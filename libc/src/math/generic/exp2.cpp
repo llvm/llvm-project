@@ -21,6 +21,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
+#include "src/__support/integer_literals.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
@@ -30,6 +31,8 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
+using Sign = fputil::Sign;
+using LIBC_NAMESPACE::operator""_u128;
 
 // Error bounds:
 // Errors when using double precision.
@@ -87,17 +90,15 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 Float128 poly_approx_f128(const Float128 &dx) {
-  using MType = typename Float128::MantissaType;
-
   constexpr Float128 COEFFS_128[]{
-      {false, -127, MType({0, 0x8000000000000000})}, // 1.0
-      {false, -128, MType({0xc9e3b39803f2f6af, 0xb17217f7d1cf79ab})},
-      {false, -128, MType({0xde2d60dd9c9a1d9f, 0x3d7f7bff058b1d50})},
-      {false, -132, MType({0x9d3b15d9e7fb6897, 0xe35846b82505fc59})},
-      {false, -134, MType({0x184462f6bcd2b9e7, 0x9d955b7dd273b94e})},
-      {false, -137, MType({0x39ea1bb964c51a89, 0xaec3ff3c53398883})},
-      {false, -138, MType({0x842c53418fa8ae61, 0x2861225f345c396a})},
-      {false, -144, MType({0x7abeb5abd5ad2079, 0xffe5fe2d109a319d})},
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -128, 0xb17217f7'd1cf79ab'c9e3b398'03f2f6af_u128},
+      {Sign::POS, -128, 0x3d7f7bff'058b1d50'de2d60dd'9c9a1d9f_u128},
+      {Sign::POS, -132, 0xe35846b8'2505fc59'9d3b15d9'e7fb6897_u128},
+      {Sign::POS, -134, 0x9d955b7d'd273b94e'184462f6'bcd2b9e7_u128},
+      {Sign::POS, -137, 0xaec3ff3c'53398883'39ea1bb9'64c51a89_u128},
+      {Sign::POS, -138, 0x2861225f'345c396a'842c5341'8fa8ae61_u128},
+      {Sign::POS, -144, 0xffe5fe2d'109a319d'7abeb5ab'd5ad2079_u128},
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -222,7 +223,7 @@ double set_exceptional(double x) {
         return x;
 
       if (fputil::quick_get_round() == FE_UPWARD)
-        return FPBits::min_denormal();
+        return FPBits::min_subnormal().get_val();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0;
@@ -236,13 +237,13 @@ double set_exceptional(double x) {
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return FPBits::max_normal();
+      return FPBits::max_normal().get_val();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
   }
   // x is +inf or nan
-  return x + static_cast<double>(FPBits::inf());
+  return x + FPBits::inf().get_val();
 }
 
 } // namespace

@@ -1,8 +1,8 @@
-; RUN: not llc < %s -march=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
 
-; RUN: not llc < %s -march=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
 
 ; GCN-LABEL: {{^}}inline_reg_constraints:
 ; GCN: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
@@ -97,7 +97,6 @@ define i32 @inline_A_constraint_H1() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H2:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3c00
 define i32 @inline_A_constraint_H2() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(i16 bitcast (half 1.0 to i16))
   ret i32 %v0
@@ -105,7 +104,6 @@ define i32 @inline_A_constraint_H2() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H3:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xbc00
 define i32 @inline_A_constraint_H3() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(i16 bitcast (half -1.0 to i16))
   ret i32 %v0
@@ -113,7 +111,6 @@ define i32 @inline_A_constraint_H3() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H4:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_A_constraint_H4() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(half 0xH3118)
   ret i32 %v0
@@ -121,7 +118,6 @@ define i32 @inline_A_constraint_H4() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H5:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_A_constraint_H5() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(i16 bitcast (half 0xH3118 to i16))
   ret i32 %v0
@@ -129,7 +125,6 @@ define i32 @inline_A_constraint_H5() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_H6:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_A_constraint_H6() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(half -0.5)
   ret i32 %v0
@@ -293,7 +288,6 @@ define i32 @inline_A_constraint_V0() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_V1:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_A_constraint_V1() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half -0.5, half -0.5>)
   ret i32 %v0
@@ -970,7 +964,6 @@ define i32 @inline_DA_constraint_H1() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H2:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3c00
 define i32 @inline_DA_constraint_H2() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(i16 bitcast (half 1.0 to i16))
   ret i32 %v0
@@ -978,7 +971,6 @@ define i32 @inline_DA_constraint_H2() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H3:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xbc00
 define i32 @inline_DA_constraint_H3() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(i16 bitcast (half -1.0 to i16))
   ret i32 %v0
@@ -986,7 +978,6 @@ define i32 @inline_DA_constraint_H3() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H4:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_DA_constraint_H4() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(half 0xH3118)
   ret i32 %v0
@@ -994,7 +985,6 @@ define i32 @inline_DA_constraint_H4() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H5:
-; VI: v_mov_b32 {{v[0-9]+}}, 0x3118
 define i32 @inline_DA_constraint_H5() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(i16 bitcast (half 0xH3118 to i16))
   ret i32 %v0
@@ -1002,7 +992,6 @@ define i32 @inline_DA_constraint_H5() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_H6:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_DA_constraint_H6() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(half -0.5)
   ret i32 %v0
@@ -1164,7 +1153,6 @@ define i32 @inline_DA_constraint_V0() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_V1:
-; VI: v_mov_b32 {{v[0-9]+}}, 0xb800
 define i32 @inline_DA_constraint_V1() {
   %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(<2 x half> <half -0.5, half -0.5>)
   ret i32 %v0

@@ -506,7 +506,7 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
         if (info.mergePoints.contains(blockOperand.get())) {
           if (!job.reachingDef)
             job.reachingDef = getLazyDefaultValue();
-          rewriter.updateRootInPlace(terminator, [&]() {
+          rewriter.modifyOpInPlace(terminator, [&]() {
             terminator.getSuccessorOperands(blockOperand.getOperandNumber())
                 .append(job.reachingDef);
           });
@@ -596,7 +596,7 @@ void MemorySlotPromoter::promoteSlot() {
       assert(succOperands.size() == mergePoint->getNumArguments() ||
              succOperands.size() + 1 == mergePoint->getNumArguments());
       if (succOperands.size() + 1 == mergePoint->getNumArguments())
-        rewriter.updateRootInPlace(
+        rewriter.modifyOpInPlace(
             user, [&]() { succOperands.append(getLazyDefaultValue()); });
     }
   }

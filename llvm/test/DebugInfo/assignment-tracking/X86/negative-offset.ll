@@ -1,5 +1,8 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - | FileCheck %s --implicit-check-not=DBG_VALUE
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - | FileCheck %s --implicit-check-not=DBG_VALUE
+
 ;; Check stores to an address computed as a negative offset from an alloca are
 ;; ignored by the assignment tracking analysis. For this example that should
 ;; result in no DBG_VALUEs in the while.body.lr.ph branch.

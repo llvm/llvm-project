@@ -29,7 +29,7 @@ define void @func2() #0 {
 
 ; Check that we still put .stack_sizes into the corresponding COMDAT group if any.
 ; CHECK: .section .text._Z4fooTIiET_v,"axG",@progbits,_Z4fooTIiET_v,comdat
-; GROUPS: .section .stack_sizes,"Go",@progbits,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v{{$}}
+; GROUPS: .section .stack_sizes,"oG",@progbits,.text._Z4fooTIiET_v,_Z4fooTIiET_v,comdat{{$}}
 ; NOGROUPS: .section .stack_sizes,"",@progbits
 $_Z4fooTIiET_v = comdat any
 define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {

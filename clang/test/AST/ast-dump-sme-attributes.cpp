@@ -13,16 +13,16 @@ struct Foo {
 // CHECK-NEXT: |-CXXMethodDecl {{.*}} f_streaming_compatible 'void () __arm_streaming_compatible'
 // CHECK-NEXT: |-CXXMethodDecl {{.*}} f_locally_streaming 'void ()'
 // CHECK-NEXT: | `-ArmLocallyStreamingAttr
-// CHECK-NEXT: |-CXXMethodDecl {{.*}} f_shared_za 'void () __arm_shared_za'
+// CHECK-NEXT: |-CXXMethodDecl {{.*}} f_shared_za 'void () __arm_inout("za")'
 // CHECK-NEXT: |-CXXMethodDecl {{.*}} f_new_za 'void ()'
-// CHECK-NEXT: | `-ArmNewZAAttr
-// CHECK-NEXT: |-CXXMethodDecl {{.*}} f_preserves_za 'void () __arm_preserves_za'
+// CHECK-NEXT: | `-ArmNewAttr {{.*}} za
+// CHECK-NEXT: |-CXXMethodDecl {{.*}} f_preserves_za 'void () __arm_preserves("za")'
   void f_streaming() __arm_streaming;
   void f_streaming_compatible() __arm_streaming_compatible;
   __arm_locally_streaming void f_locally_streaming();
-  void f_shared_za() __arm_shared_za;
-  __arm_new_za void f_new_za();
-  void f_preserves_za() __arm_preserves_za;
+  void f_shared_za() __arm_inout("za");
+  __arm_new("za") void f_new_za();
+  void f_preserves_za() __arm_preserves("za");
 
 
 // CHECK:      |-CXXMethodDecl {{.*}} test_lambda 'int (int)' implicit-inline

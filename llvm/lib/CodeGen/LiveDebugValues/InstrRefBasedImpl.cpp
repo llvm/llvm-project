@@ -2403,8 +2403,15 @@ bool InstrRefBasedLDV::mlocJoin(
   llvm::sort(BlockOrders, Cmp);
 
   // Skip entry block.
-  if (BlockOrders.size() == 0)
+  if (BlockOrders.size() == 0) {
+    // FIXME: We don't use assert here to prevent instr-ref-unreachable.mir
+    // failing.
+    LLVM_DEBUG(if (!MBB.isEntryBlock()) dbgs()
+               << "Found not reachable block " << MBB.getFullName()
+               << " from entry which may lead out of "
+                  "bound access to VarLocs\n");
     return false;
+  }
 
   // Step through all machine locations, look at each predecessor and test
   // whether we can eliminate redundant PHIs.

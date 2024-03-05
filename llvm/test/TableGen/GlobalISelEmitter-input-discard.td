@@ -24,8 +24,8 @@ def FOO : I<(outs GPR32:$dst), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, // src1
-// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 def : Pat <
   (int_tgt_foo (i32 srcvalue), i32:$src1),
   (FOO (IMPLICIT_DEF), GPR32:$src1)

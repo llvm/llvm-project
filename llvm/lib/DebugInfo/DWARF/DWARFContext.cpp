@@ -1024,9 +1024,17 @@ void DWARFContext::dump(
   auto dumpDebugInfo = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
     if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
-      for (const auto &U : Units)
+      for (const auto &U : Units) {
         U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
+        DWARFDie CUDie = U->getUnitDIE(false);
+        DWARFDie CUNonSkeletonDie = U->getNonSkeletonUnitDIE(false);
+        if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie) {
+          CUNonSkeletonDie.getDwarfUnit()
+              ->getDIEForOffset(*DumpOffset)
+              .dump(OS, 0, DumpOpts.noImplicitRecursion());
+        }
+      }
     else
       for (const auto &U : Units)
         U->dump(OS, DumpOpts);
@@ -1345,11 +1353,7 @@ DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
           DWOUnits.getUnitForIndexEntry(*R));
     return nullptr;
   }
-  const DenseMap<uint64_t, DWARFTypeUnit *> &Map = State->getTypeUnitMap(IsDWO);
-  auto Iter = Map.find(Hash);
-  if (Iter != Map.end())
-    return Iter->second;
-  return nullptr;
+  return State->getTypeUnitMap(IsDWO).lookup(Hash);
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
@@ -1404,6 +1408,7 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   if (DumpOpts.DumpType & DIDT_DebugStrOffsets)
     Success &= verifier.handleDebugStrOffsets();
   Success &= verifier.handleAccelTables();
+  verifier.summarize();
   return Success;
 }
 
@@ -1537,15 +1542,38 @@ DWARFCompileUnit *DWARFContext::getCompileUnitForDataAddress(uint64_t Address) {
   return nullptr;
 }
 
-DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address) {
+DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address,
+                                                             bool CheckDWO) {
   DIEsForAddress Result;
 
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address);
   if (!CU)
     return Result;
 
-  Result.CompileUnit = CU;
-  Result.FunctionDIE = CU->getSubroutineForAddress(Address);
+  if (CheckDWO) {
+    // We were asked to check the DWO file and this debug information is more
+    // complete that any information in the skeleton compile unit, so search the
+    // DWO first to see if we have a match.
+    DWARFDie CUDie = CU->getUnitDIE(false);
+    DWARFDie CUDwoDie = CU->getNonSkeletonUnitDIE(false);
+    if (CheckDWO && CUDwoDie && CUDie != CUDwoDie) {
+      // We have a DWO file, lets search it.
+      DWARFCompileUnit *CUDwo =
+          dyn_cast_or_null<DWARFCompileUnit>(CUDwoDie.getDwarfUnit());
+      if (CUDwo) {
+        Result.FunctionDIE = CUDwo->getSubroutineForAddress(Address);
+        if (Result.FunctionDIE)
+          Result.CompileUnit = CUDwo;
+      }
+    }
+  }
+
+  // Search the normal DWARF if we didn't find a match in the DWO file or if
+  // we didn't check the DWO file above.
+  if (!Result) {
+    Result.CompileUnit = CU;
+    Result.FunctionDIE = CU->getSubroutineForAddress(Address);
+  }
 
   std::vector<DWARFDie> Worklist;
   Worklist.push_back(Result.FunctionDIE);

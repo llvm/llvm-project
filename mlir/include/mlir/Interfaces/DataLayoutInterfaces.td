@@ -113,6 +113,18 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
+      /*description=*/"Returns the program memory space identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getProgramMemorySpaceIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the global memory space identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getGlobalMemorySpaceIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
       /*description=*/"Returns the stack alignment identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getStackAlignmentIdentifier",
@@ -278,6 +290,30 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::detail::getDefaultAllocaMemorySpace(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the memory space used by the ABI computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getProgramMemorySpace",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultProgramMemorySpace(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the memory space used by the ABI computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getGlobalMemorySpace",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultGlobalMemorySpace(entry);
       }]
     >,
     StaticInterfaceMethod<

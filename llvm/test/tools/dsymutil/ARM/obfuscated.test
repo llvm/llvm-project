@@ -29,20 +29,20 @@ RUN: rm %t.dSYM/Contents/Resources/E828A486-8433-3A5E-B6DB-A6294D28133D.plist
 RUN: dsymutil --symbol-map %t.mapdir %t.dSYM 2>&1 | FileCheck --check-prefix=NOTOBFUSCATING %s
 
 // ----------------------------------------
-// Repeat the same steps for --linker llvm.
-RUN: dsymutil --linker llvm --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
+// Repeat the same steps for --linker parallel.
+RUN: dsymutil --linker parallel --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
 RUN:     | llvm-dwarfdump -v - \
 RUN:     | FileCheck %s
 
-RUN: dsymutil --linker llvm --accelerator=Pub --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
+RUN: dsymutil --linker parallel --accelerator=Pub --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
 RUN:     | llvm-dwarfdump -v - \
 RUN:     | FileCheck --check-prefix=PUB %s
 
-RUN: dsymutil --linker llvm --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
+RUN: dsymutil --linker parallel --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
 RUN:     | llvm-dwarfdump -v - \
 RUN:     | FileCheck --check-prefix=NOHIDDEN %s
 
-RUN: dsymutil --linker llvm --symbol-map %p/../Inputs/obfuscated.2.map %p/../Inputs/obfuscated.2.arm64 -f -o - \
+RUN: dsymutil --linker parallel --symbol-map %p/../Inputs/obfuscated.2.map %p/../Inputs/obfuscated.2.arm64 -f -o - \
 RUN:     | llvm-dwarfdump -v - \
 RUN:     | FileCheck --check-prefix=NOHIDDEN %s
 
@@ -52,11 +52,11 @@ RUN: mkdir -p %t.mapdir
 RUN: cp %p/../Inputs/obfuscated.arm64 %t.dSYM/Contents/Resources/DWARF/
 RUN: cp %p/../Inputs/E828A486-8433-3A5E-B6DB-A6294D28133D.plist %t.dSYM/Contents/Resources/
 RUN: cp %p/../Inputs/obfuscated.map %t.mapdir/506AA50A-6B26-3B37-86D2-DC6EBD57B720.bcsymbolmap
-RUN: dsymutil --linker llvm --symbol-map %t.mapdir %t.dSYM 2>&1 | FileCheck --check-prefix=OBFUSCATING %s
+RUN: dsymutil --linker parallel --symbol-map %t.mapdir %t.dSYM 2>&1 | FileCheck --check-prefix=OBFUSCATING %s
 
 // Run without plist and make sure dsymutil doesn't crash.
 RUN: rm %t.dSYM/Contents/Resources/E828A486-8433-3A5E-B6DB-A6294D28133D.plist
-RUN: dsymutil --linker llvm --symbol-map %t.mapdir %t.dSYM 2>&1 | FileCheck --check-prefix=NOTOBFUSCATING %s
+RUN: dsymutil --linker parallel --symbol-map %t.mapdir %t.dSYM 2>&1 | FileCheck --check-prefix=NOTOBFUSCATING %s
 
 OBFUSCATING-NOT: not unobfuscating
 

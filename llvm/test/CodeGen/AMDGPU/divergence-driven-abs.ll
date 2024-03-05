@@ -1,5 +1,5 @@
-; RUN:  llc -march=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN:  llc -march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
+; RUN:  llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN:  llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
 
 ; GCN-LABEL: name: s_abs_i32
 ; GCN: S_ABS_I32

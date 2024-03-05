@@ -1026,7 +1026,9 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
                  ? LF.getValue().evaluateKnownAbsolute(Value, Layout)
                  : LF.getValue().evaluateAsAbsolute(Value, Layout);
   if (!Abs) {
-    if (!getBackend().relaxLEB128(LF, Layout, Value)) {
+    bool Relaxed, UseZeroPad;
+    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(LF, Layout, Value);
+    if (!Relaxed) {
       getContext().reportError(LF.getValue().getLoc(),
                                Twine(LF.isSigned() ? ".s" : ".u") +
                                    "leb128 expression is not absolute");
@@ -1034,6 +1036,8 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
     }
     uint8_t Tmp[10]; // maximum size: ceil(64/7)
     PadTo = std::max(PadTo, encodeULEB128(uint64_t(Value), Tmp));
+    if (UseZeroPad)
+      Value = 0;
   }
   Data.clear();
   raw_svector_ostream OSE(Data);

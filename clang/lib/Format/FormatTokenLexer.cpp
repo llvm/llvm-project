@@ -93,6 +93,10 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
     }
+    if (Style.isTableGen()) {
+      handleTableGenMultilineString();
+      handleTableGenNumericLikeIdentifier();
+    }
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -269,6 +273,45 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                           TT_BinaryOperator) ||
         Tokens.back()->is(tok::arrow)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+  }
+  if (Style.isTableGen()) {
+    // TableGen's Multi line string starts with [{
+    if (tryMergeTokens({tok::l_square, tok::l_brace},
+                       TT_TableGenMultiLineString)) {
+      // Set again with finalizing. This must never be annotated as other types.
+      Tokens.back()->setFinalizedType(TT_TableGenMultiLineString);
+      Tokens.back()->Tok.setKind(tok::string_literal);
+      return;
+    }
+    // TableGen's bang operator is the form !<name>.
+    // !cond is a special case with specific syntax.
+    if (tryMergeTokens({tok::exclaim, tok::identifier},
+                       TT_TableGenBangOperator)) {
+      Tokens.back()->Tok.setKind(tok::identifier);
+      Tokens.back()->Tok.setIdentifierInfo(nullptr);
+      if (Tokens.back()->TokenText == "!cond")
+        Tokens.back()->setFinalizedType(TT_TableGenCondOperator);
+      else
+        Tokens.back()->setFinalizedType(TT_TableGenBangOperator);
+      return;
+    }
+    if (tryMergeTokens({tok::exclaim, tok::kw_if}, TT_TableGenBangOperator)) {
+      // Here, "! if" becomes "!if".  That is, ! captures if even when the space
+      // exists. That is only one possibility in TableGen's syntax.
+      Tokens.back()->Tok.setKind(tok::identifier);
+      Tokens.back()->Tok.setIdentifierInfo(nullptr);
+      Tokens.back()->setFinalizedType(TT_TableGenBangOperator);
+      return;
+    }
+    // +, - with numbers are literals. Not unary operators.
+    if (tryMergeTokens({tok::plus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
+      return;
+    }
+    if (tryMergeTokens({tok::minus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
       return;
     }
   }
@@ -763,6 +806,75 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
 }
 
+void FormatTokenLexer::handleTableGenMultilineString() {
+  FormatToken *MultiLineString = Tokens.back();
+  if (MultiLineString->isNot(TT_TableGenMultiLineString))
+    return;
+
+  auto OpenOffset = Lex->getCurrentBufferOffset() - 2 /* "[{" */;
+  // "}]" is the end of multi line string.
+  auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
+  if (CloseOffset == StringRef::npos)
+    return;
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
+  MultiLineString->TokenText = Text;
+  resetLexer(SourceMgr.getFileOffset(
+      Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
+  auto FirstLineText = Text;
+  auto FirstBreak = Text.find('\n');
+  // Set ColumnWidth and LastLineColumnWidth when it has multiple lines.
+  if (FirstBreak != StringRef::npos) {
+    MultiLineString->IsMultiline = true;
+    FirstLineText = Text.substr(0, FirstBreak + 1);
+    // LastLineColumnWidth holds the width of the last line.
+    auto LastBreak = Text.rfind('\n');
+    MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+        Text.substr(LastBreak + 1), MultiLineString->OriginalColumn,
+        Style.TabWidth, Encoding);
+  }
+  // ColumnWidth holds only the width of the first line.
+  MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
+      FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+}
+
+void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
+  FormatToken *Tok = Tokens.back();
+  // TableGen identifiers can begin with digits. Such tokens are lexed as
+  // numeric_constant now.
+  if (Tok->isNot(tok::numeric_constant))
+    return;
+  StringRef Text = Tok->TokenText;
+  // The following check is based on llvm::TGLexer::LexToken.
+  // That lexes the token as a number if any of the following holds:
+  // 1. It starts with '+', '-'.
+  // 2. All the characters are digits.
+  // 3. The first non-digit character is 'b', and the next is '0' or '1'.
+  // 4. The first non-digit character is 'x', and the next is a hex digit.
+  // Note that in the case 3 and 4, if the next character does not exists in
+  // this token, the token is an identifier.
+  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+    return;
+  const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
+  // All the characters are digits
+  if (NonDigitPos == StringRef::npos)
+    return;
+  char FirstNonDigit = Text[NonDigitPos];
+  if (NonDigitPos < Text.size() - 1) {
+    char TheNext = Text[NonDigitPos + 1];
+    // Regarded as a binary number.
+    if (FirstNonDigit == 'b' && (TheNext == '0' || TheNext == '1'))
+      return;
+    // Regarded as hex number.
+    if (FirstNonDigit == 'x' && isxdigit(TheNext))
+      return;
+  }
+  if (isalpha(FirstNonDigit) || FirstNonDigit == '_') {
+    // This is actually an identifier in TableGen.
+    Tok->Tok.setKind(tok::identifier);
+    Tok->Tok.setIdentifierInfo(nullptr);
+  }
+}
+
 void FormatTokenLexer::handleTemplateStrings() {
   FormatToken *BacktickToken = Tokens.back();
 
@@ -1182,6 +1294,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
                                   tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
       FormatTok->Tok.setIdentifierInfo(nullptr);
+    } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
+      FormatTok->Tok.setKind(tok::identifier);
+      FormatTok->Tok.setIdentifierInfo(nullptr);
     }
   } else if (FormatTok->is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);
@@ -1305,7 +1420,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For formatting, treat unterminated string literals like normal string
   // literals.
   if (Tok.is(tok::unknown)) {
-    if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
+    if (Tok.TokenText.starts_with("\"")) {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
     } else if (Style.isJavaScript() && Tok.TokenText == "''") {

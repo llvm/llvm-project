@@ -86,7 +86,7 @@ public:
     None,                  ///< No attributes have been set
     #define GET_ATTR_ENUM
     #include "llvm/IR/Attributes.inc"
-    EndAttrKinds,          ///< Sentinal value useful for loops
+    EndAttrKinds,          ///< Sentinel value useful for loops
     EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };

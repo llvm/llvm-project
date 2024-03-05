@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=GCN
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=GCN
 
 ; GCN-LABEL: and_zext:
 ; GCN: v_and_b32_e32 [[VAL16:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}

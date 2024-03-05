@@ -1,5 +1,6 @@
 ;;; clang-rename.el --- Renames every occurrence of a symbol found at <offset>.  -*- lexical-binding: t; -*-
 
+;; Version: 0.1.0
 ;; Keywords: tools, c
 
 ;;; Commentary:

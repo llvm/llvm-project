@@ -644,3 +644,28 @@ llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
   llvm.return %0 : i32
 }
+
+// -----
+
+llvm.func @vararg_func(...) {
+  llvm.return
+}
+
+llvm.func @vararg_intrinrics() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %list = llvm.alloca %0 x !llvm.struct<"struct.va_list_opaque", (ptr)> : (i32) -> !llvm.ptr
+  // The vararg intinriscs should normally be part of a variadic function.
+  // However, this test uses a non-variadic function to ensure the presence of
+  // the intrinsic alone suffices to prevent inlining.
+  llvm.intr.vastart %list : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller() {
+  // CHECK-NEXT: llvm.call @vararg_func()
+  llvm.call @vararg_func() vararg(!llvm.func<void (...)>) : () -> ()
+  // CHECK-NEXT: llvm.call @vararg_intrinrics()
+  llvm.call @vararg_intrinrics() : () -> ()
+  llvm.return
+}

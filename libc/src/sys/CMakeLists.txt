@@ -1,3 +1,5 @@
+add_subdirectory(auxv)
+add_subdirectory(epoll)
 add_subdirectory(mman)
 add_subdirectory(random)
 add_subdirectory(resource)

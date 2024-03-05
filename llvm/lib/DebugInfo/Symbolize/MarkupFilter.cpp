@@ -611,12 +611,9 @@ std::optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
 
   // Pop off each of r/R, w/W, and x/X from the front, in that order.
   StringRef Remainder = Str;
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'r')
-    Remainder = Remainder.drop_front();
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'w')
-    Remainder = Remainder.drop_front();
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'x')
-    Remainder = Remainder.drop_front();
+  Remainder.consume_front_insensitive("r");
+  Remainder.consume_front_insensitive("w");
+  Remainder.consume_front_insensitive("x");
 
   // If anything remains, then the string wasn't a mode.
   if (!Remainder.empty()) {

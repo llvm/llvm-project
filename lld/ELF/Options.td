@@ -637,6 +637,9 @@ def save_temps_eq: JJ<"save-temps=">, HelpText<"Save select intermediate LTO com
   Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
+defm lto_basic_block_address_map: BB<"lto-basic-block-address-map",
+  "Emit basic block address map for LTO",
+  "Do not emit basic block address map for LTO (default)">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;

@@ -26,7 +26,6 @@
 class DeviceImageTy {
 
   std::unique_ptr<llvm::object::OffloadBinary> Binary;
-  llvm::SmallVector<std::unique_ptr<OffloadEntryTy>> OffloadEntries;
 
   __tgt_bin_desc *BinaryDesc;
   __tgt_device_image Image;
@@ -37,7 +36,9 @@ public:
   __tgt_device_image &getExecutableImage() { return Image; }
   __tgt_bin_desc &getBinaryDesc() { return *BinaryDesc; }
 
-  auto entries() { return llvm::make_pointee_range(OffloadEntries); }
+  auto entries() {
+    return llvm::make_range(Image.EntriesBegin, Image.EntriesEnd);
+  }
 };
 
 #endif // OMPTARGET_DEVICE_IMAGE_H

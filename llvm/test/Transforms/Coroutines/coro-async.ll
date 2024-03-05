@@ -132,7 +132,7 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   [[CALLEE_CTXT:%.*]] = tail call ptr @llvm.coro.async.context.alloc(ptr %task, ptr nonnull @my_other_async_function_fp)
 ; CHECK:   [[CALLEE_CTXT_SPILL:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 160
 ; CHECK:   store ptr [[CALLEE_CTXT]], ptr [[CALLEE_CTXT_SPILL]]
-; CHECK:   [[TYPED_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds %async.ctxt, ptr [[CALLEE_CTXT]], i64 0, i32 1
+; CHECK:   [[TYPED_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CALLEE_CTXT]], i64 8
 ; CHECK:   store ptr @my_async_functionTQ0_, ptr [[TYPED_RETURN_TO_CALLER_ADDR]]
 ; CHECK:   store ptr %async.ctxt, ptr [[CALLEE_CTXT]]
 ; Make sure the spill is underaligned to the max context alignment (16).

@@ -791,7 +791,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 
 #include <__algorithm/find.h>
 #include <__algorithm/search.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
@@ -4587,28 +4587,36 @@ public:
 
   // element access:
   _LIBCPP_HIDE_FROM_ABI difference_type length(size_type __sub = 0) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::length() called when not ready");
+    // If the match results are not ready, this will return `0`.
+    _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::length() called when not ready");
     return (*this)[__sub].length();
   }
   _LIBCPP_HIDE_FROM_ABI difference_type position(size_type __sub = 0) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::position() called when not ready");
+    // If the match results are not ready, this will return the result of subtracting two default-constructed iterators
+    // (which is typically a well-defined operation).
+    _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::position() called when not ready");
     return std::distance(__position_start_, (*this)[__sub].first);
   }
   _LIBCPP_HIDE_FROM_ABI string_type str(size_type __sub = 0) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::str() called when not ready");
+    // If the match results are not ready, this will return an empty string.
+    _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::str() called when not ready");
     return (*this)[__sub].str();
   }
   _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __n) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::operator[]() called when not ready");
+    // If the match results are not ready, this call will be equivalent to calling this function with `__n >= size()`,
+    // returning an empty subrange.
+    _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::operator[]() called when not ready");
     return __n < __matches_.size() ? __matches_[__n] : __unmatched_;
   }
 
   _LIBCPP_HIDE_FROM_ABI const_reference prefix() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::prefix() called when not ready");
+    // If the match results are not ready, this will return a default-constructed empty `__suffix_`.
+    _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::prefix() called when not ready");
     return __prefix_;
   }
   _LIBCPP_HIDE_FROM_ABI const_reference suffix() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::suffix() called when not ready");
+    // If the match results are not ready, this will return a default-constructed empty `__suffix_`.
+    _LIBCPP_ASSERT_PEDANTIC(ready(), "match_results::suffix() called when not ready");
     return __suffix_;
   }
 
@@ -4722,7 +4730,8 @@ _OutputIter match_results<_BidirectionalIterator, _Allocator>::format(
     const char_type* __fmt_first,
     const char_type* __fmt_last,
     regex_constants::match_flag_type __flags) const {
-  _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::format() called when not ready");
+  // Note: this duplicates a check in `vector::operator[]` but provides a better error message.
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(ready(), "match_results::format() called when not ready");
   if (__flags & regex_constants::format_sed) {
     for (; __fmt_first != __fmt_last; ++__fmt_first) {
       if (*__fmt_first == '&')
@@ -5114,6 +5123,14 @@ bool basic_regex<_CharT, _Traits>::__search(
         return true;
       }
       __m.__matches_.assign(__m.size(), __m.__unmatched_);
+    }
+    __m.__matches_.assign(__m.size(), __m.__unmatched_);
+    if (__match_at_start(__first, __last, __m, __flags, false)) {
+      __m.__prefix_.second  = __m[0].first;
+      __m.__prefix_.matched = __m.__prefix_.first != __m.__prefix_.second;
+      __m.__suffix_.first   = __m[0].second;
+      __m.__suffix_.matched = __m.__suffix_.first != __m.__suffix_.second;
+      return true;
     }
   }
   __m.__matches_.clear();

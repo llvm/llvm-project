@@ -35,8 +35,8 @@ llvm.func @func_no_debug() {
   tag = DW_TAG_pointer_type, name = "named", baseType = #si32
 >
 #cu = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C, file = #file, producer = "MLIR",
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  producer = "MLIR", isOptimized = true, emissionKind = Full
 >
 #composite = #llvm.di_composite_type<
   tag = DW_TAG_structure_type, name = "composite", file = #file,
@@ -169,11 +169,25 @@ llvm.func @empty_types() {
 
 // -----
 
+#di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#di_subprogram = #llvm.di_subprogram<
+  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file, subprogramFlags = "Optimized"
+>
+
+// CHECK-LABEL: declare !dbg
+// CHECK-SAME: ![[SUBPROGRAM:.*]] i32 @func_decl_with_subprogram(
+llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.mlir":2:1])
+
+// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: DISPFlagOptimized)
+// CHECK: ![[FILE]] = !DIFile(filename: "foo.mlir", directory: "/test/")
+
+// -----
+
 #di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
 #di_file = #llvm.di_file<"foo.mlir" in "/test/">
 #di_compile_unit = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file,
+  producer = "MLIR", isOptimized = true, emissionKind = Full
 >
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
@@ -216,8 +230,8 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 #di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
 #di_file = #llvm.di_file<"foo.mlir" in "/test/">
 #di_compile_unit = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file,
+  producer = "MLIR", isOptimized = true, emissionKind = Full
 >
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "func",
@@ -245,8 +259,8 @@ llvm.func @func_without_subprogram(%0 : i32) {
 
 #di_file = #llvm.di_file<"foo.mlir" in "/test/">
 #di_compile_unit = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file,
+  producer = "MLIR", isOptimized = true, emissionKind = Full
 >
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
@@ -285,7 +299,7 @@ llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
 // CHECK-DAG: ![[GVALS]] = !{![[GEXPR0]], ![[GEXPR1]]}
 
 #di_file_2 = #llvm.di_file<"not" in "existence">
-#di_compile_unit_2 = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#di_compile_unit_2 = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = Full>
 #di_basic_type_2 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint64_t", sizeInBits = 64, encoding = DW_ATE_unsigned>
 llvm.mlir.global external @global_with_expr_1() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #di_file_2, line = 370, type = #di_basic_type_2>, expr = <>>} : i64
 llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file_2, line = 371, type = #di_basic_type_2, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <>>} : i64
@@ -315,9 +329,9 @@ llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr =
 // CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: "foo2.mlir", directory: "/test/")
 #di_file_2 = #llvm.di_file<"foo2.mlir" in "/test/">
 // CHECK-DAG: ![[SCOPE2:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE2]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: DebugDirectivesOnly)
-#di_compile_unit_1 = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file_1, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
+#di_compile_unit_1 = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file_1, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
 // CHECK-DAG: ![[SCOPE1:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE1]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
-#di_compile_unit_2 = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = DebugDirectivesOnly>
+#di_compile_unit_2 = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = DebugDirectivesOnly>
 #di_subprogram_1 = #llvm.di_subprogram<compileUnit = #di_compile_unit_1, scope = #di_file_1, name = "func1", file = #di_file_1, subprogramFlags = "Definition|Optimized">
 #di_subprogram_2 = #llvm.di_subprogram<compileUnit = #di_compile_unit_2, scope = #di_file_2, name = "func2", file = #di_file_2, subprogramFlags = "Definition|Optimized">
 

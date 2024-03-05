@@ -188,3 +188,61 @@ movdir64b 291(%esi, %eiz, 4), %ebx
 
 movdir64b 291(%rsi, %riz, 4), %rbx
 // 64: movdir64b 291(%rsi,%riz,4), %rbx # encoding: [0x66,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]
+
+enqcmd	291(%si), %ecx
+// ERR64: error: invalid 16-bit base register
+// ERR32: invalid operand
+// ERR16: invalid operand
+
+enqcmd	291(%esi), %cx
+// ERR64: error: invalid operand for instruction
+// ERR32: invalid operand
+// ERR16: invalid operand
+
+enqcmd (%rdx), %r15d
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
+
+enqcmd (%edx), %r15
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
+
+enqcmd (%eip), %ebx
+// 64: enqcmd (%eip), %ebx # encoding: [0x67,0xf2,0x0f,0x38,0xf8,0x1d,0x00,0x00,0x00,0x00]
+
+enqcmd (%rip), %rbx
+// 64: enqcmd (%rip), %rbx # encoding: [0xf2,0x0f,0x38,0xf8,0x1d,0x00,0x00,0x00,0x00]
+
+enqcmd 291(%esi, %eiz, 4), %ebx
+// 64: enqcmd 291(%esi,%eiz,4), %ebx # encoding: [0x67,0xf2,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]
+// 32: enqcmd 291(%esi,%eiz,4), %ebx # encoding: [0xf2,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]
+
+enqcmd 291(%rsi, %riz, 4), %rbx
+// 64: enqcmd 291(%rsi,%riz,4), %rbx # encoding: [0xf2,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]
+
+enqcmds	291(%si), %ecx
+// ERR64: error: invalid 16-bit base register
+// ERR32: invalid operand
+// ERR16: invalid operand
+
+enqcmds	291(%esi), %cx
+// ERR64: error: invalid operand for instruction
+// ERR32: invalid operand
+// ERR16: invalid operand
+
+enqcmds (%rdx), %r15d
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
+
+enqcmds (%edx), %r15
+// ERR64: [[#@LINE-1]]:[[#]]: error: invalid operand
+
+enqcmds (%eip), %ebx
+// 64: enqcmds (%eip), %ebx # encoding: [0x67,0xf3,0x0f,0x38,0xf8,0x1d,0x00,0x00,0x00,0x00]
+
+enqcmds (%rip), %rbx
+// 64: enqcmds (%rip), %rbx # encoding: [0xf3,0x0f,0x38,0xf8,0x1d,0x00,0x00,0x00,0x00]
+
+enqcmds 291(%esi, %eiz, 4), %ebx
+// 64: enqcmds 291(%esi,%eiz,4), %ebx # encoding: [0x67,0xf3,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]
+// 32: enqcmds 291(%esi,%eiz,4), %ebx # encoding: [0xf3,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]
+
+enqcmds 291(%rsi, %riz, 4), %rbx
+// 64: enqcmds 291(%rsi,%riz,4), %rbx # encoding: [0xf3,0x0f,0x38,0xf8,0x9c,0xa6,0x23,0x01,0x00,0x00]

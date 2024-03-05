@@ -315,7 +315,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__algorithm/remove_if.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__bit_reference>
 #include <__concepts/same_as.h>
@@ -351,6 +351,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
+#include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -428,7 +429,7 @@ public:
 #endif
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x);
 
-  template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(size_type __n, const value_type& __x, const allocator_type& __a)
       : __end_cap_(nullptr, __a) {
@@ -527,7 +528,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __x)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value);
 
   template <class _InputIterator,
             __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value &&
@@ -831,13 +832,13 @@ private:
   // For more details, see the "Using libc++" documentation page or
   // the documentation for __sanitizer_annotate_contiguous_container.
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(
-      const void* __beg, const void* __end, const void* __old_mid, const void* __new_mid) const {
-    (void)__beg;
-    (void)__end;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
 #ifndef _LIBCPP_HAS_NO_ASAN
+    const void* __beg = data();
+    const void* __end = data() + capacity();
     if (!__libcpp_is_constant_evaluated() && __beg != nullptr &&
         __asan_annotate_container_with_allocator<_Allocator>::value)
       __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
@@ -847,27 +848,27 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + capacity(), data() + __current_size);
+    __annotate_contiguous_container(data() + capacity(), data() + __current_size);
 #endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + size(), data() + capacity());
+    __annotate_contiguous_container(data() + size(), data() + capacity());
 #endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_increase(size_type __n) const _NOEXCEPT {
     (void)__n;
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + size(), data() + size() + __n);
+    __annotate_contiguous_container(data() + size(), data() + size() + __n);
 #endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
     (void)__old_size;
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + __old_size, data() + size());
+    __annotate_contiguous_container(data() + __old_size, data() + size());
 #endif
   }
 
@@ -982,14 +983,18 @@ template <ranges::input_range _Range,
 vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_t<_Range>, _Alloc>;
 #endif
 
+// __swap_out_circular_buffer relocates the objects in [__begin_, __end_) into the front of __v and swaps the buffers of
+// *this and __v. It is assumed that __v provides space for exactly (__end_ - __begin_) objects in the front. This
+// function has a strong exception guarantee.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v) {
   __annotate_delete();
-  using _RevIter = std::reverse_iterator<pointer>;
-  __v.__begin_   = std::__uninitialized_allocator_move_if_noexcept(
-                     __alloc(), _RevIter(__end_), _RevIter(__begin_), _RevIter(__v.__begin_))
-                     .base();
+  auto __new_begin = __v.__begin_ - (__end_ - __begin_);
+  std::__uninitialized_allocator_relocate(
+      __alloc(), std::__to_address(__begin_), std::__to_address(__end_), std::__to_address(__new_begin));
+  __v.__begin_ = __new_begin;
+  __end_       = __begin_; // All the objects have been destroyed by relocating them.
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
   std::swap(this->__end_cap(), __v.__end_cap());
@@ -997,22 +1002,35 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   __annotate_new(size());
 }
 
+// __swap_out_circular_buffer relocates the objects in [__begin_, __p) into the front of __v, the objects in
+// [__p, __end_) into the back of __v and swaps the buffers of *this and __v. It is assumed that __v provides space for
+// exactly (__p - __begin_) objects in the front and space for at least (__end_ - __p) objects in the back. This
+// function has a strong exception guarantee if __begin_ == __p || __end_ == __p.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p) {
   __annotate_delete();
-  pointer __r    = __v.__begin_;
-  using _RevIter = std::reverse_iterator<pointer>;
-  __v.__begin_   = std::__uninitialized_allocator_move_if_noexcept(
-                     __alloc(), _RevIter(__p), _RevIter(__begin_), _RevIter(__v.__begin_))
-                     .base();
-  __v.__end_ = std::__uninitialized_allocator_move_if_noexcept(__alloc(), __p, __end_, __v.__end_);
+  pointer __ret = __v.__begin_;
+
+  // Relocate [__p, __end_) first to avoid having a hole in [__begin_, __end_)
+  // in case something in [__begin_, __p) throws.
+  std::__uninitialized_allocator_relocate(
+      __alloc(), std::__to_address(__p), std::__to_address(__end_), std::__to_address(__v.__end_));
+  __v.__end_ += (__end_ - __p);
+  __end_           = __p; // The objects in [__p, __end_) have been destroyed by relocating them.
+  auto __new_begin = __v.__begin_ - (__p - __begin_);
+
+  std::__uninitialized_allocator_relocate(
+      __alloc(), std::__to_address(__begin_), std::__to_address(__p), std::__to_address(__new_begin));
+  __v.__begin_ = __new_begin;
+  __end_       = __begin_; // All the objects have been destroyed by relocating them.
+
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
   std::swap(this->__end_cap(), __v.__end_cap());
   __v.__first_ = __v.__begin_;
   __annotate_new(size());
-  return __r;
+  return __ret;
 }
 
 template <class _Tp, class _Allocator>
@@ -1263,7 +1281,7 @@ vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocat
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>&
 vector<_Tp, _Allocator>::operator=(vector&& __x)
-    _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+    _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
   __move_assign(__x, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1563,14 +1581,13 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) {
   pointer __p = this->__begin_ + (__position - begin());
-  // We can't compare unrelated pointers inside constant expressions
-  if (!__libcpp_is_constant_evaluated() && this->__end_ < this->__end_cap()) {
+  if (this->__end_ < this->__end_cap()) {
     if (__p == this->__end_) {
       __construct_one_at_end(__x);
     } else {
       __move_range(__p, this->__end_, __p + 1);
       const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-      if (__p <= __xr && __xr < this->__end_)
+      if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end_), std::addressof(__x)))
         ++__xr;
       *__p = *__xr;
     }
@@ -1952,7 +1969,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   vector(vector&& __v, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector& operator=(vector&& __v)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value);
 
   template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
   void _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 assign(_InputIterator __first, _InputIterator __last);
@@ -2499,7 +2516,7 @@ vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>&
 vector<bool, _Allocator>::operator=(vector&& __v)
-    _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+    _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
   __move_assign(__v, integral_constant<bool, __storage_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -2972,6 +2989,7 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #  include <concepts>
 #  include <cstdlib>
+#  include <locale>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>

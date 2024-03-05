@@ -586,6 +586,7 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
     case TemplateArgument::Integral:
     case TemplateArgument::Declaration:
     case TemplateArgument::NullPtr:
+    case TemplateArgument::StructuralValue:
       ArgInfos[i] = TemplateArgumentLocInfo();
       break;
 
@@ -736,4 +737,13 @@ AutoTypeLoc TypeLoc::getContainedAutoTypeLoc() const {
   if (Res.isNull())
     return AutoTypeLoc();
   return Res.getAs<AutoTypeLoc>();
+}
+
+SourceLocation TypeLoc::getTemplateKeywordLoc() const {
+  if (const auto TSTL = getAsAdjusted<TemplateSpecializationTypeLoc>())
+    return TSTL.getTemplateKeywordLoc();
+  if (const auto DTSTL =
+          getAsAdjusted<DependentTemplateSpecializationTypeLoc>())
+    return DTSTL.getTemplateKeywordLoc();
+  return SourceLocation();
 }

@@ -12,7 +12,7 @@
 
 func.func private @emptyUsesValue(%arg0: memref<4xf32>) {
   %0 = memref.alloc() : memref<4xf32>
-  "test.memref_user"(%0) : (memref<4xf32>) -> ()
+  "test.read_buffer"(%0) : (memref<4xf32>) -> ()
   return
 }
 
@@ -24,11 +24,9 @@ func.func private @emptyUsesValue(%arg0: memref<4xf32>) {
 //  CHECK-NEXT: return
 
 // CHECK-DYNAMIC-LABEL: func private @emptyUsesValue(
-//  CHECK-DYNAMIC-SAME: [[ARG0:%.+]]: memref<4xf32>, [[ARG1:%.+]]: i1)
+//  CHECK-DYNAMIC-SAME:     [[ARG0:%.+]]: memref<4xf32>)
 //       CHECK-DYNAMIC: [[ALLOC:%.*]] = memref.alloc()
-//      CHECK-DYNAMIC: [[BASE:%[a-zA-Z0-9_]+]], {{.*}} = memref.extract_strided_metadata [[ARG0]]
-//  CHECK-DYNAMIC-NEXT: bufferization.dealloc ([[BASE]] :{{.*}}) if ([[ARG1]]) 
-//   CHECK-DYNAMIC-NOT:   retain
+//  CHECK-DYNAMIC-NEXT: "test.read_buffer"
 //  CHECK-DYNAMIC-NEXT: bufferization.dealloc ([[ALLOC]] :{{.*}}) if (%true{{[0-9_]*}}) 
 //   CHECK-DYNAMIC-NOT:   retain
 //  CHECK-DYNAMIC-NEXT: return
@@ -37,7 +35,7 @@ func.func private @emptyUsesValue(%arg0: memref<4xf32>) {
 
 func.func @emptyUsesValue(%arg0: memref<4xf32>) {
   %0 = memref.alloc() : memref<4xf32>
-  "test.memref_user"(%0) : (memref<4xf32>) -> ()
+  "test.read_buffer"(%0) : (memref<4xf32>) -> ()
   return
 }
 
@@ -74,13 +72,11 @@ func.func private @redundantOperations(%arg0: memref<2xf32>) {
 // CHECK-NEXT: return
 
 // CHECK-DYNAMIC-LABEL: func private @redundantOperations
-//      CHECK-DYNAMIC: (%[[ARG0:.*]]: memref{{.*}}, %[[ARG1:.*]]: i1)
+//      CHECK-DYNAMIC: (%[[ARG0:.*]]: memref{{.*}})
 //      CHECK-DYNAMIC: %[[FIRST_ALLOC:.*]] = memref.alloc()
 // CHECK-DYNAMIC-NEXT: test.buffer_based
 //      CHECK-DYNAMIC: %[[SECOND_ALLOC:.*]] = memref.alloc()
 // CHECK-DYNAMIC-NEXT: test.buffer_based
-// CHECK-DYNAMIC-NEXT: %[[BASE:[a-zA-Z0-9_]+]], {{.*}} = memref.extract_strided_metadata %[[ARG0]]
-// CHECK-DYNAMIC-NEXT: bufferization.dealloc (%[[BASE]] : {{.*}}) if (%[[ARG1]])
 // CHECK-DYNAMIC-NEXT: bufferization.dealloc (%[[FIRST_ALLOC]] : {{.*}}) if (%true{{[0-9_]*}})
 // CHECK-DYNAMIC-NEXT: bufferization.dealloc (%[[SECOND_ALLOC]] : {{.*}}) if (%true{{[0-9_]*}})
 // CHECK-DYNAMIC-NEXT: return
@@ -121,14 +117,39 @@ func.func private @memref_in_function_results(
 
 // CHECK-DYNAMIC-LABEL: func private @memref_in_function_results
 //       CHECK-DYNAMIC: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>,
-//  CHECK-DYNAMIC-SAME: %[[RESULT:.*]]: memref<5xf32>, %[[ARG3:.*]]: i1, %[[ARG4:.*]]: i1, %[[ARG5:.*]]: i1)
+//  CHECK-DYNAMIC-SAME: %[[RESULT:.*]]: memref<5xf32>)
 //       CHECK-DYNAMIC: %[[X:.*]] = memref.alloc()
 //       CHECK-DYNAMIC: %[[Y:.*]] = memref.alloc()
 //       CHECK-DYNAMIC: test.copy
-//       CHECK-DYNAMIC: %[[BASE0:[a-zA-Z0-9_]+]], {{.+}} = memref.extract_strided_metadata %[[ARG0]]
-//       CHECK-DYNAMIC: %[[BASE1:[a-zA-Z0-9_]+]], {{.+}} = memref.extract_strided_metadata %[[RESULT]]
 //       CHECK-DYNAMIC: bufferization.dealloc (%[[Y]] : {{.*}}) if (%true{{[0-9_]*}})
 //   CHECK-DYNAMIC-NOT: retain
-//       CHECK-DYNAMIC: [[OWN:%.+]] = bufferization.dealloc (%[[BASE0]], %[[BASE1]] : {{.*}}) if (%[[ARG3]], %[[ARG5]]) retain (%[[ARG1]] :
-//       CHECK-DYNAMIC: [[OR:%.+]] = arith.ori [[OWN]], %[[ARG4]]
-//       CHECK-DYNAMIC: return %[[ARG1]], %[[X]], [[OR]], %true
+//       CHECK-DYNAMIC: return %[[ARG1]], %[[X]], %false, %true
+
+// -----
+
+// CHECK-DYNAMIC-LABEL: func private @private_callee(
+//  CHECK-DYNAMIC-SAME:     %[[arg0:.*]]: memref<f32>) -> (memref<f32>, i1)
+//       CHECK-DYNAMIC:   %[[true:.*]] = arith.constant true
+//       CHECK-DYNAMIC:   %[[alloc:.*]] = memref.alloc() : memref<f32>
+//   CHECK-DYNAMIC-NOT:   bufferization.dealloc
+//       CHECK-DYNAMIC:   return %[[alloc]], %[[true]]
+func.func private @private_callee(%arg0: memref<f32>) -> memref<f32> {
+  %alloc = memref.alloc() : memref<f32>
+  return %alloc : memref<f32>
+}
+
+//       CHECK-DYNAMIC: func @caller() -> f32
+//       CHECK-DYNAMIC:   %[[true:.*]] = arith.constant true
+//       CHECK-DYNAMIC:   %[[alloc:.*]] = memref.alloc() : memref<f32>
+//       CHECK-DYNAMIC:   %[[call:.*]]:2 = call @private_callee(%[[alloc]])
+//       CHECK-DYNAMIC:   memref.load
+//       CHECK-DYNAMIC:   %[[base:.*]], %[[offset:.*]] = memref.extract_strided_metadata %[[call]]#0
+//       CHECK-DYNAMIC:   bufferization.dealloc (%[[alloc]], %[[base]] : {{.*}}) if (%[[true]], %[[call]]#1)
+//   CHECK-DYNAMIC-NOT:   retain
+func.func @caller() -> (f32) {
+  %alloc = memref.alloc() : memref<f32>
+  %ret = call @private_callee(%alloc) : (memref<f32>) -> memref<f32>
+
+  %val = memref.load %ret[] : memref<f32>
+  return %val : f32
+}

@@ -194,13 +194,21 @@ TEST(MatrixTest, resize) {
       EXPECT_EQ(mat(row, col), row >= 3 || col >= 3 ? 0 : int(10 * row + col));
 }
 
+template <typename T>
+static void checkMatEqual(const Matrix<T> m1, const Matrix<T> m2) {
+  EXPECT_EQ(m1.getNumRows(), m2.getNumRows());
+  EXPECT_EQ(m1.getNumColumns(), m2.getNumColumns());
+
+  for (unsigned row = 0, rows = m1.getNumRows(); row < rows; ++row)
+    for (unsigned col = 0, cols = m1.getNumColumns(); col < cols; ++col)
+      EXPECT_EQ(m1(row, col), m2(row, col));
+}
+
 static void checkHermiteNormalForm(const IntMatrix &mat,
                                    const IntMatrix &hermiteForm) {
   auto [h, u] = mat.computeHermiteNormalForm();
 
-  for (unsigned row = 0; row < mat.getNumRows(); row++)
-    for (unsigned col = 0; col < mat.getNumColumns(); col++)
-      EXPECT_EQ(h(row, col), hermiteForm(row, col));
+  checkMatEqual(h, hermiteForm);
 }
 
 TEST(MatrixTest, computeHermiteNormalForm) {
@@ -428,4 +436,41 @@ TEST(MatrixTest, LLL) {
   mat.LLL(Fraction(3, 4));
 
   checkReducedBasis(mat, Fraction(3, 4));
+}
+
+TEST(MatrixTest, moveColumns) {
+  IntMatrix mat =
+      makeIntMatrix(3, 4, {{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 4, 2}});
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{0, 3, 1, 2}, {4, 7, 5, 6}, {8, 2, 9, 4}});
+
+    movedMat.moveColumns(2, 2, 1);
+    checkMatEqual(mat, movedMat);
+  }
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{0, 3, 1, 2}, {4, 7, 5, 6}, {8, 2, 9, 4}});
+
+    movedMat.moveColumns(1, 1, 3);
+    checkMatEqual(mat, movedMat);
+  }
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{1, 2, 0, 3}, {5, 6, 4, 7}, {9, 4, 8, 2}});
+
+    movedMat.moveColumns(0, 2, 1);
+    checkMatEqual(mat, movedMat);
+  }
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{1, 0, 2, 3}, {5, 4, 6, 7}, {9, 8, 4, 2}});
+
+    movedMat.moveColumns(0, 1, 1);
+    checkMatEqual(mat, movedMat);
+  }
 }

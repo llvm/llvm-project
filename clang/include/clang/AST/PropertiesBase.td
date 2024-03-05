@@ -808,6 +808,20 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
     return TemplateArgument(ctx, value, type, isDefaulted);
   }]>;
 }
+let Class = PropertyTypeCase<TemplateArgument, "StructuralValue"> in {
+  def : Property<"value", APValue> {
+    let Read = [{ node.getAsStructuralValue() }];
+  }
+  def : Property<"type", QualType> {
+    let Read = [{ node.getStructuralValueType() }];
+  }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(ctx, type, value, isDefaulted);
+  }]>;
+}
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {
   def : Property<"name", TemplateName> {
     let Read = [{ node.getAsTemplateOrTemplatePattern() }];

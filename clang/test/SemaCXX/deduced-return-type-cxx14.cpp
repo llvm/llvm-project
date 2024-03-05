@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -685,4 +685,51 @@ auto f(auto x) { // cxx14-error {{'auto' not allowed in function prototype}}
   return f(1) + 1;
 }
 
+}
+
+#if __cplusplus >= 202002L
+template <typename T>
+concept C = true;
+#endif
+
+struct DeducedTargetTypeOfConversionFunction {
+  operator auto() const { return char(); }
+  operator const auto() const { return float(); }
+  operator const auto&() const { return int(); }
+  // expected-warning@-1 {{returning reference to local temporary object}}
+  operator decltype(auto)() const { return double(); }
+#if __cplusplus >= 202002L
+  operator C auto() const { return unsigned(); }
+  operator C decltype(auto)() const { return long(); }
+#endif
+
+  template <typename T>
+  operator auto() const { return short(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto() const { return int(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto&() const { return char(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator decltype(auto)() const { return unsigned(); }
+  // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#if __cplusplus >= 202002L
+  template <typename T>
+  operator C auto() const { return float(); }
+  // since-cxx20-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator C decltype(auto)() const { return double(); }
+  // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#endif
+};
+
+namespace GH79745 {
+template <typename = int> struct a; // expected-note {{template is declared here}}
+auto f() {
+  a c; // cxx20_23-error {{implicit instantiation of undefined template}} \
+       // cxx14-error {{use of class template 'a' requires template arguments}}
+  return c;
+}
 }

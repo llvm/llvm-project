@@ -1011,6 +1011,12 @@ public:
     return *Callsites;
   }
 
+  void addCallsite(CallsiteInfo &Callsite) {
+    if (!Callsites)
+      Callsites = std::make_unique<CallsitesTy>();
+    Callsites->push_back(Callsite);
+  }
+
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
@@ -1371,7 +1377,7 @@ private:
 
   // Temporary map while building StackIds list. Clear when index is completely
   // built via releaseTemporaryMemory.
-  std::map<uint64_t, unsigned> StackIdToIndex;
+  DenseMap<uint64_t, unsigned> StackIdToIndex;
 
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
@@ -1709,7 +1715,7 @@ public:
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
     NewName += Suffix;
-    return std::string(NewName.str());
+    return std::string(NewName);
   }
 
   /// Helper to obtain the unpromoted name for a global value (or the original

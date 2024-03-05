@@ -771,12 +771,11 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   if (!sym->section)
     return false;
 
-  ObjFile<ELFT> *file =
-      cast<InputSectionBase>(sym->section)->template getFile<ELFT>();
-  if (!file)
+  InputFile *file = cast<InputSectionBase>(sym->section)->file;
+  if (!file || file->isInternal())
     return false;
 
-  return file->getObj().getHeader().e_flags & EF_MIPS_PIC;
+  return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
 template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {

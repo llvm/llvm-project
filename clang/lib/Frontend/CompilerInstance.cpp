@@ -470,7 +470,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Predefine macros and configure the preprocessor.
   InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
-                         getFrontendOpts());
+                         getFrontendOpts(), getCodeGenOpts());
 
   // Initialize the header search object.  In CUDA compilations, we use the aux
   // triple (the host triple) to initialize our header search, since we need to
@@ -543,7 +543,7 @@ std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
   if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
-  return std::string(SpecificModuleCache.str());
+  return std::string(SpecificModuleCache);
 }
 
 // ASTContext
@@ -1061,30 +1061,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     }
   }
 
-  if (getDiagnosticOpts().ShowCarets) {
-    // We can have multiple diagnostics sharing one diagnostic client.
-    // Get the total number of warnings/errors from the client.
-    unsigned NumWarnings = getDiagnostics().getClient()->getNumWarnings();
-    unsigned NumErrors = getDiagnostics().getClient()->getNumErrors();
-
-    if (NumWarnings)
-      OS << NumWarnings << " warning" << (NumWarnings == 1 ? "" : "s");
-    if (NumWarnings && NumErrors)
-      OS << " and ";
-    if (NumErrors)
-      OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
-    if (NumWarnings || NumErrors) {
-      OS << " generated";
-      if (getLangOpts().CUDA) {
-        if (!getLangOpts().CUDAIsDevice) {
-          OS << " when compiling for host";
-        } else {
-          OS << " when compiling for " << getTargetOpts().CPU;
-        }
-      }
-      OS << ".\n";
-    }
-  }
+  printDiagnosticStats();
 
   if (getFrontendOpts().ShowStats) {
     if (hasFileManager()) {
@@ -1110,6 +1087,36 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   }
 
   return !getDiagnostics().getClient()->getNumErrors();
+}
+
+void CompilerInstance::printDiagnosticStats() {
+  if (!getDiagnosticOpts().ShowCarets)
+    return;
+
+  raw_ostream &OS = getVerboseOutputStream();
+
+  // We can have multiple diagnostics sharing one diagnostic client.
+  // Get the total number of warnings/errors from the client.
+  unsigned NumWarnings = getDiagnostics().getClient()->getNumWarnings();
+  unsigned NumErrors = getDiagnostics().getClient()->getNumErrors();
+
+  if (NumWarnings)
+    OS << NumWarnings << " warning" << (NumWarnings == 1 ? "" : "s");
+  if (NumWarnings && NumErrors)
+    OS << " and ";
+  if (NumErrors)
+    OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
+  if (NumWarnings || NumErrors) {
+    OS << " generated";
+    if (getLangOpts().CUDA) {
+      if (!getLangOpts().CUDAIsDevice) {
+        OS << " when compiling for host";
+      } else {
+        OS << " when compiling for " << getTargetOpts().CPU;
+      }
+    }
+    OS << ".\n";
+  }
 }
 
 void CompilerInstance::LoadRequestedPlugins() {
@@ -2204,7 +2211,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   // Build the module, inheriting any modules that we've built locally.
   if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
                         ModuleFileName, PreBuildStep, PostBuildStep)) {
-    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName.str());
+    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName);
     llvm::sys::RemoveFileOnSignal(ModuleFileName);
   }
 }

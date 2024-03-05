@@ -16,6 +16,7 @@
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/transform.h>
+#include <__assert>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_floating_point.h>
 #include <__charconv/to_chars_result.h>
@@ -57,21 +58,21 @@ namespace __formatter {
 template <floating_point _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value) {
   to_chars_result __r = std::to_chars(__first, __last, __value);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
 template <floating_point _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt) {
   to_chars_result __r = std::to_chars(__first, __last, __value, __fmt);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
 template <floating_point _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt, int __precision) {
   to_chars_result __r = std::to_chars(__first, __last, __value, __fmt, __precision);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
@@ -252,10 +253,10 @@ __format_buffer_default(const __float_buffer<_Fp>& __buffer, _Tp __value, char* 
     __result.__radix_point = __result.__last;
 
   // clang-format off
-  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
-                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                               (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
-                               "Post-condition failure.");
+  _LIBCPP_ASSERT_INTERNAL((__result.__integral != __result.__last) &&
+                          (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                          (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
+                          "Post-condition failure.");
   // clang-format on
 
   return __result;
@@ -304,10 +305,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_lower_case(
   }
 
   // clang-format off
-  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
-                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                               (__result.__exponent != __result.__last && *__result.__exponent == 'p'),
-                               "Post-condition failure.");
+  _LIBCPP_ASSERT_INTERNAL((__result.__integral != __result.__last) &&
+                          (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                          (__result.__exponent != __result.__last && *__result.__exponent == 'p'),
+                          "Post-condition failure.");
   // clang-format on
 
   return __result;
@@ -332,7 +333,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(
       __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::scientific, __precision);
 
   char* __first = __integral + 1;
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first != __result.__last, "No exponent present");
+  _LIBCPP_ASSERT_INTERNAL(__first != __result.__last, "No exponent present");
   if (*__first == '.') {
     __result.__radix_point = __first;
     __result.__exponent    = __formatter::__find_exponent(__first + 1, __result.__last);
@@ -342,10 +343,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(
   }
 
   // clang-format off
-  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
-                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                               (__result.__exponent != __result.__last && *__result.__exponent == 'e'),
-                               "Post-condition failure.");
+  _LIBCPP_ASSERT_INTERNAL((__result.__integral != __result.__last) &&
+                          (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                          (__result.__exponent != __result.__last && *__result.__exponent == 'e'),
+                          "Post-condition failure.");
   // clang-format on
   return __result;
 }
@@ -374,10 +375,10 @@ __format_buffer_fixed(const __float_buffer<_Fp>& __buffer, _Tp __value, int __pr
   __result.__exponent    = __result.__last;
 
   // clang-format off
-  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
-                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                               (__result.__exponent == __result.__last),
-                               "Post-condition failure.");
+  _LIBCPP_ASSERT_INTERNAL((__result.__integral != __result.__last) &&
+                          (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                          (__result.__exponent == __result.__last),
+                          "Post-condition failure.");
   // clang-format on
   return __result;
 }
@@ -410,10 +411,10 @@ __format_buffer_general_lower_case(__float_buffer<_Fp>& __buffer, _Tp __value, i
   }
 
   // clang-format off
-  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
-                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                               (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
-                               "Post-condition failure.");
+  _LIBCPP_ASSERT_INTERNAL((__result.__integral != __result.__last) &&
+                          (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                          (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
+                          "Post-condition failure.");
   // clang-format on
 
   return __result;
@@ -485,7 +486,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer(
     return __formatter::__format_buffer_general_upper_case(__buffer, __value, __buffer.__precision(), __first);
 
   default:
-    _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parser should have validated the type");
+    _LIBCPP_ASSERT_INTERNAL(false, "The parser should have validated the type");
     __libcpp_unreachable();
   }
 }
@@ -620,9 +621,8 @@ _LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
     size_t __size,
     const _CharT* __exponent,
     size_t __num_trailing_zeros) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
-  _LIBCPP_ASSERT_UNCATEGORIZED(
-      __num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
+  _LIBCPP_ASSERT_INTERNAL(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_INTERNAL(__num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
 
   __padding_size_result __padding =
       __formatter::__padding_size(__size + __num_trailing_zeros, __specs.__width_, __specs.__alignment_);

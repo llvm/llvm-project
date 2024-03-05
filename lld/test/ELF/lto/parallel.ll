@@ -1,11 +1,11 @@
 ; REQUIRES: x86
-; RUN: llvm-as -o %t.bc %s
-; RUN: rm -f %t.lto.o %t1.lto.o
-; RUN: ld.lld --lto-partitions=2 -save-temps -o %t %t.bc -shared
-; RUN: llvm-nm %t.lto.o | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-nm %t1.lto.o | FileCheck --check-prefix=CHECK1 %s
+; RUN: rm -rf %t && mkdir %t && cd %t
+; RUN: llvm-as -o a.bc %s
+; RUN: ld.lld --lto-partitions=2 -save-temps -o out a.bc -shared
+; RUN: llvm-nm out.lto.o | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-nm out.lto.1.o | FileCheck --check-prefix=CHECK1 %s
 
-; RUN: not ld.lld --lto-partitions=0 %t.bc -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID %s
+; RUN: not ld.lld --lto-partitions=0 a.bc -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID %s
 ; INVALID: --lto-partitions: number of threads must be > 0
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

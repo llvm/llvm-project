@@ -505,7 +505,7 @@ TEST_F(FormatTestCSharp, CSharpNullForgiving) {
 
 TEST_F(FormatTestCSharp, AttributesIndentation) {
   FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
 
   verifyFormat("[STAThread]\n"
                "static void Main(string[] args)\n"
@@ -1303,6 +1303,18 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
                "    where T : new() {\n"
                "}",
                Style);
+
+  // When the "where" line is not to be formatted, following lines should not
+  // take on its indentation.
+  verifyFormat("class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "  int f() {}\n"
+               "}",
+               "class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "  int f() {}\n"
+               "}",
+               Style, {tooling::Range(43, 13)});
 
   verifyFormat("class Dictionary<TKey, TVal>\n"
                "    where TKey : IComparable<TKey>\n"

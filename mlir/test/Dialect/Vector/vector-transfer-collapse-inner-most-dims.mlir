@@ -16,6 +16,25 @@ func.func @contiguous_inner_most_view(%in: memref<1x1x8x1xf32, strided<[3072, 8,
 
 // -----
 
+func.func @contiguous_outer_dyn_inner_most_view(%in: memref<?x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x1xf32>{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %in[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : memref<?x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x1xf32>
+  return %0 : vector<1x8x1xf32>
+}
+//      CHECK: func @contiguous_outer_dyn_inner_most_view(
+// CHECK-SAME:   %[[SRC:[a-zA-Z0-9]+]]
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[D0:.+]] = memref.dim %[[SRC]], %[[C0]]
+//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]][0, 0, 0, 0] [%[[D0]], 1, 8, 1] [1, 1, 1, 1]
+// CHECK-SAME:    memref<?x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>> to memref<?x1x8xf32, strided<[3072, 8, 1], offset: ?>>
+//      CHECK:   %[[VEC:.+]] = vector.transfer_read %[[SRC_0]]
+// CHECK-SAME:    memref<?x1x8xf32, strided<[3072, 8, 1], offset: ?>>, vector<1x8xf32>
+//      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[VEC]]
+//      CHECK:   return %[[RESULT]]
+
+// -----
+
 func.func @contiguous_inner_most_dim(%A: memref<16x1xf32>, %i:index, %j:index) -> (vector<8x1xf32>) {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
@@ -76,3 +95,77 @@ func.func @contiguous_inner_most_dim_out_of_bounds_2d(%arg0: memref<1x1xf32>) ->
 //  CHECK-NOT:   memref.subview
 //      CHECK:   %[[READ:.+]] = vector.transfer_read %[[SRC]]
 //      CHECK:   return %[[READ]] : vector<4x8xf32>
+
+// -----
+
+func.func @drop_two_inner_most_dim_for_transfer_write(%arg0: memref<1x512x16x1x1xf32>, %arg1: vector<1x16x16x1x1xf32>, %arg2: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%c0, %arg2, %c0, %c0, %c0]
+    {in_bounds = [true, true, true, true, true]}
+    : vector<1x16x16x1x1xf32>, memref<1x512x16x1x1xf32>
+  return
+}
+// CHECK:      func.func @drop_two_inner_most_dim_for_transfer_write
+// CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[VEC:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
+// CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]]
+// CHECK-SAME:     memref<1x512x16x1x1xf32> to memref<1x512x16xf32>
+// CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x16x16x1x1xf32> to vector<1x16x16xf32>
+// CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]
+// CHECK-SAME:     [%[[C0]], %[[IDX]], %[[C0]]]
+
+// -----
+
+func.func @drop_inner_most_dim_for_transfer_write(%arg0: memref<1x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>>, %arg1: vector<1x16x16x1xf32>, %arg2: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%c0, %arg2, %c0, %c0]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x16x16x1xf32>, memref<1x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>>
+  return
+}
+// CHECK:      func.func @drop_inner_most_dim_for_transfer_write
+// CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[VEC:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
+// CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]]
+// CHECK-SAME:     memref<1x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>> to memref<1x512x16xf32, strided<[8192, 16, 1], offset: ?>>
+// CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x16x16x1xf32> to vector<1x16x16xf32>
+// CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]
+// CHECK-SAME:     [%[[C0]], %[[IDX]], %[[C0]]]
+
+// -----
+
+func.func @outer_dyn_drop_inner_most_dim_for_transfer_write(%arg0: memref<?x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>>, %arg1: vector<1x16x16x1xf32>, %arg2: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%arg2, %c0, %c0, %c0]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x16x16x1xf32>, memref<?x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>>
+  return
+}
+// CHECK:      func.func @outer_dyn_drop_inner_most_dim_for_transfer_write
+// CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[VEC:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[D0:.+]] = memref.dim %[[SRC]], %[[C0]]
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]][0, 0, 0, 0] [%[[D0]], 512, 16, 1]
+// CHECK-SAME:     memref<?x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>> to memref<?x512x16xf32, strided<[8192, 16, 1], offset: ?>>
+// CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x16x16x1xf32> to vector<1x16x16xf32>
+// CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]
+// CHECK-SAME:     [%[[IDX]], %[[C0]], %[[C0]]]
+
+// -----
+
+func.func @non_unit_strides(%arg0: memref<512x16x1xf32, strided<[8192, 16, 4], offset: ?>>, %arg1: vector<16x16x1xf32>, %arg2: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%arg2, %c0, %c0]
+    {in_bounds = [true, true, true]}
+    : vector<16x16x1xf32>, memref<512x16x1xf32, strided<[8192, 16, 4], offset: ?>>
+  return
+}
+// The inner most unit dims can not be dropped if the strides are not ones.
+// CHECK:     func.func @non_unit_strides
+// CHECK-NOT:   memref.subview

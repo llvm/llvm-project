@@ -100,7 +100,7 @@
 #define ENABLE_LIBOMPTARGET OPENMP_ENABLE_LIBOMPTARGET
 
 // Configured cache line based on architecture
-#if KMP_ARCH_PPC64
+#if KMP_ARCH_PPC64 || KMP_ARCH_PPC
 # define CACHE_LINE 128
 #elif KMP_ARCH_AARCH64_A64FX
 # define CACHE_LINE 256

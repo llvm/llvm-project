@@ -238,11 +238,11 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::AmbiguousRegDefUseContainer(
   if (MI->getOpcode() == TargetOpcode::G_STORE)
     addUseDef(MI->getOperand(0).getReg(), MRI);
 
-  if (MI->getOpcode() == TargetOpcode::G_PHI) {
-    addDefUses(MI->getOperand(0).getReg(), MRI);
+  if (auto *PHI = dyn_cast<GPhi>(MI)) {
+    addDefUses(PHI->getReg(0), MRI);
 
-    for (unsigned i = 1; i < MI->getNumOperands(); i += 2)
-      addUseDef(MI->getOperand(i).getReg(), MRI);
+    for (unsigned I = 1; I < PHI->getNumIncomingValues(); ++I)
+      addUseDef(PHI->getIncomingValue(I), MRI);
   }
 
   if (MI->getOpcode() == TargetOpcode::G_SELECT) {

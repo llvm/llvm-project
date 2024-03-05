@@ -310,10 +310,18 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x6d") { // Microsoft Corporation.
+    // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
+    return StringSwitch<const char *>(Part)
+        .Case("0xd49", "neoverse-n2")
+        .Default("generic");
+  }
+
   if (Implementer == "0xc0") { // Ampere Computing
     return StringSwitch<const char *>(Part)
         .Case("0xac3", "ampere1")
         .Case("0xac4", "ampere1a")
+        .Case("0xac5", "ampere1b")
         .Default("generic");
   }
 
@@ -1838,6 +1846,13 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
+  Features["egpr"] = HasAPXF;
+  Features["push2pop2"] = HasAPXF;
+  Features["ppx"] = HasAPXF;
+  Features["ndd"] = HasAPXF;
+  Features["ccmp"] = HasAPXF;
+  Features["cf"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

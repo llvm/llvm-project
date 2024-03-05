@@ -270,6 +270,25 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_s
   ret float %val
 }
 
+define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_volatile(ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 inreg %soffset) {
+  ; CHECK-LABEL: name: raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_volatile
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (volatile dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 -2147483648)
+  ret float %val
+}
+
 ; Natural mapping
 define amdgpu_ps <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 inreg %soffset) {
   ; CHECK-LABEL: name: raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset

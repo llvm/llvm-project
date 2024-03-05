@@ -26,7 +26,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -562,7 +561,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
     SmallString<128> OutputFile(Opts.InputFile);
     llvm::sys::fs::make_absolute(OutputFile);
     llvm::sys::path::replace_extension(OutputFile, "res");
-    OutArgsInfo.push_back(std::string(OutputFile.str()));
+    OutArgsInfo.push_back(std::string(OutputFile));
   }
   if (!Opts.IsDryRun) {
     if (OutArgsInfo.size() != 1)
@@ -711,7 +710,10 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
     MachineType = COFF::IMAGE_FILE_MACHINE_ARMNT;
     break;
   case Triple::aarch64:
-    MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
+    if (T.isWindowsArm64EC())
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64EC;
+    else
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
     break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +
@@ -731,7 +733,6 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
 } // anonymous namespace
 
 int llvm_rc_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-rc: ");
 
   char **DashDash = std::find_if(Argv + 1, Argv + Argc,

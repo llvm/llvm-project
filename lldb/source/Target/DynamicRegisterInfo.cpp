@@ -349,10 +349,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       const size_t num_regs = invalidate_reg_list->GetSize();
       if (num_regs > 0) {
         for (uint32_t idx = 0; idx < num_regs; ++idx) {
-          uint64_t invalidate_reg_num;
-          std::optional<llvm::StringRef> maybe_invalidate_reg_name =
-              invalidate_reg_list->GetItemAtIndexAsString(idx);
-          if (maybe_invalidate_reg_name) {
+          if (auto maybe_invalidate_reg_name =
+                  invalidate_reg_list->GetItemAtIndexAsString(idx)) {
             const RegisterInfo *invalidate_reg_info =
                 GetRegisterInfo(*maybe_invalidate_reg_name);
             if (invalidate_reg_info) {
@@ -365,10 +363,11 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                      "\"%s\" while parsing register \"%s\"\n",
                      maybe_invalidate_reg_name->str().c_str(), reg_info.name);
             }
-          } else if (invalidate_reg_list->GetItemAtIndexAsInteger(
-                         idx, invalidate_reg_num)) {
-            if (invalidate_reg_num != UINT64_MAX)
-              m_invalidate_regs_map[i].push_back(invalidate_reg_num);
+          } else if (auto maybe_invalidate_reg_num =
+                         invalidate_reg_list->GetItemAtIndexAsInteger<uint64_t>(
+                             idx)) {
+            if (*maybe_invalidate_reg_num != UINT64_MAX)
+              m_invalidate_regs_map[i].push_back(*maybe_invalidate_reg_num);
             else
               printf("error: 'invalidate-regs' list value wasn't a valid "
                      "integer\n");

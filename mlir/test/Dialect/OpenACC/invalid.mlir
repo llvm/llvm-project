@@ -1,53 +1,67 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop {
   "test.openacc_dummy_op"() : () -> ()
@@ -83,10 +97,12 @@ acc.loop {
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
-acc.loop {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   acc.yield
-} attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>]}
+} attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 
 // -----
 
@@ -113,16 +129,8 @@ acc.update
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
-// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.update wait_devnum(%cst: index) dataOperands(%0: memref<f32>)
-
-// -----
-
-%cst = arith.constant 1 : index
-%value = memref.alloc() : memref<f32>
-%0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async = [#acc.device_type<none>]} 
 
 // -----
 
@@ -130,7 +138,7 @@ acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.update wait(%cst: index) dataOperands(%0: memref<f32>) attributes {wait}
+acc.update wait({%cst: index}) dataOperands(%0: memref<f32>) attributes {waitOnly = [#acc.device_type<none>]} 
 
 // -----
 
@@ -154,11 +162,13 @@ acc.parallel {
 
 // -----
 
-acc.loop {
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
   acc.yield
-}
+} attributes {inclusiveUpperbound = array<i1: true>}
 
 // -----
 
@@ -170,21 +180,25 @@ acc.parallel {
 
 // -----
 
-acc.loop {
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
   acc.shutdown
   acc.yield
-}
+} attributes {inclusiveUpperbound = array<i1: true>}
 
 // -----
 
-acc.loop {
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() ({
     // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
     acc.shutdown
   }) : () -> ()
   acc.yield
-}
+} attributes {inclusiveUpperbound = array<i1: true>}
 
 // -----
 
@@ -388,8 +402,10 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{expected ')'}}
-acc.loop gang({static=%i64Value: i64, num=%i64Value: i64} {
+acc.loop gang({static=%i64Value: i64, num=%i64Value: i64} control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -457,8 +473,10 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{new value expected after comma}}
-acc.loop gang({static=%i64Value: i64, ) {
+acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }

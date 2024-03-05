@@ -663,7 +663,7 @@ static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
   llvm::SmallString<64> Message;
   Info.FormatDiagnostic(Message);
 
-  D.Message = std::string(Message.str());
+  D.Message = std::string(Message);
   D.Severity = DiagLevel;
   D.Category = DiagnosticIDs::getCategoryNameFromID(
                    DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))
@@ -798,7 +798,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
     LastDiag->Fixes.push_back(
-        Fix{std::string(Message.str()), std::move(Edits), {}});
+        Fix{std::string(Message), std::move(Edits), {}});
     return true;
   };
 

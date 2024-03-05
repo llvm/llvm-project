@@ -5,9 +5,9 @@
 set(LLVM_DIR_SAVE ${LLVM_DIR})
 set(Clang_DIR_SAVE ${Clang_DIR})
 
-find_package(Clang 17)
+find_package(Clang 18)
 if (NOT Clang_FOUND)
-  find_package(Clang 18)
+  find_package(Clang 17)
 endif()
 
 set(SOURCES

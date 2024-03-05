@@ -80,6 +80,6 @@ Sections:
 
 # CHECK:      00000000 W weak_defined_data
 # CHECK-NEXT: 00000001 W weak_defined_func
-# CHECK-NEXT: 00000000 W weak_defined_global
+# CHECK-NEXT: 00000001 W weak_defined_global
 # CHECK-NEXT:          w weak_import_data
 # CHECK-NEXT:          w weak_import_func

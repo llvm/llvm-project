@@ -575,3 +575,18 @@ func.func @ops_supporting_fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %7 = arith.subf %arg0, %arg1 fastmath<fast> : f32
   return
 }
+
+// -----
+
+// CHECK-LABEL: @ops_supporting_overflow
+func.func @ops_supporting_overflow(%arg0: i64, %arg1: i64) {
+  // CHECK: %{{.*}} = llvm.add %{{.*}}, %{{.*}} overflow<nsw> : i64
+  %0 = arith.addi %arg0, %arg1 overflow<nsw> : i64
+  // CHECK: %{{.*}} = llvm.sub %{{.*}}, %{{.*}} overflow<nuw> : i64
+  %1 = arith.subi %arg0, %arg1 overflow<nuw> : i64
+  // CHECK: %{{.*}} = llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+  %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+  %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
+  return
+}

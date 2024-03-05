@@ -144,7 +144,7 @@ public:
                          BumpPtrAllocator &Allocator,
                          SetVector<Function *> *CGSCC, TargetMachine &TM)
       : InformationCache(M, AG, Allocator, CGSCC), TM(TM),
-        CodeObjectVersion(AMDGPU::getCodeObjectVersion(M)) {}
+        CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {}
 
   TargetMachine &TM;
 

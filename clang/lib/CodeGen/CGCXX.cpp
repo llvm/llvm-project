@@ -40,6 +40,11 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   if (getCodeGenOpts().OptimizationLevel == 0)
     return true;
 
+  // Disable this optimization for ARM64EC.  FIXME: This probably should work,
+  // but getting the symbol table correct is complicated.
+  if (getTarget().getTriple().isWindowsArm64EC())
+    return true;
+
   // If sanitizing memory to check for use-after-dtor, do not emit as
   //  an alias, unless this class owns no members.
   if (getCodeGenOpts().SanitizeMemoryUseAfterDtor &&

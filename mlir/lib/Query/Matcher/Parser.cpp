@@ -26,11 +26,16 @@ struct Parser::TokenInfo {
     text = newText;
   }
 
+  // Known identifiers.
+  static const char *const ID_Extract;
+
   llvm::StringRef text;
   TokenKind kind = TokenKind::Eof;
   SourceRange range;
   VariantValue value;
 };
+
+const char *const Parser::TokenInfo::ID_Extract = "extract";
 
 class Parser::CodeTokenizer {
 public:
@@ -201,10 +206,7 @@ private:
   }
 
   // Consume all leading whitespace from code, except newlines
-  void consumeWhitespace() {
-    code = code.drop_while(
-        [](char c) { return llvm::StringRef(" \t\v\f\r").contains(c); });
-  }
+  void consumeWhitespace() { code = code.ltrim(" \t\v\f\r"); }
 
   // Returns the current location in the source code
   SourceLocation currentLocation() {
@@ -301,6 +303,36 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *value) {
   return parseMatcherExpressionImpl(nameToken, openToken, ctor, value);
 }
 
+bool Parser::parseChainedExpression(std::string &argument) {
+  // Parse the parenthesized argument to .extract("foo")
+  // Note: EOF is handled inside the consume functions and would fail below when
+  // checking token kind.
+  const TokenInfo openToken = tokenizer->consumeNextToken();
+  const TokenInfo argumentToken = tokenizer->consumeNextTokenIgnoreNewlines();
+  const TokenInfo closeToken = tokenizer->consumeNextTokenIgnoreNewlines();
+
+  if (openToken.kind != TokenKind::OpenParen) {
+    error->addError(openToken.range, ErrorType::ParserChainedExprNoOpenParen);
+    return false;
+  }
+
+  if (argumentToken.kind != TokenKind::Literal ||
+      !argumentToken.value.isString()) {
+    error->addError(argumentToken.range,
+                    ErrorType::ParserChainedExprInvalidArg);
+    return false;
+  }
+
+  if (closeToken.kind != TokenKind::CloseParen) {
+    error->addError(closeToken.range, ErrorType::ParserChainedExprNoCloseParen);
+    return false;
+  }
+
+  // If all checks passed, extract the argument and return true.
+  argument = argumentToken.value.getString();
+  return true;
+}
+
 // Parse the arguments of a matcher
 bool Parser::parseMatcherArgs(std::vector<ParserValue> &args, MatcherCtor ctor,
                               const TokenInfo &nameToken, TokenInfo &endToken) {
@@ -367,13 +399,34 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &nameToken,
     return false;
   }
 
+  std::string functionName;
+  if (tokenizer->peekNextToken().kind == TokenKind::Period) {
+    tokenizer->consumeNextToken();
+    TokenInfo chainCallToken = tokenizer->consumeNextToken();
+    if (chainCallToken.kind == TokenKind::CodeCompletion) {
+      addCompletion(chainCallToken, MatcherCompletion("extract(\"", "extract"));
+      return false;
+    }
+
+    if (chainCallToken.kind != TokenKind::Ident ||
+        chainCallToken.text != TokenInfo::ID_Extract) {
+      error->addError(chainCallToken.range,
+                      ErrorType::ParserMalformedChainedExpr);
+      return false;
+    }
+
+    if (chainCallToken.text == TokenInfo::ID_Extract &&
+        !parseChainedExpression(functionName))
+      return false;
+  }
+
   if (!ctor)
     return false;
   // Merge the start and end infos.
   SourceRange matcherRange = nameToken.range;
   matcherRange.end = endToken.range.end;
-  VariantMatcher result =
-      sema->actOnMatcherExpression(*ctor, matcherRange, args, error);
+  VariantMatcher result = sema->actOnMatcherExpression(
+      *ctor, matcherRange, functionName, args, error);
   if (result.isNull())
     return false;
   *value = result;
@@ -473,9 +526,10 @@ Parser::RegistrySema::lookupMatcherCtor(llvm::StringRef matcherName) {
 }
 
 VariantMatcher Parser::RegistrySema::actOnMatcherExpression(
-    MatcherCtor ctor, SourceRange nameRange, llvm::ArrayRef<ParserValue> args,
-    Diagnostics *error) {
-  return RegistryManager::constructMatcher(ctor, nameRange, args, error);
+    MatcherCtor ctor, SourceRange nameRange, llvm::StringRef functionName,
+    llvm::ArrayRef<ParserValue> args, Diagnostics *error) {
+  return RegistryManager::constructMatcher(ctor, nameRange, functionName, args,
+                                           error);
 }
 
 std::vector<ArgKind> Parser::RegistrySema::getAcceptedCompletionTypes(

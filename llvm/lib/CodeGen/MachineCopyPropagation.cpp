@@ -853,7 +853,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     forwardUses(MI);
 
     // Not a copy.
-    SmallVector<Register, 2> Defs;
+    SmallVector<Register, 4> Defs;
     const MachineOperand *RegMask = nullptr;
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isRegMask())

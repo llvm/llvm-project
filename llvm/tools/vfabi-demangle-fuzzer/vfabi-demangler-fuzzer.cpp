@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/VFABIDemangler.h"
 
 using namespace llvm;
 

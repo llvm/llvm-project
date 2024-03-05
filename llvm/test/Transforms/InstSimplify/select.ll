@@ -1733,3 +1733,22 @@ define i8 @select_or_disjoint_eq(i8 %x, i8 %y) {
   %sel = select i1 %cmp, i8 %x, i8 %or
   ret i8 %sel
 }
+
+define <4 x i32> @select_vector_cmp_with_bitcasts(<2 x i64> %x, <4 x i32> %y) {
+; CHECK-LABEL: @select_vector_cmp_with_bitcasts(
+; CHECK-NEXT:    [[X_BC:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[Y_BC:%.*]] = bitcast <4 x i32> [[Y:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> [[X]], [[Y_BC]]
+; CHECK-NEXT:    [[SUB_BC:%.*]] = bitcast <2 x i64> [[SUB]] to <4 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[Y]], [[X_BC]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SUB_BC]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %x.bc = bitcast <2 x i64> %x to <4 x i32>
+  %y.bc = bitcast <4 x i32> %y to <2 x i64>
+  %sub = sub <2 x i64> %x, %y.bc
+  %sub.bc = bitcast <2 x i64> %sub to <4 x i32>
+  %cmp = icmp eq <4 x i32> %y, %x.bc
+  %sel = select <4 x i1> %cmp, <4 x i32> %sub.bc, <4 x i32> zeroinitializer
+  ret <4 x i32> %sel
+}

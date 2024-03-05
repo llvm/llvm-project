@@ -20,7 +20,7 @@ define float @constraint_f_float(float %a) nounwind {
 ; CSKYF-NEXT:    .p2align 2
 ; CSKYF-NEXT:  .LCPI0_0:
 ; CSKYF-NEXT:    .long gf
-  %1 = load float, float* @gf
+  %1 = load float, ptr @gf
   %2 = tail call float asm "fadds $0, $1, $2", "=v,v,v"(float %a, float %1)
   ret float %2
 }
@@ -43,7 +43,7 @@ define float @constraint_f_float_abi_name(float %a) nounwind {
 ; CSKYF-NEXT:  .LCPI1_0:
 ; CSKYF-NEXT:    .long gf
 
-  %1 = load float, float* @gf
+  %1 = load float, ptr @gf
   %2 = tail call float asm "fadds $0, $1, $2", "={fr0},{fr1},{fr2}"(float %a, float %1)
   ret float %2
 }

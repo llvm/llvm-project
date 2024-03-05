@@ -1,7 +1,7 @@
-# RUN: llc -run-pass=si-insert-waitcnts -march=amdgcn -mcpu=tahiti -o - %s | FileCheck %s -check-prefixes=CHECK,SI
-# RUN: llc -run-pass=si-insert-waitcnts -march=amdgcn -mcpu=gfx900 -o - %s | FileCheck %s -check-prefixes=CHECK,GFX9
-# RUN: llc -run-pass=si-insert-waitcnts -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -o - %s | FileCheck %s
-# RUN: llc -run-pass=si-insert-waitcnts -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=tahiti -o - %s | FileCheck %s -check-prefixes=CHECK,SI
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=gfx900 -o - %s | FileCheck %s -check-prefixes=CHECK,GFX9
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -o - %s | FileCheck %s
 ---
 # CHECK-LABEL: name: vccz_corrupt_workaround
 # CHECK: $vcc = V_CMP_EQ_F32

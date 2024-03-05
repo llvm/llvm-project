@@ -5708,9 +5708,8 @@ void __kmp_free_team(kmp_root_t *root,
           }
 #endif
           // first check if thread is sleeping
-          kmp_flag_64<> fl(&th->th.th_bar[bs_forkjoin_barrier].bb.b_go, th);
-          if (fl.is_sleeping())
-            fl.resume(__kmp_gtid_from_thread(th));
+          if (th->th.th_sleep_loc)
+            __kmp_null_resume_wrapper(th);
           KMP_CPU_PAUSE();
         }
       }
@@ -8901,7 +8900,7 @@ __kmp_determine_reduction_method(
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||        \
-    KMP_OS_SOLARIS || KMP_OS_WASI
+    KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
     int teamsize_cutoff = 4;
 
@@ -8926,14 +8925,14 @@ __kmp_determine_reduction_method(
 #error "Unknown or unsupported OS"
 #endif // KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||
        // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||
-       // KMP_OS_SOLARIS || KMP_OS_WASI
+       // KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS ||       \
-    KMP_ARCH_WASM
+    KMP_ARCH_WASM || KMP_ARCH_PPC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HURD || KMP_OS_SOLARIS ||       \
-    KMP_OS_WASI
+    KMP_OS_WASI || KMP_OS_AIX
 
     // basic tuning
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
@@ -103,4 +104,86 @@ DWARF:
   // sure the children range is now empty.
   DWARFDIE no_children_die(unit, die_child0);
   EXPECT_TRUE(no_children_die.children().empty());
+}
+
+TEST(DWARFDIETest, PeekName) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_str:
+    - 'NameType1'
+    - 'NameType2'
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x00000003
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_abstract_origin
+              Form:            DW_FORM_ref1
+        - Code:            0x00000004
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref1
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000000 # Name = NameType1
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000a # Name = NameType2
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x000000000000000e # Ref abstract origin to NameType1 DIE.
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000013 # Ref specification to NameType2 DIE.
+        - AbbrCode:        0x00000000
+)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  auto &debug_info = symbol_file->DebugInfo();
+
+  DIERef first_die(std::nullopt, DIERef::Section::DebugInfo,
+                   11 /*FirstDIEOffset*/);
+  EXPECT_EQ(debug_info.PeekDIEName(first_die), "");
+
+  DIERef second_die(std::nullopt, DIERef::Section::DebugInfo, 14);
+  EXPECT_EQ(debug_info.PeekDIEName(second_die), "NameType1");
+
+  DIERef third_die(std::nullopt, DIERef::Section::DebugInfo, 19);
+  EXPECT_EQ(debug_info.PeekDIEName(third_die), "NameType2");
+
+  DIERef fourth_die(std::nullopt, DIERef::Section::DebugInfo, 24);
+  EXPECT_EQ(debug_info.PeekDIEName(fourth_die), "NameType1");
+
+  DIERef fifth_die(std::nullopt, DIERef::Section::DebugInfo, 26);
+  EXPECT_EQ(debug_info.PeekDIEName(fifth_die), "NameType2");
 }

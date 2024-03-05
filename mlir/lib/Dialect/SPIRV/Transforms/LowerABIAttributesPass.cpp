@@ -261,7 +261,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     return failure();
 
   // Creates a new function with the update signature.
-  rewriter.updateRootInPlace(funcOp, [&] {
+  rewriter.modifyOpInPlace(funcOp, [&] {
     funcOp.setType(rewriter.getFunctionType(
         signatureConverter.getConvertedTypes(), std::nullopt));
   });

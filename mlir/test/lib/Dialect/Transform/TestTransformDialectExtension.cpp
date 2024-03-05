@@ -246,48 +246,6 @@ void mlir::test::TestSucceedIfOperandOfOpKind::getEffects(
   transform::onlyReadsPayload(effects);
 }
 
-DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandOp::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  auto payload = state.getPayloadOps(getOperand());
-  for (Operation *op : payload)
-    op->emitRemark() << getMessage();
-
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintRemarkAtOperandOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getOperand(), effects);
-  transform::onlyReadsPayload(effects);
-}
-
-DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandValue::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  for (Value value : state.getPayloadValues(getIn())) {
-    std::string note;
-    llvm::raw_string_ostream os(note);
-    if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
-      os << "a block argument #" << arg.getArgNumber() << " in block #"
-         << std::distance(arg.getOwner()->getParent()->begin(),
-                          arg.getOwner()->getIterator())
-         << " in region #" << arg.getOwner()->getParent()->getRegionNumber();
-    } else {
-      os << "an op result #" << llvm::cast<OpResult>(value).getResultNumber();
-    }
-    InFlightDiagnostic diag = ::emitRemark(value.getLoc()) << getMessage();
-    diag.attachNote() << "value handle points to " << os.str();
-  }
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintRemarkAtOperandValue::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getIn(), effects);
-  transform::onlyReadsPayload(effects);
-}
-
 DiagnosedSilenceableFailure mlir::test::TestAddTestExtensionOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
@@ -518,32 +476,6 @@ mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
     });
   }
   emitRemark() << count << " handles nested under";
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintParamOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getParam(), effects);
-  if (getAnchor())
-    transform::onlyReadsHandle(getAnchor(), effects);
-  transform::onlyReadsPayload(effects);
-}
-
-DiagnosedSilenceableFailure
-mlir::test::TestPrintParamOp::apply(transform::TransformRewriter &rewriter,
-                                    transform::TransformResults &results,
-                                    transform::TransformState &state) {
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  if (getMessage())
-    os << *getMessage() << " ";
-  llvm::interleaveComma(state.getParams(getParam()), os);
-  if (!getAnchor()) {
-    emitRemark() << os.str();
-    return DiagnosedSilenceableFailure::success();
-  }
-  for (Operation *payload : state.getPayloadOps(getAnchor()))
-    ::mlir::emitRemark(payload->getLoc()) << os.str();
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -955,7 +887,7 @@ public:
 #include "TestTransformDialectExtensionTypes.cpp.inc"
         >();
 
-    auto verboseConstraint = [](PatternRewriter &rewriter,
+    auto verboseConstraint = [](PatternRewriter &rewriter, PDLResultList &,
                                 ArrayRef<PDLValue> pdlValues) {
       for (const PDLValue &pdlValue : pdlValues) {
         if (Operation *op = pdlValue.dyn_cast<Operation *>()) {

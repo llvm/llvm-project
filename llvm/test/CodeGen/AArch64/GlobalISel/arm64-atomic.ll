@@ -2146,8 +2146,7 @@ define i8 @atomicrmw_and_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov w8, #-1 ; =0xffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor w0, w8, w1
+; CHECK-OUTLINE-O1-NEXT:    mvn w0, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr1_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -2421,7 +2420,7 @@ define i8 @atomicrmw_min_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    sxtb w9, w8
 ; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, sxtb
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, lt
 ; CHECK-NOLSE-O1-NEXT:    stxrb w10, w9, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB33_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2435,7 +2434,7 @@ define i8 @atomicrmw_min_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ldaxrb w8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    sxtb w9, w8
 ; CHECK-OUTLINE-O1-NEXT:    cmp w9, w1, sxtb
-; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, lt
 ; CHECK-OUTLINE-O1-NEXT:    stxrb w10, w9, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB33_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2662,7 +2661,7 @@ define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xff
 ; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
-; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, ls
+; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, lo
 ; CHECK-NOLSE-O1-NEXT:    stlxrb w11, w10, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB35_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2677,7 +2676,7 @@ define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ldaxrb w8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    and w10, w8, #0xff
 ; CHECK-OUTLINE-O1-NEXT:    cmp w10, w9
-; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, ls
+; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, lo
 ; CHECK-OUTLINE-O1-NEXT:    stlxrb w11, w10, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w11, LBB35_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3202,8 +3201,7 @@ define i16 @atomicrmw_and_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov w8, #-1 ; =0xffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor w0, w8, w1
+; CHECK-OUTLINE-O1-NEXT:    mvn w0, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr2_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -3477,7 +3475,7 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    sxth w9, w8
 ; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, sxth
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, lt
 ; CHECK-NOLSE-O1-NEXT:    stxrh w10, w9, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB43_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3491,7 +3489,7 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ldaxrh w8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    sxth w9, w8
 ; CHECK-OUTLINE-O1-NEXT:    cmp w9, w1, sxth
-; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, lt
 ; CHECK-OUTLINE-O1-NEXT:    stxrh w10, w9, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB43_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3718,7 +3716,7 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xffff
 ; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
-; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, ls
+; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, lo
 ; CHECK-NOLSE-O1-NEXT:    stlxrh w11, w10, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB45_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3733,7 +3731,7 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ldaxrh w8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    and w10, w8, #0xffff
 ; CHECK-OUTLINE-O1-NEXT:    cmp w10, w9
-; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, ls
+; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, lo
 ; CHECK-OUTLINE-O1-NEXT:    stlxrh w11, w10, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w11, LBB45_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4255,8 +4253,7 @@ define i32 @atomicrmw_and_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov w8, #-1 ; =0xffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor w0, w8, w1
+; CHECK-OUTLINE-O1-NEXT:    mvn w0, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr4_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -4526,7 +4523,7 @@ define i32 @atomicrmw_min_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxr w8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cmp w8, w1
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, lt
 ; CHECK-NOLSE-O1-NEXT:    stxr w10, w9, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB53_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4539,7 +4536,7 @@ define i32 @atomicrmw_min_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldaxr w8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cmp w8, w1
-; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, lt
 ; CHECK-OUTLINE-O1-NEXT:    stxr w10, w9, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB53_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4754,7 +4751,7 @@ define i32 @atomicrmw_umin_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxr w8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cmp w8, w1
-; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, ls
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, lo
 ; CHECK-NOLSE-O1-NEXT:    stlxr w10, w9, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB55_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4767,7 +4764,7 @@ define i32 @atomicrmw_umin_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldaxr w8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cmp w8, w1
-; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, ls
+; CHECK-OUTLINE-O1-NEXT:    csel w9, w8, w1, lo
 ; CHECK-OUTLINE-O1-NEXT:    stlxr w10, w9, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB55_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -5276,8 +5273,7 @@ define i64 @atomicrmw_and_i64(ptr %ptr, i64 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov x8, #-1 ; =0xffffffffffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor x0, x8, x1
+; CHECK-OUTLINE-O1-NEXT:    mvn x0, x1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr8_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -5547,7 +5543,7 @@ define i64 @atomicrmw_min_i64(ptr %ptr, i64 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxr x8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cmp x8, x1
-; CHECK-NOLSE-O1-NEXT:    csel x9, x8, x1, le
+; CHECK-NOLSE-O1-NEXT:    csel x9, x8, x1, lt
 ; CHECK-NOLSE-O1-NEXT:    stxr w10, x9, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB63_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -5560,7 +5556,7 @@ define i64 @atomicrmw_min_i64(ptr %ptr, i64 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldaxr x8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cmp x8, x1
-; CHECK-OUTLINE-O1-NEXT:    csel x9, x8, x1, le
+; CHECK-OUTLINE-O1-NEXT:    csel x9, x8, x1, lt
 ; CHECK-OUTLINE-O1-NEXT:    stxr w10, x9, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB63_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -5775,7 +5771,7 @@ define i64 @atomicrmw_umin_i64(ptr %ptr, i64 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxr x8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cmp x8, x1
-; CHECK-NOLSE-O1-NEXT:    csel x9, x8, x1, ls
+; CHECK-NOLSE-O1-NEXT:    csel x9, x8, x1, lo
 ; CHECK-NOLSE-O1-NEXT:    stlxr w10, x9, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB65_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -5788,7 +5784,7 @@ define i64 @atomicrmw_umin_i64(ptr %ptr, i64 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldaxr x8, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cmp x8, x1
-; CHECK-OUTLINE-O1-NEXT:    csel x9, x8, x1, ls
+; CHECK-OUTLINE-O1-NEXT:    csel x9, x8, x1, lo
 ; CHECK-OUTLINE-O1-NEXT:    stlxr w10, x9, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB65_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end

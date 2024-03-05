@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -o - -passes=sroa | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -o - -passes=sroa | FileCheck %s
 
 ;; SROA splits the alloca into two. Each slice already has a 32-bit variable
 ;; associated with it (the structured binding variables). Check SROA doesn't

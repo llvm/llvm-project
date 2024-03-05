@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   DWARFLinker
+  DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
   MC

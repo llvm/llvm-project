@@ -18,7 +18,7 @@ include "mlir/IR/OpBase.td"
 def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let description = [{
     OpenMP operations whose region will be outlined will implement this
-    interface. These operations will
+    interface.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -27,6 +27,28 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
       return &$_op.getRegion().front();
+      }]>,
+  ];
+}
+
+def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
+  let description = [{
+    OpenMP operations which own a list of omp::MapInfoOp's implement this interface
+    to allow generic access to deal with map operands to more easily manipulate 
+    this class of operations. 
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapOperands",
+      (ins), [{
+        return $_op.getMapOperands();
+      }]>,
+      InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange", 
+                      "getMapOperandsMutable",
+      (ins), [{
+        return $_op.getMapOperandsMutable();
       }]>,
   ];
 }
@@ -198,39 +220,12 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             "bool":$assumeThreadsOversubscription,
             "bool":$assumeNoThreadState,
             "bool":$assumeNoNestedParallelism,
-            "uint32_t":$openmpDeviceVersion), [{}], [{
+            "uint32_t":$openmpDeviceVersion,
+            "bool":$noGPULib), [{}], [{
         $_op->setAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
                   mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
                       assumeTeamsOversubscription, assumeThreadsOversubscription,
-                      assumeNoThreadState, assumeNoNestedParallelism, openmpDeviceVersion));
-      }]>,
-    InterfaceMethod<
-      /*description=*/[{
-        Get the Target attribute on the current module if it exists
-        and return the attribute, if it doesn't exist it returns a nullptr.
-      }],
-      /*retTy=*/"mlir::omp::TargetAttr",
-      /*methodName=*/"getTarget",
-      (ins), [{}], [{
-        if (Attribute flags = $_op->getAttr("omp.target"))
-          return ::llvm::dyn_cast_or_null<mlir::omp::TargetAttr>(flags);
-        return nullptr;
-      }]>,
-    InterfaceMethod<
-      /*description=*/[{
-        Set the attribute target on the current module with the
-        specified string arguments - name of cpu and corresponding features.
-      }],
-      /*retTy=*/"void",
-      /*methodName=*/"setTarget",
-      (ins "llvm::StringRef":$targetCPU,
-           "llvm::StringRef":$targetFeatures), [{}], [{
-        if (targetCPU.empty())
-          return;
-        $_op->setAttr(("omp." + mlir::omp::TargetAttr::getMnemonic()).str(),
-                  mlir::omp::TargetAttr::get($_op->getContext(),
-                                             targetCPU.str(),
-                                             targetFeatures.str()));
+                      assumeNoThreadState, assumeNoNestedParallelism, noGPULib, openmpDeviceVersion));
       }]>,
     InterfaceMethod<
       /*description=*/[{
@@ -283,46 +278,6 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       (ins "::mlir::omp::ClauseRequires":$clauses), [{}], [{
         $_op->setAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
           mlir::omp::ClauseRequiresAttr::get($_op->getContext(), clauses));
-      }]>
-  ];
-}
-
-def EarlyOutliningInterface : OpInterface<"EarlyOutliningInterface"> {
-  let description = [{
-    FuncOps that are a result of early outlining should have this interface.
-  }];
-
-  let cppNamespace = "::mlir::omp";
-
-  let methods = [
-    InterfaceMethod<
-      /*description=*/[{
-        Set a StringAttr on an outlined target region function containing the
-        name of the parent function where the target region was outlined
-        from. The parent name is used to construct the kernel names for target
-        regions.
-      }],
-      /*retTy=*/"void",
-      /*methodName=*/"setParentName",
-      (ins "std::string":$parentName), [{}], [{
-        $_op->setAttr(
-          mlir::StringAttr::get($_op->getContext(),
-                                llvm::Twine{"omp.outline_parent_name"}),
-          mlir::StringAttr::get($_op->getContext(), parentName));
-       }]>,
-
-    InterfaceMethod<
-      /*description=*/[{
-        Returns the parent function name from where the target op was outlined
-        from. If it doesn't exist it returns an empty string.
-      }],
-      /*retTy=*/"llvm::StringRef",
-      /*methodName=*/"getParentName",
-      (ins), [{}], [{
-        if (Attribute parentName = $_op->getAttr("omp.outline_parent_name"))
-          if (::llvm::isa<mlir::StringAttr>(parentName))
-            return ::llvm::dyn_cast<mlir::StringAttr>(parentName).getValue();
-        return {};
       }]>
   ];
 }

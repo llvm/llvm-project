@@ -4,6 +4,8 @@
 // RUN:     | FileCheck %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +d -target-feature +f -target-abi lp64d -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
+// RUN: %clang_cc1 -triple riscv64 -target-abi lp64e -emit-llvm %s -o - \
+// RUN:     | FileCheck %s
 
 #include <stddef.h>
 #include <stdint.h>

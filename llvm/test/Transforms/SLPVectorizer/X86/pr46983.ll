@@ -7,10 +7,10 @@
 
 define void @store_i32(ptr nocapture %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: @store_i32(
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr [[TMP0:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1:%.*]], i64 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP5]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP0:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i32> [[TMP7]], <i32 15, i32 15, i32 15, i32 15>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[TMP8]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[TMP0]], align 4, !tbaa [[TBAA0]]
@@ -48,11 +48,11 @@ define void @store_i32(ptr nocapture %0, i32 %1, i32 %2) {
 
 define void @store_i8(ptr nocapture %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: @store_i8(
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, ptr [[TMP0:%.*]], align 1, !tbaa [[TBAA4:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1:%.*]], i64 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[SHUFFLE]], [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[TMP0:%.*]], align 1, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 15, i32 15, i32 15, i32 15>
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[TMP9]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i32> [[TMP10]] to <4 x i8>
@@ -108,7 +108,7 @@ define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 ; SSE-NEXT:    [[TMP10:%.*]] = and i64 [[TMP7]], 4294967295
 ; SSE-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], i64 [[TMP10]], i64 255
 ; SSE-NEXT:    store i64 [[TMP11]], ptr [[TMP0]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 1
+; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; SSE-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP12]], align 8, !tbaa [[TBAA5]]
 ; SSE-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], [[TMP4]]
 ; SSE-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP14]], 15
@@ -117,7 +117,7 @@ define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 ; SSE-NEXT:    [[TMP18:%.*]] = and i64 [[TMP15]], 4294967295
 ; SSE-NEXT:    [[TMP19:%.*]] = select i1 [[TMP17]], i64 [[TMP18]], i64 255
 ; SSE-NEXT:    store i64 [[TMP19]], ptr [[TMP12]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 2
+; SSE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP21:%.*]] = load i64, ptr [[TMP20]], align 8, !tbaa [[TBAA5]]
 ; SSE-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], [[TMP4]]
 ; SSE-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 15
@@ -126,7 +126,7 @@ define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 ; SSE-NEXT:    [[TMP26:%.*]] = and i64 [[TMP23]], 4294967295
 ; SSE-NEXT:    [[TMP27:%.*]] = select i1 [[TMP25]], i64 [[TMP26]], i64 255
 ; SSE-NEXT:    store i64 [[TMP27]], ptr [[TMP20]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 3
+; SSE-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 24
 ; SSE-NEXT:    [[TMP29:%.*]] = load i64, ptr [[TMP28]], align 8, !tbaa [[TBAA5]]
 ; SSE-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP29]], [[TMP4]]
 ; SSE-NEXT:    [[TMP31:%.*]] = lshr i64 [[TMP30]], 15
@@ -139,10 +139,10 @@ define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 ;
 ; AVX-LABEL: @store_i64(
 ; AVX-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1:%.*]] to i64
-; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[TMP0:%.*]], align 8, !tbaa [[TBAA5:![0-9]+]]
-; AVX-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i64 0
-; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP8:%.*]] = mul <4 x i64> [[TMP6]], [[SHUFFLE]]
+; AVX-NEXT:    [[TMP5:%.*]] = load <4 x i64>, ptr [[TMP0:%.*]], align 8, !tbaa [[TBAA5:![0-9]+]]
+; AVX-NEXT:    [[TMP6:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i64 0
+; AVX-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP8:%.*]] = mul <4 x i64> [[TMP5]], [[TMP7]]
 ; AVX-NEXT:    [[TMP9:%.*]] = lshr <4 x i64> [[TMP8]], <i64 15, i64 15, i64 15, i64 15>
 ; AVX-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP9]] to <4 x i32>
 ; AVX-NEXT:    [[TMP11:%.*]] = icmp ult <4 x i32> [[TMP10]], <i32 255, i32 255, i32 255, i32 255>

@@ -52,3 +52,17 @@ int bar2(bool coin_flip) {
   __attribute__((suppress))
   return *result;  // leak warning is suppressed only on this path
 }
+
+class [[clang::suppress]] C {
+  int foo() {
+    int *x = nullptr;
+    return *x;  // warnings suppressed in the entire class
+  }
+
+  int bar();
+};
+
+int C::bar() {
+  int *x = nullptr;
+  return *x;  // expected-warning{{Dereference of null pointer (loaded from variable 'x')}}
+}

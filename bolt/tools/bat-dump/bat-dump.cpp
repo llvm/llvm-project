@@ -75,7 +75,7 @@ static std::string GetExecutablePath(const char *Argv0) {
     if (llvm::ErrorOr<std::string> P =
             llvm::sys::findProgramByName(ExecutablePath))
       ExecutablePath = *P;
-  return std::string(ExecutablePath.str());
+  return std::string(ExecutablePath);
 }
 
 void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {
@@ -109,7 +109,7 @@ void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {
     exit(1);
   }
 
-  if (std::error_code EC = BAT.parse(SectionContents)) {
+  if (std::error_code EC = BAT.parse(outs(), SectionContents)) {
     errs() << "BOLT-ERROR: failed to parse BOLT address translation "
               "table. Malformed BAT section\n";
     exit(1);

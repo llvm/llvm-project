@@ -30,8 +30,8 @@ define i32 @instruction_loc(i32 %arg1) {
 }
 
 ; CHECK-DAG: #[[RAW_FILE_LOC:.+]] = loc("debug-info.ll":1:2)
-; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
-; CHECK-DAG: #[[CALLEE:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
+; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
+; CHECK-DAG: #[[CALLEE:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
 ; CHECK-DAG: #[[FILE_LOC]] = loc(fused<#[[SP]]>[#[[RAW_FILE_LOC]]])
 ; CHECK-DAG: #[[RAW_CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
 ; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLEE_LOC]]])
@@ -63,7 +63,7 @@ define i32 @lexical_block(i32 %arg1) {
   ret i32 %2
 }
 ; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit =
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit =
 ; CHECK: #[[LB0:.+]] = #llvm.di_lexical_block<scope = #[[SP]]>
 ; CHECK: #[[LB1:.+]] = #llvm.di_lexical_block<scope = #[[SP]], file = #[[FILE]], line = 2, column = 2>
 ; CHECK: #[[LOC0]] = loc(fused<#[[LB0]]>[{{.*}}])
@@ -93,7 +93,7 @@ define i32 @lexical_block_file(i32 %arg1) {
   ret i32 %2
 }
 ; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit =
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit =
 ; CHECK: #[[LB0:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], discriminator = 0>
 ; CHECK: #[[LB1:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], file = #[[FILE]], discriminator = 0>
 ; CHECK: #[[LOC0]] = loc(fused<#[[LB0]]>[
@@ -197,10 +197,10 @@ define void @composite_type() !dbg !3 {
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None>
+; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None>
 ; Verify an empty subroutine types list is supported.
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
-; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
 
 define void @subprogram() !dbg !3 {
   ret void
@@ -224,7 +224,7 @@ define void @func_loc() !dbg !3 {
 }
 ; CHECK-DAG: #[[NAME_LOC:.+]] = loc("func_loc")
 ; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
-; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
+; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
 
 ; CHECK: loc(fused<#[[SP]]>[#[[NAME_LOC]], #[[FILE_LOC]]]
 
@@ -300,7 +300,7 @@ define void @class_method() {
 ; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
 ; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
 ; CHECK: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
 ; CHECK: #[[LOC]] = loc(fused<#[[SP]]>
 
 !llvm.dbg.cu = !{!1}
@@ -485,7 +485,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; // -----
 
 ; CHECK-DAG: #[[NAMESPACE:.+]] = #llvm.di_namespace<name = "std", exportSymbols = false>
-; CHECK-DAG: #[[SUBPROGRAM:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[NAMESPACE]], name = "namespace"
+; CHECK-DAG: #[[SUBPROGRAM:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #[[NAMESPACE]], name = "namespace"
 
 define void @namespace(ptr %arg) {
   call void @llvm.dbg.value(metadata ptr %arg, metadata !7, metadata !DIExpression()), !dbg !9
@@ -506,7 +506,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; // -----
 
-; CHECK-DAG: #[[SUBPROGRAM:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "noname_variable"
+; CHECK-DAG: #[[SUBPROGRAM:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "noname_variable"
 ; CHECK-DAG: #[[LOCAL_VARIABLE:.+]] =  #llvm.di_local_variable<scope = #[[SUBPROGRAM]]>
 
 define void @noname_variable(ptr %arg) {
@@ -527,7 +527,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; // -----
 
-; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, file = #{{.*}}, subprogramFlags = Definition>
+; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, file = #{{.*}}, subprogramFlags = Definition>
 ; CHECK: #[[FUNC_LOC:.*]] = loc(fused<#[[SUBPROGRAM]]>[{{.*}}])
 define void @noname_subprogram(ptr %arg) !dbg !8 {
   ret void
@@ -547,7 +547,7 @@ define void @noname_subprogram(ptr %arg) !dbg !8 {
 ; CHECK-SAME: configMacros = "bar", includePath = "/",
 ; CHECK-SAME: apinotes = "/", line = 42, isDecl = true
 ; CHECK-SAME: >
-; CHECK: #[[SUBPROGRAM:.+]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[MODULE]], name = "func_in_module"
+; CHECK: #[[SUBPROGRAM:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #[[MODULE]], name = "func_in_module"
 
 define void @func_in_module(ptr %arg) !dbg !8 {
   ret void
@@ -589,3 +589,41 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DICompositeType(tag: DW_TAG_array_type, size: 42, baseType: !6)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5)
 !7 = !DILocation(line: 0, scope: !3)
+
+; // -----
+
+; Verifies that import compile units respect the distinctness of the input.
+; CHECK-LABEL: @distinct_cu_func0
+define void @distinct_cu_func0() !dbg !4 {
+  ret void
+}
+
+define void @distinct_cu_func1() !dbg !5 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!0, !1}
+!llvm.module.flags = !{!3}
+
+; CHECK-COUNT-2: #llvm.di_compile_unit<id = distinct[{{[0-9]+}}]<>
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang")
+!1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang")
+!2 = !DIFile(filename: "other.cpp", directory: "/")
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !0)
+!5 = distinct !DISubprogram(name: "func", linkageName: "func", scope: !6, file: !6, line: 1, scopeLine: 1, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1)
+!6 = !DIFile(filename: "file.hpp", directory: "/")
+
+; // -----
+
+; CHECK-LABEL: @declaration
+declare !dbg !1 void @declaration()
+
+; CHECK: #di_subprogram = #llvm.di_subprogram<
+; CHECK-NOT: id = distinct
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")

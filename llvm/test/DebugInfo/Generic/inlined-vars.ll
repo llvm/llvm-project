@@ -1,5 +1,7 @@
 ; RUN: %llc_dwarf -O0 < %s | FileCheck %s -check-prefix ARGUMENT
 ; RUN: %llc_dwarf -O0 < %s | FileCheck %s -check-prefix VARIABLE
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 < %s | FileCheck %s -check-prefix ARGUMENT
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 < %s | FileCheck %s -check-prefix VARIABLE
 ; PR 13202
 
 define i32 @main() uwtable !dbg !5 {

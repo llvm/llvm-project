@@ -119,7 +119,7 @@ define void @test_wrssd(i32 %a, ptr %__p) {
 ;
 ; EGPR-LABEL: test_wrssd:
 ; EGPR:       ## %bb.0: ## %entry
-; EGPR-NEXT:    wrssd %edi, (%rsi) ## encoding: [0x62,0xf4,0x7c,0x08,0x66,0x3e]
+; EGPR-NEXT:    wrssd %edi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf6,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
   tail call void @llvm.x86.wrssd(i32 %a, ptr %__p)
@@ -136,7 +136,7 @@ define void @test_wrssq(i64 %a, ptr %__p) {
 ;
 ; EGPR-LABEL: test_wrssq:
 ; EGPR:       ## %bb.0: ## %entry
-; EGPR-NEXT:    wrssq %rdi, (%rsi) ## encoding: [0x62,0xf4,0xfc,0x08,0x66,0x3e]
+; EGPR-NEXT:    wrssq %rdi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf6,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
   tail call void @llvm.x86.wrssq(i64 %a, ptr %__p)
@@ -153,7 +153,7 @@ define void @test_wrussd(i32 %a, ptr %__p) {
 ;
 ; EGPR-LABEL: test_wrussd:
 ; EGPR:       ## %bb.0: ## %entry
-; EGPR-NEXT:    wrussd %edi, (%rsi) ## encoding: [0x62,0xf4,0x7d,0x08,0x65,0x3e]
+; EGPR-NEXT:    wrussd %edi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0xf5,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
   tail call void @llvm.x86.wrussd(i32 %a, ptr %__p)
@@ -170,7 +170,7 @@ define void @test_wrussq(i64 %a, ptr %__p) {
 ;
 ; EGPR-LABEL: test_wrussq:
 ; EGPR:       ## %bb.0: ## %entry
-; EGPR-NEXT:    wrussq %rdi, (%rsi) ## encoding: [0x62,0xf4,0xfd,0x08,0x65,0x3e]
+; EGPR-NEXT:    wrussq %rdi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x66,0x48,0x0f,0x38,0xf5,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
   tail call void @llvm.x86.wrussq(i64 %a, ptr %__p)

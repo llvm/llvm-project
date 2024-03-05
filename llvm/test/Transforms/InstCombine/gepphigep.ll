@@ -54,7 +54,7 @@ define i32 @test2(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19) {
 ; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[TMP1]], i64 [[TMP19:%.*]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[TMP1]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP25]]
 ;

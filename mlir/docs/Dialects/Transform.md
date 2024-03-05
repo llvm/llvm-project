@@ -423,6 +423,10 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/BufferizationTransformOps.md"]
 
+## Debug Transform Operations
+
+[include "Dialects/DebugExtensionOps.md"]
+
 ## Func Transform Operations
 
 [include "Dialects/FuncTransformOps.md"]

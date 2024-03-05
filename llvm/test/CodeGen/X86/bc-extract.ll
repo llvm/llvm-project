@@ -10,7 +10,7 @@ define float @extractFloat1() nounwind {
 ;
 ; X64-LABEL: extractFloat1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    retq
 entry:
   %tmp0 = bitcast <1 x double> <double 0x000000003F800000> to <2 x float>

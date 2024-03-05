@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; These tests check that floating point comparisons which are used by select
 ; to store integer true (-1) and false (0) values are lowered to one of the

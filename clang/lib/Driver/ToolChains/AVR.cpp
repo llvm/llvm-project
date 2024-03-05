@@ -430,7 +430,7 @@ AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
   SmallString<256> Path(ToolChain::getCompilerRTPath());
   llvm::sys::path::append(Path, "avr");
   llvm::sys::path::append(Path, File.str());
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,

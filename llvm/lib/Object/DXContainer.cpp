@@ -72,13 +72,13 @@ Error DXContainer::parseDXILHeader(StringRef Part) {
   return Error::success();
 }
 
-Error DXContainer::parseShaderFlags(StringRef Part) {
-  if (ShaderFlags)
+Error DXContainer::parseShaderFeatureFlags(StringRef Part) {
+  if (ShaderFeatureFlags)
     return parseFailed("More than one SFI0 part is present in the file");
   uint64_t FlagValue = 0;
   if (Error Err = readInteger(Part, Part.begin(), FlagValue))
     return Err;
-  ShaderFlags = FlagValue;
+  ShaderFeatureFlags = FlagValue;
   return Error::success();
 }
 
@@ -168,7 +168,7 @@ Error DXContainer::parsePartOffsets() {
         return Err;
       break;
     case dxbc::PartType::SFI0:
-      if (Error Err = parseShaderFlags(PartData))
+      if (Error Err = parseShaderFeatureFlags(PartData))
         return Err;
       break;
     case dxbc::PartType::HASH:
@@ -341,7 +341,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
     SigOutputElements.Stride = SigPatchOrPrimElements.Stride =
         SigInputElements.Stride;
 
-    if (Data.end() - Current < ElementCount * SigInputElements.Stride)
+    if (Data.end() - Current <
+        (ptrdiff_t)(ElementCount * SigInputElements.Stride))
       return parseFailed(
           "Signature elements extend beyond the size of the part");
 

@@ -174,6 +174,9 @@ Solver::Result DataflowAnalysisContext::querySolver(
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
                                                    const Formula &F) {
+  if (F.isLiteral(true))
+    return true;
+
   // Returns true if and only if truth assignment of the flow condition implies
   // that `F` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
@@ -188,6 +191,9 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
 
 bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
                                                   const Formula &F) {
+  if (F.isLiteral(false))
+    return false;
+
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   Constraints.insert(&F);
@@ -292,7 +298,7 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
+  if (F->doesThisDeclarationHaveABody()) {
     auto CFCtx = ControlFlowContext::build(*F);
     // FIXME: Handle errors.
     assert(CFCtx);

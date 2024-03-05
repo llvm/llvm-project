@@ -190,7 +190,12 @@ struct IsActuallyConstantHelper {
   bool operator()(const StructureConstructor &x) {
     for (const auto &pair : x) {
       const Expr<SomeType> &y{pair.second.value()};
-      if (!(*this)(y) && !IsNullPointer(y)) {
+      const auto sym{pair.first};
+      const bool compIsConstant{(*this)(y)};
+      // If an allocatable component is initialized by a constant,
+      // the structure constructor is not a constant.
+      if ((!compIsConstant && !IsNullPointer(y)) ||
+          (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
     }

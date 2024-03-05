@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: llc -march=amdgcn < %s -debug-only=igrouplp 2>&1 | FileCheck --check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn < %s -debug-only=igrouplp 2>&1 | FileCheck --check-prefixes=GCN %s
 
 
 

@@ -204,7 +204,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return std::string(data.str());
+  return std::string(data);
 }
 
 // Find a file by concatenating given paths. If a resulting path

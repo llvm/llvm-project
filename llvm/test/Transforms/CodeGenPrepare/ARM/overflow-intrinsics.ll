@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8m.main-arm-none-eabi"

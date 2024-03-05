@@ -16,6 +16,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "test_range.h"
 
 inline int globalBuffer[4][4] = {
     {1111, 2222, 3333, 4444},
@@ -239,7 +240,7 @@ using SimpleInputCommonOuter = BufferView<common_input_iterator<Inner*>>;
 static_assert(!std::ranges::forward_range<SimpleInputCommonOuter<>>);
 static_assert(!std::ranges::bidirectional_range<SimpleInputCommonOuter<>>);
 static_assert(std::ranges::common_range<SimpleInputCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleInputCommonOuter<>>);
+static_assert(simple_view<SimpleInputCommonOuter<>>);
 
 template <class Inner = BufferView<int*>>
 using NonSimpleInputCommonOuter = BufferView<common_input_iterator<const Inner*>, common_input_iterator<const Inner*>,
@@ -247,14 +248,14 @@ using NonSimpleInputCommonOuter = BufferView<common_input_iterator<const Inner*>
 static_assert(!std::ranges::forward_range<NonSimpleInputCommonOuter<>>);
 static_assert(!std::ranges::bidirectional_range<NonSimpleInputCommonOuter<>>);
 static_assert(std::ranges::common_range<NonSimpleInputCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleInputCommonOuter<>>);
+static_assert(!simple_view<NonSimpleInputCommonOuter<>>);
 
 template <class Inner = BufferView<int*>>
 using SimpleForwardCommonOuter = BufferView<forward_iterator<Inner*>>;
 static_assert(std::ranges::forward_range<SimpleForwardCommonOuter<>>);
 static_assert(!std::ranges::bidirectional_range<SimpleForwardCommonOuter<>>);
 static_assert(std::ranges::common_range<SimpleForwardCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleForwardCommonOuter<>>);
+static_assert(simple_view<SimpleForwardCommonOuter<>>);
 
 template <class Inner = BufferView<int*>>
 using NonSimpleForwardCommonOuter = BufferView<forward_iterator<const Inner*>, forward_iterator<const Inner*>,
@@ -262,14 +263,14 @@ using NonSimpleForwardCommonOuter = BufferView<forward_iterator<const Inner*>, f
 static_assert(std::ranges::forward_range<NonSimpleForwardCommonOuter<>>);
 static_assert(!std::ranges::bidirectional_range<NonSimpleForwardCommonOuter<>>);
 static_assert(std::ranges::common_range<NonSimpleForwardCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleForwardCommonOuter<>>);
+static_assert(!simple_view<NonSimpleForwardCommonOuter<>>);
 
 template <class Inner = BufferView<int*>>
 using SimpleForwardNonCommonOuter = BufferView<forward_iterator<Inner*>, sentinel_wrapper<forward_iterator<Inner*>>>;
 static_assert(std::ranges::forward_range<SimpleForwardNonCommonOuter<>>);
 static_assert(!std::ranges::bidirectional_range<SimpleForwardNonCommonOuter<>>);
 static_assert(!std::ranges::common_range<SimpleForwardNonCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleForwardNonCommonOuter<>>);
+static_assert(simple_view<SimpleForwardNonCommonOuter<>>);
 
 template <class Inner = BufferView<int*>>
 using NonSimpleForwardNonCommonOuter =
@@ -278,13 +279,13 @@ using NonSimpleForwardNonCommonOuter =
 static_assert(std::ranges::forward_range<NonSimpleForwardNonCommonOuter<>>);
 static_assert(!std::ranges::bidirectional_range<NonSimpleForwardNonCommonOuter<>>);
 static_assert(!std::ranges::common_range<NonSimpleForwardNonCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleForwardNonCommonOuter<>>);
+static_assert(!simple_view<NonSimpleForwardNonCommonOuter<>>);
 
 template <class Inner = BufferView<int*>>
 using BidiCommonOuter = BufferView<bidirectional_iterator<Inner*>>;
 static_assert(std::ranges::bidirectional_range<BidiCommonOuter<>>);
 static_assert(std::ranges::common_range<BidiCommonOuter<>>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<BidiCommonOuter<>>);
+static_assert(simple_view<BidiCommonOuter<>>);
 
 // an iterator where its operator* makes a copy of underlying operator*
 template <class It>
@@ -349,7 +350,7 @@ struct InnerRValue : Outer {
 static_assert(std::ranges::forward_range<InnerRValue<SimpleForwardCommonOuter<>>>);
 static_assert(!std::ranges::bidirectional_range<InnerRValue<SimpleForwardCommonOuter<>>>);
 static_assert(std::ranges::common_range<InnerRValue<SimpleForwardCommonOuter<>>>);
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<InnerRValue<SimpleForwardCommonOuter<>>>);
+static_assert(simple_view<InnerRValue<SimpleForwardCommonOuter<>>>);
 static_assert(!std::is_lvalue_reference_v<std::ranges::range_reference_t<InnerRValue<SimpleForwardCommonOuter<>>>>);
 
 struct move_swap_aware_iter {

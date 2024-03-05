@@ -12,7 +12,7 @@
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -code-model=large
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -cg-opt-level=0
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -O1
-; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -opt-pipeline=loweratomic
+; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -opt-pipeline=lower-atomic
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -aa-pipeline=basic-aa
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -override-triple=x86_64-unknown-linux-gnu
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -default-triple=x86_64-unknown-linux-gnu

@@ -116,6 +116,9 @@ def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain> {
   let IfConvergent = G_INTRINSIC_CONVERGENT;
 }
 
+def : GINodeEquiv<G_GET_FPENV, get_fpenv>;
+def : GINodeEquiv<G_SET_FPENV, set_fpenv>;
+def : GINodeEquiv<G_RESET_FPENV, reset_fpenv>;
 def : GINodeEquiv<G_GET_FPMODE, get_fpmode>;
 def : GINodeEquiv<G_SET_FPMODE, set_fpmode>;
 def : GINodeEquiv<G_RESET_FPMODE, reset_fpmode>;
@@ -127,6 +130,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 }
 
 def : GINodeEquiv<G_BR, br>;
+def : GINodeEquiv<G_BRCOND, brcond>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;
@@ -164,6 +168,7 @@ def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
 def : GINodeEquiv<G_FMAXIMUM, fmaximum>;
 def : GINodeEquiv<G_FMINIMUM, fminimum>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
+def : GINodeEquiv<G_READSTEADYCOUNTER, readsteadycounter>;
 def : GINodeEquiv<G_ROTR, rotr>;
 def : GINodeEquiv<G_ROTL, rotl>;
 def : GINodeEquiv<G_LROUND, lround>;

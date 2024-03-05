@@ -37,8 +37,8 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // cond
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src1
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src2
-// CHECK-NEXT:          GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:          GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:          // GIR_Coverage, 1,
 // CHECK-NEXT:          GIR_Done,
 // CHECK-NEXT:        // Label 2: @126
@@ -65,8 +65,8 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // cond
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src1
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src2
-// CHECK-NEXT:          GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:          GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:          // GIR_Coverage, 2,
 // CHECK-NEXT:          GIR_Done,
 // CHECK-NEXT:        // Label 3: @216

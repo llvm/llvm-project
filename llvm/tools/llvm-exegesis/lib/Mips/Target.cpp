@@ -58,7 +58,7 @@ public:
       : ExegesisTarget(MipsCpuPfmCounters, Mips_MC::isOpcodeAvailable) {}
 
 private:
-  unsigned getScratchMemoryRegister(const llvm::Triple &TT) const override;
+  unsigned getScratchMemoryRegister(const Triple &TT) const override;
   unsigned getMaxMemoryAccessSize() const override { return 64; }
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;

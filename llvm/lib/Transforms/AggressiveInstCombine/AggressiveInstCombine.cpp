@@ -425,8 +425,8 @@ static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
   Value *Arg = Call->getArgOperand(0);
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
-       cannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI, 0, &AC, &I,
-                                   &DT))) {
+       cannotBeOrderedLessThanZero(
+           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, &I)))) {
     IRBuilder<> Builder(&I);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
@@ -808,8 +808,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreateGEP(Builder.getInt8Ty(), Load1Ptr,
-                                 Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
+                                    Builder.getInt32(Offset1.getZExtValue()));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),

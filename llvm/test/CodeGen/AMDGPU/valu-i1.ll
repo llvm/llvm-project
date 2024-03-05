@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -enable-misched -asm-verbose -disable-block-placement -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -enable-misched -asm-verbose -disable-block-placement -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 

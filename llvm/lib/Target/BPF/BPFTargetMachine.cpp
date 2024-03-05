@@ -149,7 +149,9 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
 }
 
 void BPFPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIR());
+
   TargetPassConfig::addIRPasses();
 }
 

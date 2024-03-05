@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu  -fsyntax-only -verify %s
 
-void __attribute__((target_clones("fp16+sve2-aes", "sb+sve2-sha3+rcpc3"))) no_def(void);
+void __attribute__((target_clones("fp16+sve2-aes", "sb+sve2-sha3+rcpc3+mops", "rdma"))) no_def(void);
 
 // expected-warning@+1 {{unsupported 'default' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default+sha3"))) warn1(void);

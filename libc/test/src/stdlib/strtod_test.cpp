@@ -14,7 +14,6 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingModeTest;
@@ -47,13 +46,12 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<double> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<double>(expectedRawData);
 
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     double result = LIBC_NAMESPACE::strtod(inputString, &str_end);
     if (expectedErrno == 0)
-      EXPECT_THAT(result, Succeeds<double>(static_cast<double>(expected_fp)));
+      EXPECT_THAT(result, Succeeds<double>(expected_fp.get_val()));
     else
-      EXPECT_THAT(result, Fails<double>(expectedErrno,
-                                        static_cast<double>(expected_fp)));
+      EXPECT_THAT(result, Fails<double>(expectedErrno, expected_fp.get_val()));
     EXPECT_EQ(str_end - inputString, expectedStrLen);
   }
 };

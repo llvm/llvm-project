@@ -1,8 +1,11 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
-// RUN: %libomptarget-compileoptxx-run-and-check-generic
+// RUN: %libomptarget-compile-run-and-check-generic
+// RUN: %libomptarget-compileopt-run-and-check-generic
 
 // TODO: This requires malloc support for the threads states.
+// FIXME: Flaky on all GPU targets.
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>

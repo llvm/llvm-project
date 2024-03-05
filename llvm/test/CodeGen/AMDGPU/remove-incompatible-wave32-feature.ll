@@ -1,20 +1,20 @@
-; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX906 %s
 ; RUN: FileCheck --check-prefix=WARN-GFX906 %s < %t
-; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=+wavefrontsize64 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=+wavefrontsize64 -verify-machineinstrs < %s
 
-; RUN: llc -march=amdgcn -mcpu=gfx90a -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX90A %s
 ; RUN: FileCheck --check-prefix=WARN-GFX90A %s < %t
-; RUN: llc -march=amdgcn -mcpu=gfx90a -mattr=+wavefrontsize64 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+wavefrontsize64 -verify-machineinstrs < %s
 
-; RUN: llc -march=amdgcn -mcpu=gfx1011 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1011 -mattr=+wavefrontsize64 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -mattr=+wavefrontsize64 -verify-machineinstrs < %s
 
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX11 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs < %s
 
 ; WARN-GFX906: removing function 'needs_wavefrontsize32': +wavefrontsize32 is not supported on the current target
 ; WARN-GFX906-NOT: not supported

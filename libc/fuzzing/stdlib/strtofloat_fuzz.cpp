@@ -28,7 +28,7 @@ using LIBC_NAMESPACE::fputil::FPBits;
 // exponent. Subnormals have a lower effective precision since they don't
 // necessarily use all of the bits of the mantissa.
 template <typename F> inline constexpr int effective_precision(int exponent) {
-  const int full_precision = FPBits<F>::MANTISSA_PRECISION;
+  const int full_precision = FPBits<F>::FRACTION_LEN + 1;
 
   // This is intended to be 0 when the exponent is the lowest normal and
   // increase as the exponent's magnitude increases.

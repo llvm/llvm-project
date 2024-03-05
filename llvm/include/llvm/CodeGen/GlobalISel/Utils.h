@@ -17,8 +17,8 @@
 #include "GISelWorkList.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
@@ -33,6 +33,7 @@ class BlockFrequencyInfo;
 class GISelKnownBits;
 class MachineFunction;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineOperand;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
@@ -247,6 +248,24 @@ MachineInstr *getDefIgnoringCopies(Register Reg,
 /// Also walks through hints such as G_ASSERT_ZEXT.
 Register getSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 
+/// Helper function to split a wide generic register into bitwise blocks with
+/// the given Type (which implies the number of blocks needed). The generic
+/// registers created are appended to Ops, starting at bit 0 of Reg.
+void extractParts(Register Reg, LLT Ty, int NumParts,
+                  SmallVectorImpl<Register> &VRegs,
+                  MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
+/// Version which handles irregular splits.
+bool extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
+                  SmallVectorImpl<Register> &VRegs,
+                  SmallVectorImpl<Register> &LeftoverVRegs,
+                  MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
+/// Version which handles irregular sub-vector splits.
+void extractVectorParts(Register Reg, unsigned NumElts,
+                        SmallVectorImpl<Register> &VRegs,
+                        MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
 // Templated variant of getOpcodeDef returning a MachineInstr derived T.
 /// See if Reg is defined by an single def instruction of type T
 /// Also try to do trivial folding if it's a COPY with
@@ -324,10 +343,13 @@ Register getFunctionLiveInPhysReg(MachineFunction &MF,
                                   const TargetRegisterClass &RC,
                                   const DebugLoc &DL, LLT RegTy = LLT());
 
-/// Return the least common multiple type of \p OrigTy and \p TargetTy, by changing the
-/// number of vector elements or scalar bitwidth. The intent is a
+/// Return the least common multiple type of \p OrigTy and \p TargetTy, by
+/// changing the number of vector elements or scalar bitwidth. The intent is a
 /// G_MERGE_VALUES, G_BUILD_VECTOR, or G_CONCAT_VECTORS can be constructed from
-/// \p OrigTy elements, and unmerged into \p TargetTy
+/// \p OrigTy elements, and unmerged into \p TargetTy. It is an error to call
+/// this function where one argument is a fixed vector and the other is a
+/// scalable vector, since it is illegal to build a G_{MERGE|UNMERGE}_VALUES
+/// between fixed and scalable vectors.
 LLVM_READNONE
 LLT getLCMType(LLT OrigTy, LLT TargetTy);
 
@@ -346,7 +368,10 @@ LLT getCoverTy(LLT OrigTy, LLT TargetTy);
 /// If these are vectors with different element types, this will try to produce
 /// a vector with a compatible total size, but the element type of \p OrigTy. If
 /// this can't be satisfied, this will produce a scalar smaller than the
-/// original vector elements.
+/// original vector elements. It is an error to call this function where
+/// one argument is a fixed vector and the other is a scalable vector, since it
+/// is illegal to build a G_{MERGE|UNMERGE}_VALUES between fixed and scalable
+/// vectors.
 ///
 /// In the worst case, this returns LLT::scalar(1)
 LLVM_READNONE

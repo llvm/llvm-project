@@ -131,6 +131,9 @@ An easy way to create the ``.clang-format`` file is:
 
 Available style options are described in :doc:`ClangFormatStyleOptions`.
 
+.clang-format-ignore
+====================
+
 You can create ``.clang-format-ignore`` files to make ``clang-format`` ignore
 certain files. A ``.clang-format-ignore`` file consists of patterns of file path
 names. It has the following format:
@@ -141,7 +144,8 @@ names. It has the following format:
 * A non-comment line is a single pattern.
 * The slash (``/``) is used as the directory separator.
 * A pattern is relative to the directory of the ``.clang-format-ignore`` file
-  (or the root directory if the pattern starts with a slash).
+  (or the root directory if the pattern starts with a slash). Patterns
+  containing drive names (e.g. ``C:``) are not supported.
 * Patterns follow the rules specified in `POSIX 2.13.1, 2.13.2, and Rule 1 of
   2.13.3 <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/
   V3_chap02.html#tag_18_13>`_.

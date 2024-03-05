@@ -72,6 +72,9 @@
 
 using namespace clang;
 
+/// Minimum distance between two check points, in tokens.
+static constexpr unsigned CheckPointStepSize = 1024;
+
 LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
@@ -954,6 +957,11 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
+  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+    CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
+    CheckPointCounter = 0;
+  }
+
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
 
@@ -1457,6 +1465,11 @@ void Preprocessor::emitRestrictExpansionWarning(const Token &Identifier) const {
   Diag(Info.Location, diag::note_pp_macro_annotation) << 1;
 }
 
+void Preprocessor::emitRestrictInfNaNWarning(const Token &Identifier,
+                                             unsigned DiagSelection) const {
+  Diag(Identifier, diag::warn_fp_nan_inf_when_disabled) << DiagSelection << 1;
+}
+
 void Preprocessor::emitFinalMacroWarning(const Token &Identifier,
                                          bool IsUndef) const {
   const MacroAnnotations &A =
@@ -1552,4 +1565,20 @@ void Preprocessor::createPreprocessingRecord() {
 
   Record = new PreprocessingRecord(getSourceManager());
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+}
+
+const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
+  if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
+    const SmallVector<const char *> &FileCheckPoints = It->second;
+    const char *Last = nullptr;
+    // FIXME: Do better than a linear search.
+    for (const char *P : FileCheckPoints) {
+      if (P > Start)
+        break;
+      Last = P;
+    }
+    return Last;
+  }
+
+  return nullptr;
 }

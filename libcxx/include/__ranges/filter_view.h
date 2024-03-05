@@ -44,6 +44,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -51,7 +54,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
-class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG filter_view : public view_interface<filter_view<_View, _Pred>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS filter_view : public view_interface<filter_view<_View, _Pred>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
@@ -83,7 +86,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Pred const& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a filter_view that does not have a valid predicate.");
     if constexpr (_UseCache) {
       if (!__cached_begin_.__has_value()) {
@@ -250,5 +254,7 @@ inline constexpr auto filter = __filter::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_FILTER_VIEW_H

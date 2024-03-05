@@ -19,6 +19,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -26,6 +27,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -35,6 +37,7 @@
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -48,10 +51,14 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
+
+#define DEBUG_TYPE "llvm-dialect-to-llvm-ir"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -187,6 +194,26 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       bool isLittleEndian =
           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
+      layoutStream.flush();
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
+      auto value = cast<IntegerAttr>(entry.getValue());
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-P" << space;
+      layoutStream.flush();
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutGlobalMemorySpaceKey) {
+      auto value = cast<IntegerAttr>(entry.getValue());
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-G" << space;
       layoutStream.flush();
       continue;
     }
@@ -425,6 +452,99 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
   return buildSequentialConstant(constantsRef, outerShape, llvmType, loc);
 }
 
+/// Convert a dense resource elements attribute to an LLVM IR constant using its
+/// raw data storage if possible. This supports elements attributes of tensor or
+/// vector type and avoids constructing separate objects for individual values
+/// of the innermost dimension. Constants for other dimensions are still
+/// constructed recursively. Returns nullptr on failure and emits errors at
+/// `loc`.
+static llvm::Constant *convertDenseResourceElementsAttr(
+    Location loc, DenseResourceElementsAttr denseResourceAttr,
+    llvm::Type *llvmType, const ModuleTranslation &moduleTranslation) {
+  assert(denseResourceAttr && "expected non-null attribute");
+
+  llvm::Type *innermostLLVMType = getInnermostElementType(llvmType);
+  if (!llvm::ConstantDataSequential::isElementTypeCompatible(
+          innermostLLVMType)) {
+    emitError(loc, "no known conversion for innermost element type");
+    return nullptr;
+  }
+
+  ShapedType type = denseResourceAttr.getType();
+  assert(type.getNumElements() > 0 && "Expected non-empty elements attribute");
+
+  AsmResourceBlob *blob = denseResourceAttr.getRawHandle().getBlob();
+  if (!blob) {
+    emitError(loc, "resource does not exist");
+    return nullptr;
+  }
+
+  ArrayRef<char> rawData = blob->getData();
+
+  // Check that the raw data size matches what is expected for the scalar size.
+  // TODO: in theory, we could repack the data here to keep constructing from
+  // raw data.
+  // TODO: we may also need to consider endianness when cross-compiling to an
+  // architecture where it is different.
+  int64_t numElements = denseResourceAttr.getType().getNumElements();
+  int64_t elementByteSize = rawData.size() / numElements;
+  if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits()) {
+    emitError(loc, "raw data size does not match element type size");
+    return nullptr;
+  }
+
+  // Compute the shape of all dimensions but the innermost. Note that the
+  // innermost dimension may be that of the vector element type.
+  bool hasVectorElementType = isa<VectorType>(type.getElementType());
+  int64_t numAggregates =
+      numElements / (hasVectorElementType
+                         ? 1
+                         : denseResourceAttr.getType().getShape().back());
+  ArrayRef<int64_t> outerShape = type.getShape();
+  if (!hasVectorElementType)
+    outerShape = outerShape.drop_back();
+
+  // Create a constructor for the innermost constant from a piece of raw data.
+  std::function<llvm::Constant *(StringRef)> buildCstData;
+  if (isa<TensorType>(type)) {
+    auto vectorElementType = dyn_cast<VectorType>(type.getElementType());
+    if (vectorElementType && vectorElementType.getRank() == 1) {
+      buildCstData = [&](StringRef data) {
+        return llvm::ConstantDataVector::getRaw(
+            data, vectorElementType.getShape().back(), innermostLLVMType);
+      };
+    } else if (!vectorElementType) {
+      buildCstData = [&](StringRef data) {
+        return llvm::ConstantDataArray::getRaw(data, type.getShape().back(),
+                                               innermostLLVMType);
+      };
+    }
+  } else if (isa<VectorType>(type)) {
+    buildCstData = [&](StringRef data) {
+      return llvm::ConstantDataVector::getRaw(data, type.getShape().back(),
+                                              innermostLLVMType);
+    };
+  }
+  if (!buildCstData) {
+    emitError(loc, "unsupported dense_resource type");
+    return nullptr;
+  }
+
+  // Create innermost constants and defer to the default constant creation
+  // mechanism for other dimensions.
+  SmallVector<llvm::Constant *> constants;
+  int64_t aggregateSize = denseResourceAttr.getType().getShape().back() *
+                          (innermostLLVMType->getScalarSizeInBits() / 8);
+  constants.reserve(numAggregates);
+  for (unsigned i = 0; i < numAggregates; ++i) {
+    StringRef data(rawData.data() + i * aggregateSize, aggregateSize);
+    constants.push_back(buildCstData(data));
+  }
+
+  ArrayRef<llvm::Constant *> constantsRef = constants;
+  return buildSequentialConstant(constantsRef, outerShape, llvmType, loc);
+}
+
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
 /// attributes and combinations thereof. Also, an array attribute with two
@@ -523,6 +643,11 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           convertDenseElementsAttr(loc, dyn_cast<DenseElementsAttr>(attr),
                                    llvmType, moduleTranslation)) {
     return result;
+  }
+
+  if (auto denseResourceAttr = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    return convertDenseResourceElementsAttr(loc, denseResourceAttr, llvmType,
+                                            moduleTranslation);
   }
 
   // Fall back to element-by-element construction otherwise.
@@ -921,17 +1046,80 @@ LogicalResult ModuleTranslation::convertGlobals() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
+
+      [[maybe_unused]] int numConstantsHit = 0;
+      [[maybe_unused]] int numConstantsErased = 0;
+      DenseMap<llvm::ConstantAggregate *, int> constantAggregateUseMap;
+
       for (auto &op : initializer->without_terminator()) {
-        if (failed(convertOperation(op, builder)) ||
-            !isa<llvm::Constant>(lookupValue(op.getResult(0))))
+        if (failed(convertOperation(op, builder)))
+          return emitError(op.getLoc(), "fail to convert global initializer");
+        auto *cst = dyn_cast<llvm::Constant>(lookupValue(op.getResult(0)));
+        if (!cst)
           return emitError(op.getLoc(), "unemittable constant value");
+
+        // When emitting an LLVM constant, a new constant is created and the old
+        // constant may become dangling and take space. We should remove the
+        // dangling constants to avoid memory explosion especially for constant
+        // arrays whose number of elements is large.
+        // Because multiple operations may refer to the same constant, we need
+        // to count the number of uses of each constant array and remove it only
+        // when the count becomes zero.
+        if (auto *agg = dyn_cast<llvm::ConstantAggregate>(cst)) {
+          numConstantsHit++;
+          Value result = op.getResult(0);
+          int numUsers = std::distance(result.use_begin(), result.use_end());
+          auto [iterator, inserted] =
+              constantAggregateUseMap.try_emplace(agg, numUsers);
+          if (!inserted) {
+            // Key already exists, update the value
+            iterator->second += numUsers;
+          }
+        }
+        // Scan the operands of the operation to decrement the use count of
+        // constants. Erase the constant if the use count becomes zero.
+        for (Value v : op.getOperands()) {
+          auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
+          if (!cst)
+            continue;
+          auto iter = constantAggregateUseMap.find(cst);
+          assert(iter != constantAggregateUseMap.end() && "constant not found");
+          iter->second--;
+          if (iter->second == 0) {
+            // NOTE: cannot call removeDeadConstantUsers() here because it
+            // may remove the constant which has uses not be converted yet.
+            if (cst->user_empty()) {
+              cst->destroyConstant();
+              numConstantsErased++;
+            }
+            constantAggregateUseMap.erase(iter);
+          }
+        }
       }
+
       ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
       llvm::Constant *cst =
           cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
       auto *global = cast<llvm::GlobalVariable>(lookupGlobal(op));
       if (!shouldDropGlobalInitializer(global->getLinkage(), cst))
         global->setInitializer(cst);
+
+      // Try to remove the dangling constants again after all operations are
+      // converted.
+      for (auto it : constantAggregateUseMap) {
+        auto cst = it.first;
+        cst->removeDeadConstantUsers();
+        if (cst->user_empty()) {
+          cst->destroyConstant();
+          numConstantsErased++;
+        }
+      }
+
+      LLVM_DEBUG(llvm::dbgs()
+                     << "Convert initializer for " << op.getName() << "\n";
+                 llvm::dbgs() << numConstantsHit << " new constants hit\n";
+                 llvm::dbgs()
+                 << numConstantsErased << " dangling constants erased\n";);
     }
   }
 
@@ -1053,9 +1241,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   branchMapping.clear();
   llvm::Function *llvmFunc = lookupFunction(func.getName());
 
-  // Translate the debug information for this function.
-  debugTranslation->translate(func, *llvmFunc);
-
   // Add function arguments to the value remapping table.
   for (auto [mlirArg, llvmArg] :
        llvm::zip(func.getArguments(), llvmFunc->args()))
@@ -1080,7 +1265,18 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_pstate_sm_compatible");
 
   if (func.getArmNewZa())
-    llvmFunc->addFnAttr("aarch64_pstate_za_new");
+    llvmFunc->addFnAttr("aarch64_new_za");
+  else if (func.getArmInZa())
+    llvmFunc->addFnAttr("aarch64_in_za");
+  else if (func.getArmOutZa())
+    llvmFunc->addFnAttr("aarch64_out_za");
+  else if (func.getArmInoutZa())
+    llvmFunc->addFnAttr("aarch64_inout_za");
+  else if (func.getArmPreservesZa())
+    llvmFunc->addFnAttr("aarch64_preserves_za");
+
+  if (auto targetCpu = func.getTargetCpu())
+    llvmFunc->addFnAttr("target-cpu", *targetCpu);
 
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
@@ -1089,6 +1285,23 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
+
+  if (auto unsafeFpMath = func.getUnsafeFpMath())
+    llvmFunc->addFnAttr("unsafe-fp-math", llvm::toStringRef(*unsafeFpMath));
+
+  if (auto noInfsFpMath = func.getNoInfsFpMath())
+    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
+
+  if (auto noNansFpMath = func.getNoNansFpMath())
+    llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
+
+  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
+    llvmFunc->addFnAttr("approx-func-fp-math",
+                        llvm::toStringRef(*approxFuncFpMath));
+
+  if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
+    llvmFunc->addFnAttr("no-signed-zeros-fp-math",
+                        llvm::toStringRef(*noSignedZerosFpMath));
 
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())
@@ -1152,28 +1365,29 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   llvmFunc->setMemoryEffects(newMemEffects);
 }
 
-llvm::AttrBuilder
-ModuleTranslation::convertParameterAttrs(DictionaryAttr paramAttrs) {
+FailureOr<llvm::AttrBuilder>
+ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
+                                         DictionaryAttr paramAttrs) {
   llvm::AttrBuilder attrBuilder(llvmModule->getContext());
+  auto attrNameToKindMapping = getAttrNameToKindMapping();
 
-  for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
-    Attribute attr = paramAttrs.get(mlirName);
-    // Skip attributes that are not present.
-    if (!attr)
-      continue;
+  for (auto namedAttr : paramAttrs) {
+    auto it = attrNameToKindMapping.find(namedAttr.getName());
+    if (it != attrNameToKindMapping.end()) {
+      llvm::Attribute::AttrKind llvmKind = it->second;
 
-    // NOTE: C++17 does not support capturing structured bindings.
-    llvm::Attribute::AttrKind llvmKindCap = llvmKind;
-
-    llvm::TypeSwitch<Attribute>(attr)
-        .Case<TypeAttr>([&](auto typeAttr) {
-          attrBuilder.addTypeAttr(llvmKindCap,
-                                  convertType(typeAttr.getValue()));
-        })
-        .Case<IntegerAttr>([&](auto intAttr) {
-          attrBuilder.addRawIntAttr(llvmKindCap, intAttr.getInt());
-        })
-        .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKindCap); });
+      llvm::TypeSwitch<Attribute>(namedAttr.getValue())
+          .Case<TypeAttr>([&](auto typeAttr) {
+            attrBuilder.addTypeAttr(llvmKind, convertType(typeAttr.getValue()));
+          })
+          .Case<IntegerAttr>([&](auto intAttr) {
+            attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
+          })
+          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); });
+    } else if (namedAttr.getNameDialect()) {
+      if (failed(iface.convertParameterAttr(func, argIdx, namedAttr, *this)))
+        return failure();
+    }
   }
 
   return attrBuilder;
@@ -1202,14 +1416,21 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
       DictionaryAttr resultAttrs = cast<DictionaryAttr>(allResultAttrs[0]);
-      llvmFunc->addRetAttrs(convertParameterAttrs(resultAttrs));
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(function, -1, resultAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      llvmFunc->addRetAttrs(*attrBuilder);
     }
 
     // Convert argument attributes.
     for (auto [argIdx, llvmArg] : llvm::enumerate(llvmFunc->args())) {
       if (DictionaryAttr argAttrs = function.getArgAttrDict(argIdx)) {
-        llvm::AttrBuilder attrBuilder = convertParameterAttrs(argAttrs);
-        llvmArg.addAttrs(attrBuilder);
+        FailureOr<llvm::AttrBuilder> attrBuilder =
+            convertParameterAttrs(function, argIdx, argAttrs);
+        if (failed(attrBuilder))
+          return failure();
+        llvmArg.addAttrs(*attrBuilder);
       }
     }
 
@@ -1236,6 +1457,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     if (auto alignment = function.getAlignment())
       llvmFunc->setAlignment(llvm::MaybeAlign(*alignment));
+
+    // Translate the debug information for this function.
+    debugTranslation->translate(function, *llvmFunc);
   }
 
   return success();
@@ -1288,13 +1512,14 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   if (!scopeInserted)
     return scopeIt->second;
   llvm::LLVMContext &ctx = llvmModule->getContext();
+  auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
   // Convert the domain metadata node if necessary.
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
     llvm::SmallVector<llvm::Metadata *, 2> operands;
     // Placeholder for self-reference.
-    operands.push_back({});
+    operands.push_back(dummy.get());
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
@@ -1305,7 +1530,7 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   assert(domainIt->second && "Scope's domain should already be valid");
   llvm::SmallVector<llvm::Metadata *, 3> operands;
   // Placeholder for self-reference.
-  operands.push_back({});
+  operands.push_back(dummy.get());
   operands.push_back(domainIt->second);
   if (StringAttr description = aliasScopeAttr.getDescription())
     operands.push_back(llvm::MDString::get(ctx, description));
@@ -1548,6 +1773,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
 
   LLVM::ensureDistinctSuccessors(module);
+  LLVM::legalizeDIExpressionsRecursively(module);
 
   ModuleTranslation translator(module, std::move(llvmModule));
   llvm::IRBuilder<> llvmBuilder(llvmContext);

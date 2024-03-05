@@ -22,7 +22,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -121,7 +120,6 @@ static void parseArgs(int argc, char **argv) {
 }
 
 int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   HTTPClient::initialize();
   parseArgs(argc, argv);
 

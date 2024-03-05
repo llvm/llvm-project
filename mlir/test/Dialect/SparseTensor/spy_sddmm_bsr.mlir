@@ -49,12 +49,12 @@
 // CHECK:             %[[VAL_18:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_17]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_19:.*]] = %[[VAL_16]] to %[[VAL_18]] step %[[VAL_3]] {
 // CHECK:               %[[VAL_20:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_19]]] : memref<?xindex>
+// CHECK:               %[[VAL_22:.*]] = arith.muli %[[VAL_19]], %[[VAL_5]] : index
 // CHECK:               scf.for %[[VAL_21:.*]] = %[[VAL_4]] to %[[VAL_5]] step %[[VAL_3]] {
-// CHECK:                 %[[VAL_22:.*]] = arith.muli %[[VAL_19]], %[[VAL_5]] : index
-// CHECK:                 %[[VAL_23:.*]] = arith.addi %[[VAL_22]], %[[VAL_21]] : index
+// CHECK:                 %[[VAL_23:.*]] = arith.addi %[[VAL_21]], %[[VAL_22]] : index
+// CHECK:                 %[[VAL_25:.*]] = arith.muli %[[VAL_23]], %[[VAL_5]] : index
 // CHECK:                 scf.for %[[VAL_24:.*]] = %[[VAL_4]] to %[[VAL_5]] step %[[VAL_3]] {
-// CHECK:                   %[[VAL_25:.*]] = arith.muli %[[VAL_23]], %[[VAL_5]] : index
-// CHECK:                   %[[VAL_26:.*]] = arith.addi %[[VAL_25]], %[[VAL_24]] : index
+// CHECK:                   %[[VAL_26:.*]] = arith.addi %[[VAL_24]], %[[VAL_25]] : index
 // CHECK:                   %[[VAL_27:.*]] = scf.for %[[VAL_28:.*]] = %[[VAL_4]] to %[[VAL_8]] step %[[VAL_3]] iter_args(%[[VAL_29:.*]] = %[[VAL_6]]) -> (f32) {
 // CHECK:                     %[[VAL_30:.*]] = arith.muli %[[VAL_15]], %[[VAL_5]] : index
 // CHECK:                     %[[VAL_31:.*]] = arith.addi %[[VAL_30]], %[[VAL_21]] : index

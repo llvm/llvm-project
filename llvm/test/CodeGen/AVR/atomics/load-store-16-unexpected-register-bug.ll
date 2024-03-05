@@ -11,13 +11,13 @@
 %UnsafeCell = type { i16, [0 x i8] }
 
 ; CHECK-LABEL: foo
-define i8 @foo(%AtomicI16*) {
+define i8 @foo(ptr) {
 start:
 
 ; We should not be generating atomics that use the X register, they will fail when emitting MC.
 ; CHECK-NOT: X
-  %1 = getelementptr inbounds %AtomicI16, %AtomicI16* %0, i16 0, i32 0, i32 0
-  %2 = load atomic i16, i16* %1 seq_cst, align 2
+  %1 = getelementptr inbounds %AtomicI16, ptr %0, i16 0, i32 0, i32 0
+  %2 = load atomic i16, ptr %1 seq_cst, align 2
   ret i8 0
 }
 

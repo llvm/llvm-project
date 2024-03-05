@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs %s -o - | FileCheck %s
 
 ; CHECK-LABEL: foo
 ; CHECK-NOT: BUFFER_LOAD_DWORDX2_OFFSET

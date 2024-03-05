@@ -42,6 +42,12 @@ public:
   void getModuleMetadata(Module &M) override;
 
   bool isInSmallSection(uint64_t Size) const;
+
+  const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                          const MCSymbol *Sym,
+                                          const MCValue &MV, int64_t Offset,
+                                          MachineModuleInfo *MMI,
+                                          MCStreamer &Streamer) const override;
 };
 
 } // end namespace llvm

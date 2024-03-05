@@ -116,7 +116,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
-    libc.src.math.atanf    
+    libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -192,6 +192,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl

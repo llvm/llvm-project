@@ -141,7 +141,6 @@ add_llvm_component_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
-  VFABIDemangling.cpp
   ${GeneratedMLSources}
 
   ADDITIONAL_HEADER_DIRS

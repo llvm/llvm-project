@@ -280,7 +280,7 @@ BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
 Printable llvm::printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
                                BlockFrequency Freq) {
   return Printable([&MBFI, Freq](raw_ostream &OS) {
-    printBlockFreqImpl(OS, MBFI.getEntryFreq(), Freq);
+    printRelativeBlockFreq(OS, MBFI.getEntryFreq(), Freq);
   });
 }
 

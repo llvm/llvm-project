@@ -32,7 +32,7 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
 // generate code. All of the operations it can generate are modelled with
 // NoMemoryEffect. However, if hlfir.declare is given NoMemoryEffect, it can be
 // removed by dead code elimination if the value result is unused. Information
-// from the delclare operation can be used to generate debug information so we
+// from the declare operation can be used to generate debug information so we
 // don't want to remove it as dead code
 def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     MemoryEffects<[MemWrite<DebuggingResource>]>,
@@ -88,7 +88,8 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
     Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
@@ -101,7 +102,8 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
   let builders = [
     OpBuilder<(ins "mlir::Value":$memref, "llvm::StringRef":$uniq_name,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>];
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
+      CArg<"fir::CUDADataAttributeAttr", "{}">:$cuda_attr)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks

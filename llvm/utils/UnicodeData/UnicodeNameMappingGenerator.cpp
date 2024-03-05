@@ -8,7 +8,7 @@
 //
 // This file is used to generate lib/Support/UnicodeNameToCodepointGenerated.cpp
 // using UnicodeData.txt and NameAliases.txt available at
-// https://unicode.org/Public/15.0.0/ucd/
+// https://unicode.org/Public/15.1.0/ucd/
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
@@ -355,9 +355,9 @@ int main(int argc, char **argv) {
          "Usage: %s UnicodeData.txt NameAliases.txt output\n\n",
          argv[0]);
   printf("NameAliases.txt can be found at "
-         "https://unicode.org/Public/15.0.0/ucd/NameAliases.txt\n"
+         "https://unicode.org/Public/15.1.0/ucd/NameAliases.txt\n"
          "UnicodeData.txt can be found at "
-         "https://unicode.org/Public/15.0.0/ucd/UnicodeData.txt\n\n");
+         "https://unicode.org/Public/15.1.0/ucd/UnicodeData.txt\n\n");
 
   if (argc != 4)
     return EXIT_FAILURE;

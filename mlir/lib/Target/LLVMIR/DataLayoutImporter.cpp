@@ -164,9 +164,9 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
 }
 
 LogicalResult
-DataLayoutImporter::tryToEmplaceAllocaAddrSpaceEntry(StringRef token) {
-  auto key =
-      StringAttr::get(context, DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
+DataLayoutImporter::tryToEmplaceAddrSpaceEntry(StringRef token,
+                                               llvm::StringLiteral spaceKey) {
+  auto key = StringAttr::get(context, spaceKey);
   if (keyEntries.count(key))
     return success();
 
@@ -247,9 +247,24 @@ void DataLayoutImporter::translateDataLayout(
         return;
       continue;
     }
+    // Parse the program address space.
+    if (*prefix == "P") {
+      if (failed(tryToEmplaceAddrSpaceEntry(
+              token, DLTIDialect::kDataLayoutProgramMemorySpaceKey)))
+        return;
+      continue;
+    }
+    // Parse the global address space.
+    if (*prefix == "G") {
+      if (failed(tryToEmplaceAddrSpaceEntry(
+              token, DLTIDialect::kDataLayoutGlobalMemorySpaceKey)))
+        return;
+      continue;
+    }
     // Parse the alloca address space.
     if (*prefix == "A") {
-      if (failed(tryToEmplaceAllocaAddrSpaceEntry(token)))
+      if (failed(tryToEmplaceAddrSpaceEntry(
+              token, DLTIDialect::kDataLayoutAllocaMemorySpaceKey)))
         return;
       continue;
     }

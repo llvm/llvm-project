@@ -1074,7 +1074,7 @@ define void @merge_4i32_i32_combine(ptr %dst, ptr %src) {
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; X86-SSE1-NEXT:    andps %xmm0, %xmm1
 ; X86-SSE1-NEXT:    movaps %xmm1, (%eax)
 ; X86-SSE1-NEXT:    retl

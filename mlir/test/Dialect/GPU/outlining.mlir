@@ -407,3 +407,77 @@ func.func @launch_memory_attributions_1(%arg0 : memref<*xf32>) {
 }
 
 // CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+
+// -----
+// CHECK: module attributes {gpu.container_module}
+
+// CHECK-LABEL: func @launch_cluster()
+func.func @launch_cluster() {
+  // CHECK: %[[ARG0:.*]] = "op"() : () -> f32
+  %0 = "op"() : () -> (f32)
+  // CHECK: %[[ARG1:.*]] = "op"() : () -> memref<?xf32, 1>
+  %1 = "op"() : () -> (memref<?xf32, 1>)
+  // CHECK: %[[CDIMX:.*]] = arith.constant 1
+  %cDimX = arith.constant 1 : index
+  // CHECK: %[[CDIMY:.*]] = arith.constant 2
+  %cDimY = arith.constant 2 : index
+  // CHECK: %[[CDIMZ:.*]] = arith.constant 1
+  %cDimZ = arith.constant 1 : index
+  // CHECK: %[[GDIMX:.*]] = arith.constant 8
+  %gDimX = arith.constant 8 : index
+  // CHECK: %[[GDIMY:.*]] = arith.constant 12
+  %gDimY = arith.constant 12 : index
+  // CHECK: %[[GDIMZ:.*]] = arith.constant 16
+  %gDimZ = arith.constant 16 : index
+  // CHECK: %[[BDIMX:.*]] = arith.constant 20
+  %bDimX = arith.constant 20 : index
+  // CHECK: %[[BDIMY:.*]] = arith.constant 24
+  %bDimY = arith.constant 24 : index
+  // CHECK: %[[BDIMZ:.*]] = arith.constant 28
+  %bDimZ = arith.constant 28 : index
+
+  // CHECK: gpu.launch_func @launch_cluster_kernel::@launch_cluster_kernel clusters in (%[[CDIMX]], %[[CDIMY]], %[[CDIMZ]]) blocks in (%[[GDIMX]], %[[GDIMY]], %[[GDIMZ]]) threads in (%[[BDIMX]], %[[BDIMY]], %[[BDIMZ]]) args(%[[ARG0]] : f32, %[[ARG1]] : memref<?xf32, 1>)
+  // CHECK-NOT: gpu.launch blocks
+  gpu.launch clusters(%cx, %cy, %cz) in (%cluster_x = %cDimX, %cluster_y = %cDimY,
+                                       %cluster_z = %cDimZ)
+             blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY,
+                                       %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY,
+                                        %block_z = %bDimZ) {
+    "use"(%0): (f32) -> ()
+    "some_op"(%cx, %bx, %block_x) : (index, index, index) -> ()
+    %42 = memref.load %1[%tx] : memref<?xf32, 1>
+    gpu.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: gpu.module @launch_cluster_kernel
+// CHECK-NEXT: gpu.func @launch_cluster_kernel
+// CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
+// CHECK-SAME: gpu.known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: gpu.known_grid_size = array<i32: 8, 12, 16>
+// CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
+// CHECK-NEXT: = gpu.block_id y
+// CHECK-NEXT: = gpu.block_id z
+// CHECK-NEXT: %[[TID:.*]] = gpu.thread_id x
+// CHECK-NEXT: = gpu.thread_id y
+// CHECK-NEXT: = gpu.thread_id z
+// CHECK-NEXT: = gpu.grid_dim x
+// CHECK-NEXT: = gpu.grid_dim y
+// CHECK-NEXT: = gpu.grid_dim z
+// CHECK-NEXT: %[[BDIM:.*]] = gpu.block_dim x
+// CHECK-NEXT: = gpu.block_dim y
+// CHECK-NEXT: = gpu.block_dim z
+// CHECK-NEXT: %[[CID:.*]] = gpu.cluster_id x
+// CHECK-NEXT: = gpu.cluster_id y
+// CHECK-NEXT: = gpu.cluster_id z
+// CHECK-NEXT: %[[CDIM:.*]] = gpu.cluster_dim x
+// CHECK-NEXT: = gpu.cluster_dim y
+// CHECK-NEXT: = gpu.cluster_dim z
+// CHECK-NEXT: cf.br ^[[BLOCK:.*]]
+// CHECK-NEXT: ^[[BLOCK]]:
+// CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
+// CHECK-NEXT: "some_op"(%[[CID]], %[[BID]], %[[BDIM]]) : (index, index, index) -> ()
+// CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
+

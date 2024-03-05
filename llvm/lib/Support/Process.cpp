@@ -59,7 +59,7 @@ Process::FindInEnvPath(StringRef EnvName, StringRef FileName,
     SmallString<128> FilePath(Dir);
     path::append(FilePath, FileName);
     if (fs::exists(Twine(FilePath))) {
-      FoundPath = std::string(FilePath.str());
+      FoundPath = std::string(FilePath);
       break;
     }
   }
@@ -67,24 +67,40 @@ Process::FindInEnvPath(StringRef EnvName, StringRef FileName,
   return FoundPath;
 }
 
-
+// clang-format off
 #define COLOR(FGBG, CODE, BOLD) "\033[0;" BOLD FGBG CODE "m"
 
-#define ALLCOLORS(FGBG,BOLD) {\
-    COLOR(FGBG, "0", BOLD),\
-    COLOR(FGBG, "1", BOLD),\
-    COLOR(FGBG, "2", BOLD),\
-    COLOR(FGBG, "3", BOLD),\
-    COLOR(FGBG, "4", BOLD),\
-    COLOR(FGBG, "5", BOLD),\
-    COLOR(FGBG, "6", BOLD),\
-    COLOR(FGBG, "7", BOLD)\
+#define ALLCOLORS(FGBG, BRIGHT, BOLD) \
+  {                           \
+    COLOR(FGBG, "0", BOLD),   \
+    COLOR(FGBG, "1", BOLD),   \
+    COLOR(FGBG, "2", BOLD),   \
+    COLOR(FGBG, "3", BOLD),   \
+    COLOR(FGBG, "4", BOLD),   \
+    COLOR(FGBG, "5", BOLD),   \
+    COLOR(FGBG, "6", BOLD),   \
+    COLOR(FGBG, "7", BOLD),   \
+    COLOR(BRIGHT, "0", BOLD), \
+    COLOR(BRIGHT, "1", BOLD), \
+    COLOR(BRIGHT, "2", BOLD), \
+    COLOR(BRIGHT, "3", BOLD), \
+    COLOR(BRIGHT, "4", BOLD), \
+    COLOR(BRIGHT, "5", BOLD), \
+    COLOR(BRIGHT, "6", BOLD), \
+    COLOR(BRIGHT, "7", BOLD), \
   }
 
-static const char colorcodes[2][2][8][10] = {
- { ALLCOLORS("3",""), ALLCOLORS("3","1;") },
- { ALLCOLORS("4",""), ALLCOLORS("4","1;") }
+//                           bg
+//                           |  bold
+//                           |  |
+//                           |  |   codes
+//                           |  |   |
+//                           |  |   |
+static const char colorcodes[2][2][16][11] = {
+    { ALLCOLORS("3", "9", ""), ALLCOLORS("3", "9", "1;"),},
+    { ALLCOLORS("4", "10", ""), ALLCOLORS("4", "10", "1;")}
 };
+// clang-format on
 
 // A CMake option controls wheter we emit core dumps by default. An application
 // may disable core dumps by calling Process::PreventCoreFiles().

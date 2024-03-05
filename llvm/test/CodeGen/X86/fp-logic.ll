@@ -99,7 +99,7 @@ define float @f6(float %x, i32 %y) {
 define float @f7(float %x) {
 ; CHECK-LABEL: f7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.20389539E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -113,7 +113,7 @@ define float @f7(float %x) {
 define float @f8(float %x) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [5.60519386E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -177,7 +177,7 @@ define float @xor(float %x, float %y) {
 define float @f7_or(float %x) {
 ; CHECK-LABEL: f7_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.20389539E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -189,7 +189,7 @@ define float @f7_or(float %x) {
 define float @f7_xor(float %x) {
 ; CHECK-LABEL: f7_xor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.20389539E-45,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    xorps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
@@ -215,7 +215,7 @@ define double @doubles(double %x, double %y) {
 define double @f7_double(double %x) {
 ; CHECK-LABEL: f7_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.4821969375237396E-323,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast double %x to i64
@@ -231,7 +231,7 @@ define double @f7_double(double %x) {
 define float @movmsk(float %x) {
 ; CHECK-LABEL: movmsk:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32

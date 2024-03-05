@@ -177,7 +177,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", Inst.getIterator());
     NewInst->setNonNeg();
     break;
   }
@@ -186,7 +186,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", Inst.getIterator());
     NewInst->setIsExact(Inst.isExact());
     break;
   }
@@ -199,7 +199,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
       return false;
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
-    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", Inst.getIterator());
     if (Inst.getOpcode() == Instruction::SDiv)
       NewInst->setIsExact(Inst.isExact());
     break;
@@ -310,6 +310,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
         new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
       }
 
+      DefaultDest->removePredecessor(BB);
       SI->setDefaultDest(NewUnreachableBB);
       Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
       Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
@@ -1063,14 +1064,17 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
     // is ready.
     if (SCValue.isConstantRange(/*UndefAllowed=*/false)) {
       const ConstantRange &Range = SCValue.getConstantRange();
+      unsigned ReachableCaseCount = 0;
       for (const auto &Case : SI->cases()) {
         const APInt &CaseValue = Case.getCaseValue()->getValue();
-        if (Range.contains(CaseValue))
+        if (Range.contains(CaseValue)) {
           Succs[Case.getSuccessorIndex()] = true;
+          ++ReachableCaseCount;
+        }
       }
 
-      // TODO: Determine whether default case is reachable.
-      Succs[SI->case_default()->getSuccessorIndex()] = true;
+      Succs[SI->case_default()->getSuccessorIndex()] =
+          Range.isSizeLargerThan(ReachableCaseCount);
       return;
     }
 

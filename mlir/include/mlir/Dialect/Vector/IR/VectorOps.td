@@ -478,6 +478,69 @@ def Vector_ShuffleOp :
   let hasCanonicalizer = 1;
 }
 
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure,
+    AllTypesMatch<["lhs", "rhs"]>,
+    TypesMatchWith<
+    "type of 'result' is double the width of the inputs",
+    "lhs", "result",
+    [{
+      [&]() -> ::mlir::VectorType {
+        auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+        ::mlir::VectorType::Builder builder(vectorType);
+        if (vectorType.getRank() == 0) {
+          static constexpr int64_t v2xty_shape[] = { 2 };
+          return builder.setShape(v2xty_shape);
+        }
+        auto lastDim = vectorType.getRank() - 1;
+        return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
+      }()
+    }]>]> {
+  let summary = "constructs a vector by interleaving two input vectors";
+  let description = [{
+    The interleave operation constructs a new vector by interleaving the
+    elements from the trailing (or final) dimension of two input vectors,
+    returning a new vector where the trailing dimension is twice the size.
+
+    Note that for the n-D case this differs from the interleaving possible with
+    `vector.shuffle`, which would only operate on the leading dimension.
+
+    Another key difference is this operation supports scalable vectors, though
+    currently a general LLVM lowering is limited to the case where only the
+    trailing dimension is scalable.
+
+    Example:
+    ```mlir
+    %0 = vector.interleave %a, %b
+               : vector<[4]xi32>     ; yields vector<[8]xi32>
+    %1 = vector.interleave %c, %d
+               : vector<8xi8>        ; yields vector<16xi8>
+    %2 = vector.interleave %e, %f
+               : vector<f16>         ; yields vector<2xf16>
+    %3 = vector.interleave %g, %h
+               : vector<2x4x[2]xf64> ; yields vector<2x4x[4]xf64>
+    %4 = vector.interleave %i, %j
+               : vector<6x3xf32>     ; yields vector<6x6xf32>
+    ```
+  }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$lhs, AnyVectorOfAnyRank:$rhs);
+  let results = (outs AnyVector:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs  attr-dict `:` type($lhs)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return ::llvm::cast<VectorType>(getLhs().getType());
+    }
+    VectorType getResultVectorType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+}
+
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
      TypesMatchWith<"result type matches element type of vector operand",
@@ -1121,7 +1184,6 @@ def Vector_ExtractStridedSliceOp :
     attribute and extracts the n-D subvector at the proper offset.
 
     At the moment strides must contain only 1s.
-    // TODO: support non-1 strides.
 
     Returns an n-D vector where the first k-D dimensions match the `sizes`
     attribute. The returned subvector contains the elements starting at offset
@@ -1626,7 +1688,8 @@ def Vector_LoadOp : Vector_Op<"load"> {
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
-      Variadic<Index>:$indices);
+      Variadic<Index>:$indices,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
   let results = (outs AnyVectorOfAnyRank:$result);
 
   let extraClassDeclaration = [{
@@ -1710,7 +1773,8 @@ def Vector_StoreOp : Vector_Op<"store"> {
       AnyVectorOfAnyRank:$valueToStore,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$base,
-      Variadic<Index>:$indices
+      Variadic<Index>:$indices,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal
   );
 
   let extraClassDeclaration = [{
@@ -2496,6 +2560,7 @@ def Vector_TransposeOp :
 
 def Vector_PrintOp :
   Vector_Op<"print", [
+    MemoryEffects<[MemWrite]>,
     PredOpTrait<
       "`source` or `punctuation` are not set when printing strings",
       CPred<"!getStringLiteral() || (!getSource() && getPunctuation() == PrintPunctuation::NewLine)">
@@ -2744,7 +2809,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
 //       call to the function. For that, it might be useful to have a
 //       'vector.scale.global' and a 'vector.scale.local' operation.
 def VectorScaleOp : Vector_Op<"vscale",
-                 [Pure]> {
+  [Pure, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+> {
   let summary = "Load vector scale size";
   let description = [{
     The `vscale` op returns the scale of the scalable vectors, a positive
@@ -2760,6 +2826,13 @@ def VectorScaleOp : Vector_Op<"vscale",
   }];
   let results = (outs Index:$res);
   let assemblyFormat = "attr-dict";
+
+  let extraClassDefinition = [{
+    void $cppClass::getAsmResultNames(
+        ::llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
+      setNameFn(getResult(), "vscale");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

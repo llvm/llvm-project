@@ -148,26 +148,27 @@ public:
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
-                                     DebugLoc DL, const Twine &Name = "") {
+                                     DebugLoc DL = {}, const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
-  VPValue *createNot(VPValue *Operand, DebugLoc DL, const Twine &Name = "") {
+  VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
+                     const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
     return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL, const Twine &Name = "",
+                        DebugLoc DL = {}, const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
     auto *Select =
         FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},

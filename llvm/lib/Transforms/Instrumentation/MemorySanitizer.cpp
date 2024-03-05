@@ -284,9 +284,6 @@ static cl::opt<bool> ClHandleLifetimeIntrinsics(
 // passed into an assembly call. Note that this may cause false positives.
 // Because it's impossible to figure out the array sizes, we can only unpoison
 // the first sizeof(type) bytes for each type* pointer.
-// The instrumentation is only enabled in KMSAN builds, and only if
-// -msan-handle-asm-conservative is on. This is done because we may want to
-// quickly disable assembly instrumentation when it breaks.
 static cl::opt<bool> ClHandleAsmConservative(
     "msan-handle-asm-conservative",
     cl::desc("conservative handling of inline assembly"), cl::Hidden,
@@ -4103,7 +4100,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // do the usual thing: check argument shadow and mark all outputs as
       // clean. Note that any side effects of the inline asm that are not
       // immediately visible in its constraints are not handled.
-      if (ClHandleAsmConservative && MS.CompileKernel)
+      if (ClHandleAsmConservative)
         visitAsmInstruction(CB);
       else
         visitInstruction(CB);
@@ -4555,9 +4552,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (!ElemTy->isSized())
       return;
-    Value *SizeVal =
-      IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
-    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    auto Size = DL.getTypeStoreSize(ElemTy);
+    Value *SizeVal = IRB.CreateTypeSize(MS.IntptrTy, Size);
+    if (MS.CompileKernel) {
+      IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    } else {
+      // ElemTy, derived from elementtype(), does not encode the alignment of
+      // the pointer. Conservatively assume that the shadow memory is unaligned.
+      // When Size is large, avoid StoreInst as it would expand to many
+      // instructions.
+      auto [ShadowPtr, _] =
+          getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
+      if (Size <= 32)
+        IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+      else
+        IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                         SizeVal, Align(1));
+    }
   }
 
   /// Get the number of output arguments returned by pointers.
@@ -5253,8 +5264,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(8), /*isStore*/ true)
               .first;
 
-      Value *GrSrcPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
-                                              GrRegSaveAreaShadowPtrOff);
+      Value *GrSrcPtr =
+          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy, GrRegSaveAreaShadowPtrOff);
       Value *GrCopySize = IRB.CreateSub(GrArgSize, GrRegSaveAreaShadowPtrOff);
 
       IRB.CreateMemCpy(GrRegSaveAreaShadowPtr, Align(8), GrSrcPtr, Align(8),
@@ -5269,10 +5280,9 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(8), /*isStore*/ true)
               .first;
 
-      Value *VrSrcPtr = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(),
-          IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
-                                IRB.getInt32(AArch64VrBegOffset)),
+      Value *VrSrcPtr = IRB.CreateInBoundsPtrAdd(
+          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy,
+                                   IRB.getInt32(AArch64VrBegOffset)),
           VrRegSaveAreaShadowPtrOff);
       Value *VrCopySize = IRB.CreateSub(VrArgSize, VrRegSaveAreaShadowPtrOff);
 
@@ -5285,8 +5295,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(16), /*isStore*/ true)
               .first;
 
-      Value *StackSrcPtr = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(), VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
+      Value *StackSrcPtr = IRB.CreateInBoundsPtrAdd(
+          VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
 
       IRB.CreateMemCpy(StackSaveAreaShadowPtr, Align(16), StackSrcPtr,
                        Align(16), VAArgOverflowSize);

@@ -1,4 +1,5 @@
 ; RUN: opt -loop-reduce -S %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -loop-reduce -S %s | FileCheck %s
 
 ;; This test ensures that no attempt is made to translate long SCEVs into
 ;; DIExpressions. Attempting the translation can use excessive resources and

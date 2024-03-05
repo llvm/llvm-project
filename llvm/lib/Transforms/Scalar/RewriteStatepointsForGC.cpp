@@ -967,51 +967,6 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     return BDVState(BaseValue, BDVState::Base, BaseValue);
   };
 
-  bool Progress = true;
-  while (Progress) {
-#ifndef NDEBUG
-    const size_t OldSize = States.size();
-#endif
-    Progress = false;
-    // We're only changing values in this loop, thus safe to keep iterators.
-    // Since this is computing a fixed point, the order of visit does not
-    // effect the result.  TODO: We could use a worklist here and make this run
-    // much faster.
-    for (auto Pair : States) {
-      Value *BDV = Pair.first;
-      // Only values that do not have known bases or those that have differing
-      // type (scalar versus vector) from a possible known base should be in the
-      // lattice.
-      assert((!isKnownBase(BDV, KnownBases) ||
-             !areBothVectorOrScalar(BDV, Pair.second.getBaseValue())) &&
-                 "why did it get added?");
-
-      BDVState NewState(BDV);
-      visitBDVOperands(BDV, [&](Value *Op) {
-        Value *BDV = findBaseOrBDV(Op, Cache, KnownBases);
-        auto OpState = GetStateForBDV(BDV, Op);
-        NewState.meet(OpState);
-      });
-
-      BDVState OldState = Pair.second;
-      if (OldState != NewState) {
-        Progress = true;
-        States[BDV] = NewState;
-      }
-    }
-
-    assert(OldSize == States.size() &&
-           "fixed point shouldn't be adding any new nodes to state");
-  }
-
-#ifndef NDEBUG
-  VerifyStates();
-  LLVM_DEBUG(dbgs() << "States after meet iteration:\n");
-  for (const auto &Pair : States) {
-    LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
-  }
-#endif
-
   // Even though we have identified a concrete base (or a conflict) for all live
   // pointers at this point, there are cases where the base is of an
   // incompatible type compared to the original instruction. We conservatively
@@ -1023,7 +978,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   // the BDVs.
   // TODO: in many cases the instructions emited for the conflicting states
   // will be identical to the I itself (if the I's operate on their BDVs
-  // themselves). We should expoit this, but can't do it here since it would
+  // themselves). We should exploit this, but can't do it here since it would
   // break the invariant about the BDVs not being known to be a base.
   // TODO: the code also does not handle constants at all - the algorithm relies
   // on all constants having the same BDV and therefore constant-only insns
@@ -1050,6 +1005,60 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     return false;
   };
 
+  bool Progress = true;
+  while (Progress) {
+#ifndef NDEBUG
+    const size_t OldSize = States.size();
+#endif
+    Progress = false;
+    // We're only changing values in this loop, thus safe to keep iterators.
+    // Since this is computing a fixed point, the order of visit does not
+    // effect the result.  TODO: We could use a worklist here and make this run
+    // much faster.
+    for (auto Pair : States) {
+      Value *BDV = Pair.first;
+      // Only values that do not have known bases or those that have differing
+      // type (scalar versus vector) from a possible known base should be in the
+      // lattice.
+      assert((!isKnownBase(BDV, KnownBases) ||
+             !areBothVectorOrScalar(BDV, Pair.second.getBaseValue())) &&
+                 "why did it get added?");
+
+      BDVState NewState(BDV);
+      visitBDVOperands(BDV, [&](Value *Op) {
+        Value *BDV = findBaseOrBDV(Op, Cache, KnownBases);
+        auto OpState = GetStateForBDV(BDV, Op);
+        NewState.meet(OpState);
+      });
+
+      // if the instruction has known base, but should in fact be marked as
+      // conflict because of incompatible in/out types, we mark it as such
+      // ensuring that it will propagate through the fixpoint iteration
+      auto I = cast<Instruction>(BDV);
+      auto BV = NewState.getBaseValue();
+      if (BV && MarkConflict(I, BV))
+        NewState = BDVState(I, BDVState::Conflict);
+
+      BDVState OldState = Pair.second;
+      if (OldState != NewState) {
+        Progress = true;
+        States[BDV] = NewState;
+      }
+    }
+
+    assert(OldSize == States.size() &&
+           "fixed point shouldn't be adding any new nodes to state");
+  }
+
+#ifndef NDEBUG
+  VerifyStates();
+  LLVM_DEBUG(dbgs() << "States after meet iteration:\n");
+  for (const auto &Pair : States) {
+    LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
+  }
+
+  // since we do the conflict marking as part of the fixpoint iteration this
+  // loop only asserts that invariants are met
   for (auto Pair : States) {
     Instruction *I = cast<Instruction>(Pair.first);
     BDVState State = Pair.second;
@@ -1061,18 +1070,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         (!isKnownBase(I, KnownBases) || !areBothVectorOrScalar(I, BaseValue)) &&
         "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
-
-    // since we only mark vec-scalar insns as conflicts in the pass, our work is
-    // done if the instruction already conflicts
-    if (State.isConflict())
-      continue;
-
-    if (MarkConflict(I, BaseValue))
-      States[I] = BDVState(I, BDVState::Conflict);
   }
-
-#ifndef NDEBUG
-  VerifyStates();
 #endif
 
   // Insert Phis for all conflicts
@@ -1975,19 +1973,10 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
     assert(AllocaMap.count(OriginalValue));
     Value *Alloca = AllocaMap[OriginalValue];
 
-    // Emit store into the related alloca
-    // All gc_relocates are i8 addrspace(1)* typed, and it must be bitcasted to
-    // the correct type according to alloca.
+    // Emit store into the related alloca.
     assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    IRBuilder<> Builder(Relocate->getNextNode());
-    Value *CastedRelocatedValue =
-      Builder.CreateBitCast(Relocate,
-                            cast<AllocaInst>(Alloca)->getAllocatedType(),
-                            suffixed_name_or(Relocate, ".casted", ""));
-
-    new StoreInst(CastedRelocatedValue, Alloca,
-                  cast<Instruction>(CastedRelocatedValue)->getNextNode());
+    new StoreInst(Relocate, Alloca, Relocate->getNextNode());
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2620,13 +2609,9 @@ static bool inlineGetBaseAndOffset(Function &F,
       Value *Base =
           findBasePointer(Callsite->getOperand(0), DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
-      auto *BaseBC = IRBuilder<>(Callsite).CreateBitCast(
-          Base, Callsite->getType(), suffixed_name_or(Base, ".cast", ""));
-      if (BaseBC != Base)
-        DVCache[BaseBC] = Base;
-      Callsite->replaceAllUsesWith(BaseBC);
-      if (!BaseBC->hasName())
-        BaseBC->takeName(Callsite);
+      Callsite->replaceAllUsesWith(Base);
+      if (!Base->hasName())
+        Base->takeName(Callsite);
       Callsite->eraseFromParent();
       break;
     }

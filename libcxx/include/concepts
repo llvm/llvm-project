@@ -129,7 +129,6 @@ namespace std {
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__concepts/arithmetic.h>
 #include <__concepts/assignable.h>
 #include <__concepts/boolean_testable.h>
@@ -155,7 +154,7 @@ namespace std {
 #include <__config>
 #include <version>
 
-#if _LIBCPP_STD_VER <= 20 && !defined(_LIPCPP_REMOVE_TRANSITIVE_INCLUDES)
+#if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <type_traits>
 #endif
 

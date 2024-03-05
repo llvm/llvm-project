@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 # Do not fold stack objects into SDWA.
 

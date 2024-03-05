@@ -16,7 +16,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value
   // CHECK: max version: v1.3
   // CHECK: extensions: [ ]
   // CHECK: capabilities: [ [Kernel] ]
-  %0 = spirv.AtomicCompareExchangeWeak "Workgroup" "Release" "Acquire" %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Release> <Acquire> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
   return %0: i32
 }
 

@@ -31,12 +31,12 @@ module attributes { transform.with_named_sequence } {
       %lhs_type: !transform.type {transform.readonly},
       %rhs_type: !transform.type {transform.readonly},
       %res_type: !transform.type {transform.readonly}) {
-    transform.test_print_remark_at_operand %fill, "fill" : !transform.any_op
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
-    transform.test_print_param %dims, "dimensions" at %matmul : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %lhs_type, "LHS type" at %matmul : !transform.type, !transform.any_op
-    transform.test_print_param %rhs_type, "RHS type" at %matmul : !transform.type, !transform.any_op
-    transform.test_print_param %res_type, "result type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_remark_at %fill, "fill" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_param_as_remark %dims, "dimensions" at %matmul : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %lhs_type, "LHS type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_param_as_remark %rhs_type, "RHS type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_param_as_remark %res_type, "result type" at %matmul : !transform.type, !transform.any_op
     transform.yield
   }
 

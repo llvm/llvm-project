@@ -129,6 +129,7 @@ namespace llvm {
     COV_3 = 300, // Unsupported.
     COV_4 = 400,
     COV_5 = 500,
+    COV_6 = 600,
   };
 
   class TargetOptions {
@@ -145,13 +146,13 @@ namespace llvm {
           IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
           UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), EnableIPRA(false), EmitStackSizeSection(false),
-          EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
-          SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-          EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-          ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-          DebugStrictDwarf(false), Hotpatch(false),
+          EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+          EmitStackSizeSection(false), EnableMachineOutliner(false),
+          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
+          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+          XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
@@ -295,6 +296,9 @@ namespace llvm {
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
 
+    /// EnableTLSDESC - This flag enables TLS Descriptors.
+    unsigned EnableTLSDESC : 1;
+
     /// This flag enables InterProcedural Register Allocation (IPRA).
     unsigned EnableIPRA : 1;
 
@@ -312,6 +316,10 @@ namespace llvm {
 
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
+
+    // Emit the SHT_LLVM_BB_ADDR_MAP section containing basic block address
+    // which can be used to map virtual addresses to machine basic blocks.
+    unsigned BBAddrMap : 1;
 
     /// Emit basic blocks into separate sections.
     BasicBlockSection BBSections = BasicBlockSection::None;

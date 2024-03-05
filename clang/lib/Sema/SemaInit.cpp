@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -5495,7 +5496,7 @@ static void TryOrBuildParenListInitialization(
         return;
     }
     //   ...and value-initialized for each k < i <= n;
-    if (ArrayLength > Args.size()) {
+    if (ArrayLength > Args.size() || Entity.isVariableLengthArrayNew()) {
       InitializedEntity SubEntity = InitializedEntity::InitializeElement(
           S.getASTContext(), Args.size(), Entity);
       InitializationKind SubKind = InitializationKind::CreateValue(
@@ -5512,6 +5513,14 @@ static void TryOrBuildParenListInitialization(
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
     bool IsUnion = RT->isUnionType();
     const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+    if (RD->isInvalidDecl()) {
+      // Exit early to avoid confusion when processing members.
+      // We do the same for braced list initialization in
+      // `CheckStructUnionTypes`.
+      Sequence.SetFailed(
+          clang::InitializationSequence::FK_ParenthesizedListInitFailed);
+      return;
+    }
 
     if (!IsUnion) {
       for (const CXXBaseSpecifier &Base : RD->bases()) {
@@ -6423,7 +6432,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
   // For HLSL ext vector types we allow list initialization behavior for C++
   // constructor syntax. This is accomplished by converting initialization
   // arguments an InitListExpr late.
-  if (S.getLangOpts().HLSL && DestType->isExtVectorType() &&
+  if (S.getLangOpts().HLSL && Args.size() > 1 && DestType->isExtVectorType() &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
 
@@ -7575,15 +7584,27 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
     Path.pop_back();
   };
 
-  if (ObjectArg && implicitObjectParamIsLifetimeBound(Callee))
-    VisitLifetimeBoundArg(Callee, ObjectArg);
-
   bool CheckCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
                     RD->hasAttr<CoroReturnTypeAttr>() &&
                     !Callee->hasAttr<CoroDisableLifetimeBoundAttr>();
   }
+
+  if (ObjectArg) {
+    bool CheckCoroObjArg = CheckCoroCall;
+    // Coroutine lambda objects with empty capture list are not lifetimebound.
+    if (auto *LE = dyn_cast<LambdaExpr>(ObjectArg->IgnoreImplicit());
+        LE && LE->captures().empty())
+      CheckCoroObjArg = false;
+    // Allow `get_return_object()` as the object param (__promise) is not
+    // lifetimebound.
+    if (Sema::CanBeGetReturnObject(Callee))
+      CheckCoroObjArg = false;
+    if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
+      VisitLifetimeBoundArg(Callee, ObjectArg);
+  }
+
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());
        I != N; ++I) {
@@ -7710,6 +7731,14 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     if (!C->getFalseExpr()->getType()->isVoidType())
       visitLocalsRetainedByReferenceBinding(Path, C->getFalseExpr(), RK, Visit,
                                             EnableLifetimeWarnings);
+    break;
+  }
+
+  case Stmt::CompoundLiteralExprClass: {
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+      if (!CLE->isFileScope())
+        Visit(Path, Local(CLE), RK);
+    }
     break;
   }
 
@@ -8268,6 +8297,10 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         if (LK == LK_StmtExprResult)
           return false;
         Diag(DiagLoc, diag::warn_ret_addr_label) << DiagRange;
+      } else if (auto *CLE = dyn_cast<CompoundLiteralExpr>(L)) {
+        Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
+            << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
+            << DiagRange;
       } else {
         Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
          << Entity.getType()->isReferenceType() << DiagRange;
@@ -8470,6 +8503,10 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   // are done in both CreateMaterializeTemporaryExpr and MaybeBindToTemporary,
   // but there may be a chance to merge them.
   Cleanup.setExprNeedsCleanups(false);
+  if (isInLifetimeExtendingContext()) {
+    auto &Record = ExprEvalContexts.back();
+    Record.ForRangeLifetimeExtendTemps.push_back(MTE);
+  }
   return MTE;
 }
 
@@ -10369,11 +10406,6 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
-static bool NarrowingErrs(const LangOptions &L) {
-  return L.CPlusPlus11 &&
-         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015));
-}
-
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -10394,6 +10426,19 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     return;
   }
 
+  auto MakeDiag = [&](bool IsConstRef, unsigned DefaultDiagID,
+                      unsigned ConstRefDiagID, unsigned WarnDiagID) {
+    unsigned DiagID;
+    auto &L = S.getLangOpts();
+    if (L.CPlusPlus11 &&
+        (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
+      DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
+    else
+      DiagID = WarnDiagID;
+    return S.Diag(PostInit->getBeginLoc(), DiagID)
+           << PostInit->getSourceRange();
+  };
+
   // C++11 [dcl.init.list]p7: Check whether this is a narrowing conversion.
   APValue ConstantValue;
   QualType ConstantType;
@@ -10409,13 +10454,9 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
     QualType T = EntityType.getNonReferenceType();
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? (T == EntityType
-                      ? diag::ext_init_list_type_narrowing
-                      : diag::ext_init_list_type_narrowing_const_reference)
-               : diag::warn_init_list_type_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(T != EntityType, diag::ext_init_list_type_narrowing,
+             diag::ext_init_list_type_narrowing_const_reference,
+             diag::warn_init_list_type_narrowing)
         << PreNarrowingType.getLocalUnqualifiedType()
         << T.getLocalUnqualifiedType();
     break;
@@ -10423,14 +10464,10 @@ static void DiagnoseNarrowingInInitList(Sema &S,
 
   case NK_Constant_Narrowing: {
     // A constant value was narrowed.
-    QualType T = EntityType.getNonReferenceType();
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? (T == EntityType
-                      ? diag::ext_init_list_constant_narrowing
-                      : diag::ext_init_list_constant_narrowing_const_reference)
-               : diag::warn_init_list_constant_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(EntityType.getNonReferenceType() != EntityType,
+             diag::ext_init_list_constant_narrowing,
+             diag::ext_init_list_constant_narrowing_const_reference,
+             diag::warn_init_list_constant_narrowing)
         << ConstantValue.getAsString(S.getASTContext(), ConstantType)
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
@@ -10438,14 +10475,10 @@ static void DiagnoseNarrowingInInitList(Sema &S,
 
   case NK_Variable_Narrowing: {
     // A variable's value may have been narrowed.
-    QualType T = EntityType.getNonReferenceType();
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? (T == EntityType
-                      ? diag::ext_init_list_variable_narrowing
-                      : diag::ext_init_list_variable_narrowing_const_reference)
-               : diag::warn_init_list_variable_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(EntityType.getNonReferenceType() != EntityType,
+             diag::ext_init_list_variable_narrowing,
+             diag::ext_init_list_variable_narrowing_const_reference,
+             diag::warn_init_list_variable_narrowing)
         << PreNarrowingType.getLocalUnqualifiedType()
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
@@ -10714,7 +10747,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     bool HasAnyDeductionGuide = false;
 
     auto SynthesizeAggrGuide = [&](InitListExpr *ListInit) {
-      auto *RD = cast<CXXRecordDecl>(Template->getTemplatedDecl());
+      auto *Pattern = Template;
+      while (Pattern->getInstantiatedFromMemberTemplate()) {
+        if (Pattern->isMemberSpecialization())
+          break;
+        Pattern = Pattern->getInstantiatedFromMemberTemplate();
+      }
+
+      auto *RD = cast<CXXRecordDecl>(Pattern->getTemplatedDecl());
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
       QualType Ty = Context.getRecordType(RD);

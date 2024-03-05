@@ -1,6 +1,9 @@
 ; RUN: llc -mcpu=core2 -mtriple=i686-pc-win32 -o - -O0 -filetype=obj < %s \
 ; RUN:   | llvm-readobj --codeview - | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators -mcpu=core2 -mtriple=i686-pc-win32 -o - -O0 -filetype=obj < %s \
+; RUN:   | llvm-readobj --codeview - | FileCheck %s
+
 ; C++ source to regenerate:
 ; namespace foo {
 ; int bar(int x) { return x * 2; }

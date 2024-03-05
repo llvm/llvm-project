@@ -16,11 +16,11 @@ declare i32 @memcmp(ptr, ptr, i64)
 define void @fold_memcmp_cst_cst(ptr %pcmp) {
 ; CHECK-LABEL: @fold_memcmp_cst_cst(
 ; CHECK-NEXT:    store i32 -1, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[SB5_A5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[SB5_A5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 1, ptr [[SB5_A5]], align 4
-; CHECK-NEXT:    [[SA6_B6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[SA6_B6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 -1, ptr [[SA6_B6]], align 4
-; CHECK-NEXT:    [[SB6_A6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[SB6_A6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 1, ptr [[SB6_A6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -63,15 +63,15 @@ define void @fold_memcmp_cst_var(ptr %pcmp, i64 %n) {
 ; CHECK-NEXT:    store i32 [[CA0_B0]], ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[N]], 6
 ; CHECK-NEXT:    [[CB0_A0:%.*]] = zext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[SB0_A0:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[SB0_A0:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 [[CB0_A0]], ptr [[SB0_A0]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[CA6_B6:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[SA6_B6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[SA6_B6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 [[CA6_B6]], ptr [[SA6_B6]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[CB6_A6:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[SB6_A6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[SB6_A6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 [[CB6_A6]], ptr [[SB6_A6]], align 4
 ; CHECK-NEXT:    ret void
 ;

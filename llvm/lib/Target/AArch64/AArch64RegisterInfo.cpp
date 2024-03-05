@@ -78,6 +78,9 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
 
+  if (MF->getFunction().getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
+    return CSR_Win_AArch64_Arm64EC_Thunk_SaveList;
+
   // Darwin has its own CSR_AArch64_AAPCS_SaveList, which means most CSR save
   // lists depending on that will need to have their Darwin variant as well.
   if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
@@ -434,11 +437,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     markSuperRegs(Reserved, AArch64::W16);
 
+  // FFR is modelled as global state that cannot be allocated.
+  if (MF.getSubtarget<AArch64Subtarget>().hasSVE())
+    Reserved.set(AArch64::FFR);
+
   // SME tiles are not allocatable.
   if (MF.getSubtarget<AArch64Subtarget>().hasSME()) {
     for (MCPhysReg SubReg : subregs_inclusive(AArch64::ZA))
       Reserved.set(SubReg);
   }
+
+  // VG cannot be allocated
+  Reserved.set(AArch64::VG);
 
   if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
     for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
@@ -447,6 +457,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     markSuperRegs(Reserved, AArch64::X27);
@@ -502,6 +513,10 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
   // for normal codegen.
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening) &&
         MCRegisterInfo::regsOverlap(PhysReg, AArch64::X16))
+    return true;
+
+  // ZA/ZT0 registers are reserved but may be permitted in the clobber list.
+  if (PhysReg == AArch64::ZA || PhysReg == AArch64::ZT0)
     return true;
 
   return !isReservedReg(MF, PhysReg);
@@ -1012,6 +1027,8 @@ bool AArch64RegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+
   if (MI->isCopy() &&
       ((DstRC->getID() == AArch64::GPR64RegClassID) ||
        (DstRC->getID() == AArch64::GPR64commonRegClassID)) &&
@@ -1020,5 +1037,38 @@ bool AArch64RegisterInfo::shouldCoalesce(
     // which implements a 32 to 64 bit zero extension
     // which relies on the upper 32 bits being zeroed.
     return false;
+
+  auto IsCoalescerBarrier = [](const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AArch64::COALESCER_BARRIER_FPR16:
+    case AArch64::COALESCER_BARRIER_FPR32:
+    case AArch64::COALESCER_BARRIER_FPR64:
+    case AArch64::COALESCER_BARRIER_FPR128:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // For calls that temporarily have to toggle streaming mode as part of the
+  // call-sequence, we need to be more careful when coalescing copy instructions
+  // so that we don't end up coalescing the NEON/FP result or argument register
+  // with a whole Z-register, such that after coalescing the register allocator
+  // will try to spill/reload the entire Z register.
+  //
+  // We do this by checking if the node has any defs/uses that are
+  // COALESCER_BARRIER pseudos. These are 'nops' in practice, but they exist to
+  // instruct the coalescer to avoid coalescing the copy.
+  if (MI->isCopy() && SubReg != DstSubReg &&
+      (AArch64::ZPRRegClass.hasSubClassEq(DstRC) ||
+       AArch64::ZPRRegClass.hasSubClassEq(SrcRC))) {
+    unsigned SrcReg = MI->getOperand(1).getReg();
+    if (any_of(MRI.def_instructions(SrcReg), IsCoalescerBarrier))
+      return false;
+    unsigned DstReg = MI->getOperand(0).getReg();
+    if (any_of(MRI.use_nodbg_instructions(DstReg), IsCoalescerBarrier))
+      return false;
+  }
+
   return true;
 }

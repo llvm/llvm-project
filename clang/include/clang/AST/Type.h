@@ -917,6 +917,9 @@ public:
   /// Return true if this is a trivially copyable type (C++0x [basic.types]p9)
   bool isTriviallyCopyableType(const ASTContext &Context) const;
 
+  /// Return true if this is a trivially copyable type
+  bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
+
   /// Return true if this is a trivially relocatable type.
   bool isTriviallyRelocatableType(const ASTContext &Context) const;
 
@@ -2610,6 +2613,9 @@ public:
   /// Return true if this is a fixed point or integer type.
   bool isFixedPointOrIntegerType() const;
 
+  /// Return true if this can be converted to (or from) a fixed point type.
+  bool isConvertibleToFixedPointType() const;
+
   /// Return true if this is a saturated fixed point type according to
   /// ISO/IEC JTC1 SC22 WG14 N1169. This type can be signed or unsigned.
   bool isSaturatedFixedPointType() const;
@@ -3492,6 +3498,9 @@ enum class VectorKind {
 
   /// is RISC-V RVV fixed-length data vector
   RVVFixedLengthData,
+
+  /// is RISC-V RVV fixed-length mask vector
+  RVVFixedLengthMask,
 };
 
 /// Represents a GCC generic vector type. This type is created using
@@ -4026,19 +4035,6 @@ public:
   /// because TrailingObjects cannot handle repeated types.
   struct ExceptionType { QualType Type; };
 
-  /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
-  /// of function type attributes that can be set on function types, including
-  /// function pointers.
-  enum AArch64SMETypeAttributes : unsigned {
-    SME_NormalFunction = 0,
-    SME_PStateSMEnabledMask = 1 << 0,
-    SME_PStateSMCompatibleMask = 1 << 1,
-    SME_PStateZASharedMask = 1 << 2,
-    SME_PStateZAPreservedMask = 1 << 3,
-    SME_AttributeMask = 0b111'111 // We only support maximum 6 bits because of the
-                                  // bitmask in FunctionTypeExtraBitfields.
-  };
-
   /// A simple holder for various uncommon bits which do not fit in
   /// FunctionTypeBitfields. Aligned to alignof(void *) to maintain the
   /// alignment of subsequent objects in TrailingObjects.
@@ -4048,11 +4044,57 @@ public:
     /// [implimits] 8 bits would be enough here.
     unsigned NumExceptionType : 10;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasArmTypeAttributes : 1;
+
+    FunctionTypeExtraBitfields()
+        : NumExceptionType(0), HasArmTypeAttributes(false) {}
+  };
+
+  /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
+  /// of function type attributes that can be set on function types, including
+  /// function pointers.
+  enum AArch64SMETypeAttributes : unsigned {
+    SME_NormalFunction = 0,
+    SME_PStateSMEnabledMask = 1 << 0,
+    SME_PStateSMCompatibleMask = 1 << 1,
+
+    // Describes the value of the state using ArmStateValue.
+    SME_ZAShift = 2,
+    SME_ZAMask = 0b111 << SME_ZAShift,
+    SME_ZT0Shift = 5,
+    SME_ZT0Mask = 0b111 << SME_ZT0Shift,
+
+    SME_AttributeMask =
+        0b111'111'11 // We can't support more than 8 bits because of
+                     // the bitmask in FunctionTypeExtraBitfields.
+  };
+
+  enum ArmStateValue : unsigned {
+    ARM_None = 0,
+    ARM_Preserves = 1,
+    ARM_In = 2,
+    ARM_Out = 3,
+    ARM_InOut = 4,
+  };
+
+  static ArmStateValue getArmZAState(unsigned AttrBits) {
+    return (ArmStateValue)((AttrBits & SME_ZAMask) >> SME_ZAShift);
+  }
+
+  static ArmStateValue getArmZT0State(unsigned AttrBits) {
+    return (ArmStateValue)((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
+  }
+
+  /// A holder for Arm type attributes as described in the Arm C/C++
+  /// Language extensions which are not particularly common to all
+  /// types and therefore accounted separately from FunctionTypeBitfields.
+  struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
-    unsigned AArch64SMEAttributes : 6;
-    FunctionTypeExtraBitfields()
-        : NumExceptionType(0), AArch64SMEAttributes(SME_NormalFunction) {}
+    unsigned AArch64SMEAttributes : 8;
+
+    FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
   };
 
 protected:
@@ -4151,7 +4193,8 @@ class FunctionProtoType final
       public llvm::FoldingSetNode,
       private llvm::TrailingObjects<
           FunctionProtoType, QualType, SourceLocation,
-          FunctionType::FunctionTypeExtraBitfields, FunctionType::ExceptionType,
+          FunctionType::FunctionTypeExtraBitfields,
+          FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
@@ -4224,6 +4267,8 @@ public:
     ExceptionSpecInfo() = default;
 
     ExceptionSpecInfo(ExceptionSpecificationType EST) : Type(EST) {}
+
+    void instantiate();
   };
 
   /// Extra information about a function prototype. ExtProtoInfo is not
@@ -4233,7 +4278,7 @@ public:
     FunctionType::ExtInfo ExtInfo;
     unsigned Variadic : 1;
     unsigned HasTrailingReturn : 1;
-    unsigned AArch64SMEAttributes : 6;
+    unsigned AArch64SMEAttributes : 8;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
@@ -4256,7 +4301,11 @@ public:
 
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
-             AArch64SMEAttributes != SME_NormalFunction;
+             requiresFunctionProtoTypeArmAttributes();
+    }
+
+    bool requiresFunctionProtoTypeArmAttributes() const {
+      return AArch64SMEAttributes != SME_NormalFunction;
     }
 
     void setArmSMEAttribute(AArch64SMETypeAttributes Kind, bool Enable = true) {
@@ -4274,6 +4323,10 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
     return isVariadic();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<FunctionTypeArmAttributes>) const {
+    return hasArmTypeAttributes();
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
@@ -4362,6 +4415,12 @@ private:
            "ExtraBitfields are required for given ExceptionSpecType");
     return FunctionTypeBits.HasExtraBitfields;
 
+  }
+
+  bool hasArmTypeAttributes() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasArmTypeAttributes;
   }
 
   bool hasExtQualifiers() const {
@@ -4575,9 +4634,9 @@ public:
   /// Return a bitmask describing the SME attributes on the function type, see
   /// AArch64SMETypeAttributes for their values.
   unsigned getAArch64SMEAttributes() const {
-    if (!hasExtraBitfields())
+    if (!hasArmTypeAttributes())
       return SME_NormalFunction;
-    return getTrailingObjects<FunctionTypeExtraBitfields>()
+    return getTrailingObjects<FunctionTypeArmAttributes>()
         ->AArch64SMEAttributes;
   }
 
@@ -4676,13 +4735,12 @@ public:
   bool typeMatchesDecl() const { return !UsingBits.hasTypeDifferentFromDecl; }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, Found, typeMatchesDecl() ? QualType() : getUnderlyingType());
+    Profile(ID, Found, getUnderlyingType());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const UsingShadowDecl *Found,
                       QualType Underlying) {
     ID.AddPointer(Found);
-    if (!Underlying.isNull())
-      Underlying.Profile(ID);
+    Underlying.Profile(ID);
   }
   static bool classof(const Type *T) { return T->getTypeClass() == Using; }
 };
@@ -4877,6 +4935,73 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       Expr *E);
+};
+
+class PackIndexingType final
+    : public Type,
+      public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<PackIndexingType, QualType> {
+  friend TrailingObjects;
+
+  const ASTContext &Context;
+  QualType Pattern;
+  Expr *IndexExpr;
+
+  unsigned Size;
+
+protected:
+  friend class ASTContext; // ASTContext creates these.
+  PackIndexingType(const ASTContext &Context, QualType Canonical,
+                   QualType Pattern, Expr *IndexExpr,
+                   ArrayRef<QualType> Expansions = {});
+
+public:
+  Expr *getIndexExpr() const { return IndexExpr; }
+  QualType getPattern() const { return Pattern; }
+
+  bool isSugared() const { return hasSelectedType(); }
+
+  QualType desugar() const {
+    if (hasSelectedType())
+      return getSelectedType();
+    return QualType(this, 0);
+  }
+
+  QualType getSelectedType() const {
+    assert(hasSelectedType() && "Type is dependant");
+    return *(getExpansionsPtr() + *getSelectedIndex());
+  }
+
+  std::optional<unsigned> getSelectedIndex() const;
+
+  bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
+
+  ArrayRef<QualType> getExpansions() const {
+    return {getExpansionsPtr(), Size};
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == PackIndexing;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    if (hasSelectedType())
+      getSelectedType().Profile(ID);
+    else
+      Profile(ID, Context, getPattern(), getIndexExpr());
+  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      QualType Pattern, Expr *E);
+
+private:
+  const QualType *getExpansionsPtr() const {
+    return getTrailingObjects<QualType>();
+  }
+
+  static TypeDependence computeDependence(QualType Pattern, Expr *IndexExpr,
+                                          ArrayRef<QualType> Expansions = {});
+
+  unsigned numTrailingObjects(OverloadToken<QualType>) const { return Size; }
 };
 
 /// A unary type transform, which is a type constructed from another.
@@ -7369,6 +7494,10 @@ inline bool Type::isFixedPointType() const {
 
 inline bool Type::isFixedPointOrIntegerType() const {
   return isFixedPointType() || isIntegerType();
+}
+
+inline bool Type::isConvertibleToFixedPointType() const {
+  return isRealFloatingType() || isFixedPointOrIntegerType();
 }
 
 inline bool Type::isSaturatedFixedPointType() const {

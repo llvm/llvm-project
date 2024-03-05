@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -27,6 +26,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -104,6 +104,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_STORE:               return "AtomicStore";
   case ISD::PCMARKER:                   return "PCMarker";
   case ISD::READCYCLECOUNTER:           return "ReadCycleCounter";
+  case ISD::READSTEADYCOUNTER:          return "ReadSteadyCounter";
   case ISD::SRCVALUE:                   return "SrcValue";
   case ISD::MDNODE_SDNODE:              return "MDNode";
   case ISD::EntryToken:                 return "EntryToken";
@@ -149,7 +150,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned OpNo = getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 0 : 1;
-    unsigned IID = cast<ConstantSDNode>(getOperand(OpNo))->getZExtValue();
+    unsigned IID = getOperand(OpNo)->getAsZExtVal();
     if (IID < Intrinsic::num_intrinsics)
       return Intrinsic::getBaseName((Intrinsic::ID)IID).str();
     if (!G)
@@ -379,7 +380,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_TO_FP16:                 return "fp_to_fp16";
   case ISD::STRICT_FP_TO_FP16:          return "strict_fp_to_fp16";
   case ISD::BF16_TO_FP:                 return "bf16_to_fp";
+  case ISD::STRICT_BF16_TO_FP:          return "strict_bf16_to_fp";
   case ISD::FP_TO_BF16:                 return "fp_to_bf16";
+  case ISD::STRICT_FP_TO_BF16:          return "strict_fp_to_bf16";
   case ISD::LROUND:                     return "lround";
   case ISD::STRICT_LROUND:              return "strict_lround";
   case ISD::LLROUND:                    return "llround";

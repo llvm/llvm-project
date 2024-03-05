@@ -23,7 +23,7 @@ using namespace mlir;
 template <typename OpTy>
 static bool isContiguousXferOp(OpTy op) {
   return op.getPermutationMap().isMinorIdentity() && op.isDimInBounds(0) &&
-         op.hasBufferSemantics() &&
+         op.hasPureBufferSemantics() &&
          isLastMemrefDimUnitStride(
              cast<MemRefType>(nvgpu::getMemrefOperand(op).getType()));
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/numeric.h"
+#include "numeric-templates.h"
 #include "terminator.h"
 #include "flang/Common/float128.h"
 #include <cfloat>
@@ -68,39 +69,6 @@ inline RT_API_ATTRS RESULT Floor(ARG x) {
   return std::floor(x);
 }
 
-// EXPONENT (16.9.75)
-template <typename RESULT, typename ARG>
-inline RT_API_ATTRS RESULT Exponent(ARG x) {
-  if (std::isinf(x) || std::isnan(x)) {
-    return std::numeric_limits<RESULT>::max(); // +/-Inf, NaN -> HUGE(0)
-  } else if (x == 0) {
-    return 0; // 0 -> 0
-  } else {
-    return std::ilogb(x) + 1;
-  }
-}
-
-// Suppress the warnings about calling __host__-only std::frexp,
-// defined in C++ STD header files, from __device__ code.
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
-
-// FRACTION (16.9.80)
-template <typename T> inline RT_API_ATTRS T Fraction(T x) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return x; // 0 -> same 0
-  } else {
-    int ignoredExp;
-    return std::frexp(x, &ignoredExp);
-  }
-}
-
-RT_DIAG_POP
-
 // MOD & MODULO (16.9.135, .136)
 template <bool IS_MODULO, typename T>
 inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
@@ -114,35 +82,6 @@ inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
   }
   return mod;
 }
-template <bool IS_MODULO, typename T>
-inline RT_API_ATTRS T RealMod(
-    T a, T p, const char *sourceFile, int sourceLine) {
-  if (p == 0) {
-    Terminator{sourceFile, sourceLine}.Crash(
-        IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
-  }
-  T quotient{a / p};
-  if (std::isinf(quotient) && std::isfinite(a) && std::isfinite(p)) {
-    // a/p overflowed -- so it must be an integer, and the result
-    // must be a zero of the same sign as one of the operands.
-    return std::copysign(T{}, IS_MODULO ? p : a);
-  }
-  T toInt{IS_MODULO ? std::floor(quotient) : std::trunc(quotient)};
-  return a - toInt * p;
-}
-
-// RRSPACING (16.9.164)
-template <int PREC, typename T> inline RT_API_ATTRS T RRSpacing(T x) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return 0; // 0 -> 0
-  } else {
-    return std::ldexp(std::abs(x), PREC - (std::ilogb(x) + 1));
-  }
-}
 
 // SCALE (16.9.166)
 template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
@@ -151,7 +90,7 @@ template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
     ip = p < 0 ? std::numeric_limits<int>::min()
                : std::numeric_limits<int>::max();
   }
-  return std::ldexp(x, p); // x*2**p
+  return std::ldexp(x, ip); // x*2**p
 }
 
 // SELECTED_INT_KIND (16.9.169)
@@ -220,42 +159,6 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
   }
 
   return error ? error : kind;
-}
-
-// SET_EXPONENT (16.9.171)
-template <typename T> inline RT_API_ATTRS T SetExponent(T x, std::int64_t p) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return x; // return negative zero if x is negative zero
-  } else {
-    int expo{std::ilogb(x) + 1};
-    auto ip{static_cast<int>(p - expo)};
-    if (ip != p - expo) {
-      ip = p < 0 ? std::numeric_limits<int>::min()
-                 : std::numeric_limits<int>::max();
-    }
-    return std::ldexp(x, ip); // x*2**(p-e)
-  }
-}
-
-// SPACING (16.9.180)
-template <int PREC, typename T> inline RT_API_ATTRS T Spacing(T x) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    // The standard-mandated behavior seems broken, since TINY() can't be
-    // subnormal.
-    return std::numeric_limits<T>::min(); // 0 -> TINY(x)
-  } else {
-    T result{
-        std::ldexp(static_cast<T>(1.0), std::ilogb(x) + 1 - PREC)}; // 2**(e-p)
-    return result == 0 ? /*TINY(x)*/ std::numeric_limits<T>::min() : result;
-  }
 }
 
 // NEAREST (16.9.139)
@@ -422,6 +325,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent10_8)(
   return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent16_4)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);
@@ -538,6 +442,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Fraction10)(
   return Fraction(x);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Fraction16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Fraction(x);
@@ -625,6 +530,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ModReal10)(
   return RealMod<false>(x, p, sourceFile, sourceLine);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(ModReal16)(
     CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
     const char *sourceFile, int sourceLine) {
@@ -681,6 +587,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ModuloReal10)(
   return RealMod<true>(x, p, sourceFile, sourceLine);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(ModuloReal16)(
     CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
     const char *sourceFile, int sourceLine) {
@@ -702,6 +609,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Nearest10)(
   return Nearest<64>(x, positive);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Nearest16)(
     CppTypeFor<TypeCategory::Real, 16> x, bool positive) {
   return Nearest<113>(x, positive);
@@ -814,6 +722,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(RRSpacing10)(
   return RRSpacing<64>(x);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(RRSpacing16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return RRSpacing<113>(x);
@@ -834,6 +743,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(SetExponent10)(
   return SetExponent(x, p);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(SetExponent16)(
     CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
   return SetExponent(x, p);
@@ -854,6 +764,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Scale10)(
   return Scale(x, p);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Scale16)(
     CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
   return Scale(x, p);
@@ -913,6 +824,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Spacing10)(
   return Spacing<64>(x);
 }
 #elif LDBL_MANT_DIG == 113
+// The __float128 implementation resides in FortranFloat128Math library.
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Spacing16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Spacing<113>(x);

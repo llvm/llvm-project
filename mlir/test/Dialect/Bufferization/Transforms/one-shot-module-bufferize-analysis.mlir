@@ -772,7 +772,7 @@ func.func @insert_slice_chain(
 // CHECK-SAME: bufferization.access = "none"
     %arg2: tensor<62x90xf32> {bufferization.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, bufferization.writable = true})
 // CHECK-SAME: bufferization.access = "write"
-  -> tensor<62x90xf32> attributes {passthrough = [["target-cpu", "skylake-avx512"], ["prefer-vector-width", "512"]]}
+  -> tensor<62x90xf32> attributes {passthrough = [["prefer-vector-width", "512"]], target_cpu = "skylake-avx512"}
 {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32

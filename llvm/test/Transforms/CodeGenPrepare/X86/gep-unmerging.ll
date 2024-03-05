@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S -mtriple=x86_64 < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S -mtriple=x86_64 < %s | FileCheck %s
 
 @exit_addr = constant ptr blockaddress(@gep_unmerging, %exit)
 @op1_addr = constant ptr blockaddress(@gep_unmerging, %op1)

@@ -153,11 +153,11 @@ inline void writeStubHelperEntry(uint8_t *buf8,
 }
 
 template <class LP>
-inline void
-writeObjCMsgSendStub(uint8_t *buf, const uint32_t objcStubsFastCode[8],
-                     Symbol *sym, uint64_t stubsAddr, uint64_t stubOffset,
-                     uint64_t selrefsVA, uint64_t selectorIndex,
-                     uint64_t gotAddr, uint64_t msgSendIndex) {
+inline void writeObjCMsgSendFastStub(uint8_t *buf,
+                                     const uint32_t objcStubsFastCode[8],
+                                     Symbol *sym, uint64_t stubsAddr,
+                                     uint64_t stubOffset, uint64_t selrefVA,
+                                     uint64_t gotAddr, uint64_t msgSendIndex) {
   SymbolDiagnostic d = {sym, sym->getName()};
   auto *buf32 = reinterpret_cast<uint32_t *>(buf);
 
@@ -165,18 +165,39 @@ writeObjCMsgSendStub(uint8_t *buf, const uint32_t objcStubsFastCode[8],
     return pageBits(stubsAddr + stubOffset + i * sizeof(uint32_t));
   };
 
-  uint64_t selectorOffset = selectorIndex * LP::wordSize;
   encodePage21(&buf32[0], d, objcStubsFastCode[0],
-               pageBits(selrefsVA + selectorOffset) - pcPageBits(0));
-  encodePageOff12(&buf32[1], d, objcStubsFastCode[1],
-                  selrefsVA + selectorOffset);
+               pageBits(selrefVA) - pcPageBits(0));
+  encodePageOff12(&buf32[1], d, objcStubsFastCode[1], selrefVA);
+  uint64_t gotOffset = msgSendIndex * LP::wordSize;
   encodePage21(&buf32[2], d, objcStubsFastCode[2],
-               pageBits(gotAddr) - pcPageBits(2));
-  encodePage21(&buf32[3], d, objcStubsFastCode[3], msgSendIndex * LP::wordSize);
+               pageBits(gotAddr + gotOffset) - pcPageBits(2));
+  encodePageOff12(&buf32[3], d, objcStubsFastCode[3], gotAddr + gotOffset);
   buf32[4] = objcStubsFastCode[4];
   buf32[5] = objcStubsFastCode[5];
   buf32[6] = objcStubsFastCode[6];
   buf32[7] = objcStubsFastCode[7];
+}
+
+template <class LP>
+inline void
+writeObjCMsgSendSmallStub(uint8_t *buf, const uint32_t objcStubsSmallCode[3],
+                          Symbol *sym, uint64_t stubsAddr, uint64_t stubOffset,
+                          uint64_t selrefVA, uint64_t msgSendAddr,
+                          uint64_t msgSendIndex) {
+  SymbolDiagnostic d = {sym, sym->getName()};
+  auto *buf32 = reinterpret_cast<uint32_t *>(buf);
+
+  auto pcPageBits = [stubsAddr, stubOffset](int i) {
+    return pageBits(stubsAddr + stubOffset + i * sizeof(uint32_t));
+  };
+
+  encodePage21(&buf32[0], d, objcStubsSmallCode[0],
+               pageBits(selrefVA) - pcPageBits(0));
+  encodePageOff12(&buf32[1], d, objcStubsSmallCode[1], selrefVA);
+  uint64_t msgSendStubVA = msgSendAddr + msgSendIndex * target->stubSize;
+  uint64_t pcVA = stubsAddr + stubOffset + 2 * sizeof(uint32_t);
+  encodeBranch26(&buf32[2], {nullptr, "objc_msgSend stub"},
+                 objcStubsSmallCode[2], msgSendStubVA - pcVA);
 }
 
 } // namespace lld::macho

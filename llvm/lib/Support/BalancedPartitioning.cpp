@@ -117,7 +117,7 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
   if (NumNodes <= 1 || RecDepth >= Config.SplitDepth) {
     // We've reach the lowest level of the recursion tree. Fall back to the
     // original order and assign to buckets.
-    llvm::stable_sort(Nodes, [](const auto &L, const auto &R) {
+    llvm::sort(Nodes, [](const auto &L, const auto &R) {
       return L.InputOrderIndex < R.InputOrderIndex;
     });
     for (auto &N : Nodes)
@@ -167,26 +167,22 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
                                          unsigned RightBucket,
                                          std::mt19937 &RNG) const {
   unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
-  DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeDegree;
+  DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      ++UtilityNodeDegree[UN];
+      ++UtilityNodeIndex[UN];
   // Remove utility nodes if they have just one edge or are connected to all
   // functions
   for (auto &N : Nodes)
     llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
-      return UtilityNodeDegree[UN] <= 1 || UtilityNodeDegree[UN] >= NumNodes;
+      return UtilityNodeIndex[UN] == 1 || UtilityNodeIndex[UN] == NumNodes;
     });
 
   // Renumber utility nodes so they can be used to index into Signatures
-  DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
+  UtilityNodeIndex.clear();
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      if (!UtilityNodeIndex.count(UN))
-        UtilityNodeIndex[UN] = UtilityNodeIndex.size();
-  for (auto &N : Nodes)
-    for (auto &UN : N.UtilityNodes)
-      UN = UtilityNodeIndex[UN];
+      UN = UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()}).first->second;
 
   // Initialize signatures
   SignaturesT Signatures(/*Size=*/UtilityNodeIndex.size());

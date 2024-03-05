@@ -26,10 +26,15 @@
 /// are trying to (re)register an existing lib or really have a new one.
 struct TranslationTable {
   __tgt_target_table HostTable;
+  llvm::SmallVector<__tgt_target_table> DeviceTables;
 
   // Image assigned to a given device.
   llvm::SmallVector<__tgt_device_image *>
       TargetsImages; // One image per device ID.
+
+  // Arrays of entries active on the device.
+  llvm::SmallVector<llvm::SmallVector<__tgt_offload_entry>>
+      TargetsEntries; // One table per device ID.
 
   // Table of entry points or NULL if it was not already computed.
   llvm::SmallVector<__tgt_target_table *>

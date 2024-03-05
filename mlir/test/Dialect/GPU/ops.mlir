@@ -59,24 +59,39 @@ module attributes {gpu.container_module} {
   gpu.module @kernels {
     gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = gpu.thread_id x
+      // CHECK:      thread_id_x
       %tIdY = gpu.thread_id y
+      // CHECK-NEXT: thread_id_y
       %tIdZ = gpu.thread_id z
+      // CHECK-NEXT: thread_id_z
 
       %bDimX = gpu.block_dim x
+      // CHECK-NEXT: block_dim_x
       %bDimY = gpu.block_dim y
+      // CHECK-NEXT: block_dim_y
       %bDimZ = gpu.block_dim z
+      // CHECK-NEXT: block_dim_z
 
       %bIdX = gpu.block_id x
+      // CHECK-NEXT: block_id_x
       %bIdY = gpu.block_id y
+      // CHECK-NEXT: block_id_y
       %bIdZ = gpu.block_id z
+      // CHECK-NEXT: block_id_z
 
       %gDimX = gpu.grid_dim x
+      // CHECK-NEXT: grid_dim_x
       %gDimY = gpu.grid_dim y
+      // CHECK-NEXT: grid_dim_y
       %gDimZ = gpu.grid_dim z
+      // CHECK-NEXT: grid_dim_z
 
       %gIdX = gpu.global_id x
+      // CHECK-NEXT: global_id_x
       %gIdY = gpu.global_id y
+      // CHECK-NEXT: global_id_y
       %gIdZ = gpu.global_id z
+      // CHECK-NEXT: global_id_z
 
       %sgId = gpu.subgroup_id : index
       %numSg = gpu.num_subgroups : index
@@ -93,6 +108,17 @@ module attributes {gpu.container_module} {
       // CHECK: %{{.*}} = gpu.all_reduce add %{{.*}} uniform {
       // CHECK-NEXT: } : (f32) -> f32
       %sum1 = gpu.all_reduce add %one uniform {} : (f32) -> f32
+
+      // CHECK: %{{.*}} = gpu.all_reduce %{{.*}} {
+      // CHECK-NEXT: ^{{.*}}(%{{.*}}: f32, %{{.*}}: f32):
+      // CHECK-NEXT: %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
+      // CHECK-NEXT: gpu.yield %{{.*}} : f32
+      // CHECK-NEXT: } : (f32) -> f32
+      %sum2 = gpu.all_reduce %one { 
+      ^bb(%lhs : f32, %rhs : f32):
+        %tmp = arith.addf %lhs, %rhs : f32
+        gpu.yield %tmp : f32
+      } : (f32) -> (f32)
 
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (f32) -> f32
       %sum_subgroup = gpu.subgroup_reduce add %one : (f32) -> f32
@@ -411,4 +437,7 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
   gpu.func @kernel(%arg0 : f32) kernel {
     gpu.return
   }
+}
+
+gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }

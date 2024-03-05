@@ -219,7 +219,8 @@ static bool shouldLinkerNotDedup(bool IsLinkerOnlyAction, const ArgList &Args) {
 void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                                  ArgStringList &CmdArgs,
                                  const InputInfoList &Inputs,
-                                 VersionTuple Version, bool LinkerIsLLD) const {
+                                 VersionTuple Version, bool LinkerIsLLD,
+                                 bool UsePlatformVersion) const {
   const Driver &D = getToolChain().getDriver();
   const toolchains::MachO &MachOTC = getMachOToolChain();
 
@@ -355,7 +356,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_init);
 
   // Add the deployment target.
-  if (Version >= VersionTuple(520) || LinkerIsLLD)
+  if (Version >= VersionTuple(520) || LinkerIsLLD || UsePlatformVersion)
     MachOTC.addPlatformVersionArgs(Args, CmdArgs);
   else
     MachOTC.addMinVersionArgs(Args, CmdArgs);
@@ -596,9 +597,13 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(getToolChain().GetLinkerPath(&LinkerIsLLD));
 
+  // xrOS always uses -platform-version.
+  bool UsePlatformVersion = getToolChain().getTriple().isXROS();
+
   // I'm not sure why this particular decomposition exists in gcc, but
   // we follow suite for ease of comparison.
-  AddLinkArgs(C, Args, CmdArgs, Inputs, Version, LinkerIsLLD);
+  AddLinkArgs(C, Args, CmdArgs, Inputs, Version, LinkerIsLLD,
+              UsePlatformVersion);
 
   if (willEmitRemarks(Args) &&
       checkRemarksOptions(getToolChain().getDriver(), Args,
@@ -638,9 +643,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // It seems that the 'e' option is completely ignored for dynamic executables
   // (the default), and with static executables, the last one wins, as expected.
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
-                   options::OPT_Z_Flag, options::OPT_u_Group, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
+                            options::OPT_Z_Flag, options::OPT_u_Group});
 
   // Forward -ObjC when either -ObjC or -ObjC++ is used, to force loading
   // members of static archive libraries which implement Objective-C classes or
@@ -921,9 +925,7 @@ void darwin::VerifyDebug::ConstructJob(Compilation &C, const JobAction &JA,
 MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   // We expect 'as', 'ld', etc. to be adjacent to our install dir.
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 /// Darwin - Darwin tool chain for i386 and x86_64.
@@ -954,6 +956,13 @@ ObjCRuntime Darwin::getDefaultObjCRuntime(bool isNonFragile) const {
     return ObjCRuntime(ObjCRuntime::WatchOS, TargetVersion);
   if (isTargetIOSBased())
     return ObjCRuntime(ObjCRuntime::iOS, TargetVersion);
+  if (isTargetXROS()) {
+    // XROS uses the iOS runtime.
+    auto T = llvm::Triple(Twine("arm64-apple-") +
+                          llvm::Triple::getOSTypeName(llvm::Triple::XROS) +
+                          TargetVersion.getAsString());
+    return ObjCRuntime(ObjCRuntime::iOS, T.getiOSVersion());
+  }
   if (isNonFragile)
     return ObjCRuntime(ObjCRuntime::MacOSX, TargetVersion);
   return ObjCRuntime(ObjCRuntime::FragileMacOSX, TargetVersion);
@@ -961,7 +970,7 @@ ObjCRuntime Darwin::getDefaultObjCRuntime(bool isNonFragile) const {
 
 /// Darwin provides a blocks runtime starting in MacOS X 10.6 and iOS 3.2.
 bool Darwin::hasBlocksRuntime() const {
-  if (isTargetWatchOSBased() || isTargetDriverKit())
+  if (isTargetWatchOSBased() || isTargetDriverKit() || isTargetXROS())
     return true;
   else if (isTargetIOSBased())
     return !isIPhoneOSVersionLT(3, 2);
@@ -973,12 +982,12 @@ bool Darwin::hasBlocksRuntime() const {
 
 void Darwin::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args) const {
-  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+  CudaInstallation->AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void Darwin::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                ArgStringList &CC1Args) const {
-  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+  RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 // This is just a MachO name translation routine and there's no
@@ -1092,6 +1101,8 @@ std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
     Str += "driverkit";
   else if (isTargetIOSBased() || isTargetMacCatalyst())
     Str += "ios";
+  else if (isTargetXROS())
+    Str += llvm::Triple::getOSTypeName(llvm::Triple::XROS);
   else
     Str += "macosx";
   Str += getTripleTargetVersion().getAsString();
@@ -1173,6 +1184,8 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
     return;
   // ARC runtime is supported everywhere on arm64e.
   if (getTriple().isArm64e())
+    return;
+  if (isTargetXROS())
     return;
 
   ObjCRuntime runtime = getDefaultObjCRuntime(/*nonfragile*/ true);
@@ -1309,6 +1322,8 @@ StringRef Darwin::getPlatformFamily() const {
       return "Watch";
     case DarwinPlatformKind::DriverKit:
       return "DriverKit";
+    case DarwinPlatformKind::XROS:
+      return "XR";
   }
   llvm_unreachable("Unsupported platform");
 }
@@ -1340,6 +1355,9 @@ StringRef Darwin::getOSLibraryNameSuffix(bool IgnoreSim) const {
   case DarwinPlatformKind::WatchOS:
     return TargetEnvironment == NativeEnvironment || IgnoreSim ? "watchos"
                                                                : "watchossim";
+  case DarwinPlatformKind::XROS:
+    return TargetEnvironment == NativeEnvironment || IgnoreSim ? "xros"
+                                                               : "xrossim";
   case DarwinPlatformKind::DriverKit:
     return "driverkit";
   }
@@ -1649,6 +1667,9 @@ struct DarwinPlatform {
     case DarwinPlatformKind::WatchOS:
       Opt = options::OPT_mwatchos_version_min_EQ;
       break;
+    case DarwinPlatformKind::XROS:
+      // xrOS always explicitly provides a version in the triple.
+      return;
     case DarwinPlatformKind::DriverKit:
       // DriverKit always explicitly provides a version in the triple.
       return;
@@ -1794,6 +1815,8 @@ private:
       return DarwinPlatformKind::TvOS;
     case llvm::Triple::WatchOS:
       return DarwinPlatformKind::WatchOS;
+    case llvm::Triple::XROS:
+      return DarwinPlatformKind::XROS;
     case llvm::Triple::DriverKit:
       return DarwinPlatformKind::DriverKit;
     default:
@@ -1876,6 +1899,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
       "TVOS_DEPLOYMENT_TARGET",
       "WATCHOS_DEPLOYMENT_TARGET",
       "DRIVERKIT_DEPLOYMENT_TARGET",
+      "XROS_DEPLOYMENT_TARGET"
   };
   static_assert(std::size(EnvVars) == Darwin::LastDarwinPlatform + 1,
                 "Missing platform");
@@ -1888,14 +1912,15 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   // default platform.
   if (!Targets[Darwin::MacOS].empty() &&
       (!Targets[Darwin::IPhoneOS].empty() ||
-       !Targets[Darwin::WatchOS].empty() || !Targets[Darwin::TvOS].empty())) {
+       !Targets[Darwin::WatchOS].empty() || !Targets[Darwin::TvOS].empty() ||
+       !Targets[Darwin::XROS].empty())) {
     if (Triple.getArch() == llvm::Triple::arm ||
         Triple.getArch() == llvm::Triple::aarch64 ||
         Triple.getArch() == llvm::Triple::thumb)
       Targets[Darwin::MacOS] = "";
     else
       Targets[Darwin::IPhoneOS] = Targets[Darwin::WatchOS] =
-          Targets[Darwin::TvOS] = "";
+          Targets[Darwin::TvOS] = Targets[Darwin::XROS] = "";
   } else {
     // Don't allow conflicts in any other platform.
     unsigned FirstTarget = std::size(Targets);
@@ -1975,6 +2000,10 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
       return DarwinPlatform::createFromSDK(
           Darwin::TvOS, Version,
           /*IsSimulator=*/SDK.starts_with("AppleTVSimulator"));
+    else if (SDK.starts_with("XR"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::XROS, Version,
+          /*IsSimulator=*/SDK.contains("Simulator"));
     else if (SDK.starts_with("DriverKit"))
       return DarwinPlatform::createFromSDK(Darwin::DriverKit, Version);
     return std::nullopt;
@@ -2012,6 +2041,11 @@ std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
     break;
   case llvm::Triple::WatchOS:
     OsVersion = Triple.getWatchOSVersion();
+    break;
+  case llvm::Triple::XROS:
+    OsVersion = Triple.getOSVersion();
+    if (!OsVersion.getMajor())
+      OsVersion = OsVersion.withMajorReplaced(1);
     break;
   case llvm::Triple::DriverKit:
     OsVersion = Triple.getDriverKitVersion();
@@ -2104,6 +2138,7 @@ std::optional<DarwinPlatform> getDeploymentTargetFromMTargetOSArg(
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
+  case llvm::Triple::XROS:
     break;
   default:
     TheDriver.Diag(diag::err_drv_invalid_os_in_arg)
@@ -2319,6 +2354,13 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << OSTarget->getAsString(Args, Opts);
+  } else if (Platform == XROS) {
+    if (!Driver::GetReleaseVersion(OSTarget->getOSVersion(), Major, Minor,
+                                   Micro, HadExtra) ||
+        HadExtra || Major < 1 || Major >= MajorVersionLimit || Minor >= 100 ||
+        Micro >= 100)
+      getDriver().Diag(diag::err_drv_invalid_version_number)
+          << OSTarget->getAsString(Args, Opts);
   } else
     llvm_unreachable("unknown kind of Darwin platform");
 
@@ -2472,25 +2514,19 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // On Darwin, libc++ can be installed in one of the following places:
-    // 1. Alongside the compiler in <install>/include/c++/v1
-    // 2. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
-    // 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+    // 1. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
+    // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
     //
     // The precedence of paths is as listed above, i.e. we take the first path
     // that exists. Note that we never include libc++ twice -- we take the first
     // path that exists and don't send the other paths to CC1 (otherwise
     // include_next could break).
-    //
-    // Also note that in most cases, (1) and (2) are exactly the same path.
-    // Those two paths will differ only when the `clang` program being run
-    // is actually a symlink to the real executable.
 
     // Check for (1)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
     // Note that InstallBin can be relative, so we use '..' instead of
     // parent_path.
-    llvm::SmallString<128> InstallBin =
-        llvm::StringRef(getDriver().getInstalledDir()); // <install>/bin
+    llvm::SmallString<128> InstallBin(getDriver().Dir); // <install>/bin
     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
     if (getVFS().exists(InstallBin)) {
       addSystemInclude(DriverArgs, CC1Args, InstallBin);
@@ -2500,20 +2536,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // (2) Check for the folder where the executable is located, if different.
-    if (getDriver().getInstalledDir() != getDriver().Dir) {
-      InstallBin = llvm::StringRef(getDriver().Dir);
-      llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
-      if (getVFS().exists(InstallBin)) {
-        addSystemInclude(DriverArgs, CC1Args, InstallBin);
-        return;
-      } else if (DriverArgs.hasArg(options::OPT_v)) {
-        llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
-                     << "\"\n";
-      }
-    }
-
-    // Otherwise, check for (3)
+    // Otherwise, check for (2)
     llvm::SmallString<128> SysrootUsr = Sysroot;
     llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
     if (getVFS().exists(SysrootUsr)) {
@@ -2641,6 +2664,10 @@ void DarwinClang::AddCCKextLibArgs(const ArgList &Args,
     llvm::sys::path::append(P, "libclang_rt.cc_kext_ios.a");
   } else if (isTargetDriverKit()) {
     // DriverKit doesn't want extra runtime support.
+  } else if (isTargetXROSDevice()) {
+    llvm::sys::path::append(
+        P, llvm::Twine("libclang_rt.cc_kext_") +
+               llvm::Triple::getOSTypeName(llvm::Triple::XROS) + ".a");
   } else {
     llvm::sys::path::append(P, "libclang_rt.cc_kext.a");
   }
@@ -2855,6 +2882,8 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   case WatchOS: // Earlier than 4.0.
     OS = llvm::Triple::WatchOS;
     break;
+  case XROS: // Always available.
+    return false;
   case DriverKit: // Always available.
     return false;
   }
@@ -2875,6 +2904,8 @@ static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPl
   case Darwin::TvOS:
     return SDKVersion >= VersionTuple(99U);
   case Darwin::WatchOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::XROS:
     return SDKVersion >= VersionTuple(99U);
   default:
     return true;
@@ -2917,6 +2948,10 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   // to fix the same problem with C++ headers, and is generally fragile.
   if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
+
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
+                                options::OPT_fno_define_target_os_macros))
+    CC1Args.push_back("-fdefine-target-os-macros");
 }
 
 void Darwin::addClangCC1ASTargetOptions(
@@ -2994,7 +3029,7 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   // FIXME: It would be far better to avoid inserting those -static arguments,
   // but we can't check the deployment target in the translation code until
   // it is set here.
-  if (isTargetWatchOSBased() || isTargetDriverKit() ||
+  if (isTargetWatchOSBased() || isTargetDriverKit() || isTargetXROS() ||
       (isTargetIOSBased() && !isIPhoneOSVersionLT(6, 0))) {
     for (ArgList::iterator it = DAL->begin(), ie = DAL->end(); it != ie; ) {
       Arg *A = *it;
@@ -3088,6 +3123,8 @@ void Darwin::addMinVersionArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   VersionTuple TargetVersion = getTripleTargetVersion();
 
+  assert(!isTargetXROS() && "xrOS always uses -platform-version");
+
   if (isTargetWatchOS())
     CmdArgs.push_back("-watchos_version_min");
   else if (isTargetWatchOSSimulator())
@@ -3147,6 +3184,8 @@ static const char *getPlatformName(Darwin::DarwinPlatformKind Platform,
     return "tvos";
   case Darwin::WatchOS:
     return "watchos";
+  case Darwin::XROS:
+    return "xros";
   case Darwin::DriverKit:
     return "driverkit";
   }
@@ -3343,7 +3382,7 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
 }
 
 void Darwin::CheckObjCARC() const {
-  if (isTargetIOSBased() || isTargetWatchOSBased() ||
+  if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetXROS() ||
       (isTargetMacOSBased() && !isMacosxVersionLT(10, 6)))
     return;
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
@@ -3377,6 +3416,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
 }
 
 void Darwin::printVerboseInfo(raw_ostream &OS) const {
-  CudaInstallation.print(OS);
-  RocmInstallation.print(OS);
+  CudaInstallation->print(OS);
+  RocmInstallation->print(OS);
 }

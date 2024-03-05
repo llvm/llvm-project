@@ -265,6 +265,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
+    }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
@@ -306,6 +310,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction(
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
+    }
+    for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -525,8 +533,7 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   if (isa<ConstantSDNode>(Idx) &&
       (EltTy == MVT::i32 || EltTy == MVT::i64 || EltTy == MVT::f32 ||
-       EltTy == MVT::f64 ||
-       cast<ConstantSDNode>(Idx)->getZExtValue() < NumElts / 2))
+       EltTy == MVT::f64 || Idx->getAsZExtVal() < NumElts / 2))
     return Op;
 
   return SDValue();
@@ -762,12 +769,13 @@ static SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty,
 
 template <class NodeTy>
 SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                         CodeModel::Model M,
                                          bool IsLocal) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
 
-  switch (DAG.getTarget().getCodeModel()) {
+  switch (M) {
   default:
     report_fatal_error("Unsupported code model");
 
@@ -808,24 +816,35 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
 
 SDValue LoongArchTargetLowering::lowerBlockAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  return getAddr(cast<BlockAddressSDNode>(Op), DAG);
+  return getAddr(cast<BlockAddressSDNode>(Op), DAG,
+                 DAG.getTarget().getCodeModel());
 }
 
 SDValue LoongArchTargetLowering::lowerJumpTable(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  return getAddr(cast<JumpTableSDNode>(Op), DAG);
+  return getAddr(cast<JumpTableSDNode>(Op), DAG,
+                 DAG.getTarget().getCodeModel());
 }
 
 SDValue LoongArchTargetLowering::lowerConstantPool(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  return getAddr(cast<ConstantPoolSDNode>(Op), DAG);
+  return getAddr(cast<ConstantPoolSDNode>(Op), DAG,
+                 DAG.getTarget().getCodeModel());
 }
 
 SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
                                                     SelectionDAG &DAG) const {
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
-  return getAddr(N, DAG, N->getGlobal()->isDSOLocal());
+  auto CM = DAG.getTarget().getCodeModel();
+  const GlobalValue *GV = N->getGlobal();
+
+  if (GV->isDSOLocal() && isa<GlobalVariable>(GV)) {
+    if (auto GCM = dyn_cast<GlobalVariable>(GV)->getCodeModel())
+      CM = *GCM;
+  }
+
+  return getAddr(N, DAG, CM, GV->isDSOLocal());
 }
 
 SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
@@ -945,6 +964,28 @@ static SDValue checkIntrinsicImmArg(SDValue Op, unsigned ImmOp,
     DAG.getContext()->emitError(Op->getOperationName(0) +
                                 ": argument out of range.");
     return DAG.getNode(ISD::UNDEF, SDLoc(Op), Op.getValueType());
+  }
+  return SDValue();
+}
+
+static SDValue checkAndModifyXVPERMI_QIntrinsicImmArg(SDValue Op,
+                                                      SelectionDAG &DAG) {
+  SDValue Op3 = Op->getOperand(3);
+  uint64_t Imm = Op3->getAsZExtVal();
+  // Check the range of ImmArg.
+  if (!isUInt<8>(Imm)) {
+    DAG.getContext()->emitError(Op->getOperationName(0) +
+                                ": argument out of range.");
+    return DAG.getNode(ISD::UNDEF, SDLoc(Op), Op.getValueType());
+  }
+
+  // For instruction xvpermi.q, only [1:0] and [5:4] bits of operands[3]
+  // are used. The unused bits in operands[3] need to be set to 0 to avoid
+  // causing undefined behavior on LA464.
+  if ((Imm & 0x33) != Imm) {
+    Op3 = DAG.getTargetConstant(Imm & 0x33, SDLoc(Op), Op3.getValueType());
+    DAG.UpdateNodeOperands(Op.getNode(), Op->getOperand(0), Op->getOperand(1),
+                           Op->getOperand(2), Op3);
   }
   return SDValue();
 }
@@ -1206,13 +1247,14 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vextrins_d:
   case Intrinsic::loongarch_lasx_xvshuf4i_d:
   case Intrinsic::loongarch_lasx_xvpermi_w:
-  case Intrinsic::loongarch_lasx_xvpermi_q:
   case Intrinsic::loongarch_lasx_xvbitseli_b:
   case Intrinsic::loongarch_lasx_xvextrins_b:
   case Intrinsic::loongarch_lasx_xvextrins_h:
   case Intrinsic::loongarch_lasx_xvextrins_w:
   case Intrinsic::loongarch_lasx_xvextrins_d:
     return checkIntrinsicImmArg<8>(Op, 3, DAG);
+  case Intrinsic::loongarch_lasx_xvpermi_q:
+    return checkAndModifyXVPERMI_QIntrinsicImmArg(Op, DAG);
   case Intrinsic::loongarch_lsx_vrepli_b:
   case Intrinsic::loongarch_lsx_vrepli_h:
   case Intrinsic::loongarch_lsx_vrepli_w:
@@ -1383,28 +1425,28 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
     if (IntrinsicEnum == Intrinsic::loongarch_cacop_w && Subtarget.is64Bit())
       return emitIntrinsicErrorMessage(Op, ErrorMsgReqLA32, DAG);
     // call void @llvm.loongarch.cacop.[d/w](uimm5, rj, simm12)
-    unsigned Imm1 = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm1 = Op2->getAsZExtVal();
     int Imm2 = cast<ConstantSDNode>(Op.getOperand(4))->getSExtValue();
     if (!isUInt<5>(Imm1) || !isInt<12>(Imm2))
       return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
     return Op;
   }
   case Intrinsic::loongarch_dbar: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::DBAR, DL, MVT::Other, Chain,
                              DAG.getConstant(Imm, DL, GRLenVT));
   }
   case Intrinsic::loongarch_ibar: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::IBAR, DL, MVT::Other, Chain,
                              DAG.getConstant(Imm, DL, GRLenVT));
   }
   case Intrinsic::loongarch_break: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::BREAK, DL, MVT::Other, Chain,
@@ -1413,7 +1455,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::loongarch_movgr2fcsr: {
     if (!Subtarget.hasBasicF())
       return emitIntrinsicErrorMessage(Op, ErrorMsgReqF, DAG);
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<2>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::MOVGR2FCSR, DL, MVT::Other, Chain,
@@ -1422,7 +1464,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
                                          Op.getOperand(3)));
   }
   case Intrinsic::loongarch_syscall: {
-    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned Imm = Op2->getAsZExtVal();
     return !isUInt<15>(Imm)
                ? emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG)
                : DAG.getNode(LoongArchISD::SYSCALL, DL, MVT::Other, Chain,
@@ -1925,7 +1967,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
         emitErrorAndReplaceIntrinsicResults(N, Results, DAG, ErrorMsgReqF);
         return;
       }
-      unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+      unsigned Imm = Op2->getAsZExtVal();
       if (!isUInt<2>(Imm)) {
         emitErrorAndReplaceIntrinsicResults(N, Results, DAG, ErrorMsgOOR);
         return;
@@ -1981,7 +2023,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       CSR_CASE(iocsrrd_d);
 #undef CSR_CASE
     case Intrinsic::loongarch_csrrd_w: {
-      unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+      unsigned Imm = Op2->getAsZExtVal();
       if (!isUInt<14>(Imm)) {
         emitErrorAndReplaceIntrinsicResults(N, Results, DAG, ErrorMsgOOR);
         return;
@@ -4920,4 +4962,9 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return !isa<ConstantSDNode>(Y);
+}
+
+ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
+  // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
+  return ISD::SIGN_EXTEND;
 }

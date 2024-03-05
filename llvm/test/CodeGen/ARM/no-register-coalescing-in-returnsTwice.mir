@@ -33,55 +33,55 @@
   define i32 @main() {
   entry:
     %P0 = alloca %struct.S37, align 8
-    %0 = bitcast %struct.S37* %P0 to %struct.S18*
+    %0 = bitcast ptr %P0 to ptr
     %jb1 = alloca [20 x i64], align 8
     %P1 = alloca %struct.S18, align 8
     %jb2 = alloca [20 x i64], align 8
-    %1 = bitcast %struct.S37* %P0 to i8*
-    %M2.i = getelementptr inbounds %struct.S37, %struct.S37* %P0, i32 0, i32 2
-    %2 = bitcast %struct.S38* %M2.i to i8*
-    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(48) %2, i8 0, i64 48, i1 false)
-    %M6.i = getelementptr inbounds %struct.S37, %struct.S37* %P0, i32 0, i32 7
-    store i32 0, i32* %M6.i, align 8
-    %3 = bitcast [20 x i64]* %jb1 to i8*
-    %arraydecay1 = bitcast [20 x i64]* %jb1 to i64*
-    %call1 = call i32 @setjmp(i64* nonnull %arraydecay1)
+    %1 = bitcast ptr %P0 to ptr
+    %M2.i = getelementptr inbounds %struct.S37, ptr %P0, i32 0, i32 2
+    %2 = bitcast ptr %M2.i to ptr
+    call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(48) %2, i8 0, i64 48, i1 false)
+    %M6.i = getelementptr inbounds %struct.S37, ptr %P0, i32 0, i32 7
+    store i32 0, ptr %M6.i, align 8
+    %3 = bitcast ptr %jb1 to ptr
+    %arraydecay1 = bitcast ptr %jb1 to ptr
+    %call1 = call i32 @setjmp(ptr nonnull %arraydecay1)
     %tobool = icmp eq i32 %call1, 0
     br i1 %tobool, label %if.then, label %if.end
   if.then:                                          ; preds = %entry
-    %4 = bitcast [20 x i64]* %jb1 to i64*
-    call void (i64*, %struct.S37*, ...) @_Z3barPx3S37z(i64* nonnull %4, %struct.S37* nonnull byval(%struct.S37) align 8 %P0)
+    %4 = bitcast ptr %jb1 to ptr
+    call void (ptr, ptr, ...) @_Z3barPx3S37z(ptr nonnull %4, ptr nonnull byval(%struct.S37) align 8 %P0)
     unreachable
   if.end:                                           ; preds = %entry
-    %5 = bitcast [20 x i64]* %jb1 to i8*
-    %6 = bitcast %struct.S37* %P0 to i8*
+    %5 = bitcast ptr %jb1 to ptr
+    %6 = bitcast ptr %P0 to ptr
     call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{sp},~{lr}"()
-    %7 = bitcast %struct.S18* %0 to i8*
-    %BM0.i = getelementptr inbounds %struct.S18, %struct.S18* %0, i32 0, i32 2
-    store double 0.000000e+00, double* %BM0.i, align 8
-    %M0.i = getelementptr inbounds %struct.S18, %struct.S18* %0, i32 0, i32 5
-    store i32 42, i32* %M0.i, align 8
-    %M3.i = getelementptr inbounds %struct.S18, %struct.S18* %0, i32 0, i32 7
-    %8 = bitcast %struct.S23* %M3.i to i8*
-    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(28) %8, i8 0, i64 28, i1 false)
-    %9 = bitcast [20 x i64]* %jb1 to i8*
-    %arraydecay42 = bitcast [20 x i64]* %jb1 to i64*
-    %call5 = call i32 @setjmp(i64* nonnull %arraydecay42)
+    %7 = bitcast ptr %0 to ptr
+    %BM0.i = getelementptr inbounds %struct.S18, ptr %0, i32 0, i32 2
+    store double 0.000000e+00, ptr %BM0.i, align 8
+    %M0.i = getelementptr inbounds %struct.S18, ptr %0, i32 0, i32 5
+    store i32 42, ptr %M0.i, align 8
+    %M3.i = getelementptr inbounds %struct.S18, ptr %0, i32 0, i32 7
+    %8 = bitcast ptr %M3.i to ptr
+    call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(28) %8, i8 0, i64 28, i1 false)
+    %9 = bitcast ptr %jb1 to ptr
+    %arraydecay42 = bitcast ptr %jb1 to ptr
+    %call5 = call i32 @setjmp(ptr nonnull %arraydecay42)
     %tobool6 = icmp eq i32 %call5, 0
     br i1 %tobool6, label %if.then7, label %if.end10
   if.then7:                                         ; preds = %if.end
-    %10 = bitcast [20 x i64]* %jb1 to i64*
-    call void (i64*, %struct.S18*, ...) @_Z3fooPx3S18z(i64* nonnull %10, %struct.S18* nonnull byval(%struct.S18) align 8 %0)
+    %10 = bitcast ptr %jb1 to ptr
+    call void (ptr, ptr, ...) @_Z3fooPx3S18z(ptr nonnull %10, ptr nonnull byval(%struct.S18) align 8 %0)
     unreachable
   if.end10:                                         ; preds = %if.end
-    %11 = bitcast [20 x i64]* %jb1 to i8*
-    %12 = bitcast %struct.S18* %0 to i8*
+    %11 = bitcast ptr %jb1 to ptr
+    %12 = bitcast ptr %0 to ptr
     ret i32 0
   }
-  declare i32 @setjmp(i64*)
-  declare void @_Z3barPx3S37z(i64*, %struct.S37* byval(%struct.S37) align 8, ...)
-  declare void @_Z3fooPx3S18z(i64*, %struct.S18* byval(%struct.S18) align 8, ...)
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+  declare i32 @setjmp(ptr)
+  declare void @_Z3barPx3S37z(ptr, ptr byval(%struct.S37) align 8, ...)
+  declare void @_Z3fooPx3S18z(ptr, ptr byval(%struct.S18) align 8, ...)
+  declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 ...
 ---
 name:            main

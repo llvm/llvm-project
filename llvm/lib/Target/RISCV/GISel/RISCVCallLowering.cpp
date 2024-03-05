@@ -34,6 +34,9 @@ private:
   // Whether this is assigning args for a return.
   bool IsRet;
 
+  // true if assignArg has been called for a mask argument, false otherwise.
+  bool AssignedFirstMaskArg = false;
+
 public:
   RISCVOutgoingValueAssigner(
       RISCVTargetLowering::RISCVCCAssignFn *RISCVAssignFn_, bool IsRet)
@@ -48,10 +51,16 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+    std::optional<unsigned> FirstMaskArgument;
+    if (Subtarget.hasVInstructions() && !AssignedFirstMaskArg &&
+        ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1) {
+      FirstMaskArgument = ValNo;
+      AssignedFirstMaskArg = true;
+    }
+
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, Info.IsFixed, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering(),
-                      /*FirstMaskArgument=*/std::nullopt))
+                      *Subtarget.getTargetLowering(), FirstMaskArgument))
       return true;
 
     StackSize = State.getStackSize();
@@ -146,11 +155,11 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
     if (Thunk) {
       *Thunk = assignFunc;
-      return 1;
+      return 2;
     }
 
     assignFunc();
-    return 1;
+    return 2;
   }
 
 private:
@@ -172,6 +181,9 @@ private:
   // Whether this is assigning args from a return.
   bool IsRet;
 
+  // true if assignArg has been called for a mask argument, false otherwise.
+  bool AssignedFirstMaskArg = false;
+
 public:
   RISCVIncomingValueAssigner(
       RISCVTargetLowering::RISCVCCAssignFn *RISCVAssignFn_, bool IsRet)
@@ -189,10 +201,16 @@ public:
     if (LocVT.isScalableVector())
       MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
+    std::optional<unsigned> FirstMaskArgument;
+    if (Subtarget.hasVInstructions() && !AssignedFirstMaskArg &&
+        ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1) {
+      FirstMaskArgument = ValNo;
+      AssignedFirstMaskArg = true;
+    }
+
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering(),
-                      /*FirstMaskArgument=*/std::nullopt))
+                      *Subtarget.getTargetLowering(), FirstMaskArgument))
       return true;
 
     StackSize = State.getStackSize();
@@ -266,7 +284,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
     MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
-    return 1;
+    return 2;
   }
 
   /// How the physical register gets marked varies between formal
@@ -431,7 +449,7 @@ void RISCVCallLowering::saveVarArgRegisters(
   MachineFunction &MF = MIRBuilder.getMF();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
-  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs();
+  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget.getTargetABI());
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -579,7 +597,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Select the recommended relocation type R_RISCV_CALL_PLT.
   if (!Info.Callee.isReg())
-    Info.Callee.setTargetFlags(RISCVII::MO_PLT);
+    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
 
   MachineInstrBuilder Call =
       MIRBuilder

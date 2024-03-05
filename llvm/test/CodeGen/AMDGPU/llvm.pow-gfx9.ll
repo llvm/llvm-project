@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=amdgcn -mcpu=gfx908 | FileCheck %s --check-prefixes=GCN,GFX908
-; RUN: llc < %s -march=amdgcn -mcpu=gfx90a | FileCheck %s --check-prefixes=GCN,GFX90A
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx908 | FileCheck %s --check-prefixes=GCN,GFX908
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx90a | FileCheck %s --check-prefixes=GCN,GFX90A
 
 ; GCN-LABEL: {{^}}mul_legacy
 ; GFX908: v_mul_legacy_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}

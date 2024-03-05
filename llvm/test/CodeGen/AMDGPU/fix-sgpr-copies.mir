@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass=si-fix-sgpr-copies -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -run-pass=si-fix-sgpr-copies -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 
 # GCN-LABEL: name: fix-sgpr-copies
 # GCN: V_ADD_CO_U32_e32

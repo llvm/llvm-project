@@ -1,5 +1,7 @@
 ; RUN: opt -S %s -passes=verify 2>&1 \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=verify 2>&1 \
+; RUN: | FileCheck %s
 
 ;; NOTE: Expect opt to return zero because the badly formed debug info
 ;; is going to be stripped.

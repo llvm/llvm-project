@@ -139,6 +139,28 @@ constexpr bool test() {
     assert(y.has_value());
   }
 
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true, true> x(std::unexpect);
+      CheckForInvalidWrites<true, true> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
+    {
+      CheckForInvalidWrites<false, true> x(std::unexpect);
+      CheckForInvalidWrites<false, true> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
+  }
+
   return true;
 }
 

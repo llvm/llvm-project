@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=amdgcn -mcpu=tahiti -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: {{^}}flt_f64:
 ; CHECK: v_cmp_nge_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}

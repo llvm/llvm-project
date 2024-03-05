@@ -78,9 +78,11 @@ target_compile_options(std.compat
     -nostdinc++
     -Wno-reserved-module-identifier
     -Wno-reserved-user-defined-literal
+	-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/std.dir/std.pcm
     @LIBCXX_COMPILE_FLAGS@
 )
 set_target_properties(std.compat
   PROPERTIES
     OUTPUT_NAME   "c++std.compat"
 )
+add_dependencies(std.compat std)

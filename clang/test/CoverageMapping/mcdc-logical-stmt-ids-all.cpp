@@ -129,3 +129,80 @@ bool func_ternary_or(bool a, bool b, bool c, bool d, bool e, bool f) {
 // CHECK:  Branch,File 0, 122:26 -> 122:27 = (#6 - #7), #7 [4,0,3]
 // CHECK:  Branch,File 0, 122:31 -> 122:32 = (#4 - #5), #5 [3,0,2]
 // CHECK:  Branch,File 0, 122:36 -> 122:37 = (#2 - #3), #3 [2,0,0]
+
+bool func_if_nested_if(bool a, bool b, bool c, bool d, bool e) {
+  if (a || (b && c) || d || e)
+    return true;
+  else
+    return false;
+}
+
+// CHECK-LABEL: Decision,File 0, 134:7 -> 134:30 = M:0, C:5
+// CHECK-NEXT:  Branch,File 0, 134:7 -> 134:8 = (#0 - #6), #6 [1,0,4]
+// CHECK:  Branch,File 0, 134:13 -> 134:14 = #7, (#6 - #7) [4,5,3]
+// CHECK:  Branch,File 0, 134:18 -> 134:19 = #8, (#7 - #8) [5,0,3]
+// CHECK:  Branch,File 0, 134:24 -> 134:25 = (#4 - #5), #5 [3,0,2]
+// CHECK:  Branch,File 0, 134:29 -> 134:30 = (#2 - #3), #3 [2,0,0]
+
+bool func_ternary_nested_if(bool a, bool b, bool c, bool d, bool e) {
+  return (a || (b && c) || d || e) ? true : false;
+}
+
+// CHECK-LABEL: Decision,File 0, 148:11 -> 148:34 = M:0, C:5
+// CHECK-NEXT:  Branch,File 0, 148:11 -> 148:12 = (#0 - #6), #6 [1,0,4]
+// CHECK:  Branch,File 0, 148:17 -> 148:18 = #7, (#6 - #7) [4,5,3]
+// CHECK:  Branch,File 0, 148:22 -> 148:23 = #8, (#7 - #8) [5,0,3]
+// CHECK:  Branch,File 0, 148:28 -> 148:29 = (#4 - #5), #5 [3,0,2]
+// CHECK:  Branch,File 0, 148:33 -> 148:34 = (#2 - #3), #3 [2,0,0]
+
+bool func_if_nested_if_2(bool a, bool b, bool c, bool d, bool e) {
+  if (a || ((b && c) || d) && e)
+    return true;
+  else
+    return false;
+}
+
+// CHECK-LABEL: Decision,File 0, 159:7 -> 159:32 = M:0, C:5
+// CHECK-NEXT:  Branch,File 0, 159:7 -> 159:8 = (#0 - #2), #2 [1,0,2]
+// CHECK:  Branch,File 0, 159:14 -> 159:15 = #7, (#2 - #7) [2,5,4]
+// CHECK:  Branch,File 0, 159:19 -> 159:20 = #8, (#7 - #8) [5,3,4]
+// CHECK:  Branch,File 0, 159:25 -> 159:26 = (#5 - #6), #6 [4,3,0]
+// CHECK:  Branch,File 0, 159:31 -> 159:32 = #4, (#3 - #4) [3,0,0]
+
+bool func_ternary_nested_if_2(bool a, bool b, bool c, bool d, bool e) {
+  return (a || ((b && c) || d) && e) ? true : false;
+}
+
+// CHECK-LABEL: Decision,File 0, 173:11 -> 173:36 = M:0, C:5
+// CHECK-NEXT:  Branch,File 0, 173:11 -> 173:12 = (#0 - #2), #2 [1,0,2]
+// CHECK:  Branch,File 0, 173:18 -> 173:19 = #7, (#2 - #7) [2,5,4]
+// CHECK:  Branch,File 0, 173:23 -> 173:24 = #8, (#7 - #8) [5,3,4]
+// CHECK:  Branch,File 0, 173:29 -> 173:30 = (#5 - #6), #6 [4,3,0]
+// CHECK:  Branch,File 0, 173:35 -> 173:36 = #4, (#3 - #4) [3,0,0]
+
+bool func_if_nested_if_3(bool a, bool b, bool c, bool d, bool e, bool f) {
+  if ((a && (b || c) || (d && e)) && f)
+    return true;
+  else
+    return false;
+}
+
+// CHECK-LABEL: Decision,File 0, 184:7 -> 184:39 = M:0, C:6
+// CHECK:  Branch,File 0, 184:8 -> 184:9 = #5, (#0 - #5) [1,4,3]
+// CHECK:  Branch,File 0, 184:14 -> 184:15 = (#5 - #6), #6 [4,2,5]
+// CHECK:  Branch,File 0, 184:19 -> 184:20 = (#6 - #7), #7 [5,2,3]
+// CHECK:  Branch,File 0, 184:26 -> 184:27 = #8, (#4 - #8) [3,6,0]
+// CHECK:  Branch,File 0, 184:31 -> 184:32 = #9, (#8 - #9) [6,2,0]
+// CHECK:  Branch,File 0, 184:38 -> 184:39 = #3, (#2 - #3) [2,0,0]
+
+bool func_ternary_nested_if_3(bool a, bool b, bool c, bool d, bool e, bool f) {
+  return ((a && (b || c) || (d && e)) && f) ? true : false;
+}
+
+// CHECK-LABEL: Decision,File 0, 199:11 -> 199:43 = M:0, C:6
+// CHECK:  Branch,File 0, 199:12 -> 199:13 = #5, (#0 - #5) [1,4,3]
+// CHECK:  Branch,File 0, 199:18 -> 199:19 = (#5 - #6), #6 [4,2,5]
+// CHECK:  Branch,File 0, 199:23 -> 199:24 = (#6 - #7), #7 [5,2,3]
+// CHECK:  Branch,File 0, 199:30 -> 199:31 = #8, (#4 - #8) [3,6,0]
+// CHECK:  Branch,File 0, 199:35 -> 199:36 = #9, (#8 - #9) [6,2,0]
+// CHECK:  Branch,File 0, 199:42 -> 199:43 = #3, (#2 - #3) [2,0,0]

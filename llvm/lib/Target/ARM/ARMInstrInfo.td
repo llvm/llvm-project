@@ -379,6 +379,8 @@ def imm_neg_XFORM : SDNodeXForm<imm, [{
 def imm_not_XFORM : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
+def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
+  GISDNodeXFormEquiv<imm_not_XFORM>;
 
 // asr_imm_XFORM - Returns a shift immediate with bit {5} set to 1
 def asr_imm_XFORM : SDNodeXForm<imm, [{
@@ -830,8 +832,8 @@ def mod_imm : Operand<i32>, ImmLeaf<i32, [{
 // instructions, which use mod_imm.
 
 def ModImmNotAsmOperand : AsmOperandClass { let Name = "ModImmNot"; }
-def mod_imm_not : Operand<i32>, PatLeaf<(imm), [{
-    return ARM_AM::getSOImmVal(~(uint32_t)N->getZExtValue()) != -1;
+def mod_imm_not : Operand<i32>, ImmLeaf<i32, [{
+    return ARM_AM::getSOImmVal(~(uint32_t)Imm) != -1;
   }], imm_not_XFORM> {
   let ParserMatchClass = ModImmNotAsmOperand;
 }
@@ -6531,4 +6533,16 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// Pseudo Instructions for use when early-clobber is defined and Greedy Register
+// Allocation is used. This ensures the constraint is used properly.
+//===----------------------------------------------------------------------===//
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def PseudoARMInitUndefMQPR      :  PseudoInst<(outs MQPR:$vd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefSPR      :  PseudoInst<(outs SPR:$sd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefDPR_VFP2      :  PseudoInst<(outs DPR_VFP2:$dd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefGPR     :  PseudoInst<(outs GPR:$rd), (ins), NoItinerary, []>;
 }

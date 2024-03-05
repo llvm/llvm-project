@@ -27,7 +27,9 @@ export namespace std {
   using std::string_view;
   using std::u16string_view;
   using std::u32string_view;
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
   using std::u8string_view;
+#endif
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::wstring_view;
 #endif

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx1200 -d - | FileCheck -check-prefix=OBJ %s
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -show-mc-encoding < %s | FileCheck -check-prefix=ASM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx1200 -d - | FileCheck -check-prefix=OBJ %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -show-mc-encoding < %s | FileCheck -check-prefix=ASM %s
 
 declare i32 @llvm.amdgcn.permlane16.var(i32, i32, i32, i1, i1)
 

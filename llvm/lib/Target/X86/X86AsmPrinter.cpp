@@ -24,8 +24,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Mangler.h"
@@ -774,6 +774,14 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       PrintOperand(MI, OpNo, O);
       return false;
 
+    case 'p': {
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      if (MO.getType() != MachineOperand::MO_GlobalAddress)
+        return true;
+      PrintSymbolOperand(MO, O);
+      return false;
+    }
+
     case 'P': // This is the operand of a call, treat specially.
       PrintPCRelImm(MI, OpNo, O);
       return false;
@@ -869,7 +877,6 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->emitInt32(FeatureFlagsAnd);            // data
       emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
-      OutStreamer->endSection(Nt);
       OutStreamer->switchSection(Cur);
     }
   }

@@ -2,6 +2,7 @@
 
 template <typename T>
 concept constraint = false;
+
 namespace temp_friend_9 {
 // A non-template friend declaration with a requires-clause shall be a
 // definition. ...Such a constrained friend function ... does not declare the
@@ -11,6 +12,14 @@ struct NonTemplateFriend {
   friend void foo()
     requires true
   {}
+
+  friend void baz() // expected-error {{non-template friend declaration with a requires clause must be a definition}}
+    requires true;
+};
+
+struct TempP9NotShownIfFunctionWouldBeInvalidAnyway {
+  friend void foo()
+    requires true; // expected-error {{non-templated function cannot have a requires clause}}
 };
 
 // A friend function template with a constraint that depends on a template
@@ -19,6 +28,10 @@ struct NonTemplateFriend {
 // function template as a declaration in any other scope.
 template <typename T>
 struct TemplateFromEnclosing {
+  template <typename U>
+  friend void bar2() // expected-error {{friend declaration with a constraint that depends on an enclosing template parameter must be a definition}}
+    requires constraint<T>;
+
   template <typename U>
   friend void foo()
     requires constraint<T>

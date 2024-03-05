@@ -198,9 +198,9 @@ public:
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
-  virtual bool relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
-                           int64_t &Value) const {
-    return false;
+  virtual std::pair<bool, bool>
+  relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout, int64_t &Value) const {
+    return std::make_pair(false, false);
   }
 
   /// @}

@@ -212,6 +212,7 @@ class StringList;
 class StringTableReader;
 class StructuredDataImpl;
 class StructuredDataPlugin;
+class SupportFile;
 class Symbol;
 class SymbolContext;
 class SymbolContextList;
@@ -297,6 +298,7 @@ struct CompilerContext;
 struct LineEntry;
 struct PropertyDefinition;
 struct ScriptSummaryFormat;
+struct StatisticsOptions;
 struct StringSummaryFormat;
 template <unsigned N> class StreamBuffer;
 
@@ -462,6 +464,7 @@ typedef std::shared_ptr<lldb_private::TypeSummaryImpl> TypeSummaryImplSP;
 typedef std::shared_ptr<lldb_private::TypeSummaryOptions> TypeSummaryOptionsSP;
 typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildren>
     ScriptedSyntheticChildrenSP;
+typedef std::shared_ptr<lldb_private::SupportFile> SupportFileSP;
 typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;
 typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;

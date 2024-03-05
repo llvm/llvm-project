@@ -551,7 +551,9 @@ struct ExecutionPartConstruct {
 };
 
 // R509 execution-part -> executable-construct [execution-part-construct]...
-WRAPPER_CLASS(ExecutionPart, std::list<ExecutionPartConstruct>);
+// R1101 block -> [execution-part-construct]...
+using Block = std::list<ExecutionPartConstruct>;
+WRAPPER_CLASS(ExecutionPart, Block);
 
 // R502 program-unit ->
 //        main-program | external-subprogram | module | submodule | block-data
@@ -2115,9 +2117,6 @@ struct ForallConstruct {
       t;
 };
 
-// R1101 block -> [execution-part-construct]...
-using Block = std::list<ExecutionPartConstruct>;
-
 // R1105 selector -> expr | variable
 struct Selector {
   UNION_CLASS_BOILERPLATE(Selector);
@@ -3309,12 +3308,18 @@ struct CompilerDirective {
   struct LoopCount {
     WRAPPER_CLASS_BOILERPLATE(LoopCount, std::list<std::uint64_t>);
   };
+  struct AssumeAligned {
+    TUPLE_CLASS_BOILERPLATE(AssumeAligned);
+    std::tuple<common::Indirection<Designator>, uint64_t> t;
+  };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
   };
   CharBlock source;
-  std::variant<std::list<IgnoreTKR>, LoopCount, std::list<NameValue>> u;
+  std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
+      std::list<NameValue>>
+      u;
 };
 
 // (CUDA) ATTRIBUTE(attribute) [::] name-list
@@ -4072,8 +4077,8 @@ struct AccWaitArgument {
 };
 
 struct AccDeviceTypeExpr {
-  ENUM_CLASS(Device, Star, Default, Nvidia, Radeon, Host, Multicore)
-  WRAPPER_CLASS_BOILERPLATE(AccDeviceTypeExpr, Device);
+  WRAPPER_CLASS_BOILERPLATE(
+      AccDeviceTypeExpr, Fortran::common::OpenACCDeviceType);
   CharBlock source;
 };
 

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX678 %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX678 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX678 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX678 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 declare double @llvm.minnum.f64(double, double) #0
 declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>) #0

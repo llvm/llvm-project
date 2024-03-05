@@ -202,7 +202,7 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
   sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
 
   if (func_decl_file != prologue_end_line.file &&
-      func_decl_file != prologue_end_line.original_file)
+      func_decl_file != prologue_end_line.original_file_sp->GetSpecOnly())
     return {};
 
   SourceLine decl_line;
@@ -407,7 +407,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                   sc.function->GetStartLineSourceInfo(func_decl_file,
                                                       func_decl_line);
                   if (func_decl_file == prologue_end_line.file ||
-                      func_decl_file == prologue_end_line.original_file) {
+                      func_decl_file ==
+                          prologue_end_line.original_file_sp->GetSpecOnly()) {
                     // Add all the lines between the function declaration and
                     // the first non-prologue source line to the list of lines
                     // to print.

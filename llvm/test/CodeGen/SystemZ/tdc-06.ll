@@ -11,7 +11,7 @@ define i32 @fpc(double %x) {
 entry:
 ; CHECK-LABEL: fpc
 ; CHECK-DAG: lhi %r2, 5
-; CHECK-DAG: ltdbr %f0, %f0
+; CHECK-DAG: ltdbr %f1, %f0
 ; CHECK: je [[RET:.L.*]]
   %testeq = fcmp oeq double %x, 0.000000e+00
   br i1 %testeq, label %ret, label %nonzero, !prof !1

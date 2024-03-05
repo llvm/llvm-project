@@ -42,7 +42,7 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
       deallocOp.getConditions() == conditions)
     return failure();
 
-  rewriter.updateRootInPlace(deallocOp, [&]() {
+  rewriter.modifyOpInPlace(deallocOp, [&]() {
     deallocOp.getMemrefsMutable().assign(memrefs);
     deallocOp.getConditionsMutable().assign(conditions);
   });
@@ -77,18 +77,12 @@ static bool distinctAllocAndBlockArgument(Value v1, Value v2) {
   return areDistinct(v1Base, v2Base) || areDistinct(v2Base, v1Base);
 }
 
-/// Checks if `memref` may or must alias a MemRef in `otherList`. It is often a
-/// requirement of optimization patterns that there cannot be any aliasing
-/// memref in order to perform the desired simplification. The `allowSelfAlias`
-/// argument indicates whether `memref` may be present in `otherList` which
-/// makes this helper function applicable to situations where we already know
-/// that `memref` is in the list but also when we don't want it in the list.
+/// Checks if `memref` may potentially alias a MemRef in `otherList`. It is
+/// often a requirement of optimization patterns that there cannot be any
+/// aliasing memref in order to perform the desired simplification.
 static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
-                                     ValueRange otherList, Value memref,
-                                     bool allowSelfAlias) {
+                                     ValueRange otherList, Value memref) {
   for (auto other : otherList) {
-    if (allowSelfAlias && other == memref)
-      continue;
     if (distinctAllocAndBlockArgument(other, memref))
       continue;
     if (!analysis.alias(other, memref).isNo())
@@ -240,23 +234,17 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> newRetainedMemrefs, replacements;
-    Value falseValue;
-    auto getOrCreateFalse = [&]() -> Value {
-      if (!falseValue)
-        falseValue = rewriter.create<arith::ConstantOp>(
-            deallocOp.getLoc(), rewriter.getBoolAttr(false));
-      return falseValue;
-    };
 
     for (auto retainedMemref : deallocOp.getRetained()) {
       if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
-                                   retainedMemref, false)) {
+                                   retainedMemref)) {
         newRetainedMemrefs.push_back(retainedMemref);
         replacements.push_back({});
         continue;
       }
 
-      replacements.push_back(getOrCreateFalse());
+      replacements.push_back(rewriter.create<arith::ConstantOp>(
+          deallocOp.getLoc(), rewriter.getBoolAttr(false)));
     }
 
     if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
@@ -320,11 +308,13 @@ struct SplitDeallocWhenNotAliasingAnyOther
 
     SmallVector<Value> remainingMemrefs, remainingConditions;
     SmallVector<SmallVector<Value>> updatedConditions;
-    for (auto [memref, cond] :
-         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+    for (int64_t i = 0, e = deallocOp.getMemrefs().size(); i < e; ++i) {
+      Value memref = deallocOp.getMemrefs()[i];
+      Value cond = deallocOp.getConditions()[i];
+      SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
+      otherMemrefs.erase(otherMemrefs.begin() + i);
       // Check if `memref` can split off into a separate bufferization.dealloc.
-      if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
-                                   memref, true)) {
+      if (potentiallyAliasesMemref(aliasAnalysis, otherMemrefs, memref)) {
         // `memref` alias with other memrefs, do not split off.
         remainingMemrefs.push_back(memref);
         remainingConditions.push_back(cond);

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: valu_write_vgpr_sgemm_mfma_read
 # GCN:      V_MOV_B32

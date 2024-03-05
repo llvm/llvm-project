@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_add_i16:

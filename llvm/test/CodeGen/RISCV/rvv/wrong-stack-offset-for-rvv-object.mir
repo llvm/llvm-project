@@ -32,27 +32,27 @@
 
   %struct = type { i32 }
 
-  define void @asm_fprintf(%struct %file, i8* %p, [10 x i8]* %buf, i8* %arrayidx3, <2 x i8>* %0, i8* %1, ...) #0 {
+  define void @asm_fprintf(%struct %file, ptr %p, ptr %buf, ptr %arrayidx3, ptr %0, ptr %1, ...) #0 {
   entry:
     %buf1 = alloca [10 x i8], i32 0, align 8
-    %arrayidx32 = getelementptr inbounds [10 x i8], [10 x i8]* %buf, i64 0, i64 1
+    %arrayidx32 = getelementptr inbounds [10 x i8], ptr %buf, i64 0, i64 1
     br label %while.cond
 
   while.cond:                                       ; preds = %while.cond, %sw.bb, %entry
-    %incdec.ptr = getelementptr inbounds i8, i8* undef, i64 1
-    %2 = load i8, i8* null, align 1
+    %incdec.ptr = getelementptr inbounds i8, ptr undef, i64 1
+    %2 = load i8, ptr null, align 1
     %3 = zext i8 0 to i64
     %cond = icmp eq i64 %3, 0
     br i1 %cond, label %sw.bb, label %while.cond
 
   sw.bb:                                            ; preds = %while.cond
-    %4 = load i8, i8* null, align 1
-    store <2 x i8> zeroinitializer, <2 x i8>* %0, align 1
-    %call = call i32 (i8*, ...) @fprintf(i8* %p)
+    %4 = load i8, ptr null, align 1
+    store <2 x i8> zeroinitializer, ptr %0, align 1
+    %call = call i32 (ptr, ...) @fprintf(ptr %p)
     br label %while.cond
   }
 
-  declare i32 @fprintf(i8*, ...) #0
+  declare i32 @fprintf(ptr, ...) #0
 
   attributes #0 = { "target-features"="+m,+v" }
 
@@ -189,7 +189,7 @@ body:             |
   ; CHECK-NEXT:   renamable $v8 = VL1RE8_V killed $x10 :: (load unknown-size from %stack.1, align 8)
   ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3 /* e8 */, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
   ; CHECK-NEXT:   $x10 = COPY renamable $x9
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-plt) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
   ; CHECK-NEXT:   PseudoBR %bb.1
   bb.0.entry:
     successors: %bb.1(0x80000000)
@@ -219,7 +219,7 @@ body:             |
     PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
     $x10 = COPY renamable $x9
-    PseudoCALL target-flags(riscv-plt) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
+    PseudoCALL target-flags(riscv-call) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoBR %bb.1
 

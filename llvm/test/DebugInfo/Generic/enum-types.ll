@@ -1,5 +1,6 @@
 ;
 ; RUN: %llc_dwarf -filetype=obj -O0 -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -filetype=obj -O0 -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; Make sure we can handle enums with the same identifier but in enum types of
 ; different compile units.

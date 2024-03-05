@@ -575,6 +575,25 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return false;
         }]
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return "true" if the this op has tensor semantics and should be
+          bufferized. By default, ops with tensor operands, tensor op results
+          and/or tensor block arguments have tensor semantics.
+
+          This interface methods can be implemented by ops that should be
+          bufferized but do not have tensor semantics according to the above
+          definition. E.g., this function can return "true" for symbols.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"hasTensorSemantics",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::bufferization::detail
+              ::defaultHasTensorSemantics($_op.getOperation());
+        }]
+      >,
       StaticInterfaceMethod<
         /*desc=*/[{
           Return `true` if the op and this interface implementation supports

@@ -10,8 +10,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
-
 template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
@@ -72,9 +70,11 @@ public:
     constexpr StorageType COUNT = 100'000;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = static_cast<T>(FPBits(v));
-      if (isnan(x) || isinf(x) || x == 0.0l)
+      FPBits x_bits = FPBits(v);
+      if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
+
+      T x = x_bits.get_val();
 
       int exponent;
       LIBC_NAMESPACE::fputil::frexp(x, exponent);

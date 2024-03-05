@@ -83,8 +83,10 @@ Clang-Tidy Checks
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
+   :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
+   :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
@@ -154,7 +156,6 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl21-cpp <cert/dcl21-cpp>`, "Yes"
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-env33-c <cert/env33-c>`,
@@ -287,6 +288,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
+   :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
@@ -337,6 +339,8 @@ Clang-Tidy Checks
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
+   :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
+   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`,
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
    :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
@@ -363,9 +367,11 @@ Clang-Tidy Checks
    :doc:`readability-operators-representation <readability/operators-representation>`, "Yes"
    :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes"
+   :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes"
    :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes"
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
+   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
@@ -381,6 +387,7 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
 

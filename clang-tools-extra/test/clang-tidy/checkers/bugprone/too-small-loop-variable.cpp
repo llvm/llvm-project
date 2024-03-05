@@ -93,6 +93,18 @@ void voidBadForLoopWithMacroBound() {
   }
 }
 
+unsigned int getVal() {
+    return 300;
+}
+
+// The iteration's upper bound has a function declaration.
+void voidBadForLoop8() {
+  const unsigned int l = getVal();
+  for (unsigned char i = 0; i < l; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: loop variable has narrower type 'unsigned char' than iteration's upper bound 'const unsigned int' [bugprone-too-small-loop-variable]
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Correct loops: we should not warn here.
 

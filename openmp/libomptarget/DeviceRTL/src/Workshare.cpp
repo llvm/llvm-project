@@ -45,9 +45,6 @@ struct DynamicScheduleTracker {
 
 #pragma omp begin declare target device_type(nohost)
 
-extern int32_t __omp_rtl_assume_teams_oversubscription;
-extern int32_t __omp_rtl_assume_threads_oversubscription;
-
 // TODO: This variable is a hack inherited from the old runtime.
 static uint64_t SHARED(Cnt);
 
@@ -746,7 +743,7 @@ public:
     // If we know we have more threads than iterations we can indicate that to
     // avoid an outer loop.
     bool OneIterationPerThread = false;
-    if (__omp_rtl_assume_threads_oversubscription) {
+    if (config::getAssumeThreadsOversubscription()) {
       ASSERT(NumThreads >= NumIters, "Broken assumption");
       OneIterationPerThread = true;
     }
@@ -788,7 +785,7 @@ public:
     // If we know we have more blocks than iterations we can indicate that to
     // avoid an outer loop.
     bool OneIterationPerThread = false;
-    if (__omp_rtl_assume_teams_oversubscription) {
+    if (config::getAssumeTeamsOversubscription()) {
       ASSERT(NumBlocks >= NumIters, "Broken assumption");
       OneIterationPerThread = true;
     }
@@ -839,8 +836,8 @@ public:
     // If we know we have more threads (across all blocks) than iterations we
     // can indicate that to avoid an outer loop.
     bool OneIterationPerThread = false;
-    if (__omp_rtl_assume_teams_oversubscription &
-        __omp_rtl_assume_threads_oversubscription) {
+    if (config::getAssumeTeamsOversubscription() &
+        config::getAssumeThreadsOversubscription()) {
       OneIterationPerThread = true;
       ASSERT(NumBlocks * NumThreads >= NumIters, "Broken assumption");
     }

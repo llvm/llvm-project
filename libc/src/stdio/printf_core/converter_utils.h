@@ -51,6 +51,9 @@ LIBC_INLINE uintmax_t apply_length_modifier(uintmax_t num, LengthModifier lm) {
       return result;                                                           \
   }
 
+// This is used to represent which direction the number should be rounded.
+enum class RoundDirection { Up, Down, Even };
+
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE
 

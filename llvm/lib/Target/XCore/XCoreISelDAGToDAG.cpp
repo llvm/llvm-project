@@ -142,7 +142,7 @@ void XCoreDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   default: break;
   case ISD::Constant: {
-    uint64_t Val = cast<ConstantSDNode>(N)->getZExtValue();
+    uint64_t Val = N->getAsZExtVal();
     if (immMskBitp(N)) {
       // Transformation function: get the size of a mask
       // Look for the first non-zero bit

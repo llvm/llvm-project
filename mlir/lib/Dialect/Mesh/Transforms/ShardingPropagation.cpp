@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Mesh/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -27,8 +28,6 @@ namespace mesh {
 
 using namespace mlir;
 using namespace mlir::mesh;
-
-namespace {
 
 //===----------------------------------------------------------------------===//
 // Utilities
@@ -82,7 +81,7 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
 // `getShardingOption` method. If the inferred sharding option is not empty, add
 // a `mesh.shard` operation for all remaining operands and results that do not
 // have sharding annotations.
-LogicalResult visitOp(Operation *op, OpBuilder &builder) {
+static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   if (op->hasTrait<OpTrait::IsTerminator>() || llvm::isa<mesh::ShardOp>(op))
     return success();
 
@@ -206,5 +205,3 @@ struct ShardingPropagation
         return signalPassFailure();
   }
 };
-
-} // namespace

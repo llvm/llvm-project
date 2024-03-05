@@ -127,6 +127,10 @@ def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;
 
+def relocatable : Flag<["--", "-"], "relocatable">, 
+    HelpText<"Link device code to create a relocatable offloading application">;
+def r : Flag<["-"], "r">, Alias<relocatable>;
+
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
 def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;

@@ -33,7 +33,7 @@ define i32 @caller_float_in_fpr() nounwind {
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[C]](s32)
   ; RV32-ILP32F-NEXT:   $f10_f = COPY [[C1]](s32)
-  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_in_fpr, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $f10_f, implicit-def $x10
+  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_fpr, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $f10_f, implicit-def $x10
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -46,7 +46,7 @@ define i32 @caller_float_in_fpr() nounwind {
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[C]](s32)
   ; RV32-ILP32D-NEXT:   $f10_f = COPY [[C1]](s32)
-  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_in_fpr, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $f10_f, implicit-def $x10
+  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_fpr, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $f10_f, implicit-def $x10
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -112,7 +112,7 @@ define i32 @caller_float_in_fpr_exhausted_gprs() nounwind {
   ; RV32-ILP32F-NEXT:   $x16 = COPY [[UV6]](s32)
   ; RV32-ILP32F-NEXT:   $x17 = COPY [[UV7]](s32)
   ; RV32-ILP32F-NEXT:   $f10_f = COPY [[C5]](s32)
-  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_in_fpr_exhausted_gprs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $x10
+  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_fpr_exhausted_gprs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $x10
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -144,7 +144,7 @@ define i32 @caller_float_in_fpr_exhausted_gprs() nounwind {
   ; RV32-ILP32D-NEXT:   $x16 = COPY [[UV6]](s32)
   ; RV32-ILP32D-NEXT:   $x17 = COPY [[UV7]](s32)
   ; RV32-ILP32D-NEXT:   $f10_f = COPY [[C5]](s32)
-  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_in_fpr_exhausted_gprs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $x10
+  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_fpr_exhausted_gprs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $x10
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -202,7 +202,7 @@ define i32 @caller_float_in_gpr_exhausted_fprs() nounwind {
   ; RV32-ILP32F-NEXT:   $f16_f = COPY [[C6]](s32)
   ; RV32-ILP32F-NEXT:   $f17_f = COPY [[C7]](s32)
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[C8]](s32)
-  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_in_gpr_exhausted_fprs, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $x10
+  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_gpr_exhausted_fprs, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $x10
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -229,7 +229,7 @@ define i32 @caller_float_in_gpr_exhausted_fprs() nounwind {
   ; RV32-ILP32D-NEXT:   $f16_f = COPY [[C6]](s32)
   ; RV32-ILP32D-NEXT:   $f17_f = COPY [[C7]](s32)
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[C8]](s32)
-  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_in_gpr_exhausted_fprs, csr_ilp32d_lp64d, implicit-def $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $x10
+  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_gpr_exhausted_fprs, csr_ilp32d_lp64d, implicit-def $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $x10
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -320,7 +320,7 @@ define i32 @caller_float_on_stack_exhausted_gprs_fprs() nounwind {
   ; RV32-ILP32F-NEXT:   $f15_f = COPY [[C9]](s32)
   ; RV32-ILP32F-NEXT:   $f16_f = COPY [[C10]](s32)
   ; RV32-ILP32F-NEXT:   $f17_f = COPY [[C11]](s32)
-  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_on_stack_exhausted_gprs_fprs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_f, implicit $x12, implicit $x13, implicit $f11_f, implicit $x14, implicit $x15, implicit $f12_f, implicit $x16, implicit $x17, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit-def $x10
+  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_on_stack_exhausted_gprs_fprs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_f, implicit $x12, implicit $x13, implicit $f11_f, implicit $x14, implicit $x15, implicit $f12_f, implicit $x16, implicit $x17, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit-def $x10
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -366,7 +366,7 @@ define i32 @caller_float_on_stack_exhausted_gprs_fprs() nounwind {
   ; RV32-ILP32D-NEXT:   $f15_f = COPY [[C9]](s32)
   ; RV32-ILP32D-NEXT:   $f16_f = COPY [[C10]](s32)
   ; RV32-ILP32D-NEXT:   $f17_f = COPY [[C11]](s32)
-  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_on_stack_exhausted_gprs_fprs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_f, implicit $x12, implicit $x13, implicit $f11_f, implicit $x14, implicit $x15, implicit $f12_f, implicit $x16, implicit $x17, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit-def $x10
+  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_on_stack_exhausted_gprs_fprs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $f10_f, implicit $x12, implicit $x13, implicit $f11_f, implicit $x14, implicit $x15, implicit $f12_f, implicit $x16, implicit $x17, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit-def $x10
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[COPY1]](s32)
@@ -390,7 +390,7 @@ define i32 @caller_float_ret() nounwind {
   ; RV32-ILP32F-LABEL: name: caller_float_ret
   ; RV32-ILP32F: bb.1 (%ir-block.0):
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $f10_f
+  ; RV32-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $f10_f
   ; RV32-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV32-ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -399,7 +399,7 @@ define i32 @caller_float_ret() nounwind {
   ; RV32-ILP32D-LABEL: name: caller_float_ret
   ; RV32-ILP32D: bb.1 (%ir-block.0):
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_float_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit-def $f10_f
+  ; RV32-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit-def $f10_f
   ; RV32-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV32-ILP32D-NEXT:   $x10 = COPY [[COPY]](s32)

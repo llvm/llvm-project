@@ -16,39 +16,6 @@
 
 using namespace mlir;
 
-/// Returns true if 'val' is a splat of zero, false otherwise.
-static bool isSplatZero(Type elemType, DenseElementsAttr val) {
-  if (llvm::isa<FloatType>(elemType))
-    return val && val.isSplat() && val.getSplatValue<APFloat>().isZero();
-  if (llvm::isa<IntegerType>(elemType))
-    return val && val.isSplat() && val.getSplatValue<APInt>().isZero();
-  return false;
-}
-
-/// Generates a for loop over ZA tile slices where the induction variable is
-/// the tile slice index and each iteration yields a new tile. Loop body is
-/// built via the callback, which returns the next tile value.
-template <typename LoopBodyCallback>
-static scf::ForOp createLoopOverTileSlices(PatternRewriter &rewriter,
-                                           Location loc, Value initTile,
-                                           LoopBodyCallback callback) {
-  OpBuilder::InsertionGuard g(rewriter);
-  auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-  auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
-      loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
-  auto vscale =
-      rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-  auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto numTileSlices =
-      rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
-  auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step,
-                                           ValueRange{initTile});
-  rewriter.setInsertionPointToStart(forOp.getBody());
-  auto nextTile = callback(forOp);
-  rewriter.create<scf::YieldOp>(loc, nextTile.getResult());
-  return forOp;
-}
-
 namespace {
 
 /// Conversion pattern for vector.transfer_read.
@@ -223,56 +190,6 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
   }
 };
 
-/// Conversion pattern for dense arith.constant.
-struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
-  using OpRewritePattern<arith::ConstantOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(arith::ConstantOp constantOp,
-                                PatternRewriter &rewriter) const final {
-    auto tileType = dyn_cast<VectorType>(constantOp.getType());
-    if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
-      return failure();
-
-    auto denseAttr = dyn_cast<DenseElementsAttr>(constantOp.getValueAttr());
-    if (!denseAttr || !denseAttr.isSplat())
-      return failure();
-
-    auto tileElementType = tileType.getElementType();
-
-    // Lower 'arith.constant dense<0>' to 'arm_sme.zero' op.
-    if (isSplatZero(tileElementType, denseAttr)) {
-      rewriter.replaceOpWithNewOp<arm_sme::ZeroOp>(constantOp, tileType);
-      return success();
-    }
-
-    // Lower non-zero constants to a loop of 'arm_sme.move_vector_to_tile_slice'
-    // ops that broadcast the constant to each tile slice.
-    auto loc = constantOp.getLoc();
-
-    // To fill a tile with a constant, we create a 1-D splat of the constant,
-    // then move that into each tile slice (the largest unit we can set at once,
-    // outside of operations like the outerproduct).
-    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-    auto denseAttr1D = DenseElementsAttr::get(
-        tileSliceType, denseAttr.getSplatValue<Attribute>());
-    auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
-
-    auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
-    auto forOp =
-        createLoopOverTileSlices(rewriter, loc, initTile, [&](auto forOp) {
-          auto tileSliceIndex = forOp.getInductionVar();
-          auto currentTile = forOp.getRegionIterArg(0);
-          // Create 'arm_sme.move_vector_to_tile_slice' to write vector to tile
-          // slice.
-          return rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
-              loc, tileType, constantOp1D, currentTile, tileSliceIndex);
-        });
-    rewriter.replaceOp(constantOp, forOp.getResult(0));
-
-    return success();
-  }
-};
-
 /// Conversion pattern for vector.broadcast.
 ///
 /// Example:
@@ -322,16 +239,18 @@ struct BroadcastOpToArmSMELowering
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
+    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                            Value currentTile) {
+      // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value
+      // to each tile slice.
+      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+          loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
+      return nextTile.getResult();
+    };
+
     // Create a loop over ZA tile slices.
     auto forOp =
-        createLoopOverTileSlices(rewriter, loc, initTile, [&](auto forOp) {
-          auto tileSliceIndex = forOp.getInductionVar();
-          auto currentTile = forOp.getRegionIterArg(0);
-          // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value
-          // to each tile slice.
-          return rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
-              loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
-        });
+        createLoopOverTileSlices(rewriter, loc, initTile, makeLoopBody);
 
     rewriter.replaceOp(broadcastOp, forOp.getResult(0));
 
@@ -381,15 +300,17 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
+    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                            Value currentTile) {
+      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+          loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
+      return nextTile.getResult();
+    };
+
     // Next, create a loop over ZA tile slices and "move" the generated 1-d
     // vector to each slice.
     auto forOp =
-        createLoopOverTileSlices(rewriter, loc, initTile, [&](auto forOp) {
-          auto tileSliceIndex = forOp.getInductionVar();
-          auto currentTile = forOp.getRegionIterArg(0);
-          return rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
-              loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
-        });
+        createLoopOverTileSlices(rewriter, loc, initTile, makeLoopBody);
 
     rewriter.replaceOp(splatOp, forOp.getResult(0));
 
@@ -741,11 +662,10 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns
-      .add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
-           SplatOpToArmSMELowering, TransferReadToArmSMELowering,
-           TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
-           VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
-           VectorOuterProductToArmSMELowering, VectorExtractToArmSMELowering,
-           VectorInsertToArmSMELowering, VectorPrintToArmSMELowering>(&ctx);
+  patterns.add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
+               TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
+               TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
+               VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
+               VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
+               VectorPrintToArmSMELowering>(&ctx);
 }

@@ -25,8 +25,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir::arm_sme {
+static constexpr unsigned kInMemoryTileIdBase = 16;
 #include "mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h.inc"
-}
+} // namespace mlir::arm_sme
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/ArmSME/IR/ArmSMEAttrDefs.h.inc"

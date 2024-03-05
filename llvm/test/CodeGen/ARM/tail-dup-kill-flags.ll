@@ -8,19 +8,19 @@ target triple = "thumbv7-apple-ios8.0.0"
 
 ; CHECK-LABEL: @test
 
-%struct.cdiff_ctx = type { i8*, %struct.cdiff_node*, %struct.cdiff_node*, %struct.cdiff_node*, %struct.cdiff_node* }
-%struct.cdiff_node = type { i32, i8*, i8*, %struct.cdiff_node* }
+%struct.cdiff_ctx = type { ptr, ptr, ptr, ptr, ptr }
+%struct.cdiff_node = type { i32, ptr, ptr, ptr }
 
 declare i32 @logg(i32)
 
-define hidden i32 @test(%struct.cdiff_ctx* nocapture %ctx, %struct.cdiff_node* %tmp10) {
+define hidden i32 @test(ptr nocapture %ctx, ptr %tmp10) {
 bb:
   br label %.outer
 
 bb33:                                             ; preds = %bb92, %.outer
   %lines.0 = phi i32 [ %tmp37, %bb92 ], [ %lines.0.ph, %.outer ]
   %tmp37 = add i32 %lines.0, 1
-  %tmp39 = load i32, i32* %tmp57, align 4
+  %tmp39 = load i32, ptr %tmp57, align 4
   %tmp40 = icmp eq i32 %tmp39, %tmp37
   br i1 %tmp40, label %bb41, label %bb92
 
@@ -34,14 +34,14 @@ bb47:                                             ; preds = %bb41
   ret i32 -1
 
 bb53:                                             ; preds = %bb41
-  %tmp54 = getelementptr inbounds %struct.cdiff_node, %struct.cdiff_node* %del.0.ph, i32 0, i32 3
-  %tmp55 = load %struct.cdiff_node*, %struct.cdiff_node** %tmp54, align 4
+  %tmp54 = getelementptr inbounds %struct.cdiff_node, ptr %del.0.ph, i32 0, i32 3
+  %tmp55 = load ptr, ptr %tmp54, align 4
   br label %.outer
 
 .outer:                                           ; preds = %bb53, %bb
-  %del.0.ph = phi %struct.cdiff_node* [ %tmp55, %bb53 ], [ null, %bb ]
+  %del.0.ph = phi ptr [ %tmp55, %bb53 ], [ null, %bb ]
   %lines.0.ph = phi i32 [ 1, %bb53 ], [ 0, %bb ]
-  %tmp57 = getelementptr inbounds %struct.cdiff_node, %struct.cdiff_node* %del.0.ph, i32 0, i32 0
+  %tmp57 = getelementptr inbounds %struct.cdiff_node, ptr %del.0.ph, i32 0, i32 0
   br label %bb33
 
 bb92:                                             ; preds = %bb33

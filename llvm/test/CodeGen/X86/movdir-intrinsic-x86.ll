@@ -18,7 +18,7 @@ define void @test_movdiri(ptr %p, i32 %v) {
 ;
 ; EGPR-LABEL: test_movdiri:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    movdiri %esi, (%rdi) # encoding: [0x62,0xf4,0x7c,0x08,0xf9,0x37]
+; EGPR-NEXT:    movdiri %esi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf9,0x37]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   call void @llvm.x86.directstore32(ptr %p, i32 %v)
@@ -42,7 +42,7 @@ define void @test_movdir64b(ptr %dst, ptr %src) {
 ;
 ; EGPR-LABEL: test_movdir64b:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    movdir64b (%rsi), %rdi # encoding: [0x62,0xf4,0x7d,0x08,0xf8,0x3e]
+; EGPR-NEXT:    movdir64b (%rsi), %rdi # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0xf8,0x3e]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   call void @llvm.x86.movdir64b(ptr %dst, ptr %src)

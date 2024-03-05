@@ -166,9 +166,11 @@ bar:
 .section .shf_metadata1,"ao",@progbits,.Lshf_metadata_target2_1
 .section .shf_metadata2,"ao",@progbits,.Lshf_metadata_target2_2
 .section .shf_metadata3,"ao",@progbits,.shf_metadata_target1
+.section .linkorder_group_zero,"aoG",@progbits,.shf_metadata_target1,foo
 // ASM: .section .shf_metadata1,"ao",@progbits,.Lshf_metadata_target2_1
 // ASM: .section .shf_metadata2,"ao",@progbits,.Lshf_metadata_target2_2
 // ASM: .section .shf_metadata3,"ao",@progbits,.shf_metadata_target1
+// ASM: .section .linkorder_group_zero,"aoG",@progbits,.shf_metadata_target1,foo{{$}}
 
 // CHECK:      Section {
 // CHECK:        Index: 22
@@ -213,6 +215,20 @@ bar:
 // CHECK-NEXT:   Type: SHT_PROGBITS
 // CHECK-NEXT:   Flags [
 // CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_LINK_ORDER
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address:
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   Size:
+// CHECK-NEXT:   Link:    22
+// CHECK-NEXT:   Info:    0
+
+// CHECK:      Section {
+// CHECK:        Name: .linkorder_group_zero
+// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_GROUP
 // CHECK-NEXT:     SHF_LINK_ORDER
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   Address:

@@ -17,8 +17,10 @@
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
 #include "CastingThroughVoidCheck.h"
+#include "ChainedComparisonCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
 #include "CopyConstructorInitCheck.h"
+#include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
@@ -108,6 +110,8 @@ public:
     CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");
     CheckFactories.registerCheck<CastingThroughVoidCheck>(
         "bugprone-casting-through-void");
+    CheckFactories.registerCheck<ChainedComparisonCheck>(
+        "bugprone-chained-comparison");
     CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
         "bugprone-compare-pointer-to-member-virtual-function");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
@@ -234,6 +238,8 @@ public:
         "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UniquePtrArrayMismatchCheck>(
         "bugprone-unique-ptr-array-mismatch");
+    CheckFactories.registerCheck<CrtpConstructorAccessibilityCheck>(
+        "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(

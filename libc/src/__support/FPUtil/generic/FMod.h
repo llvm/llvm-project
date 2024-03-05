@@ -124,7 +124,7 @@ template <typename T> struct FModExceptionalInputHandler {
 
   LIBC_INLINE static bool pre_check(T x, T y, T &out) {
     using FPB = fputil::FPBits<T>;
-    const T quiet_nan = FPB::build_quiet_nan(0);
+    const T quiet_nan = FPB::quiet_nan().get_val();
     FPB sx(x), sy(y);
     if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
                     !sx.is_inf_or_nan())) {
@@ -308,9 +308,9 @@ public:
     if (T out; Wrapper::pre_check(x, y, out))
       return out;
     FPB sx(x), sy(y);
-    bool sign = sx.get_sign();
-    sx.set_sign(false);
-    sy.set_sign(false);
+    Sign sign = sx.sign();
+    sx.set_sign(Sign::POS);
+    sy.set_sign(Sign::POS);
     FPB result = eval_internal(sx, sy);
     result.set_sign(sign);
     return result.get_val();

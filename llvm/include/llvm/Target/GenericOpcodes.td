@@ -815,7 +815,7 @@ def G_FMAXNUM_IEEE : GenericInstruction {
 
 // FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
 // as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2018 draft semantics.
+// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
 def G_FMINIMUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
@@ -1020,6 +1020,27 @@ def G_FNEARBYINT : GenericInstruction {
 // it is modeled as a side effect, because constrained intrinsics use the same
 // method.
 
+// Reading floating-point environment.
+def G_GET_FPENV : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point environment.
+def G_SET_FPENV : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
+// Setting default floating-point environment.
+def G_RESET_FPENV : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 // Reading floating-point control modes.
 def G_GET_FPMODE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1075,6 +1096,12 @@ def G_INTRINSIC_ROUNDEVEN : GenericInstruction {
 }
 
 def G_READCYCLECOUNTER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_READSTEADYCOUNTER : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
   let hasSideEffects = true;

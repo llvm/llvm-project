@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-tiling-interface=tile-consumer-and-fuse-producer-using-scf-for -cse -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -transform-interpreter -cse -split-input-file %s | FileCheck %s
 
 func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
@@ -8,10 +8,19 @@ func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) ->
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %init = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %gemm = linalg.matmul {__internal_transform__ = "fusion"}
-      ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %gemm = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %gemm : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %matmul [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //      CHECK: func.func @gemm_fill_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -43,11 +52,9 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %init = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %gemm = linalg.matmul
-      ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %gemm = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   %generic = linalg.generic {
-      __internal_transform__ = "fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
       ins(%gemm, %arg2 : tensor<?x?xf32>, tensor<?xf32>) outs(%init : tensor<?x?xf32>) {
@@ -56,6 +63,16 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
       linalg.yield %add : f32
   } -> tensor<?x?xf32>
   return %generic : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //      CHECK: func.func @gemm_generic_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -97,9 +114,21 @@ func.func @gemm_gemm_fusion(%lhs0 : tensor<?x?xf32>, %rhs0 : tensor<?x?xf32>, %r
   %d2 = tensor.dim %rhs1, %c1 : tensor<?x?xf32>
   %init1 = tensor.empty(%d0, %d2) : tensor<?x?xf32>
   %fill1 = linalg.fill ins(%cst : f32) outs(%init1 : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %gemm1 = linalg.matmul  {__internal_transform__ = "gemm_fusion"}
+  %gemm1 = linalg.matmul  
       ins(%gemm0, %rhs1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%fill1 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %gemm1 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmuls = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %mm1, %mm2 = transform.split_handle %matmuls
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %a, %b = transform.structured.fuse %mm2 [10]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //      CHECK: func.func @gemm_gemm_fusion(
 // CHECK-SAME:     %[[LHS0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -142,12 +171,10 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %init0 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init0 : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %gemm = linalg.matmul
-      ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %gemm = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   %init1 = tensor.empty(%d1, %d0) : tensor<?x?xf32>
   %transpose = linalg.generic {
-      __internal_transform__ = "fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>],
       iterator_types = ["parallel", "parallel"]}
       ins(%gemm : tensor<?x?xf32>) outs(%init1 : tensor<?x?xf32>) {
@@ -155,6 +182,16 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
       linalg.yield %b0 : f32
   } -> tensor<?x?xf32>
   return %transpose : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //      CHECK: func.func @gemm_transpose_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -194,11 +231,9 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
   %cst = arith.constant 0.0 : f32
   %0 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %2 = linalg.matmul
-      ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %2 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%1 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %3 = linalg.generic {
-      __internal_transform__ = "gemm_interchange_fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
       ins(%2 : tensor<?x?xf32>) outs(%0 : tensor<?x?xf32>) {
@@ -207,6 +242,16 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
         linalg.yield %4 : f32
       } -> tensor<?x?xf32>
   return %3 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %generic [10, 20] interchange[1, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //      CHECK: func.func @interchange_matmul_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
@@ -248,8 +293,7 @@ func.func @matmul_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
     {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                       affine_map<(d0, d1) -> (d0, d1)>,
                       affine_map<(d0, d1) -> (d0, d1)>],
-     iterator_types = ["parallel", "parallel"],
-     __internal_transform__ = "gemm_plus_gemm_fusion"}
+     iterator_types = ["parallel", "parallel"]}
     ins(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%5 : tensor<?x?xf32>) {
     ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
@@ -258,8 +302,16 @@ func.func @matmul_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
     } -> tensor<?x?xf32>
   return %6 : tensor<?x?xf32>
 }
-// This fuses as expected but the gemm operation is inlined twice. It should be CSE-d but isnt today.
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
 //       CHECK: func @matmul_plus_matmul
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -301,8 +353,7 @@ func.func @matmul_plus_transpose_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x
     {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                       affine_map<(d0, d1) -> (d1, d0)>,
                       affine_map<(d0, d1) -> (d0, d1)>],
-     iterator_types = ["parallel", "parallel"],
-     __internal_transform__ = "gemm_plus_gemm_fusion"}
+     iterator_types = ["parallel", "parallel"]}
     ins(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%5 : tensor<?x?xf32>) {
     ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32) :
@@ -310,6 +361,16 @@ func.func @matmul_plus_transpose_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x
       linalg.yield %7 : f32
     } -> tensor<?x?xf32>
   return %6 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //       CHECK: func @matmul_plus_transpose_matmul
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -351,13 +412,22 @@ func.func @matmul_sequence_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>
     outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> // [M, N0] * [N0, N1]
   %1 = linalg.matmul ins(%0, %arg3 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%arg4 : tensor<?x?xf32>) -> tensor<?x?xf32> // [M, N1] * [N1, N2]
-  %2 = linalg.matmul
-    {__internal_transform__ = "gemm_sequence_fusion"}
-    ins(%1, %arg5 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %2 = linalg.matmul ins(%1, %arg5 : tensor<?x?xf32>, tensor<?x?xf32>)
     outs(%arg6 : tensor<?x?xf32>) -> tensor<?x?xf32> // [M, N2] * [N2, N3]
   return %2 : tensor<?x?xf32>
 }
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmuls = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %mm1, %mm2, %mm3 = transform.split_handle %matmuls
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %a, %b = transform.structured.fuse %mm3 [10]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
 //       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
 //       CHECK: func @matmul_sequence_fusion(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -425,7 +495,6 @@ func.func @reduction_sequence(%arg0: tensor<30x3xf32>) -> tensor<30x3xf32> {
       linalg.yield %10, %9 : f32, f32
     } -> (tensor<30xf32>, tensor<30x3xf32>)
   %6 = linalg.generic {
-      __internal_transform__ = "reduction_sequence_fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>,
                        affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
@@ -435,6 +504,18 @@ func.func @reduction_sequence(%arg0: tensor<30x3xf32>) -> tensor<30x3xf32> {
       linalg.yield %8 : f32
     } -> tensor<30x3xf32>
   return %6 : tensor<30x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generics = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %generic1, %generic2, %generic3 = transform.split_handle %generics
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %a, %b = transform.structured.fuse %generic3 [10]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 //       CHECK: func @reduction_sequence(%[[ARG0:.+]]: tensor<30x3xf32>)
 //   CHECK-DAG:   %[[INIT0:.+]] = tensor.empty() : tensor<30xf32>

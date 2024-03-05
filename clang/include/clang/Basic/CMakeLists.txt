@@ -45,10 +45,10 @@ clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
 
-clang_tablegen(AttrTokenKinds.inc -gen-clang-attr-token-kinds
+clang_tablegen(RegularKeywordAttrInfo.inc -gen-clang-regular-keyword-attr-info
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
-  TARGET ClangAttrTokenKinds
+  TARGET ClangRegularKeywordAttrInfo
   )
 
 clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
@@ -56,6 +56,18 @@ clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   SOURCE Attr.td
   TARGET ClangAttrHasAttributeImpl
   )
+
+clang_tablegen(Builtins.inc -gen-clang-builtins
+  SOURCE Builtins.td
+  TARGET ClangBuiltins)
+
+clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
+  SOURCE BuiltinsBPF.td
+  TARGET ClangBuiltinsBPF)
+
+clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
+  SOURCE BuiltinsRISCV.td
+  TARGET ClangBuiltinsRISCV)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema

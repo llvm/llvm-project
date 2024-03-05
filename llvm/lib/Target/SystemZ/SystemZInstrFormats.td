@@ -5036,18 +5036,6 @@ class BranchPreloadMII<string mnemonic, bits<8> opcode>
             (ins imm32zx4:$M1, brtarget12bpp:$RI2, brtarget24bpp:$RI3),
             mnemonic#"\t$M1, $RI2, $RI3", []>;
 
-// A floating-point load-and test operation.  Create both a normal unary
-// operation and one that acts as a comparison against zero.
-// Note that the comparison against zero operation is not available if we
-// have vector support, since load-and-test instructions will partially
-// clobber the target (vector) register.
-multiclass LoadAndTestRRE<string mnemonic, bits<16> opcode,
-                          RegisterOperand cls> {
-  def "" : UnaryRRE<mnemonic, opcode, null_frag, cls, cls>;
-  let isCodeGenOnly = 1, Predicates = [FeatureNoVector] in
-    def Compare : CompareRRE<mnemonic, opcode, null_frag, cls, cls>;
-}
-
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//

@@ -27,6 +27,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenInstruction.h"
+#include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "GlobalISel/CXXPredicates.h"
 #include "GlobalISel/CodeExpander.h"
@@ -284,7 +285,8 @@ private:
   /// succeed.
   PatternType inferNamedOperandType(const InstructionPattern &IP,
                                     StringRef OpName,
-                                    const TypeEquivalenceClasses &TECs) const;
+                                    const TypeEquivalenceClasses &TECs,
+                                    bool AllowSelf = false) const;
 
   const Record &RuleDef;
   SmallVector<InstructionPattern *, 8> MatchPats;
@@ -400,9 +402,9 @@ void CombineRuleOperandTypeChecker::propagateAndInferTypes() {
 PatternType CombineRuleOperandTypeChecker::inferImmediateType(
     const InstructionPattern &IP, unsigned ImmOpIdx,
     const TypeEquivalenceClasses &TECs) const {
-  // We can only infer CGPs.
+  // We can only infer CGPs (except intrinsics).
   const auto *CGP = dyn_cast<CodeGenInstructionPattern>(&IP);
-  if (!CGP)
+  if (!CGP || CGP->isIntrinsic())
     return {};
 
   // For CGPs, we try to infer immediates by trying to infer another named
@@ -427,8 +429,8 @@ PatternType CombineRuleOperandTypeChecker::inferImmediateType(
         continue;
 
       // Named operand with the same name, try to infer that.
-      if (PatternType InferTy =
-              inferNamedOperandType(IP, Op.getOperandName(), TECs))
+      if (PatternType InferTy = inferNamedOperandType(IP, Op.getOperandName(),
+                                                      TECs, /*AllowSelf=*/true))
         return InferTy;
     }
   }
@@ -438,16 +440,17 @@ PatternType CombineRuleOperandTypeChecker::inferImmediateType(
 
 PatternType CombineRuleOperandTypeChecker::inferNamedOperandType(
     const InstructionPattern &IP, StringRef OpName,
-    const TypeEquivalenceClasses &TECs) const {
+    const TypeEquivalenceClasses &TECs, bool AllowSelf) const {
   // This is the simplest possible case, we just need to find a TEC that
-  // contains OpName. Look at all other operands in equivalence class and try to
-  // find a suitable one.
+  // contains OpName. Look at all operands in equivalence class and try to
+  // find a suitable one. If `AllowSelf` is true, the operand itself is also
+  // considered suitable.
 
   // Check for a def of a matched pattern. This is guaranteed to always
   // be a register so we can blindly use that.
   StringRef GoodOpName;
   for (auto It = TECs.findLeader(OpName); It != TECs.member_end(); ++It) {
-    if (*It == OpName)
+    if (!AllowSelf && *It == OpName)
       continue;
 
     const auto LookupRes = MatchOpTable.lookup(*It);
@@ -519,14 +522,18 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
   //    - Iterating over the map, filtering types we don't like, and just adding
   //      the array of Operand Indexes to \p OutTECs.
 
-  // We can only do this on CodeGenInstructions. Other InstructionPatterns have
-  // no type inference information associated with them.
+  // We can only do this on CodeGenInstructions that aren't intrinsics. Other
+  // InstructionPatterns have no type inference information associated with
+  // them.
+  // TODO: We could try to extract some info from CodeGenIntrinsic to
+  //       guide inference.
+
   // TODO: Could we add some inference information to builtins at least? e.g.
   // ReplaceReg should always replace with a reg of the same type, for instance.
   // Though, those patterns are often used alone so it might not be worth the
   // trouble to infer their types.
   auto *CGP = dyn_cast<CodeGenInstructionPattern>(&P);
-  if (!CGP)
+  if (!CGP || CGP->isIntrinsic())
     return;
 
   const auto MCOITypes = getMCOIOperandTypes(*CGP);
@@ -1249,8 +1256,8 @@ bool CombineRuleBuilder::checkSemantics() {
 
       const auto *IRoot = dyn_cast<CodeGenInstructionPattern>(MatchRoot);
       if (!IRoot) {
-        PrintError(Name +
-                   " can only be used if the root is a CodeGenInstruction");
+        PrintError(Name + " can only be used if the root is a "
+                          "CodeGenInstruction or Intrinsic");
         return false;
       }
 
@@ -1544,6 +1551,32 @@ bool CombineRuleBuilder::parsePatternList(
   return true;
 }
 
+static const CodeGenInstruction &
+getInstrForIntrinsic(const CodeGenTarget &CGT, const CodeGenIntrinsic *I) {
+  StringRef Opc;
+  if (I->isConvergent) {
+    Opc = I->hasSideEffects ? "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS"
+                            : "G_INTRINSIC_CONVERGENT";
+  } else {
+    Opc = I->hasSideEffects ? "G_INTRINSIC_W_SIDE_EFFECTS" : "G_INTRINSIC";
+  }
+
+  RecordKeeper &RK = I->TheDef->getRecords();
+  return CGT.getInstruction(RK.getDef(Opc));
+}
+
+static const CodeGenIntrinsic *getCodeGenIntrinsic(Record *R) {
+  // Intrinsics need to have a static lifetime because the match table keeps
+  // references to CodeGenIntrinsic objects.
+  static DenseMap<const Record *, std::unique_ptr<CodeGenIntrinsic>>
+      AllIntrinsics;
+
+  auto &Ptr = AllIntrinsics[R];
+  if (!Ptr)
+    Ptr = std::make_unique<CodeGenIntrinsic>(R, std::vector<Record *>());
+  return Ptr.get();
+}
+
 std::unique_ptr<Pattern>
 CombineRuleBuilder::parseInstructionPattern(const Init &Arg,
                                             StringRef Name) const {
@@ -1556,6 +1589,14 @@ CombineRuleBuilder::parseInstructionPattern(const Init &Arg,
     auto &Instr = CGT.getInstruction(IP->getOperatorAsDef(RuleDef.getLoc()));
     Pat =
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
+  } else if (const DagInit *IP =
+                 getDagWithOperatorOfSubClass(Arg, "Intrinsic")) {
+    Record *TheDef = IP->getOperatorAsDef(RuleDef.getLoc());
+    const CodeGenIntrinsic *Intrin = getCodeGenIntrinsic(TheDef);
+    const CodeGenInstruction &Instr = getInstrForIntrinsic(CGT, Intrin);
+    Pat =
+        std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
+    cast<CodeGenInstructionPattern>(*Pat).setIntrinsic(Intrin);
   } else if (const DagInit *PFP =
                  getDagWithOperatorOfSubClass(Arg, PatFrag::ClassName)) {
     const Record *Def = PFP->getOperatorAsDef(RuleDef.getLoc());
@@ -1567,9 +1608,8 @@ CombineRuleBuilder::parseInstructionPattern(const Init &Arg,
                  getDagWithOperatorOfSubClass(Arg, BuiltinPattern::ClassName)) {
     Pat = std::make_unique<BuiltinPattern>(
         *BP->getOperatorAsDef(RuleDef.getLoc()), insertStrRef(Name));
-  } else {
+  } else
     return nullptr;
-  }
 
   for (unsigned K = 0; K < DagPat->getNumArgs(); ++K) {
     Init *Arg = DagPat->getArg(K);
@@ -2183,6 +2223,11 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
     }
   }
 
+  // Erase the root.
+  unsigned RootInsnID =
+      M.getInsnVarID(M.getInstructionMatcher(MatchRoot->getName()));
+  M.addAction<EraseInstAction>(RootInsnID);
+
   return true;
 }
 
@@ -2230,7 +2275,18 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
   auto &DstMI =
       M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &CGIP.getInst());
 
+  bool HasEmittedIntrinsicID = false;
+  const auto EmitIntrinsicID = [&]() {
+    assert(CGIP.isIntrinsic());
+    DstMI.addRenderer<IntrinsicIDRenderer>(CGIP.getIntrinsic());
+    HasEmittedIntrinsicID = true;
+  };
+
   for (auto &Op : P.operands()) {
+    // Emit the intrinsic ID after the last def.
+    if (CGIP.isIntrinsic() && !Op.isDef() && !HasEmittedIntrinsicID)
+      EmitIntrinsicID();
+
     if (Op.isNamedImmediate()) {
       PrintError("invalid output operand '" + Op.getOperandName() +
                  "': output immediates cannot be named");
@@ -2316,8 +2372,13 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
           M.actions_begin(), getLLTCodeGenOrTempType(Ty, M), TempRegID);
     }
 
-    DstMI.addRenderer<TempRegRenderer>(TempRegID);
+    DstMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
   }
+
+  // Some intrinsics have no in operands, ensure the ID is still emitted in such
+  // cases.
+  if (CGIP.isIntrinsic() && !HasEmittedIntrinsicID)
+    EmitIntrinsicID();
 
   // Render MIFlags
   if (const auto *FI = CGIP.getMIFlagsInfo()) {
@@ -2416,12 +2477,6 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     // checkSemantics should have ensured that we can only rewrite the root.
     // Ensure we're deleting it.
     assert(MatchOpTable.getDef(Old) == MatchRoot);
-    // TODO: We could avoid adding the action again if it's already in. The
-    // MatchTable is smart enough to only emit one opcode even if
-    // EraseInstAction is present multiple times. I think searching for a copy
-    // is more expensive than just blindly adding it though.
-    M.addAction<EraseInstAction>(/*InsnID*/ 0);
-
     return true;
   }
   }
@@ -2454,6 +2509,14 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());
 
+  // If this is an intrinsic, check the intrinsic ID.
+  if (P.isIntrinsic()) {
+    // The IntrinsicID's operand is the first operand after the defs.
+    OperandMatcher &OM = IM.addOperand(P.getNumInstDefs(), "$intrinsic_id",
+                                       AllocatedTemporariesBaseID++);
+    OM.addPredicate<IntrinsicIDOperandMatcher>(P.getIntrinsic());
+  }
+
   // Check flags if needed.
   if (const auto *FI = P.getMIFlagsInfo()) {
     assert(FI->copy_flags().empty());
@@ -2465,7 +2528,7 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
                                                           /*CheckNot=*/true);
   }
 
-  for (const auto &[Idx, OriginalO] : enumerate(P.operands())) {
+  for (auto [Idx, OriginalO] : enumerate(P.operands())) {
     // Remap the operand. This is used when emitting InstructionPatterns inside
     // PatFrags, so it can remap them to the arguments passed to the pattern.
     //
@@ -2480,8 +2543,17 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
 
     const auto OpName =
         RemappedO.isNamedOperand() ? RemappedO.getOperandName().str() : "";
+
+    // For intrinsics, the first use operand is the intrinsic id, so the true
+    // operand index is shifted by 1.
+    //
+    // From now on:
+    //    Idx = index in the pattern operand list.
+    //    RealIdx = expected index in the MachineInstr.
+    const unsigned RealIdx =
+        (P.isIntrinsic() && !OriginalO.isDef()) ? (Idx + 1) : Idx;
     OperandMatcher &OM =
-        IM.addOperand(Idx, OpName, AllocatedTemporariesBaseID++);
+        IM.addOperand(RealIdx, OpName, AllocatedTemporariesBaseID++);
     if (!OpName.empty())
       declareOperandExpansion(CE, OM, OriginalO.getOperandName());
 
@@ -2884,8 +2956,8 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::make_tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
-           std::make_tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
+    return std::tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
+           std::tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
   });
 
   for (Matcher *Rule : InputRules)

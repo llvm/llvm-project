@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CI -check-prefix=FUNC %s
 
 declare double @llvm.ceil.f64(double) nounwind readnone
 declare <2 x double> @llvm.ceil.v2f64(<2 x double>) nounwind readnone

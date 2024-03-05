@@ -555,10 +555,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           },
           symbol.details());
     }
-    // Sort the data component symbols by offset before emitting them
+    // Sort the data component symbols by offset before emitting them, placing
+    // the parent component first if any.
     std::sort(dataComponentSymbols.begin(), dataComponentSymbols.end(),
         [](const Symbol *x, const Symbol *y) {
-          return x->offset() < y->offset();
+          return x->test(Symbol::Flag::ParentComp) || x->offset() < y->offset();
         });
     std::vector<evaluate::StructureConstructor> dataComponents;
     for (const Symbol *symbol : dataComponentSymbols) {
@@ -788,20 +789,23 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const DerivedTypeSpec &spec{dyType.GetDerivedTypeSpec()};
     Scope *derivedScope{const_cast<Scope *>(
         spec.scope() ? spec.scope() : spec.typeSymbol().scope())};
-    const Symbol *derivedDescription{DescribeType(DEREF(derivedScope))};
-    AddValue(values, componentSchema_, "derived"s,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Designator<evaluate::SomeDerived>{
-                DEREF(derivedDescription)}}));
-    // Package values of LEN parameters, if any
-    if (const SymbolVector * specParams{GetTypeParameters(spec.typeSymbol())}) {
-      for (SymbolRef ref : *specParams) {
-        const auto &tpd{ref->get<TypeParamDetails>()};
-        if (tpd.attr() == common::TypeParamAttr::Len) {
-          if (const ParamValue * paramValue{spec.FindParameter(ref->name())}) {
-            lenParams.emplace_back(GetValue(*paramValue, parameters));
-          } else {
-            lenParams.emplace_back(GetValue(tpd.init(), parameters));
+    if (const Symbol * derivedDescription{DescribeType(DEREF(derivedScope))}) {
+      AddValue(values, componentSchema_, "derived"s,
+          evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
+              evaluate::Designator<evaluate::SomeDerived>{
+                  DEREF(derivedDescription)}}));
+      // Package values of LEN parameters, if any
+      if (const SymbolVector *
+          specParams{GetTypeParameters(spec.typeSymbol())}) {
+        for (SymbolRef ref : *specParams) {
+          const auto &tpd{ref->get<TypeParamDetails>()};
+          if (tpd.attr() == common::TypeParamAttr::Len) {
+            if (const ParamValue *
+                paramValue{spec.FindParameter(ref->name())}) {
+              lenParams.emplace_back(GetValue(*paramValue, parameters));
+            } else {
+              lenParams.emplace_back(GetValue(tpd.init(), parameters));
+            }
           }
         }
       }
@@ -1141,7 +1145,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
           which = scalarFinalEnum_;
           if (int rank{evaluate::GetRank(typeAndShape.shape())}; rank > 0) {
             which = IntExpr<1>(ToInt64(which).value() + rank);
-            if (!proc->dummyArguments[0].CanBePassedViaImplicitInterface()) {
+            if (dummyData.IsPassedByDescriptor(proc->IsBindC())) {
               argThatMightBeDescriptor = 1;
             }
             if (!typeAndShape.attrs().test(evaluate::characteristics::
@@ -1184,10 +1188,14 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         break;
       }
     }
-    if (argThatMightBeDescriptor != 0 &&
-        !proc->dummyArguments.at(argThatMightBeDescriptor - 1)
-             .CanBePassedViaImplicitInterface()) {
-      isArgDescriptorSet |= 1 << (argThatMightBeDescriptor - 1);
+    if (argThatMightBeDescriptor != 0) {
+      if (const auto *dummyData{
+              std::get_if<evaluate::characteristics::DummyDataObject>(
+                  &proc->dummyArguments.at(argThatMightBeDescriptor - 1).u)}) {
+        if (dummyData->IsPassedByDescriptor(proc->IsBindC())) {
+          isArgDescriptorSet |= 1 << (argThatMightBeDescriptor - 1);
+        }
+      }
     }
     evaluate::StructureConstructorValues values;
     auto index{evaluate::ToInt64(which)};

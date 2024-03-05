@@ -502,9 +502,12 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
 
   Value newLowerBound =
       isZeroBased ? lowerBound
-                  : boundsBuilder.create<arith::ConstantIndexOp>(loc, 0);
+                  : boundsBuilder.create<arith::ConstantOp>(
+                        loc, boundsBuilder.getZeroAttr(lowerBound.getType()));
   Value newStep =
-      isStepOne ? step : boundsBuilder.create<arith::ConstantIndexOp>(loc, 1);
+      isStepOne ? step
+                : boundsBuilder.create<arith::ConstantOp>(
+                      loc, boundsBuilder.getIntegerAttr(step.getType(), 1));
 
   // Insert code computing the value of the original loop induction variable
   // from the "normalized" one.
@@ -631,9 +634,9 @@ void mlir::collapseParallelLoops(
   SmallVector<Value, 3> lowerBounds, upperBounds, steps;
   auto cst0 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 0);
   auto cst1 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-  for (unsigned i = 0, e = sortedDimensions.size(); i < e; ++i) {
+  for (auto &sortedDimension : sortedDimensions) {
     Value newUpperBound = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-    for (auto idx : sortedDimensions[i]) {
+    for (auto idx : sortedDimension) {
       newUpperBound = outsideBuilder.create<arith::MulIOp>(
           loc, newUpperBound, normalizedUpperBounds[idx]);
     }
@@ -788,10 +791,8 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
     // Insert newForOp before the terminator of `t`.
     auto b = OpBuilder::atBlockTerminator((t.getBody()));
     Value stepped = b.create<arith::AddIOp>(t.getLoc(), iv, forOp.getStep());
-    Value less = b.create<arith::CmpIOp>(t.getLoc(), arith::CmpIPredicate::slt,
-                                         forOp.getUpperBound(), stepped);
-    Value ub = b.create<arith::SelectOp>(t.getLoc(), less,
-                                         forOp.getUpperBound(), stepped);
+    Value ub =
+        b.create<arith::MinSIOp>(t.getLoc(), forOp.getUpperBound(), stepped);
 
     // Splice [begin, begin + nOps - 1) into `newForOp` and replace uses.
     auto newForOp = b.create<scf::ForOp>(t.getLoc(), iv, ub, originalStep);
@@ -930,11 +931,11 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
   fusedMapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
 
   // Map shared outs.
-  fusedMapping.map(target.getOutputBlockArguments(),
-                   fusedLoop.getOutputBlockArguments().slice(0, numTargetOuts));
+  fusedMapping.map(target.getRegionIterArgs(),
+                   fusedLoop.getRegionIterArgs().slice(0, numTargetOuts));
   fusedMapping.map(
-      source.getOutputBlockArguments(),
-      fusedLoop.getOutputBlockArguments().slice(numTargetOuts, numSourceOuts));
+      source.getRegionIterArgs(),
+      fusedLoop.getRegionIterArgs().slice(numTargetOuts, numSourceOuts));
 
   // Append everything except the terminator into the fused operation.
   rewriter.setInsertionPointToStart(fusedLoop.getBody());

@@ -324,7 +324,7 @@ define void @addi_fold_crash(i32 %arg) nounwind {
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    sb zero, 0(a0)
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    call snork@plt
+; RV32I-NEXT:    call snork
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret

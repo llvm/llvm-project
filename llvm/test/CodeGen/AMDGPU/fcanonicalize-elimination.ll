@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
-; RUN: llc -march=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
 
 ; GCN-LABEL: {{^}}test_no_fold_canonicalize_loaded_value_f32:
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}

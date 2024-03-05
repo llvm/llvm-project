@@ -35,9 +35,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -3176,6 +3176,9 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsVarArg)
     return false;
 
+  if (Subtarget->isWindowsArm64EC())
+    return false;
+
   for (auto Flag : CLI.OutFlags)
     if (Flag.isInReg() || Flag.isSRet() || Flag.isNest() || Flag.isByVal() ||
         Flag.isSwiftSelf() || Flag.isSwiftAsync() || Flag.isSwiftError())
@@ -5176,7 +5179,8 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
 
   SMEAttrs CallerAttrs(*FuncInfo.Fn);
-  if (CallerAttrs.hasZAState() || CallerAttrs.hasStreamingInterfaceOrBody() ||
+  if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
+      CallerAttrs.hasStreamingInterfaceOrBody() ||
       CallerAttrs.hasStreamingCompatibleInterface())
     return nullptr;
   return new AArch64FastISel(FuncInfo, LibInfo);

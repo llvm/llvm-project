@@ -22,16 +22,19 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          const char *pathname, const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized)
-    : CompileUnit(module_sp, user_data, FileSpec(pathname), cu_sym_id, language,
-                  is_optimized) {}
+    : CompileUnit(module_sp, user_data,
+                  std::make_shared<SupportFile>(FileSpec(pathname)), cu_sym_id,
+                  language, is_optimized) {}
 
 CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-                         const FileSpec &fspec, const lldb::user_id_t cu_sym_id,
+                         lldb::SupportFileSP support_file_sp,
+                         const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized,
                          SupportFileList &&support_files)
     : ModuleChild(module_sp), UserID(cu_sym_id), m_user_data(user_data),
-      m_language(language), m_flags(0), m_file_spec(fspec),
+      m_language(language), m_flags(0),
+      m_primary_support_file_sp(support_file_sp),
       m_support_files(std::move(support_files)), m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);

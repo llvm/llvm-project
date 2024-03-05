@@ -50,7 +50,7 @@ define void @test(ptr %r, ptr %p, ptr %q) #0 {
   ret void
 }
 
-define void @test2(i64* %a, i64* %b) {
+define void @test2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 2
@@ -65,16 +65,16 @@ define void @test2(i64* %a, i64* %b) {
 ; CHECK-NEXT:    store i64 [[ADD2]], ptr [[A2]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %a1 = getelementptr inbounds i64, i64* %a, i64 1
-  %a2 = getelementptr inbounds i64, i64* %a, i64 2
-  %i1 = ptrtoint i64* %a1 to i64
-  %b3 = getelementptr inbounds i64, i64* %b, i64 3
-  %i2 = ptrtoint i64* %b3 to i64
-  %v1 = load i64, i64* %a1, align 8
-  %v2 = load i64, i64* %a2, align 8
+  %a1 = getelementptr inbounds i64, ptr %a, i64 1
+  %a2 = getelementptr inbounds i64, ptr %a, i64 2
+  %i1 = ptrtoint ptr %a1 to i64
+  %b3 = getelementptr inbounds i64, ptr %b, i64 3
+  %i2 = ptrtoint ptr %b3 to i64
+  %v1 = load i64, ptr %a1, align 8
+  %v2 = load i64, ptr %a2, align 8
   %add1 = add i64 %i1, %v1
   %add2 = add i64 %i2, %v2
-  store i64 %add1, i64* %a1, align 8
-  store i64 %add2, i64* %a2, align 8
+  store i64 %add1, ptr %a1, align 8
+  store i64 %add2, ptr %a2, align 8
   ret void
 }

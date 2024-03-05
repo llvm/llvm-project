@@ -632,7 +632,7 @@ define void @fp_conv(<8 x float> %a, <16 x float>%b, <4 x float> %c) {
 ; AVX512-LABEL: 'fp_conv'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A3 = fpext <16 x float> %b to <16 x double>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A3 = fpext <16 x float> %b to <16 x double>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A4 = fptrunc <4 x double> undef to <4 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A5 = fptrunc <8 x double> undef to <8 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void

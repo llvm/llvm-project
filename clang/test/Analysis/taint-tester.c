@@ -154,7 +154,6 @@ void getwTest(void) {
   int i = getw(stdin); // expected-warning + {{tainted}}
 }
 
-typedef long ssize_t;
 ssize_t getline(char ** __restrict, size_t * __restrict, FILE * __restrict);
 int  printf(const char * __restrict, ...);
 void free(void *ptr);

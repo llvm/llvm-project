@@ -329,8 +329,8 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
 
   // Account for the fact that on windows-msvc __start_* symbols actually
   // point to a uint64_t before the start of the array.
-  auto GEP = IRB.CreateGEP(Int8Ty, SecStart,
-                           ConstantInt::get(IntptrTy, sizeof(uint64_t)));
+  auto GEP =
+      IRB.CreatePtrAdd(SecStart, ConstantInt::get(IntptrTy, sizeof(uint64_t)));
   return std::make_pair(GEP, SecEnd);
 }
 
