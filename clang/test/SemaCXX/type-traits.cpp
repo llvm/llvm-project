@@ -2654,12 +2654,6 @@ void is_trivially_destructible_test() {
   static_assert(!__is_trivially_destructible(const volatile void));
 }
 
-// Instantiation of __has_unique_object_representations
-template <typename T>
-struct has_unique_object_representations {
-  static const bool value = __has_unique_object_representations(T);
-};
-
 static_assert(!__has_unique_object_representations(void), "void is never unique");
 static_assert(!__has_unique_object_representations(const void), "void is never unique");
 static_assert(!__has_unique_object_representations(volatile void), "void is never unique");
@@ -2879,30 +2873,30 @@ static_assert(__has_unique_object_representations(PackedNoPadding1), "Packed str
 static_assert(__has_unique_object_representations(PackedNoPadding2), "Packed structs have no padding");
 
 static_assert(!__has_unique_object_representations(int(int)), "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) const>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) volatile>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) const volatile>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) const &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) volatile &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) const volatile &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) &&>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) const &&>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) volatile &&>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int) const volatile &&>::value, "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) const), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) volatile), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) const volatile), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) const &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) volatile &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) const volatile &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) &&), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) const &&), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) volatile &&), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int) const volatile &&), "Functions are not unique");
 
 static_assert(!__has_unique_object_representations(int(int, ...)), "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) const>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) volatile>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) const volatile>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) const &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) volatile &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) const volatile &>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) &&>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) const &&>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) volatile &&>::value, "Functions are not unique");
-static_assert(!has_unique_object_representations<int(int, ...) const volatile &&>::value, "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) const), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) volatile), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) const volatile), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) const &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) volatile &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) const volatile &), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) &&), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) const &&), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) volatile &&), "Functions are not unique");
+static_assert(!__has_unique_object_representations(int(int, ...) const volatile &&), "Functions are not unique");
 
 void foo(){
   static auto lambda = []() {};
