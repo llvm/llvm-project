@@ -209,104 +209,38 @@ object in the Direct3D 12 API. The binary format is defined by the
 <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_signature_desc>`_
 or `D3D12_ROOT_SIGNATURE_DESC1 (for rootsig_1_1)
 <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_signature_desc1>`_ 
-structure in the Direct3D 12 API.
+structure in the Direct3D 12 API. (With the pointers translated to offsets.)
 
-
+DXC implementation of the serialization could be find `here
+<https://github.com/microsoft/DirectXShaderCompiler/blob/main/lib/DxilRootSignature/DxilRootSignatureSerializer.cpp#L41>`_
 
 Implementation Details
 ======================
 
-The root signature string will be parsed in the HLSL frontend. 
+The root signature string will be parsed in Clang. 
 The parsing 
 will happened when build HLSLRootSignatureAttr or when build standalone root 
 signature blob. 
 
-The root signature parsing will generate a VersionedRootSignatureDesc object 
-that represents the root signature string. 
-VersionedRootSignatureDesc is a struct that contains a RootSignatureVersion 
-and a RootSignatureDesc.
+The root signature parsing will generate a HLSLRootSignatureAttr with member 
+represents the root signature string and the parsed information for each 
+resource in the root signature. It will bind to the entry function in the AST. 
 
-.. code-block:: c++
+For case compile to a standalone root signature blob, the HLSLRootSignatureAttr 
+will be bind to the TU.
 
-    struct DescriptorRange {
-    DescriptorRangeType RangeType;
-    uint32_t NumDescriptors = 1;
-    uint32_t BaseShaderRegister;
-    uint32_t RegisterSpace = 0;
-    DescriptorRangeFlags Flags = DescriptorRangeFlags::None;
-    uint32_t OffsetInDescriptorsFromTableStart = DescriptorRangeOffsetAppend;
-    };
-
-    struct RootDescriptorTable {
-    std::vector<DescriptorRange> DescriptorRanges;
-    };
-    struct RootConstants {
-    uint32_t ShaderRegister;
-    uint32_t RegisterSpace = 0;
-    uint32_t Num32BitValues;
-    };
-
-    struct RootDescriptor {
-    uint32_t ShaderRegister;
-    uint32_t RegisterSpace = 0;
-    RootDescriptorFlags Flags = RootDescriptorFlags::None;
-    };
-    struct RootParameter {
-    RootParameterType ParameterType;
-    std::variant<RootDescriptorTable, RootConstants, RootDescriptor>
-        Parameter;
-    ShaderVisibility ShaderVisibility = ShaderVisibility::All;
-    };
-
-    struct StaticSamplerDesc {
-    Filter Filter = Filter::ANISOTROPIC;
-    TextureAddressMode AddressU = TextureAddressMode::Wrap;
-    TextureAddressMode AddressV = TextureAddressMode::Wrap;
-    TextureAddressMode AddressW = TextureAddressMode::Wrap;
-    float MipLODBias = 0.f;
-    uint32_t MaxAnisotropy = 16;
-    ComparisonFunc ComparisonFunc = ComparisonFunc::LessEqual;
-    StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
-    float MinLOD = 0.f;
-    float MaxLOD = MaxLOD;
-    uint32_t ShaderRegister;
-    uint32_t RegisterSpace = 0;
-    ShaderVisibility ShaderVisibility = ShaderVisibility::All;
-    };
-
-    struct RootSignatureDesc {
-    std::vector<RootParameter> Parameters;
-    std::vector<StaticSamplerDesc> StaticSamplers;
-    RootSignatureFlags Flags;
-    };
-
-    struct VersionedRootSignatureDesc {
-    RootSignatureVersion Version;
-    RootSignatureDesc Desc;
-    };
-
-Things like DescriptorRangeType and RootDescriptorFlags will be enums.
-
-After parsing, the VersionedRootSignatureDesc will be translated into a 
-constant global variable in the clang AST and save to the 
-HLSLRootSignatureAttr. 
-
-For case compile to a standalone root signature blob, the global variable will 
-be saved in the ASTContext.
-
-The global variable in AST will have a struct type that represents the root 
-signature layout and a initializer that contains the values like space and 
-numDescriptors of the root signature.
-
-In clang code generation, the global variable in AST will be translated into 
-a global variable with constant initializer in LLVM IR. 
+In clang code generation, the HLSLRootSignatureAttr in AST will be translated into 
+a global variable with struct type to express the layout and a constant initializer
+to save things like space and NumDescriptors in LLVM IR. 
 
 CGHLSLRuntime will generate metadata to link the global variable as root 
 signature for given entry function or just nullptr for the standalone root 
 signature blob case. 
 
-In LLVM DirectX backend, the global variable will be serialized and save into
- the root signature part of dx container when emit DXIL.
+In LLVM DirectX backend, the global variable will be serialized and saved as another 
+global variable with section 'RTS0' with the serialized root signature as initializer.
+Then 'RTS0' global variable will be translated to the root signature part of dx 
+container.
 
 In DXIL validation, the root signature part will be deserialized and check if 
 the resource binding in the root signature exists in the resource table.
