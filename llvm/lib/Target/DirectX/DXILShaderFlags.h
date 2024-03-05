@@ -28,33 +28,33 @@ class GlobalVariable;
 namespace dxil {
 
 struct ComputedShaderFlags {
-#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str)                 \
+#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str)                 \
   bool FlagName : 1;
-#define DXIL_MODULE_FLAG(bit, FlagName, Str) bool FlagName : 1;
+#define DXIL_MODULE_FLAG(Bit, FlagName, Str) bool FlagName : 1;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 
-#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str) FlagName = false;
-#define DXIL_MODULE_FLAG(bit, FlagName, Str) FlagName = false;
+#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str) FlagName = false;
+#define DXIL_MODULE_FLAG(Bit, FlagName, Str) FlagName = false;
   ComputedShaderFlags() {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   }
 
   operator uint64_t() const {
     uint64_t FlagValue = 0;
-#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str)                 \
+#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str)                 \
   FlagValue |= FlagName ? (uint64_t)1 << DxilModuleBit : 0ull;
-#define DXIL_MODULE_FLAG(bit, FlagName, Str)                                   \
-  FlagValue |= FlagName ? (uint64_t)1 << bit : 0ull;
+#define DXIL_MODULE_FLAG(Bit, FlagName, Str)                                   \
+  FlagValue |= FlagName ? (uint64_t)1 << Bit : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return FlagValue;
   }
 
-  uint64_t getFeatureInfo() const {
-    uint64_t FeatureInfo = 0;
-#define SHADER_FEATURE_FLAG(bit, DxilModuleBit, FlagName, Str)                 \
-  FeatureInfo |= FlagName ? (uint64_t)1 << bit : 0ull;
+  uint64_t getFeatureFlags() const {
+    uint64_t FeatureFlags = 0;
+#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str)                 \
+  FeatureFlags |= FlagName ? (uint64_t)1 << Bit : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-    return FeatureInfo;
+    return FeatureFlags;
   }
 
   static ComputedShaderFlags computeFlags(Module &M);
