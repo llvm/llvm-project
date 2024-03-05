@@ -263,9 +263,7 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
   if (IS.isExecuted() && !ShouldCarryOver) {
     PRF.onInstructionExecuted(&IS);
     LSU.onInstructionExecuted(IR);
-    notifyEvent<HWInstructionEvent>(
-        HWInstructionEvent(HWInstructionEvent::Executed, IR));
-    LLVM_DEBUG(dbgs() << "[E] Instruction #" << IR << " is executed\n");
+    notifyInstructionExecuted(IR);
 
     retireInstruction(IR);
     return llvm::ErrorSuccess();
@@ -337,11 +335,9 @@ void InOrderIssueStage::updateCarriedOver() {
 
   // updateIssuedInst did not handle executed if issue had carry over.
   if (CarriedOver.getInstruction()->isExecuted()) {
-    PRF.onInstructionExecuted(&IS);
-    LSU.onInstructionExecuted(IR);
-    notifyEvent<HWInstructionEvent>(
-        HWInstructionEvent(HWInstructionEvent::Executed, IR));
-    LLVM_DEBUG(dbgs() << "[E] Instruction #" << IR << " is executed\n");
+    PRF.onInstructionExecuted(CarriedOver.getInstruction());
+    LSU.onInstructionExecuted(CarriedOver);
+    notifyInstructionExecuted(CarriedOver);
 
     retireInstruction(CarriedOver);
   }
