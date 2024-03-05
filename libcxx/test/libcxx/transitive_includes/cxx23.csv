@@ -178,7 +178,6 @@ experimental/utility utility
 filesystem compare
 filesystem cstddef
 filesystem cstdint
-filesystem cstring
 filesystem ctime
 filesystem iomanip
 filesystem limits
@@ -520,6 +519,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream version
 stack compare
 stack cstddef

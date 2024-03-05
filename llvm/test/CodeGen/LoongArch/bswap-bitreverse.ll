@@ -114,17 +114,17 @@ define i64 @test_bitreverse_bswap_i64(i64 %a) nounwind {
 define i32 @pr55484(i32 %0) {
 ; LA32-LABEL: pr55484:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a0, 8
-; LA32-NEXT:    srli.w $a0, $a0, 8
-; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    srli.w $a1, $a0, 8
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    or $a0, $a1, $a0
 ; LA32-NEXT:    ext.w.h $a0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: pr55484:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 8
-; LA64-NEXT:    srli.d $a0, $a0, 8
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    srli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    ext.w.h $a0, $a0
 ; LA64-NEXT:    ret
   %2 = lshr i32 %0, 8

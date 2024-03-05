@@ -3233,7 +3233,9 @@ struct VIDSequence {
 
 static std::optional<uint64_t> getExactInteger(const APFloat &APF,
                                                uint32_t BitWidth) {
-  APSInt ValInt(BitWidth, !APF.isNegative());
+  // We will use a SINT_TO_FP to materialize this constant so we should use a
+  // signed APSInt here.
+  APSInt ValInt(BitWidth, /*IsUnsigned*/ false);
   // We use an arbitrary rounding mode here. If a floating-point is an exact
   // integer (e.g., 1.0), the rounding mode does not affect the output value. If
   // the rounding mode changes the output value, then it is not an exact
@@ -4057,8 +4059,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
         MVT InterVT =
             MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
         auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT,
-                                    DAG.getUNDEF(InterVT), Lo,
-                                    DAG.getRegister(RISCV::X0, MVT::i32));
+                                    DAG.getUNDEF(InterVT), Lo, NewVL);
         return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
       }
     }

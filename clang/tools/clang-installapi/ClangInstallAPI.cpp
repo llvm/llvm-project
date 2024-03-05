@@ -40,7 +40,7 @@ using namespace llvm::opt;
 using namespace llvm::MachO;
 
 static bool runFrontend(StringRef ProgName, bool Verbose,
-                        const InstallAPIContext &Ctx,
+                        InstallAPIContext &Ctx,
                         llvm::vfs::InMemoryFileSystem *FS,
                         const ArrayRef<std::string> InitialArgs) {
 
@@ -64,7 +64,7 @@ static bool runFrontend(StringRef ProgName, bool Verbose,
 
   // Create & run invocation.
   clang::tooling::ToolInvocation Invocation(
-      std::move(Args), std::make_unique<InstallAPIAction>(*Ctx.Slice), Ctx.FM);
+      std::move(Args), std::make_unique<InstallAPIAction>(Ctx), Ctx.FM);
 
   return Invocation.run();
 }
@@ -123,11 +123,13 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     return EXIT_FAILURE;
 
   // Execute and gather AST results.
+  // An invocation is ran for each unique target triple and for each header
+  // access level.
   llvm::MachO::Records FrontendResults;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
     for (const HeaderType Type :
          {HeaderType::Public, HeaderType::Private, HeaderType::Project}) {
-      Ctx.Slice = std::make_shared<RecordsSlice>(Trip);
+      Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
       Ctx.Type = Type;
       if (!runFrontend(ProgName, Opts.DriverOpts.Verbose, Ctx,
                        InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
