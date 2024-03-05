@@ -397,7 +397,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     Timer SinglePass("single fold pass", "single fold pass");
     LLVM_DEBUG(SinglePass.startTimer());
 
-    ThreadPool *ThPool;
+    ThreadPoolInterface *ThPool;
     if (!opts::NoThreads)
       ThPool = &ParallelUtilities::getThreadPool();
 

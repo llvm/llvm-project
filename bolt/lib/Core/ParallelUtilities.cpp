@@ -102,7 +102,7 @@ inline unsigned estimateTotalCost(const BinaryContext &BC,
 
 } // namespace
 
-ThreadPool &getThreadPool() {
+ThreadPoolInterface &getThreadPool() {
   if (ThreadPoolPtr.get())
     return *ThreadPoolPtr;
 
@@ -145,7 +145,7 @@ void runOnEachFunction(BinaryContext &BC, SchedulingPolicy SchedPolicy,
       TotalCost > BlocksCount ? TotalCost / BlocksCount : 1;
 
   // Divide work into blocks of equal cost
-  ThreadPool &Pool = getThreadPool();
+  ThreadPoolInterface &Pool = getThreadPool();
   auto BlockBegin = BC.getBinaryFunctions().begin();
   unsigned CurrentCost = 0;
 
@@ -202,7 +202,7 @@ void runOnEachFunctionWithUniqueAllocId(
       TotalCost > BlocksCount ? TotalCost / BlocksCount : 1;
 
   // Divide work into blocks of equal cost
-  ThreadPool &Pool = getThreadPool();
+  ThreadPoolInterface &Pool = getThreadPool();
   auto BlockBegin = BC.getBinaryFunctions().begin();
   unsigned CurrentCost = 0;
   unsigned AllocId = 1;

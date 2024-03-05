@@ -49,8 +49,8 @@ enum SchedulingPolicy {
   SP_BB_QUADRATIC,   /// cost is estimated by the square of the BB count
 };
 
-/// Return the managed thread pool and initialize it if not initiliazed.
-ThreadPool &getThreadPool();
+/// Return the managed thread pool and initialize it if not initialized.
+ThreadPoolInterface &getThreadPool();
 
 /// Perform the work on each BinaryFunction except those that are accepted
 /// by SkipPredicate, scheduling heuristic is based on SchedPolicy.
