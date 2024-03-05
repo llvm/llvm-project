@@ -7734,6 +7734,14 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     break;
   }
 
+  case Stmt::CompoundLiteralExprClass: {
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+      if (!CLE->isFileScope())
+        Visit(Path, Local(CLE), RK);
+    }
+    break;
+  }
+
   // FIXME: Visit the left-hand side of an -> or ->*.
 
   default:
@@ -8289,6 +8297,10 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         if (LK == LK_StmtExprResult)
           return false;
         Diag(DiagLoc, diag::warn_ret_addr_label) << DiagRange;
+      } else if (auto *CLE = dyn_cast<CompoundLiteralExpr>(L)) {
+        Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
+            << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
+            << DiagRange;
       } else {
         Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
          << Entity.getType()->isReferenceType() << DiagRange;

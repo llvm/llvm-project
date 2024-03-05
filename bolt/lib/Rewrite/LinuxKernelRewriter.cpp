@@ -14,6 +14,7 @@
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -27,9 +28,9 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
-    PrintORC("print-orc",
-             cl::desc("print ORC unwind information for instructions"),
-             cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+    DumpExceptions("dump-linux-exceptions",
+                   cl::desc("dump Linux kernel exception table"),
+                   cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
     DumpORC("dump-orc", cl::desc("dump raw ORC unwind information (sorted)"),
@@ -39,6 +40,11 @@ static cl::opt<bool> DumpStaticCalls("dump-static-calls",
                                      cl::desc("dump Linux kernel static calls"),
                                      cl::init(false), cl::Hidden,
                                      cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    PrintORC("print-orc",
+             cl::desc("print ORC unwind information for instructions"),
+             cl::init(true), cl::Hidden, cl::cat(BoltCategory));
 
 } // namespace opts
 
@@ -134,6 +140,13 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   using StaticCallListType = std::vector<StaticCallInfo>;
   StaticCallListType StaticCallEntries;
 
+  /// Section containing the Linux exception table.
+  ErrorOr<BinarySection &> ExceptionsSection = std::errc::bad_address;
+  static constexpr size_t EXCEPTION_TABLE_ENTRY_SIZE = 12;
+
+  /// Functions with exception handling code.
+  DenseSet<BinaryFunction *> FunctionsWithExceptions;
+
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
   void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
@@ -142,9 +155,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
-
-  /// Process special linux kernel section, __ex_table.
-  void processLKExTable();
 
   /// Process special linux kernel section, .pci_fixup.
   void processLKPCIFixup();
@@ -174,6 +184,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error readStaticCalls();
   Error rewriteStaticCalls();
 
+  Error readExceptionTable();
+  Error rewriteExceptionTable();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -192,6 +205,9 @@ public:
     if (Error E = readStaticCalls())
       return E;
 
+    if (Error E = readExceptionTable())
+      return E;
+
     return Error::success();
   }
 
@@ -203,6 +219,11 @@ public:
   }
 
   Error preEmitFinalizer() override {
+    // Since rewriteExceptionTable() can mark functions as non-simple, run it
+    // before other rewriters that depend on simple/emit status.
+    if (Error E = rewriteExceptionTable())
+      return E;
+
     if (Error E = rewriteORCTables())
       return E;
 
@@ -249,75 +270,11 @@ void LinuxKernelRewriter::insertLKMarker(uint64_t PC, uint64_t SectionOffset,
 }
 
 void LinuxKernelRewriter::processLKSections() {
-  processLKExTable();
   processLKPCIFixup();
   processLKKSymtab();
   processLKKSymtab(true);
   processLKBugTable();
   processLKSMPLocks();
-}
-
-/// Process __ex_table section of Linux Kernel.
-/// This section contains information regarding kernel level exception
-/// handling (https://www.kernel.org/doc/html/latest/x86/exception-tables.html).
-/// More documentation is in arch/x86/include/asm/extable.h.
-///
-/// The section is the list of the following structures:
-///
-///   struct exception_table_entry {
-///     int insn;
-///     int fixup;
-///     int handler;
-///   };
-///
-void LinuxKernelRewriter::processLKExTable() {
-  ErrorOr<BinarySection &> SectionOrError =
-      BC.getUniqueSectionByName("__ex_table");
-  if (!SectionOrError)
-    return;
-
-  const uint64_t SectionSize = SectionOrError->getSize();
-  const uint64_t SectionAddress = SectionOrError->getAddress();
-  assert((SectionSize % 12) == 0 &&
-         "The size of the __ex_table section should be a multiple of 12");
-  for (uint64_t I = 0; I < SectionSize; I += 4) {
-    const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
-    assert(Offset && "failed reading PC-relative offset for __ex_table");
-    int32_t SignedOffset = *Offset;
-    const uint64_t RefAddress = EntryAddress + SignedOffset;
-
-    BinaryFunction *ContainingBF =
-        BC.getBinaryFunctionContainingAddress(RefAddress);
-    if (!ContainingBF)
-      continue;
-
-    MCSymbol *ReferencedSymbol = ContainingBF->getSymbol();
-    const uint64_t FunctionOffset = RefAddress - ContainingBF->getAddress();
-    switch (I % 12) {
-    default:
-      llvm_unreachable("bad alignment of __ex_table");
-      break;
-    case 0:
-      // insn
-      insertLKMarker(RefAddress, I, SignedOffset, true, "__ex_table");
-      break;
-    case 4:
-      // fixup
-      if (FunctionOffset)
-        ReferencedSymbol = ContainingBF->addEntryPointAtOffset(FunctionOffset);
-      BC.addRelocation(EntryAddress, ReferencedSymbol, Relocation::getPC32(), 0,
-                       *Offset);
-      break;
-    case 8:
-      // handler
-      assert(!FunctionOffset &&
-             "__ex_table handler entry should point to function start");
-      BC.addRelocation(EntryAddress, ReferencedSymbol, Relocation::getPC32(), 0,
-                       *Offset);
-      break;
-    }
-  }
 }
 
 /// Process .pci_fixup section of Linux Kernel.
@@ -939,6 +896,119 @@ Error LinuxKernelRewriter::rewriteStaticCalls() {
     StaticCallSection->addRelocation(EntryOffset, Entry.Label,
                                      ELF::R_X86_64_PC32, /*Addend*/ 0);
   }
+
+  return Error::success();
+}
+
+/// Instructions that access user-space memory can cause page faults. These
+/// faults will be handled by the kernel and execution will resume at the fixup
+/// code location if the address was invalid. The kernel uses the exception
+/// table to match the faulting instruction to its fixup. The table consists of
+/// the following entries:
+///
+///   struct exception_table_entry {
+///     int insn;
+///     int fixup;
+///     int data;
+///   };
+///
+/// More info at:
+/// https://www.kernel.org/doc/Documentation/x86/exception-tables.txt
+Error LinuxKernelRewriter::readExceptionTable() {
+  ExceptionsSection = BC.getUniqueSectionByName("__ex_table");
+  if (!ExceptionsSection)
+    return Error::success();
+
+  if (ExceptionsSection->getSize() % EXCEPTION_TABLE_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "exception table size error");
+
+  const uint64_t SectionAddress = ExceptionsSection->getAddress();
+  DataExtractor DE(ExceptionsSection->getContents(),
+                   BC.AsmInfo->isLittleEndian(),
+                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor Cursor(0);
+  uint32_t EntryID = 0;
+  while (Cursor && Cursor.tell() < ExceptionsSection->getSize()) {
+    const uint64_t InstAddress =
+        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t FixupAddress =
+        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t Data = DE.getU32(Cursor);
+
+    // Consume the status of the cursor.
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading exception table");
+
+    ++EntryID;
+
+    if (opts::DumpExceptions) {
+      BC.outs() << "Exception Entry: " << EntryID << '\n';
+      BC.outs() << "\tInsn:  0x" << Twine::utohexstr(InstAddress) << '\n'
+                << "\tFixup: 0x" << Twine::utohexstr(FixupAddress) << '\n'
+                << "\tData:  0x" << Twine::utohexstr(Data) << '\n';
+    }
+
+    MCInst *Inst = nullptr;
+    MCSymbol *FixupLabel = nullptr;
+
+    BinaryFunction *InstBF = BC.getBinaryFunctionContainingAddress(InstAddress);
+    if (InstBF && BC.shouldEmit(*InstBF)) {
+      Inst = InstBF->getInstructionAtOffset(InstAddress - InstBF->getAddress());
+      if (!Inst)
+        return createStringError(errc::executable_format_error,
+                                 "no instruction at address 0x%" PRIx64
+                                 " in exception table",
+                                 InstAddress);
+      BC.MIB->addAnnotation(*Inst, "ExceptionEntry", EntryID);
+      FunctionsWithExceptions.insert(InstBF);
+    }
+
+    if (!InstBF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches instruction at 0x"
+                << Twine::utohexstr(InstAddress)
+                << " referenced by Linux exception table\n";
+    }
+
+    BinaryFunction *FixupBF =
+        BC.getBinaryFunctionContainingAddress(FixupAddress);
+    if (FixupBF && BC.shouldEmit(*FixupBF)) {
+      const uint64_t Offset = FixupAddress - FixupBF->getAddress();
+      if (!FixupBF->getInstructionAtOffset(Offset))
+        return createStringError(errc::executable_format_error,
+                                 "no instruction at fixup address 0x%" PRIx64
+                                 " in exception table",
+                                 FixupAddress);
+      FixupLabel = Offset ? FixupBF->addEntryPointAtOffset(Offset)
+                          : FixupBF->getSymbol();
+      if (Inst)
+        BC.MIB->addAnnotation(*Inst, "Fixup", FixupLabel->getName());
+      FunctionsWithExceptions.insert(FixupBF);
+    }
+
+    if (!FixupBF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches fixup code at 0x"
+                << Twine::utohexstr(FixupAddress)
+                << " referenced by Linux exception table\n";
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed "
+            << ExceptionsSection->getSize() / EXCEPTION_TABLE_ENTRY_SIZE
+            << " exception table entries\n";
+
+  return Error::success();
+}
+
+/// Depending on the value of CONFIG_BUILDTIME_TABLE_SORT, the kernel expects
+/// the exception table to be sorted. Hence we have to sort it after code
+/// reordering.
+Error LinuxKernelRewriter::rewriteExceptionTable() {
+  // Disable output of functions with exceptions before rewrite support is
+  // added.
+  for (BinaryFunction *BF : FunctionsWithExceptions)
+    BF->setSimple(false);
 
   return Error::success();
 }
