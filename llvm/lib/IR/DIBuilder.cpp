@@ -1029,10 +1029,7 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
     const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
   if (M.IsNewDbgInfoFormat) {
     DPValue *DPV = DPValue::createDPValue(Val, VarInfo, Expr, DL);
-    if (InsertBefore && InsertBB)
-      InsertBB->insertDPValueBefore(DPV, InsertBefore->getIterator());
-    else if (InsertBB)
-      InsertBB->insertDPValueBefore(DPV, InsertBB->end());
+    insertDPValue(DPV, InsertBB, InsertBefore);
     return DPV;
   } else {
     if (!ValueFn)
@@ -1063,6 +1060,19 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   IRBuilder<> B(DL->getContext());
   initIRBuilder(B, DL, InsertBB, InsertBefore);
   return B.CreateCall(DeclareFn, Args);
+}
+
+void DIBuilder::insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
+                              Instruction *InsertBefore) {
+  trackIfUnresolved(DPV->getVariable());
+  trackIfUnresolved(DPV->getExpression());
+  if (DPV->isDbgAssign())
+    trackIfUnresolved(DPV->getAddressExpression());
+
+  if (InsertBB && InsertBefore)
+    InsertBB->insertDPValueBefore(DPV, InsertBefore->getIterator());
+  else if (InsertBB)
+    InsertBB->insertDPValueBefore(DPV, InsertBB->end());
 }
 
 Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,

@@ -101,6 +101,10 @@ namespace llvm {
     DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
                            BasicBlock *InsertBB, Instruction *InsertBefore);
 
+    /// Internal helper. Track metadata if untracked and insert \p DPV.
+    void insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
+                       Instruction *InsertBefore);
+
     /// Internal helper with common code used by insertDbg{Value,Addr}Intrinsic.
     Instruction *insertDbgIntrinsic(llvm::Function *Intrinsic, llvm::Value *Val,
                                     DILocalVariable *VarInfo,
