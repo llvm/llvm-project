@@ -475,6 +475,17 @@ namespace PR59389 {
     };
   }
 
+  void testLambdaInLambdaWithDoubleReturns() {
+    const auto MakeS = []() -> S* {
+      const auto MakeS2 = []() -> S* {
+        return ::gsl::owner<S*>{new S(1)};
+        // CHECK-NOTES: [[@LINE-1]]:9: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>' [cppcoreguidelines-owning-memory]
+      };
+      return ::gsl::owner<S*>{new S(2)};
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>'
+    };
+  }
+
   void testReverseLambdaInLambdaNegative() {
     const auto MakeI = []() -> int {
       const auto MakeS = []() -> ::gsl::owner<S*> { return new S(); };
