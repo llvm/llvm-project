@@ -738,7 +738,7 @@ public:
     auto stt = getSparseTensorType(op.getTensor());
     SmallVector<Value> retVal;
     SmallVector<Value> retLen;
-    // Then get the positions and coordinates buffers.
+    // Get the positions and coordinates buffers.
     const Level lvlRank = stt.getLvlRank();
     Level trailCOOLen = 0;
     for (Level l = 0; l < lvlRank; l++) {

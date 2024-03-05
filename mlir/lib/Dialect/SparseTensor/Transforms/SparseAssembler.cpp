@@ -31,9 +31,9 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
       convTypes.push_back(type);
       continue;
     }
-    // Convert the external representation of the values array.
+
+    // Convert the external representation of the position/coordinate array
     const SparseTensorType stt(cast<RankedTensorType>(type));
-    // Convert the external representation of the position/coordinate array.
     foreachFieldAndTypeInSparseTensor(stt, [&convTypes, extraTypes](
                                                Type t, FieldIndex,
                                                SparseTensorFieldKind kind,
@@ -64,7 +64,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
       toVals.push_back(fromVals[idx++]);
       continue;
     }
-    // Convert the external representation of the values array.
+    // Handle sparse data.
     auto rtp = cast<RankedTensorType>(type);
     const SparseTensorType stt(rtp);
     SmallVector<Value> inputs;
