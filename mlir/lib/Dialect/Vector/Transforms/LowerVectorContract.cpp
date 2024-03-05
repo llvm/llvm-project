@@ -226,27 +226,27 @@ namespace {
 ///   * the source Op when mask _is not_ present,
 ///   * the source Op *and* the mask Op when mask _is_ present.
 template <class SourceOp>
-struct MaybeMaskedOpRewritePattern : OpRewritePattern<SourceOp> {
+struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
   using OpRewritePattern<SourceOp>::OpRewritePattern;
 
 private:
   LogicalResult matchAndRewrite(SourceOp sourceOp,
                                 PatternRewriter &rewriter) const final {
-    auto maskableOp =
-        dyn_cast_if_present<MaskableOpInterface>(sourceOp.getOperation());
+    auto maskableOp = dyn_cast<MaskableOpInterface>(sourceOp.getOperation());
     if (!maskableOp)
       return failure();
 
-    // Retrieve the mask if present
-    MaskingOpInterface maskOp;
-    if (maskableOp.isMasked())
-      maskOp = maskableOp.getMaskingOp();
-
-    // If this Op is masked, update the insertion point to avoid inserting into
-    // the vector.mask Op region.
-    OpBuilder::InsertionGuard guard(rewriter);
+    // Op to update
     Operation *rootOp = sourceOp;
-    if (maskOp) {
+
+    // If this Op is masked:
+    //    * update the insertion point to avoid inserting into the vector.mask
+    //      Op region,
+    //    * update the Op to rewrite so that it's the parent vector.mask Op
+    OpBuilder::InsertionGuard guard(rewriter);
+    MaskingOpInterface maskOp;
+    if (maskableOp.isMasked()) {
+      maskOp = maskableOp.getMaskingOp();
       rewriter.setInsertionPoint(maskOp);
       rootOp = maskOp;
     }
@@ -283,9 +283,9 @@ public:
 /// This only kicks in when VectorTransformsOptions is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
-    : public MaybeMaskedOpRewritePattern<vector::ContractionOp> {
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
 public:
-  using MaybeMaskedOpRewritePattern::MaybeMaskedOpRewritePattern;
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
@@ -298,7 +298,7 @@ public:
       vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       FilterConstraintType constraint = defaultFilter)
-      : MaybeMaskedOpRewritePattern<vector::ContractionOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
@@ -328,9 +328,9 @@ private:
 /// This only kicks in when VectorTransformsOptions is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToOuterProductOpLowering
-    : public MaybeMaskedOpRewritePattern<vector::ContractionOp> {
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
 public:
-  using MaybeMaskedOpRewritePattern::MaybeMaskedOpRewritePattern;
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
@@ -343,7 +343,7 @@ public:
       vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       FilterConstraintType constraint = defaultFilter)
-      : MaybeMaskedOpRewritePattern<vector::ContractionOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
@@ -376,9 +376,9 @@ private:
 /// This only kicks in when VectorTransformsOptions is set to Dot and
 /// the vector.contract op is a row-major matmul or matvec.
 class ContractionOpToDotLowering
-    : public MaybeMaskedOpRewritePattern<vector::ContractionOp> {
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
 public:
-  using MaybeMaskedOpRewritePattern::MaybeMaskedOpRewritePattern;
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
@@ -391,7 +391,7 @@ public:
       vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       const FilterConstraintType &constraint = defaultFilter)
-      : MaybeMaskedOpRewritePattern<vector::ContractionOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   FailureOr<Value>
@@ -404,10 +404,24 @@ private:
   FilterConstraintType filter;
 };
 
+/// Progressive lowering of ContractionOp.
+///
+/// One:
+///   %x = vector.contract with at least one free/batch dimension
+/// is replaced by:
+///   %a = vector.contract with one less free/batch dimension
+///   %b = vector.contract with one less free/batch dimension
+///   ..
+///   %x = combine %a %b ..
+/// until a pure contraction is reached (no free/batch dimensions),
+/// which is replaced by a dot-product.
+///
+/// This only kicks in when either VectorTransformsOptions is set
+/// to Dot or when other contraction patterns fail.
 class ContractionOpLowering
-    : public MaybeMaskedOpRewritePattern<vector::ContractionOp> {
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
 public:
-  using MaybeMaskedOpRewritePattern::MaybeMaskedOpRewritePattern;
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
 
@@ -418,7 +432,7 @@ public:
   ContractionOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
                         MLIRContext *context, PatternBenefit benefit = 1,
                         FilterConstraintType constraint = defaultFilter)
-      : MaybeMaskedOpRewritePattern<vector::ContractionOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
@@ -826,8 +840,8 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
 /// Lower vector.contract with all size one reduction dimensions to
 /// elementwise ops when possible.
 struct ContractOpToElementwise
-    : public MaybeMaskedOpRewritePattern<vector::ContractionOp> {
-  using MaybeMaskedOpRewritePattern::MaybeMaskedOpRewritePattern;
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
   static LogicalResult defaultFilter(vector::ContractionOp op) {
@@ -837,7 +851,7 @@ struct ContractOpToElementwise
       vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       const FilterConstraintType &constraint = defaultFilter)
-      : MaybeMaskedOpRewritePattern<vector::ContractionOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   FailureOr<Value>
