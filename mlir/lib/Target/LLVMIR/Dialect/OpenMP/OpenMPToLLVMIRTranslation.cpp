@@ -757,9 +757,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       case mlir::omp::ClauseTaskDepend::taskdependin:
         type = llvm::omp::RTLDependenceKindTy::DepIn;
         break;
-        // The OpenMP runtime requires that the codegen for 'depend' clause for
-        // 'out' dependency kind must be the same as codegen for 'depend' clause
-        // with 'inout' dependency.
+      // The OpenMP runtime requires that the codegen for 'depend' clause for
+      // 'out' dependency kind must be the same as codegen for 'depend' clause
+      // with 'inout' dependency.
       case mlir::omp::ClauseTaskDepend::taskdependout:
       case mlir::omp::ClauseTaskDepend::taskdependinout:
         type = llvm::omp::RTLDependenceKindTy::DepInOut;
