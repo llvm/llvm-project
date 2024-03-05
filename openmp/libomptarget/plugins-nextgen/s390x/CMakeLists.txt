@@ -11,7 +11,7 @@
 ##===----------------------------------------------------------------------===##
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
- build_generic_elf64("SystemZ" "S390X" "s390x" "s390x-ibm-linux-gnu" "22")
+ build_generic_elf64("s390x" "S390X" "s390x" "systemz" "s390x-ibm-linux-gnu" "22")
 else()
  libomptarget_say("Not building s390x NextGen offloading plugin: machine not found in the system.")
 endif()
