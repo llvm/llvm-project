@@ -920,17 +920,19 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILabel *Label =
         DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
 
-    // Insert before I and check order.
-    ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
+    { /* dbg.label | DPLabel */
+      // Insert before I and check order.
+      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
 
-    // We should be able to insert at the end of the block, even if there's
-    // no terminator yet. Note that in RemoveDIs mode this record won't get
-    // inserted into the block untill another instruction is added.
-    DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
-    // Specifically do not insert a terminator, to check this works. `I` should
-    // have absorbed the DPLabel in the new debug info mode.
-    I = Builder.CreateAlloca(Builder.getInt32Ty());
-    ExpectOrder(LabelRecord, I->getIterator());
+      // We should be able to insert at the end of the block, even if there's
+      // no terminator yet. Note that in RemoveDIs mode this record won't get
+      // inserted into the block untill another instruction is added.
+      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
+      // Specifically do not insert a terminator, to check this works. `I`
+      // should have absorbed the DPLabel in the new debug info mode.
+      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      ExpectOrder(LabelRecord, I->getIterator());
+    }
 
     // Variable metadata and records
     // -----------------------------
@@ -938,14 +940,27 @@ TEST_F(IRBuilderTest, DIBuilder) {
     auto *IntType = DIB.createBasicType("int", 32, dwarf::DW_ATE_signed);
     DILocalVariable *VarX =
         DIB.createAutoVariable(BarSP, "X", File, 2, IntType, true);
-    ExpectOrder(
-        DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(), VarLoc, I),
-        I->getIterator());
-    // Check inserting at end of the block works as with labels.
-    DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
-        I, VarX, DIB.createExpression(), VarLoc, BB);
-    I = Builder.CreateAlloca(Builder.getInt32Ty());
-    ExpectOrder(VarXValue, I->getIterator());
+    DILocalVariable *VarY =
+        DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
+    { /* dbg.value | DPValue::Value */
+      ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
+                                              VarLoc, I),
+                  I->getIterator());
+      // Check inserting at end of the block works as with labels.
+      DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
+          I, VarX, DIB.createExpression(), VarLoc, BB);
+      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      ExpectOrder(VarXValue, I->getIterator());
+    }
+    { /* dbg.declare | DPValue::Declare */
+      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
+                  I->getIterator());
+      // Check inserting at end of the block works as with labels.
+      DbgInstPtr VarYDeclare =
+          DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB);
+      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      ExpectOrder(VarYDeclare, I->getIterator());
+    }
 
     DIB.finalize();
     // Check the labels are not/are added to Bar's retainedNodes array (AlwaysPreserve).
@@ -955,7 +970,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
               BarSP->getRetainedNodes().end());
     EXPECT_NE(find(BarSP->getRetainedNodes(), VarX),
               BarSP->getRetainedNodes().end());
-
+    EXPECT_NE(find(BarSP->getRetainedNodes(), VarY),
+              BarSP->getRetainedNodes().end());
     EXPECT_TRUE(verifyModule(*M));
   };
 
