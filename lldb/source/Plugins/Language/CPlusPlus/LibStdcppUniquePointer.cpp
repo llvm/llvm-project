@@ -28,7 +28,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -116,7 +116,7 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
 bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
-LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx == 0 && m_ptr_obj)
     return m_ptr_obj->GetSP();
   if (idx == 1 && m_del_obj)
