@@ -18,7 +18,8 @@ void f() {
 
 // CHECK-LABEL: define {{.*}} void @dr438::f()()
 // CHECK:         [[A:%.+]] = alloca [2 x i64]
+// CHECK:         {{.+}} = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 0
 // CHECK:         [[ARRAYIDX1:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 0
-// CHECK:         [[TEMPIDX:%.+]] = load i64, ptr [[ARRAYIDX1]]
-// CHECK:         [[ARRAYIDX2:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 [[TEMPIDX]]
+// CHECK-NEXT:    [[TEMPIDX:%.+]] = load i64, ptr [[ARRAYIDX1]]
+// CHECK-NEXT:    [[ARRAYIDX2:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 [[TEMPIDX]]
 // CHECK-LABEL: }
