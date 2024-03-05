@@ -600,9 +600,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     TargetLoweringBase::LegalizeKind VecLK =
         getTLI()->getTypeConversion(C, VecVT);
     const Value *Idx = IsExtract ? ICA.getArgs()[1] : ICA.getArgs()[2];
-    const ConstantInt *CIdx = dyn_cast<ConstantInt>(Idx);
+    const ConstantInt *CIdx = cast<ConstantInt>(Idx);
     if (SubVecLK.first == TargetLoweringBase::TypeLegal &&
-        VecLK.first == TargetLoweringBase::TypeLegal && CIdx && CIdx->isZero())
+        VecLK.first == TargetLoweringBase::TypeLegal && CIdx->isZero())
       return TTI::TCC_Free;
     break;
   }
