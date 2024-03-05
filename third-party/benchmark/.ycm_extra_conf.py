@@ -1,5 +1,4 @@
 import os
-
 import ycm_core
 
 # These are the compilation flags that will be used in case there's no
@@ -92,9 +91,7 @@ def GetCompilationInfoForFile(filename):
         for extension in SOURCE_EXTENSIONS:
             replacement_file = basename + extension
             if os.path.exists(replacement_file):
-                compilation_info = database.GetCompilationInfoForFile(
-                    replacement_file
-                )
+                compilation_info = database.GetCompilationInfoForFile(replacement_file)
                 if compilation_info.compiler_flags_:
                     return compilation_info
         return None
@@ -110,8 +107,7 @@ def FlagsForFile(filename, **kwargs):
             return None
 
         final_flags = MakeRelativePathsInFlagsAbsolute(
-            compilation_info.compiler_flags_,
-            compilation_info.compiler_working_dir_,
+            compilation_info.compiler_flags_, compilation_info.compiler_working_dir_
         )
     else:
         relative_to = DirectoryOfThisScript()

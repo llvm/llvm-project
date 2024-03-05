@@ -24,8 +24,7 @@ static void BM_MapLookup(benchmark::State& state) {
     m = ConstructRandomMap(size);
     state.ResumeTiming();
     for (int i = 0; i < size; ++i) {
-      auto it = m.find(std::rand() % size);
-      benchmark::DoNotOptimize(it);
+      benchmark::DoNotOptimize(m.find(std::rand() % size));
     }
   }
   state.SetItemsProcessed(state.iterations() * size);
@@ -35,11 +34,11 @@ BENCHMARK(BM_MapLookup)->Range(1 << 3, 1 << 12);
 // Using fixtures.
 class MapFixture : public ::benchmark::Fixture {
  public:
-  void SetUp(const ::benchmark::State& st) override {
+  void SetUp(const ::benchmark::State& st) BENCHMARK_OVERRIDE {
     m = ConstructRandomMap(static_cast<int>(st.range(0)));
   }
 
-  void TearDown(const ::benchmark::State&) override { m.clear(); }
+  void TearDown(const ::benchmark::State&) BENCHMARK_OVERRIDE { m.clear(); }
 
   std::map<int, int> m;
 };
@@ -48,8 +47,7 @@ BENCHMARK_DEFINE_F(MapFixture, Lookup)(benchmark::State& state) {
   const int size = static_cast<int>(state.range(0));
   for (auto _ : state) {
     for (int i = 0; i < size; ++i) {
-      auto it = m.find(std::rand() % size);
-      benchmark::DoNotOptimize(it);
+      benchmark::DoNotOptimize(m.find(std::rand() % size));
     }
   }
   state.SetItemsProcessed(state.iterations() * size);
