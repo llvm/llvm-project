@@ -8447,7 +8447,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
-  bool inModule{currScope().kind() == Scope::Kind::Module};
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (NeedsExplicitType(symbol)) {
@@ -8461,13 +8460,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
     if (symbol.has<GenericDetails>()) {
       CheckGenericProcedures(symbol);
-    }
-    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
-        !symbol.test(Symbol::Flag::Function) &&
-        !symbol.test(Symbol::Flag::Subroutine)) {
-      // in a module, external proc without return type is subroutine
-      symbol.set(
-          symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
     }
     if (!symbol.has<HostAssocDetails>()) {
       CheckPossibleBadForwardRef(symbol);
@@ -8990,8 +8982,18 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   }
   EndScopeForNode(node);
   // Ensure that every object entity has a type.
+  bool inModule{node.GetKind() == ProgramTree::Kind::Module ||
+      node.GetKind() == ProgramTree::Kind::Submodule};
   for (auto &pair : *node.scope()) {
-    ApplyImplicitRules(*pair.second);
+    Symbol &symbol{*pair.second};
+    if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
+        !symbol.test(Symbol::Flag::Function) &&
+        !symbol.test(Symbol::Flag::Subroutine)) {
+      // in a module, external proc without return type is subroutine
+      symbol.set(
+          symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+    }
+    ApplyImplicitRules(symbol);
   }
 }
 
