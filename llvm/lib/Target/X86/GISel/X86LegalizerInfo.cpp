@@ -587,16 +587,16 @@ bool X86LegalizerInfo::legalizeBrJT(LegalizerHelper &Helper,
       MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
       PtrTy.getSizeInBytes(), Align(EntrySize));
 
-  auto ShiftAmt = MIB.buildConstant(IdxTy, Log2_32(PtrTy.getSizeInBytes()));
+  auto ShiftAmt =
+      MIB.buildConstant(IdxTy, Log2_32(MJTI->getEntrySize(MF.getDataLayout())));
   auto Shift = MIB.buildShl(IdxTy, IdxReg, ShiftAmt);
-  auto Target =
-      MIB.buildPtrAdd(PtrTy, PtrReg, Shift->getOperand(0).getReg()).getReg(0);
+  auto Target = MIB.buildPtrAdd(PtrTy, PtrReg, Shift);
 
   switch (MJTI->getEntryKind()) {
   default:
     return false;
   case MachineJumpTableInfo::EK_BlockAddress: {
-    Target = MIB.buildLoad(PtrTy, Target, *MMO).getReg(0);
+    Target = MIB.buildLoad(PtrTy, Target, *MMO);
     break;
   }
   case MachineJumpTableInfo::EK_LabelDifference64:
@@ -606,11 +606,11 @@ bool X86LegalizerInfo::legalizeBrJT(LegalizerHelper &Helper,
     auto Load = MIB.buildLoadInstr(
         TargetOpcode::G_LOAD, LLT::scalar(PtrTy.getSizeInBits()), Target, *MMO);
     Load = MIB.buildSExtOrTrunc(IdxTy, Load);
-    Target = MIB.buildPtrAdd(PtrTy, PtrReg, Load).getReg(0);
+    Target = MIB.buildPtrAdd(PtrTy, PtrReg, Load);
     break;
   }
 
-  MIB.buildBrIndirect(Target);
+  MIB.buildBrIndirect(Target.getReg(0));
 
   MI.removeFromParent();
 
