@@ -259,6 +259,13 @@ __global__ void max_num_work_groups_32_0_1() {}
 __attribute__((amdgpu_max_num_work_groups(32, 1, 0)))
 __global__ void max_num_work_groups_32_1_0() {}
 
+__attribute__((amdgpu_max_num_work_groups(4294967295)))
+__global__ void max_num_work_groups_max_unsigned_int() {}
+
+// expected-error@+1{{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
+__attribute__((amdgpu_max_num_work_groups(4294967296)))
+__global__ void max_num_work_groups_max_unsigned_int_plus1() {}
+
 // expected-error@+1{{integer constant expression evaluates to value 10000000000 that cannot be represented in a 32-bit unsigned integer type}}
 __attribute__((amdgpu_max_num_work_groups(10000000000)))
 __global__ void max_num_work_groups_too_large() {}

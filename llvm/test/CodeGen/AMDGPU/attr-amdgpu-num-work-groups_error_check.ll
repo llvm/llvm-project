@@ -21,7 +21,6 @@ entry:
 }
 attributes #23 = {"amdgpu-max-num-work-groups"="1,2,-3"}
 
-
 ; ERROR: error: can't parse integer attribute 1.0 in amdgpu-max-num-work-groups
 define amdgpu_kernel void @empty_max_num_work_groups_non_int1() #31 {
 entry:
@@ -50,7 +49,6 @@ entry:
 }
 attributes #41 = {"amdgpu-max-num-work-groups"="10000000000,2,3"}
 
-
 ; ERROR: error: attribute amdgpu-max-num-work-groups has incorrect number of integers; expected 3
 define amdgpu_kernel void @empty_max_num_work_groups_1_arg() #51 {
 entry:
@@ -71,7 +69,3 @@ entry:
   ret void
 }
 attributes #53 = {"amdgpu-max-num-work-groups"="1,2,3,4"}
-
-
-
-
