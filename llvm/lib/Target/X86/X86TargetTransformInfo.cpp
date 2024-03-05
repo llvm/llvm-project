@@ -1550,6 +1550,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
+
+    // If we're inserting into the same legalized type then its not an
+    // insert anymore, its a copy.
+    if (LT.second == SubLT.second &&
+        BaseTp->getPrimitiveSizeInBits() >= LT.second.getSizeInBits() &&
+        SubTp->getPrimitiveSizeInBits() >= SubLT.second.getSizeInBits())
+      return TTI::TCC_Free;
+
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
