@@ -1334,7 +1334,7 @@ private:
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
         UpdateTargetRegs(Reg);
       } else {
-        for (auto Use : ROMap.find(MI)->getSecond().Uses)
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
           UpdateTargetRegs(Use.RegUnit);
       }
     }
@@ -1438,7 +1438,7 @@ private:
 
         const unsigned Iter = I - Stage;
 
-        for (auto Def : ROMap.find(MI)->getSecond().Defs)
+        for (auto &Def : ROMap.find(MI)->getSecond().Defs)
           InsertReg(LiveRegSets[Iter], Def.RegUnit);
 
         for (auto LastUse : LastUses[MI]) {
