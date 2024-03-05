@@ -189,10 +189,8 @@ define i32 @n9_ult_slt_neg17(i32 %x, i32 %replacement_low, i32 %replacement_high
 ; Regression test for PR53252.
 define i32 @n10_ugt_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @n10_ugt_slt(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[REPLACEMENT_HIGH:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp ugt i32 [[X]], 128
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[X]], i32 [[T1]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ugt i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[X]], i32 [[REPLACEMENT_HIGH:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 0
@@ -204,10 +202,8 @@ define i32 @n10_ugt_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 
 define i32 @n11_uge_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @n11_uge_slt(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[REPLACEMENT_HIGH:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp ult i32 [[X]], 129
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[T1]], i32 [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ult i32 [[X:%.*]], 129
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 0
