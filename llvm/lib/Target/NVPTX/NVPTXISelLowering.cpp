@@ -465,7 +465,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::SMIN:
     case ISD::UMIN:
     case ISD::UMAX:
-    case ISD::SUB:
       IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 80;
       break;
     }
