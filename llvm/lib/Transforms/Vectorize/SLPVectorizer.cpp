@@ -2379,7 +2379,8 @@ private:
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
 
   /// \returns Cast context for the given graph node.
-  TTI::CastContextHint getCastContextHint(const TreeEntry &TE) const;
+  TargetTransformInfo::CastContextHint
+  getCastContextHint(const TreeEntry &TE) const;
 
   /// \returns the cost of the vectorizable entry.
   InstructionCost getEntryCost(const TreeEntry *E,
@@ -7037,7 +7038,8 @@ static bool isAlternateInstruction(const Instruction *I,
   return I->getOpcode() == AltOp->getOpcode();
 }
 
-TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) {
+TargetTransformInfo::OperandValueInfo
+BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) {
   assert(!Ops.empty());
   const auto *Op0 = Ops.front();
 
