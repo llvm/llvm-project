@@ -13213,14 +13213,14 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
     if (R.empty()) {
       // If a 'template' keyword was used, a lookup that finds only non-template
       // names is an error.
-      getSema().Diag(R.getNameLoc(), diag::err_template_kw_refers_to_non_template)
-          << R.getLookupName()
-          << Old->getQualifierLoc().getSourceRange()
-          << Old->hasTemplateKeyword()
-          << Old->getTemplateKeywordLoc();
-      getSema().Diag(FoundDecl->getLocation(), diag::note_template_kw_refers_to_non_template)
+      getSema().Diag(R.getNameLoc(),
+                     diag::err_template_kw_refers_to_non_template)
+          << R.getLookupName() << Old->getQualifierLoc().getSourceRange()
+          << Old->hasTemplateKeyword() << Old->getTemplateKeywordLoc();
+      getSema().Diag(FoundDecl->getLocation(),
+                     diag::note_template_kw_refers_to_non_template)
           << R.getLookupName();
-        return true;
+      return true;
     }
   }
 

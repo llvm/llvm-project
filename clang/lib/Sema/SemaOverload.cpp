@@ -5805,10 +5805,10 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
     return ICS;
   }
 
-  // FIXME: Should this check getAsRecordDecl instead?
-  #if 0
+// FIXME: Should this check getAsRecordDecl instead?
+#if 0
   assert(FromType->isRecordType());
-  #endif
+#endif
 
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
   // C++98 [class.dtor]p2:

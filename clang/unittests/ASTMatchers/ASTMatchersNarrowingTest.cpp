@@ -1569,8 +1569,9 @@ TEST_P(ASTMatchersTest, IsArrow_MatchesMemberVariablesViaArrow) {
       matches("class Y { void x() { y; } int y; };", memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { (*this).y; } int y; };",
                          memberExpr(isArrow())));
-  EXPECT_TRUE(matches("template <class T> class Y { void x() { this->m; } int m; };",
-                         memberExpr(isArrow())));
+  EXPECT_TRUE(
+      matches("template <class T> class Y { void x() { this->m; } int m; };",
+              memberExpr(isArrow())));
   EXPECT_TRUE(
       notMatches("template <class T> class Y { void x() { (*this).m; } };",
                  cxxDependentScopeMemberExpr(isArrow())));
