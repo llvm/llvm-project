@@ -95,10 +95,10 @@ template <typename T> T load(CPtr src) {
     return ::LIBC_NAMESPACE::load<T>(src);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
-    T Value;
-    for (size_t I = 0; I < array_size_v<T>; ++I)
-      Value[I] = load<value_type>(src + (I * sizeof(value_type)));
-    return Value;
+    T value;
+    for (size_t i = 0; i < array_size_v<T>; ++i)
+      value[i] = load<value_type>(src + (i * sizeof(value_type)));
+    return value;
   }
 }
 
@@ -108,8 +108,8 @@ template <typename T> void store(Ptr dst, T value) {
     ::LIBC_NAMESPACE::store<T>(dst, value);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
-    for (size_t I = 0; I < array_size_v<T>; ++I)
-      store<value_type>(dst + (I * sizeof(value_type)), value[I]);
+    for (size_t i = 0; i < array_size_v<T>; ++i)
+      store<value_type>(dst + (i * sizeof(value_type)), value[i]);
   }
 }
 
@@ -118,11 +118,11 @@ template <typename T> T splat(uint8_t value) {
   if constexpr (is_scalar_v<T>)
     return T(~0) / T(0xFF) * T(value);
   else if constexpr (is_vector_v<T>) {
-    T Out;
+    T out;
     // This for loop is optimized out for vector types.
     for (size_t i = 0; i < sizeof(T); ++i)
-      Out[i] = value;
-    return Out;
+      out[i] = value;
+    return out;
   }
 }
 
@@ -140,8 +140,8 @@ template <typename T> struct Memset {
     } else if constexpr (is_array_v<T>) {
       using value_type = typename T::value_type;
       const auto Splat = splat<value_type>(value);
-      for (size_t I = 0; I < array_size_v<T>; ++I)
-        store<value_type>(dst + (I * sizeof(value_type)), Splat);
+      for (size_t i = 0; i < array_size_v<T>; ++i)
+        store<value_type>(dst + (i * sizeof(value_type)), Splat);
     }
   }
 
