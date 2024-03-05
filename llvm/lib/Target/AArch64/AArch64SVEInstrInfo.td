@@ -488,11 +488,11 @@ def AArch64fmin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmin, AAr
 def AArch64fmax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmax, AArch64fmax_p>;
 
 let Predicates = [HasSVE] in {
-  defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
-  def  RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
-  defm RDFFR_P    : sve_int_rdffr_unpred<"rdffr", int_aarch64_sve_rdffr>;
-  def  SETFFR     : sve_int_setffr<"setffr", int_aarch64_sve_setffr>;
-  def  WRFFR      : sve_int_wrffr<"wrffr", int_aarch64_sve_wrffr>;
+  def RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
+  def RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
+  def RDFFR_P    : sve_int_rdffr_unpred<"rdffr", int_aarch64_sve_rdffr>;
+  def SETFFR     : sve_int_setffr<"setffr", int_aarch64_sve_setffr>;
+  def WRFFR      : sve_int_wrffr<"wrffr", int_aarch64_sve_wrffr>;
 } // End HasSVE
 
 let Predicates = [HasSVEorSME] in {

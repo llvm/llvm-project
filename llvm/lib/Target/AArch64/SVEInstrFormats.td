@@ -6421,33 +6421,33 @@ class sve2_mem_sstnt_vs_base<bits<3> opc, string asm,
 multiclass sve2_mem_sstnt_vs_32_ptrs<bits<3> opc, string asm,
                              SDPatternOperator op,
                              ValueType vt> {
-  def _REAL : sve2_mem_sstnt_vs_base<opc, asm, Z_s, ZPR32>;
+  def NAME : sve2_mem_sstnt_vs_base<opc, asm, Z_s, ZPR32>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), 0>;
+                 (!cast<Instruction>(NAME) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 0>;
+                 (!cast<Instruction>(NAME) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 1>;
+                 (!cast<Instruction>(NAME) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 1>;
 
   def : Pat <(op (nxv4i32 ZPR32:$Zt), (nxv4i1 PPR3bAny:$Pg), (nxv4i32 ZPR32:$Zn), (i64 GPR64:$Rm), vt),
-             (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm)>;
+             (!cast<Instruction>(NAME) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm)>;
 }
 
 multiclass sve2_mem_sstnt_vs_64_ptrs<bits<3> opc, string asm,
                              SDPatternOperator op,
                              ValueType vt> {
-  def _REAL : sve2_mem_sstnt_vs_base<opc, asm, Z_d, ZPR64>;
+  def NAME : sve2_mem_sstnt_vs_base<opc, asm, Z_d, ZPR64>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), 0>;
+                 (!cast<Instruction>(NAME) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 0>;
+                 (!cast<Instruction>(NAME) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+                 (!cast<Instruction>(NAME) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
 
   def : Pat <(op (nxv2i64 ZPR64:$Zt), (nxv2i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64:$Rm), vt),
-             (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
+             (!cast<Instruction>(NAME) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
 }
 
 class sve_mem_sst_sv<bits<3> opc, bit xs, bit scaled, string asm,
@@ -6782,11 +6782,11 @@ multiclass sve_int_perm_punpk<bit opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Pat<nxv2i1, op, nxv4i1,  !cast<Instruction>(NAME)>;
 }
 
-class sve_int_rdffr_pred<bit s, string asm>
+class sve_int_rdffr_pred<bit s, string asm, SDPatternOperator op = null_frag>
 : I<(outs PPR8:$Pd), (ins PPRAny:$Pg),
   asm, "\t$Pd, $Pg/z",
   "",
-  []>, Sched<[]> {
+  [(set (nxv16i1 PPR8:$Pd), (op (nxv16i1 PPRAny:$Pg)))]>, Sched<[]> {
   bits<4> Pd;
   bits<4> Pg;
   let Inst{31-23} = 0b001001010;
@@ -6801,39 +6801,17 @@ class sve_int_rdffr_pred<bit s, string asm>
   let hasSideEffects = 1;
 }
 
-multiclass sve_int_rdffr_pred<bit s, string asm, SDPatternOperator op> {
-  def _REAL : sve_int_rdffr_pred<s, asm>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def "" : Pseudo<(outs PPR8:$Pd), (ins PPRAny:$Pg), [(set (nxv16i1 PPR8:$Pd), (op (nxv16i1 PPRAny:$Pg)))]>,
-           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) PPR8:$Pd, PPRAny:$Pg)>;
-  }
-}
-
-class sve_int_rdffr_unpred<string asm> : I<
+class sve_int_rdffr_unpred<string asm, SDPatternOperator op> : I<
   (outs PPR8:$Pd), (ins),
   asm, "\t$Pd",
   "",
-  []>, Sched<[]> {
+  [(set (nxv16i1 PPR8:$Pd), (op))]>, Sched<[]> {
   bits<4> Pd;
   let Inst{31-4} = 0b0010010100011001111100000000;
   let Inst{3-0}   = Pd;
 
   let Uses = [FFR];
   let hasSideEffects = 1;
-}
-
-multiclass sve_int_rdffr_unpred<string asm, SDPatternOperator op> {
-  def _REAL : sve_int_rdffr_unpred<asm>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def "" : Pseudo<(outs PPR8:$Pd), (ins), [(set (nxv16i1 PPR8:$Pd), (op))]>,
-           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) PPR8:$Pd)>;
-  }
 }
 
 class sve_int_wrffr<string asm, SDPatternOperator op>
@@ -7327,9 +7305,9 @@ class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
   let mayLoad = 1;
 }
 
-multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
-                          ZPRRegOp zprty> {
-  def "" : sve_mem_cld_si_base<dtype, 0, asm, listty>;
+multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
+                               RegisterOperand listty, ZPRRegOp zprty> {
+  def NAME : sve_mem_cld_si_base<dtype, nf, asm, listty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
@@ -7338,6 +7316,14 @@ multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
 }
+
+multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
+                          ZPRRegOp zprty>
+: sve_mem_cld_si_base<dtype, 0, asm, listty, zprty>;
+
+multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
+                            ZPRRegOp zprty>
+: sve_mem_cld_si_base<dtype, 1, asm, listty, zprty>;
 
 class sve_mem_cldnt_si_base<bits<2> msz, string asm, RegisterOperand VecList>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4),
@@ -7527,7 +7513,7 @@ class sve_mem_cld_ss_base<bits<4> dtype, bit ff, dag iops, string asm,
 
 multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
                           ZPRRegOp zprty, RegisterOperand gprty> {
-  def "" : sve_mem_cld_ss_base<dtype, 0, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+  def NAME : sve_mem_cld_ss_base<dtype, 0, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
                                asm, listty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
@@ -7536,43 +7522,16 @@ multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
 
 multiclass sve_mem_cldff_ss<bits<4> dtype, string asm, RegisterOperand listty,
                             ZPRRegOp zprty, RegisterOperand gprty> {
-  def _REAL : sve_mem_cld_ss_base<dtype, 1, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
-                                  asm, listty>;
+  def NAME : sve_mem_cld_ss_base<dtype, 1, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), asm, listty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
+                 (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                 (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 1>;
+                 (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 1>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def "" : Pseudo<(outs listty:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), []>,
-           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm)>;
-  }
-}
-
-multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
-                            ZPRRegOp zprty> {
-  def _REAL : sve_mem_cld_si_base<dtype, 1, asm, listty>;
-
-  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
-  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
-                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
-  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                  (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1, mayLoad = 1 in {
-  def "" : Pseudo<(outs listty:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), []>,
-           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4)>;
-  }
+                 (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, XZR), 0>;
 }
 
 class sve_mem_eld_si<bits<2> sz, bits<3> nregs, RegisterOperand VecList,
@@ -7673,22 +7632,13 @@ multiclass sve_mem_32b_gld_sv_32_scaled<bits<4> opc, string asm,
                                         RegisterOperand sxtw_opnd,
                                         RegisterOperand uxtw_opnd,
                                         ValueType vt> {
-  def _UXTW_SCALED_REAL : sve_mem_32b_gld_sv<opc, 0, 1, asm, uxtw_opnd>;
-  def _SXTW_SCALED_REAL : sve_mem_32b_gld_sv<opc, 1, 1, asm, sxtw_opnd>;
+  def _UXTW_SCALED : sve_mem_32b_gld_sv<opc, 0, 1, asm, uxtw_opnd>;
+  def _SXTW_SCALED : sve_mem_32b_gld_sv<opc, 1, 1, asm, sxtw_opnd>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+                  (!cast<Instruction>(NAME # _UXTW_SCALED) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _UXTW_SCALED : Pseudo<(outs Z_s:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), []>,
-                     PseudoInstExpansion<(!cast<Instruction>(NAME # _UXTW_SCALED_REAL) Z_s:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm)>;
-  def _SXTW_SCALED : Pseudo<(outs Z_s:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), []>,
-                     PseudoInstExpansion<(!cast<Instruction>(NAME # _SXTW_SCALED_REAL) Z_s:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm)>;
-  }
+                  (!cast<Instruction>(NAME # _SXTW_SCALED) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
 
   def : Pat<(nxv4i32 (uxtw_op (nxv4i1 PPR:$gp), GPR64sp:$base, (nxv4i32 ZPR:$indices), vt)),
             (!cast<Instruction>(NAME # _UXTW_SCALED) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
@@ -7702,22 +7652,13 @@ multiclass sve_mem_32b_gld_vs_32_unscaled<bits<4> opc, string asm,
                                           RegisterOperand sxtw_opnd,
                                           RegisterOperand uxtw_opnd,
                                           ValueType vt> {
-  def _UXTW_REAL : sve_mem_32b_gld_sv<opc, 0, 0, asm, uxtw_opnd>;
-  def _SXTW_REAL : sve_mem_32b_gld_sv<opc, 1, 0, asm, sxtw_opnd>;
+  def _UXTW : sve_mem_32b_gld_sv<opc, 0, 0, asm, uxtw_opnd>;
+  def _SXTW : sve_mem_32b_gld_sv<opc, 1, 0, asm, sxtw_opnd>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _UXTW_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+                  (!cast<Instruction>(NAME # _UXTW) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _SXTW_REAL) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _UXTW : Pseudo<(outs Z_s:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), []>,
-              PseudoInstExpansion<(!cast<Instruction>(NAME # _UXTW_REAL) Z_s:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm)>;
-  def _SXTW : Pseudo<(outs Z_s:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), []>,
-              PseudoInstExpansion<(!cast<Instruction>(NAME # _SXTW_REAL) Z_s:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm)>;
-  }
+                  (!cast<Instruction>(NAME # _SXTW) ZPR32:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
 
   def : Pat<(nxv4i32 (uxtw_op (nxv4i1 PPR:$gp), GPR64sp:$base, (nxv4i32 ZPR:$offsets), vt)),
             (!cast<Instruction>(NAME # _UXTW) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
@@ -7754,21 +7695,14 @@ class sve_mem_32b_gld_vi<bits<4> opc, string asm, Operand imm_ty>
 
 multiclass sve_mem_32b_gld_vi_32_ptrs<bits<4> opc, string asm, Operand imm_ty,
                                       SDPatternOperator op, ValueType vt> {
-  def _IMM_REAL : sve_mem_32b_gld_vi<opc, asm, imm_ty>;
+  def _IMM : sve_mem_32b_gld_vi<opc, asm, imm_ty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                  (!cast<Instruction>(NAME # _IMM_REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 0>;
+                  (!cast<Instruction>(NAME # _IMM) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $imm5]",
-                  (!cast<Instruction>(NAME # _IMM_REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5), 0>;
+                  (!cast<Instruction>(NAME # _IMM) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                  (!cast<Instruction>(NAME # _IMM_REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _IMM : Pseudo<(outs Z_s:$Zt), (ins PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5), []>,
-             PseudoInstExpansion<(!cast<Instruction>(NAME # _IMM_REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5)>;
-  }
+                  (!cast<Instruction>(NAME # _IMM) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
 
   def : Pat<(nxv4i32 (op (nxv4i1 PPR:$gp), (nxv4i32 ZPR:$ptrs), imm_ty:$index, vt)),
             (!cast<Instruction>(NAME # _IMM) PPR:$gp, ZPR:$ptrs, imm_ty:$index)>;
@@ -7979,35 +7913,33 @@ class sve2_mem_gldnt_vs_base<bits<5> opc, dag iops, string asm,
 multiclass sve2_mem_gldnt_vs_32_ptrs<bits<5> opc, string asm,
                                   SDPatternOperator op,
                                   ValueType vt> {
-  def _REAL : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm),
-                                     asm, Z_s>;
+  def NAME : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), asm, Z_s>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), 0>;
+                 (!cast<Instruction>(NAME) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 0>;
+                 (!cast<Instruction>(NAME) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 1>;
+                 (!cast<Instruction>(NAME) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 1>;
 
   def : Pat <(nxv4i32 (op (nxv4i1 PPR3bAny:$Pg), (nxv4i32 ZPR32:$Zd), (i64 GPR64:$Rm), vt)),
-             (!cast<Instruction>(NAME # _REAL) PPR3bAny:$Pg, ZPR32:$Zd, GPR64:$Rm)>;
+             (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR32:$Zd, GPR64:$Rm)>;
 }
 
 multiclass sve2_mem_gldnt_vs_64_ptrs<bits<5> opc, string asm,
                                    SDPatternOperator op,
                                    ValueType vt> {
-  def _REAL : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm),
-                                     asm, Z_d>;
+  def NAME : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), asm, Z_d>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), 0>;
+                 (!cast<Instruction>(NAME) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 0>;
+                 (!cast<Instruction>(NAME) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+                 (!cast<Instruction>(NAME) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
 
   def : Pat <(nxv2i64 (op (nxv2i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zd), (i64 GPR64:$Rm), vt)),
-             (!cast<Instruction>(NAME # _REAL) PPR3bAny:$Pg, ZPR64:$Zd, GPR64:$Rm)>;
+             (!cast<Instruction>(NAME) PPR3bAny:$Pg, ZPR64:$Zd, GPR64:$Rm)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8051,22 +7983,13 @@ multiclass sve_mem_64b_gld_sv_32_scaled<bits<4> opc, string asm,
                                         RegisterOperand sxtw_opnd,
                                         RegisterOperand uxtw_opnd,
                                         ValueType vt> {
-  def _UXTW_SCALED_REAL : sve_mem_64b_gld_sv<opc, 0, 1, 0, asm, uxtw_opnd>;
-  def _SXTW_SCALED_REAL : sve_mem_64b_gld_sv<opc, 1, 1, 0, asm, sxtw_opnd>;
+  def _UXTW_SCALED : sve_mem_64b_gld_sv<opc, 0, 1, 0, asm, uxtw_opnd>;
+  def _SXTW_SCALED : sve_mem_64b_gld_sv<opc, 1, 1, 0, asm, sxtw_opnd>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _UXTW_SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+                  (!cast<Instruction>(NAME # _UXTW_SCALED) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _SXTW_SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _UXTW_SCALED : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), []>,
-                     PseudoInstExpansion<(!cast<Instruction>(NAME # _UXTW_SCALED_REAL) Z_d:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm)>;
-  def _SXTW_SCALED : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), []>,
-                     PseudoInstExpansion<(!cast<Instruction>(NAME # _SXTW_SCALED_REAL) Z_d:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm)>;
-  }
+                  (!cast<Instruction>(NAME # _SXTW_SCALED) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
 
   def : Pat<(nxv2i64 (uxtw_op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$indices), vt)),
             (!cast<Instruction>(NAME # _UXTW_SCALED) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
@@ -8080,22 +8003,13 @@ multiclass sve_mem_64b_gld_vs_32_unscaled<bits<4> opc, string asm,
                                           RegisterOperand sxtw_opnd,
                                           RegisterOperand uxtw_opnd,
                                           ValueType vt> {
-  def _UXTW_REAL : sve_mem_64b_gld_sv<opc, 0, 0, 0, asm, uxtw_opnd>;
-  def _SXTW_REAL : sve_mem_64b_gld_sv<opc, 1, 0, 0, asm, sxtw_opnd>;
+  def _UXTW : sve_mem_64b_gld_sv<opc, 0, 0, 0, asm, uxtw_opnd>;
+  def _SXTW : sve_mem_64b_gld_sv<opc, 1, 0, 0, asm, sxtw_opnd>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _UXTW_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
+                  (!cast<Instruction>(NAME # _UXTW) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _SXTW_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _UXTW : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm), []>,
-              PseudoInstExpansion<(!cast<Instruction>(NAME # _UXTW_REAL) Z_d:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm)>;
-  def _SXTW : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), []>,
-              PseudoInstExpansion<(!cast<Instruction>(NAME # _SXTW_REAL) Z_d:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm)>;
-  }
+                  (!cast<Instruction>(NAME # _SXTW) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm), 0>;
 
   def : Pat<(nxv2i64 (uxtw_op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$offsets), vt)),
             (!cast<Instruction>(NAME # _UXTW) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
@@ -8106,17 +8020,10 @@ multiclass sve_mem_64b_gld_vs_32_unscaled<bits<4> opc, string asm,
 multiclass sve_mem_64b_gld_sv2_64_scaled<bits<4> opc, string asm,
                                          SDPatternOperator op,
                                          RegisterOperand zprext, ValueType vt> {
-  def _SCALED_REAL : sve_mem_64b_gld_sv<opc, 1, 1, 1, asm, zprext>;
+  def _SCALED : sve_mem_64b_gld_sv<opc, 1, 1, 1, asm, zprext>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _SCALED_REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _SCALED : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm), []>,
-                PseudoInstExpansion<(!cast<Instruction>(NAME # _SCALED_REAL) Z_d:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm)>;
-  }
+                  (!cast<Instruction>(NAME # _SCALED) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm), 0>;
 
   def : Pat<(nxv2i64 (op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$indices), vt)),
                      (!cast<Instruction>(NAME # _SCALED) PPR:$gp, GPR64sp:$base, ZPR:$indices)>;
@@ -8124,17 +8031,10 @@ multiclass sve_mem_64b_gld_sv2_64_scaled<bits<4> opc, string asm,
 
 multiclass sve_mem_64b_gld_vs2_64_unscaled<bits<4> opc, string asm,
                                            SDPatternOperator op, ValueType vt> {
-  def _REAL : sve_mem_64b_gld_sv<opc, 1, 0, 1, asm, ZPR64ExtLSL8>;
+  def NAME : sve_mem_64b_gld_sv<opc, 1, 0, 1, asm, ZPR64ExtLSL8>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Zm]",
-                  (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, ZPR64ExtLSL8:$Zm), 0>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def "" : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, ZPR64ExtLSL8:$Zm), []>,
-           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) Z_d:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, ZPR64ExtLSL8:$Zm)>;
-  }
+                  (!cast<Instruction>(NAME) ZPR64:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, ZPR64ExtLSL8:$Zm), 0>;
 
   def : Pat<(nxv2i64 (op (nxv2i1 PPR:$gp), GPR64sp:$base, (nxv2i64 ZPR:$offsets), vt)),
             (!cast<Instruction>(NAME) PPR:$gp, GPR64sp:$base, ZPR:$offsets)>;
@@ -8167,21 +8067,14 @@ class sve_mem_64b_gld_vi<bits<4> opc, string asm, Operand imm_ty>
 
 multiclass sve_mem_64b_gld_vi_64_ptrs<bits<4> opc, string asm, Operand imm_ty,
                                       SDPatternOperator op, ValueType vt> {
-  def _IMM_REAL : sve_mem_64b_gld_vi<opc, asm, imm_ty>;
+  def _IMM : sve_mem_64b_gld_vi<opc, asm, imm_ty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                  (!cast<Instruction>(NAME # _IMM_REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, 0), 0>;
+                  (!cast<Instruction>(NAME # _IMM) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, 0), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $imm5]",
-                 (!cast<Instruction>(NAME # _IMM_REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5), 0>;
+                  (!cast<Instruction>(NAME # _IMM) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                  (!cast<Instruction>(NAME # _IMM_REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def _IMM : Pseudo<(outs Z_d:$Zt), (ins PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5), []>,
-                  PseudoInstExpansion<(!cast<Instruction>(NAME # _IMM_REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5)>;
-  }
+                  (!cast<Instruction>(NAME # _IMM) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
 
   def : Pat<(nxv2i64 (op (nxv2i1 PPR:$gp), (nxv2i64 ZPR:$ptrs), imm_ty:$index, vt)),
             (!cast<Instruction>(NAME # _IMM) PPR:$gp, ZPR:$ptrs, imm_ty:$index)>;
