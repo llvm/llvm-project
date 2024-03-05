@@ -2857,7 +2857,6 @@ struct Conv1DGenerator
         return;
       break;
     }
-    hasTensorSemantics = linalgOp.hasPureTensorSemantics();
     // The op is now known to be valid.
     valid = true;
   }
@@ -3175,6 +3174,9 @@ struct Conv1DGenerator
     if (ShapedType::isDynamic(cSize)) {
       assert(channelDimVecSize != 0 && "Channel dim vec size must be > 0");
       cSize = channelDimVecSize;
+      // Scalable vectors are only used when both conditions are met:
+      //  1. channel dim is dynamic
+      //  2. channelDimScalableFlag is set
       scalableChDim = channelDimScalableFlag;
       useMasking = true;
     }
@@ -3216,7 +3218,7 @@ struct Conv1DGenerator
       auto maskType =
           VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
       SmallVector<OpFoldResult> mixedSourceDims =
-          hasTensorSemantics
+          cast<LinalgOp>(op).hasPureTensorSemantics()
               ? TypeSwitch<Operation *, SmallVector<OpFoldResult>>(opToMask)
                     .Case<vector::TransferReadOp>([&](auto readOp) {
                       return tensor::getMixedSizes(rewriter, loc,
@@ -3490,7 +3492,7 @@ struct Conv1DGenerator
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
   FailureOr<Operation *> generateDilatedConv(uint64_t vecChDimSize = 0,
-                                             bool vecChDimScalableFlag = true,
+                                             bool vecChDimScalableFlag = false,
                                              bool flatten = false) {
     AffineExpr n, w, c, kw;
     bindDims(ctx, n, w, c, kw);
@@ -3514,7 +3516,6 @@ private:
   StringAttr redOp;
   StringAttr poolExtOp;
   bool isPoolExt = false;
-  bool hasTensorSemantics = false;
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;

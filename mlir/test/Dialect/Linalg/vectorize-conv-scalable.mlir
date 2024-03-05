@@ -124,7 +124,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2(%input: memref<3x5x?xf32>,
+func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dilation_2(%input: memref<3x5x?xf32>,
                                                                 %filter: memref<2x?xf32>,
                                                                 %output: memref<3x2x?xf32>) {
   linalg.depthwise_conv_1d_nwc_wc
@@ -135,7 +135,7 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2(%input: memref<3
 }
 
 // TODO - nice variable names
-// CHECK-LABEL:   func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2(
+// CHECK-LABEL:   func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dilation_2(
 // CHECK-SAME:     %[[VAL_0:.*]]: memref<3x5x?xf32>,
 // CHECK-SAME:     %[[VAL_1:.*]]: memref<2x?xf32>,
 // CHECK-SAME:     %[[VAL_2:.*]]: memref<3x2x?xf32>) {
