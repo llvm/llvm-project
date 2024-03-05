@@ -5597,6 +5597,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_rcp:
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
