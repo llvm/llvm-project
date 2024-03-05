@@ -1,6 +1,4 @@
 // RUN: fir-opt --memory-allocation-opt="dynamic-array-on-heap=true maximum-array-alloc-size=1024" %s | FileCheck %s
-// FIXME: started crashing on windows https://github.com/llvm/llvm-project/issues/83534
-// UNSUPPORTED: system-windows
 
 // Test for size of array being too big.
 
