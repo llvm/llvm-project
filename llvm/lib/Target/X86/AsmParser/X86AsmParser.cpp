@@ -2311,12 +2311,12 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
 /// mnemonic.
 bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken StartTok = Parser.getTok();
-  const SMLoc Start = StartTok.getLoc();
-  if (!StartTok.is(AsmToken::LCurly))
-    return Error(StartTok.getLoc(), "Expected { at this point");
-  Parser.Lex(); // Eat "{"
   AsmToken Tok = Parser.getTok();
+  const SMLoc Start = Tok.getLoc();
+  if (!Tok.is(AsmToken::LCurly))
+    return Error(Tok.getLoc(), "Expected { at this point");
+  Parser.Lex(); // Eat "{"
+  Tok = Parser.getTok();
   SMLoc End;
   if (Tok.is(AsmToken::RCurly)) {
     End = Tok.getEndLoc();
