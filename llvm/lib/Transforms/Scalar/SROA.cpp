@@ -2257,6 +2257,41 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
   return nullptr;
 }
 
+static VectorType *createAndCheckVectorTypesForPromotion(
+    SetVector<Type *> &OtherTys, ArrayRef<VectorType *> CandidateTysCopy,
+    function_ref<void(Type *)> CheckCandidateType, Partition &P,
+    const DataLayout &DL, SmallVectorImpl<VectorType *> &CandidateTys,
+    bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
+    bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy) {
+  [[maybe_unused]] VectorType *OriginalElt =
+      CandidateTysCopy.size() ? CandidateTysCopy[0] : nullptr;
+  // Consider additional vector types where the element type size is a
+  // multiple of load/store element size.
+  for (Type *Ty : OtherTys) {
+    if (!VectorType::isValidElementType(Ty))
+      continue;
+    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
+    // Make a copy of CandidateTys and iterate through it, because we
+    // might append to CandidateTys in the loop.
+    for (VectorType *const VTy : CandidateTysCopy) {
+      // The elements in the copy should remain invariant throughout the loop
+      assert(CandidateTysCopy[0] == OriginalElt && "Different Element");
+      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
+      unsigned ElementSize =
+          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+      if (TypeSize != VectorSize && TypeSize != ElementSize &&
+          VectorSize % TypeSize == 0) {
+        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
+        CheckCandidateType(NewVTy);
+      }
+    }
+  }
+
+  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
+                                      CommonEltTy, HaveVecPtrTy,
+                                      HaveCommonVecPtrTy, CommonVecPtrTy);
+}
+
 /// Test whether the given alloca partitioning and range of slices can be
 /// promoted to a vector.
 ///
@@ -2271,6 +2306,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // we have different element types.
   SmallVector<VectorType *, 4> CandidateTys;
   SetVector<Type *> LoadStoreTys;
+  SetVector<Type *> DeferredTys;
   Type *CommonEltTy = nullptr;
   VectorType *CommonVecPtrTy = nullptr;
   bool HaveVecPtrTy = false;
@@ -2314,42 +2350,32 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       Ty = SI->getValueOperand()->getType();
     else
       continue;
+
+    auto CandTy = Ty->getScalarType();
+    if (CandTy->isPointerTy() && (S.beginOffset() != P.beginOffset() ||
+                                  S.endOffset() != P.endOffset())) {
+      DeferredTys.insert(Ty);
+      continue;
+    }
+
     LoadStoreTys.insert(Ty);
     // Consider any loads or stores that are the exact size of the slice.
     if (S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset())
       CheckCandidateType(Ty);
   }
 
-  if (auto *VTy = checkVectorTypesForPromotion(
-          P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
+  if (auto *VTy = createAndCheckVectorTypesForPromotion(
+          LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
+          CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
           HaveCommonVecPtrTy, CommonVecPtrTy))
     return VTy;
 
-  // Consider additional vector types where the element type size is a
-  // multiple of load/store element size.
-  for (Type *Ty : LoadStoreTys) {
-    if (!VectorType::isValidElementType(Ty))
-      continue;
-    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
-    // Make a copy of CandidateTys and iterate through it, because we might
-    // append to CandidateTys in the loop.
-    SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
-    CandidateTys.clear();
-    for (VectorType *&VTy : CandidateTysCopy) {
-      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
-      unsigned ElementSize =
-          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-      if (TypeSize != VectorSize && TypeSize != ElementSize &&
-          VectorSize % TypeSize == 0) {
-        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
-        CheckCandidateType(NewVTy);
-      }
-    }
-  }
-
-  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
-                                      CommonEltTy, HaveVecPtrTy,
-                                      HaveCommonVecPtrTy, CommonVecPtrTy);
+  CandidateTys.clear();
+  return createAndCheckVectorTypesForPromotion(
+      DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
+      HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
+      CommonVecPtrTy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
