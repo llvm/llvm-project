@@ -1285,7 +1285,7 @@ endif()
 if(LLVM_ENABLE_FATLTO AND (FUCHSIA OR UNIX))
   append("-ffat-lto-objects" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   if(NOT LINKER_IS_LLD_LINK)
-    append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
   endif()
 endif()
 
