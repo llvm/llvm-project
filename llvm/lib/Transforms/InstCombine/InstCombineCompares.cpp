@@ -6491,6 +6491,13 @@ InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
       if (!SafeReplacementConstant)
         SafeReplacementConstant = CI;
     }
+  } else if (isa<VectorType>(C->getType())) {
+    // Handle scalable splat
+    Value *SplatC = C->getSplatValue();
+    auto *CI = dyn_cast_or_null<ConstantInt>(SplatC);
+    // Bail out if the constant can't be safely incremented/decremented.
+    if (!CI || !ConstantIsOk(CI))
+      return std::nullopt;
   } else {
     // ConstantExpr?
     return std::nullopt;
