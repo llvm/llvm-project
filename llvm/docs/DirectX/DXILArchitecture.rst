@@ -113,7 +113,7 @@ The passes to encode DXIL to binary in the DX Container follow the flow:
 
   DXILEmbedder -> DXContainerGlobals -> AsmPrinter
 
-These passes have defined responsibilities:
+Each of these passes have the following defined responsibilities:
 
 #. DXILEmbedder runs the DXIL bitcode writer to generate a bitcode stream and
    embeds the binary data inside a global in the original module.
