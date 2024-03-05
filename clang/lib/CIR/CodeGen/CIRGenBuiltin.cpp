@@ -55,6 +55,22 @@ static RValue buildUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
   return RValue::get(Call->getResult(0));
 }
 
+template <typename Op>
+static RValue
+buildBuiltinBitOp(CIRGenFunction &CGF, const CallExpr *E,
+                  std::optional<CIRGenFunction::BuiltinCheckKind> CK) {
+  mlir::Value arg;
+  if (CK.has_value())
+    arg = CGF.buildCheckedArgForBuiltin(E->getArg(0), *CK);
+  else
+    arg = CGF.buildScalarExpr(E->getArg(0));
+
+  auto resultTy = CGF.ConvertType(E->getType());
+  auto op =
+      CGF.getBuilder().create<Op>(CGF.getLoc(E->getExprLoc()), resultTy, arg);
+  return RValue::get(op);
+}
+
 RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -462,7 +478,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImempcpy:
-  case Builtin::BI__builtin_mempcpy:
+  case Builtin::BI__builtin_mempcpy: {
     Address Dest = buildPointerWithAlignment(E->getArg(0));
     Address Src = buildPointerWithAlignment(E->getArg(1));
     mlir::Value SizeVal = buildScalarExpr(E->getArg(2));
@@ -478,6 +494,42 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm_unreachable("mempcpy is NYI");
     else
       return RValue::get(Dest.getPointer());
+  }
+
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll:
+    return buildBuiltinBitOp<mlir::cir::BitClrsbOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctz:
+  case Builtin::BI__builtin_ctzl:
+  case Builtin::BI__builtin_ctzll:
+    return buildBuiltinBitOp<mlir::cir::BitCtzOp>(*this, E, BCK_CTZPassedZero);
+
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clz:
+  case Builtin::BI__builtin_clzl:
+  case Builtin::BI__builtin_clzll:
+    return buildBuiltinBitOp<mlir::cir::BitClzOp>(*this, E, BCK_CLZPassedZero);
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    return buildBuiltinBitOp<mlir::cir::BitFfsOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__builtin_parity:
+  case Builtin::BI__builtin_parityl:
+  case Builtin::BI__builtin_parityll:
+    return buildBuiltinBitOp<mlir::cir::BitParityOp>(*this, E, std::nullopt);
+
+  case Builtin::BI__popcnt16:
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
+  case Builtin::BI__builtin_popcount:
+  case Builtin::BI__builtin_popcountl:
+  case Builtin::BI__builtin_popcountll:
+    return buildBuiltinBitOp<mlir::cir::BitPopcountOp>(*this, E, std::nullopt);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -541,6 +593,19 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   // Unknown builtin, for now just dump it out and return undef.
   return GetUndefRValue(E->getType());
+}
+
+mlir::Value CIRGenFunction::buildCheckedArgForBuiltin(const Expr *E,
+                                                      BuiltinCheckKind Kind) {
+  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero) &&
+         "Unsupported builtin check kind");
+
+  auto value = buildScalarExpr(E);
+  if (!SanOpts.has(SanitizerKind::Builtin))
+    return value;
+
+  assert(!UnimplementedFeature::sanitizerBuiltin());
+  llvm_unreachable("NYI");
 }
 
 static mlir::Value buildTargetArchBuiltinExpr(CIRGenFunction *CGF,

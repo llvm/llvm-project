@@ -1,0 +1,75 @@
+// RUN: cir-opt %s | cir-opt | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @test() {
+    %s8 = cir.const(#cir.int<1> : !s8i) : !s8i
+    %s16 = cir.const(#cir.int<1> : !s16i) : !s16i
+    %s32 = cir.const(#cir.int<1> : !s32i) : !s32i
+    %s64 = cir.const(#cir.int<1> : !s64i) : !s64i
+    %u8 = cir.const(#cir.int<1> : !u8i) : !u8i
+    %u16 = cir.const(#cir.int<1> : !u16i) : !u16i
+    %u32 = cir.const(#cir.int<1> : !u32i) : !u32i
+    %u64 = cir.const(#cir.int<1> : !u64i) : !u64i
+
+    %2 = cir.bit.clrsb(%s32 : !s32i) : !s32i
+    %3 = cir.bit.clrsb(%s64 : !s64i) : !s32i
+
+    %4 = cir.bit.clz(%u16 : !u16i) : !s32i
+    %5 = cir.bit.clz(%u32 : !u32i) : !s32i
+    %6 = cir.bit.clz(%u64 : !u64i) : !s32i
+
+    %7 = cir.bit.ctz(%u16 : !u16i) : !s32i
+    %8 = cir.bit.ctz(%u32 : !u32i) : !s32i
+    %9 = cir.bit.ctz(%u64 : !u64i) : !s32i
+
+    %10 = cir.bit.ffs(%s32 : !s32i) : !s32i
+    %11 = cir.bit.ffs(%s64 : !s64i) : !s32i
+
+    %12 = cir.bit.parity(%u32 : !u32i) : !s32i
+    %13 = cir.bit.parity(%u64 : !u64i) : !s32i
+
+    %14 = cir.bit.popcount(%u16 : !u16i) : !s32i
+    %15 = cir.bit.popcount(%u32 : !u32i) : !s32i
+    %16 = cir.bit.popcount(%u64 : !u64i) : !s32i
+
+    cir.return
+  }
+}
+
+//      CHECK: module {
+// CHECK-NEXT:   cir.func @test() {
+// CHECK-NEXT:     %0 = cir.const(#cir.int<1> : !s8i) : !s8i
+// CHECK-NEXT:     %1 = cir.const(#cir.int<1> : !s16i) : !s16i
+// CHECK-NEXT:     %2 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:     %3 = cir.const(#cir.int<1> : !s64i) : !s64i
+// CHECK-NEXT:     %4 = cir.const(#cir.int<1> : !u8i) : !u8i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u16i) : !u16i
+// CHECK-NEXT:     %6 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK-NEXT:     %7 = cir.const(#cir.int<1> : !u64i) : !u64i
+// CHECK-NEXT:     %8 = cir.bit.clrsb(%2 : !s32i) : !s32i
+// CHECK-NEXT:     %9 = cir.bit.clrsb(%3 : !s64i) : !s32i
+// CHECK-NEXT:     %10 = cir.bit.clz(%5 : !u16i) : !s32i
+// CHECK-NEXT:     %11 = cir.bit.clz(%6 : !u32i) : !s32i
+// CHECK-NEXT:     %12 = cir.bit.clz(%7 : !u64i) : !s32i
+// CHECK-NEXT:     %13 = cir.bit.ctz(%5 : !u16i) : !s32i
+// CHECK-NEXT:     %14 = cir.bit.ctz(%6 : !u32i) : !s32i
+// CHECK-NEXT:     %15 = cir.bit.ctz(%7 : !u64i) : !s32i
+// CHECK-NEXT:     %16 = cir.bit.ffs(%2 : !s32i) : !s32i
+// CHECK-NEXT:     %17 = cir.bit.ffs(%3 : !s64i) : !s32i
+// CHECK-NEXT:     %18 = cir.bit.parity(%6 : !u32i) : !s32i
+// CHECK-NEXT:     %19 = cir.bit.parity(%7 : !u64i) : !s32i
+// CHECK-NEXT:     %20 = cir.bit.popcount(%5 : !u16i) : !s32i
+// CHECK-NEXT:     %21 = cir.bit.popcount(%6 : !u32i) : !s32i
+// CHECK-NEXT:     %22 = cir.bit.popcount(%7 : !u64i) : !s32i
+// CHECK-NEXT:     cir.return
+// CHECK-NEXT:   }
+// CHECK-NEXT: }

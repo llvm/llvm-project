@@ -97,6 +97,36 @@ def SInt16 : SInt<16>;
 def SInt32 : SInt<32>;
 def SInt64 : SInt<64>;
 
+// A type constraint that allows unsigned integer type whose width is among the
+// specified list of possible widths.
+class UIntOfWidths<list<int> widths>
+  : Type<And<[
+            CPred<"$_self.isa<::mlir::cir::IntType>()">,
+            CPred<"$_self.cast<::mlir::cir::IntType>().isUnsigned()">,
+            Or<!foreach(
+              w, widths,
+              CPred<"$_self.cast<::mlir::cir::IntType>().getWidth() == " # w>
+            )>
+        ]>,
+        !interleave(!foreach(w, widths, w # "-bit"), " or ") # " uint",
+        "::mlir::cir::IntType"
+    > {}
+
+// A type constraint that allows unsigned integer type whose width is among the
+// specified list of possible widths.
+class SIntOfWidths<list<int> widths>
+  : Type<And<[
+            CPred<"$_self.isa<::mlir::cir::IntType>()">,
+            CPred<"$_self.cast<::mlir::cir::IntType>().isSigned()">,
+            Or<!foreach(
+              w, widths,
+              CPred<"$_self.cast<::mlir::cir::IntType>().getWidth() == " # w>
+            )>
+        ]>,
+        !interleave(!foreach(w, widths, w # "-bit"), " or ") # " sint",
+        "::mlir::cir::IntType"
+    > {}
+
 //===----------------------------------------------------------------------===//
 // FloatType
 //===----------------------------------------------------------------------===//

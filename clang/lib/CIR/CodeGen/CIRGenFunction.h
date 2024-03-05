@@ -1509,6 +1509,17 @@ public:
   LValue buildCheckedLValue(const Expr *E, TypeCheckKind TCK);
   LValue buildMemberExpr(const MemberExpr *E);
 
+  /// Specifies which type of sanitizer check to apply when handling a
+  /// particular builtin.
+  enum BuiltinCheckKind {
+    BCK_CTZPassedZero,
+    BCK_CLZPassedZero,
+  };
+
+  /// Emits an argument for a call to a builtin. If the builtin sanitizer is
+  /// enabled, a runtime check specified by \p Kind is also emitted.
+  mlir::Value buildCheckedArgForBuiltin(const Expr *E, BuiltinCheckKind Kind);
+
   /// returns true if aggregate type has a volatile member.
   /// TODO(cir): this could be a common AST helper between LLVM / CIR.
   bool hasVolatileMember(QualType T) {
