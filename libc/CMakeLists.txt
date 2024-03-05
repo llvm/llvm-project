@@ -39,7 +39,7 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
 # Defining a global namespace to enclose all libc functions.
-set(default_namespace "__llvm_libc_")
+set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
   set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}")
 endif()
