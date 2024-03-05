@@ -620,7 +620,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
     EltTyConst = UndefValue::get(AI->getAllocatedType());
   else if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
     EltTyConst = UndefValue::get(GEP->getResultElementType());
-  else if (I->getType()->isPointerTy())
+  else
     EltTyConst = UndefValue::get(IntegerType::getInt8Ty(I->getContext()));
 
   buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()}, EltTyConst, I,

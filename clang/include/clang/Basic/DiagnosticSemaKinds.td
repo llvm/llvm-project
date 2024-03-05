@@ -9901,7 +9901,7 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 returned">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,

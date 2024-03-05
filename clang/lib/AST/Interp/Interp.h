@@ -746,6 +746,17 @@ inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
                                          CompareFn Fn) {
   const auto &RHS = S.Stk.pop<FunctionPointer>();
   const auto &LHS = S.Stk.pop<FunctionPointer>();
+
+  // We cannot compare against weak declarations at compile time.
+  for (const auto &FP : {LHS, RHS}) {
+    if (!FP.isZero() && FP.getFunction()->getDecl()->isWeak()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
+          << FP.toDiagnosticString(S.getCtx());
+      return false;
+    }
+  }
+
   S.Stk.push<Boolean>(Boolean::from(Fn(LHS.compare(RHS))));
   return true;
 }
