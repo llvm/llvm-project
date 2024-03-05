@@ -509,6 +509,13 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
+const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
+  const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
+  if (EC.isScalable())
+    Res = getMulExpr(Res, getVScale(Ty));
+  return Res;
+}
+
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
     : SCEV(ID, SCEVTy, computeExpressionSize(op)), Op(op), Ty(ty) {}

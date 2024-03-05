@@ -247,16 +247,19 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
-  /// Returns the Level-shape.
+  /// Returns the level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
   }
 
-  /// Returns the Level-shape.
+  /// Returns the batched level-rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched level-shape.
   SmallVector<Size> getBatchLvlShape() const {
-    auto lvlShape = getEncoding().tranlateShape(getDimShape(),
-                                                CrdTransDirectionKind::dim2lvl);
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
     lvlShape.truncate(getEncoding().getBatchLvlRank());
     return lvlShape;
   }

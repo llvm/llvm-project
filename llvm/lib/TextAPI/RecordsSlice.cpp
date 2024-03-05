@@ -225,6 +225,7 @@ bool ObjCInterfaceRecord::addObjCCategory(ObjCCategoryRecord *Record) {
 ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
                                                   StringRef Category) {
   Category = copyString(Category);
+  ClassToExtend = copyString(ClassToExtend);
 
   // Add owning record first into record slice.
   auto Result =

@@ -266,9 +266,10 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     CallBase *NewCS = nullptr;
     if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
       NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                                 Args, OpBundles, "", &CB);
+                                 Args, OpBundles, "", CB.getIterator());
     } else {
-      auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", &CB);
+      auto *NewCall =
+          CallInst::Create(NF, Args, OpBundles, "", CB.getIterator());
       NewCall->setTailCallKind(cast<CallInst>(&CB)->getTailCallKind());
       NewCS = NewCall;
     }

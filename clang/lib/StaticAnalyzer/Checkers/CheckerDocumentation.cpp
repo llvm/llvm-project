@@ -137,10 +137,7 @@ public:
   /// (2) and (3). Post-call for the allocator is called after step (1).
   /// Pre-statement for the new-expression is called on step (4) when the value
   /// of the expression is evaluated.
-  /// \param NE     The C++ new-expression that triggered the allocation.
-  /// \param Target The allocated region, casted to the class type.
-  void checkNewAllocator(const CXXNewExpr *NE, SVal Target,
-                         CheckerContext &) const {}
+  void checkNewAllocator(const CXXAllocatorCall &, CheckerContext &) const {}
 
   /// Called on a load from and a store to a location.
   ///
@@ -328,6 +325,14 @@ public:
 
 void CheckerDocumentation::checkPostStmt(const DeclStmt *DS,
                                          CheckerContext &C) const {
+}
+
+void registerCheckerDocumentationChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<CheckerDocumentation>();
+}
+
+bool shouldRegisterCheckerDocumentationChecker(const CheckerManager &) {
+  return false;
 }
 
 } // end namespace ento

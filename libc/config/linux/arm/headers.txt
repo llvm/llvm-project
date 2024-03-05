@@ -3,6 +3,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.errno
     libc.include.float
+    libc.include.stdint
     libc.include.inttypes
     libc.include.math
     libc.include.stdckdint

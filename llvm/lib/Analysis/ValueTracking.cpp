@@ -5536,10 +5536,10 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 // indices from Idxs that should be left out when inserting into the resulting
 // struct. To is the result struct built so far, new insertvalue instructions
 // build on that.
-static Value *BuildSubAggregate(Value *From, Value* To, Type *IndexedType,
+static Value *BuildSubAggregate(Value *From, Value *To, Type *IndexedType,
                                 SmallVectorImpl<unsigned> &Idxs,
                                 unsigned IdxSkip,
-                                Instruction *InsertBefore) {
+                                BasicBlock::iterator InsertBefore) {
   StructType *STy = dyn_cast<StructType>(IndexedType);
   if (STy) {
     // Save the original To argument so we can modify it
@@ -5596,8 +5596,7 @@ static Value *BuildSubAggregate(Value *From, Value* To, Type *IndexedType,
 //
 // All inserted insertvalue instructions are inserted before InsertBefore
 static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
-                                Instruction *InsertBefore) {
-  assert(InsertBefore && "Must have someplace to insert!");
+                                BasicBlock::iterator InsertBefore) {
   Type *IndexedType = ExtractValueInst::getIndexedType(From->getType(),
                                                              idx_range);
   Value *To = PoisonValue::get(IndexedType);
@@ -5613,8 +5612,9 @@ static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
 ///
 /// If InsertBefore is not null, this function will duplicate (modified)
 /// insertvalues when a part of a nested struct is extracted.
-Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
-                               Instruction *InsertBefore) {
+Value *
+llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
+                        std::optional<BasicBlock::iterator> InsertBefore) {
   // Nothing to index? Just return V then (this is useful at the end of our
   // recursion).
   if (idx_range.empty())
@@ -5653,7 +5653,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
         // which allows the unused 0,0 element from the nested struct to be
         // removed.
         return BuildSubAggregate(V, ArrayRef(idx_range.begin(), req_idx),
-                                 InsertBefore);
+                                 *InsertBefore);
       }
 
       // This insert value inserts something else than what we are looking for.
@@ -5661,7 +5661,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
       // looking for, then.
       if (*req_idx != *i)
         return FindInsertedValue(I->getAggregateOperand(), idx_range,
-                                 InsertBefore);
+                                 *InsertBefore);
     }
     // If we end up here, the indices of the insertvalue match with those
     // requested (though possibly only partially). Now we recursively look at
@@ -9098,4 +9098,109 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   }
 
   return CR;
+}
+
+static void
+addValueAffectedByCondition(Value *V,
+                            function_ref<void(Value *)> InsertAffected) {
+  assert(V != nullptr);
+  if (isa<Argument>(V) || isa<GlobalValue>(V)) {
+    InsertAffected(V);
+  } else if (auto *I = dyn_cast<Instruction>(V)) {
+    InsertAffected(V);
+
+    // Peek through unary operators to find the source of the condition.
+    Value *Op;
+    if (match(I, m_PtrToInt(m_Value(Op)))) {
+      if (isa<Instruction>(Op) || isa<Argument>(Op))
+        InsertAffected(Op);
+    }
+  }
+}
+
+void llvm::findValuesAffectedByCondition(
+    Value *Cond, bool IsAssume, function_ref<void(Value *)> InsertAffected) {
+  auto AddAffected = [&InsertAffected](Value *V) {
+    addValueAffectedByCondition(V, InsertAffected);
+  };
+
+  auto AddCmpOperands = [&AddAffected, IsAssume](Value *LHS, Value *RHS) {
+    if (IsAssume) {
+      AddAffected(LHS);
+      AddAffected(RHS);
+    } else if (match(RHS, m_Constant()))
+      AddAffected(LHS);
+  };
+
+  SmallVector<Value *, 8> Worklist;
+  SmallPtrSet<Value *, 8> Visited;
+  Worklist.push_back(Cond);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    CmpInst::Predicate Pred;
+    Value *A, *B, *X;
+
+    if (IsAssume) {
+      AddAffected(V);
+      if (match(V, m_Not(m_Value(X))))
+        AddAffected(X);
+    }
+
+    if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
+      // assume(A && B) is split to -> assume(A); assume(B);
+      // assume(!(A || B)) is split to -> assume(!A); assume(!B);
+      // Finally, assume(A || B) / assume(!(A && B)) generally don't provide
+      // enough information to be worth handling (intersection of information as
+      // opposed to union).
+      if (!IsAssume) {
+        Worklist.push_back(A);
+        Worklist.push_back(B);
+      }
+    } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      AddCmpOperands(A, B);
+
+      if (ICmpInst::isEquality(Pred)) {
+        if (match(B, m_ConstantInt())) {
+          // (X & C) or (X | C) or (X ^ C).
+          // (X << C) or (X >>_s C) or (X >>_u C).
+          if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
+              match(A, m_Shift(m_Value(X), m_ConstantInt())))
+            AddAffected(X);
+        }
+      } else {
+        // Handle (A + C1) u< C2, which is the canonical form of
+        // A > C3 && A < C4.
+        if (match(A, m_Add(m_Value(X), m_ConstantInt())) &&
+            match(B, m_ConstantInt()))
+          AddAffected(X);
+
+        // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported
+        // by computeKnownFPClass().
+        if (match(A, m_ElementWiseBitCast(m_Value(X)))) {
+          if (Pred == ICmpInst::ICMP_SLT && match(B, m_Zero()))
+            InsertAffected(X);
+          else if (Pred == ICmpInst::ICMP_SGT && match(B, m_AllOnes()))
+            InsertAffected(X);
+        }
+      }
+    } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
+      AddCmpOperands(A, B);
+
+      // fcmp fneg(x), y
+      // fcmp fabs(x), y
+      // fcmp fneg(fabs(x)), y
+      if (match(A, m_FNeg(m_Value(A))))
+        AddAffected(A);
+      if (match(A, m_FAbs(m_Value(A))))
+        AddAffected(A);
+
+    } else if (match(V, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
+                                                           m_Value()))) {
+      // Handle patterns that computeKnownFPClass() support.
+      AddAffected(A);
+    }
+  }
 }

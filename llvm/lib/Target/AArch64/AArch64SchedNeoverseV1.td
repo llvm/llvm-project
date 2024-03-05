@@ -1714,17 +1714,17 @@ def : InstRW<[V1Write_7c_1L01_1S], (instrs LDNT1H_ZRR)>;
 def : InstRW<[V1Write_6c_1L01_1S], (instregex "^LDNT1[BWD]_ZRR$")>;
 
 // Contiguous first faulting load, scalar + scalar
-def : InstRW<[V1Write_7c_1L01_1S], (instregex "^LDFF1H_REAL$",
-                                              "^LDFF1S?H_[SD]_REAL$")>;
-def : InstRW<[V1Write_6c_1L01_1S], (instregex "^LDFF1[BWD]_REAL$",
-                                              "^LDFF1S?B_[HSD]_REAL$",
-                                              "^LDFF1S?W_D_REAL$")>;
+def : InstRW<[V1Write_7c_1L01_1S], (instregex "^LDFF1H$",
+                                              "^LDFF1S?H_[SD]$")>;
+def : InstRW<[V1Write_6c_1L01_1S], (instregex "^LDFF1[BWD]$",
+                                              "^LDFF1S?B_[HSD]$",
+                                              "^LDFF1S?W_D$")>;
 
 // Contiguous non faulting load, scalar + imm
-def : InstRW<[V1Write_6c_1L01], (instregex "^LDNF1[BHWD]_IMM_REAL$",
-                                           "^LDNF1S?B_[HSD]_IMM_REAL$",
-                                           "^LDNF1S?H_[SD]_IMM_REAL$",
-                                           "^LDNF1S?W_D_IMM_REAL$")>;
+def : InstRW<[V1Write_6c_1L01], (instregex "^LDNF1[BHWD]_IMM$",
+                                           "^LDNF1S?B_[HSD]_IMM$",
+                                           "^LDNF1S?H_[SD]_IMM$",
+                                           "^LDNF1S?W_D_IMM$")>;
 
 // Contiguous Load two structures to two vectors, scalar + imm
 def : InstRW<[V1Write_8c_2L01_2V01], (instregex "^LD2[BHWD]_IMM$")>;
@@ -1746,25 +1746,25 @@ def : InstRW<[V1Write_12c_4L01_4V01], (instregex "^LD4[BHWD]_IMM$")>;
 def : InstRW<[V1Write_13c_4L01_2S_4V01], (instregex "^LD4[BHWD]$")>;
 
 // Gather load, vector + imm, 32-bit element size
-def : InstRW<[V1Write_11c_1L_1V], (instregex "^GLD(FF)?1S?[BH]_S_IMM_REAL$",
-                                             "^GLD(FF)?1W_IMM_REAL$")>;
+def : InstRW<[V1Write_11c_1L_1V], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
+                                             "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
 def : InstRW<[V1Write_9c_2L_2V],
-             (instregex "^GLD(FF)?1S?[BHW]_D_IMM_REAL$",
-                        "^GLD(FF)?1S?[BHW]_D_([SU]XTW_)?(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_IMM_REAL$",
-                        "^GLD(FF)?1D_([SU]XTW_)?(SCALED_)?REAL$")>;
+             (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+                        "^GLD(FF)?1S?[BHW]_D(_[SU]XTW)?(_SCALED)?$",
+                        "^GLD(FF)?1D_IMM$",
+                        "^GLD(FF)?1D(_[SU]XTW)?(_SCALED)?$")>;
 
 // Gather load, 32-bit scaled offset
 def : InstRW<[V1Write_11c_2L_2V],
-             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED_REAL$",
-                        "^GLD(FF)?1W_[SU]XTW_SCALED_REAL")>;
+             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED$",
+                        "^GLD(FF)?1W_[SU]XTW_SCALED")>;
 
 // Gather load, 32-bit unpacked unscaled offset
 def : InstRW<[V1Write_9c_1L_1V],
-             (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW_REAL$",
-                        "^GLD(FF)?1W_[SU]XTW_REAL$")>;
+             (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
+                        "^GLD(FF)?1W_[SU]XTW$")>;
 
 // Prefetch
 // NOTE: This is not specified in the SOG.
@@ -1848,12 +1848,12 @@ def : InstRW<[V1Write_6c_1L01_1V], (instregex "^SST1[BHW]_D_IMM$",
 // Read first fault register, unpredicated
 // Set first fault register
 // Write to first fault register
-def : InstRW<[V1Write_2c_1M0], (instrs RDFFR_P_REAL,
+def : InstRW<[V1Write_2c_1M0], (instrs RDFFR_P,
                                        SETFFR,
                                        WRFFR)>;
 
 // Read first fault register, predicated
-def : InstRW<[V1Write_3c_2M0], (instrs RDFFR_PPz_REAL)>;
+def : InstRW<[V1Write_3c_2M0], (instrs RDFFR_PPz)>;
 
 // Read first fault register and set flags
 def : InstRW<[V1Write_4c_1M], (instrs RDFFRS_PPz)>;

@@ -15,11 +15,14 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -176,6 +179,18 @@ static cl::opt<bool> ClWithTls(
     cl::desc("Access dynamic shadow through an thread-local pointer on "
              "platforms that support this"),
     cl::Hidden, cl::init(true));
+
+static cl::opt<bool>
+    CSkipHotCode("hwasan-skip-hot-code",
+                 cl::desc("Do not instument hot functions based on FDO."),
+                 cl::Hidden, cl::init(false));
+
+static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
+                                        cl::init(0));
+
+STATISTIC(NumTotalFuncs, "Number of total funcs HWASAN");
+STATISTIC(NumInstrumentedFuncs, "Number of HWASAN instrumented funcs");
+STATISTIC(NumNoProfileSummaryFuncs, "Number of HWASAN funcs without PS");
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -1506,6 +1521,27 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return;
+
+  if (F.empty())
+    return;
+
+  NumTotalFuncs++;
+  if (CSkipHotCode) {
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (PSI && PSI->hasProfileSummary()) {
+      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+      if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
+              ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
+                                                           &F, BFI)
+              : PSI->isFunctionHotInCallGraph(&F, BFI))
+        return;
+    } else {
+      ++NumNoProfileSummaryFuncs;
+    }
+  }
+  NumInstrumentedFuncs++;
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 

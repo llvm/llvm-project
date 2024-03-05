@@ -13,6 +13,7 @@ class BreakpointOptionsTestCase(TestBase):
         """Test breakpoint command for different options."""
         self.build()
         self.breakpoint_options_test()
+        self.breakpoint_options_language_test()
 
     def setUp(self):
         # Call super's setUp().

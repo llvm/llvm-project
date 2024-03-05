@@ -175,7 +175,7 @@ Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
 }
 
 Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
-                                  Value s) {
+                                  ValueRange s) {
   Value load = builder.create<memref::LoadOp>(loc, mem, s);
   if (!isa<IndexType>(load.getType())) {
     if (load.getType().getIntOrFloatBitWidth() < 64)

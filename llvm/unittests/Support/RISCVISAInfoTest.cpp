@@ -830,6 +830,7 @@ R"(All available -march extensions for RISC-V
     smepmp              1.0
     ssaia               1.0
     ssccptr             1.0
+    sscofpmf            1.0
     sscounterenw        1.0
     ssstateen           1.0
     ssstrict            1.0

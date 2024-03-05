@@ -311,12 +311,12 @@ struct VPTransformState {
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
     auto Iter = Data.PerPartScalars.insert({Def, {}});
     auto &PerPartVec = Iter.first->second;
-    while (PerPartVec.size() <= Instance.Part)
-      PerPartVec.emplace_back();
+    if (PerPartVec.size() <= Instance.Part)
+      PerPartVec.resize(Instance.Part + 1);
     auto &Scalars = PerPartVec[Instance.Part];
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    while (Scalars.size() <= CacheIdx)
-      Scalars.push_back(nullptr);
+    if (Scalars.size() <= CacheIdx)
+      Scalars.resize(CacheIdx + 1);
     assert(!Scalars[CacheIdx] && "should overwrite existing value");
     Scalars[CacheIdx] = V;
   }

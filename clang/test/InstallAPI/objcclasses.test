@@ -20,19 +20,68 @@
 @end
 
 __attribute__((visibility("hidden")))
-@interface Hidden 
+@interface Hidden
+@end
+
+__attribute__((visibility("hidden")))
+@interface HiddenWithIvars {
+@public 
+char _ivar;
+}
 @end
 
 __attribute__((objc_exception))
 @interface Exception 
 @end
 
+@interface PublicClass : Visible  {
+@package 
+  int _internal;
+@protected
+  int _external;
+@private
+  int private;
+@public
+char _public;
+}
+@end
+
+
+//--- Foo.framework/PrivateHeaders/Foo_Private.h
+#import <Foo/Foo.h>
+
+@interface ClassWithIvars : Visible  {
+  char _ivar1;
+  char _ivar2;
+@private
+  int _privateIVar;
+@protected
+  int _externalIVar;
+@package 
+  int _internalIVar;
+}
+@end
+
+@interface Exception () {
+@public 
+  char _ivarFromExtension;
+@private 
+  int _privateIvarFromExtension;
+}
+@end
+
+
 //--- inputs.json.in
 {
   "headers": [ {
     "path" : "DSTROOT/Foo.framework/Headers/Foo.h",
     "type" : "public"
-  }],
+  }, 
+  {
+    "path" : "DSTROOT/Foo.framework/PrivateHeaders/Foo_Private.h",
+    "type" : "private"
+  }
+  ],
   "version": "3"
 }
 
@@ -53,11 +102,21 @@ __attribute__((objc_exception))
       {
         "data": {
           "objc_class": [
+            "PublicClass",
             "Exception",
-            "Visible"
+            "Visible",
+            "ClassWithIvars"
           ],
           "objc_eh_type": [
             "Exception"
+          ],
+          "objc_ivar": [
+            "Exception._ivarFromExtension",
+            "ClassWithIvars._ivar2",
+            "PublicClass._external",
+            "ClassWithIvars._ivar1",
+            "ClassWithIvars._externalIVar",
+            "PublicClass._public"
           ]
         }
       }

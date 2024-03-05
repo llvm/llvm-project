@@ -1062,6 +1062,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::AmbiguousSymbol);
 
   const auto &RenameDecl = **DeclsUnderCursor.begin();
+  static constexpr trace::Metric RenameTriggerCounter(
+      "rename_trigger_count", trace::Metric::Counter, "decl_kind");
+  RenameTriggerCounter.record(1, RenameDecl.getDeclKindName());
+
   std::string Placeholder = getName(RenameDecl);
   auto Invalid = checkName(RenameDecl, RInputs.NewName, Placeholder);
   if (Invalid)

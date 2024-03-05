@@ -24,7 +24,7 @@ def CMath_ComplexType : CMath_Type<"ComplexType", "complex"> {
 }
 
 // CHECK:      irdl.operation @identity {
-// CHECK-NEXT:   %0 = irdl.c_pred "(::llvm::isa<cmath::ComplexTypeType>($_self))" 
+// CHECK-NEXT:   %0 = irdl.base "!cmath.complex"
 // CHECK-NEXT:   irdl.operands()
 // CHECK-NEXT:   irdl.results(%0)
 // CHECK-NEXT: }
@@ -33,9 +33,9 @@ def CMath_IdentityOp : CMath_Op<"identity"> {
 }
 
 // CHECK:      irdl.operation @mul {
-// CHECK-NEXT:   %0 = irdl.c_pred "(::llvm::isa<cmath::ComplexTypeType>($_self))" 
-// CHECK-NEXT:   %1 = irdl.c_pred "(::llvm::isa<cmath::ComplexTypeType>($_self))" 
-// CHECK-NEXT:   %2 = irdl.c_pred "(::llvm::isa<cmath::ComplexTypeType>($_self))" 
+// CHECK-NEXT:   %0 = irdl.base "!cmath.complex"
+// CHECK-NEXT:   %1 = irdl.base "!cmath.complex"
+// CHECK-NEXT:   %2 = irdl.base "!cmath.complex"
 // CHECK-NEXT:   irdl.operands(%0, %1)
 // CHECK-NEXT:   irdl.results(%2)
 // CHECK-NEXT: }
@@ -45,8 +45,8 @@ def CMath_MulOp : CMath_Op<"mul"> {
 }
 
 // CHECK:      irdl.operation @norm {
-// CHECK-NEXT:   %0 = irdl.c_pred "(true)" 
-// CHECK-NEXT:   %1 = irdl.c_pred "(::llvm::isa<cmath::ComplexTypeType>($_self))" 
+// CHECK-NEXT:   %0 = irdl.any
+// CHECK-NEXT:   %1 = irdl.base "!cmath.complex"
 // CHECK-NEXT:   irdl.operands(%0)
 // CHECK-NEXT:   irdl.results(%1)
 // CHECK-NEXT: }

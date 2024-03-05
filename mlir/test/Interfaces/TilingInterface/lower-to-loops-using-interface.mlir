@@ -33,6 +33,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
 //       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
 //       CHECK:         memref.store %[[ADDF]], %[[ARG2]][%[[IV0]], %[[IV1]]]
+//   CHECK-NOT:   linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
 
 // -----
 

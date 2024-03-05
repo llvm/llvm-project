@@ -998,6 +998,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_stdint_macros",
+    hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_stdfix_macros",
     hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
     deps = [":llvm_libc_macros_float_macros"],

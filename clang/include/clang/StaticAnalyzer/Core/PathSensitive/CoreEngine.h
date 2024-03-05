@@ -149,12 +149,6 @@ public:
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
                        ProgramStateRef InitState);
 
-  /// Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkListWithInitialState(const LocationContext *L,
-                                       unsigned Steps,
-                                       ProgramStateRef InitState,
-                                       ExplodedNodeSet &Dst);
-
   /// Dispatch the work list item based on the given location information.
   /// Use Pred parameter as the predecessor state.
   void dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,

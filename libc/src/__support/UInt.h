@@ -898,6 +898,8 @@ public:
     return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
   }
   LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>(0); }
+  // Meant to match std::numeric_limits interface.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
@@ -909,6 +911,8 @@ public:
   LIBC_INLINE static constexpr Int<128> min() {
     return Int<128>({0, 0x8000'0000'0000'0000});
   }
+  // Meant to match std::numeric_limits interface.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 

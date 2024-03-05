@@ -1,6 +1,7 @@
 include "config/public_api.td"
 
 include "spec/stdc.td"
+include "spec/stdc_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{

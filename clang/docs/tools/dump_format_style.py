@@ -129,6 +129,7 @@ class Option(object):
             s += indent(
                 "\n\nNested configuration flags:\n\n%s\n" % self.nested_struct, 2
             )
+            s = s.replace("<option-name>", self.name)
         return s
 
 

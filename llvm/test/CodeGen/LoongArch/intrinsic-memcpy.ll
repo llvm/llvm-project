@@ -13,17 +13,17 @@ define void @box(ptr noalias nocapture noundef writeonly sret(%Box) align 16 der
 ; CHECK-NEXT:    addi.d $a2, $sp, 0
 ; CHECK-NEXT:    add.d $a3, $a2, $a1
 ; CHECK-NEXT:    ldx.d $a1, $a1, $a2
+; CHECK-NEXT:    ld.d $a2, $a3, 40
 ; CHECK-NEXT:    st.d $a1, $a0, 0
-; CHECK-NEXT:    ld.d $a1, $a3, 40
-; CHECK-NEXT:    st.d $a1, $a0, 40
+; CHECK-NEXT:    st.d $a2, $a0, 40
 ; CHECK-NEXT:    ld.d $a1, $a3, 32
+; CHECK-NEXT:    ld.d $a2, $a3, 24
+; CHECK-NEXT:    ld.d $a4, $a3, 16
+; CHECK-NEXT:    ld.d $a3, $a3, 8
 ; CHECK-NEXT:    st.d $a1, $a0, 32
-; CHECK-NEXT:    ld.d $a1, $a3, 24
-; CHECK-NEXT:    st.d $a1, $a0, 24
-; CHECK-NEXT:    ld.d $a1, $a3, 16
-; CHECK-NEXT:    st.d $a1, $a0, 16
-; CHECK-NEXT:    ld.d $a1, $a3, 8
-; CHECK-NEXT:    st.d $a1, $a0, 8
+; CHECK-NEXT:    st.d $a2, $a0, 24
+; CHECK-NEXT:    st.d $a4, $a0, 16
+; CHECK-NEXT:    st.d $a3, $a0, 8
 ; CHECK-NEXT:    addi.d $sp, $sp, 96
 ; CHECK-NEXT:    ret
   %1 = alloca [2 x %Box], align 16
