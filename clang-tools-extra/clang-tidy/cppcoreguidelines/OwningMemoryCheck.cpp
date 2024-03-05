@@ -157,27 +157,28 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                              .bind("bad_owner_creation_parameter"))),
                      this);
 
+  auto IsNotInSubLambda = stmt(
+      hasAncestor(
+          stmt(anyOf(equalsBoundNode("body"), lambdaExpr())).bind("scope")),
+      hasAncestor(stmt(equalsBoundNode("scope"), equalsBoundNode("body"))));
+
   // Matching on functions, that return an owner/resource, but don't declare
   // their return type as owner.
   Finder->addMatcher(
       functionDecl(
           decl().bind("function_decl"),
-          hasBody(stmt(
-              stmt().bind("body"),
-              hasDescendant(
-                  returnStmt(hasReturnValue(ConsideredOwner),
-                             // Ignore sub-lambda expressions
-                             hasAncestor(stmt(anyOf(equalsBoundNode("body"),
-                                                    lambdaExpr()))
-                                             .bind("scope")),
-                             hasAncestor(stmt(equalsBoundNode("scope"),
-                                              equalsBoundNode("body"))),
-                             // Ignore sub-functions
-                             hasAncestor(functionDecl().bind("context")),
-                             hasAncestor(functionDecl(
-                                 equalsBoundNode("context"),
-                                 equalsBoundNode("function_decl"))))
-                      .bind("bad_owner_return")))),
+          hasBody(
+              stmt(stmt().bind("body"),
+                   hasDescendant(
+                       returnStmt(hasReturnValue(ConsideredOwner),
+                                  // Ignore sub-lambda expressions
+                                  IsNotInSubLambda,
+                                  // Ignore sub-functions
+                                  hasAncestor(functionDecl().bind("context")),
+                                  hasAncestor(functionDecl(
+                                      equalsBoundNode("context"),
+                                      equalsBoundNode("function_decl"))))
+                           .bind("bad_owner_return")))),
           returns(qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))),
       this);
 
@@ -186,22 +187,18 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       lambdaExpr(
           hasAncestor(decl(ScopeDeclaration).bind("scope-decl")),
-          hasLambdaBody(stmt(
-              stmt().bind("body"),
-              hasDescendant(
-                  returnStmt(
-                      hasReturnValue(ConsideredOwner),
-                      // Ignore sub-lambdas
-                      hasAncestor(
-                          stmt(anyOf(equalsBoundNode("body"), lambdaExpr()))
-                              .bind("scope")),
-                      hasAncestor(stmt(equalsBoundNode("scope"),
-                                       equalsBoundNode("body"))),
-                      // Ignore sub-functions
-                      hasAncestor(decl(ScopeDeclaration).bind("context")),
-                      hasAncestor(decl(equalsBoundNode("context"),
-                                       equalsBoundNode("scope-decl"))))
-                      .bind("bad_owner_return")))),
+          hasLambdaBody(
+              stmt(stmt().bind("body"),
+                   hasDescendant(
+                       returnStmt(
+                           hasReturnValue(ConsideredOwner),
+                           // Ignore sub-lambdas
+                           IsNotInSubLambda,
+                           // Ignore sub-functions
+                           hasAncestor(decl(ScopeDeclaration).bind("context")),
+                           hasAncestor(decl(equalsBoundNode("context"),
+                                            equalsBoundNode("scope-decl"))))
+                           .bind("bad_owner_return")))),
           hasCallOperator(returns(
               qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))))
           .bind("lambda"),
