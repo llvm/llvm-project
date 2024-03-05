@@ -33,20 +33,14 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
     }
     // Convert the external representation of the values array.
     const SparseTensorType stt(cast<RankedTensorType>(type));
-    auto shape = stt.getBatchLvlShape();
-    shape.push_back(ShapedType::kDynamic);
-    auto vtp = RankedTensorType::get(shape, stt.getElementType());
-    convTypes.push_back(vtp);
-    if (extraTypes)
-      extraTypes->push_back(vtp);
-
     // Convert the external representation of the position/coordinate array.
     foreachFieldAndTypeInSparseTensor(stt, [&convTypes, extraTypes](
                                                Type t, FieldIndex,
                                                SparseTensorFieldKind kind,
                                                Level, LevelType) {
       if (kind == SparseTensorFieldKind::CrdMemRef ||
-          kind == SparseTensorFieldKind::PosMemRef) {
+          kind == SparseTensorFieldKind::PosMemRef ||
+          kind == SparseTensorFieldKind::ValMemRef) {
         ShapedType st = t.cast<ShapedType>();
         auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
         convTypes.push_back(rtp);
@@ -73,26 +67,19 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
     // Convert the external representation of the values array.
     auto rtp = cast<RankedTensorType>(type);
     const SparseTensorType stt(rtp);
-    auto shape = stt.getBatchLvlShape();
-    shape.push_back(ShapedType::kDynamic);
     SmallVector<Value> inputs;
     SmallVector<Type> retTypes;
     SmallVector<Type> cntTypes;
-    // Collect the external representation of the values array for
-    // input or the outgoing sparse tensor for output.
-    inputs.push_back(fromVals[idx++]);
-    if (!isIn) {
-      inputs.push_back(extraVals[extra++]);
-      retTypes.push_back(RankedTensorType::get(shape, stt.getElementType()));
-      cntTypes.push_back(builder.getIndexType()); // nnz
-    }
+    if (!isIn)
+      inputs.push_back(fromVals[idx++]); // The sparse tensor to disassemble
 
     // Collect the external representations of the pos/crd arrays.
     foreachFieldAndTypeInSparseTensor(stt, [&, isIn](Type t, FieldIndex,
                                                      SparseTensorFieldKind kind,
                                                      Level, LevelType) {
       if (kind == SparseTensorFieldKind::CrdMemRef ||
-          kind == SparseTensorFieldKind::PosMemRef) {
+          kind == SparseTensorFieldKind::PosMemRef ||
+          kind == SparseTensorFieldKind::ValMemRef) {
         if (isIn) {
           inputs.push_back(fromVals[idx++]);
         } else {
@@ -100,7 +87,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
           auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
           inputs.push_back(extraVals[extra++]);
           retTypes.push_back(rtp);
-          cntTypes.push_back(rtp.getElementType());
+          cntTypes.push_back(builder.getIndexType());
         }
       }
       return true;
