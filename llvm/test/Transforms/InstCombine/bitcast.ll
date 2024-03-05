@@ -689,7 +689,7 @@ define ptr @bitcast_from_single_element_pointer_vector_to_pointer(<1 x ptr> %ptr
 ; Sure that we calculate the correct shift.
 define <4 x i32> @bitcast_shl(i32 %arg) {
 ; CHECK-LABEL: @bitcast_shl(
-; CHECK-NEXT:    [[I5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[ARG:%.*]], i64 3
+; CHECK-NEXT:    [[I5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 65, i32 poison>, i32 [[ARG:%.*]], i64 3
 ; CHECK-NEXT:    ret <4 x i32> [[I5]]
 ;
   %i = zext i32 %arg to i64
