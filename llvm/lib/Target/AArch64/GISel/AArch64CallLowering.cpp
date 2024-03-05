@@ -1305,12 +1305,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // For an intrinsic call (e.g. memset), use GOT if "RtLibUseGOT" (-fno-plt)
     // is set.
     if (Info.Callee.isSymbol() && F.getParent()->getRtLibUseGOT()) {
-      auto Reg =
-          MRI.createGenericVirtualRegister(getLLTForType(*F.getType(), DL));
-      MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE)
-          .addDef(Reg)
-          .addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
-      Info.Callee = MachineOperand::CreateReg(Reg, false);
+      auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE);
+      DstOp(getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
+      MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
+      Info.Callee = MachineOperand::CreateReg(MIB.getReg(0), false);
     }
     Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
   }
