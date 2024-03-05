@@ -1,7 +1,7 @@
 //# RUN: rm -rf %t.dir/* && mkdir -p %t.dir
 //# RUN: echo '[{"directory": "%/t.dir", "command": "clang -x c -c %s", "file": "%s"}]' > %t.dir/compile_commands.json
 //# RUN: clangd --compile-commands-dir=%t.dir --check=%s 2>&1 | FileCheck %s
-
+//# UNSUPPORTED: system-windows
 typedef struct S {
   unsigned char id;
   union {
