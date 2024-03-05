@@ -10,6 +10,7 @@
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
+#include "llvm/ADT/Sequence.h"
 
 using namespace mlir;
 using namespace presburger;
@@ -97,6 +98,10 @@ QuasiPolynomial QuasiPolynomial::operator/(const Fraction x) const {
   return qp;
 }
 
+void QuasiPolynomial::operator+=(const QuasiPolynomial &x) {
+  *this = *this + x;
+}
+
 // Removes terms which evaluate to zero from the expression and
 // integrate affine functions which are constants into the
 // coefficients.
@@ -109,7 +114,7 @@ QuasiPolynomial QuasiPolynomial::simplify() {
 
   unsigned numParam = getNumInputs();
 
-  for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
+  for (int i : llvm::seq<int>(0, coefficients.size())) {
     // A term is zero if its coefficient is zero, or
     if (coefficients[i] == Fraction(0, 1))
       continue;
@@ -148,9 +153,9 @@ QuasiPolynomial QuasiPolynomial::collectTerms() {
   SmallVector<Fraction> newCoeffs({});
   std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
 
-  for (unsigned i = 0, e = affine.size(); i < e; i++) {
+  for (int i : llvm::seq<int>(0, affine.size())) {
     bool alreadyPresent = false;
-    for (unsigned j = 0, f = newAffine.size(); j < f; j++) {
+    for (int j : llvm::seq<int>(0, newAffine.size())) {
       if (affine[i] == newAffine[j]) {
         newCoeffs[j] += coefficients[i];
         alreadyPresent = true;
@@ -167,8 +172,32 @@ QuasiPolynomial QuasiPolynomial::collectTerms() {
 
 Fraction QuasiPolynomial::getConstantTerm() {
   Fraction constTerm = 0;
-  for (unsigned i = 0, e = coefficients.size(); i < e; ++i)
+  for (int i : llvm::seq<int>(0, coefficients.size()))
     if (affine[i].size() == 0)
       constTerm += coefficients[i];
   return constTerm;
+}
+
+Fraction QuasiPolynomial::evaluateAt(const SmallVector<Fraction> &parameters) {
+  assert(parameters.size() == getNumInputs() &&
+         "the size of the input vector does not match the dimensionality of "
+         "the polynomial!");
+
+  unsigned numParams = parameters.size();
+  Fraction sum = 0;
+  // The value of the function is given by a sum of terms,
+  for (int i : llvm::seq<int>(0, coefficients.size())) {
+    // each of which is a coefficient, multiplied by the product of
+    Fraction product = coefficients[i];
+    for (int j : llvm::seq<int>(0, affine[i].size())) {
+      ArrayRef<Fraction> affineFunction(affine[i][j]);
+      // the floors of some affine functions.
+      Fraction value =
+          floor(dotProduct(affineFunction.slice(numParams), parameters) +
+                affineFunction.back());
+      product *= value;
+    }
+    sum += coefficients[i] * product;
+  }
+  return sum;
 }

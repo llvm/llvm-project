@@ -93,7 +93,7 @@ TEST(BarvinokTest, getNonOrthogonalVector) {
                                 Point({2, 7, 0, 0}), Point({0, 0, 0, 0})};
   Point nonOrth = getNonOrthogonalVector(vectors);
 
-  for (unsigned i = 0; i < 3; i++)
+  for (unsigned i = 0; i < 3; ++i)
     EXPECT_NE(dotProduct(nonOrth, vectors[i]), 0);
 
   vectors = {Point({0, 1, 3}), Point({-2, -1, 1}), Point({6, 3, 0}),
@@ -160,7 +160,7 @@ TEST(BarvinokTest, computeNumTermsCone) {
   // terms with 1 affine function,
   Fraction pSquaredCoeff = 0, pCoeff = 0, constantTerm = 0;
   SmallVector<Fraction> coefficients = numPoints.getCoefficients();
-  for (unsigned i = 0; i < numPoints.getCoefficients().size(); i++)
+  for (int i : llvm::seq<int>(0, numPoints.getCoefficients().size()))
     if (numPoints.getAffine()[i].size() == 2)
       pSquaredCoeff = pSquaredCoeff + coefficients[i];
     else if (numPoints.getAffine()[i].size() == 1)
@@ -214,7 +214,7 @@ TEST(BarvinokTest, computeNumTermsCone) {
   // We store the coefficients of M, N and P in this array.
   Fraction count[2][2][2];
   coefficients = numPoints.getCoefficients();
-  for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
+  for (int i : llvm::seq<int>(0, coefficients.size())) {
     unsigned mIndex = 0, nIndex = 0, pIndex = 0;
     for (const SmallVector<Fraction> &aff : numPoints.getAffine()[i]) {
       if (aff[0] == 1)
@@ -231,9 +231,9 @@ TEST(BarvinokTest, computeNumTermsCone) {
   // We expect the answer to be
   // (⌊M⌋ + 1)(⌊N⌋ + 1)(⌊P⌋ + 1) =
   // ⌊M⌋⌊N⌋⌊P⌋ + ⌊M⌋⌊N⌋ + ⌊N⌋⌊P⌋ + ⌊M⌋⌊P⌋ + ⌊M⌋ + ⌊N⌋ + ⌊P⌋ + 1.
-  for (unsigned i = 0; i < 2; i++)
-    for (unsigned j = 0; j < 2; j++)
-      for (unsigned k = 0; k < 2; k++)
+  for (unsigned i = 0; i < 2; ++i)
+    for (unsigned j = 0; j < 2; ++j)
+      for (unsigned k = 0; k < 2; ++k)
         EXPECT_EQ(count[i][j][k], 1);
 }
 
