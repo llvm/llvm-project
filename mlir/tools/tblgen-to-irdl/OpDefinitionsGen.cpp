@@ -39,15 +39,49 @@ llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::Required);
 
-irdl::CPredOp createConstraint(OpBuilder &builder,
-                               NamedTypeConstraint namedConstraint) {
+Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   MLIRContext *ctx = builder.getContext();
-  // Build the constraint as a string.
-  std::string constraint =
-      namedConstraint.constraint.getPredicate().getCondition();
+  const Record &predRec = constraint.getDef();
+
+  if (predRec.isSubClassOf("Variadic") || predRec.isSubClassOf("Optional"))
+    return createConstraint(builder, predRec.getValueAsDef("baseType"));
+
+  if (predRec.getName() == "AnyType") {
+    auto op = builder.create<irdl::AnyOp>(UnknownLoc::get(ctx));
+    return op.getOutput();
+  }
+
+  if (predRec.isSubClassOf("TypeDef")) {
+    std::string typeName = ("!" + predRec.getValueAsString("typeName")).str();
+    auto op = builder.create<irdl::BaseOp>(UnknownLoc::get(ctx),
+                                           StringAttr::get(ctx, typeName));
+    return op.getOutput();
+  }
+
+  if (predRec.isSubClassOf("AnyTypeOf")) {
+    std::vector<Value> constraints;
+    for (Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
+      constraints.push_back(
+          createConstraint(builder, tblgen::Constraint(child)));
+    }
+    auto op = builder.create<irdl::AnyOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
+  if (predRec.isSubClassOf("AllOfType")) {
+    std::vector<Value> constraints;
+    for (Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
+      constraints.push_back(
+          createConstraint(builder, tblgen::Constraint(child)));
+    }
+    auto op = builder.create<irdl::AllOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
+  std::string condition = constraint.getPredicate().getCondition();
   // Build a CPredOp to match the C constraint built.
   irdl::CPredOp op = builder.create<irdl::CPredOp>(
-      UnknownLoc::get(ctx), StringAttr::get(ctx, constraint));
+      UnknownLoc::get(ctx), StringAttr::get(ctx, condition));
   return op;
 }
 
@@ -74,7 +108,7 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
     SmallVector<Value> operands;
     SmallVector<irdl::VariadicityAttr> variadicity;
     for (const NamedTypeConstraint &namedCons : namedCons) {
-      auto operand = createConstraint(consBuilder, namedCons);
+      auto operand = createConstraint(consBuilder, namedCons.constraint);
       operands.push_back(operand);
 
       irdl::VariadicityAttr var;
