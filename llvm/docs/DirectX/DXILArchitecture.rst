@@ -100,7 +100,7 @@ are grouped into two flows:
 
 The passes to generate DXIL IR follow the flow:
 
-DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata
+  DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata
 
 Each of these passes has a defined responsibility:
 
@@ -111,7 +111,7 @@ Each of these passes has a defined responsibility:
 
 The passes to encode DXIL to binary in the DX Container follow the flow:
 
-DXILEmbedder -> DXContainerGlobals -> AsmPrinter
+  DXILEmbedder -> DXContainerGlobals -> AsmPrinter
 
 These passes have defined responsibilities:
 
