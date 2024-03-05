@@ -94,6 +94,7 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- The `-Wreturn-type` flag has been modified to split some of its functionality into `-Wreturn-mismatch` flag.
 
 Removed Compiler Flags
 -------------------------
