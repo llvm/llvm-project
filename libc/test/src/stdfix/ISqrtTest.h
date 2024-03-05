@@ -32,11 +32,11 @@ public:
 
     EXPECT_EQ(one, func(T(1)));
     EXPECT_EQ(static_cast<OutType>(2.0), func(T(4)));
-    EXPECT_EQ(static_cast<OutType>(3.0), func(T(9)));
+    EXPECT_EQ(static_cast<OutType>(4.0), func(T(16)));
     EXPECT_EQ(static_cast<OutType>(16.0), func(T(256)));
 
     constexpr int COUNT = 255;
-    constexpr double ERR = 3.0 * static_cast<double>(eps);
+    constexpr double ERR = 2.0 * static_cast<double>(eps);
     double x_d = 0.0;
     T x = 0;
     for (int i = 0; i < COUNT; ++i) {
