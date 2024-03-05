@@ -13,6 +13,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_AMPLIFIERSUPPORTPLUGIN_H
 #define LLVM_EXECUTIONENGINE_ORC_AMPLIFIERSUPPORTPLUGIN_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
@@ -49,10 +51,10 @@ private:
   ExecutorAddr RegisterVTuneImplAddr;
   ExecutorAddr UnregisterVTuneImplAddr;
   std::mutex PluginMutex;
-  uint64_t NextMethodID{0};
+  uint64_t NextMethodID = 0;
   DenseMap<MaterializationResponsibility *, std::pair<uint64_t, uint64_t>>
       PendingMethodIDs;
-  DenseMap<ResourceKey, std::vector<std::pair<uint64_t, uint64_t>>>
+  DenseMap<ResourceKey, SmallVector<std::pair<uint64_t, uint64_t>>>
       LoadedMethodIDs;
   bool EmitDebugInfo;
 };

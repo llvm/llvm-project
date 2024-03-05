@@ -16,7 +16,7 @@
 namespace llvm {
 namespace orc {
 
-typedef std::vector<std::pair<unsigned, unsigned>> VTuneLineTable;
+using VTuneLineTable = std::vector<std::pair<unsigned, unsigned>>;
 
 // SI = String Index, 1-indexed into the VTuneMethodBatch::Strings table.
 // SI == 0 means replace with nullptr.
@@ -35,15 +35,15 @@ struct VTuneMethodInfo {
   uint32_t ParentMI;
 };
 
-typedef std::vector<VTuneMethodInfo> VTuneMethodTable;
-typedef std::vector<std::string> VTuneStringTable;
+using VTuneMethodTable = std::vector<VTuneMethodInfo>;
+using VTuneStringTable = std::vector<std::string>;
 
 struct VTuneMethodBatch {
   VTuneMethodTable Methods;
   VTuneStringTable Strings;
 };
 
-typedef std::vector<std::pair<uint64_t, uint64_t>> VTuneUnloadedMethodIDs;
+using VTuneUnloadedMethodIDs = SmallVector<std::pair<uint64_t, uint64_t>>;
 
 namespace shared {
 
