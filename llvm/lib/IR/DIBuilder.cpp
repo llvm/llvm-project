@@ -1031,12 +1031,12 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
     DPValue *DPV = DPValue::createDPValue(Val, VarInfo, Expr, DL);
     insertDPValue(DPV, InsertBB, InsertBefore);
     return DPV;
-  } else {
-    if (!ValueFn)
-      ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
-    return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
-                              InsertBefore);
   }
+
+  if (!ValueFn)
+    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
+  return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
+                            InsertBefore);
 }
 
 DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
@@ -1048,6 +1048,13 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   assert(DL->getScope()->getSubprogram() ==
              VarInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
+
+  if (M.IsNewDbgInfoFormat) {
+    DPValue *DPV = DPValue::createDPVDeclare(Storage, VarInfo, Expr, DL);
+    insertDPValue(DPV, InsertBB, InsertBefore);
+    return DPV;
+  }
+
   if (!DeclareFn)
     DeclareFn = getDeclareIntrin(M);
 
@@ -1119,16 +1126,16 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
       InsertBB->insertDPValueBefore(DPL, InsertBB->end());
     // FIXME: Use smart pointers for DbgRecord ownership management.
     return DPL;
-  } else {
-    if (!LabelFn)
-      LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
-
-    Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
-
-    IRBuilder<> B(DL->getContext());
-    initIRBuilder(B, DL, InsertBB, InsertBefore);
-    return B.CreateCall(LabelFn, Args);
   }
+
+  if (!LabelFn)
+    LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
+
+  Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
+
+  IRBuilder<> B(DL->getContext());
+  initIRBuilder(B, DL, InsertBB, InsertBefore);
+  return B.CreateCall(LabelFn, Args);
 }
 
 void DIBuilder::replaceVTableHolder(DICompositeType *&T, DIType *VTableHolder) {
