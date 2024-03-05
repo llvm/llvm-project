@@ -350,18 +350,19 @@ unsigned llvm::ComputeMaxSignificantBits(const Value *V, const DataLayout &DL,
 }
 
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
-                                   bool NSW, const APInt &DemandedElts,
+                                   bool NSW, bool NUW,
+                                   const APInt &DemandedElts,
                                    KnownBits &KnownOut, KnownBits &Known2,
                                    unsigned Depth, const SimplifyQuery &Q) {
   computeKnownBits(Op1, DemandedElts, KnownOut, Depth + 1, Q);
 
   // If one operand is unknown and we have no nowrap information,
   // the result will be unknown independently of the second operand.
-  if (KnownOut.isUnknown() && !NSW)
+  if (KnownOut.isUnknown() && !NSW && !NUW)
     return;
 
   computeKnownBits(Op0, DemandedElts, Known2, Depth + 1, Q);
-  KnownOut = KnownBits::computeForAddSub(Add, NSW, Known2, KnownOut);
+  KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
@@ -1145,13 +1146,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::Sub: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    computeKnownBitsAddSub(false, I->getOperand(0), I->getOperand(1), NSW,
+    bool NUW = Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(I));
+    computeKnownBitsAddSub(false, I->getOperand(0), I->getOperand(1), NSW, NUW,
                            DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::Add: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    computeKnownBitsAddSub(true, I->getOperand(0), I->getOperand(1), NSW,
+    bool NUW = Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(I));
+    computeKnownBitsAddSub(true, I->getOperand(0), I->getOperand(1), NSW, NUW,
                            DemandedElts, Known, Known2, Depth, Q);
     break;
   }
@@ -1245,12 +1248,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // Note that inbounds does *not* guarantee nsw for the addition, as only
       // the offset is signed, while the base address is unsigned.
       Known = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, Known, IndexBits);
+          /*Add=*/true, /*NSW=*/false, /* NUW=*/false, Known, IndexBits);
     }
     if (!Known.isUnknown() && !AccConstIndices.isZero()) {
       KnownBits Index = KnownBits::makeConstant(AccConstIndices);
       Known = KnownBits::computeForAddSub(
-          /*Add=*/true, /*NSW=*/false, Known, Index);
+          /*Add=*/true, /*NSW=*/false, /* NUW=*/false, Known, Index);
     }
     break;
   }
@@ -1689,15 +1692,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
         default: break;
         case Intrinsic::uadd_with_overflow:
         case Intrinsic::sadd_with_overflow:
-          computeKnownBitsAddSub(true, II->getArgOperand(0),
-                                 II->getArgOperand(1), false, DemandedElts,
-                                 Known, Known2, Depth, Q);
+          computeKnownBitsAddSub(
+              true, II->getArgOperand(0), II->getArgOperand(1), /*NSW=*/false,
+              /* NUW=*/false, DemandedElts, Known, Known2, Depth, Q);
           break;
         case Intrinsic::usub_with_overflow:
         case Intrinsic::ssub_with_overflow:
-          computeKnownBitsAddSub(false, II->getArgOperand(0),
-                                 II->getArgOperand(1), false, DemandedElts,
-                                 Known, Known2, Depth, Q);
+          computeKnownBitsAddSub(
+              false, II->getArgOperand(0), II->getArgOperand(1), /*NSW=*/false,
+              /* NUW=*/false, DemandedElts, Known, Known2, Depth, Q);
           break;
         case Intrinsic::umul_with_overflow:
         case Intrinsic::smul_with_overflow:
@@ -2318,7 +2321,11 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
 
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
-                         Value *Y, bool NSW) {
+                         Value *Y, bool NSW, bool NUW) {
+  if (NUW)
+    return isKnownNonZero(Y, DemandedElts, Depth, Q) ||
+           isKnownNonZero(X, DemandedElts, Depth, Q);
+
   KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
   KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
 
@@ -2351,7 +2358,7 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
       isKnownToBeAPowerOfTwo(X, /*OrZero*/ false, Depth, Q))
     return true;
 
-  return KnownBits::computeForAddSub(/*Add*/ true, NSW, XKnown, YKnown)
+  return KnownBits::computeForAddSub(/*Add=*/true, NSW, NUW, XKnown, YKnown)
       .isNonZero();
 }
 
@@ -2556,12 +2563,9 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     // If Add has nuw wrap flag, then if either X or Y is non-zero the result is
     // non-zero.
     auto *BO = cast<OverflowingBinaryOperator>(I);
-    if (Q.IIQ.hasNoUnsignedWrap(BO))
-      return isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q) ||
-             isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
-
     return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
-                        I->getOperand(1), Q.IIQ.hasNoSignedWrap(BO));
+                        I->getOperand(1), Q.IIQ.hasNoSignedWrap(BO),
+                        Q.IIQ.hasNoUnsignedWrap(BO));
   }
   case Instruction::Mul: {
     // If X and Y are non-zero then so is X * Y as long as the multiplication
@@ -2716,7 +2720,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       case Intrinsic::sadd_sat:
         return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1),
-                            /*NSW*/ true);
+                            /*NSW=*/true, /* NUW=*/false);
       case Intrinsic::umax:
       case Intrinsic::uadd_sat:
         return isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q) ||
