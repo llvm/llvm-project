@@ -11,11 +11,12 @@
 // <spanstream>
 
 //   template<class charT, class traits = char_traits<charT>>
-//   class basic_ispanstream
+//   class basic_spanbuf
 //     : public basic_streambuf<charT, traits> {
 
-//     // [ispanstream.swap], swap
-//     void swap(basic_ispanstream& rhs);
+//     // [spanbuf.cons], constructors
+//
+//     basic_spanbuf& operator=(basic_spanbuf&& rhs);
 
 #include <cassert>
 #include <concepts>
@@ -28,48 +29,44 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
+  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   CharT arr[4];
   std::span<CharT> sp{arr};
 
   // TODO:
-
+  
   // Mode: default
   {
-    SpStream rhsSpSt{sp};
-    SpStream spSt(std::span<CharT>{});
-    spSt.swap(rhsSpSt);
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
+    SpBuf rhsSpBuf{sp};
+    SpBuf spBuf = std::move(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
   }
   // Mode: `ios_base::in`
   {
-    SpStream rhsSpSt{sp, std::ios_base::in};
-    SpStream spSt(std::span<CharT>{});
-    spSt.swap(rhsSpSt);
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
+    SpBuf rhsSpBuf{sp, std::ios_base::in};
+    SpBuf spBuf = std::move(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
   }
   // Mode `ios_base::out`
   {
-    SpStream rhsSpSt{sp, std::ios_base::out};
-    SpStream spSt(std::span<CharT>{});
-    spSt.swap(rhsSpSt);
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    SpBuf rhsSpBuf{sp, std::ios_base::out};
+    SpBuf spBuf = std::move(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
   }
   // Mode: multiple
   {
-    SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpStream spSt(std::span<CharT>{});
-    spSt.swap(rhsSpSt);
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    SpBuf rhsSpBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpBuf spBuf = std::move(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
   }
 }
 
