@@ -286,3 +286,23 @@ struct B {
   auto operator = (RM<B>) -> RV<B> = delete;
 };
 }
+
+namespace GH80869 {
+  struct F {F(F&&)=delete;}; // expected-note {{has been explicitly marked deleted here}}
+
+  template<int=0>
+  struct M {
+    F f; // expected-note {{field 'f' has a deleted move constructor}}
+    M();
+    M(const M&);
+    M(M&&);
+  };
+
+  template<int I>
+  M<I>::M(M&&)=default; // expected-error {{would delete it after its first declaration}}
+
+  M<> f() {
+    M<> m;
+    return m; // expected-note {{in instantiation of}}
+  }
+}
