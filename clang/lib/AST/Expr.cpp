@@ -723,16 +723,20 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
     const auto &LO = Context.getLangOpts();
+    bool isFuncOrFunctionInNonMSVCCompatEnv =
+        ((IK == PredefinedIdentKind::Func ||
+          IK == PredefinedIdentKind ::Function) &&
+         !LO.MSVCCompat);
+    bool isLFunctionInMSVCCommpatEnv =
+        IK == PredefinedIdentKind::LFunction && LO.MSVCCompat;
+    bool isFuncOrFunctionOrLFunctionOrFuncDName =
+        IK != PredefinedIdentKind::PrettyFunction &&
+        IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
+        IK != PredefinedIdentKind::FuncSig &&
+        IK != PredefinedIdentKind::LFuncSig;
     if ((ForceElaboratedPrinting &&
-         (((IK == PredefinedIdentKind::Func ||
-            IK == PredefinedIdentKind ::Function) &&
-           !LO.MicrosoftExt) ||
-          (IK == PredefinedIdentKind::LFunction && LO.MicrosoftExt))) ||
-        (!ForceElaboratedPrinting &&
-         (IK != PredefinedIdentKind::PrettyFunction &&
-          IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
-          IK != PredefinedIdentKind::FuncSig &&
-          IK != PredefinedIdentKind::LFuncSig)))
+         (isFuncOrFunctionInNonMSVCCompatEnv || isLFunctionInMSVCCommpatEnv)) ||
+        !ForceElaboratedPrinting && isFuncOrFunctionOrLFunctionOrFuncDName)
       return FD->getNameAsString();
 
     SmallString<256> Name;
@@ -761,7 +765,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
     if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
-      Policy.SuppressTagKeyword = !LO.MicrosoftExt;
+      Policy.SuppressTagKeyword = !LO.MSVCCompat;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 

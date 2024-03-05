@@ -3742,7 +3742,7 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
     // Pre-defined identifiers are of type char[x], where x is the length of
     // the string.
     bool ForceElaboratedPrinting =
-        IK == PredefinedIdentKind::Function && getLangOpts().MicrosoftExt;
+        IK == PredefinedIdentKind::Function && getLangOpts().MSVCCompat;
     auto Str =
         PredefinedExpr::ComputeName(IK, currentDecl, ForceElaboratedPrinting);
     unsigned Length = Str.length();
