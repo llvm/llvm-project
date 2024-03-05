@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/RemoveTrapsPass.h"
 
@@ -17,37 +14,31 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include <cstdint>
+#include "llvm/Support/RandomNumberGenerator.h"
+#include <memory>
+#include <random>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "remove-traps"
 
-static constexpr unsigned MaxRandomRate = 1000;
-
 static cl::opt<int> HotPercentileCutoff(
     "remove-traps-percentile-cutoff-hot", cl::init(0),
     cl::desc("Alternative hot percentile cuttoff. By default "
              "`-profile-summary-cutoff-hot` is used."));
+
 static cl::opt<float> RandomRate(
     "remove-traps-random-rate", cl::init(0.0),
-    cl::desc(
-        "Probability to use for pseudorandom unconditional checks removal."));
+    cl::desc("Probability of unconditional pseudorandom checks removal."));
 
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
 
-static SmallVector<IntrinsicInst *, 16>
-removeUbsanTraps(Function &F, FunctionAnalysisManager &FAM,
-                 ProfileSummaryInfo *PSI) {
+static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
+                             const ProfileSummaryInfo *PSI) {
   SmallVector<IntrinsicInst *, 16> Remove;
+  std::unique_ptr<RandomNumberGenerator> Rng;
 
-  if (F.isDeclaration())
-    return {};
-
-  auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-
-  int BBCounter = 0;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
@@ -65,18 +56,34 @@ removeUbsanTraps(Function &F, FunctionAnalysisManager &FAM,
           Count += BFI.getBlockProfileCount(PR).value_or(0);
 
         IsHot = HotPercentileCutoff.getNumOccurrences()
-                    ? PSI->isHotCountNthPercentile(HotPercentileCutoff, Count)
+                    ? (HotPercentileCutoff > 0 &&
+                       PSI->isHotCountNthPercentile(HotPercentileCutoff, Count))
                     : PSI->isHotCount(Count);
       }
 
-      if ((IsHot) || ((F.getGUID() + BBCounter++) % MaxRandomRate) <
-                         RandomRate * RandomRate) {
+      auto ShouldRemove = [&]() {
+        if (IsHot)
+          return true;
+        if (!Rng) {
+          if (!RandomRate.getNumOccurrences())
+            return false;
+          Rng = F.getParent()->createRNG(F.getName());
+        }
+        std::bernoulli_distribution D(RandomRate);
+        return D(*Rng);
+      };
+
+      if (ShouldRemove()) {
         Remove.push_back(II);
         ++NumChecksRemoved;
       }
     }
   }
-  return Remove;
+
+  for (auto *I : Remove)
+    I->eraseFromParent();
+
+  return !Remove.empty();
 }
 
 PreservedAnalyses RemoveTrapsPass::run(Function &F,
@@ -86,10 +93,8 @@ PreservedAnalyses RemoveTrapsPass::run(Function &F,
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  BlockFrequencyInfo &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
 
-  auto Remove = removeUbsanTraps(F, AM, PSI);
-  for (auto *I : Remove)
-    I->eraseFromParent();
-
-  return Remove.empty() ? PreservedAnalyses::all() : PreservedAnalyses::none();
+  return removeUbsanTraps(F, BFI, PSI) ? PreservedAnalyses::none()
+                                             : PreservedAnalyses::all();
 }
