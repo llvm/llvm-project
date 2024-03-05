@@ -93,9 +93,9 @@ namespace llvm {
     void trackIfUnresolved(MDNode *N);
 
     /// Internal helper for insertDeclare.
-    Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
-                               DIExpression *Expr, const DILocation *DL,
-                               BasicBlock *InsertBB, Instruction *InsertBefore);
+    DbgInstPtr insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
+                             DIExpression *Expr, const DILocation *DL,
+                             BasicBlock *InsertBB, Instruction *InsertBefore);
 
     /// Internal helper for insertLabel.
     DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
@@ -925,9 +925,9 @@ namespace llvm {
     /// \param Expr        A complex location expression.
     /// \param DL          Debug info location.
     /// \param InsertAtEnd Location for the new intrinsic.
-    Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
-                               DIExpression *Expr, const DILocation *DL,
-                               BasicBlock *InsertAtEnd);
+    DbgInstPtr insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
+                             DIExpression *Expr, const DILocation *DL,
+                             BasicBlock *InsertAtEnd);
 
     /// Insert a new llvm.dbg.assign intrinsic call.
     /// \param LinkedInstr   Instruction with a DIAssignID to link with the new
@@ -955,9 +955,9 @@ namespace llvm {
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertBefore Location for the new intrinsic.
-    Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
-                               DIExpression *Expr, const DILocation *DL,
-                               Instruction *InsertBefore);
+    DbgInstPtr insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
+                             DIExpression *Expr, const DILocation *DL,
+                             Instruction *InsertBefore);
 
     /// Insert a new llvm.dbg.label intrinsic call.
     /// \param LabelInfo    Label's debug info descriptor.
