@@ -1142,12 +1142,22 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
 }
 
 static bool isCCMPOrCTEST(InternalInstruction *insn) {
-  return (insn->opcodeType == MAP4) &&
-         (((insn->opcode & 0xfe) == 0x38) || ((insn->opcode & 0xfe) == 0x3a) ||
-          (((insn->opcode & 0xfe) == 0x80 || insn->opcode == 0x83) &&
-           regFromModRM(insn->modRM) == 7) ||
-          (insn->opcode & 0xfe) == 0x84 ||
-          ((insn->opcode & 0xfe) == 0xf6 && regFromModRM(insn->modRM) == 0));
+  if (insn->opcodeType != MAP4)
+    return false;
+  if (insn->opcode == 0x83 && regFromModRM(insn->modRM) == 7)
+    return true;
+  switch (insn->opcode & 0xfe) {
+  default:
+    return false;
+  case 0x38:
+  case 0x3a:
+  case 0x84:
+    return true;
+  case 0x80:
+    return regFromModRM(insn->modRM) == 7;
+  case 0xf6:
+    return regFromModRM(insn->modRM) == 0;
+  }
 }
 
 static bool isNF(InternalInstruction *insn) {
