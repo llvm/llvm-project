@@ -171,7 +171,7 @@ module {
   // CHECK:  ^bb2:  // pred: ^bb1
   // CHECK:    llvm.br ^bb3
   // CHECK:  ^bb3:  // pred: ^bb2
-  // CHECK:    llvm.cond_br %14, ^bb4, ^bb5
+  // CHECK:    llvm.cond_br {{%.*}}, ^bb4, ^bb5
   // CHECK:  ^bb4:  // pred: ^bb3
   // CHECK:    llvm.br ^bb7
   // CHECK:  ^bb5:  // pred: ^bb3

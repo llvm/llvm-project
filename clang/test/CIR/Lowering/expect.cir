@@ -1,0 +1,54 @@
+// RUN: cir-opt %s -cir-to-llvm | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+
+!s64i = !cir.int<s, 64>
+module {
+  cir.func @foo(%arg0: !s64i) {
+    %0 = cir.const(#cir.int<1> : !s64i) : !s64i
+    %1 = cir.expect(%arg0, %0) : !s64i
+    %2 = cir.cast(int_to_bool, %1 : !s64i), !cir.bool
+    cir.if %2 {
+      cir.yield
+    }
+    %3 = cir.expect(%arg0, %0, 1.000000e-01) : !s64i
+    %4 = cir.cast(int_to_bool, %3 : !s64i), !cir.bool
+    cir.if %4 {
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+// MLIR:  llvm.func @foo(%arg0: i64)
+// MLIR:    [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// MLIR:    [[EXPECT:%.*]] = llvm.intr.expect %arg0, [[ONE]] : i64
+// MLIR:    [[ZERO:%.*]] = llvm.mlir.constant(0 : i64) : i64
+// MLIR:    [[CMP_NE:%.*]] = llvm.icmp "ne" [[EXPECT]], [[ZERO]] : i64
+// MLIR:    llvm.cond_br [[CMP_NE]], ^bb1, ^bb2
+// MLIR:  ^bb1:  // pred: ^bb0
+// MLIR:    llvm.br ^bb2
+// MLIR:  ^bb2:  // 2 preds: ^bb0, ^bb1
+// MLIR:    [[EXPECT_WITH_PROB:%.*]] = llvm.intr.expect.with.probability %arg0, [[ONE]], 1.000000e-01 : i64
+// MLIR:    [[ZERO:%.*]] = llvm.mlir.constant(0 : i64) : i64
+// MLIR:    [[CMP_NE:%.*]] = llvm.icmp "ne" [[EXPECT_WITH_PROB]], [[ZERO]] : i64
+// MLIR:    llvm.cond_br [[CMP_NE]], ^bb3, ^bb4
+// MLIR:  ^bb3:  // pred: ^bb2
+// MLIR:    llvm.br ^bb4
+// MLIR:  ^bb4:  // 2 preds: ^bb2, ^bb3
+// MLIR:    llvm.return
+
+// LLVM:  define void @foo(i64 %0)
+// LLVM:    [[EXPECT:%.*]] = call i64 @llvm.expect.i64(i64 %0, i64 1)
+// LLVM:    [[CMP_NE:%.*]] = icmp ne i64 [[EXPECT]], 0
+// LLVM:    br i1 [[CMP_NE]], label %4, label %5
+// LLVM:  4:
+// LLVM:    br label %5
+// LLVM:  5:
+// LLVM:    [[EXPECT_WITH_PROB:%.*]] = call i64 @llvm.expect.with.probability.i64(i64 %0, i64 1, double 1.000000e-01)
+// LLVM:    [[CMP_NE:%.*]] = icmp ne i64 [[EXPECT_WITH_PROB]], 0
+// LLVM:    br i1 [[CMP_NE]], label %8, label %9
+// LLVM:  8:
+// LLVM:    br label %9
+// LLVM:  9:
+// LLVM:    ret void
+
