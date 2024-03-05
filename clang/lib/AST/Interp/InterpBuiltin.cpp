@@ -132,6 +132,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
 
+  if (A.isDummy() || B.isDummy())
+    return false;
+
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
@@ -460,9 +463,6 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const Function *Func,
                                      const CallExpr *Call) {
-
-  Func->getDecl()->dump();
-
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
   pushInteger(S, Val.popcount(), Call->getType());
@@ -900,15 +900,31 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+/// __builtin_complex(Float A, float B);
+static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame,
+                                    const Function *Func,
+                                    const CallExpr *Call) {
+  const Floating &Arg2 = S.Stk.peek<Floating>();
+  const Floating &Arg1 = S.Stk.peek<Floating>(align(primSize(PT_Float)) * 2);
+  Pointer &Result = S.Stk.peek<Pointer>(align(primSize(PT_Float)) * 2 +
+                                        align(primSize(PT_Ptr)));
+
+  Result.atIndex(0).deref<Floating>() = Arg1;
+  Result.atIndex(0).initialize();
+  Result.atIndex(1).deref<Floating>() = Arg2;
+  Result.atIndex(1).initialize();
+  Result.initialize();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
-
-  // If classify failed, we assume void.
-  assert(ReturnT || Call->getType()->isVoidType());
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -1206,7 +1222,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case Builtin::BI__builtin_complex:
+    if (!interp__builtin_complex(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
   default:
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
+
     return false;
   }
 
@@ -1230,7 +1255,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return false;
-      RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getDecl();
       if (RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getCtx().getASTRecordLayout(RD);

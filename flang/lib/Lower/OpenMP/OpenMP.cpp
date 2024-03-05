@@ -840,7 +840,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> dependTypeOperands;
 
   Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
-  llvm::omp::Directive directive;
+  // GCC 9.3.0 emits a (probably) bogus warning about an unused variable.
+  [[maybe_unused]] llvm::omp::Directive directive;
   if constexpr (std::is_same_v<OpTy, mlir::omp::EnterDataOp>) {
     directiveName =
         Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetEnterData;
@@ -1809,7 +1810,11 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                /*outerCombined=*/false);
     break;
   case llvm::omp::Directive::OMPD_workshare:
-    TODO(currentLocation, "Workshare construct");
+    // FIXME: Workshare is not a commonly used OpenMP construct, an
+    // implementation for this feature will come later. For the codes
+    // that use this construct, add a single construct for now.
+    genSingleOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
+                beginClauseList, endClauseList);
     break;
   default:
     singleDirective = false;
@@ -1844,7 +1849,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
   if ((llvm::omp::workShareSet & llvm::omp::blockConstructSet)
           .test(directive.v)) {
-    TODO(currentLocation, "Workshare construct");
+    genSingleOp(converter, semaCtx, eval, /*genNested=*/false, currentLocation,
+                beginClauseList, endClauseList);
     combinedDirective = true;
   }
   if (!combinedDirective)

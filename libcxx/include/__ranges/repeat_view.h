@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___RANGES_REPEAT_VIEW_H
 #define _LIBCPP___RANGES_REPEAT_VIEW_H
 
+#include <__assert>
 #include <__concepts/constructible.h>
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
