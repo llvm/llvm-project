@@ -6250,13 +6250,6 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
     }
   }
 
-  if (isOldDbgFormatIntrinsic(FunctionName)) {
-    if (SeenNewDbgInfoFormat)
-      return error(NameLoc, "llvm.dbg intrinsic should not appear in a module "
-                            "using non-intrinsic debug info");
-    SeenOldDbgInfoFormat = true;
-  }
-
   Fn = Function::Create(FT, GlobalValue::ExternalLinkage, AddrSpace,
                         FunctionName, M);
 

@@ -1,17 +1,15 @@
-;; Test that we get a parser error when a debug intrinsic declaration appears in
-;; the same module as a debug intrinsic declaration.
+;; Test that we get a parser error when we have a debug record with an
+;; incorrect number of arguments.
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
 ; ModuleID = '<stdin>'
 source_filename = "<stdin>"
 
 define dso_local i32 @f(i32 %a) !dbg !7 {
 entry:
-    #dbg_value(!DIArgList(i32 %a), !12, !DIExpression(), !14)
+; CHECK: <stdin>:[[@LINE+1]]:24: error: expected '!' here
+    #dbg_value(i32 %a, i32 0, !DIExpression(), !14)
   ret i32 %a, !dbg !18
 }
-
-; CHECK: <stdin>:[[@LINE+1]]:14: error: llvm.dbg intrinsic should not appear in a module using non-intrinsic debug info
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
