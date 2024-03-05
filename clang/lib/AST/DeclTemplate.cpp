@@ -342,66 +342,48 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
   return;
-
-  // Grab the most recent declaration to ensure we've loaded any lazy
-  // redeclarations of this template.
-  CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
-  if (auto *Specs = CommonBasePtr->LazySpecializations) {
-    if (!OnlyPartial)
-      CommonBasePtr->LazySpecializations = nullptr;
-    for (uint32_t I = 0, N = Specs[0].DeclID; I != N; ++I) {
-      // Skip over already loaded specializations.
-      if (!Specs[I + 1].ODRHash)
-        continue;
-      if (!OnlyPartial || Specs[I + 1].IsPartial)
-        (void)loadLazySpecializationImpl(Specs[I + 1]);
-    }
-  }
 }
 
-Decl *RedeclarableTemplateDecl::loadLazySpecializationImpl(
-    LazySpecializationInfo &LazySpecInfo) const {
-  llvm_unreachable("We don't use LazySpecializationInfo any more");
-
-  uint32_t ID = LazySpecInfo.DeclID;
-  assert(ID && "Loading already loaded specialization!");
-  // Note that we loaded the specialization.
-  LazySpecInfo.DeclID = LazySpecInfo.ODRHash = LazySpecInfo.IsPartial = 0;
-  return getASTContext().getExternalSource()->GetExternalDecl(ID);
-}
-
-void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
+bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
     ArrayRef<TemplateArgument> Args, TemplateParameterList *TPL) const {
   auto *ExternalSource = getASTContext().getExternalSource();
   if (!ExternalSource)
-    return;
+    return false;
 
-  ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(), Args);
-  return;
-
-  CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
-  if (auto *Specs = CommonBasePtr->LazySpecializations) {
-    unsigned Hash = TemplateArgumentList::ComputeODRHash(Args);
-    for (uint32_t I = 0, N = Specs[0].DeclID; I != N; ++I)
-      if (Specs[I + 1].ODRHash && Specs[I + 1].ODRHash == Hash)
-        (void)loadLazySpecializationImpl(Specs[I + 1]);
-  }
+  return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
+                                                     Args);
 }
 
-template<class EntryType, typename... ProfileArguments>
+template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
-RedeclarableTemplateDecl::findSpecializationImpl(
+RedeclarableTemplateDecl::findSpecializationLocally(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments&&... ProfileArgs) {
-  using SETraits = SpecEntryTraits<EntryType>;
-
-  loadLazySpecializationsImpl(std::forward<ProfileArguments>(ProfileArgs)...);
+    ProfileArguments &&...ProfileArgs) {
+  using SETraits = RedeclarableTemplateDecl::SpecEntryTraits<EntryType>;
 
   llvm::FoldingSetNodeID ID;
   EntryType::Profile(ID, std::forward<ProfileArguments>(ProfileArgs)...,
                      getASTContext());
   EntryType *Entry = Specs.FindNodeOrInsertPos(ID, InsertPos);
   return Entry ? SETraits::getDecl(Entry)->getMostRecentDecl() : nullptr;
+}
+
+template <class EntryType, typename... ProfileArguments>
+typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
+RedeclarableTemplateDecl::findSpecializationImpl(
+    llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
+    ProfileArguments &&...ProfileArgs) {
+
+  if (auto *Found = findSpecializationLocally(
+          Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...))
+    return Found;
+
+  if (!loadLazySpecializationsImpl(
+          std::forward<ProfileArguments>(ProfileArgs)...))
+    return nullptr;
+
+  return findSpecializationLocally(
+      Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...);
 }
 
 template<class Derived, class EntryType>
@@ -939,7 +921,20 @@ TemplateArgumentList::CreateCopy(ASTContext &Context,
   return new (Mem) TemplateArgumentList(Args);
 }
 
-unsigned TemplateArgumentList::ComputeODRHash(ArrayRef<TemplateArgument> Args) {
+unsigned
+TemplateArgumentList::ComputeStableHash(ArrayRef<TemplateArgument> Args) {
+  // FIXME: ODR hashing may not be the best mechanism to hash the template
+  // arguments. ODR hashing is (or perhaps, should be) about determining whether
+  // two things are spelled the same way and have the same meaning (as required
+  // by the C++ ODR), whereas what we want here is whether they have the same
+  // meaning regardless of spelling. Maybe we can get away with reusing ODR
+  // hashing anyway, on the basis that any canonical, non-dependent template
+  // argument should have the same (invented) spelling in every translation
+  // unit, but it is not sure that's true in all cases. There may still be cases
+  // where the canonical type includes some aspect of "whatever we saw first",
+  // in which case the ODR hash can differ across translation units for
+  // non-dependent, canonical template arguments that are spelled differently
+  // but have the same meaning. But it is not easy to raise examples.
   ODRHash Hasher;
   for (TemplateArgument TA : Args)
     Hasher.AddTemplateArgument(TA);

@@ -699,7 +699,7 @@ enum ASTRecordTypes {
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
 
-  UPDATE_SPECIALIZATION = 68,
+  CXX_ADDED_TEMPLATE_SPECIALIZATION = 68,
 };
 
 /// Record types used within a source manager block.

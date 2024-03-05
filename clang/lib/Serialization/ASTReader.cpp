@@ -3499,7 +3499,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
-    case UPDATE_SPECIALIZATION: {
+    case CXX_ADDED_TEMPLATE_SPECIALIZATION: {
       unsigned Idx = 0;
       serialization::DeclID ID = ReadDeclID(F, Record, Idx);
       auto *Data = (const unsigned char *)Blob.data();
@@ -7964,23 +7964,30 @@ void ASTReader::LoadExternalSpecializations(const Decl *D, bool OnlyPartial) {
       GetDecl(Info.ID);
 }
 
-void ASTReader::LoadExternalSpecializations(
+bool ASTReader::LoadExternalSpecializations(
     const Decl *D, ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
   auto It = SpecializationsLookups.find(D);
   if (It == SpecializationsLookups.end())
-    return;
+    return false;
 
   Deserializing LookupResults(this);
-  auto HashValue = TemplateArgumentList::ComputeODRHash(TemplateArgs);
+  auto HashValue = TemplateArgumentList::ComputeStableHash(TemplateArgs);
 
   // Get Decl may violate the iterator from SpecializationsLookups
   llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
       It->second.Table.find(HashValue);
 
-  for (auto &Info : Infos)
+  bool NewSpecsFound = false;
+  for (auto &Info : Infos) {
+    if (GetExistingDecl(Info.ID))
+      continue;
+    NewSpecsFound = true;
     GetDecl(Info.ID);
+  }
+
+  return NewSpecsFound;
 }
 
 void ASTReader::FindExternalLexicalDecls(

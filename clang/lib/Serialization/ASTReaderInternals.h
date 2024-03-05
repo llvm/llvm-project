@@ -129,7 +129,6 @@ struct LazySpecializationInfo {
     assert(ID != Other.ID || IsPartial == Other.IsPartial);
     return ID == Other.ID;
   }
-
   // Records the size record in OnDiskHashTable.
   // sizeof() may return 8 due to align requirements.
   static constexpr unsigned Length = 5;
