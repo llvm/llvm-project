@@ -49,7 +49,14 @@ void test_sfinae_with_nasty_char() {
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
-  using SpStream = std::basic_spanstream<CharT, TraitsT>;
+  using SpStream =
+#ifndef TEST_HAS_NO_NASTY_STRING
+      std::conditional_t<std::same_as<CharT, nasty_char>,
+                         std::basic_ispanstream<nasty_char, nasty_char_traits>,
+                         std::basic_ispanstream<CharT, TraitsT>>;
+#else
+      std::basic_ispanstream<CharT, TraitsT>;
+#endif
 
   // Mode
   static_assert(std::constructible_from<SpStream, const std::span<CharT>, std::ios_base::openmode>);
@@ -123,7 +130,7 @@ void test() {
 
 int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
-  test_sfinae_with_nasty_char();
+  test_sfinae<nasty_char>();
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
