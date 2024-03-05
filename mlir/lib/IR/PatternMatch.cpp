@@ -229,7 +229,10 @@ void RewriterBase::eraseOp(Operation *op) {
       // until the region is empty. (The block graph could be disconnected.)
       while (!r.empty()) {
         SmallVector<Block *> erasedBlocks;
-        for (Block *b : llvm::post_order(&r.front())) {
+        // Some blocks may have invalid successor, use a set including nullptr
+        // to avoid null pointer.
+        llvm::SmallPtrSet<Block *, 4> visited{nullptr};
+        for (Block *b : llvm::post_order_ext(&r.front(), visited)) {
           // Visit ops in reverse order.
           for (Operation &op :
                llvm::make_early_inc_range(ReverseIterator::makeIterable(*b)))
