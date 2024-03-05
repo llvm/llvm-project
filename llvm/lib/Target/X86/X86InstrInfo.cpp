@@ -10088,6 +10088,8 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSGD, "x86-tlsgd"},
       {MO_TLSLD, "x86-tlsld"},
       {MO_TLSLDM, "x86-tlsldm"},
+      {MO_TLSDESC, "x86-tlsdesc"},
+      {MO_TLSCALL, "x86-tlscall"},
       {MO_GOTTPOFF, "x86-gottpoff"},
       {MO_INDNTPOFF, "x86-indntpoff"},
       {MO_TPOFF, "x86-tpoff"},
@@ -10241,6 +10243,8 @@ struct LDTLSCleanup : public MachineFunctionPass {
       switch (I->getOpcode()) {
       case X86::TLS_base_addr32:
       case X86::TLS_base_addr64:
+      case X86::TLSCall_32:
+      case X86::TLSCall_64:
         if (TLSBaseAddrReg)
           I = ReplaceTLSBaseAddrCall(*I, TLSBaseAddrReg);
         else

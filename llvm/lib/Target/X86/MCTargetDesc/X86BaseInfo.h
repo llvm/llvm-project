@@ -431,6 +431,18 @@ enum TOF {
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @TLSLDM
   MO_TLSLDM,
+  /// MO_TLSDESC - On a symbol operand this indicates that the immediate is
+  /// the offset of the GOT entry with the TLS index for the module that
+  /// contains the symbol. When this index is passed to a call to
+  /// the resolver function, it will return the offset from the thread pointer.
+  /// See 'ELF Handling for Thread-Local Storage' for more details.
+  ///    SYMBOL_LABEL @TLSDESC
+  MO_TLSDESC,
+  /// MO_TLSCALL - On a symbol operand this indicates this  call to
+  /// the resolver function, it will return the offset from the thread pointer.
+  /// See 'ELF Handling for Thread-Local Storage' for more details.
+  ///    SYMBOL_LABEL @TLSCALL
+  MO_TLSCALL,
   /// MO_GOTTPOFF - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the thread-pointer offset for the
   /// symbol. Used in the x86-64 initial exec TLS access model.
