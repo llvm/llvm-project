@@ -190,16 +190,6 @@ public:
     return Engine.ExecuteWorkList(L, Steps, nullptr);
   }
 
-  /// Execute the work list with an initial state. Nodes that reaches the exit
-  /// of the function are added into the Dst set, which represent the exit
-  /// state of the function call. Returns true if there is still simulation
-  /// state on the worklist.
-  bool ExecuteWorkListWithInitialState(const LocationContext *L, unsigned Steps,
-                                       ProgramStateRef InitState,
-                                       ExplodedNodeSet &Dst) {
-    return Engine.ExecuteWorkListWithInitialState(L, Steps, InitState, Dst);
-  }
-
   /// getContext - Return the ASTContext associated with this analysis.
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
