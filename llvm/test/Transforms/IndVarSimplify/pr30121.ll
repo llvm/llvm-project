@@ -6,12 +6,11 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 define void @g(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[N:%.*]], 4
-; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[N:%.*]], 4
+; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[MUL]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[MUL]], i32 1)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[MUL]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
