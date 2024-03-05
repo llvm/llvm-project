@@ -117,31 +117,36 @@ targets.
 hlsl.h
 ------
 
-HLSL has an extensive library of built in functionality. This is similar to
-OpenCL and CUDA. The implementation approach for the HLSL library functionality
-draws from patterns in use by OpenCL and other built-in headers.
+HLSL has an extensive library of functionality. This is similar to OpenCL and
+CUDA. The implementation approach for the HLSL library functionality draws from
+patterns in use by OpenCL and other Clang resource headers.
 
 Similar to OpenCL, the HLSL library functionality is implicitly declared in
 translation units without needing to include a header to provide declarations.
-In Clang this is handled by making ``hlsl.h`` an implicitly included header.
+In Clang this is handled by making ``hlsl.h`` an implicitly included header
+distributed as part of the Clang resource directory.
 
 Similar to OpenCL, HLSL's implicit header will explicitly declare all overloads,
-and each overload will map to a corresponding builtin that is used for code
-generation. CUDA uses a similar pattern although many CUDA built-in functions
-have full definitions in the included headers which in turn call builtins. By
-not having bodies we avoid the need for the inliner to clean up and inline the
-small library functions.
+and each overload will map to a corresponding ``__builtin_*`` compiler intrinsic
+that is handled in ClangCodeGen. CUDA uses a similar pattern although many CUDA
+functions have full definitions in the included headers which in turn call
+corresponding ``__builtin*`` compiler intrinsics. By not having bodies HLSL
+avoids the need for the inliner to clean up and inline large numbers of small
+library functions.
 
-HLSL's implicit headers also define some of HLSL's built-in typedefs. This is
-consistent with how the AVX vector header is implemented.
+HLSL's implicit headers also define some of HLSL's typedefs. This is consistent
+with how the AVX vector header is implemented.
 
 Concerns have been expressed that this approach may result in slower compile
-times than the approach DXC uses where built-in functions are treated more like
-Clang builtins. While this might be true we have no existing shaders where
-parsing is a significant compile-time overhead. Further, by treating these
-built-in functions as functions rather than builtins the language behaviors are
-more consistent and aligned with user expectation because normal overload
-resolution rules and implicit conversions apply as expected.
+times than the approach DXC uses where library functions are treated more like
+Clang ``__builtin*`` intrinsics. No real world use cases have been identified
+where parsing is a significant compile-time overhead, but the HLSL implicit
+headers can be compiled into a module for performance if needed.
+
+Further, by treating these functions as functions rather than ``__builtin*``
+compiler intrinsics the language behaviors are more consistent and aligned with
+user expectation because normal overload resolution rules and implicit
+conversions apply as expected.
 
 It is a feature of this design that clangd-powered "go to declaration" for
 library functions will jump to a valid header declaration and all overloads will
