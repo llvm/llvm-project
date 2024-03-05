@@ -270,6 +270,8 @@ Bug Fixes to C++ Support
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter. (#GH80971)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
+- Fix parsing of abominable function types inside type traits.
+  Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
 - Clang now classifies aggregate initialization in C++17 and newer as constant
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Partially fixes
@@ -303,6 +305,8 @@ Bug Fixes to C++ Support
 - Fixed an issue where an attribute on a declarator would cause the attribute to
   be destructed prematurely. This fixes a pair of Chromium that were brought to
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
+- Fix evaluation of some immediate calls in default arguments.
+  Fixes (#GH80630)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
