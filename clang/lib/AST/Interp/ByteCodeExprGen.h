@@ -117,6 +117,7 @@ public:
   bool VisitRequiresExpr(const RequiresExpr *E);
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
+  bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -182,7 +183,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if (!this->emitInitPtr(Init))
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -196,7 +197,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if (!this->emitInitPtr(Init))
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -210,7 +211,7 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitInitPtrPop(I);
+    return this->emitFinishInitPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
@@ -331,7 +332,7 @@ public:
   }
 
   virtual void emitDestruction() {}
-  virtual void emitDestructors() {}
+  virtual bool emitDestructors() { return true; }
   VariableScope *getParent() const { return Parent; }
 
 protected:
@@ -355,13 +356,18 @@ public:
   }
 
   /// Overriden to support explicit destruction.
-  void emitDestruction() override {
+  void emitDestruction() override { destroyLocals(); }
+
+  /// Explicit destruction of local variables.
+  bool destroyLocals() {
     if (!Idx)
-      return;
-    this->emitDestructors();
+      return true;
+
+    bool Success = this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
     this->Idx = std::nullopt;
+    return Success;
   }
 
   void addLocal(const Scope::Local &Local) override {
@@ -373,19 +379,25 @@ public:
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
-  void emitDestructors() override {
+  bool emitDestructors() override {
     if (!Idx)
-      return;
+      return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
-        this->Ctx->emitDestruction(Local.Desc);
-        this->Ctx->emitPopPtr(SourceInfo{});
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{}))
+          return false;
+
+        if (!this->Ctx->emitDestruction(Local.Desc))
+          return false;
+
+        if (!this->Ctx->emitPopPtr(SourceInfo{}))
+          return false;
         removeIfStoredOpaqueValue(Local);
       }
     }
+    return true;
   }
 
   void removeStoredOpaqueValues() {
