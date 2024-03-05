@@ -221,7 +221,7 @@ private:
 // Avoids unneccesary copies of the environment.
 class JoinedStateBuilder {
   AnalysisContext &AC;
-  Environment::ExprJoinBehavior ExprBehavior;
+  Environment::ExprJoinBehavior JoinBehavior;
   std::vector<const TypeErasedDataflowAnalysisState *> All;
   std::deque<TypeErasedDataflowAnalysisState> Owned;
 
@@ -229,13 +229,13 @@ class JoinedStateBuilder {
   join(const TypeErasedDataflowAnalysisState &L,
        const TypeErasedDataflowAnalysisState &R) {
     return {AC.Analysis.joinTypeErased(L.Lattice, R.Lattice),
-            Environment::join(L.Env, R.Env, AC.Analysis, ExprBehavior)};
+            Environment::join(L.Env, R.Env, AC.Analysis, JoinBehavior)};
   }
 
 public:
   JoinedStateBuilder(AnalysisContext &AC,
-                     Environment::ExprJoinBehavior ExprBehavior)
-      : AC(AC), ExprBehavior(ExprBehavior) {}
+                     Environment::ExprJoinBehavior JoinBehavior)
+      : AC(AC), JoinBehavior(JoinBehavior) {}
 
   void addOwned(TypeErasedDataflowAnalysisState State) {
     Owned.push_back(std::move(State));
@@ -256,7 +256,7 @@ public:
       // FIXME: We could consider writing special-case code for this that only
       // does the discarding, but it's not clear if this is worth it.
       return {All[0]->Lattice, Environment::join(All[0]->Env, All[0]->Env,
-                                                 AC.Analysis, ExprBehavior)};
+                                                 AC.Analysis, JoinBehavior)};
 
     auto Result = join(*All[0], *All[1]);
     for (unsigned I = 2; I < All.size(); ++I)
@@ -317,15 +317,15 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
   // consumed in a different block. While this is potentially suboptimal, it's
   // actually likely, if we have control flow within a full expression, that
   // all predecessors have expression state consumed in a different block.
-  Environment::ExprJoinBehavior ExprBehavior = Environment::DiscardExprState;
+  Environment::ExprJoinBehavior JoinBehavior = Environment::DiscardExprState;
   for (const CFGBlock *Pred : Preds) {
     if (Pred && AC.CFCtx.containsExprConsumedInDifferentBlock(*Pred)) {
-      ExprBehavior = Environment::KeepExprState;
+      JoinBehavior = Environment::KeepExprState;
       break;
     }
   }
 
-  JoinedStateBuilder Builder(AC, ExprBehavior);
+  JoinedStateBuilder Builder(AC, JoinBehavior);
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
