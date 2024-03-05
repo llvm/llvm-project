@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <ranges>
 #include <iterator>
 
@@ -26,16 +27,16 @@
 #include "test_iterators.h"
 #include "MoveOnly.h"
 
-template <class Iter, class Sent = Iter, class Count = std::size_t>
-concept HasShiftLeftIt = requires(Iter iter, Sent sent, Count n) { std::ranges::shift_left(iter, sent, n); };
+template <class Iter, class Sent = Iter>
+concept HasShiftLeftIt = requires(Iter iter, Sent sent, std::size_t n) { std::ranges::shift_left(iter, sent, n); };
 
 static_assert(HasShiftLeftIt<int*>);
 static_assert(!HasShiftLeftIt<ForwardIteratorNotDerivedFrom>);
 static_assert(!HasShiftLeftIt<PermutableNotForwardIterator>);
 static_assert(!HasShiftLeftIt<PermutableNotSwappable>);
 
-template <class Range, class Count = std::size_t>
-concept HasShiftLeftR = requires(Range range, Count n) { std::ranges::shift_left(range, n); };
+template <class Range>
+concept HasShiftLeftR = requires(Range range, std::size_t n) { std::ranges::shift_left(range, n); };
 
 static_assert(HasShiftLeftR<UncheckedRange<int*>>);
 static_assert(!HasShiftLeftR<ForwardRangeNotDerivedFrom>);
@@ -170,25 +171,17 @@ constexpr void test_iter_sent() {
   }
 }
 
-template <class Iter>
-constexpr void test_iter() {
-  test_iter_sent<Iter, Iter>();
-  test_iter_sent<Iter, sentinel_wrapper<Iter>>();
-  test_iter_sent<Iter, sized_sentinel<Iter>>();
-}
-
 constexpr bool test() {
-  test_iter<forward_iterator<int*>>();
-  test_iter<bidirectional_iterator<int*>>();
-  test_iter<random_access_iterator<int*>>();
-  test_iter<contiguous_iterator<int*>>();
-  test_iter<int*>();
+  types::for_each(types::forward_iterator_list<int*>{}, []<class Iter> {
+    test_iter_sent<Iter, Iter>();
+    test_iter_sent<Iter, sentinel_wrapper<Iter>>();
+    test_iter_sent<Iter, sized_sentinel<Iter>>();
+  });
   return true;
 }
 
 int main(int, char**) {
   test();
   static_assert(test());
-
   return 0;
 }
