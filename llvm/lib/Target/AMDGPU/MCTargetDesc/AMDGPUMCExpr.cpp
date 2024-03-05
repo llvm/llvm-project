@@ -57,7 +57,7 @@ static int64_t op(AMDGPUVariadicMCExpr::VariadicKind Kind, int64_t Arg1,
   case AMDGPUVariadicMCExpr::AGVK_Max:
     return std::max(Arg1, Arg2);
   case AMDGPUVariadicMCExpr::AGVK_Or:
-    return Arg1 || Arg2;
+    return Arg1 | Arg2;
   }
 }
 

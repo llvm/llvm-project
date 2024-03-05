@@ -29,16 +29,16 @@
 // OBJDUMP-NEXT: 8000000000000000 l       *ABS*  0000000000000000 max_expr_one_min
 // OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 max_expr_two_min
 // OBJDUMP-NEXT: 0000000000989680 l       *ABS*  0000000000000000 max_expr_three_min
-// OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_expression_all
-// OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_expression_two
+// OBJDUMP-NEXT: 0000000000000007 l       *ABS*  0000000000000000 or_expression_all
+// OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 or_expression_two
 // OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_expression_one
-// OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_literals
+// OBJDUMP-NEXT: 000000000000000f l       *ABS*  0000000000000000 or_literals
 // OBJDUMP-NEXT: 0000000000000000 l       *ABS*  0000000000000000 or_false
-// OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_with_or_sym
+// OBJDUMP-NEXT: 00000000000000ff l       *ABS*  0000000000000000 or_with_or_sym
 // OBJDUMP-NEXT: 00000000000000ff l       *ABS*  0000000000000000 or
-// OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_with_subexpr
-// OBJDUMP-NEXT: 0000000000000002 l       *ABS*  0000000000000000 or_as_subexpr
-// OBJDUMP-NEXT: 0000000000000001 l       *ABS*  0000000000000000 or_recursive_subexpr
+// OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 or_with_subexpr
+// OBJDUMP-NEXT: 0000000000000008 l       *ABS*  0000000000000000 or_as_subexpr
+// OBJDUMP-NEXT: 0000000000000007 l       *ABS*  0000000000000000 or_recursive_subexpr
 
 // ASM: .set zero, 0
 // ASM: .set one, 1
@@ -98,9 +98,9 @@
 .set max_expr_three_min, max(i64_min, three, 10000000)
 
 // ASM: .set or_expression_all, or(1, 2, five, 3, four)
-// ASM: .set or_expression_two, 1
+// ASM: .set or_expression_two, 3
 // ASM: .set or_expression_one, 1
-// ASM: .set or_literals, 1
+// ASM: .set or_literals, 15
 // ASM: .set or_false, 0
 // ASM: .set or_with_or_sym, or(or, 4, 3, 1, 2)
 
@@ -111,7 +111,7 @@
 .set or_false, or(zero, 0, (2-2), 5 > 6)
 .set or_with_or_sym, or(or, 4, 3, one, two)
 
-// ASM: .set or_with_subexpr, 1
+// ASM: .set or_with_subexpr, 3
 // ASM: .set or_as_subexpr, 1+(or(4, 3, five))
 // ASM: .set or_recursive_subexpr, or(or(1, four), 3, or_expression_all)
 

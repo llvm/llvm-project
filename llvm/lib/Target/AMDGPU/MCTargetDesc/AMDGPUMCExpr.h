@@ -19,7 +19,7 @@ namespace llvm {
 ///
 /// Takes in a minimum of 1 argument to be used with an operation. The supported
 /// operations are:
-///   - (logic) or
+///   - (bitwise) or
 ///   - max
 ///
 /// \note If the 'or'/'max' operations are provided only a single argument, the
