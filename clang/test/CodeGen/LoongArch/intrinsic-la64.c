@@ -387,7 +387,7 @@ unsigned int cpucfg(unsigned int a) {
 
 // CHECK-LABEL: @rdtime_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i64, i64 } asm sideeffect "rdtime.d $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i64, i64 } asm sideeffect "rdtime.d $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc [[META2:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void rdtime_d() {
@@ -396,8 +396,8 @@ void rdtime_d() {
 
 // CHECK-LABEL: @rdtime(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !4
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc [[META3:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc [[META4:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void rdtime() {
@@ -426,4 +426,19 @@ int loongarch_movfcsr2gr() {
 void loongarch_movgr2fcsr(int a) {
   __movgr2fcsr(1, a);
   __builtin_loongarch_movgr2fcsr(1, a);
+}
+
+// CHECK-LABEL: @iocsrrd_h_result(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A]])
+// CHECK-NEXT:    [[CONV2:%.*]] = and i32 [[TMP0]], 255
+// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[CONV2]]
+// CHECK-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD]] to i16
+// CHECK-NEXT:    ret i16 [[CONV4]]
+//
+unsigned short iocsrrd_h_result(unsigned int a) {
+  unsigned short b = __iocsrrd_h(a);
+  unsigned short c = __builtin_loongarch_iocsrrd_h(a);
+  return b+c;
 }
