@@ -4983,7 +4983,8 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
           "The interface for procedure '%s' has already been declared"_err_en_US);
       context().SetError(symbol);
     } else if (interface) {
-      details->set_procInterface(*interface);
+      details->set_procInterfaces(
+          *interface, BypassGeneric(interface->GetUltimate()));
       if (interface->test(Symbol::Flag::Function)) {
         symbol.set(Symbol::Flag::Function);
       } else if (interface->test(Symbol::Flag::Subroutine)) {
@@ -5658,10 +5659,10 @@ void DeclarationVisitor::Post(const parser::ProcInterface &x) {
 }
 void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   const auto &name{std::get<parser::Name>(x.t)};
-  const Symbol *procInterface{nullptr};
-  if (interfaceName_ && interfaceName_->symbol) {
-    procInterface = &BypassGeneric(*interfaceName_->symbol);
-  }
+  // Don't use BypassGeneric or GetUltimate on this symbol, they can
+  // lead to unusable names in module files.
+  const Symbol *procInterface{
+      interfaceName_ ? interfaceName_->symbol : nullptr};
   auto attrs{HandleSaveName(name.source, GetAttrs())};
   DerivedTypeDetails *dtDetails{nullptr};
   if (Symbol * symbol{currScope().symbol()}) {
@@ -6624,10 +6625,9 @@ void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
   if (const Symbol * symbol{name.symbol}) {
     const Symbol &ultimate{symbol->GetUltimate()};
     if (!context().HasError(*symbol) && !context().HasError(ultimate) &&
-        !ultimate.HasExplicitInterface()) {
+        !BypassGeneric(ultimate).HasExplicitInterface()) {
       Say(name,
-          "'%s' must be an abstract interface or a procedure with "
-          "an explicit interface"_err_en_US,
+          "'%s' must be an abstract interface or a procedure with an explicit interface"_err_en_US,
           symbol->name());
     }
   }
