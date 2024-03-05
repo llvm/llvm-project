@@ -433,6 +433,26 @@ Attribute Changes in Clang
 - Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
   ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
 
+- Introduced ``__attribute__((wraps))`` which can be added to type or variable
+  declarations. Using an attributed type or variable in an arithmetic
+  expression will define the overflow behavior for that expression as having
+  two's complement wrap-around. These expressions will not be instrumented by
+  overflow sanitizers nor will they cause integer overflow warnings. They also
+  cannot be optimized away by some eager UB optimizations as the behavior of
+  the arithmetic is no longer "undefined".
+
+  There is also ``__attribute__((no_wraps))`` which can be added to types or
+  variable declarations. Types or variables with this attribute may be
+  instrumented by overflow sanitizers, if enabled. Note that this matches the
+  default behavior of integer types. So, in most cases, ``no_wraps`` serves
+  purely as an annotation to readers of code that a type or variable really
+  shouldn't wrap-around. ``__attribute__((no_wraps))`` has the most function
+  when paired with `Sanitizer Special Case Lists (SSCL)
+  <https://clang.llvm.org/docs/SanitizerSpecialCaseList.html>`_.
+
+  These attributes are only valid for C, as there are built-in language
+  alternatives for other languages.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 

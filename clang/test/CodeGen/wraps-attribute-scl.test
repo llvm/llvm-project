@@ -1,0 +1,78 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// Ensure the wraps and no_wraps attributes properly adjust SSCL coverage
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/ignoreall.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/precedence.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=PREC
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow -fsanitize-ignorelist=%t/promotion.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefix=PROMO
+
+//--- ignoreall.ignorelist
+[signed-integer-overflow]
+type:*
+
+//--- precedence.ignorelist
+[signed-integer-overflow]
+type:myty
+type:qaz=sanitize
+
+//--- promotion.ignorelist
+[{signed-integer-overflow,unsigned-integer-overflow}]
+type:*
+type:int=sanitize
+
+//--- test.c
+typedef int __attribute__((no_wraps)) non_wrapping_int;
+
+// CHECK-LABEL: define dso_local void @foo
+void foo(non_wrapping_int A, int B) {
+// CHECK: %[[A:.*]] = load i32, ptr %A.addr
+// CHECK-NEXT: @llvm.sadd.with.overflow.i32(i32 %[[A]], i32 1)
+  ++A;
+
+// CHECK: %[[B:.*]] = load i32, ptr %B.addr
+// CHECK-NEXT: %[[INC1:.*]] = add nsw i32 %[[B]], 1
+// CHECK-NEXT: store i32 %[[INC1]], ptr %B.addr
+  ++B;
+}
+
+// If our ignorelist (precedence.ignorelist) has an entry for `myty`, the
+// `no_wraps` attribute should take precedence -- enable overflow sanitizer
+// instrumentation.
+typedef int __attribute__((no_wraps)) myty;
+
+// If our ignorelist (precedence.ignorelist) has an etry for `qaz=sanitize`,
+// the `wraps` attribute should take precedence -- disabling overflow sanitizer
+// instrumentation.
+typedef int __attribute__((wraps)) qaz;
+
+// PREC-LABEL: define dso_local void @bar
+void bar(myty C, qaz D) {
+// PREC: %[[C:.*]] = load i32, ptr %C.addr
+// PREC-NEXT: @llvm.sadd.with.overflow.i32(i32 %[[C]], i32 1)
+  ++C;
+
+// CHECK: %[[D:.*]] = load i32, ptr %D.addr
+// CHECK-NEXT: %[[INC2:.*]] = add i32 %[[D]], 1
+// CHECK-NEXT: store i32 %[[INC2]], ptr %D.addr
+  ++D;
+}
+
+// If a type is marked as both `wraps` and `no_wraps`, `no_wraps` should take
+// precedence, but really users shouldn't be marking a type as both of these.
+// Let's introduce a warning at some point.
+typedef int __attribute__((wraps)) __attribute__((no_wraps)) both;
+
+// CHECK-LABEL: define dso_local void @jam
+void jam(both E) {
+// CHECK: %[[E:.*]] = load i32, ptr %E.addr
+// CHECK-NEXT: @llvm.sadd.with.overflow.i32(i32 %[[E]], i32 1)
+  ++E;
+}
+
+// PROMO-LABEL: define dso_local void @bux
+void bux(char __attribute__((wraps)) F) {
+// PROMO: %[[F:.*]] = load i8, ptr %F.addr
+// PROMO-NEXT: %[[CONV1:.*]] = sext i8 %[[F]] to i32
+// PROMO-NEXT: add i32 %[[CONV1]], 1
+  (F + 1); // F is promoted to `int` but should carry the `wraps` attribute with it
+}

@@ -4142,6 +4142,12 @@ public:
     return getFPFeaturesInEffect(LO).getAllowFEnvAccess();
   }
 
+  /// Does one of the subexpressions have the wraps attribute?
+  bool hasWrappingOperand(const ASTContext &Ctx) const;
+
+  /// How about the no_wraps attribute?
+  bool hasNonWrappingOperand(const ASTContext &Ctx) const;
+
 protected:
   BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs, Opcode opc,
                  QualType ResTy, ExprValueKind VK, ExprObjectKind OK,

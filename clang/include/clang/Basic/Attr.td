@@ -4855,3 +4855,18 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Documentation = [ClspvLibclcBuiltinDoc];
   let SimpleHandler = 1;
 }
+
+def Wraps : DeclOrTypeAttr {
+  let Spellings = [Clang<"wraps">];
+  let Subjects = SubjectList<[Var, TypedefName, Field]>;
+  let Documentation = [WrapsDocs];
+  let LangOpts = [COnly];
+}
+
+def NoWraps : DeclOrTypeAttr {
+  let Spellings = [Clang<"no_wraps">];
+  let Subjects = SubjectList<[Var, TypedefName, Field]>;
+  let Documentation = [NoWrapsDocs];
+  let LangOpts = [COnly];
+}
+

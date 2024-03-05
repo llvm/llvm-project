@@ -1588,3 +1588,9 @@ def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-stor
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
 
+
+// Warnings regarding the usage of __attribute__((wraps)) on non-integer types.
+def UselessWrapsAttr : DiagGroup<"useless-wraps-attribute">;
+
+// Warnings about the wraps attribute getting implicitly discarded
+def ImpDiscardedWrapsAttr : DiagGroup<"implicitly-discarded-wraps-attribute">;
