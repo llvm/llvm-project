@@ -80,6 +80,10 @@ uint64_t MachOCASWriter::writeObject(MCAssembler &Asm,
 
     return Error::success();
   };
+
+  if (CasIDOS)
+    writeCASIDBuffer(CASObj.getID(), *CasIDOS);
+
   // If there is a callback, then just hand off the result through callback.
   if (ResultCallBack) {
     cantFail((*ResultCallBack)(CASObj.getID()));
@@ -114,9 +118,6 @@ uint64_t MachOCASWriter::writeObject(MCAssembler &Asm,
     break;
   }
   }
-
-  if (CasIDOS)
-    writeCASIDBuffer(CASObj.getID(), *CasIDOS);
 
   return OS.tell() - StartOffset;
 }
