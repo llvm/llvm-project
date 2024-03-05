@@ -62,6 +62,11 @@ public:
   /// Returns true if we don't know any bits.
   bool isUnknown() const { return Zero.isZero() && One.isZero(); }
 
+  /// Returns true if we don't know the sign bit.
+  bool isSignUnknown() const {
+    return !Zero.isSignBitSet() && !One.isSignBitSet();
+  }
+
   /// Resets the known state of all bits.
   void resetAll() {
     Zero.clearAllBits();
@@ -330,7 +335,7 @@ public:
 
   /// Compute known bits resulting from adding LHS and RHS.
   static KnownBits computeForAddSub(bool Add, bool NSW, bool NUW,
-                                    const KnownBits &LHS, KnownBits RHS);
+                                    const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits results from subtracting RHS from LHS with 1-bit
   /// Borrow.
