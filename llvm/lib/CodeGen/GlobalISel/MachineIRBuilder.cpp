@@ -621,7 +621,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(const DstOp &Dst,
 #ifndef NDEBUG
   assert(SrcTy.isValid() && "invalid operand type");
   assert(DstTy.isValid() && "invalid operand type");
-  assert(Index + DstTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
+  assert(TypeSize::isKnownLE(DstTy.getSizeInBits().getWithIncrement(Index),
+                             SrcTy.getSizeInBits()) &&
          "extracting off end of register");
 #endif
 
@@ -797,8 +798,9 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
                                                   const SrcOp &Src,
                                                   const SrcOp &Op,
                                                   unsigned Index) {
-  assert(Index + Op.getLLTTy(*getMRI()).getSizeInBits() <=
-             Res.getLLTTy(*getMRI()).getSizeInBits() &&
+  assert(TypeSize::isKnownLE(
+             Op.getLLTTy(*getMRI()).getSizeInBits().getWithIncrement(Index),
+             Res.getLLTTy(*getMRI()).getSizeInBits()) &&
          "insertion past the end of a register");
 
   if (Res.getLLTTy(*getMRI()).getSizeInBits() ==
