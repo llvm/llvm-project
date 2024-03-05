@@ -54,8 +54,5 @@ for(int i=0; i<2; i+=1) {};
 
 for(int i=0; i<2; i+=1) ;
 
-int a = 2;
-for(int i=0; i<2; i+=1) a-=1;
-
 int *aa=nullptr;
 if (auto *b=aa) *b += 1;
