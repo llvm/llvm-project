@@ -13649,10 +13649,12 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // use evaluation contexts to distinguish the function parameter case.
   CXXRecordDecl::LambdaDependencyKind DependencyKind =
       CXXRecordDecl::LDK_Unknown;
+  DeclContext *DC = getSema().CurContext;
+  if (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
+    DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&
-      (getSema().CurContext->isFileContext() ||
-       !getSema().CurContext->getParent()->isDependentContext()))
+      (DC->isFileContext() || !DC->getParent()->isDependentContext()))
     DependencyKind = CXXRecordDecl::LDK_NeverDependent;
 
   CXXRecordDecl *OldClass = E->getLambdaClass();
