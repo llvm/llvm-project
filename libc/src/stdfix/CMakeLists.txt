@@ -46,3 +46,29 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       libc.src.__support.fixed_point.fx_bits
   )
 endforeach()
+
+add_entrypoint_object(
+  uhksqrtus
+  HDRS
+    uhksqrtus.h
+  SRCS
+    uhksqrtus.cpp
+  COMPILE_OPTIONS
+    -O3
+    -ffixed-point
+  DEPENDS
+    libc.src.__support.fixed_point.sqrt
+)
+
+add_entrypoint_object(
+  uksqrtui
+  HDRS
+    uksqrtui.h
+  SRCS
+    uksqrtui.cpp
+  COMPILE_OPTIONS
+    -O3
+    -ffixed-point
+  DEPENDS
+    libc.src.__support.fixed_point.sqrt
+)

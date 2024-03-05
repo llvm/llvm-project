@@ -55,6 +55,9 @@ def StdcExt : StandardSpec<"stdc_ext"> {
           GuardedFunctionSpec<"sqrtuhk", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"sqrtuk", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"sqrtulk", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UnsignedLongAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+
+          GuardedFunctionSpec<"uhksqrtus", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
+          GuardedFunctionSpec<"uksqrtui", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedIntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
       ]
   >;
 

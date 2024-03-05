@@ -61,3 +61,43 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       libc.src.__support.fixed_point.fx_bits
   )
 endforeach()
+
+add_libc_test(
+  uhksqrtus_test
+  SUITE
+    libc-stdfix-tests
+  HDRS
+    ISqrtTest.h
+  SRCS
+    uhksqrtus_test.cpp
+  COMPILE_OPTIONS
+    -O3
+    -ffixed-point
+  DEPENDS
+    libc.src.stdfix.uhksqrtus
+    libc.src.__support.CPP.bit
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.fixed_point.sqrt
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.sqrt
+)
+
+add_libc_test(
+  uksqrtui_test
+  SUITE
+    libc-stdfix-tests
+  HDRS
+    ISqrtTest.h
+  SRCS
+    uksqrtui_test.cpp
+  COMPILE_OPTIONS
+    -O3
+    -ffixed-point
+  DEPENDS
+    libc.src.stdfix.uksqrtui
+    libc.src.__support.CPP.bit
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.fixed_point.sqrt
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.sqrt
+)
