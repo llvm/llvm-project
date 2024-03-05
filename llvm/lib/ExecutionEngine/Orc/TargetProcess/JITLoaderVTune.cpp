@@ -31,34 +31,32 @@ std::unique_ptr<IntelJITEventsWrapper> JITEventWrapper::Wrapper;
 static Error registerJITLoaderVTuneRegisterImpl(const VTuneMethodBatch &MB) {
   const size_t StringsSize = MB.Strings.size();
 
-  for (auto MethodInfo = MB.Methods.begin(), E = MB.Methods.end();
-       MethodInfo != E; ++MethodInfo) {
+  for (const auto &MethodInfo : MB.Methods) {
     iJIT_Method_Load MethodMessage;
     memset(&MethodMessage, 0, sizeof(iJIT_Method_Load));
 
-    MethodMessage.method_id = MethodInfo->MethodID;
-    if (MethodInfo->NameSI != 0 && MethodInfo->NameSI < StringsSize) {
+    MethodMessage.method_id = MethodInfo.MethodID;
+    if (MethodInfo.NameSI != 0 && MethodInfo.NameSI < StringsSize) {
       MethodMessage.method_name =
-          const_cast<char *>(MB.Strings.at(MethodInfo->NameSI).data());
+          const_cast<char *>(MB.Strings.at(MethodInfo.NameSI).data());
     } else {
       MethodMessage.method_name = NULL;
     }
-    if (MethodInfo->ClassFileSI != 0 && MethodInfo->ClassFileSI < StringsSize) {
+    if (MethodInfo.ClassFileSI != 0 && MethodInfo.ClassFileSI < StringsSize) {
       MethodMessage.class_file_name =
-          const_cast<char *>(MB.Strings.at(MethodInfo->ClassFileSI).data());
+          const_cast<char *>(MB.Strings.at(MethodInfo.ClassFileSI).data());
     } else {
       MethodMessage.class_file_name = NULL;
     }
-    if (MethodInfo->SourceFileSI != 0 &&
-        MethodInfo->SourceFileSI < StringsSize) {
+    if (MethodInfo.SourceFileSI != 0 && MethodInfo.SourceFileSI < StringsSize) {
       MethodMessage.source_file_name =
-          const_cast<char *>(MB.Strings.at(MethodInfo->SourceFileSI).data());
+          const_cast<char *>(MB.Strings.at(MethodInfo.SourceFileSI).data());
     } else {
       MethodMessage.source_file_name = NULL;
     }
 
-    MethodMessage.method_load_address = MethodInfo->LoadAddr.toPtr<void *>();
-    MethodMessage.method_size = MethodInfo->LoadSize;
+    MethodMessage.method_load_address = MethodInfo.LoadAddr.toPtr<void *>();
+    MethodMessage.method_size = MethodInfo.LoadSize;
     MethodMessage.class_id = 0;
 
     MethodMessage.user_data = NULL;
@@ -66,7 +64,7 @@ static Error registerJITLoaderVTuneRegisterImpl(const VTuneMethodBatch &MB) {
     MethodMessage.env = iJDE_JittingAPI;
 
     std::vector<LineNumberInfo> LineInfo;
-    for (const auto &LInfo : MethodInfo->LineTable) {
+    for (const auto &LInfo : MethodInfo.LineTable) {
       LineInfo.push_back(LineNumberInfo{LInfo.first, LInfo.second});
     }
 
