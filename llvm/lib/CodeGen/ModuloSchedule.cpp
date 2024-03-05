@@ -2264,15 +2264,16 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
 
   SmallVector<MachineOperand, 4> Cond;
   LoopInfo->createRemainingIterationsGreaterCondition(
-      Schedule.getNumStages() + NumUnroll - 2, *Check, Cond, ValueMapTy());
+      Schedule.getNumStages() + NumUnroll - 2, *Check, Cond, InstrMapTy());
   TII->insertBranch(*Check, Prolog, NewPreheader, Cond, DebugLoc());
 
   // VRMaps map (prolog/kernel/epilog phase#, original register#) to new
   // register#
   SmallVector<ValueMapTy> PrologVRMap, KernelVRMap, EpilogVRMap;
+  InstrMapTy LastStage0Insts;
   generateProlog(PrologVRMap);
-  generateKernel(PrologVRMap, KernelVRMap);
-  generateEpilog(KernelVRMap, EpilogVRMap);
+  generateKernel(PrologVRMap, KernelVRMap, LastStage0Insts);
+  generateEpilog(KernelVRMap, EpilogVRMap, LastStage0Insts);
 }
 
 /// Replace MI's use operands according to the maps.
@@ -2523,18 +2524,21 @@ void ModuloScheduleExpanderMVE::generateProlog(
 
 void ModuloScheduleExpanderMVE::generateKernel(
     SmallVectorImpl<ValueMapTy> &PrologVRMap,
-    SmallVectorImpl<ValueMapTy> &KernelVRMap) {
+    SmallVectorImpl<ValueMapTy> &KernelVRMap, InstrMapTy &LastStage0Insts) {
   KernelVRMap.clear();
   KernelVRMap.resize(NumUnroll);
   SmallVector<ValueMapTy> PhiVRMap;
   PhiVRMap.resize(NumUnroll);
   DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
+  DenseMap<MachineInstr *, MachineInstr *> MIMapLastStage0;
   for (int UnrollNum = 0; UnrollNum < NumUnroll; ++UnrollNum) {
     for (MachineInstr *MI : Schedule.getInstructions()) {
       if (MI->isPHI())
         continue;
       int StageNum = Schedule.getStage(MI);
       MachineInstr *NewMI = cloneInstr(MI);
+      if (UnrollNum == NumUnroll - 1)
+        LastStage0Insts[MI] = NewMI;
       updateInstrDef(NewMI, KernelVRMap[UnrollNum],
                      (UnrollNum == NumUnroll - 1 && StageNum == 0));
       generatePhi(MI, UnrollNum, PrologVRMap, KernelVRMap, PhiVRMap);
@@ -2552,8 +2556,8 @@ void ModuloScheduleExpanderMVE::generateKernel(
 
   // If remaining trip count is greater than NumUnroll-1, loop continues
   SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createRemainingIterationsGreaterCondition(
-      NumUnroll - 1, *NewKernel, Cond, KernelVRMap[NumUnroll - 1]);
+  LoopInfo->createRemainingIterationsGreaterCondition(NumUnroll - 1, *NewKernel,
+                                                      Cond, LastStage0Insts);
   TII->insertBranch(*NewKernel, NewKernel, Epilog, Cond, DebugLoc());
 
   LLVM_DEBUG({
@@ -2564,7 +2568,7 @@ void ModuloScheduleExpanderMVE::generateKernel(
 
 void ModuloScheduleExpanderMVE::generateEpilog(
     SmallVectorImpl<ValueMapTy> &KernelVRMap,
-    SmallVectorImpl<ValueMapTy> &EpilogVRMap) {
+    SmallVectorImpl<ValueMapTy> &EpilogVRMap, InstrMapTy &LastStage0Insts) {
   EpilogVRMap.clear();
   EpilogVRMap.resize(Schedule.getNumStages() - 1);
   DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
@@ -2595,8 +2599,8 @@ void ModuloScheduleExpanderMVE::generateEpilog(
   // are indicated by shouldIgnoreForPipelining() and are assumed to be placed
   // in stage 0. Thus, the map is for the last one in the kernel.
   SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createRemainingIterationsGreaterCondition(
-      0, *Epilog, Cond, KernelVRMap[NumUnroll - 1]);
+  LoopInfo->createRemainingIterationsGreaterCondition(0, *Epilog, Cond,
+                                                      LastStage0Insts);
   TII->insertBranch(*Epilog, NewPreheader, NewExit, Cond, DebugLoc());
 
   LLVM_DEBUG({
@@ -2671,7 +2675,8 @@ void ModuloScheduleExpanderMVE::expand() {
 /// Check if ModuloScheduleExpanderMVE can be applied to L
 bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
   if (!L.getExitBlock()) {
-    LLVM_DEBUG(dbgs() << "Can not apply MVE expander: No single exit block.\n";);
+    LLVM_DEBUG(
+        dbgs() << "Can not apply MVE expander: No single exit block.\n";);
     return false;
   }
 
@@ -2688,8 +2693,9 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
       if (MO.isReg())
         for (MachineInstr &Ref : MRI.use_instructions(MO.getReg()))
           if (Ref.getParent() != BB || Ref.isPHI()) {
-            LLVM_DEBUG(dbgs() << "Can not apply MVE expander: A phi result is "
-                                 "referenced outside of the loop or by phi.\n";);
+            LLVM_DEBUG(dbgs()
+                           << "Can not apply MVE expander: A phi result is "
+                              "referenced outside of the loop or by phi.\n";);
             return false;
           }
 

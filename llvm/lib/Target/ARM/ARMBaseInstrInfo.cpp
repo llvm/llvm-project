@@ -6824,7 +6824,7 @@ public:
 
   void createRemainingIterationsGreaterCondition(
       int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
-      DenseMap<unsigned, unsigned> RegMap) override {
+      DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) override {
     llvm_unreachable(
         "Target didn't implement createRemainingIterationsGreaterCondition");
   }

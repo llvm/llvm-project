@@ -408,9 +408,11 @@ private:
                    SmallVectorImpl<ValueMapTy> &KernelVRMap,
                    SmallVectorImpl<ValueMapTy> &PhiVRMap);
   void generateKernel(SmallVectorImpl<ValueMapTy> &PrologVRMap,
-                      SmallVectorImpl<ValueMapTy> &KernelVRMap);
+                      SmallVectorImpl<ValueMapTy> &KernelVRMap,
+                      InstrMapTy &LastStage0Insts);
   void generateEpilog(SmallVectorImpl<ValueMapTy> &KernelVRMap,
-                      SmallVectorImpl<ValueMapTy> &EpilogVRMap);
+                      SmallVectorImpl<ValueMapTy> &EpilogVRMap,
+                      InstrMapTy &LastStage0Insts);
   void mergeRegUsesAfterPipeline(Register OrigReg, Register NewReg);
 
   MachineInstr *cloneInstr(MachineInstr *OldMI);

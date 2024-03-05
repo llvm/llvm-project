@@ -770,15 +770,18 @@ public:
     /// Create a condition to determine if the remaining trip count for a phase
     /// is greater than TC. Some instructions such as comparisons may be
     /// inserted at the bottom of MBB. The all instructions expanded for the
-    /// phase must be inserted in MBB before calling this function. RegMap is
-    /// the map from the original registers to the expanded registers for the
-    /// phase.
+    /// phase must be inserted in MBB before calling this function.
+    /// LastStage0Insts is the map from the original instructions scheduled at
+    /// stage#0 to the expanded instructions for the last iteration of the
+    /// kernel. LastStage0Insts is intended to obtain the instruction that
+    /// refers the latest loop counter value.
     ///
-    /// MBB can also be a predecessor of the prologue block. Then RegMap must be
-    /// empty and the compared value is the initial value of the trip count.
+    /// MBB can also be a predecessor of the prologue block. Then
+    /// LastStage0Insts must be empty and the compared value is the initial
+    /// value of the trip count.
     virtual void createRemainingIterationsGreaterCondition(
         int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
-        DenseMap<unsigned, unsigned> RegMap) = 0;
+        DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) = 0;
 
     /// Modify the loop such that the trip count is
     /// OriginalTC + TripCountAdjust.
