@@ -27,7 +27,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -48,7 +48,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -103,7 +103,7 @@ uint32_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_start || !m_finish)
     return lldb::ValueObjectSP();
 
@@ -172,7 +172,7 @@ uint32_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   auto iter = m_children.find(idx), end = m_children.end();
   if (iter != end)
     return iter->second;

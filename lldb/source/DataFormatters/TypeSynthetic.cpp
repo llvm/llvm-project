@@ -167,7 +167,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
 ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
 
 lldb::ValueObjectSP
-ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(size_t idx) {
+ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!m_wrapper_sp || !m_interpreter)
     return lldb::ValueObjectSP();
 

@@ -105,7 +105,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -146,7 +146,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -178,7 +178,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -211,7 +211,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -232,7 +232,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -265,7 +265,7 @@ namespace Foundation1100 {
     
     uint32_t CalculateNumChildren() override;
     
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
     lldb::ChildCacheState Update() override;
 
@@ -655,7 +655,7 @@ bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   uint32_t num_children = CalculateNumChildren();
 
   if (idx >= num_children)
@@ -777,7 +777,7 @@ bool lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   lldb::addr_t m_keys_ptr = m_hashtable.GetKeyPointer();
   lldb::addr_t m_values_ptr = m_hashtable.GetValuePointer();
 
@@ -920,7 +920,7 @@ bool lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    NSConstantDictionarySyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    NSConstantDictionarySyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   uint32_t num_children = CalculateNumChildren();
 
   if (idx >= num_children)
@@ -1012,7 +1012,7 @@ bool lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (idx != 0)
     return lldb::ValueObjectSP();
 
@@ -1140,7 +1140,7 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
 template <typename D32, typename D64>
 lldb::ValueObjectSP
 lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
-    D32, D64>::GetChildAtIndex(size_t idx) {
+    D32, D64>::GetChildAtIndex(uint32_t idx) {
   lldb::addr_t m_keys_ptr;
   lldb::addr_t m_values_ptr;
   if (m_data_32) {
@@ -1300,7 +1300,7 @@ lldb_private::formatters::Foundation1100::
 
 lldb::ValueObjectSP
 lldb_private::formatters::Foundation1100::
-  NSDictionaryMSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+  NSDictionaryMSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   lldb::addr_t m_keys_ptr =
       (m_data_32 ? m_data_32->_keys_addr : m_data_64->_keys_addr);
   lldb::addr_t m_values_ptr =

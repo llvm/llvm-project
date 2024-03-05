@@ -465,7 +465,7 @@ public:
   /// Returns a unique id for this ValueObject.
   lldb::user_id_t GetID() const { return m_id.GetID(); }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx,
+  virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx,
                                               bool can_create = true);
 
   // The method always creates missing children in the path, if necessary.
@@ -791,7 +791,7 @@ protected:
       return (m_children.find(idx) != m_children.end());
     }
 
-    ValueObject *GetChildAtIndex(size_t idx) {
+    ValueObject *GetChildAtIndex(uint32_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);
       const auto iter = m_children.find(idx);
       return ((iter == m_children.end()) ? nullptr : iter->second);

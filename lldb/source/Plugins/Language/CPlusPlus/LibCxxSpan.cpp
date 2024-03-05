@@ -29,7 +29,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   /// Determines properties of the std::span<> associated with this object
   //
@@ -80,7 +80,7 @@ uint32_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_start)
     return {};
 

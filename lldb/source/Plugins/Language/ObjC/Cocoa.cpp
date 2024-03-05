@@ -1040,7 +1040,7 @@ public:
 
   uint32_t CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return lldb::ValueObjectSP();
   }
 
