@@ -1,5 +1,27 @@
 ; RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1210 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1210-ERR --implicit-check-not=error: --strict-whitespace %s
 
+;; Ray Tracing: DS_BVH_STACK ops
+
+ds_bvh_stack_rtn_b32 v255, v254, v253, v[249:252]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bvh_stack_push4_pop1_rtn_b32 v1, v0, v1, v[2:5]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bvh_stack_push8_pop1_rtn_b32 v1, v0, v1, v[2:9]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bvh_stack_push8_pop2_rtn_b64 v[254:255], v253, v252, v[244:251]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+;; S_WAIT_*CNT instructions.
+
+s_wait_samplecnt 0x1234
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_bvhcnt 0x1234
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; All "TBUFFER" ops, and BUFFER_LOAD/STORE_FORMAT ops.
 
 tbuffer_load_d16_format_x v4, off, s[8:11], s3 format:[BUF_FMT_8_UNORM] offset:8388607
