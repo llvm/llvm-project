@@ -63,28 +63,41 @@ template <> struct is_scalar<uint32_t> : cpp::true_type {};
 #ifdef LLVM_LIBC_HAS_UINT64
 template <> struct is_scalar<uint64_t> : cpp::true_type {};
 #endif // LLVM_LIBC_HAS_UINT64
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_scalar_v = is_scalar<T>::value;
 
 template <typename T> struct is_vector : cpp::false_type {};
 template <> struct is_vector<generic_v128> : cpp::true_type {};
 template <> struct is_vector<generic_v256> : cpp::true_type {};
 template <> struct is_vector<generic_v512> : cpp::true_type {};
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_vector_v = is_vector<T>::value;
 
 template <class T> struct is_array : cpp::false_type {};
 template <class T, size_t N> struct is_array<cpp::array<T, N>> {
+  // Meant to match std::numeric_limits interface.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr bool value = is_scalar_v<T> || is_vector_v<T>;
 };
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_array_v = is_array<T>::value;
 
+// Meant to match std::numeric_limits interface.
+// NOLINTBEGIN(readability-identifier-naming)
 template <typename T>
 constexpr bool is_element_type_v =
     is_scalar_v<T> || is_vector_v<T> || is_array_v<T>;
+// NOLINTEND(readability-identifier-naming)
 
 // Helper struct to retrieve the number of elements of an array.
 template <class T> struct array_size {};
 template <class T, size_t N>
 struct array_size<cpp::array<T, N>> : cpp::integral_constant<size_t, N> {};
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr size_t array_size_v = array_size<T>::value;
 
 // Generic operations for the above type categories.
