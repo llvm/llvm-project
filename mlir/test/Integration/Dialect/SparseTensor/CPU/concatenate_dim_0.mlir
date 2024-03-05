@@ -137,23 +137,8 @@ module {
                : (tensor<2x4xf64, #MAT_C_C>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64>
     call @dump_mat_dense_9x4(%1) : (tensor<9x4xf64>) -> ()
 
-    // CHECK:      {{\[}}[1,   0,   3,   0],
-    // CHECK-NEXT:  [0,   2,   0,   0],
-    // CHECK-NEXT:  [1,   0,   1,   1],
-    // CHECK-NEXT:  [0,   0.5,   0,   0],
-    // CHECK-NEXT:  [1,   5,   2,   0],
-    // CHECK-NEXT:  [0,   0,   1.5,   1],
-    // CHECK-NEXT:  [0,   3.5,   0,   0],
-    // CHECK-NEXT:  [1,   5,   2,   0],
-    // CHECK-NEXT:  [1,   0.5,   0,   0]]
-    // CHECK-NEXT: 18
-    // CHECK:      [1,  3,  2,  1,  1,  1,  0.5,  1,  5,  2,  1.5,  1,  3.5,  1,  5,  2,  1,  0.5
-    %2 = call @concat_mix_sparse(%m24, %sm34cd, %sm44dc)
-               : (tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C>
-    sparse_tensor.print %2 : tensor<9x4xf64, #MAT_C_C>
-
     //
-    // CHECK: ---- Sparse Tensor ----
+    // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 18
     // CHECK-NEXT: dim = ( 9, 4 )
     // CHECK-NEXT: lvl = ( 9, 4 )
@@ -163,7 +148,22 @@ module {
     // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1,  )
     // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5,  )
     // CHECK-NEXT: ----
+    %2 = call @concat_mix_sparse(%m24, %sm34cd, %sm44dc)
+               : (tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C>
+    sparse_tensor.print %2 : tensor<9x4xf64, #MAT_C_C>
+
     //
+    // CHECK: {{\[}}[1,   0,   3,   0],
+    // CHECK-NEXT:  [0,   2,   0,   0],
+    // CHECK-NEXT:  [1,   0,   1,   1],
+    // CHECK-NEXT:  [0,   0.5,   0,   0],
+    // CHECK-NEXT:  [1,   5,   2,   0],
+    // CHECK-NEXT:  [0,   0,   1.5,   1],
+    // CHECK-NEXT:  [0,   3.5,   0,   0],
+    // CHECK-NEXT:  [1,   5,   2,   0],
+    // CHECK-NEXT:  [1,   0.5,   0,   0]]
+    //
+    %1 = call @concat_sparse_dense(%sm24cc, %sm34cd, %sm44dc)
     %3 = call @concat_mix_dense(%m24, %sm34cd, %sm44dc)
                : (tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64>
     call @dump_mat_dense_9x4(%3) : (tensor<9x4xf64>) -> ()
