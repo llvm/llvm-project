@@ -753,6 +753,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream type_traits
 sstream version
 stack compare

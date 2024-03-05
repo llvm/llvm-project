@@ -177,6 +177,9 @@ Improvements to Clang's diagnostics
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes #GH69444.
 
+- Clang now uses thousand separators when printing large numbers in integer overflow diagnostics.
+  Fixes #GH80939.
+
 - Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
 - Added diagnostics for C11 keywords being incompatible with language standards
@@ -265,6 +268,8 @@ Bug Fixes to C++ Support
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter. (#GH80971)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
+- Fix parsing of abominable function types inside type traits.
+  Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
 - Clang now classifies aggregate initialization in C++17 and newer as constant
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Partially fixes
@@ -295,7 +300,13 @@ Bug Fixes to C++ Support
   of templates. Previously we were diagnosing on any non-function template
   instead of only on class, alias, and variable templates, as last updated by
   CWG2032. Fixes (#GH83461)
-
+- Fixed an issue where an attribute on a declarator would cause the attribute to
+  be destructed prematurely. This fixes a pair of Chromium that were brought to
+  our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
+- Fix evaluation of some immediate calls in default arguments.
+  Fixes (#GH80630)
+- Fix a crash when an explicit template argument list is used with a name for which lookup
+  finds a non-template function and a dependent using declarator.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
