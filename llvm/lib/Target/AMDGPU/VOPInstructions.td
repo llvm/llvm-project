@@ -39,6 +39,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
   int Subtarget = sub;
 }
 
+def GFX13Gen             : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX12_10Gen          : GFXGen<isGFX12_10Plus, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
 def GFX12PlusNot12_10Gen : GFXGen<isGFX12PlusNot12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen             : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
@@ -1559,7 +1560,7 @@ class VOP3_BITOP3_DPP8<bits<10> op, VOP_Pseudo p> : Base_VOP3_DPP8<op, p> {
 }
 
 //===----------------------------------------------------------------------===//
-// VOP3 GFX11, GFX12
+// VOP3 GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
@@ -1617,6 +1618,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   if !ne(ps.Mnemonic, asmName) then
     def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
 }
+
+multiclass VOP3_Real_with_name_gfx12_gfx13<
+    bits<10> op, string opName, string asmName, bit isSingle = 0> :
+  VOP3_Real_with_name<GFX12Gen, op, opName, asmName, isSingle>,
+  VOP3_Real_with_name<GFX13Gen, op, opName, asmName, isSingle>;
 
 // for READLANE/WRITELANE
 multiclass VOP3_Real_No_Suffix<GFXGen Gen, bits<10> op, string opName = NAME> {

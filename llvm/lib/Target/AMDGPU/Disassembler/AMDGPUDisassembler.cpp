@@ -507,6 +507,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DecW, Address, CS))
         break;
 
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1396, DecoderTableGFX13_FAKE1696, MI,
+                        DecW, Address, CS))
+        break;
+
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
         break;
@@ -590,7 +595,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX13() &&
-          tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX1364, DecoderTableGFX13_FAKE1664, MI, QW,
+                        Address, CS))
         break;
     }
 
@@ -627,10 +633,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         MI, DW, Address, CS))
         break;
 
-      if (isGFX13() &&
-          tryDecodeInst(DecoderTableGFX1332, MI, DW, Address, CS))
-        break;
-
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
                         Address, CS))
@@ -638,6 +640,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
+                        Address, CS))
+        break;
+
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1332, DecoderTableGFX13_FAKE1632, MI, DW,
                         Address, CS))
         break;
     }
