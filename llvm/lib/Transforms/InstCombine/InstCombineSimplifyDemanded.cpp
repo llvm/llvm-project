@@ -565,7 +565,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(true, NSW, LHSKnown, RHSKnown);
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known = KnownBits::computeForAddSub(true, NSW, NUW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Sub: {
@@ -598,7 +599,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(false, NSW, LHSKnown, RHSKnown);
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known = KnownBits::computeForAddSub(false, NSW, NUW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Mul: {
@@ -1206,7 +1208,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
       return I->getOperand(1);
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(/*Add*/ true, NSW, LHSKnown, RHSKnown);
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known =
+        KnownBits::computeForAddSub(/*Add=*/true, NSW, NUW, LHSKnown, RHSKnown);
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
@@ -1221,8 +1225,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
       return I->getOperand(0);
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
+    Known = KnownBits::computeForAddSub(/*Add=*/false, NSW, NUW, LHSKnown,
+                                        RHSKnown);
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
