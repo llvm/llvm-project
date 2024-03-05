@@ -602,7 +602,7 @@ class ScopBuilder final {
   /// results will escape during execution of the loop nest. We basically check
   /// here that no other memory access can access the same memory as the
   /// potential reduction.
-  void checkForReductions(ScopStmt &Stmt);
+  void checkForReductions(ScopStmt &Stmt, BasicBlock *Block);
 
   /// Verify that all required invariant loads have been hoisted.
   ///

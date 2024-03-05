@@ -470,6 +470,8 @@ public:
     RT_BOR,  ///< Bitwise Or
     RT_BXOR, ///< Bitwise XOr
     RT_BAND, ///< Bitwise And
+
+    RT_BOTTOM, ///< Pseudo type for the data flow analysis
   };
 
   using SubscriptsTy = SmallVector<const SCEV *, 4>;
@@ -1139,6 +1141,7 @@ class ScopStmt final {
   friend class ScopBuilder;
 
 public:
+  using MemoryAccessVec = llvm::SmallVector<MemoryAccess *, 8>;
   /// Create the ScopStmt from a BasicBlock.
   ScopStmt(Scop &parent, BasicBlock &bb, StringRef Name, Loop *SurroundingLoop,
            std::vector<Instruction *> Instructions);
@@ -1206,7 +1209,6 @@ private:
   /// The memory accesses of this statement.
   ///
   /// The only side effects of a statement are its memory accesses.
-  using MemoryAccessVec = llvm::SmallVector<MemoryAccess *, 8>;
   MemoryAccessVec MemAccs;
 
   /// Mapping from instructions to (scalar) memory accesses.
