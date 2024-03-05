@@ -800,7 +800,8 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_first_trailing_one">,
         Macro<"stdc_count_zeros">,
         Macro<"stdc_count_ones">,
-        Macro<"stdc_has_single_bit">
+        Macro<"stdc_has_single_bit">,
+        Macro<"std_bit_width">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -854,7 +855,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_has_single_bit_us", RetValSpec<BoolType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_has_single_bit_ui", RetValSpec<BoolType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_has_single_bit_ul", RetValSpec<BoolType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_has_single_bit_ull", RetValSpec<BoolType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_has_single_bit_ull", RetValSpec<BoolType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_bit_width_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_bit_width_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_bit_width_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_bit_width_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_bit_width_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 
