@@ -41,7 +41,7 @@ std::wstring convert_thousands_sep(std::wstring const& in, wchar_t sep) {
   return out;
 }
 
-#if defined(_WIN32)
+#  if defined(_WIN32)
 // This implementation is similar to the locale_guard in the private libcxx implementation headers
 // but exists here for usability from the libcxx/test/std conformance test suites.
 class LocaleGuard {
@@ -118,14 +118,14 @@ std::wstring get_locale_mon_thousands_sep(const char* locale) {
 std::wstring get_locale_thousands_sep(const char* locale) {
   return get_locale_lconv_cstr_member(locale, &lconv::thousands_sep);
 }
-#endif // _WIN32
+#  endif // _WIN32
 
 // GLIBC 2.27 and newer use U+202F NARROW NO-BREAK SPACE as a thousands separator.
 // This function converts the spaces in string inputs to U+202F if need
 // be. FreeBSD's locale data also uses U+202F, since 2018.
 // Windows may use U+00A0 NO-BREAK SPACE or U+0202F NARROW NO-BREAK SPACE.
 std::wstring convert_mon_thousands_sep_fr_FR(std::wstring const& in) {
-#if defined(_CS_GNU_LIBC_VERSION)
+#  if defined(_CS_GNU_LIBC_VERSION)
   if (glibc_version_less_than("2.27"))
     return in;
   else

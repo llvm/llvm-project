@@ -37,7 +37,7 @@
 #include "test_macros.h"
 
 #if defined(_WIN32) && !defined(TEST_HAS_NO_WIDE_CHARACTERS)
-#include "locale_helpers.h"
+#  include "locale_helpers.h"
 #endif
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
@@ -95,10 +95,14 @@ static void test_values() {
 #ifdef _WIN32
     std::wstring expected_sep = LocaleHelpers::get_locale_thousands_sep(LOCALE_fr_FR_UTF_8);
     assert(expected_sep.size() == 1);
-    assert(stream_fr_FR_locale<CharT>(-1'000'000s) == LocaleHelpers::convert_thousands_sep(L"-1 000 000s", expected_sep[0]));
-    assert(stream_fr_FR_locale<CharT>(1'000'000s) == LocaleHelpers::convert_thousands_sep(L"1 000 000s", expected_sep[0]));
-    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == LocaleHelpers::convert_thousands_sep(L"-1 000,1235s", expected_sep[0]));
-    assert(stream_fr_FR_locale<CharT>(1'000.123456s) == LocaleHelpers::convert_thousands_sep(L"1 000,1235s", expected_sep[0]));
+    assert(stream_fr_FR_locale<CharT>(-1'000'000s) ==
+           LocaleHelpers::convert_thousands_sep(L"-1 000 000s", expected_sep[0]));
+    assert(stream_fr_FR_locale<CharT>(1'000'000s) ==
+           LocaleHelpers::convert_thousands_sep(L"1 000 000s", expected_sep[0]));
+    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) ==
+           LocaleHelpers::convert_thousands_sep(L"-1 000,1235s", expected_sep[0]));
+    assert(stream_fr_FR_locale<CharT>(1'000.123456s) ==
+           LocaleHelpers::convert_thousands_sep(L"1 000,1235s", expected_sep[0]));
 #elif defined(__APPLE__)
     assert(stream_fr_FR_locale<CharT>(-1'000'000s) == SV("-1000000s"));
     assert(stream_fr_FR_locale<CharT>(1'000'000s) == SV("1000000s"));

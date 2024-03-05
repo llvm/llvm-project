@@ -30,7 +30,7 @@
 #include "platform_support.h" // locale name macros
 
 #if defined(_WIN32) && !defined(TEST_HAS_NO_WIDE_CHARACTERS)
-#include "locale_helpers.h"
+#  include "locale_helpers.h"
 #endif
 
 class Fnf
