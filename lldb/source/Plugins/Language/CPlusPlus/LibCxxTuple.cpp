@@ -27,7 +27,7 @@ public:
   bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
   uint32_t CalculateNumChildren() override { return m_elements.size(); }
-  ValueObjectSP GetChildAtIndex(size_t idx) override;
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
 private:
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -58,7 +58,7 @@ lldb::ChildCacheState TupleFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP TupleFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= m_elements.size())
     return ValueObjectSP();
   if (!m_base)

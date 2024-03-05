@@ -35,7 +35,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -93,7 +93,7 @@ static bool isUnorderedMap(ConstString type_name) {
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= CalculateNumChildren())
     return lldb::ValueObjectSP();
   if (m_tree == nullptr)

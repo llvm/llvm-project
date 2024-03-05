@@ -127,7 +127,7 @@ public:
     return 4;
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     switch (idx) {
       case 0: return m_name_sp;
       case 1: return m_reason_sp;

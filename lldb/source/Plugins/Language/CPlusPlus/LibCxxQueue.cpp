@@ -32,7 +32,7 @@ public:
     return m_container_sp ? m_container_sp->GetNumChildren() : 0;
   }
 
-  ValueObjectSP GetChildAtIndex(size_t idx) override {
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return m_container_sp ? m_container_sp->GetChildAtIndex(idx)
                           : nullptr;
   }

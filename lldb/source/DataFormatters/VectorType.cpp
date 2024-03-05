@@ -226,7 +226,7 @@ public:
 
   uint32_t CalculateNumChildren() override { return m_num_children; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (idx >= CalculateNumChildren())
       return {};
     std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);

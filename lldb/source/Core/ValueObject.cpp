@@ -372,7 +372,7 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   return ret;
 }
 
-ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
+ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
   ValueObjectSP child_sp;
   // We may need to update our value if we are dynamic
   if (IsPossibleDynamicType())
