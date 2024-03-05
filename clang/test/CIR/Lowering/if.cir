@@ -18,32 +18,28 @@ module {
 //      MLIR:   llvm.func @foo(%arg0: i32) -> i32
 // MLIR-NEXT:     %0 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:     %1 = llvm.icmp "ne" %arg0, %0 : i32
-// MLIR-NEXT:     %2 = llvm.zext %1 : i1 to i8
-// MLIR-NEXT:     %3 = llvm.trunc %2 : i8 to i1
-// MLIR-NEXT:     llvm.cond_br %3, ^bb2, ^bb1
+// MLIR-NEXT:     llvm.cond_br %1, ^bb2, ^bb1
 // MLIR-NEXT:   ^bb1:  // pred: ^bb0
-// MLIR-NEXT:     %4 = llvm.mlir.constant(0 : i32) : i32
-// MLIR-NEXT:     llvm.return %4 : i32
+// MLIR-NEXT:     %2 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     llvm.return %2 : i32
 // MLIR-NEXT:   ^bb2:  // pred: ^bb0
-// MLIR-NEXT:     %5 = llvm.mlir.constant(1 : i32) : i32
-// MLIR-NEXT:     llvm.return %5 : i32
+// MLIR-NEXT:     %3 = llvm.mlir.constant(1 : i32) : i32
+// MLIR-NEXT:     llvm.return %3 : i32
 // MLIR-NEXT:   ^bb3:  // no predecessors
 // MLIR-NEXT:     llvm.return %arg0 : i32
 // MLIR-NEXT:   }
 
 //       LLVM: define i32 @foo(i32 %0)
 //  LLVM-NEXT:   %2 = icmp ne i32 %0, 0
-//  LLVM-NEXT:   %3 = zext i1 %2 to i8
-//  LLVM-NEXT:   %4 = trunc i8 %3 to i1
-//  LLVM-NEXT:   br i1 %4, label %6, label %5
+//  LLVM-NEXT:   br i1 %2, label %4, label %3
 // LLVM-EMPTY:
-//  LLVM-NEXT: 5:
+//  LLVM-NEXT: 3:
 //  LLVM-NEXT:   ret i32 0
 // LLVM-EMPTY:
-//  LLVM-NEXT: 6:
+//  LLVM-NEXT: 4:
 //  LLVM-NEXT:   ret i32 1
 // LLVM-EMPTY:
-//  LLVM-NEXT: 7:
+//  LLVM-NEXT: 5:
 //  LLVM-NEXT:   ret i32 %0
 //  LLVM-NEXT: }
 
@@ -59,12 +55,10 @@ module {
   //      MLIR: llvm.func @onlyIf(%arg0: i32) -> i32
   // MLIR-NEXT:   %0 = llvm.mlir.constant(0 : i32) : i32
   // MLIR-NEXT:   %1 = llvm.icmp "ne" %arg0, %0 : i32
-  // MLIR-NEXT:   %2 = llvm.zext %1 : i1 to i8
-  // MLIR-NEXT:   %3 = llvm.trunc %2 : i8 to i1
-  // MLIR-NEXT:   llvm.cond_br %3, ^bb1, ^bb2
+  // MLIR-NEXT:   llvm.cond_br %1, ^bb1, ^bb2
   // MLIR-NEXT: ^bb1:  // pred: ^bb0
-  // MLIR-NEXT:   %4 = llvm.mlir.constant(1 : i32) : i32
-  // MLIR-NEXT:   llvm.return %4 : i32
+  // MLIR-NEXT:   %2 = llvm.mlir.constant(1 : i32) : i32
+  // MLIR-NEXT:   llvm.return %2 : i32
   // MLIR-NEXT: ^bb2:  // pred: ^bb0
   // MLIR-NEXT:   llvm.return %arg0 : i32
   // MLIR-NEXT: }

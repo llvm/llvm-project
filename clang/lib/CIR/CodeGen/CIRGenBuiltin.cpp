@@ -402,10 +402,40 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_expect:
-  case Builtin::BI__builtin_expect_with_probability:
+  case Builtin::BI__builtin_expect_with_probability: {
+    auto ArgValue = buildScalarExpr(E->getArg(0));
+    auto ExpectedValue = buildScalarExpr(E->getArg(1));
+
+    // Don't generate cir.expect on -O0 as the backend won't use it for
+    // anything. Note, we still IRGen ExpectedValue because it could have
+    // side-effects.
+    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+      return RValue::get(ArgValue);
+
+    mlir::FloatAttr ProbAttr = {};
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_expect_with_probability) {
+      llvm::APFloat Probability(0.0);
+      const Expr *ProbArg = E->getArg(2);
+      bool EvalSucceed =
+          ProbArg->EvaluateAsFloat(Probability, CGM.getASTContext());
+      assert(EvalSucceed && "probability should be able to evaluate as float");
+      (void)EvalSucceed;
+      bool LoseInfo = false;
+      Probability.convert(llvm::APFloat::IEEEdouble(),
+                          llvm::RoundingMode::Dynamic, &LoseInfo);
+      ProbAttr = mlir::FloatAttr::get(
+          mlir::FloatType::getF64(builder.getContext()), Probability);
+    }
+
+    auto result = builder.create<mlir::cir::ExpectOp>(
+        getLoc(E->getSourceRange()), ArgValue.getType(), ArgValue,
+        ExpectedValue, ProbAttr);
+
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_unpredictable: {
     if (CGM.getCodeGenOpts().OptimizationLevel != 0)
-      assert(!UnimplementedFeature::branchPredictionInfoBuiltin());
+      assert(!UnimplementedFeature::insertBuiltinUnpredictable());
     return RValue::get(buildScalarExpr(E->getArg(0)));
   }
 

@@ -2853,6 +2853,31 @@ def SqrtOp : UnaryFPToFPBuiltinOp<"sqrt">;
 def TruncOp : UnaryFPToFPBuiltinOp<"trunc">;
 
 //===----------------------------------------------------------------------===//
+// Branch Probability Operations
+//===----------------------------------------------------------------------===//
+
+def ExpectOp : CIR_Op<"expect",
+  [Pure, AllTypesMatch<["result", "val", "expected"]>]> {
+  let summary =
+    "Compute whether expression is likely to evaluate to a specified value";
+  let description = [{
+    Provides __builtin_expect functionality in Clang IR.
+
+    If $prob is not specified, then behaviour is same as __builtin_expect.
+    If specified, then behaviour is same as __builtin_expect_with_probability,
+    where probability = $prob.
+  }];
+
+  let arguments = (ins CIR_IntType:$val,
+                       CIR_IntType:$expected,
+                       OptionalAttr<F64Attr>:$prob);
+  let results = (outs CIR_IntType:$result);
+  let assemblyFormat = [{
+    `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
 
