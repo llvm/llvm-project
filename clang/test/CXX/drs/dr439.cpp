@@ -16,6 +16,9 @@ void f() {
 
 } // namespace dr439
 
+// We're checking that p2 was copied from p1, and then was carried over
+// to the comparison without change.
+
 // CHECK-LABEL: define {{.*}} void @dr439::f()()
 // CHECK:         [[P1:%.+]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P2:%.+]] = alloca ptr, align 8
