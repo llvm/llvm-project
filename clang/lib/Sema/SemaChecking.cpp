@@ -17624,20 +17624,8 @@ public:
       return VisitExpr(CCE);
 
     // In C++11, list initializations are sequenced.
-    SmallVector<SequenceTree::Seq, 32> Elts;
-    SequenceTree::Seq Parent = Region;
-    for (CXXConstructExpr::const_arg_iterator I = CCE->arg_begin(),
-                                              E = CCE->arg_end();
-         I != E; ++I) {
-      Region = Tree.allocate(Parent);
-      Elts.push_back(Region);
-      Visit(*I);
-    }
-
-    // Forget that the initializers are sequenced.
-    Region = Parent;
-    for (unsigned I = 0; I < Elts.size(); ++I)
-      Tree.merge(Elts[I]);
+    SequenceExpressionsInOrder(
+        llvm::ArrayRef(CCE->getArgs(), CCE->getNumArgs()));
   }
 
   void VisitInitListExpr(const InitListExpr *ILE) {
@@ -17645,10 +17633,20 @@ public:
       return VisitExpr(ILE);
 
     // In C++11, list initializations are sequenced.
+    SequenceExpressionsInOrder(ILE->inits());
+  }
+
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *PLIE) {
+    // C++20 parenthesized list initializations are sequenced. See C++20
+    // [decl.init.general]p16.5 and [decl.init.general]p16.6.2.2.
+    SequenceExpressionsInOrder(PLIE->getInitExprs());
+  }
+
+private:
+  void SequenceExpressionsInOrder(ArrayRef<const Expr *> ExpressionList) {
     SmallVector<SequenceTree::Seq, 32> Elts;
     SequenceTree::Seq Parent = Region;
-    for (unsigned I = 0; I < ILE->getNumInits(); ++I) {
-      const Expr *E = ILE->getInit(I);
+    for (const Expr *E : ExpressionList) {
       if (!E)
         continue;
       Region = Tree.allocate(Parent);
