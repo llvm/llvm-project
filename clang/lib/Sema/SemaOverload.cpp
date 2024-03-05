@@ -432,12 +432,11 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         Converted.convert(Ctx.getFloatTypeSemantics(FromType),
                           llvm::APFloat::rmNearestTiesToEven, &ignored);
         if (Ctx.getLangOpts().C23) {
-          if (FloatVal.isNaN() && Converted.isNaN()) {
-            if (!FloatVal.isSignaling() && !Converted.isSignaling()) {
-              // Quiet NaNs are considered the same value, regardless of
-              // payloads.
-              return NK_Not_Narrowing;
-            }
+          if (FloatVal.isNaN() && Converted.isNaN() &&
+              !FloatVal.isSignaling() && !Converted.isSignaling()) {
+            // Quiet NaNs are considered the same value, regardless of
+            // payloads.
+            return NK_Not_Narrowing;
           }
           // For normal values, check exact equality.
           if (!Converted.bitwiseIsEqual(FloatVal)) {
