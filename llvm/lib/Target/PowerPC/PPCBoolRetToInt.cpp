@@ -101,7 +101,7 @@ class PPCBoolRetToInt : public FunctionPass {
       // runOnUse.
       Value *Zero = Constant::getNullValue(IntTy);
       PHINode *Q =
-        PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P);
+        PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P->getIterator());
       for (unsigned i = 0; i < P->getNumOperands(); ++i)
         Q->addIncoming(Zero, P->getIncomingBlock(i));
       return Q;
