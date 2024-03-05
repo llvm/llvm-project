@@ -335,6 +335,14 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
 
 void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
     bool OnlyPartial /*=false*/) const {
+  auto *ExternalSource = getASTContext().getExternalSource();
+  if (!ExternalSource)
+    return;
+
+  ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
+                                              OnlyPartial);
+  return;
+
   // Grab the most recent declaration to ensure we've loaded any lazy
   // redeclarations of this template.
   CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
@@ -353,6 +361,8 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
 
 Decl *RedeclarableTemplateDecl::loadLazySpecializationImpl(
     LazySpecializationInfo &LazySpecInfo) const {
+  llvm_unreachable("We don't use LazySpecializationInfo any more");
+
   uint32_t ID = LazySpecInfo.DeclID;
   assert(ID && "Loading already loaded specialization!");
   // Note that we loaded the specialization.
@@ -362,6 +372,13 @@ Decl *RedeclarableTemplateDecl::loadLazySpecializationImpl(
 
 void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
     ArrayRef<TemplateArgument> Args, TemplateParameterList *TPL) const {
+  auto *ExternalSource = getASTContext().getExternalSource();
+  if (!ExternalSource)
+    return;
+
+  ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(), Args);
+  return;
+
   CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
   if (auto *Specs = CommonBasePtr->LazySpecializations) {
     unsigned Hash = TemplateArgumentList::ComputeODRHash(Args);
