@@ -35,15 +35,16 @@ void test() {
   std::span<CharT> sp{arr};
 
   // TODO:
-  (void)sp;
-  // // Mode: default
-  // {
-  //   SpBuf rhsSpBuf{sp};
-  //   SpBuf spBuf = std::move(rhsSpBuf);
-  //   assert(spBuf.span().data() == arr);
-  //   assert(!spBuf.span().empty());
-  //   assert(spBuf.span().size() == 4);
-  // }
+
+  // Mode: default
+  {
+    SpBuf rhsSpBuf{sp};
+    SpBuf spBuf = std::move(rhsSpBuf);
+    (void)spBuf;
+    // assert(spBuf.span().data() == arr);
+    // assert(!spBuf.span().empty());
+    // assert(spBuf.span().size() == 4);
+  }
   // // Mode: `ios_base::in`
   // {
   //   SpBuf rhsSpBuf{sp, std::ios_base::in};
