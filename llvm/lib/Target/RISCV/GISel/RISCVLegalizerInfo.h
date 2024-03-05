@@ -48,6 +48,8 @@ private:
   bool legalizeSplatVector(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool legalizeLoadStore(MachineInstr &MI, LegalizerHelper &Helper,
                          MachineIRBuilder &MIB) const;
+  bool legalizeInsert(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeExtract(MachineInstr &MI, MachineIRBuilder &MIB) const;
 };
 } // end namespace llvm
 #endif
