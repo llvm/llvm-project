@@ -5271,8 +5271,10 @@ public:
           (ProcessGDBRemote *)m_interpreter.GetExecutionContext()
               .GetProcessPtr();
       if (process) {
-        StreamSP output_stream_sp(
-            m_interpreter.GetDebugger().GetAsyncOutputStream());
+        StreamSP output_stream_sp = result.GetImmediateOutputStream();
+        if (!output_stream_sp)
+          output_stream_sp =
+              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =
@@ -5618,8 +5620,7 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
       log,
       "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
       child_pid, child_tid);
-  assert(m_vfork_in_progress >= 0);
-  ++m_vfork_in_progress;
+  ++m_vfork_in_progress_count;
 
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5674,8 +5675,7 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 
 void ProcessGDBRemote::DidVForkDone() {
   assert(m_vfork_in_progress_count > 0);
-  if (m_vfork_in_progress_count > 0)
-    --m_vfork_in_progress_count;
+  --m_vfork_in_progress_count;
 
   // Reenable all software breakpoints that were enabled before vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5686,7 +5686,6 @@ void ProcessGDBRemote::DidExec() {
   // If we are following children, vfork is finished by exec (rather than
   // vforkdone that is submitted for parent).
   if (GetFollowForkMode() == eFollowChild) {
-    assert(m_vfork_in_progress_count > 0);
     if (m_vfork_in_progress_count > 0)
       --m_vfork_in_progress_count;
   }
