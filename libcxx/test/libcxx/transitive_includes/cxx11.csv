@@ -160,6 +160,7 @@ compare limits
 compare type_traits
 compare version
 complex cmath
+complex cstddef
 complex iosfwd
 complex sstream
 complex stdexcept
@@ -750,6 +751,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream type_traits
 sstream version
 stack compare

@@ -2044,7 +2044,8 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
           return false;
 
         if (Init) {
-          const auto *Construct = dyn_cast<CXXConstructExpr>(Init);
+          const auto *Construct =
+              dyn_cast<CXXConstructExpr>(Init->IgnoreImpCasts());
           if (Construct && !Construct->isElidable()) {
             const CXXConstructorDecl *CD = Construct->getConstructor();
             if (!CD->isTrivial() && !RD->hasAttr<WarnUnusedAttr>() &&
@@ -6210,6 +6211,8 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
                                         SourceLocation Loc,
                                         TemplateIdAnnotation *TemplateId,
                                         bool IsMemberSpecialization) {
+  assert(SS.isValid() && "diagnoseQualifiedDeclaration called for declaration "
+                         "without nested-name-specifier");
   DeclContext *Cur = CurContext;
   while (isa<LinkageSpecDecl>(Cur) || isa<CapturedDecl>(Cur))
     Cur = Cur->getParent();
@@ -6298,22 +6301,36 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         << FixItHint::CreateRemoval(TemplateId->TemplateKWLoc);
 
   NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
-  while (SpecLoc.getPrefix()) {
+  do {
     if (SpecLoc.getNestedNameSpecifier()->getKind() ==
         NestedNameSpecifier::TypeSpecWithTemplate)
       Diag(Loc, diag::ext_template_after_declarative_nns)
           << FixItHint::CreateRemoval(
                  SpecLoc.getTypeLoc().getTemplateKeywordLoc());
 
-    SpecLoc = SpecLoc.getPrefix();
-  }
-  // C++11 [dcl.meaning]p1:
-  //   [...] "The nested-name-specifier of the qualified declarator-id shall
-  //   not begin with a decltype-specifer"
-  if (isa_and_nonnull<DecltypeType>(
-          SpecLoc.getNestedNameSpecifier()->getAsType()))
-    Diag(Loc, diag::err_decltype_in_declarator)
-      << SpecLoc.getTypeLoc().getSourceRange();
+    if (const Type *T = SpecLoc.getNestedNameSpecifier()->getAsType()) {
+      if (const auto *TST = T->getAsAdjusted<TemplateSpecializationType>()) {
+        // C++23 [expr.prim.id.qual]p3:
+        //   [...] If a nested-name-specifier N is declarative and has a
+        //   simple-template-id with a template argument list A that involves a
+        //   template parameter, let T be the template nominated by N without A.
+        //   T shall be a class template.
+        if (TST->isDependentType() && TST->isTypeAlias())
+          Diag(Loc, diag::ext_alias_template_in_declarative_nns)
+              << SpecLoc.getLocalSourceRange();
+      } else if (T->isDecltypeType()) {
+        // C++23 [expr.prim.id.qual]p2:
+        //   [...] A declarative nested-name-specifier shall not have a
+        //   decltype-specifier.
+        //
+        // FIXME: This wording appears to be defective as it does not forbid
+        // declarative nested-name-specifiers with pack-index-specifiers.
+        // See https://github.com/cplusplus/CWG/issues/499.
+        Diag(Loc, diag::err_decltype_in_declarator)
+            << SpecLoc.getTypeLoc().getSourceRange();
+      }
+    }
+  } while ((SpecLoc = SpecLoc.getPrefix()));
 
   return false;
 }
@@ -6335,12 +6352,6 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     return nullptr;
   } else if (DiagnoseUnexpandedParameterPack(NameInfo, UPPC_DeclarationType))
     return nullptr;
-
-  // The scope passed in may not be a decl scope.  Zip up the scope tree until
-  // we find one that is.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
 
   DeclContext *DC = CurContext;
   if (D.getCXXScopeSpec().isInvalid())
@@ -6469,12 +6480,22 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     RemoveUsingDecls(Previous);
   }
 
-  if (Previous.isSingleResult() &&
-      Previous.getFoundDecl()->isTemplateParameter()) {
-    // Maybe we will complain about the shadowed template parameter.
-    if (!D.isInvalidType())
-      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(),
-                                      Previous.getFoundDecl());
+  if (auto *TPD = Previous.getAsSingle<NamedDecl>();
+      TPD && TPD->isTemplateParameter()) {
+    // Older versions of clang allowed the names of function/variable templates
+    // to shadow the names of their template parameters. For the compatibility
+    // purposes we detect such cases and issue a default-to-error warning that
+    // can be disabled with -Wno-strict-primary-template-shadow.
+    if (!D.isInvalidType()) {
+      bool AllowForCompatibility = false;
+      if (Scope *DeclParent = S->getDeclParent();
+          Scope *TemplateParamParent = S->getTemplateParamParent()) {
+        AllowForCompatibility = DeclParent->Contains(*TemplateParamParent) &&
+                                TemplateParamParent->isDeclScope(TPD);
+      }
+      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(), TPD,
+                                      AllowForCompatibility);
+    }
 
     // Just pretend that we didn't see the previous declaration.
     Previous.clear();
@@ -6497,6 +6518,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // of a function declaration (C++ only).
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
+
+  /// Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   NamedDecl *New;
 
@@ -16408,6 +16432,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
   ProcessDeclAttributeList(S, D, Attrs);
+  ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
     if (Method->isStatic())
@@ -19667,6 +19692,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+  ProcessAPINotes(Record);
 }
 
 /// Determine whether the given integral value is representable within
@@ -19981,6 +20007,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
+  ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());
@@ -20179,6 +20206,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   QualType EnumType = Context.getTypeDeclType(Enum);
 
   ProcessDeclAttributeList(S, Enum, Attrs);
+  ProcessAPINotes(Enum);
 
   if (Enum->isDependentType()) {
     for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
@@ -20317,8 +20345,13 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                            ? Context.UnsignedLongTy : Context.LongTy;
     } else {
       BestWidth = Context.getTargetInfo().getLongLongWidth();
-      assert(NumPositiveBits <= BestWidth &&
-             "How could an initializer get larger than ULL?");
+      if (NumPositiveBits > BestWidth) {
+        // This can happen with bit-precise integer types, but those are not
+        // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
+        // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
+        // a 128-bit integer, we should consider doing the same.
+        Diag(Enum->getLocation(), diag::ext_enum_too_large);
+      }
       BestType = Context.UnsignedLongLongTy;
       BestPromotionType
         = (NumPositiveBits == BestWidth || !getLangOpts().CPlusPlus)

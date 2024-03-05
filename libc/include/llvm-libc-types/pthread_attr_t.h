@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_PTHREAD_ATTR_T_H
-#define __LLVM_LIBC_TYPES_PTHREAD_ATTR_T_H
+#ifndef LLVM_LIBC_TYPES_PTHREAD_ATTR_T_H
+#define LLVM_LIBC_TYPES_PTHREAD_ATTR_T_H
 
 #include <llvm-libc-types/size_t.h>
 
@@ -18,4 +18,4 @@ typedef struct {
   size_t __guardsize;
 } pthread_attr_t;
 
-#endif // __LLVM_LIBC_TYPES_PTHREAD_ATTR_T_H
+#endif // LLVM_LIBC_TYPES_PTHREAD_ATTR_T_H

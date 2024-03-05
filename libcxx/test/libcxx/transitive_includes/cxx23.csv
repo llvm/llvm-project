@@ -30,7 +30,6 @@ array stdexcept
 array version
 atomic cstddef
 atomic cstdint
-atomic cstdlib
 atomic cstring
 atomic ctime
 atomic limits
@@ -111,6 +110,7 @@ compare cstdint
 compare limits
 compare version
 complex cmath
+complex cstddef
 complex sstream
 complex version
 concepts cstddef
@@ -178,7 +178,6 @@ experimental/utility utility
 filesystem compare
 filesystem cstddef
 filesystem cstdint
-filesystem cstring
 filesystem ctime
 filesystem iomanip
 filesystem limits
@@ -520,6 +519,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream version
 stack compare
 stack cstddef

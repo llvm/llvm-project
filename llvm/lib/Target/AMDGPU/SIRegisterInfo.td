@@ -1108,24 +1108,34 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
     let ParserMatchClass = RegImmMatcher<!subst("_Deferred", "", NAME)>;
 }
 
+// Should be in sync with the OperandSemantics defined in SIDefines.h
+def OperandSemantics {
+  int INT = 0;
+  int FP16 = 1;
+  int BF16 = 2;
+  int FP32 = 3;
+  int FP64 = 4;
+}
+
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
 class SrcRegOrImm9<RegisterClass regClass, string opWidth, string operandType,
-                   int immWidth> : RegOrImmOperand<regClass, operandType> {
+                   int immWidth, int OperandSemantics>
+    : RegOrImmOperand<regClass, operandType> {
   let DecoderMethod = "decodeSrcRegOrImm9<AMDGPUDisassembler::" # opWidth #
-                      ", " # immWidth # ">";
+                      ", " # immWidth # ", " # OperandSemantics # ">";
 }
 
-def SSrc_b16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT16", 16>;
-def SSrc_bf16: SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_BF16", 16>;
-def SSrc_f16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_FP16", 16>;
-def SSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT32", 32>;
-def SSrc_f32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_FP32", 32>;
-def SSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_IMM_INT64", 64>;
+def SSrc_b16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT16", 16, OperandSemantics.INT>;
+def SSrc_bf16: SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_BF16", 16, OperandSemantics.BF16>;
+def SSrc_f16 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_FP16", 16, OperandSemantics.FP16>;
+def SSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_INT32", 32, OperandSemantics.INT>;
+def SSrc_f32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_IMM_FP32", 32, OperandSemantics.FP32>;
+def SSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_IMM_INT64", 64, OperandSemantics.INT>;
 
-def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPW32", "OPERAND_REG_IMM_INT32", 32>;
+def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPW32", "OPERAND_REG_IMM_INT32", 32, OperandSemantics.INT>;
 
 //===----------------------------------------------------------------------===//
 //  SSrc_32_Deferred Operands with an SGPR or a 32-bit immediate for use with
@@ -1133,29 +1143,29 @@ def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPW32", "OPERAND_REG_IMM_INT32"
 //===----------------------------------------------------------------------===//
 
 class SrcRegOrImmDeferred9<RegisterClass regClass, string opWidth,
-                           string operandType, int immWidth>
+                           string operandType, int immWidth, int OperandSemantics>
     : RegOrImmOperand<regClass, operandType> {
   let DecoderMethod = "decodeSrcRegOrImmDeferred9<AMDGPUDisassembler::" #
-                      opWidth # ", " # immWidth # ">";
+                      opWidth # ", " # immWidth # ", " # OperandSemantics # ">";
 }
 
-def SSrc_f32_Deferred : SrcRegOrImmDeferred9<SReg_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED", 32>;
+def SSrc_f32_Deferred : SrcRegOrImmDeferred9<SReg_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED", 32, OperandSemantics.FP32>;
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
-def SCSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_INT32", 32>;
-def SCSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT64", 64>;
+def SCSrc_b32 : SrcRegOrImm9 <SReg_32, "OPW32", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def SCSrc_b64 : SrcRegOrImm9 <SReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT64", 64, OperandSemantics.INT>;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
 // The current and temporary future default used case for VOP3.
-def VSrc_b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_INT16", 16>;
-def VSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_BF16", 16>;
-def VSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP16", 16>;
+def VSrc_b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_INT16", 16, OperandSemantics.INT>;
+def VSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_BF16", 16, OperandSemantics.BF16>;
+def VSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP16", 16, OperandSemantics.FP16>;
 
 // True16 VOP3 operands.
 def VSrcT_b16 : RegOrImmOperand <VS_16, "OPERAND_REG_IMM_INT16"> {
@@ -1187,35 +1197,35 @@ def VSrcT_f16_Lo128 : RegOrImmOperand <VS_16_Lo128, "OPERAND_REG_IMM_FP16"> {
 
 // The current and temporary future default used case for fake VOP1/2/C.
 // For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
-def VSrcFake16_b16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_INT16", 16>;
-def VSrcFake16_bf16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16", 16>;
-def VSrcFake16_f16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_FP16", 16>;
+def VSrcFake16_b16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_INT16", 16, OperandSemantics.INT>;
+def VSrcFake16_bf16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16", 16, OperandSemantics.BF16>;
+def VSrcFake16_f16_Lo128 : SrcRegOrImm9 <VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_FP16", 16, OperandSemantics.FP16>;
 
-def VSrc_b32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_INT32", 32>;
-def VSrc_f32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP32", 32>;
-def VSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2INT16", 32>;
-def VSrc_v2bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2BF16", 16>;
-def VSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2FP16", 16>;
-def VSrc_b64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_INT64", 64>;
-def VSrc_f64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_FP64", 64> {
+def VSrc_b32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_INT32", 32, OperandSemantics.INT>;
+def VSrc_f32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_FP32", 32, OperandSemantics.FP32>;
+def VSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2INT16", 32, OperandSemantics.INT>;
+def VSrc_v2bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2BF16", 16, OperandSemantics.BF16>;
+def VSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_V2FP16", 16, OperandSemantics.FP16>;
+def VSrc_b64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_INT64", 64, OperandSemantics.INT>;
+def VSrc_f64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_FP64", 64, OperandSemantics.FP64> {
   let DecoderMethod = "decodeOperand_VSrc_f64";
 }
-def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2INT32", 32>;
-def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2FP32", 32>;
+def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2INT32", 32, OperandSemantics.INT>;
+def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2FP32", 32, OperandSemantics.FP32>;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
 //  with FMAMK/FMAAK
 //===----------------------------------------------------------------------===//
 
-def VSrc_bf16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16>;
-def VSrc_f16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED", 16>;
-def VSrc_f32_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED", 32>;
+def VSrc_bf16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16, OperandSemantics.BF16>;
+def VSrc_f16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED", 16, OperandSemantics.FP16>;
+def VSrc_f32_Deferred : SrcRegOrImmDeferred9<VS_32, "OPW32", "OPERAND_REG_IMM_FP32_DEFERRED", 32, OperandSemantics.FP32>;
 
 def VSrcFake16_bf16_Lo128_Deferred
-  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16>;
+  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_BF16_DEFERRED", 16, OperandSemantics.BF16>;
 def VSrcFake16_f16_Lo128_Deferred
-  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED", 16>;
+  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPW16", "OPERAND_REG_IMM_FP16_DEFERRED", 16, OperandSemantics.FP16>;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
@@ -1277,34 +1287,34 @@ def ARegSrc_32 : AVOperand<AGPR_32, "decodeSrcA9", "OPW32">;
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VCSrc_b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_INT16", 16>;
-def VCSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_BF16", 16>;
-def VCSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_FP16", 16>;
-def VCSrc_b32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_INT32", 32>;
-def VCSrc_f32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_FP32", 32>;
-def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2INT16", 32>;
-def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2BF16", 16>;
-def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2FP16", 16>;
+def VCSrc_b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_INT16", 16, OperandSemantics.INT>;
+def VCSrc_bf16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_BF16", 16, OperandSemantics.BF16>;
+def VCSrc_f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_FP16", 16, OperandSemantics.FP16>;
+def VCSrc_b32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def VCSrc_f32 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_FP32", 32, OperandSemantics.FP32>;
+def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2INT16", 32, OperandSemantics.INT>;
+def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2BF16", 16, OperandSemantics.BF16>;
+def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2FP16", 16, OperandSemantics.FP16>;
 
 //===----------------------------------------------------------------------===//
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_BF16", 16>;
-def VISrc_64_f16 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_FP16", 16>;
-def VISrc_64_b32 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT32", 32>;
-def VISrc_64_f64 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_FP64", 64>;
-def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_BF16", 16>;
-def VISrc_128_f16 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_FP16", 16>;
-def VISrc_128_b32 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_INT32", 32>;
-def VISrc_128_f32 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_FP32", 32>;
-def VISrc_256_b32 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_INT32", 32>;
-def VISrc_256_f32 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_FP32", 32>;
-def VISrc_256_f64 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_FP64", 64>;
-def VISrc_512_b32 : SrcRegOrImm9 <VReg_512, "OPW512", "OPERAND_REG_INLINE_C_INT32", 32>;
-def VISrc_512_f32 : SrcRegOrImm9 <VReg_512, "OPW512", "OPERAND_REG_INLINE_C_FP32", 32>;
-def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024, "OPW1024", "OPERAND_REG_INLINE_C_INT32", 32>;
-def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024, "OPW1024", "OPERAND_REG_INLINE_C_FP32", 32>;
+def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_BF16", 16, OperandSemantics.BF16>;
+def VISrc_64_f16 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_FP16", 16, OperandSemantics.FP16>;
+def VISrc_64_b32 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def VISrc_64_f64 : SrcRegOrImm9 <VReg_64, "OPW64", "OPERAND_REG_INLINE_C_FP64", 64, OperandSemantics.FP64>;
+def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_BF16", 16, OperandSemantics.BF16>;
+def VISrc_128_f16 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_FP16", 16, OperandSemantics.FP16>;
+def VISrc_128_b32 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def VISrc_128_f32 : SrcRegOrImm9 <VReg_128, "OPW128", "OPERAND_REG_INLINE_C_FP32", 32, OperandSemantics.FP32>;
+def VISrc_256_b32 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def VISrc_256_f32 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_FP32", 32, OperandSemantics.FP32>;
+def VISrc_256_f64 : SrcRegOrImm9 <VReg_256, "OPW256", "OPERAND_REG_INLINE_C_FP64", 64, OperandSemantics.FP64>;
+def VISrc_512_b32 : SrcRegOrImm9 <VReg_512, "OPW512", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def VISrc_512_f32 : SrcRegOrImm9 <VReg_512, "OPW512", "OPERAND_REG_INLINE_C_FP32", 32, OperandSemantics.FP32>;
+def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024, "OPW1024", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
+def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024, "OPW1024", "OPERAND_REG_INLINE_C_FP32", 32, OperandSemantics.FP32>;
 
 //===----------------------------------------------------------------------===//
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
@@ -1337,17 +1347,17 @@ def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
 //===----------------------------------------------------------------------===//
 
 class SrcRegOrImmA9<RegisterClass regClass, string opWidth, string operandType,
-                    int immWidth>
+                    int immWidth, int OperandSemantics>
     : RegOrImmOperand<regClass, operandType> {
   let DecoderMethod = "decodeSrcRegOrImmA9<AMDGPUDisassembler::" # opWidth #
-                      ", " # immWidth # ">";
+                      ", " # immWidth # ", " # OperandSemantics # ">";
 }
 
-def AISrc_64_f64 : SrcRegOrImmA9 <AReg_64, "OPW64", "OPERAND_REG_INLINE_AC_FP64", 64>;
-def AISrc_128_f32 : SrcRegOrImmA9 <AReg_128, "OPW128", "OPERAND_REG_INLINE_AC_FP32", 32>;
-def AISrc_128_b32 : SrcRegOrImmA9 <AReg_128, "OPW128", "OPERAND_REG_INLINE_AC_INT32", 32>;
-def AISrc_256_f64 : SrcRegOrImmA9 <AReg_256, "OPW256", "OPERAND_REG_INLINE_AC_FP64", 64>;
-def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPW512", "OPERAND_REG_INLINE_AC_FP32", 32>;
-def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPW512", "OPERAND_REG_INLINE_AC_INT32", 32>;
-def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPW1024", "OPERAND_REG_INLINE_AC_FP32", 32>;
-def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPW1024", "OPERAND_REG_INLINE_AC_INT32", 32>;
+def AISrc_64_f64 : SrcRegOrImmA9 <AReg_64, "OPW64", "OPERAND_REG_INLINE_AC_FP64", 64, OperandSemantics.FP64>;
+def AISrc_128_f32 : SrcRegOrImmA9 <AReg_128, "OPW128", "OPERAND_REG_INLINE_AC_FP32", 32, OperandSemantics.FP32>;
+def AISrc_128_b32 : SrcRegOrImmA9 <AReg_128, "OPW128", "OPERAND_REG_INLINE_AC_INT32", 32, OperandSemantics.INT>;
+def AISrc_256_f64 : SrcRegOrImmA9 <AReg_256, "OPW256", "OPERAND_REG_INLINE_AC_FP64", 64, OperandSemantics.FP64>;
+def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPW512", "OPERAND_REG_INLINE_AC_FP32", 32, OperandSemantics.FP32>;
+def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPW512", "OPERAND_REG_INLINE_AC_INT32", 32, OperandSemantics.INT>;
+def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPW1024", "OPERAND_REG_INLINE_AC_FP32", 32, OperandSemantics.FP32>;
+def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPW1024", "OPERAND_REG_INLINE_AC_INT32", 32, OperandSemantics.INT>;

@@ -332,14 +332,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    func::ConstantOp constantOp) {
-  Operation *operation = constantOp.getOperation();
-  Attribute value = constantOp.getValueAttr();
-
-  return printConstantOp(emitter, operation, value);
-}
-
-static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::AssignOp assignOp) {
   auto variableOp = cast<emitc::VariableOp>(assignOp.getVar().getDefiningOp());
   OpResult result = variableOp->getResult(0);
@@ -364,6 +356,22 @@ static LogicalResult printBinaryOperation(CppEmitter &emitter,
   os << " " << binaryOperator << " ";
 
   if (failed(emitter.emitOperand(operation->getOperand(1))))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult printUnaryOperation(CppEmitter &emitter,
+                                         Operation *operation,
+                                         StringRef unaryOperator) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+
+  os << unaryOperator;
+
+  if (failed(emitter.emitOperand(operation->getOperand(0))))
     return failure();
 
   return success();
@@ -596,6 +604,44 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::BitwiseAndOp bitwiseAndOp) {
+  Operation *operation = bitwiseAndOp.getOperation();
+  return printBinaryOperation(emitter, operation, "&");
+}
+
+static LogicalResult
+printOperation(CppEmitter &emitter,
+               emitc::BitwiseLeftShiftOp bitwiseLeftShiftOp) {
+  Operation *operation = bitwiseLeftShiftOp.getOperation();
+  return printBinaryOperation(emitter, operation, "<<");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::BitwiseNotOp bitwiseNotOp) {
+  Operation *operation = bitwiseNotOp.getOperation();
+  return printUnaryOperation(emitter, operation, "~");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::BitwiseOrOp bitwiseOrOp) {
+  Operation *operation = bitwiseOrOp.getOperation();
+  return printBinaryOperation(emitter, operation, "|");
+}
+
+static LogicalResult
+printOperation(CppEmitter &emitter,
+               emitc::BitwiseRightShiftOp bitwiseRightShiftOp) {
+  Operation *operation = bitwiseRightShiftOp.getOperation();
+  return printBinaryOperation(emitter, operation, ">>");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::BitwiseXorOp bitwiseXorOp) {
+  Operation *operation = bitwiseXorOp.getOperation();
+  return printBinaryOperation(emitter, operation, "^");
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, emitc::CastOp castOp) {
   raw_ostream &os = emitter.ostream();
   Operation &op = *castOp.getOperation();
@@ -633,6 +679,24 @@ static LogicalResult printOperation(CppEmitter &emitter,
     os << "\"" << includeOp.getInclude() << "\"";
 
   return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LogicalAndOp logicalAndOp) {
+  Operation *operation = logicalAndOp.getOperation();
+  return printBinaryOperation(emitter, operation, "&&");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LogicalNotOp logicalNotOp) {
+  Operation *operation = logicalNotOp.getOperation();
+  return printUnaryOperation(emitter, operation, "!");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LogicalOrOp logicalOrOp) {
+  Operation *operation = logicalOrOp.getOperation();
+  return printBinaryOperation(emitter, operation, "||");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
@@ -1288,15 +1352,19 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp, emitc::CallOp,
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
+                emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
+                emitc::BitwiseNotOp, emitc::BitwiseOrOp,
+                emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
                 emitc::ConstantOp, emitc::DeclareFuncOp, emitc::DivOp,
                 emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::IncludeOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
+                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
                 emitc::SubOp, emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
-          .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(
+          .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops.
           .Case<arith::ConstantOp>(

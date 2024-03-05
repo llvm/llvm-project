@@ -2150,6 +2150,12 @@ public:
     VariadicDoesNotApply
   };
 
+  /// Determine if type T is a valid subject for a nonnull and similar
+  /// attributes. By default, we look through references (the behavior used by
+  /// nonnull), but if the second parameter is true, then we treat a reference
+  /// type as valid.
+  bool isValidPointerAttrType(QualType T, bool RefOkay = false);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
@@ -9155,7 +9161,21 @@ public:
                                       TemplateSpecializationKind TSK,
                                       bool Complain = true);
 
-  void DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl);
+  /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
+  /// that the template parameter 'PrevDecl' is being shadowed by a new
+  /// declaration at location Loc. Returns true to indicate that this is
+  /// an error, and false otherwise.
+  ///
+  /// \param Loc The location of the declaration that shadows a template
+  ///            parameter.
+  ///
+  /// \param PrevDecl The template parameter that the declaration shadows.
+  ///
+  /// \param SupportedForCompatibility Whether to issue the diagnostic as
+  ///        a warning for compatibility with older versions of clang.
+  ///        Ignored when MSVC compatibility is enabled.
+  void DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl,
+                                       bool SupportedForCompatibility = false);
   TemplateDecl *AdjustDeclIfTemplate(Decl *&Decl);
 
   NamedDecl *ActOnTypeParameter(Scope *S, bool Typename,
@@ -9289,7 +9309,7 @@ public:
   /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
-                                VarTemplateDecl *Template,
+                                VarTemplateDecl *Template, NamedDecl *FoundD,
                                 SourceLocation TemplateLoc,
                                 const TemplateArgumentListInfo *TemplateArgs);
 
@@ -12968,6 +12988,24 @@ public:
 
   ///@}
 
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name API Notes
+  /// Implementations are in SemaAPINotes.cpp
+  ///@{
+
+public:
+  /// Map any API notes provided for this declaration to attributes on the
+  /// declaration.
+  ///
+  /// Triggered by declaration-attribute processing.
+  void ProcessAPINotes(Decl *D);
+
+  ///@}
   //
   //
   // -------------------------------------------------------------------------

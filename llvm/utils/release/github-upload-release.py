@@ -77,20 +77,28 @@ parser.add_argument(
 parser.add_argument("--token", type=str)
 parser.add_argument("--release", type=str)
 parser.add_argument("--user", type=str)
+parser.add_argument("--user-token", type=str)
 
 # Upload args
 parser.add_argument("--files", nargs="+", type=str)
 
 args = parser.parse_args()
 
-github = github.Github(args.token)
-llvm_org = github.get_organization("llvm")
+gh = github.Github(args.token)
+llvm_org = gh.get_organization("llvm")
 llvm_repo = llvm_org.get_repo("llvm-project")
 
 if args.user:
+    if not args.user_token:
+        print("--user-token option required when --user is used")
+        sys.exit(1)
     # Validate that this user is allowed to modify releases.
-    user = github.get_user(args.user)
-    team = llvm_org.get_team_by_slug("llvm-release-managers")
+    user = gh.get_user(args.user)
+    team = (
+        github.Github(args.user_token)
+        .get_organization("llvm")
+        .get_team_by_slug("llvm-release-managers")
+    )
     if not team.has_in_members(user):
         print("User {} is not a allowed to modify releases".format(args.user))
         sys.exit(1)

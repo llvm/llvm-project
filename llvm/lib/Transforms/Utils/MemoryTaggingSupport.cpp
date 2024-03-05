@@ -111,7 +111,7 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 
 void StackInfoBuilder::visit(Instruction &Inst) {
   // Visit non-intrinsic debug-info records attached to Inst.
-  for (auto &DPV : Inst.getDbgValueRange()) {
+  for (DPValue &DPV : DPValue::filter(Inst.getDbgValueRange())) {
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
@@ -219,7 +219,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
   Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
   auto *NewAI = new AllocaInst(TypeWithPadding, Info.AI->getAddressSpace(),
-                               nullptr, "", Info.AI);
+                               nullptr, "", Info.AI->getIterator());
   NewAI->takeName(Info.AI);
   NewAI->setAlignment(Info.AI->getAlign());
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
@@ -230,7 +230,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 
   // TODO: Remove when typed pointers dropped
   if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
 
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();

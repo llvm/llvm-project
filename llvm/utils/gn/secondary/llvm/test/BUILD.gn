@@ -74,6 +74,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_USE_INTEL_JITEVENTS=0",
     "LLVM_USE_SANITIZER=",
     "LLVM_VERSION_MAJOR=$llvm_version_major",
+    "LLVM_VERSION_MINOR=$llvm_version_minor",
     "LLVM_VERSION_SUFFIX=git",
     "Python3_EXECUTABLE=$python_path",
     "TARGETS_TO_BUILD=$llvm_targets_to_build_string",

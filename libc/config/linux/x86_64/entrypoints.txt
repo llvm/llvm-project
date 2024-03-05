@@ -132,6 +132,21 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_first_trailing_one_ui
     libc.src.stdbit.stdc_first_trailing_one_ul
     libc.src.stdbit.stdc_first_trailing_one_ull
+    libc.src.stdbit.stdc_count_zeros_uc
+    libc.src.stdbit.stdc_count_zeros_us
+    libc.src.stdbit.stdc_count_zeros_ui
+    libc.src.stdbit.stdc_count_zeros_ul
+    libc.src.stdbit.stdc_count_zeros_ull
+    libc.src.stdbit.stdc_count_ones_uc
+    libc.src.stdbit.stdc_count_ones_us
+    libc.src.stdbit.stdc_count_ones_ui
+    libc.src.stdbit.stdc_count_ones_ul
+    libc.src.stdbit.stdc_count_ones_ull
+    libc.src.stdbit.stdc_has_single_bit_uc
+    libc.src.stdbit.stdc_has_single_bit_us
+    libc.src.stdbit.stdc_has_single_bit_ui
+    libc.src.stdbit.stdc_has_single_bit_ul
+    libc.src.stdbit.stdc_has_single_bit_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
@@ -355,6 +370,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.llogb
+    libc.src.math.llogbf
+    libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
     libc.src.math.llrintl
@@ -424,7 +442,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
-if(LIBC_COMPILER_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128
@@ -435,7 +453,10 @@ if(LIBC_COMPILER_HAS_FLOAT128)
     libc.src.math.fmaxf128
     libc.src.math.fminf128
     libc.src.math.frexpf128
+    libc.src.math.ilogbf128
     libc.src.math.ldexpf128
+    libc.src.math.llogbf128
+    libc.src.math.logbf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
@@ -463,6 +484,12 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.roundur
     libc.src.stdfix.roundulk
     libc.src.stdfix.roundulr
+    libc.src.stdfix.sqrtuhk
+    libc.src.stdfix.sqrtuhr
+    libc.src.stdfix.sqrtuk
+    libc.src.stdfix.sqrtur
+    # libc.src.stdfix.sqrtulk
+    libc.src.stdfix.sqrtulr
   )
 endif()
 

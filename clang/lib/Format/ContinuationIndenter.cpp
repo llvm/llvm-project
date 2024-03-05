@@ -1803,7 +1803,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   }
 
   if (Current.MatchingParen && Current.is(BK_Block)) {
-    moveStateToNewBlock(State);
+    moveStateToNewBlock(State, Newline);
     return;
   }
 
@@ -1991,7 +1991,7 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
   }
 }
 
-void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
+void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
@@ -2003,10 +2003,18 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
       NestedBlockIndent + (State.NextToken->is(TT_ObjCBlockLBrace)
                                ? Style.ObjCBlockIndentWidth
                                : Style.IndentWidth);
+
+  // Even when wrapping before lambda body, the left brace can still be added to
+  // the same line. This occurs when checking whether the whole lambda body can
+  // go on a single line. In this case we have to make sure there are no line
+  // breaks in the body, otherwise we could just end up with a regular lambda
+  // body without the brace wrapped.
+  bool NoLineBreak = Style.BraceWrapping.BeforeLambdaBody && !NewLine &&
+                     State.NextToken->is(TT_LambdaLBrace);
+
   State.Stack.push_back(ParenState(State.NextToken, NewIndent,
                                    State.Stack.back().LastSpace,
-                                   /*AvoidBinPacking=*/true,
-                                   /*NoLineBreak=*/false));
+                                   /*AvoidBinPacking=*/true, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = true;
 }
