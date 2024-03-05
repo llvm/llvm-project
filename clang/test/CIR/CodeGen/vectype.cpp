@@ -15,6 +15,22 @@ void vector_int_test(int x) {
   vi4 b = { x, 5, 6, x + 1 };
   // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}} : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
 
+  // Incomplete vector initialization.
+  vi4 bb = { x, x + 1 };
+  // CHECK: %[[#zero:]] = cir.const(#cir.int<0> : !s32i) : !s32i
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %[[#zero]], %[[#zero]] : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
+
+  // Scalar to vector conversion, a.k.a. vector splat.  Only valid as an
+  // operand of a binary operator, not as a regular conversion.
+  bb = a + 7;
+  // CHECK: %[[#seven:]] = cir.const(#cir.int<7> : !s32i) : !s32i
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%[[#seven]], %[[#seven]], %[[#seven]], %[[#seven]] : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
+
+  // Vector to vector conversion
+  vd2 bbb = { };
+  bb = (vi4)bbb;
+  // CHECK: %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.vector<!cir.double x 2>), !cir.vector<!s32i x 4>
+
   // Extract element
   int c = a[x];
   // CHECK: %{{[0-9]+}} = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : <!s32i x 4>
@@ -75,6 +91,17 @@ void vector_double_test(int x, double y) {
   // Non-const vector initialization.
   vd2 b = { y, y + 1.0 };
   // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : !cir.double, !cir.double) : <!cir.double x 2>
+
+  // Incomplete vector initialization
+  vd2 bb = { y };
+  // CHECK: [[#dzero:]] = cir.const(#cir.fp<0.000000e+00> : !cir.double) : !cir.double
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %[[#dzero]] : !cir.double, !cir.double) : <!cir.double x 2>
+
+  // Scalar to vector conversion, a.k.a. vector splat.  Only valid as an
+  // operand of a binary operator, not as a regular conversion.
+  bb = a + 2.5;
+  // CHECK: %[[#twohalf:]] = cir.const(#cir.fp<2.500000e+00> : !cir.double) : !cir.double
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%[[#twohalf]], %[[#twohalf]] : !cir.double, !cir.double) : <!cir.double x 2>
 
   // Extract element
   double c = a[x];
