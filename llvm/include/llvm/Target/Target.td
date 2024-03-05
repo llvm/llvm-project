@@ -1564,6 +1564,10 @@ class AsmParser {
   // method shall be called for all operands as opposed to only those
   // that have their own specified custom parsers.
   bit CallCustomParserForAllOperands = false;
+
+  // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
+  // instructions.
+  bit PreferSmallerInstructions = false;
 }
 def DefaultAsmParser : AsmParser;
 
@@ -1743,11 +1747,6 @@ class Target {
   // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
   // for all opcodes if this flag is set to 0.
   int AllowRegisterRenaming = 0;
-
-  // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
-  // instructions. 1 if the instruction set should sort by size,
-  // 0 otherwise.
-  bit PreferSmallerInstructions = 0;
 }
 
 //===----------------------------------------------------------------------===//

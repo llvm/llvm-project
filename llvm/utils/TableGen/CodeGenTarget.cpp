@@ -332,10 +332,6 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
   return TargetRec->getValueAsInt("AllowRegisterRenaming");
 }
 
-bool CodeGenTarget::getPreferSmallerInstructions() const {
-  return TargetRec->getValueAsBit("PreferSmallerInstructions");
-}
-
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
 Record *CodeGenTarget::getAsmParser() const {
@@ -344,6 +340,10 @@ Record *CodeGenTarget::getAsmParser() const {
     PrintFatalError("Target does not have an AsmParser #" +
                     Twine(AsmParserNum) + "!");
   return LI[AsmParserNum];
+}
+
+bool CodeGenTarget::getPreferSmallerInstructions() const {
+  return getAsmParser()->getValueAsBit("PreferSmallerInstructions");
 }
 
 /// getAsmParserVariant - Return the AssemblyParserVariant definition for
