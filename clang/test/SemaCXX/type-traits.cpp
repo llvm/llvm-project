@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++17 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++20 -fblocks -Wno-deprecated-builtins -Wno-defaulted-function-deleted -Wno-c++17-extensions  %s
 
 
 struct NonPOD { NonPOD(int); };
@@ -212,56 +212,56 @@ struct HasVirtBase : virtual ACompleteType {};
 
 void is_pod()
 {
-  static_assert(__is_pod(int), "");
-  static_assert(__is_pod(Enum), "");
-  static_assert(__is_pod(POD), "");
-  static_assert(__is_pod(Int), "");
-  static_assert(__is_pod(IntAr), "");
-  static_assert(__is_pod(Statics), "");
-  static_assert(__is_pod(Empty), "");
-  static_assert(__is_pod(EmptyUnion), "");
-  static_assert(__is_pod(Union), "");
-  static_assert(__is_pod(HasFunc), "");
-  static_assert(__is_pod(HasOp), "");
-  static_assert(__is_pod(HasConv), "");
-  static_assert(__is_pod(HasAssign), "");
-  static_assert(__is_pod(IntArNB), "");
-  static_assert(__is_pod(HasAnonymousUnion), "");
-  static_assert(__is_pod(Vector), "");
-  static_assert(__is_pod(VectorExt), "");
-  static_assert(__is_pod(Derives), "");
-  static_assert(__is_pod(DerivesAr), "");
-  static_assert(__is_pod(DerivesArNB), "");
-  static_assert(__is_pod(DerivesEmpty), "");
-  static_assert(__is_pod(HasPriv), "");
-  static_assert(__is_pod(HasProt), "");
-  static_assert(__is_pod(DerivesHasPriv), "");
-  static_assert(__is_pod(DerivesHasProt), "");
+  static_assert(__is_pod(int));
+  static_assert(__is_pod(Enum));
+  static_assert(__is_pod(POD));
+  static_assert(__is_pod(Int));
+  static_assert(__is_pod(IntAr));
+  static_assert(__is_pod(Statics));
+  static_assert(__is_pod(Empty));
+  static_assert(__is_pod(EmptyUnion));
+  static_assert(__is_pod(Union));
+  static_assert(__is_pod(HasFunc));
+  static_assert(__is_pod(HasOp));
+  static_assert(__is_pod(HasConv));
+  static_assert(__is_pod(HasAssign));
+  static_assert(__is_pod(IntArNB));
+  static_assert(__is_pod(HasAnonymousUnion));
+  static_assert(__is_pod(Vector));
+  static_assert(__is_pod(VectorExt));
+  static_assert(__is_pod(Derives));
+  static_assert(__is_pod(DerivesAr));
+  static_assert(__is_pod(DerivesArNB));
+  static_assert(__is_pod(DerivesEmpty));
+  static_assert(__is_pod(HasPriv));
+  static_assert(__is_pod(HasProt));
+  static_assert(__is_pod(DerivesHasPriv));
+  static_assert(__is_pod(DerivesHasProt));
 
-  static_assert(!__is_pod(HasCons), "");
-  static_assert(!__is_pod(HasCopyAssign), "");
-  static_assert(!__is_pod(HasMoveAssign), "");
-  static_assert(!__is_pod(HasDest), "");
-  static_assert(!__is_pod(HasRef), "");
-  static_assert(!__is_pod(HasVirt), "");
-  static_assert(!__is_pod(DerivesHasCons), "");
-  static_assert(!__is_pod(DerivesHasCopyAssign), "");
-  static_assert(!__is_pod(DerivesHasMoveAssign), "");
-  static_assert(!__is_pod(DerivesHasDest), "");
-  static_assert(!__is_pod(DerivesHasRef), "");
-  static_assert(!__is_pod(DerivesHasVirt), "");
-  static_assert(!__is_pod(NonPOD), "");
-  static_assert(!__is_pod(HasNonPOD), "");
-  static_assert(!__is_pod(NonPODAr), "");
-  static_assert(!__is_pod(NonPODArNB), "");
-  static_assert(!__is_pod(void), "");
-  static_assert(!__is_pod(cvoid), "");
-// static_assert(!__is_pod(NonPODUnion), "");
+  static_assert(!__is_pod(HasCons));
+  static_assert(!__is_pod(HasCopyAssign));
+  static_assert(!__is_pod(HasMoveAssign));
+  static_assert(!__is_pod(HasDest));
+  static_assert(!__is_pod(HasRef));
+  static_assert(!__is_pod(HasVirt));
+  static_assert(!__is_pod(DerivesHasCons));
+  static_assert(!__is_pod(DerivesHasCopyAssign));
+  static_assert(!__is_pod(DerivesHasMoveAssign));
+  static_assert(!__is_pod(DerivesHasDest));
+  static_assert(!__is_pod(DerivesHasRef));
+  static_assert(!__is_pod(DerivesHasVirt));
+  static_assert(!__is_pod(NonPOD));
+  static_assert(!__is_pod(HasNonPOD));
+  static_assert(!__is_pod(NonPODAr));
+  static_assert(!__is_pod(NonPODArNB));
+  static_assert(!__is_pod(void));
+  static_assert(!__is_pod(cvoid));
+// static_assert(!__is_pod(NonPODUnion));
 
-  static_assert(__is_pod(ACompleteType), "");
-  static_assert(!__is_pod(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_pod(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_pod(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
+  static_assert(__is_pod(ACompleteType));
+  static_assert(!__is_pod(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_pod(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__is_pod(AnIncompleteType[1])); // expected-error {{incomplete type}}
 }
 
 typedef Empty EmptyAr[10];
@@ -273,56 +273,56 @@ struct DerivesVirt : virtual POD {};
 
 void is_empty()
 {
-  static_assert(__is_empty(Empty), "");
-  static_assert(__is_empty(DerivesEmpty), "");
-  static_assert(__is_empty(HasCons), "");
-  static_assert(__is_empty(HasCopyAssign), "");
-  static_assert(__is_empty(HasMoveAssign), "");
-  static_assert(__is_empty(HasDest), "");
-  static_assert(__is_empty(HasFunc), "");
-  static_assert(__is_empty(HasOp), "");
-  static_assert(__is_empty(HasConv), "");
-  static_assert(__is_empty(HasAssign), "");
-  static_assert(__is_empty(Bit0), "");
-  static_assert(__is_empty(Bit0Cons), "");
+  static_assert(__is_empty(Empty));
+  static_assert(__is_empty(DerivesEmpty));
+  static_assert(__is_empty(HasCons));
+  static_assert(__is_empty(HasCopyAssign));
+  static_assert(__is_empty(HasMoveAssign));
+  static_assert(__is_empty(HasDest));
+  static_assert(__is_empty(HasFunc));
+  static_assert(__is_empty(HasOp));
+  static_assert(__is_empty(HasConv));
+  static_assert(__is_empty(HasAssign));
+  static_assert(__is_empty(Bit0));
+  static_assert(__is_empty(Bit0Cons));
 
-  static_assert(!__is_empty(Int), "");
-  static_assert(!__is_empty(POD), "");
-  static_assert(!__is_empty(EmptyUnion), "");
-  static_assert(!__is_empty(IncompleteUnion), "");
-  static_assert(!__is_empty(EmptyAr), "");
-  static_assert(!__is_empty(HasRef), "");
-  static_assert(!__is_empty(HasVirt), "");
-  static_assert(!__is_empty(AnonBitOnly), "");
-  static_assert(!__is_empty(BitOnly), "");
-  static_assert(!__is_empty(void), "");
-  static_assert(!__is_empty(IntArNB), "");
-  static_assert(!__is_empty(HasAnonymousUnion), "");
-//  static_assert(!__is_empty(DerivesVirt), "");
+  static_assert(!__is_empty(Int));
+  static_assert(!__is_empty(POD));
+  static_assert(!__is_empty(EmptyUnion));
+  static_assert(!__is_empty(IncompleteUnion));
+  static_assert(!__is_empty(EmptyAr));
+  static_assert(!__is_empty(HasRef));
+  static_assert(!__is_empty(HasVirt));
+  static_assert(!__is_empty(AnonBitOnly));
+  static_assert(!__is_empty(BitOnly));
+  static_assert(!__is_empty(void));
+  static_assert(!__is_empty(IntArNB));
+  static_assert(!__is_empty(HasAnonymousUnion));
+//  static_assert(!__is_empty(DerivesVirt));
 
-  static_assert(__is_empty(ACompleteType), "");
-  static_assert(!__is_empty(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_empty(AnIncompleteType[]), "");
-  static_assert(!__is_empty(AnIncompleteType[1]), "");
+  static_assert(__is_empty(ACompleteType));
+  static_assert(!__is_empty(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_empty(AnIncompleteType[]));
+  static_assert(!__is_empty(AnIncompleteType[1]));
 }
 
 typedef Derives ClassType;
 
 void is_class()
 {
-  static_assert(__is_class(Derives), "");
-  static_assert(__is_class(HasPriv), "");
-  static_assert(__is_class(ClassType), "");
-  static_assert(__is_class(HasAnonymousUnion), "");
+  static_assert(__is_class(Derives));
+  static_assert(__is_class(HasPriv));
+  static_assert(__is_class(ClassType));
+  static_assert(__is_class(HasAnonymousUnion));
 
-  static_assert(!__is_class(int), "");
-  static_assert(!__is_class(Enum), "");
-  static_assert(!__is_class(Int), "");
-  static_assert(!__is_class(IntAr), "");
-  static_assert(!__is_class(DerivesAr), "");
-  static_assert(!__is_class(Union), "");
-  static_assert(!__is_class(cvoid), "");
-  static_assert(!__is_class(IntArNB), "");
+  static_assert(!__is_class(int));
+  static_assert(!__is_class(Enum));
+  static_assert(!__is_class(Int));
+  static_assert(!__is_class(IntAr));
+  static_assert(!__is_class(DerivesAr));
+  static_assert(!__is_class(Union));
+  static_assert(!__is_class(cvoid));
+  static_assert(!__is_class(IntArNB));
 }
 
 typedef Union UnionAr[10];
@@ -330,17 +330,17 @@ typedef Union UnionType;
 
 void is_union()
 {
-  static_assert(__is_union(Union), "");
-  static_assert(__is_union(UnionType), "");
+  static_assert(__is_union(Union));
+  static_assert(__is_union(UnionType));
 
-  static_assert(!__is_union(int), "");
-  static_assert(!__is_union(Enum), "");
-  static_assert(!__is_union(Int), "");
-  static_assert(!__is_union(IntAr), "");
-  static_assert(!__is_union(UnionAr), "");
-  static_assert(!__is_union(cvoid), "");
-  static_assert(!__is_union(IntArNB), "");
-  static_assert(!__is_union(HasAnonymousUnion), "");
+  static_assert(!__is_union(int));
+  static_assert(!__is_union(Enum));
+  static_assert(!__is_union(Int));
+  static_assert(!__is_union(IntAr));
+  static_assert(!__is_union(UnionAr));
+  static_assert(!__is_union(cvoid));
+  static_assert(!__is_union(IntArNB));
+  static_assert(!__is_union(HasAnonymousUnion));
 }
 
 typedef Enum EnumType;
@@ -348,57 +348,57 @@ typedef EnumClass EnumClassType;
 
 void is_enum()
 {
-  static_assert(__is_enum(Enum), "");
-  static_assert(__is_enum(EnumType), "");
-  static_assert(__is_enum(SignedEnum), "");
-  static_assert(__is_enum(UnsignedEnum), "");
+  static_assert(__is_enum(Enum));
+  static_assert(__is_enum(EnumType));
+  static_assert(__is_enum(SignedEnum));
+  static_assert(__is_enum(UnsignedEnum));
 
-  static_assert(__is_enum(EnumClass), "");
-  static_assert(__is_enum(EnumClassType), "");
-  static_assert(__is_enum(SignedEnumClass), "");
-  static_assert(__is_enum(UnsignedEnumClass), "");
+  static_assert(__is_enum(EnumClass));
+  static_assert(__is_enum(EnumClassType));
+  static_assert(__is_enum(SignedEnumClass));
+  static_assert(__is_enum(UnsignedEnumClass));
 
-  static_assert(!__is_enum(int), "");
-  static_assert(!__is_enum(Union), "");
-  static_assert(!__is_enum(Int), "");
-  static_assert(!__is_enum(IntAr), "");
-  static_assert(!__is_enum(UnionAr), "");
-  static_assert(!__is_enum(Derives), "");
-  static_assert(!__is_enum(ClassType), "");
-  static_assert(!__is_enum(cvoid), "");
-  static_assert(!__is_enum(IntArNB), "");
-  static_assert(!__is_enum(HasAnonymousUnion), "");
-  static_assert(!__is_enum(AnIncompleteType), "");
-  static_assert(!__is_enum(AnIncompleteTypeAr), "");
-  static_assert(!__is_enum(AnIncompleteTypeArMB), "");
-  static_assert(!__is_enum(AnIncompleteTypeArNB), "");
+  static_assert(!__is_enum(int));
+  static_assert(!__is_enum(Union));
+  static_assert(!__is_enum(Int));
+  static_assert(!__is_enum(IntAr));
+  static_assert(!__is_enum(UnionAr));
+  static_assert(!__is_enum(Derives));
+  static_assert(!__is_enum(ClassType));
+  static_assert(!__is_enum(cvoid));
+  static_assert(!__is_enum(IntArNB));
+  static_assert(!__is_enum(HasAnonymousUnion));
+  static_assert(!__is_enum(AnIncompleteType));
+  static_assert(!__is_enum(AnIncompleteTypeAr));
+  static_assert(!__is_enum(AnIncompleteTypeArMB));
+  static_assert(!__is_enum(AnIncompleteTypeArNB));
 }
 
 void is_scoped_enum() {
-  static_assert(!__is_scoped_enum(Enum), "");
-  static_assert(!__is_scoped_enum(EnumType), "");
-  static_assert(!__is_scoped_enum(SignedEnum), "");
-  static_assert(!__is_scoped_enum(UnsignedEnum), "");
+  static_assert(!__is_scoped_enum(Enum));
+  static_assert(!__is_scoped_enum(EnumType));
+  static_assert(!__is_scoped_enum(SignedEnum));
+  static_assert(!__is_scoped_enum(UnsignedEnum));
 
-  static_assert(__is_scoped_enum(EnumClass), "");
-  static_assert(__is_scoped_enum(EnumClassType), "");
-  static_assert(__is_scoped_enum(SignedEnumClass), "");
-  static_assert(__is_scoped_enum(UnsignedEnumClass), "");
+  static_assert(__is_scoped_enum(EnumClass));
+  static_assert(__is_scoped_enum(EnumClassType));
+  static_assert(__is_scoped_enum(SignedEnumClass));
+  static_assert(__is_scoped_enum(UnsignedEnumClass));
 
-  static_assert(!__is_scoped_enum(int), "");
-  static_assert(!__is_scoped_enum(Union), "");
-  static_assert(!__is_scoped_enum(Int), "");
-  static_assert(!__is_scoped_enum(IntAr), "");
-  static_assert(!__is_scoped_enum(UnionAr), "");
-  static_assert(!__is_scoped_enum(Derives), "");
-  static_assert(!__is_scoped_enum(ClassType), "");
-  static_assert(!__is_scoped_enum(cvoid), "");
-  static_assert(!__is_scoped_enum(IntArNB), "");
-  static_assert(!__is_scoped_enum(HasAnonymousUnion), "");
-  static_assert(!__is_scoped_enum(AnIncompleteType), "");
-  static_assert(!__is_scoped_enum(AnIncompleteTypeAr), "");
-  static_assert(!__is_scoped_enum(AnIncompleteTypeArMB), "");
-  static_assert(!__is_scoped_enum(AnIncompleteTypeArNB), "");
+  static_assert(!__is_scoped_enum(int));
+  static_assert(!__is_scoped_enum(Union));
+  static_assert(!__is_scoped_enum(Int));
+  static_assert(!__is_scoped_enum(IntAr));
+  static_assert(!__is_scoped_enum(UnionAr));
+  static_assert(!__is_scoped_enum(Derives));
+  static_assert(!__is_scoped_enum(ClassType));
+  static_assert(!__is_scoped_enum(cvoid));
+  static_assert(!__is_scoped_enum(IntArNB));
+  static_assert(!__is_scoped_enum(HasAnonymousUnion));
+  static_assert(!__is_scoped_enum(AnIncompleteType));
+  static_assert(!__is_scoped_enum(AnIncompleteTypeAr));
+  static_assert(!__is_scoped_enum(AnIncompleteTypeArMB));
+  static_assert(!__is_scoped_enum(AnIncompleteTypeArNB));
 }
 
 struct FinalClass final {
@@ -419,20 +419,20 @@ struct PotentiallyFinal<int> final { };
 
 void is_final()
 {
-	static_assert(__is_final(FinalClass), "");
-	static_assert(__is_final(PotentiallyFinal<float*>), "");
-	static_assert(__is_final(PotentiallyFinal<int>), "");
+	static_assert(__is_final(FinalClass));
+	static_assert(__is_final(PotentiallyFinal<float*>));
+	static_assert(__is_final(PotentiallyFinal<int>));
 
-	static_assert(!__is_final(int), "");
-	static_assert(!__is_final(Union), "");
-	static_assert(!__is_final(Int), "");
-	static_assert(!__is_final(IntAr), "");
-	static_assert(!__is_final(UnionAr), "");
-	static_assert(!__is_final(Derives), "");
-	static_assert(!__is_final(ClassType), "");
-	static_assert(!__is_final(cvoid), "");
-	static_assert(!__is_final(IntArNB), "");
-	static_assert(!__is_final(HasAnonymousUnion), "");
+	static_assert(!__is_final(int));
+	static_assert(!__is_final(Union));
+	static_assert(!__is_final(Int));
+	static_assert(!__is_final(IntAr));
+	static_assert(!__is_final(UnionAr));
+	static_assert(!__is_final(Derives));
+	static_assert(!__is_final(ClassType));
+	static_assert(!__is_final(cvoid));
+	static_assert(!__is_final(IntArNB));
+	static_assert(!__is_final(HasAnonymousUnion));
 }
 
 
@@ -441,78 +441,78 @@ struct InheritPolymorph : Polymorph {};
 
 void is_polymorphic()
 {
-  static_assert(__is_polymorphic(Polymorph), "");
-  static_assert(__is_polymorphic(InheritPolymorph), "");
+  static_assert(__is_polymorphic(Polymorph));
+  static_assert(__is_polymorphic(InheritPolymorph));
 
-  static_assert(!__is_polymorphic(int), "");
-  static_assert(!__is_polymorphic(Union), "");
-  static_assert(!__is_polymorphic(IncompleteUnion), "");
-  static_assert(!__is_polymorphic(Int), "");
-  static_assert(!__is_polymorphic(IntAr), "");
-  static_assert(!__is_polymorphic(UnionAr), "");
-  static_assert(!__is_polymorphic(Derives), "");
-  static_assert(!__is_polymorphic(ClassType), "");
-  static_assert(!__is_polymorphic(Enum), "");
-  static_assert(!__is_polymorphic(cvoid), "");
-  static_assert(!__is_polymorphic(IntArNB), "");
+  static_assert(!__is_polymorphic(int));
+  static_assert(!__is_polymorphic(Union));
+  static_assert(!__is_polymorphic(IncompleteUnion));
+  static_assert(!__is_polymorphic(Int));
+  static_assert(!__is_polymorphic(IntAr));
+  static_assert(!__is_polymorphic(UnionAr));
+  static_assert(!__is_polymorphic(Derives));
+  static_assert(!__is_polymorphic(ClassType));
+  static_assert(!__is_polymorphic(Enum));
+  static_assert(!__is_polymorphic(cvoid));
+  static_assert(!__is_polymorphic(IntArNB));
 }
 
 void is_integral()
 {
-  static_assert(__is_integral(bool), "");
-  static_assert(__is_integral(char), "");
-  static_assert(__is_integral(signed char), "");
-  static_assert(__is_integral(unsigned char), "");
-  //static_assert(__is_integral(char16_t), "");
-  //static_assert(__is_integral(char32_t), "");
-  static_assert(__is_integral(wchar_t), "");
-  static_assert(__is_integral(short), "");
-  static_assert(__is_integral(unsigned short), "");
-  static_assert(__is_integral(int), "");
-  static_assert(__is_integral(unsigned int), "");
-  static_assert(__is_integral(long), "");
-  static_assert(__is_integral(unsigned long), "");
+  static_assert(__is_integral(bool));
+  static_assert(__is_integral(char));
+  static_assert(__is_integral(signed char));
+  static_assert(__is_integral(unsigned char));
+  //static_assert(__is_integral(char16_t));
+  //static_assert(__is_integral(char32_t));
+  static_assert(__is_integral(wchar_t));
+  static_assert(__is_integral(short));
+  static_assert(__is_integral(unsigned short));
+  static_assert(__is_integral(int));
+  static_assert(__is_integral(unsigned int));
+  static_assert(__is_integral(long));
+  static_assert(__is_integral(unsigned long));
 
-  static_assert(!__is_integral(float), "");
-  static_assert(!__is_integral(double), "");
-  static_assert(!__is_integral(long double), "");
-  static_assert(!__is_integral(Union), "");
-  static_assert(!__is_integral(UnionAr), "");
-  static_assert(!__is_integral(Derives), "");
-  static_assert(!__is_integral(ClassType), "");
-  static_assert(!__is_integral(Enum), "");
-  static_assert(!__is_integral(void), "");
-  static_assert(!__is_integral(cvoid), "");
-  static_assert(!__is_integral(IntArNB), "");
+  static_assert(!__is_integral(float));
+  static_assert(!__is_integral(double));
+  static_assert(!__is_integral(long double));
+  static_assert(!__is_integral(Union));
+  static_assert(!__is_integral(UnionAr));
+  static_assert(!__is_integral(Derives));
+  static_assert(!__is_integral(ClassType));
+  static_assert(!__is_integral(Enum));
+  static_assert(!__is_integral(void));
+  static_assert(!__is_integral(cvoid));
+  static_assert(!__is_integral(IntArNB));
 }
 
 void is_floating_point()
 {
-  static_assert(__is_floating_point(float), "");
-  static_assert(__is_floating_point(double), "");
-  static_assert(__is_floating_point(long double), "");
+  static_assert(__is_floating_point(float));
+  static_assert(__is_floating_point(double));
+  static_assert(__is_floating_point(long double));
 
-  static_assert(!__is_floating_point(bool), "");
-  static_assert(!__is_floating_point(char), "");
-  static_assert(!__is_floating_point(signed char), "");
-  static_assert(!__is_floating_point(unsigned char), "");
-  //static_assert(!__is_floating_point(char16_t), "");
-  //static_assert(!__is_floating_point(char32_t), "");
-  static_assert(!__is_floating_point(wchar_t), "");
-  static_assert(!__is_floating_point(short), "");
-  static_assert(!__is_floating_point(unsigned short), "");
-  static_assert(!__is_floating_point(int), "");
-  static_assert(!__is_floating_point(unsigned int), "");
-  static_assert(!__is_floating_point(long), "");
-  static_assert(!__is_floating_point(unsigned long), "");
-  static_assert(!__is_floating_point(Union), "");
-  static_assert(!__is_floating_point(UnionAr), "");
-  static_assert(!__is_floating_point(Derives), "");
-  static_assert(!__is_floating_point(ClassType), "");
-  static_assert(!__is_floating_point(Enum), "");
-  static_assert(!__is_floating_point(void), "");
-  static_assert(!__is_floating_point(cvoid), "");
-  static_assert(!__is_floating_point(IntArNB), "");
+  static_assert(!__is_floating_point(bool));
+  static_assert(!__is_floating_point(char));
+  static_assert(!__is_floating_point(signed char));
+  static_assert(!__is_floating_point(unsigned char));
+  //static_assert(!__is_floating_point(char16_t));
+  //static_assert(!__is_floating_point(char32_t));
+  static_assert(!__is_floating_point(wchar_t));
+  static_assert(!__is_floating_point(short));
+  static_assert(!__is_floating_point(unsigned short));
+  static_assert(!__is_floating_point(int));
+  static_assert(!__is_floating_point(unsigned int));
+  static_assert(!__is_floating_point(long));
+  static_assert(!__is_floating_point(unsigned long));
+  static_assert(!__is_floating_point(Union));
+  static_assert(!__is_floating_point(UnionAr));
+  static_assert(!__is_floating_point(Derives));
+  static_assert(!__is_floating_point(ClassType));
+  static_assert(!__is_floating_point(Enum));
+  static_assert(!__is_floating_point(void));
+  static_assert(!__is_floating_point(cvoid));
+  static_assert(!__is_floating_point(IntArNB));
 }
 
 template <class T>
@@ -535,274 +535,274 @@ void is_aggregate()
   __is_aggregate(IncompleteUnion); // expected-error {{incomplete type}}
 
   // Valid since LWG3823
-  static_assert(__is_aggregate(AnIncompleteType[]), "");
-  static_assert(__is_aggregate(AnIncompleteType[1]), "");
-  static_assert(__is_aggregate(AnIncompleteTypeAr), "");
-  static_assert(__is_aggregate(AnIncompleteTypeArNB), "");
-  static_assert(__is_aggregate(AnIncompleteTypeArMB), "");
+  static_assert(__is_aggregate(AnIncompleteType[]));
+  static_assert(__is_aggregate(AnIncompleteType[1]));
+  static_assert(__is_aggregate(AnIncompleteTypeAr));
+  static_assert(__is_aggregate(AnIncompleteTypeArNB));
+  static_assert(__is_aggregate(AnIncompleteTypeArMB));
 
-  static_assert(!__is_aggregate(NonPOD), "");
-  static_assert(__is_aggregate(NonPODAr), "");
-  static_assert(__is_aggregate(NonPODArNB), "");
-  static_assert(__is_aggregate(NonPODArMB), "");
+  static_assert(!__is_aggregate(NonPOD));
+  static_assert(__is_aggregate(NonPODAr));
+  static_assert(__is_aggregate(NonPODArNB));
+  static_assert(__is_aggregate(NonPODArMB));
 
-  static_assert(!__is_aggregate(Enum), "");
-  static_assert(__is_aggregate(POD), "");
-  static_assert(__is_aggregate(Empty), "");
-  static_assert(__is_aggregate(EmptyAr), "");
-  static_assert(__is_aggregate(EmptyArNB), "");
-  static_assert(__is_aggregate(EmptyArMB), "");
-  static_assert(!__is_aggregate(void), "");
-  static_assert(!__is_aggregate(const volatile void), "");
-  static_assert(!__is_aggregate(int), "");
-  static_assert(__is_aggregate(IntAr), "");
-  static_assert(__is_aggregate(IntArNB), "");
-  static_assert(__is_aggregate(EmptyUnion), "");
-  static_assert(__is_aggregate(Union), "");
-  static_assert(__is_aggregate(Statics), "");
-  static_assert(__is_aggregate(HasFunc), "");
-  static_assert(__is_aggregate(HasOp), "");
-  static_assert(__is_aggregate(HasAssign), "");
-  static_assert(__is_aggregate(HasAnonymousUnion), "");
+  static_assert(!__is_aggregate(Enum));
+  static_assert(__is_aggregate(POD));
+  static_assert(__is_aggregate(Empty));
+  static_assert(__is_aggregate(EmptyAr));
+  static_assert(__is_aggregate(EmptyArNB));
+  static_assert(__is_aggregate(EmptyArMB));
+  static_assert(!__is_aggregate(void));
+  static_assert(!__is_aggregate(const volatile void));
+  static_assert(!__is_aggregate(int));
+  static_assert(__is_aggregate(IntAr));
+  static_assert(__is_aggregate(IntArNB));
+  static_assert(__is_aggregate(EmptyUnion));
+  static_assert(__is_aggregate(Union));
+  static_assert(__is_aggregate(Statics));
+  static_assert(__is_aggregate(HasFunc));
+  static_assert(__is_aggregate(HasOp));
+  static_assert(__is_aggregate(HasAssign));
+  static_assert(__is_aggregate(HasAnonymousUnion));
 
-  static_assert(__is_aggregate(Derives) == TrueAfterCpp14, "");
-  static_assert(__is_aggregate(DerivesAr), "");
-  static_assert(__is_aggregate(DerivesArNB), "");
-  static_assert(!__is_aggregate(HasCons), "");
+  static_assert(__is_aggregate(Derives) == TrueAfterCpp14);
+  static_assert(__is_aggregate(DerivesAr));
+  static_assert(__is_aggregate(DerivesArNB));
+  static_assert(!__is_aggregate(HasCons));
 #if __cplusplus >= 202002L
-  static_assert(!__is_aggregate(HasDefaultCons), "");
+  static_assert(!__is_aggregate(HasDefaultCons));
 #else
-  static_assert(__is_aggregate(HasDefaultCons), "");
+  static_assert(__is_aggregate(HasDefaultCons));
 #endif
-  static_assert(!__is_aggregate(HasExplicitDefaultCons), "");
-  static_assert(!__is_aggregate(HasInheritedCons), "");
-  static_assert(__is_aggregate(HasNoInheritedCons) == TrueAfterCpp14, "");
-  static_assert(__is_aggregate(HasCopyAssign), "");
-  static_assert(!__is_aggregate(NonTrivialDefault), "");
-  static_assert(__is_aggregate(HasDest), "");
-  static_assert(!__is_aggregate(HasPriv), "");
-  static_assert(!__is_aggregate(HasProt), "");
-  static_assert(__is_aggregate(HasRefAggregate), "");
-  static_assert(__is_aggregate(HasNonPOD), "");
-  static_assert(!__is_aggregate(HasVirt), "");
-  static_assert(__is_aggregate(VirtAr), "");
-  static_assert(__is_aggregate(HasInClassInit) == TrueAfterCpp11, "");
-  static_assert(!__is_aggregate(HasPrivateBase), "");
-  static_assert(!__is_aggregate(HasProtectedBase), "");
-  static_assert(!__is_aggregate(HasVirtBase), "");
+  static_assert(!__is_aggregate(HasExplicitDefaultCons));
+  static_assert(!__is_aggregate(HasInheritedCons));
+  static_assert(__is_aggregate(HasNoInheritedCons) == TrueAfterCpp14);
+  static_assert(__is_aggregate(HasCopyAssign));
+  static_assert(!__is_aggregate(NonTrivialDefault));
+  static_assert(__is_aggregate(HasDest));
+  static_assert(!__is_aggregate(HasPriv));
+  static_assert(!__is_aggregate(HasProt));
+  static_assert(__is_aggregate(HasRefAggregate));
+  static_assert(__is_aggregate(HasNonPOD));
+  static_assert(!__is_aggregate(HasVirt));
+  static_assert(__is_aggregate(VirtAr));
+  static_assert(__is_aggregate(HasInClassInit) == TrueAfterCpp11);
+  static_assert(!__is_aggregate(HasPrivateBase));
+  static_assert(!__is_aggregate(HasProtectedBase));
+  static_assert(!__is_aggregate(HasVirtBase));
 
-  static_assert(__is_aggregate(AggregateTemplate<int>), "");
-  static_assert(!__is_aggregate(NonAggregateTemplate<int>), "");
+  static_assert(__is_aggregate(AggregateTemplate<int>));
+  static_assert(!__is_aggregate(NonAggregateTemplate<int>));
 
-  static_assert(__is_aggregate(Vector), ""); // Extension supported by GCC and Clang
-  static_assert(__is_aggregate(VectorExt), "");
-  static_assert(__is_aggregate(ComplexInt), "");
-  static_assert(__is_aggregate(ComplexFloat), "");
+  static_assert(__is_aggregate(Vector)); // Extension supported by GCC and Clang
+  static_assert(__is_aggregate(VectorExt));
+  static_assert(__is_aggregate(ComplexInt));
+  static_assert(__is_aggregate(ComplexFloat));
 }
 
 void is_arithmetic()
 {
-  static_assert(__is_arithmetic(float), "");
-  static_assert(__is_arithmetic(double), "");
-  static_assert(__is_arithmetic(long double), "");
-  static_assert(__is_arithmetic(bool), "");
-  static_assert(__is_arithmetic(char), "");
-  static_assert(__is_arithmetic(signed char), "");
-  static_assert(__is_arithmetic(unsigned char), "");
-  //static_assert(__is_arithmetic(char16_t), "");
-  //static_assert(__is_arithmetic(char32_t), "");
-  static_assert(__is_arithmetic(wchar_t), "");
-  static_assert(__is_arithmetic(short), "");
-  static_assert(__is_arithmetic(unsigned short), "");
-  static_assert(__is_arithmetic(int), "");
-  static_assert(__is_arithmetic(unsigned int), "");
-  static_assert(__is_arithmetic(long), "");
-  static_assert(__is_arithmetic(unsigned long), "");
+  static_assert(__is_arithmetic(float));
+  static_assert(__is_arithmetic(double));
+  static_assert(__is_arithmetic(long double));
+  static_assert(__is_arithmetic(bool));
+  static_assert(__is_arithmetic(char));
+  static_assert(__is_arithmetic(signed char));
+  static_assert(__is_arithmetic(unsigned char));
+  //static_assert(__is_arithmetic(char16_t));
+  //static_assert(__is_arithmetic(char32_t));
+  static_assert(__is_arithmetic(wchar_t));
+  static_assert(__is_arithmetic(short));
+  static_assert(__is_arithmetic(unsigned short));
+  static_assert(__is_arithmetic(int));
+  static_assert(__is_arithmetic(unsigned int));
+  static_assert(__is_arithmetic(long));
+  static_assert(__is_arithmetic(unsigned long));
 
-  static_assert(!__is_arithmetic(Union), "");
-  static_assert(!__is_arithmetic(UnionAr), "");
-  static_assert(!__is_arithmetic(Derives), "");
-  static_assert(!__is_arithmetic(ClassType), "");
-  static_assert(!__is_arithmetic(Enum), "");
-  static_assert(!__is_arithmetic(void), "");
-  static_assert(!__is_arithmetic(cvoid), "");
-  static_assert(!__is_arithmetic(IntArNB), "");
+  static_assert(!__is_arithmetic(Union));
+  static_assert(!__is_arithmetic(UnionAr));
+  static_assert(!__is_arithmetic(Derives));
+  static_assert(!__is_arithmetic(ClassType));
+  static_assert(!__is_arithmetic(Enum));
+  static_assert(!__is_arithmetic(void));
+  static_assert(!__is_arithmetic(cvoid));
+  static_assert(!__is_arithmetic(IntArNB));
 }
 
 void is_complete_type()
 {
-  static_assert(__is_complete_type(float), "");
-  static_assert(__is_complete_type(double), "");
-  static_assert(__is_complete_type(long double), "");
-  static_assert(__is_complete_type(bool), "");
-  static_assert(__is_complete_type(char), "");
-  static_assert(__is_complete_type(signed char), "");
-  static_assert(__is_complete_type(unsigned char), "");
-  //static_assert(__is_complete_type(char16_t), "");
-  //static_assert(__is_complete_type(char32_t), "");
-  static_assert(__is_complete_type(wchar_t), "");
-  static_assert(__is_complete_type(short), "");
-  static_assert(__is_complete_type(unsigned short), "");
-  static_assert(__is_complete_type(int), "");
-  static_assert(__is_complete_type(unsigned int), "");
-  static_assert(__is_complete_type(long), "");
-  static_assert(__is_complete_type(unsigned long), "");
-  static_assert(__is_complete_type(ACompleteType), "");
+  static_assert(__is_complete_type(float));
+  static_assert(__is_complete_type(double));
+  static_assert(__is_complete_type(long double));
+  static_assert(__is_complete_type(bool));
+  static_assert(__is_complete_type(char));
+  static_assert(__is_complete_type(signed char));
+  static_assert(__is_complete_type(unsigned char));
+  //static_assert(__is_complete_type(char16_t));
+  //static_assert(__is_complete_type(char32_t));
+  static_assert(__is_complete_type(wchar_t));
+  static_assert(__is_complete_type(short));
+  static_assert(__is_complete_type(unsigned short));
+  static_assert(__is_complete_type(int));
+  static_assert(__is_complete_type(unsigned int));
+  static_assert(__is_complete_type(long));
+  static_assert(__is_complete_type(unsigned long));
+  static_assert(__is_complete_type(ACompleteType));
 
-  static_assert(!__is_complete_type(AnIncompleteType), "");
+  static_assert(!__is_complete_type(AnIncompleteType));
 }
 
 void is_void()
 {
-  static_assert(__is_void(void), "");
-  static_assert(__is_void(cvoid), "");
+  static_assert(__is_void(void));
+  static_assert(__is_void(cvoid));
 
-  static_assert(!__is_void(float), "");
-  static_assert(!__is_void(double), "");
-  static_assert(!__is_void(long double), "");
-  static_assert(!__is_void(bool), "");
-  static_assert(!__is_void(char), "");
-  static_assert(!__is_void(signed char), "");
-  static_assert(!__is_void(unsigned char), "");
-  static_assert(!__is_void(wchar_t), "");
-  static_assert(!__is_void(short), "");
-  static_assert(!__is_void(unsigned short), "");
-  static_assert(!__is_void(int), "");
-  static_assert(!__is_void(unsigned int), "");
-  static_assert(!__is_void(long), "");
-  static_assert(!__is_void(unsigned long), "");
-  static_assert(!__is_void(Union), "");
-  static_assert(!__is_void(UnionAr), "");
-  static_assert(!__is_void(Derives), "");
-  static_assert(!__is_void(ClassType), "");
-  static_assert(!__is_void(Enum), "");
-  static_assert(!__is_void(IntArNB), "");
-  static_assert(!__is_void(void*), "");
-  static_assert(!__is_void(cvoid*), "");
+  static_assert(!__is_void(float));
+  static_assert(!__is_void(double));
+  static_assert(!__is_void(long double));
+  static_assert(!__is_void(bool));
+  static_assert(!__is_void(char));
+  static_assert(!__is_void(signed char));
+  static_assert(!__is_void(unsigned char));
+  static_assert(!__is_void(wchar_t));
+  static_assert(!__is_void(short));
+  static_assert(!__is_void(unsigned short));
+  static_assert(!__is_void(int));
+  static_assert(!__is_void(unsigned int));
+  static_assert(!__is_void(long));
+  static_assert(!__is_void(unsigned long));
+  static_assert(!__is_void(Union));
+  static_assert(!__is_void(UnionAr));
+  static_assert(!__is_void(Derives));
+  static_assert(!__is_void(ClassType));
+  static_assert(!__is_void(Enum));
+  static_assert(!__is_void(IntArNB));
+  static_assert(!__is_void(void*));
+  static_assert(!__is_void(cvoid*));
 }
 
 void is_array()
 {
-  static_assert(__is_array(IntAr), "");
-  static_assert(__is_array(IntArNB), "");
-  static_assert(__is_array(UnionAr), "");
+  static_assert(__is_array(IntAr));
+  static_assert(__is_array(IntArNB));
+  static_assert(__is_array(UnionAr));
 
-  static_assert(!__is_array(void), "");
-  static_assert(!__is_array(cvoid), "");
-  static_assert(!__is_array(float), "");
-  static_assert(!__is_array(double), "");
-  static_assert(!__is_array(long double), "");
-  static_assert(!__is_array(bool), "");
-  static_assert(!__is_array(char), "");
-  static_assert(!__is_array(signed char), "");
-  static_assert(!__is_array(unsigned char), "");
-  static_assert(!__is_array(wchar_t), "");
-  static_assert(!__is_array(short), "");
-  static_assert(!__is_array(unsigned short), "");
-  static_assert(!__is_array(int), "");
-  static_assert(!__is_array(unsigned int), "");
-  static_assert(!__is_array(long), "");
-  static_assert(!__is_array(unsigned long), "");
-  static_assert(!__is_array(Union), "");
-  static_assert(!__is_array(Derives), "");
-  static_assert(!__is_array(ClassType), "");
-  static_assert(!__is_array(Enum), "");
-  static_assert(!__is_array(void*), "");
-  static_assert(!__is_array(cvoid*), "");
+  static_assert(!__is_array(void));
+  static_assert(!__is_array(cvoid));
+  static_assert(!__is_array(float));
+  static_assert(!__is_array(double));
+  static_assert(!__is_array(long double));
+  static_assert(!__is_array(bool));
+  static_assert(!__is_array(char));
+  static_assert(!__is_array(signed char));
+  static_assert(!__is_array(unsigned char));
+  static_assert(!__is_array(wchar_t));
+  static_assert(!__is_array(short));
+  static_assert(!__is_array(unsigned short));
+  static_assert(!__is_array(int));
+  static_assert(!__is_array(unsigned int));
+  static_assert(!__is_array(long));
+  static_assert(!__is_array(unsigned long));
+  static_assert(!__is_array(Union));
+  static_assert(!__is_array(Derives));
+  static_assert(!__is_array(ClassType));
+  static_assert(!__is_array(Enum));
+  static_assert(!__is_array(void*));
+  static_assert(!__is_array(cvoid*));
 }
 
 void is_bounded_array(int n) {
-  static_assert(__is_bounded_array(IntAr), "");
-  static_assert(!__is_bounded_array(IntArNB), "");
-  static_assert(__is_bounded_array(UnionAr), "");
+  static_assert(__is_bounded_array(IntAr));
+  static_assert(!__is_bounded_array(IntArNB));
+  static_assert(__is_bounded_array(UnionAr));
 
-  static_assert(!__is_bounded_array(void), "");
-  static_assert(!__is_bounded_array(cvoid), "");
-  static_assert(!__is_bounded_array(float), "");
-  static_assert(!__is_bounded_array(double), "");
-  static_assert(!__is_bounded_array(long double), "");
-  static_assert(!__is_bounded_array(bool), "");
-  static_assert(!__is_bounded_array(char), "");
-  static_assert(!__is_bounded_array(signed char), "");
-  static_assert(!__is_bounded_array(unsigned char), "");
-  static_assert(!__is_bounded_array(wchar_t), "");
-  static_assert(!__is_bounded_array(short), "");
-  static_assert(!__is_bounded_array(unsigned short), "");
-  static_assert(!__is_bounded_array(int), "");
-  static_assert(!__is_bounded_array(unsigned int), "");
-  static_assert(!__is_bounded_array(long), "");
-  static_assert(!__is_bounded_array(unsigned long), "");
-  static_assert(!__is_bounded_array(Union), "");
-  static_assert(!__is_bounded_array(Derives), "");
-  static_assert(!__is_bounded_array(ClassType), "");
-  static_assert(!__is_bounded_array(Enum), "");
-  static_assert(!__is_bounded_array(void *), "");
-  static_assert(!__is_bounded_array(cvoid *), "");
+  static_assert(!__is_bounded_array(void));
+  static_assert(!__is_bounded_array(cvoid));
+  static_assert(!__is_bounded_array(float));
+  static_assert(!__is_bounded_array(double));
+  static_assert(!__is_bounded_array(long double));
+  static_assert(!__is_bounded_array(bool));
+  static_assert(!__is_bounded_array(char));
+  static_assert(!__is_bounded_array(signed char));
+  static_assert(!__is_bounded_array(unsigned char));
+  static_assert(!__is_bounded_array(wchar_t));
+  static_assert(!__is_bounded_array(short));
+  static_assert(!__is_bounded_array(unsigned short));
+  static_assert(!__is_bounded_array(int));
+  static_assert(!__is_bounded_array(unsigned int));
+  static_assert(!__is_bounded_array(long));
+  static_assert(!__is_bounded_array(unsigned long));
+  static_assert(!__is_bounded_array(Union));
+  static_assert(!__is_bounded_array(Derives));
+  static_assert(!__is_bounded_array(ClassType));
+  static_assert(!__is_bounded_array(Enum));
+  static_assert(!__is_bounded_array(void *));
+  static_assert(!__is_bounded_array(cvoid *));
 
   int t32[n];
   (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_bounded_array'}}
 }
 
 void is_unbounded_array(int n) {
-  static_assert(!__is_unbounded_array(IntAr), "");
-  static_assert(__is_unbounded_array(IntArNB), "");
-  static_assert(!__is_unbounded_array(UnionAr), "");
+  static_assert(!__is_unbounded_array(IntAr));
+  static_assert(__is_unbounded_array(IntArNB));
+  static_assert(!__is_unbounded_array(UnionAr));
 
-  static_assert(!__is_unbounded_array(void), "");
-  static_assert(!__is_unbounded_array(cvoid), "");
-  static_assert(!__is_unbounded_array(float), "");
-  static_assert(!__is_unbounded_array(double), "");
-  static_assert(!__is_unbounded_array(long double), "");
-  static_assert(!__is_unbounded_array(bool), "");
-  static_assert(!__is_unbounded_array(char), "");
-  static_assert(!__is_unbounded_array(signed char), "");
-  static_assert(!__is_unbounded_array(unsigned char), "");
-  static_assert(!__is_unbounded_array(wchar_t), "");
-  static_assert(!__is_unbounded_array(short), "");
-  static_assert(!__is_unbounded_array(unsigned short), "");
-  static_assert(!__is_unbounded_array(int), "");
-  static_assert(!__is_unbounded_array(unsigned int), "");
-  static_assert(!__is_unbounded_array(long), "");
-  static_assert(!__is_unbounded_array(unsigned long), "");
-  static_assert(!__is_unbounded_array(Union), "");
-  static_assert(!__is_unbounded_array(Derives), "");
-  static_assert(!__is_unbounded_array(ClassType), "");
-  static_assert(!__is_unbounded_array(Enum), "");
-  static_assert(!__is_unbounded_array(void *), "");
-  static_assert(!__is_unbounded_array(cvoid *), "");
+  static_assert(!__is_unbounded_array(void));
+  static_assert(!__is_unbounded_array(cvoid));
+  static_assert(!__is_unbounded_array(float));
+  static_assert(!__is_unbounded_array(double));
+  static_assert(!__is_unbounded_array(long double));
+  static_assert(!__is_unbounded_array(bool));
+  static_assert(!__is_unbounded_array(char));
+  static_assert(!__is_unbounded_array(signed char));
+  static_assert(!__is_unbounded_array(unsigned char));
+  static_assert(!__is_unbounded_array(wchar_t));
+  static_assert(!__is_unbounded_array(short));
+  static_assert(!__is_unbounded_array(unsigned short));
+  static_assert(!__is_unbounded_array(int));
+  static_assert(!__is_unbounded_array(unsigned int));
+  static_assert(!__is_unbounded_array(long));
+  static_assert(!__is_unbounded_array(unsigned long));
+  static_assert(!__is_unbounded_array(Union));
+  static_assert(!__is_unbounded_array(Derives));
+  static_assert(!__is_unbounded_array(ClassType));
+  static_assert(!__is_unbounded_array(Enum));
+  static_assert(!__is_unbounded_array(void *));
+  static_assert(!__is_unbounded_array(cvoid *));
 
   int t32[n];
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_unbounded_array'}}
 }
 
 void is_referenceable() {
-  static_assert(__is_referenceable(int), "");
-  static_assert(__is_referenceable(const int), "");
-  static_assert(__is_referenceable(volatile int), "");
-  static_assert(__is_referenceable(const volatile int), "");
-  static_assert(__is_referenceable(int *), "");
-  static_assert(__is_referenceable(int &), "");
-  static_assert(__is_referenceable(int &&), "");
-  static_assert(__is_referenceable(int (*)()), "");
-  static_assert(__is_referenceable(int (&)()), "");
-  static_assert(__is_referenceable(int(&&)()), "");
-  static_assert(__is_referenceable(IntAr), "");
-  static_assert(__is_referenceable(IntArNB), "");
-  static_assert(__is_referenceable(decltype(nullptr)), "");
-  static_assert(__is_referenceable(Empty), "");
-  static_assert(__is_referenceable(Union), "");
-  static_assert(__is_referenceable(Derives), "");
-  static_assert(__is_referenceable(Enum), "");
-  static_assert(__is_referenceable(EnumClass), "");
-  static_assert(__is_referenceable(int Empty::*), "");
-  static_assert(__is_referenceable(int(Empty::*)()), "");
-  static_assert(__is_referenceable(AnIncompleteType), "");
-  static_assert(__is_referenceable(struct AnIncompleteType), "");
+  static_assert(__is_referenceable(int));
+  static_assert(__is_referenceable(const int));
+  static_assert(__is_referenceable(volatile int));
+  static_assert(__is_referenceable(const volatile int));
+  static_assert(__is_referenceable(int *));
+  static_assert(__is_referenceable(int &));
+  static_assert(__is_referenceable(int &&));
+  static_assert(__is_referenceable(int (*)()));
+  static_assert(__is_referenceable(int (&)()));
+  static_assert(__is_referenceable(int(&&)()));
+  static_assert(__is_referenceable(IntAr));
+  static_assert(__is_referenceable(IntArNB));
+  static_assert(__is_referenceable(decltype(nullptr)));
+  static_assert(__is_referenceable(Empty));
+  static_assert(__is_referenceable(Union));
+  static_assert(__is_referenceable(Derives));
+  static_assert(__is_referenceable(Enum));
+  static_assert(__is_referenceable(EnumClass));
+  static_assert(__is_referenceable(int Empty::*));
+  static_assert(__is_referenceable(int(Empty::*)()));
+  static_assert(__is_referenceable(AnIncompleteType));
+  static_assert(__is_referenceable(struct AnIncompleteType));
 
   using function_type = void(int);
-  static_assert(__is_referenceable(function_type), "");
+  static_assert(__is_referenceable(function_type));
 
-  static_assert(!__is_referenceable(void), "");
+  static_assert(!__is_referenceable(void));
 }
 
 template <typename T> void tmpl_func(T&) {}
@@ -815,152 +815,152 @@ template <typename T> struct type_wrapper {
 
 void is_function()
 {
-  static_assert(__is_function(type_wrapper<void(void)>::type), "");
-  static_assert(__is_function(typeof(tmpl_func<int>)), "");
+  static_assert(__is_function(type_wrapper<void(void)>::type));
+  static_assert(__is_function(typeof(tmpl_func<int>)));
 
   typedef void (*ptr_to_func_type)(void);
 
-  static_assert(!__is_function(void), "");
-  static_assert(!__is_function(cvoid), "");
-  static_assert(!__is_function(float), "");
-  static_assert(!__is_function(double), "");
-  static_assert(!__is_function(long double), "");
-  static_assert(!__is_function(bool), "");
-  static_assert(!__is_function(char), "");
-  static_assert(!__is_function(signed char), "");
-  static_assert(!__is_function(unsigned char), "");
-  static_assert(!__is_function(wchar_t), "");
-  static_assert(!__is_function(short), "");
-  static_assert(!__is_function(unsigned short), "");
-  static_assert(!__is_function(int), "");
-  static_assert(!__is_function(unsigned int), "");
-  static_assert(!__is_function(long), "");
-  static_assert(!__is_function(unsigned long), "");
-  static_assert(!__is_function(Union), "");
-  static_assert(!__is_function(Derives), "");
-  static_assert(!__is_function(ClassType), "");
-  static_assert(!__is_function(Enum), "");
-  static_assert(!__is_function(void*), "");
-  static_assert(!__is_function(cvoid*), "");
-  static_assert(!__is_function(void(*)()), "");
-  static_assert(!__is_function(ptr_to_func_type), "");
-  static_assert(!__is_function(type_wrapper<void(void)>::ptrtype), "");
-  static_assert(!__is_function(type_wrapper<void(void)>::reftype), "");
+  static_assert(!__is_function(void));
+  static_assert(!__is_function(cvoid));
+  static_assert(!__is_function(float));
+  static_assert(!__is_function(double));
+  static_assert(!__is_function(long double));
+  static_assert(!__is_function(bool));
+  static_assert(!__is_function(char));
+  static_assert(!__is_function(signed char));
+  static_assert(!__is_function(unsigned char));
+  static_assert(!__is_function(wchar_t));
+  static_assert(!__is_function(short));
+  static_assert(!__is_function(unsigned short));
+  static_assert(!__is_function(int));
+  static_assert(!__is_function(unsigned int));
+  static_assert(!__is_function(long));
+  static_assert(!__is_function(unsigned long));
+  static_assert(!__is_function(Union));
+  static_assert(!__is_function(Derives));
+  static_assert(!__is_function(ClassType));
+  static_assert(!__is_function(Enum));
+  static_assert(!__is_function(void*));
+  static_assert(!__is_function(cvoid*));
+  static_assert(!__is_function(void(*)()));
+  static_assert(!__is_function(ptr_to_func_type));
+  static_assert(!__is_function(type_wrapper<void(void)>::ptrtype));
+  static_assert(!__is_function(type_wrapper<void(void)>::reftype));
 }
 
 void is_reference()
 {
-  static_assert(__is_reference(int&), "");
-  static_assert(__is_reference(const int&), "");
-  static_assert(__is_reference(void *&), "");
+  static_assert(__is_reference(int&));
+  static_assert(__is_reference(const int&));
+  static_assert(__is_reference(void *&));
 
-  static_assert(!__is_reference(int), "");
-  static_assert(!__is_reference(const int), "");
-  static_assert(!__is_reference(void *), "");
+  static_assert(!__is_reference(int));
+  static_assert(!__is_reference(const int));
+  static_assert(!__is_reference(void *));
 }
 
 void is_lvalue_reference()
 {
-  static_assert(__is_lvalue_reference(int&), "");
-  static_assert(__is_lvalue_reference(void *&), "");
-  static_assert(__is_lvalue_reference(const int&), "");
-  static_assert(__is_lvalue_reference(void * const &), "");
+  static_assert(__is_lvalue_reference(int&));
+  static_assert(__is_lvalue_reference(void *&));
+  static_assert(__is_lvalue_reference(const int&));
+  static_assert(__is_lvalue_reference(void * const &));
 
-  static_assert(!__is_lvalue_reference(int), "");
-  static_assert(!__is_lvalue_reference(const int), "");
-  static_assert(!__is_lvalue_reference(void *), "");
+  static_assert(!__is_lvalue_reference(int));
+  static_assert(!__is_lvalue_reference(const int));
+  static_assert(!__is_lvalue_reference(void *));
 }
 
 #if __has_feature(cxx_rvalue_references)
 
 void is_rvalue_reference()
 {
-  static_assert(__is_rvalue_reference(const int&&), "");
-  static_assert(__is_rvalue_reference(void * const &&), "");
+  static_assert(__is_rvalue_reference(const int&&));
+  static_assert(__is_rvalue_reference(void * const &&));
 
-  static_assert(!__is_rvalue_reference(int&), "");
-  static_assert(!__is_rvalue_reference(void *&), "");
-  static_assert(!__is_rvalue_reference(const int&), "");
-  static_assert(!__is_rvalue_reference(void * const &), "");
-  static_assert(!__is_rvalue_reference(int), "");
-  static_assert(!__is_rvalue_reference(const int), "");
-  static_assert(!__is_rvalue_reference(void *), "");
+  static_assert(!__is_rvalue_reference(int&));
+  static_assert(!__is_rvalue_reference(void *&));
+  static_assert(!__is_rvalue_reference(const int&));
+  static_assert(!__is_rvalue_reference(void * const &));
+  static_assert(!__is_rvalue_reference(int));
+  static_assert(!__is_rvalue_reference(const int));
+  static_assert(!__is_rvalue_reference(void *));
 }
 
 #endif
 
 void is_fundamental()
 {
-  static_assert(__is_fundamental(float), "");
-  static_assert(__is_fundamental(double), "");
-  static_assert(__is_fundamental(long double), "");
-  static_assert(__is_fundamental(bool), "");
-  static_assert(__is_fundamental(char), "");
-  static_assert(__is_fundamental(signed char), "");
-  static_assert(__is_fundamental(unsigned char), "");
-  //static_assert(__is_fundamental(char16_t), "");
-  //static_assert(__is_fundamental(char32_t), "");
-  static_assert(__is_fundamental(wchar_t), "");
-  static_assert(__is_fundamental(short), "");
-  static_assert(__is_fundamental(unsigned short), "");
-  static_assert(__is_fundamental(int), "");
-  static_assert(__is_fundamental(unsigned int), "");
-  static_assert(__is_fundamental(long), "");
-  static_assert(__is_fundamental(unsigned long), "");
-  static_assert(__is_fundamental(void), "");
-  static_assert(__is_fundamental(cvoid), "");
-  static_assert(__is_fundamental(decltype(nullptr)), "");
+  static_assert(__is_fundamental(float));
+  static_assert(__is_fundamental(double));
+  static_assert(__is_fundamental(long double));
+  static_assert(__is_fundamental(bool));
+  static_assert(__is_fundamental(char));
+  static_assert(__is_fundamental(signed char));
+  static_assert(__is_fundamental(unsigned char));
+  //static_assert(__is_fundamental(char16_t));
+  //static_assert(__is_fundamental(char32_t));
+  static_assert(__is_fundamental(wchar_t));
+  static_assert(__is_fundamental(short));
+  static_assert(__is_fundamental(unsigned short));
+  static_assert(__is_fundamental(int));
+  static_assert(__is_fundamental(unsigned int));
+  static_assert(__is_fundamental(long));
+  static_assert(__is_fundamental(unsigned long));
+  static_assert(__is_fundamental(void));
+  static_assert(__is_fundamental(cvoid));
+  static_assert(__is_fundamental(decltype(nullptr)));
 
-  static_assert(!__is_fundamental(Union), "");
-  static_assert(!__is_fundamental(UnionAr), "");
-  static_assert(!__is_fundamental(Derives), "");
-  static_assert(!__is_fundamental(ClassType), "");
-  static_assert(!__is_fundamental(Enum), "");
-  static_assert(!__is_fundamental(IntArNB), "");
+  static_assert(!__is_fundamental(Union));
+  static_assert(!__is_fundamental(UnionAr));
+  static_assert(!__is_fundamental(Derives));
+  static_assert(!__is_fundamental(ClassType));
+  static_assert(!__is_fundamental(Enum));
+  static_assert(!__is_fundamental(IntArNB));
 }
 
 void is_object()
 {
-  static_assert(__is_object(int), "");
-  static_assert(__is_object(int *), "");
-  static_assert(__is_object(void *), "");
-  static_assert(__is_object(Union), "");
-  static_assert(__is_object(UnionAr), "");
-  static_assert(__is_object(ClassType), "");
-  static_assert(__is_object(Enum), "");
+  static_assert(__is_object(int));
+  static_assert(__is_object(int *));
+  static_assert(__is_object(void *));
+  static_assert(__is_object(Union));
+  static_assert(__is_object(UnionAr));
+  static_assert(__is_object(ClassType));
+  static_assert(__is_object(Enum));
 
-  static_assert(!__is_object(type_wrapper<void(void)>::type), "");
-  static_assert(!__is_object(int&), "");
-  static_assert(!__is_object(void), "");
+  static_assert(!__is_object(type_wrapper<void(void)>::type));
+  static_assert(!__is_object(int&));
+  static_assert(!__is_object(void));
 }
 
 void is_scalar()
 {
-  static_assert(__is_scalar(float), "");
-  static_assert(__is_scalar(double), "");
-  static_assert(__is_scalar(long double), "");
-  static_assert(__is_scalar(bool), "");
-  static_assert(__is_scalar(char), "");
-  static_assert(__is_scalar(signed char), "");
-  static_assert(__is_scalar(unsigned char), "");
-  static_assert(__is_scalar(wchar_t), "");
-  static_assert(__is_scalar(short), "");
-  static_assert(__is_scalar(unsigned short), "");
-  static_assert(__is_scalar(int), "");
-  static_assert(__is_scalar(unsigned int), "");
-  static_assert(__is_scalar(long), "");
-  static_assert(__is_scalar(unsigned long), "");
-  static_assert(__is_scalar(Enum), "");
-  static_assert(__is_scalar(void*), "");
-  static_assert(__is_scalar(cvoid*), "");
+  static_assert(__is_scalar(float));
+  static_assert(__is_scalar(double));
+  static_assert(__is_scalar(long double));
+  static_assert(__is_scalar(bool));
+  static_assert(__is_scalar(char));
+  static_assert(__is_scalar(signed char));
+  static_assert(__is_scalar(unsigned char));
+  static_assert(__is_scalar(wchar_t));
+  static_assert(__is_scalar(short));
+  static_assert(__is_scalar(unsigned short));
+  static_assert(__is_scalar(int));
+  static_assert(__is_scalar(unsigned int));
+  static_assert(__is_scalar(long));
+  static_assert(__is_scalar(unsigned long));
+  static_assert(__is_scalar(Enum));
+  static_assert(__is_scalar(void*));
+  static_assert(__is_scalar(cvoid*));
 
-  static_assert(!__is_scalar(void), "");
-  static_assert(!__is_scalar(cvoid), "");
-  static_assert(!__is_scalar(Union), "");
-  static_assert(!__is_scalar(UnionAr), "");
-  static_assert(!__is_scalar(Derives), "");
-  static_assert(!__is_scalar(ClassType), "");
-  static_assert(!__is_scalar(IntArNB), "");
+  static_assert(!__is_scalar(void));
+  static_assert(!__is_scalar(cvoid));
+  static_assert(!__is_scalar(Union));
+  static_assert(!__is_scalar(UnionAr));
+  static_assert(!__is_scalar(Derives));
+  static_assert(!__is_scalar(ClassType));
+  static_assert(!__is_scalar(IntArNB));
 }
 
 struct StructWithMembers {
@@ -970,314 +970,314 @@ struct StructWithMembers {
 
 void is_compound()
 {
-  static_assert(__is_compound(void*), "");
-  static_assert(__is_compound(cvoid*), "");
-  static_assert(__is_compound(void (*)()), "");
-  static_assert(__is_compound(int StructWithMembers::*), "");
-  static_assert(__is_compound(void (StructWithMembers::*)()), "");
-  static_assert(__is_compound(int&), "");
-  static_assert(__is_compound(Union), "");
-  static_assert(__is_compound(UnionAr), "");
-  static_assert(__is_compound(Derives), "");
-  static_assert(__is_compound(ClassType), "");
-  static_assert(__is_compound(IntArNB), "");
-  static_assert(__is_compound(Enum), "");
+  static_assert(__is_compound(void*));
+  static_assert(__is_compound(cvoid*));
+  static_assert(__is_compound(void (*)()));
+  static_assert(__is_compound(int StructWithMembers::*));
+  static_assert(__is_compound(void (StructWithMembers::*)()));
+  static_assert(__is_compound(int&));
+  static_assert(__is_compound(Union));
+  static_assert(__is_compound(UnionAr));
+  static_assert(__is_compound(Derives));
+  static_assert(__is_compound(ClassType));
+  static_assert(__is_compound(IntArNB));
+  static_assert(__is_compound(Enum));
 
-  static_assert(!__is_compound(float), "");
-  static_assert(!__is_compound(double), "");
-  static_assert(!__is_compound(long double), "");
-  static_assert(!__is_compound(bool), "");
-  static_assert(!__is_compound(char), "");
-  static_assert(!__is_compound(signed char), "");
-  static_assert(!__is_compound(unsigned char), "");
-  static_assert(!__is_compound(wchar_t), "");
-  static_assert(!__is_compound(short), "");
-  static_assert(!__is_compound(unsigned short), "");
-  static_assert(!__is_compound(int), "");
-  static_assert(!__is_compound(unsigned int), "");
-  static_assert(!__is_compound(long), "");
-  static_assert(!__is_compound(unsigned long), "");
-  static_assert(!__is_compound(void), "");
-  static_assert(!__is_compound(cvoid), "");
+  static_assert(!__is_compound(float));
+  static_assert(!__is_compound(double));
+  static_assert(!__is_compound(long double));
+  static_assert(!__is_compound(bool));
+  static_assert(!__is_compound(char));
+  static_assert(!__is_compound(signed char));
+  static_assert(!__is_compound(unsigned char));
+  static_assert(!__is_compound(wchar_t));
+  static_assert(!__is_compound(short));
+  static_assert(!__is_compound(unsigned short));
+  static_assert(!__is_compound(int));
+  static_assert(!__is_compound(unsigned int));
+  static_assert(!__is_compound(long));
+  static_assert(!__is_compound(unsigned long));
+  static_assert(!__is_compound(void));
+  static_assert(!__is_compound(cvoid));
 }
 
 void is_pointer()
 {
   StructWithMembers x;
 
-  static_assert(__is_pointer(void*), "");
-  static_assert(__is_pointer(cvoid*), "");
-  static_assert(__is_pointer(cvoid*), "");
-  static_assert(__is_pointer(char*), "");
-  static_assert(__is_pointer(int*), "");
-  static_assert(__is_pointer(int**), "");
-  static_assert(__is_pointer(ClassType*), "");
-  static_assert(__is_pointer(Derives*), "");
-  static_assert(__is_pointer(Enum*), "");
-  static_assert(__is_pointer(IntArNB*), "");
-  static_assert(__is_pointer(Union*), "");
-  static_assert(__is_pointer(UnionAr*), "");
-  static_assert(__is_pointer(StructWithMembers*), "");
-  static_assert(__is_pointer(void (*)()), "");
+  static_assert(__is_pointer(void*));
+  static_assert(__is_pointer(cvoid*));
+  static_assert(__is_pointer(cvoid*));
+  static_assert(__is_pointer(char*));
+  static_assert(__is_pointer(int*));
+  static_assert(__is_pointer(int**));
+  static_assert(__is_pointer(ClassType*));
+  static_assert(__is_pointer(Derives*));
+  static_assert(__is_pointer(Enum*));
+  static_assert(__is_pointer(IntArNB*));
+  static_assert(__is_pointer(Union*));
+  static_assert(__is_pointer(UnionAr*));
+  static_assert(__is_pointer(StructWithMembers*));
+  static_assert(__is_pointer(void (*)()));
 
-  static_assert(!__is_pointer(void), "");
-  static_assert(!__is_pointer(cvoid), "");
-  static_assert(!__is_pointer(cvoid), "");
-  static_assert(!__is_pointer(char), "");
-  static_assert(!__is_pointer(int), "");
-  static_assert(!__is_pointer(int), "");
-  static_assert(!__is_pointer(ClassType), "");
-  static_assert(!__is_pointer(Derives), "");
-  static_assert(!__is_pointer(Enum), "");
-  static_assert(!__is_pointer(IntArNB), "");
-  static_assert(!__is_pointer(Union), "");
-  static_assert(!__is_pointer(UnionAr), "");
-  static_assert(!__is_pointer(StructWithMembers), "");
-  static_assert(!__is_pointer(int StructWithMembers::*), "");
-  static_assert(!__is_pointer(void (StructWithMembers::*) ()), "");
+  static_assert(!__is_pointer(void));
+  static_assert(!__is_pointer(cvoid));
+  static_assert(!__is_pointer(cvoid));
+  static_assert(!__is_pointer(char));
+  static_assert(!__is_pointer(int));
+  static_assert(!__is_pointer(int));
+  static_assert(!__is_pointer(ClassType));
+  static_assert(!__is_pointer(Derives));
+  static_assert(!__is_pointer(Enum));
+  static_assert(!__is_pointer(IntArNB));
+  static_assert(!__is_pointer(Union));
+  static_assert(!__is_pointer(UnionAr));
+  static_assert(!__is_pointer(StructWithMembers));
+  static_assert(!__is_pointer(int StructWithMembers::*));
+  static_assert(!__is_pointer(void (StructWithMembers::*) ()));
 }
 
 void is_null_pointer() {
   StructWithMembers x;
 
-  static_assert(__is_nullptr(decltype(nullptr)), "");
-  static_assert(!__is_nullptr(void *), "");
-  static_assert(!__is_nullptr(cvoid *), "");
-  static_assert(!__is_nullptr(cvoid *), "");
-  static_assert(!__is_nullptr(char *), "");
-  static_assert(!__is_nullptr(int *), "");
-  static_assert(!__is_nullptr(int **), "");
-  static_assert(!__is_nullptr(ClassType *), "");
-  static_assert(!__is_nullptr(Derives *), "");
-  static_assert(!__is_nullptr(Enum *), "");
-  static_assert(!__is_nullptr(IntArNB *), "");
-  static_assert(!__is_nullptr(Union *), "");
-  static_assert(!__is_nullptr(UnionAr *), "");
-  static_assert(!__is_nullptr(StructWithMembers *), "");
-  static_assert(!__is_nullptr(void (*)()), "");
+  static_assert(__is_nullptr(decltype(nullptr)));
+  static_assert(!__is_nullptr(void *));
+  static_assert(!__is_nullptr(cvoid *));
+  static_assert(!__is_nullptr(cvoid *));
+  static_assert(!__is_nullptr(char *));
+  static_assert(!__is_nullptr(int *));
+  static_assert(!__is_nullptr(int **));
+  static_assert(!__is_nullptr(ClassType *));
+  static_assert(!__is_nullptr(Derives *));
+  static_assert(!__is_nullptr(Enum *));
+  static_assert(!__is_nullptr(IntArNB *));
+  static_assert(!__is_nullptr(Union *));
+  static_assert(!__is_nullptr(UnionAr *));
+  static_assert(!__is_nullptr(StructWithMembers *));
+  static_assert(!__is_nullptr(void (*)()));
 
-  static_assert(!__is_nullptr(void), "");
-  static_assert(!__is_nullptr(cvoid), "");
-  static_assert(!__is_nullptr(cvoid), "");
-  static_assert(!__is_nullptr(char), "");
-  static_assert(!__is_nullptr(int), "");
-  static_assert(!__is_nullptr(int), "");
-  static_assert(!__is_nullptr(ClassType), "");
-  static_assert(!__is_nullptr(Derives), "");
-  static_assert(!__is_nullptr(Enum), "");
-  static_assert(!__is_nullptr(IntArNB), "");
-  static_assert(!__is_nullptr(Union), "");
-  static_assert(!__is_nullptr(UnionAr), "");
-  static_assert(!__is_nullptr(StructWithMembers), "");
-  static_assert(!__is_nullptr(int StructWithMembers::*), "");
-  static_assert(!__is_nullptr(void(StructWithMembers::*)()), "");
+  static_assert(!__is_nullptr(void));
+  static_assert(!__is_nullptr(cvoid));
+  static_assert(!__is_nullptr(cvoid));
+  static_assert(!__is_nullptr(char));
+  static_assert(!__is_nullptr(int));
+  static_assert(!__is_nullptr(int));
+  static_assert(!__is_nullptr(ClassType));
+  static_assert(!__is_nullptr(Derives));
+  static_assert(!__is_nullptr(Enum));
+  static_assert(!__is_nullptr(IntArNB));
+  static_assert(!__is_nullptr(Union));
+  static_assert(!__is_nullptr(UnionAr));
+  static_assert(!__is_nullptr(StructWithMembers));
+  static_assert(!__is_nullptr(int StructWithMembers::*));
+  static_assert(!__is_nullptr(void(StructWithMembers::*)()));
 }
 
 void is_member_object_pointer()
 {
   StructWithMembers x;
 
-  static_assert(__is_member_object_pointer(int StructWithMembers::*), "");
+  static_assert(__is_member_object_pointer(int StructWithMembers::*));
 
-  static_assert(!__is_member_object_pointer(void (StructWithMembers::*) ()), "");
-  static_assert(!__is_member_object_pointer(void*), "");
-  static_assert(!__is_member_object_pointer(cvoid*), "");
-  static_assert(!__is_member_object_pointer(cvoid*), "");
-  static_assert(!__is_member_object_pointer(char*), "");
-  static_assert(!__is_member_object_pointer(int*), "");
-  static_assert(!__is_member_object_pointer(int**), "");
-  static_assert(!__is_member_object_pointer(ClassType*), "");
-  static_assert(!__is_member_object_pointer(Derives*), "");
-  static_assert(!__is_member_object_pointer(Enum*), "");
-  static_assert(!__is_member_object_pointer(IntArNB*), "");
-  static_assert(!__is_member_object_pointer(Union*), "");
-  static_assert(!__is_member_object_pointer(UnionAr*), "");
-  static_assert(!__is_member_object_pointer(StructWithMembers*), "");
-  static_assert(!__is_member_object_pointer(void), "");
-  static_assert(!__is_member_object_pointer(cvoid), "");
-  static_assert(!__is_member_object_pointer(cvoid), "");
-  static_assert(!__is_member_object_pointer(char), "");
-  static_assert(!__is_member_object_pointer(int), "");
-  static_assert(!__is_member_object_pointer(int), "");
-  static_assert(!__is_member_object_pointer(ClassType), "");
-  static_assert(!__is_member_object_pointer(Derives), "");
-  static_assert(!__is_member_object_pointer(Enum), "");
-  static_assert(!__is_member_object_pointer(IntArNB), "");
-  static_assert(!__is_member_object_pointer(Union), "");
-  static_assert(!__is_member_object_pointer(UnionAr), "");
-  static_assert(!__is_member_object_pointer(StructWithMembers), "");
-  static_assert(!__is_member_object_pointer(void (*)()), "");
+  static_assert(!__is_member_object_pointer(void (StructWithMembers::*) ()));
+  static_assert(!__is_member_object_pointer(void*));
+  static_assert(!__is_member_object_pointer(cvoid*));
+  static_assert(!__is_member_object_pointer(cvoid*));
+  static_assert(!__is_member_object_pointer(char*));
+  static_assert(!__is_member_object_pointer(int*));
+  static_assert(!__is_member_object_pointer(int**));
+  static_assert(!__is_member_object_pointer(ClassType*));
+  static_assert(!__is_member_object_pointer(Derives*));
+  static_assert(!__is_member_object_pointer(Enum*));
+  static_assert(!__is_member_object_pointer(IntArNB*));
+  static_assert(!__is_member_object_pointer(Union*));
+  static_assert(!__is_member_object_pointer(UnionAr*));
+  static_assert(!__is_member_object_pointer(StructWithMembers*));
+  static_assert(!__is_member_object_pointer(void));
+  static_assert(!__is_member_object_pointer(cvoid));
+  static_assert(!__is_member_object_pointer(cvoid));
+  static_assert(!__is_member_object_pointer(char));
+  static_assert(!__is_member_object_pointer(int));
+  static_assert(!__is_member_object_pointer(int));
+  static_assert(!__is_member_object_pointer(ClassType));
+  static_assert(!__is_member_object_pointer(Derives));
+  static_assert(!__is_member_object_pointer(Enum));
+  static_assert(!__is_member_object_pointer(IntArNB));
+  static_assert(!__is_member_object_pointer(Union));
+  static_assert(!__is_member_object_pointer(UnionAr));
+  static_assert(!__is_member_object_pointer(StructWithMembers));
+  static_assert(!__is_member_object_pointer(void (*)()));
 }
 
 void is_member_function_pointer()
 {
   StructWithMembers x;
 
-  static_assert(__is_member_function_pointer(void (StructWithMembers::*) ()), "");
+  static_assert(__is_member_function_pointer(void (StructWithMembers::*) ()));
 
-  static_assert(!__is_member_function_pointer(int StructWithMembers::*), "");
-  static_assert(!__is_member_function_pointer(void*), "");
-  static_assert(!__is_member_function_pointer(cvoid*), "");
-  static_assert(!__is_member_function_pointer(cvoid*), "");
-  static_assert(!__is_member_function_pointer(char*), "");
-  static_assert(!__is_member_function_pointer(int*), "");
-  static_assert(!__is_member_function_pointer(int**), "");
-  static_assert(!__is_member_function_pointer(ClassType*), "");
-  static_assert(!__is_member_function_pointer(Derives*), "");
-  static_assert(!__is_member_function_pointer(Enum*), "");
-  static_assert(!__is_member_function_pointer(IntArNB*), "");
-  static_assert(!__is_member_function_pointer(Union*), "");
-  static_assert(!__is_member_function_pointer(UnionAr*), "");
-  static_assert(!__is_member_function_pointer(StructWithMembers*), "");
-  static_assert(!__is_member_function_pointer(void), "");
-  static_assert(!__is_member_function_pointer(cvoid), "");
-  static_assert(!__is_member_function_pointer(cvoid), "");
-  static_assert(!__is_member_function_pointer(char), "");
-  static_assert(!__is_member_function_pointer(int), "");
-  static_assert(!__is_member_function_pointer(int), "");
-  static_assert(!__is_member_function_pointer(ClassType), "");
-  static_assert(!__is_member_function_pointer(Derives), "");
-  static_assert(!__is_member_function_pointer(Enum), "");
-  static_assert(!__is_member_function_pointer(IntArNB), "");
-  static_assert(!__is_member_function_pointer(Union), "");
-  static_assert(!__is_member_function_pointer(UnionAr), "");
-  static_assert(!__is_member_function_pointer(StructWithMembers), "");
-  static_assert(!__is_member_function_pointer(void (*)()), "");
+  static_assert(!__is_member_function_pointer(int StructWithMembers::*));
+  static_assert(!__is_member_function_pointer(void*));
+  static_assert(!__is_member_function_pointer(cvoid*));
+  static_assert(!__is_member_function_pointer(cvoid*));
+  static_assert(!__is_member_function_pointer(char*));
+  static_assert(!__is_member_function_pointer(int*));
+  static_assert(!__is_member_function_pointer(int**));
+  static_assert(!__is_member_function_pointer(ClassType*));
+  static_assert(!__is_member_function_pointer(Derives*));
+  static_assert(!__is_member_function_pointer(Enum*));
+  static_assert(!__is_member_function_pointer(IntArNB*));
+  static_assert(!__is_member_function_pointer(Union*));
+  static_assert(!__is_member_function_pointer(UnionAr*));
+  static_assert(!__is_member_function_pointer(StructWithMembers*));
+  static_assert(!__is_member_function_pointer(void));
+  static_assert(!__is_member_function_pointer(cvoid));
+  static_assert(!__is_member_function_pointer(cvoid));
+  static_assert(!__is_member_function_pointer(char));
+  static_assert(!__is_member_function_pointer(int));
+  static_assert(!__is_member_function_pointer(int));
+  static_assert(!__is_member_function_pointer(ClassType));
+  static_assert(!__is_member_function_pointer(Derives));
+  static_assert(!__is_member_function_pointer(Enum));
+  static_assert(!__is_member_function_pointer(IntArNB));
+  static_assert(!__is_member_function_pointer(Union));
+  static_assert(!__is_member_function_pointer(UnionAr));
+  static_assert(!__is_member_function_pointer(StructWithMembers));
+  static_assert(!__is_member_function_pointer(void (*)()));
 }
 
 void is_member_pointer()
 {
   StructWithMembers x;
 
-  static_assert(__is_member_pointer(int StructWithMembers::*), "");
-  static_assert(__is_member_pointer(void (StructWithMembers::*) ()), "");
+  static_assert(__is_member_pointer(int StructWithMembers::*));
+  static_assert(__is_member_pointer(void (StructWithMembers::*) ()));
 
-  static_assert(!__is_member_pointer(void*), "");
-  static_assert(!__is_member_pointer(cvoid*), "");
-  static_assert(!__is_member_pointer(cvoid*), "");
-  static_assert(!__is_member_pointer(char*), "");
-  static_assert(!__is_member_pointer(int*), "");
-  static_assert(!__is_member_pointer(int**), "");
-  static_assert(!__is_member_pointer(ClassType*), "");
-  static_assert(!__is_member_pointer(Derives*), "");
-  static_assert(!__is_member_pointer(Enum*), "");
-  static_assert(!__is_member_pointer(IntArNB*), "");
-  static_assert(!__is_member_pointer(Union*), "");
-  static_assert(!__is_member_pointer(UnionAr*), "");
-  static_assert(!__is_member_pointer(StructWithMembers*), "");
-  static_assert(!__is_member_pointer(void), "");
-  static_assert(!__is_member_pointer(cvoid), "");
-  static_assert(!__is_member_pointer(cvoid), "");
-  static_assert(!__is_member_pointer(char), "");
-  static_assert(!__is_member_pointer(int), "");
-  static_assert(!__is_member_pointer(int), "");
-  static_assert(!__is_member_pointer(ClassType), "");
-  static_assert(!__is_member_pointer(Derives), "");
-  static_assert(!__is_member_pointer(Enum), "");
-  static_assert(!__is_member_pointer(IntArNB), "");
-  static_assert(!__is_member_pointer(Union), "");
-  static_assert(!__is_member_pointer(UnionAr), "");
-  static_assert(!__is_member_pointer(StructWithMembers), "");
-  static_assert(!__is_member_pointer(void (*)()), "");
+  static_assert(!__is_member_pointer(void*));
+  static_assert(!__is_member_pointer(cvoid*));
+  static_assert(!__is_member_pointer(cvoid*));
+  static_assert(!__is_member_pointer(char*));
+  static_assert(!__is_member_pointer(int*));
+  static_assert(!__is_member_pointer(int**));
+  static_assert(!__is_member_pointer(ClassType*));
+  static_assert(!__is_member_pointer(Derives*));
+  static_assert(!__is_member_pointer(Enum*));
+  static_assert(!__is_member_pointer(IntArNB*));
+  static_assert(!__is_member_pointer(Union*));
+  static_assert(!__is_member_pointer(UnionAr*));
+  static_assert(!__is_member_pointer(StructWithMembers*));
+  static_assert(!__is_member_pointer(void));
+  static_assert(!__is_member_pointer(cvoid));
+  static_assert(!__is_member_pointer(cvoid));
+  static_assert(!__is_member_pointer(char));
+  static_assert(!__is_member_pointer(int));
+  static_assert(!__is_member_pointer(int));
+  static_assert(!__is_member_pointer(ClassType));
+  static_assert(!__is_member_pointer(Derives));
+  static_assert(!__is_member_pointer(Enum));
+  static_assert(!__is_member_pointer(IntArNB));
+  static_assert(!__is_member_pointer(Union));
+  static_assert(!__is_member_pointer(UnionAr));
+  static_assert(!__is_member_pointer(StructWithMembers));
+  static_assert(!__is_member_pointer(void (*)()));
 }
 
 void is_const()
 {
-  static_assert(__is_const(cvoid), "");
-  static_assert(__is_const(const char), "");
-  static_assert(__is_const(const int), "");
-  static_assert(__is_const(const long), "");
-  static_assert(__is_const(const short), "");
-  static_assert(__is_const(const signed char), "");
-  static_assert(__is_const(const wchar_t), "");
-  static_assert(__is_const(const bool), "");
-  static_assert(__is_const(const float), "");
-  static_assert(__is_const(const double), "");
-  static_assert(__is_const(const long double), "");
-  static_assert(__is_const(const unsigned char), "");
-  static_assert(__is_const(const unsigned int), "");
-  static_assert(__is_const(const unsigned long long), "");
-  static_assert(__is_const(const unsigned long), "");
-  static_assert(__is_const(const unsigned short), "");
-  static_assert(__is_const(const void), "");
-  static_assert(__is_const(const ClassType), "");
-  static_assert(__is_const(const Derives), "");
-  static_assert(__is_const(const Enum), "");
-  static_assert(__is_const(const IntArNB), "");
-  static_assert(__is_const(const Union), "");
-  static_assert(__is_const(const UnionAr), "");
+  static_assert(__is_const(cvoid));
+  static_assert(__is_const(const char));
+  static_assert(__is_const(const int));
+  static_assert(__is_const(const long));
+  static_assert(__is_const(const short));
+  static_assert(__is_const(const signed char));
+  static_assert(__is_const(const wchar_t));
+  static_assert(__is_const(const bool));
+  static_assert(__is_const(const float));
+  static_assert(__is_const(const double));
+  static_assert(__is_const(const long double));
+  static_assert(__is_const(const unsigned char));
+  static_assert(__is_const(const unsigned int));
+  static_assert(__is_const(const unsigned long long));
+  static_assert(__is_const(const unsigned long));
+  static_assert(__is_const(const unsigned short));
+  static_assert(__is_const(const void));
+  static_assert(__is_const(const ClassType));
+  static_assert(__is_const(const Derives));
+  static_assert(__is_const(const Enum));
+  static_assert(__is_const(const IntArNB));
+  static_assert(__is_const(const Union));
+  static_assert(__is_const(const UnionAr));
 
-  static_assert(!__is_const(char), "");
-  static_assert(!__is_const(int), "");
-  static_assert(!__is_const(long), "");
-  static_assert(!__is_const(short), "");
-  static_assert(!__is_const(signed char), "");
-  static_assert(!__is_const(wchar_t), "");
-  static_assert(!__is_const(bool), "");
-  static_assert(!__is_const(float), "");
-  static_assert(!__is_const(double), "");
-  static_assert(!__is_const(long double), "");
-  static_assert(!__is_const(unsigned char), "");
-  static_assert(!__is_const(unsigned int), "");
-  static_assert(!__is_const(unsigned long long), "");
-  static_assert(!__is_const(unsigned long), "");
-  static_assert(!__is_const(unsigned short), "");
-  static_assert(!__is_const(void), "");
-  static_assert(!__is_const(ClassType), "");
-  static_assert(!__is_const(Derives), "");
-  static_assert(!__is_const(Enum), "");
-  static_assert(!__is_const(IntArNB), "");
-  static_assert(!__is_const(Union), "");
-  static_assert(!__is_const(UnionAr), "");
+  static_assert(!__is_const(char));
+  static_assert(!__is_const(int));
+  static_assert(!__is_const(long));
+  static_assert(!__is_const(short));
+  static_assert(!__is_const(signed char));
+  static_assert(!__is_const(wchar_t));
+  static_assert(!__is_const(bool));
+  static_assert(!__is_const(float));
+  static_assert(!__is_const(double));
+  static_assert(!__is_const(long double));
+  static_assert(!__is_const(unsigned char));
+  static_assert(!__is_const(unsigned int));
+  static_assert(!__is_const(unsigned long long));
+  static_assert(!__is_const(unsigned long));
+  static_assert(!__is_const(unsigned short));
+  static_assert(!__is_const(void));
+  static_assert(!__is_const(ClassType));
+  static_assert(!__is_const(Derives));
+  static_assert(!__is_const(Enum));
+  static_assert(!__is_const(IntArNB));
+  static_assert(!__is_const(Union));
+  static_assert(!__is_const(UnionAr));
 }
 
 void is_volatile()
 {
-  static_assert(__is_volatile(volatile char), "");
-  static_assert(__is_volatile(volatile int), "");
-  static_assert(__is_volatile(volatile long), "");
-  static_assert(__is_volatile(volatile short), "");
-  static_assert(__is_volatile(volatile signed char), "");
-  static_assert(__is_volatile(volatile wchar_t), "");
-  static_assert(__is_volatile(volatile bool), "");
-  static_assert(__is_volatile(volatile float), "");
-  static_assert(__is_volatile(volatile double), "");
-  static_assert(__is_volatile(volatile long double), "");
-  static_assert(__is_volatile(volatile unsigned char), "");
-  static_assert(__is_volatile(volatile unsigned int), "");
-  static_assert(__is_volatile(volatile unsigned long long), "");
-  static_assert(__is_volatile(volatile unsigned long), "");
-  static_assert(__is_volatile(volatile unsigned short), "");
-  static_assert(__is_volatile(volatile void), "");
-  static_assert(__is_volatile(volatile ClassType), "");
-  static_assert(__is_volatile(volatile Derives), "");
-  static_assert(__is_volatile(volatile Enum), "");
-  static_assert(__is_volatile(volatile IntArNB), "");
-  static_assert(__is_volatile(volatile Union), "");
-  static_assert(__is_volatile(volatile UnionAr), "");
+  static_assert(__is_volatile(volatile char));
+  static_assert(__is_volatile(volatile int));
+  static_assert(__is_volatile(volatile long));
+  static_assert(__is_volatile(volatile short));
+  static_assert(__is_volatile(volatile signed char));
+  static_assert(__is_volatile(volatile wchar_t));
+  static_assert(__is_volatile(volatile bool));
+  static_assert(__is_volatile(volatile float));
+  static_assert(__is_volatile(volatile double));
+  static_assert(__is_volatile(volatile long double));
+  static_assert(__is_volatile(volatile unsigned char));
+  static_assert(__is_volatile(volatile unsigned int));
+  static_assert(__is_volatile(volatile unsigned long long));
+  static_assert(__is_volatile(volatile unsigned long));
+  static_assert(__is_volatile(volatile unsigned short));
+  static_assert(__is_volatile(volatile void));
+  static_assert(__is_volatile(volatile ClassType));
+  static_assert(__is_volatile(volatile Derives));
+  static_assert(__is_volatile(volatile Enum));
+  static_assert(__is_volatile(volatile IntArNB));
+  static_assert(__is_volatile(volatile Union));
+  static_assert(__is_volatile(volatile UnionAr));
 
-  static_assert(!__is_volatile(char), "");
-  static_assert(!__is_volatile(int), "");
-  static_assert(!__is_volatile(long), "");
-  static_assert(!__is_volatile(short), "");
-  static_assert(!__is_volatile(signed char), "");
-  static_assert(!__is_volatile(wchar_t), "");
-  static_assert(!__is_volatile(bool), "");
-  static_assert(!__is_volatile(float), "");
-  static_assert(!__is_volatile(double), "");
-  static_assert(!__is_volatile(long double), "");
-  static_assert(!__is_volatile(unsigned char), "");
-  static_assert(!__is_volatile(unsigned int), "");
-  static_assert(!__is_volatile(unsigned long long), "");
-  static_assert(!__is_volatile(unsigned long), "");
-  static_assert(!__is_volatile(unsigned short), "");
-  static_assert(!__is_volatile(void), "");
-  static_assert(!__is_volatile(ClassType), "");
-  static_assert(!__is_volatile(Derives), "");
-  static_assert(!__is_volatile(Enum), "");
-  static_assert(!__is_volatile(IntArNB), "");
-  static_assert(!__is_volatile(Union), "");
-  static_assert(!__is_volatile(UnionAr), "");
+  static_assert(!__is_volatile(char));
+  static_assert(!__is_volatile(int));
+  static_assert(!__is_volatile(long));
+  static_assert(!__is_volatile(short));
+  static_assert(!__is_volatile(signed char));
+  static_assert(!__is_volatile(wchar_t));
+  static_assert(!__is_volatile(bool));
+  static_assert(!__is_volatile(float));
+  static_assert(!__is_volatile(double));
+  static_assert(!__is_volatile(long double));
+  static_assert(!__is_volatile(unsigned char));
+  static_assert(!__is_volatile(unsigned int));
+  static_assert(!__is_volatile(unsigned long long));
+  static_assert(!__is_volatile(unsigned long));
+  static_assert(!__is_volatile(unsigned short));
+  static_assert(!__is_volatile(void));
+  static_assert(!__is_volatile(ClassType));
+  static_assert(!__is_volatile(Derives));
+  static_assert(!__is_volatile(Enum));
+  static_assert(!__is_volatile(IntArNB));
+  static_assert(!__is_volatile(Union));
+  static_assert(!__is_volatile(UnionAr));
 }
 
 struct TrivialStruct {
@@ -1350,87 +1350,87 @@ ExtDefaulted::~ExtDefaulted() = default;
 
 void is_trivial2()
 {
-  static_assert(__is_trivial(char), "");
-  static_assert(__is_trivial(int), "");
-  static_assert(__is_trivial(long), "");
-  static_assert(__is_trivial(short), "");
-  static_assert(__is_trivial(signed char), "");
-  static_assert(__is_trivial(wchar_t), "");
-  static_assert(__is_trivial(bool), "");
-  static_assert(__is_trivial(float), "");
-  static_assert(__is_trivial(double), "");
-  static_assert(__is_trivial(long double), "");
-  static_assert(__is_trivial(unsigned char), "");
-  static_assert(__is_trivial(unsigned int), "");
-  static_assert(__is_trivial(unsigned long long), "");
-  static_assert(__is_trivial(unsigned long), "");
-  static_assert(__is_trivial(unsigned short), "");
-  static_assert(__is_trivial(ClassType), "");
-  static_assert(__is_trivial(Derives), "");
-  static_assert(__is_trivial(Enum), "");
-  static_assert(__is_trivial(IntAr), "");
-  static_assert(__is_trivial(Union), "");
-  static_assert(__is_trivial(UnionAr), "");
-  static_assert(__is_trivial(TrivialStruct), "");
-  static_assert(__is_trivial(AllDefaulted), "");
-  static_assert(__is_trivial(AllDeleted), "");
+  static_assert(__is_trivial(char));
+  static_assert(__is_trivial(int));
+  static_assert(__is_trivial(long));
+  static_assert(__is_trivial(short));
+  static_assert(__is_trivial(signed char));
+  static_assert(__is_trivial(wchar_t));
+  static_assert(__is_trivial(bool));
+  static_assert(__is_trivial(float));
+  static_assert(__is_trivial(double));
+  static_assert(__is_trivial(long double));
+  static_assert(__is_trivial(unsigned char));
+  static_assert(__is_trivial(unsigned int));
+  static_assert(__is_trivial(unsigned long long));
+  static_assert(__is_trivial(unsigned long));
+  static_assert(__is_trivial(unsigned short));
+  static_assert(__is_trivial(ClassType));
+  static_assert(__is_trivial(Derives));
+  static_assert(__is_trivial(Enum));
+  static_assert(__is_trivial(IntAr));
+  static_assert(__is_trivial(Union));
+  static_assert(__is_trivial(UnionAr));
+  static_assert(__is_trivial(TrivialStruct));
+  static_assert(__is_trivial(AllDefaulted));
+  static_assert(__is_trivial(AllDeleted));
 
-  static_assert(!__is_trivial(void), "");
-  static_assert(!__is_trivial(NonTrivialStruct), "");
-  static_assert(!__is_trivial(SuperNonTrivialStruct), "");
-  static_assert(!__is_trivial(NonTCStruct), "");
-  static_assert(!__is_trivial(ExtDefaulted), "");
+  static_assert(!__is_trivial(void));
+  static_assert(!__is_trivial(NonTrivialStruct));
+  static_assert(!__is_trivial(SuperNonTrivialStruct));
+  static_assert(!__is_trivial(NonTCStruct));
+  static_assert(!__is_trivial(ExtDefaulted));
 
-  static_assert(__is_trivial(ACompleteType), "");
-  static_assert(!__is_trivial(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivial(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivial(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivial(void), "");
-  static_assert(!__is_trivial(const volatile void), "");
+  static_assert(__is_trivial(ACompleteType));
+  static_assert(!__is_trivial(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_trivial(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__is_trivial(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_trivial(void));
+  static_assert(!__is_trivial(const volatile void));
 }
 
 void is_trivially_copyable2()
 {
-  static_assert(__is_trivially_copyable(char), "");
-  static_assert(__is_trivially_copyable(int), "");
-  static_assert(__is_trivially_copyable(long), "");
-  static_assert(__is_trivially_copyable(short), "");
-  static_assert(__is_trivially_copyable(signed char), "");
-  static_assert(__is_trivially_copyable(wchar_t), "");
-  static_assert(__is_trivially_copyable(bool), "");
-  static_assert(__is_trivially_copyable(float), "");
-  static_assert(__is_trivially_copyable(double), "");
-  static_assert(__is_trivially_copyable(long double), "");
-  static_assert(__is_trivially_copyable(unsigned char), "");
-  static_assert(__is_trivially_copyable(unsigned int), "");
-  static_assert(__is_trivially_copyable(unsigned long long), "");
-  static_assert(__is_trivially_copyable(unsigned long), "");
-  static_assert(__is_trivially_copyable(unsigned short), "");
-  static_assert(__is_trivially_copyable(ClassType), "");
-  static_assert(__is_trivially_copyable(Derives), "");
-  static_assert(__is_trivially_copyable(Enum), "");
-  static_assert(__is_trivially_copyable(IntAr), "");
-  static_assert(__is_trivially_copyable(Union), "");
-  static_assert(__is_trivially_copyable(UnionAr), "");
-  static_assert(__is_trivially_copyable(TrivialStruct), "");
-  static_assert(__is_trivially_copyable(NonTrivialStruct), "");
-  static_assert(__is_trivially_copyable(AllDefaulted), "");
-  static_assert(__is_trivially_copyable(AllDeleted), "");
+  static_assert(__is_trivially_copyable(char));
+  static_assert(__is_trivially_copyable(int));
+  static_assert(__is_trivially_copyable(long));
+  static_assert(__is_trivially_copyable(short));
+  static_assert(__is_trivially_copyable(signed char));
+  static_assert(__is_trivially_copyable(wchar_t));
+  static_assert(__is_trivially_copyable(bool));
+  static_assert(__is_trivially_copyable(float));
+  static_assert(__is_trivially_copyable(double));
+  static_assert(__is_trivially_copyable(long double));
+  static_assert(__is_trivially_copyable(unsigned char));
+  static_assert(__is_trivially_copyable(unsigned int));
+  static_assert(__is_trivially_copyable(unsigned long long));
+  static_assert(__is_trivially_copyable(unsigned long));
+  static_assert(__is_trivially_copyable(unsigned short));
+  static_assert(__is_trivially_copyable(ClassType));
+  static_assert(__is_trivially_copyable(Derives));
+  static_assert(__is_trivially_copyable(Enum));
+  static_assert(__is_trivially_copyable(IntAr));
+  static_assert(__is_trivially_copyable(Union));
+  static_assert(__is_trivially_copyable(UnionAr));
+  static_assert(__is_trivially_copyable(TrivialStruct));
+  static_assert(__is_trivially_copyable(NonTrivialStruct));
+  static_assert(__is_trivially_copyable(AllDefaulted));
+  static_assert(__is_trivially_copyable(AllDeleted));
 
-  static_assert(!__is_trivially_copyable(void), "");
-  static_assert(!__is_trivially_copyable(SuperNonTrivialStruct), "");
-  static_assert(!__is_trivially_copyable(NonTCStruct), "");
-  static_assert(!__is_trivially_copyable(ExtDefaulted), "");
+  static_assert(!__is_trivially_copyable(void));
+  static_assert(!__is_trivially_copyable(SuperNonTrivialStruct));
+  static_assert(!__is_trivially_copyable(NonTCStruct));
+  static_assert(!__is_trivially_copyable(ExtDefaulted));
 
-  static_assert(__is_trivially_copyable(const int), "");
-  static_assert(__is_trivially_copyable(volatile int), "");
+  static_assert(__is_trivially_copyable(const int));
+  static_assert(__is_trivially_copyable(volatile int));
 
-  static_assert(__is_trivially_copyable(ACompleteType), "");
-  static_assert(!__is_trivially_copyable(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_copyable(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_copyable(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_copyable(void), "");
-  static_assert(!__is_trivially_copyable(const volatile void), "");
+  static_assert(__is_trivially_copyable(ACompleteType));
+  static_assert(!__is_trivially_copyable(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_copyable(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_copyable(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_copyable(void));
+  static_assert(!__is_trivially_copyable(const volatile void));
 }
 
 struct CStruct {
@@ -1475,32 +1475,32 @@ void is_standard_layout()
   typedef ConstInt ConstIntAr[4];
   typedef CppStructStandard CppStructStandardAr[4];
 
-  static_assert(__is_standard_layout(int), "");
-  static_assert(__is_standard_layout(ConstInt), "");
-  static_assert(__is_standard_layout(ConstIntAr), "");
-  static_assert(__is_standard_layout(CStruct), "");
-  static_assert(__is_standard_layout(CppStructStandard), "");
-  static_assert(__is_standard_layout(CppStructStandardAr), "");
-  static_assert(__is_standard_layout(Vector), "");
-  static_assert(__is_standard_layout(VectorExt), "");
+  static_assert(__is_standard_layout(int));
+  static_assert(__is_standard_layout(ConstInt));
+  static_assert(__is_standard_layout(ConstIntAr));
+  static_assert(__is_standard_layout(CStruct));
+  static_assert(__is_standard_layout(CppStructStandard));
+  static_assert(__is_standard_layout(CppStructStandardAr));
+  static_assert(__is_standard_layout(Vector));
+  static_assert(__is_standard_layout(VectorExt));
 
   typedef CppStructNonStandardByBase CppStructNonStandardByBaseAr[4];
 
-  static_assert(!__is_standard_layout(CppStructNonStandardByVirt), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardByMemb), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardByProt), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardByVirtBase), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardByBase), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardByBaseAr), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardBySameBase), "");
-  static_assert(!__is_standard_layout(CppStructNonStandardBy2ndVirtBase), "");
+  static_assert(!__is_standard_layout(CppStructNonStandardByVirt));
+  static_assert(!__is_standard_layout(CppStructNonStandardByMemb));
+  static_assert(!__is_standard_layout(CppStructNonStandardByProt));
+  static_assert(!__is_standard_layout(CppStructNonStandardByVirtBase));
+  static_assert(!__is_standard_layout(CppStructNonStandardByBase));
+  static_assert(!__is_standard_layout(CppStructNonStandardByBaseAr));
+  static_assert(!__is_standard_layout(CppStructNonStandardBySameBase));
+  static_assert(!__is_standard_layout(CppStructNonStandardBy2ndVirtBase));
 
-  static_assert(__is_standard_layout(ACompleteType), "");
-  static_assert(!__is_standard_layout(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_standard_layout(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_standard_layout(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_standard_layout(void), "");
-  static_assert(!__is_standard_layout(const volatile void), "");
+  static_assert(__is_standard_layout(ACompleteType));
+  static_assert(!__is_standard_layout(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_standard_layout(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__is_standard_layout(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_standard_layout(void));
+  static_assert(!__is_standard_layout(const volatile void));
 
   struct HasAnonEmptyBitfield { int : 0; };
   struct HasAnonBitfield { int : 4; };
@@ -1508,11 +1508,11 @@ void is_standard_layout()
   struct DerivesFromBitfieldWithBitfield : HasAnonBitfield { int : 5; };
   struct DerivesFromBitfieldTwice : DerivesFromBitfield, HasAnonEmptyBitfield {};
 
-  static_assert(__is_standard_layout(HasAnonEmptyBitfield), "");
-  static_assert(__is_standard_layout(HasAnonBitfield), "");
-  static_assert(__is_standard_layout(DerivesFromBitfield), "");
-  static_assert(!__is_standard_layout(DerivesFromBitfieldWithBitfield), "");
-  static_assert(!__is_standard_layout(DerivesFromBitfieldTwice), "");
+  static_assert(__is_standard_layout(HasAnonEmptyBitfield));
+  static_assert(__is_standard_layout(HasAnonBitfield));
+  static_assert(__is_standard_layout(DerivesFromBitfield));
+  static_assert(!__is_standard_layout(DerivesFromBitfieldWithBitfield));
+  static_assert(!__is_standard_layout(DerivesFromBitfieldTwice));
 
   struct Empty {};
   struct HasEmptyBase : Empty {};
@@ -1526,16 +1526,16 @@ void is_standard_layout()
   struct HasEmptyIndirectBaseAsSecondMember : HasEmptyBase { int n; Empty e; };
   struct HasEmptyIndirectBaseAfterBitfield : HasEmptyBase { int : 4; Empty e; };
 
-  static_assert(__is_standard_layout(Empty), "");
-  static_assert(__is_standard_layout(HasEmptyBase), "");
-  static_assert(!__is_standard_layout(HasRepeatedEmptyBase), "");
-  static_assert(!__is_standard_layout(HasEmptyBaseAsMember), "");
-  static_assert(!__is_standard_layout(HasEmptyBaseAsSubobjectOfMember1), "");
-  static_assert(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember2), ""); // FIXME: standard bug?
-  static_assert(!__is_standard_layout(HasEmptyBaseAsSubobjectOfMember3), "");
-  static_assert(!__is_standard_layout(HasEmptyIndirectBaseAsMember), "");
-  static_assert(__is_standard_layout(HasEmptyIndirectBaseAsSecondMember), "");
-  static_assert(!__is_standard_layout(HasEmptyIndirectBaseAfterBitfield), ""); // FIXME: standard bug?
+  static_assert(__is_standard_layout(Empty));
+  static_assert(__is_standard_layout(HasEmptyBase));
+  static_assert(!__is_standard_layout(HasRepeatedEmptyBase));
+  static_assert(!__is_standard_layout(HasEmptyBaseAsMember));
+  static_assert(!__is_standard_layout(HasEmptyBaseAsSubobjectOfMember1));
+  static_assert(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember2)); // FIXME: standard bug?
+  static_assert(!__is_standard_layout(HasEmptyBaseAsSubobjectOfMember3));
+  static_assert(!__is_standard_layout(HasEmptyIndirectBaseAsMember));
+  static_assert(__is_standard_layout(HasEmptyIndirectBaseAsSecondMember));
+  static_assert(!__is_standard_layout(HasEmptyIndirectBaseAfterBitfield)); // FIXME: standard bug?
 
   struct StructWithEmptyFields {
     int n;
@@ -1552,68 +1552,68 @@ void is_standard_layout()
     UnionWithEmptyFields u;
   };
 
-  static_assert(__is_standard_layout(HasEmptyIndirectBaseAsSecondStructMember), "");
-  static_assert(!__is_standard_layout(HasEmptyIndirectBaseAsSecondUnionMember), "");
+  static_assert(__is_standard_layout(HasEmptyIndirectBaseAsSecondStructMember));
+  static_assert(!__is_standard_layout(HasEmptyIndirectBaseAsSecondUnionMember));
 }
 
 void is_signed()
 {
-  //static_assert(__is_signed(char), "");
-  static_assert(__is_signed(int), "");
-  static_assert(__is_signed(long), "");
-  static_assert(__is_signed(short), "");
-  static_assert(__is_signed(signed char), "");
-  static_assert(__is_signed(wchar_t), "");
-  static_assert(__is_signed(float), "");
-  static_assert(__is_signed(double), "");
-  static_assert(__is_signed(long double), "");
+  //static_assert(__is_signed(char));
+  static_assert(__is_signed(int));
+  static_assert(__is_signed(long));
+  static_assert(__is_signed(short));
+  static_assert(__is_signed(signed char));
+  static_assert(__is_signed(wchar_t));
+  static_assert(__is_signed(float));
+  static_assert(__is_signed(double));
+  static_assert(__is_signed(long double));
 
-  static_assert(!__is_signed(bool), "");
-  static_assert(!__is_signed(cvoid), "");
-  static_assert(!__is_signed(unsigned char), "");
-  static_assert(!__is_signed(unsigned int), "");
-  static_assert(!__is_signed(unsigned long long), "");
-  static_assert(!__is_signed(unsigned long), "");
-  static_assert(!__is_signed(unsigned short), "");
-  static_assert(!__is_signed(void), "");
-  static_assert(!__is_signed(ClassType), "");
-  static_assert(!__is_signed(Derives), "");
-  static_assert(!__is_signed(Enum), "");
-  static_assert(!__is_signed(SignedEnum), "");
-  static_assert(!__is_signed(IntArNB), "");
-  static_assert(!__is_signed(Union), "");
-  static_assert(!__is_signed(UnionAr), "");
-  static_assert(!__is_signed(UnsignedEnum), "");
+  static_assert(!__is_signed(bool));
+  static_assert(!__is_signed(cvoid));
+  static_assert(!__is_signed(unsigned char));
+  static_assert(!__is_signed(unsigned int));
+  static_assert(!__is_signed(unsigned long long));
+  static_assert(!__is_signed(unsigned long));
+  static_assert(!__is_signed(unsigned short));
+  static_assert(!__is_signed(void));
+  static_assert(!__is_signed(ClassType));
+  static_assert(!__is_signed(Derives));
+  static_assert(!__is_signed(Enum));
+  static_assert(!__is_signed(SignedEnum));
+  static_assert(!__is_signed(IntArNB));
+  static_assert(!__is_signed(Union));
+  static_assert(!__is_signed(UnionAr));
+  static_assert(!__is_signed(UnsignedEnum));
 }
 
 void is_unsigned()
 {
-  static_assert(__is_unsigned(bool), "");
-  static_assert(__is_unsigned(unsigned char), "");
-  static_assert(__is_unsigned(unsigned short), "");
-  static_assert(__is_unsigned(unsigned int), "");
-  static_assert(__is_unsigned(unsigned long), "");
-  static_assert(__is_unsigned(unsigned long long), "");
+  static_assert(__is_unsigned(bool));
+  static_assert(__is_unsigned(unsigned char));
+  static_assert(__is_unsigned(unsigned short));
+  static_assert(__is_unsigned(unsigned int));
+  static_assert(__is_unsigned(unsigned long));
+  static_assert(__is_unsigned(unsigned long long));
 
-  static_assert(!__is_unsigned(void), "");
-  static_assert(!__is_unsigned(cvoid), "");
-  static_assert(!__is_unsigned(float), "");
-  static_assert(!__is_unsigned(double), "");
-  static_assert(!__is_unsigned(long double), "");
-  static_assert(!__is_unsigned(char), "");
-  static_assert(!__is_unsigned(signed char), "");
-  static_assert(!__is_unsigned(wchar_t), "");
-  static_assert(!__is_unsigned(short), "");
-  static_assert(!__is_unsigned(int), "");
-  static_assert(!__is_unsigned(long), "");
-  static_assert(!__is_unsigned(Union), "");
-  static_assert(!__is_unsigned(UnionAr), "");
-  static_assert(!__is_unsigned(Derives), "");
-  static_assert(!__is_unsigned(ClassType), "");
-  static_assert(!__is_unsigned(IntArNB), "");
-  static_assert(!__is_unsigned(Enum), "");
-  static_assert(!__is_unsigned(UnsignedEnum), "");
-  static_assert(!__is_unsigned(SignedEnum), "");
+  static_assert(!__is_unsigned(void));
+  static_assert(!__is_unsigned(cvoid));
+  static_assert(!__is_unsigned(float));
+  static_assert(!__is_unsigned(double));
+  static_assert(!__is_unsigned(long double));
+  static_assert(!__is_unsigned(char));
+  static_assert(!__is_unsigned(signed char));
+  static_assert(!__is_unsigned(wchar_t));
+  static_assert(!__is_unsigned(short));
+  static_assert(!__is_unsigned(int));
+  static_assert(!__is_unsigned(long));
+  static_assert(!__is_unsigned(Union));
+  static_assert(!__is_unsigned(UnionAr));
+  static_assert(!__is_unsigned(Derives));
+  static_assert(!__is_unsigned(ClassType));
+  static_assert(!__is_unsigned(IntArNB));
+  static_assert(!__is_unsigned(Enum));
+  static_assert(!__is_unsigned(UnsignedEnum));
+  static_assert(!__is_unsigned(SignedEnum));
 }
 
 typedef Int& IntRef;
@@ -1636,35 +1636,35 @@ struct HasTemplateCons {
 };
 
 void has_trivial_default_constructor() {
-  static_assert(__has_trivial_constructor(Int), "");
-  static_assert(__has_trivial_constructor(IntAr), "");
-  static_assert(__has_trivial_constructor(Union), "");
-  static_assert(__has_trivial_constructor(UnionAr), "");
-  static_assert(__has_trivial_constructor(POD), "");
-  static_assert(__has_trivial_constructor(Derives), "");
-  static_assert(__has_trivial_constructor(DerivesAr), "");
-  static_assert(__has_trivial_constructor(ConstIntAr), "");
-  static_assert(__has_trivial_constructor(ConstIntArAr), "");
-  static_assert(__has_trivial_constructor(HasDest), "");
-  static_assert(__has_trivial_constructor(HasPriv), "");
-  static_assert(__has_trivial_constructor(HasCopyAssign), "");
-  static_assert(__has_trivial_constructor(HasMoveAssign), "");
-  static_assert(__has_trivial_constructor(const Int), "");
-  static_assert(__has_trivial_constructor(AllDefaulted), "");
-  static_assert(__has_trivial_constructor(AllDeleted), "");
-  static_assert(__has_trivial_constructor(ACompleteType[]), "");
+  static_assert(__has_trivial_constructor(Int));
+  static_assert(__has_trivial_constructor(IntAr));
+  static_assert(__has_trivial_constructor(Union));
+  static_assert(__has_trivial_constructor(UnionAr));
+  static_assert(__has_trivial_constructor(POD));
+  static_assert(__has_trivial_constructor(Derives));
+  static_assert(__has_trivial_constructor(DerivesAr));
+  static_assert(__has_trivial_constructor(ConstIntAr));
+  static_assert(__has_trivial_constructor(ConstIntArAr));
+  static_assert(__has_trivial_constructor(HasDest));
+  static_assert(__has_trivial_constructor(HasPriv));
+  static_assert(__has_trivial_constructor(HasCopyAssign));
+  static_assert(__has_trivial_constructor(HasMoveAssign));
+  static_assert(__has_trivial_constructor(const Int));
+  static_assert(__has_trivial_constructor(AllDefaulted));
+  static_assert(__has_trivial_constructor(AllDeleted));
+  static_assert(__has_trivial_constructor(ACompleteType[]));
 
-  static_assert(!__has_trivial_constructor(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_trivial_constructor(HasCons), "");
-  static_assert(!__has_trivial_constructor(HasRef), "");
-  static_assert(!__has_trivial_constructor(HasCopy), "");
-  static_assert(!__has_trivial_constructor(IntRef), "");
-  static_assert(!__has_trivial_constructor(VirtAr), "");
-  static_assert(!__has_trivial_constructor(void), "");
-  static_assert(!__has_trivial_constructor(cvoid), "");
-  static_assert(!__has_trivial_constructor(HasTemplateCons), "");
-  static_assert(!__has_trivial_constructor(AllPrivate), "");
-  static_assert(!__has_trivial_constructor(ExtDefaulted), "");
+  static_assert(!__has_trivial_constructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_trivial_constructor(HasCons));
+  static_assert(!__has_trivial_constructor(HasRef));
+  static_assert(!__has_trivial_constructor(HasCopy));
+  static_assert(!__has_trivial_constructor(IntRef));
+  static_assert(!__has_trivial_constructor(VirtAr));
+  static_assert(!__has_trivial_constructor(void));
+  static_assert(!__has_trivial_constructor(cvoid));
+  static_assert(!__has_trivial_constructor(HasTemplateCons));
+  static_assert(!__has_trivial_constructor(AllPrivate));
+  static_assert(!__has_trivial_constructor(ExtDefaulted));
 }
 
 void has_trivial_move_constructor() {
@@ -1680,127 +1680,127 @@ void has_trivial_move_constructor() {
   //     type (or array thereof), the constructor selected
   //     to copy/move that member is trivial;
   // otherwise the copy/move constructor is non-trivial.
-  static_assert(__has_trivial_move_constructor(POD), "");
-  static_assert(__has_trivial_move_constructor(Union), "");
-  static_assert(__has_trivial_move_constructor(HasCons), "");
-  static_assert(__has_trivial_move_constructor(HasStaticMemberMoveCtor), "");
-  static_assert(__has_trivial_move_constructor(AllDeleted), "");
-  static_assert(__has_trivial_move_constructor(ACompleteType[]), "");
+  static_assert(__has_trivial_move_constructor(POD));
+  static_assert(__has_trivial_move_constructor(Union));
+  static_assert(__has_trivial_move_constructor(HasCons));
+  static_assert(__has_trivial_move_constructor(HasStaticMemberMoveCtor));
+  static_assert(__has_trivial_move_constructor(AllDeleted));
+  static_assert(__has_trivial_move_constructor(ACompleteType[]));
 
-  static_assert(!__has_trivial_move_constructor(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_trivial_move_constructor(HasVirt), "");
-  static_assert(!__has_trivial_move_constructor(DerivesVirt), "");
-  static_assert(!__has_trivial_move_constructor(HasMoveCtor), "");
-  static_assert(!__has_trivial_move_constructor(DerivesHasMoveCtor), "");
-  static_assert(!__has_trivial_move_constructor(HasMemberMoveCtor), "");
+  static_assert(!__has_trivial_move_constructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_trivial_move_constructor(HasVirt));
+  static_assert(!__has_trivial_move_constructor(DerivesVirt));
+  static_assert(!__has_trivial_move_constructor(HasMoveCtor));
+  static_assert(!__has_trivial_move_constructor(DerivesHasMoveCtor));
+  static_assert(!__has_trivial_move_constructor(HasMemberMoveCtor));
 }
 
 void has_trivial_copy_constructor() {
-  static_assert(__has_trivial_copy(Int), "");
-  static_assert(__has_trivial_copy(IntAr), "");
-  static_assert(__has_trivial_copy(Union), "");
-  static_assert(__has_trivial_copy(UnionAr), "");
-  static_assert(__has_trivial_copy(POD), "");
-  static_assert(__has_trivial_copy(Derives), "");
-  static_assert(__has_trivial_copy(ConstIntAr), "");
-  static_assert(__has_trivial_copy(ConstIntArAr), "");
-  static_assert(__has_trivial_copy(HasDest), "");
-  static_assert(__has_trivial_copy(HasPriv), "");
-  static_assert(__has_trivial_copy(HasCons), "");
-  static_assert(__has_trivial_copy(HasRef), "");
-  static_assert(__has_trivial_copy(HasMove), "");
-  static_assert(__has_trivial_copy(IntRef), "");
-  static_assert(__has_trivial_copy(HasCopyAssign), "");
-  static_assert(__has_trivial_copy(HasMoveAssign), "");
-  static_assert(__has_trivial_copy(const Int), "");
-  static_assert(__has_trivial_copy(AllDefaulted), "");
-  static_assert(__has_trivial_copy(AllDeleted), "");
-  static_assert(__has_trivial_copy(DerivesAr), "");
-  static_assert(__has_trivial_copy(DerivesHasRef), "");
-  static_assert(__has_trivial_copy(ACompleteType[]), "");
+  static_assert(__has_trivial_copy(Int));
+  static_assert(__has_trivial_copy(IntAr));
+  static_assert(__has_trivial_copy(Union));
+  static_assert(__has_trivial_copy(UnionAr));
+  static_assert(__has_trivial_copy(POD));
+  static_assert(__has_trivial_copy(Derives));
+  static_assert(__has_trivial_copy(ConstIntAr));
+  static_assert(__has_trivial_copy(ConstIntArAr));
+  static_assert(__has_trivial_copy(HasDest));
+  static_assert(__has_trivial_copy(HasPriv));
+  static_assert(__has_trivial_copy(HasCons));
+  static_assert(__has_trivial_copy(HasRef));
+  static_assert(__has_trivial_copy(HasMove));
+  static_assert(__has_trivial_copy(IntRef));
+  static_assert(__has_trivial_copy(HasCopyAssign));
+  static_assert(__has_trivial_copy(HasMoveAssign));
+  static_assert(__has_trivial_copy(const Int));
+  static_assert(__has_trivial_copy(AllDefaulted));
+  static_assert(__has_trivial_copy(AllDeleted));
+  static_assert(__has_trivial_copy(DerivesAr));
+  static_assert(__has_trivial_copy(DerivesHasRef));
+  static_assert(__has_trivial_copy(ACompleteType[]));
 
-  static_assert(!__has_trivial_copy(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_trivial_copy(HasCopy), "");
-  static_assert(!__has_trivial_copy(HasTemplateCons), "");
-  static_assert(!__has_trivial_copy(VirtAr), "");
-  static_assert(!__has_trivial_copy(void), "");
-  static_assert(!__has_trivial_copy(cvoid), "");
-  static_assert(!__has_trivial_copy(AllPrivate), "");
-  static_assert(!__has_trivial_copy(ExtDefaulted), "");
+  static_assert(!__has_trivial_copy(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_trivial_copy(HasCopy));
+  static_assert(!__has_trivial_copy(HasTemplateCons));
+  static_assert(!__has_trivial_copy(VirtAr));
+  static_assert(!__has_trivial_copy(void));
+  static_assert(!__has_trivial_copy(cvoid));
+  static_assert(!__has_trivial_copy(AllPrivate));
+  static_assert(!__has_trivial_copy(ExtDefaulted));
 }
 
 void has_trivial_copy_assignment() {
-  static_assert(__has_trivial_assign(Int), "");
-  static_assert(__has_trivial_assign(IntAr), "");
-  static_assert(__has_trivial_assign(Union), "");
-  static_assert(__has_trivial_assign(UnionAr), "");
-  static_assert(__has_trivial_assign(POD), "");
-  static_assert(__has_trivial_assign(Derives), "");
-  static_assert(__has_trivial_assign(HasDest), "");
-  static_assert(__has_trivial_assign(HasPriv), "");
-  static_assert(__has_trivial_assign(HasCons), "");
-  static_assert(__has_trivial_assign(HasRef), "");
-  static_assert(__has_trivial_assign(HasCopy), "");
-  static_assert(__has_trivial_assign(HasMove), "");
-  static_assert(__has_trivial_assign(HasMoveAssign), "");
-  static_assert(__has_trivial_assign(AllDefaulted), "");
-  static_assert(__has_trivial_assign(AllDeleted), "");
-  static_assert(__has_trivial_assign(DerivesAr), "");
-  static_assert(__has_trivial_assign(DerivesHasRef), "");
-  static_assert(__has_trivial_assign(ACompleteType[]), "");
+  static_assert(__has_trivial_assign(Int));
+  static_assert(__has_trivial_assign(IntAr));
+  static_assert(__has_trivial_assign(Union));
+  static_assert(__has_trivial_assign(UnionAr));
+  static_assert(__has_trivial_assign(POD));
+  static_assert(__has_trivial_assign(Derives));
+  static_assert(__has_trivial_assign(HasDest));
+  static_assert(__has_trivial_assign(HasPriv));
+  static_assert(__has_trivial_assign(HasCons));
+  static_assert(__has_trivial_assign(HasRef));
+  static_assert(__has_trivial_assign(HasCopy));
+  static_assert(__has_trivial_assign(HasMove));
+  static_assert(__has_trivial_assign(HasMoveAssign));
+  static_assert(__has_trivial_assign(AllDefaulted));
+  static_assert(__has_trivial_assign(AllDeleted));
+  static_assert(__has_trivial_assign(DerivesAr));
+  static_assert(__has_trivial_assign(DerivesHasRef));
+  static_assert(__has_trivial_assign(ACompleteType[]));
 
-  static_assert(!__has_trivial_assign(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_trivial_assign(IntRef), "");
-  static_assert(!__has_trivial_assign(HasCopyAssign), "");
-  static_assert(!__has_trivial_assign(const Int), "");
-  static_assert(!__has_trivial_assign(ConstIntAr), "");
-  static_assert(!__has_trivial_assign(ConstIntArAr), "");
-  static_assert(!__has_trivial_assign(VirtAr), "");
-  static_assert(!__has_trivial_assign(void), "");
-  static_assert(!__has_trivial_assign(cvoid), "");
-  static_assert(!__has_trivial_assign(AllPrivate), "");
-  static_assert(!__has_trivial_assign(ExtDefaulted), "");
+  static_assert(!__has_trivial_assign(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_trivial_assign(IntRef));
+  static_assert(!__has_trivial_assign(HasCopyAssign));
+  static_assert(!__has_trivial_assign(const Int));
+  static_assert(!__has_trivial_assign(ConstIntAr));
+  static_assert(!__has_trivial_assign(ConstIntArAr));
+  static_assert(!__has_trivial_assign(VirtAr));
+  static_assert(!__has_trivial_assign(void));
+  static_assert(!__has_trivial_assign(cvoid));
+  static_assert(!__has_trivial_assign(AllPrivate));
+  static_assert(!__has_trivial_assign(ExtDefaulted));
 }
 
 void has_trivial_destructor() {
-  static_assert(__has_trivial_destructor(Int), "");
-  static_assert(__has_trivial_destructor(IntAr), "");
-  static_assert(__has_trivial_destructor(Union), "");
-  static_assert(__has_trivial_destructor(UnionAr), "");
-  static_assert(__has_trivial_destructor(POD), "");
-  static_assert(__has_trivial_destructor(Derives), "");
-  static_assert(__has_trivial_destructor(ConstIntAr), "");
-  static_assert(__has_trivial_destructor(ConstIntArAr), "");
-  static_assert(__has_trivial_destructor(HasPriv), "");
-  static_assert(__has_trivial_destructor(HasCons), "");
-  static_assert(__has_trivial_destructor(HasRef), "");
-  static_assert(__has_trivial_destructor(HasCopy), "");
-  static_assert(__has_trivial_destructor(HasMove), "");
-  static_assert(__has_trivial_destructor(IntRef), "");
-  static_assert(__has_trivial_destructor(HasCopyAssign), "");
-  static_assert(__has_trivial_destructor(HasMoveAssign), "");
-  static_assert(__has_trivial_destructor(const Int), "");
-  static_assert(__has_trivial_destructor(DerivesAr), "");
-  static_assert(__has_trivial_destructor(VirtAr), "");
-  static_assert(__has_trivial_destructor(AllDefaulted), "");
-  static_assert(__has_trivial_destructor(AllDeleted), "");
-  static_assert(__has_trivial_destructor(DerivesHasRef), "");
-  static_assert(__has_trivial_destructor(ACompleteType[]), "");
+  static_assert(__has_trivial_destructor(Int));
+  static_assert(__has_trivial_destructor(IntAr));
+  static_assert(__has_trivial_destructor(Union));
+  static_assert(__has_trivial_destructor(UnionAr));
+  static_assert(__has_trivial_destructor(POD));
+  static_assert(__has_trivial_destructor(Derives));
+  static_assert(__has_trivial_destructor(ConstIntAr));
+  static_assert(__has_trivial_destructor(ConstIntArAr));
+  static_assert(__has_trivial_destructor(HasPriv));
+  static_assert(__has_trivial_destructor(HasCons));
+  static_assert(__has_trivial_destructor(HasRef));
+  static_assert(__has_trivial_destructor(HasCopy));
+  static_assert(__has_trivial_destructor(HasMove));
+  static_assert(__has_trivial_destructor(IntRef));
+  static_assert(__has_trivial_destructor(HasCopyAssign));
+  static_assert(__has_trivial_destructor(HasMoveAssign));
+  static_assert(__has_trivial_destructor(const Int));
+  static_assert(__has_trivial_destructor(DerivesAr));
+  static_assert(__has_trivial_destructor(VirtAr));
+  static_assert(__has_trivial_destructor(AllDefaulted));
+  static_assert(__has_trivial_destructor(AllDeleted));
+  static_assert(__has_trivial_destructor(DerivesHasRef));
+  static_assert(__has_trivial_destructor(ACompleteType[]));
 
-  static_assert(!__has_trivial_destructor(HasDest), "");
-  static_assert(!__has_trivial_destructor(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_trivial_destructor(void), "");
-  static_assert(!__has_trivial_destructor(cvoid), "");
-  static_assert(!__has_trivial_destructor(AllPrivate), "");
-  static_assert(!__has_trivial_destructor(ExtDefaulted), "");
+  static_assert(!__has_trivial_destructor(HasDest));
+  static_assert(!__has_trivial_destructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_trivial_destructor(void));
+  static_assert(!__has_trivial_destructor(cvoid));
+  static_assert(!__has_trivial_destructor(AllPrivate));
+  static_assert(!__has_trivial_destructor(ExtDefaulted));
 }
 
 struct A { ~A() {} };
 template<typename> struct B : A { };
 
 void f() {
-  static_assert(!__has_trivial_destructor(A), "");
-  static_assert(!__has_trivial_destructor(B<int>), "");
+  static_assert(!__has_trivial_destructor(A));
+  static_assert(!__has_trivial_destructor(B<int>));
 }
 
 class PR11110 {
@@ -1821,69 +1821,69 @@ public:
 };
 
 void has_nothrow_assign() {
-  static_assert(__has_nothrow_assign(Int), "");
-  static_assert(__has_nothrow_assign(IntAr), "");
-  static_assert(__has_nothrow_assign(Union), "");
-  static_assert(__has_nothrow_assign(UnionAr), "");
-  static_assert(__has_nothrow_assign(POD), "");
-  static_assert(__has_nothrow_assign(Derives), "");
-  static_assert(__has_nothrow_assign(HasDest), "");
-  static_assert(__has_nothrow_assign(HasPriv), "");
-  static_assert(__has_nothrow_assign(HasCons), "");
-  static_assert(__has_nothrow_assign(HasRef), "");
-  static_assert(__has_nothrow_assign(HasCopy), "");
-  static_assert(__has_nothrow_assign(HasMove), "");
-  static_assert(__has_nothrow_assign(HasMoveAssign), "");
-  static_assert(__has_nothrow_assign(HasNoThrowCopyAssign), "");
-  static_assert(__has_nothrow_assign(HasMultipleNoThrowCopyAssign), "");
-  static_assert(__has_nothrow_assign(HasVirtDest), "");
-  static_assert(__has_nothrow_assign(AllPrivate), "");
-  static_assert(__has_nothrow_assign(UsingAssign), "");
-  static_assert(__has_nothrow_assign(DerivesAr), "");
-  static_assert(__has_nothrow_assign(ACompleteType[]), "");
+  static_assert(__has_nothrow_assign(Int));
+  static_assert(__has_nothrow_assign(IntAr));
+  static_assert(__has_nothrow_assign(Union));
+  static_assert(__has_nothrow_assign(UnionAr));
+  static_assert(__has_nothrow_assign(POD));
+  static_assert(__has_nothrow_assign(Derives));
+  static_assert(__has_nothrow_assign(HasDest));
+  static_assert(__has_nothrow_assign(HasPriv));
+  static_assert(__has_nothrow_assign(HasCons));
+  static_assert(__has_nothrow_assign(HasRef));
+  static_assert(__has_nothrow_assign(HasCopy));
+  static_assert(__has_nothrow_assign(HasMove));
+  static_assert(__has_nothrow_assign(HasMoveAssign));
+  static_assert(__has_nothrow_assign(HasNoThrowCopyAssign));
+  static_assert(__has_nothrow_assign(HasMultipleNoThrowCopyAssign));
+  static_assert(__has_nothrow_assign(HasVirtDest));
+  static_assert(__has_nothrow_assign(AllPrivate));
+  static_assert(__has_nothrow_assign(UsingAssign));
+  static_assert(__has_nothrow_assign(DerivesAr));
+  static_assert(__has_nothrow_assign(ACompleteType[]));
 
-  static_assert(!__has_nothrow_assign(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_nothrow_assign(IntRef), "");
-  static_assert(!__has_nothrow_assign(HasCopyAssign), "");
-  static_assert(!__has_nothrow_assign(HasMultipleCopyAssign), "");
-  static_assert(!__has_nothrow_assign(const Int), "");
-  static_assert(!__has_nothrow_assign(ConstIntAr), "");
-  static_assert(!__has_nothrow_assign(ConstIntArAr), "");
-  static_assert(!__has_nothrow_assign(VirtAr), "");
-  static_assert(!__has_nothrow_assign(void), "");
-  static_assert(!__has_nothrow_assign(cvoid), "");
-  static_assert(!__has_nothrow_assign(PR11110), "");
+  static_assert(!__has_nothrow_assign(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_nothrow_assign(IntRef));
+  static_assert(!__has_nothrow_assign(HasCopyAssign));
+  static_assert(!__has_nothrow_assign(HasMultipleCopyAssign));
+  static_assert(!__has_nothrow_assign(const Int));
+  static_assert(!__has_nothrow_assign(ConstIntAr));
+  static_assert(!__has_nothrow_assign(ConstIntArAr));
+  static_assert(!__has_nothrow_assign(VirtAr));
+  static_assert(!__has_nothrow_assign(void));
+  static_assert(!__has_nothrow_assign(cvoid));
+  static_assert(!__has_nothrow_assign(PR11110));
 }
 
 void has_nothrow_move_assign() {
-  static_assert(__has_nothrow_move_assign(Int), "");
-  static_assert(__has_nothrow_move_assign(Enum), "");
-  static_assert(__has_nothrow_move_assign(Int*), "");
-  static_assert(__has_nothrow_move_assign(Enum POD::*), "");
-  static_assert(__has_nothrow_move_assign(POD), "");
-  static_assert(__has_nothrow_move_assign(HasPriv), "");
-  static_assert(__has_nothrow_move_assign(HasNoThrowMoveAssign), "");
-  static_assert(__has_nothrow_move_assign(HasNoExceptNoThrowMoveAssign), "");
-  static_assert(__has_nothrow_move_assign(HasMemberNoThrowMoveAssign), "");
-  static_assert(__has_nothrow_move_assign(HasMemberNoExceptNoThrowMoveAssign), "");
-  static_assert(__has_nothrow_move_assign(AllDeleted), "");
-  static_assert(__has_nothrow_move_assign(ACompleteType[]), "");
+  static_assert(__has_nothrow_move_assign(Int));
+  static_assert(__has_nothrow_move_assign(Enum));
+  static_assert(__has_nothrow_move_assign(Int*));
+  static_assert(__has_nothrow_move_assign(Enum POD::*));
+  static_assert(__has_nothrow_move_assign(POD));
+  static_assert(__has_nothrow_move_assign(HasPriv));
+  static_assert(__has_nothrow_move_assign(HasNoThrowMoveAssign));
+  static_assert(__has_nothrow_move_assign(HasNoExceptNoThrowMoveAssign));
+  static_assert(__has_nothrow_move_assign(HasMemberNoThrowMoveAssign));
+  static_assert(__has_nothrow_move_assign(HasMemberNoExceptNoThrowMoveAssign));
+  static_assert(__has_nothrow_move_assign(AllDeleted));
+  static_assert(__has_nothrow_move_assign(ACompleteType[]));
 
-  static_assert(!__has_nothrow_move_assign(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_nothrow_move_assign(HasThrowMoveAssign), "");
-  static_assert(!__has_nothrow_move_assign(HasNoExceptFalseMoveAssign), "");
-  static_assert(!__has_nothrow_move_assign(HasMemberThrowMoveAssign), "");
-  static_assert(!__has_nothrow_move_assign(HasMemberNoExceptFalseMoveAssign), "");
-  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyCtor), "");
-  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyAssign), "");
-  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToDtor), "");
+  static_assert(!__has_nothrow_move_assign(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_nothrow_move_assign(HasThrowMoveAssign));
+  static_assert(!__has_nothrow_move_assign(HasNoExceptFalseMoveAssign));
+  static_assert(!__has_nothrow_move_assign(HasMemberThrowMoveAssign));
+  static_assert(!__has_nothrow_move_assign(HasMemberNoExceptFalseMoveAssign));
+  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyCtor));
+  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyAssign));
+  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToDtor));
 
 
-  static_assert(__is_nothrow_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign), "");
-  static_assert(!__is_nothrow_assignable(HasThrowMoveAssign, HasThrowMoveAssign), "");
+  static_assert(__is_nothrow_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign));
+  static_assert(!__is_nothrow_assignable(HasThrowMoveAssign, HasThrowMoveAssign));
 
-  static_assert(__is_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign), "");
-  static_assert(__is_assignable(HasThrowMoveAssign, HasThrowMoveAssign), "");
+  static_assert(__is_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign));
+  static_assert(__is_assignable(HasThrowMoveAssign, HasThrowMoveAssign));
 }
 
 void has_trivial_move_assign() {
@@ -1898,120 +1898,120 @@ void has_trivial_move_assign() {
   //  - for each non-static data member of X that is of class type
   //    (or array thereof), the assignment operator
   //    selected to copy/move that member is trivial;
-  static_assert(__has_trivial_move_assign(Int), "");
-  static_assert(__has_trivial_move_assign(HasStaticMemberMoveAssign), "");
-  static_assert(__has_trivial_move_assign(AllDeleted), "");
-  static_assert(__has_trivial_move_assign(ACompleteType[]), "");
+  static_assert(__has_trivial_move_assign(Int));
+  static_assert(__has_trivial_move_assign(HasStaticMemberMoveAssign));
+  static_assert(__has_trivial_move_assign(AllDeleted));
+  static_assert(__has_trivial_move_assign(ACompleteType[]));
 
-  static_assert(!__has_trivial_move_assign(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_trivial_move_assign(HasVirt), "");
-  static_assert(!__has_trivial_move_assign(DerivesVirt), "");
-  static_assert(!__has_trivial_move_assign(HasMoveAssign), "");
-  static_assert(!__has_trivial_move_assign(DerivesHasMoveAssign), "");
-  static_assert(!__has_trivial_move_assign(HasMemberMoveAssign), "");
-  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyCtor), "");
-  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyAssign), "");
+  static_assert(!__has_trivial_move_assign(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_trivial_move_assign(HasVirt));
+  static_assert(!__has_trivial_move_assign(DerivesVirt));
+  static_assert(!__has_trivial_move_assign(HasMoveAssign));
+  static_assert(!__has_trivial_move_assign(DerivesHasMoveAssign));
+  static_assert(!__has_trivial_move_assign(HasMemberMoveAssign));
+  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyCtor));
+  static_assert(!__has_nothrow_move_assign(NoDefaultMoveAssignDueToUDCopyAssign));
 }
 
 void has_nothrow_copy() {
-  static_assert(__has_nothrow_copy(Int), "");
-  static_assert(__has_nothrow_copy(IntAr), "");
-  static_assert(__has_nothrow_copy(Union), "");
-  static_assert(__has_nothrow_copy(UnionAr), "");
-  static_assert(__has_nothrow_copy(POD), "");
-  static_assert(__has_nothrow_copy(const Int), "");
-  static_assert(__has_nothrow_copy(ConstIntAr), "");
-  static_assert(__has_nothrow_copy(ConstIntArAr), "");
-  static_assert(__has_nothrow_copy(Derives), "");
-  static_assert(__has_nothrow_copy(IntRef), "");
-  static_assert(__has_nothrow_copy(HasDest), "");
-  static_assert(__has_nothrow_copy(HasPriv), "");
-  static_assert(__has_nothrow_copy(HasCons), "");
-  static_assert(__has_nothrow_copy(HasRef), "");
-  static_assert(__has_nothrow_copy(HasMove), "");
-  static_assert(__has_nothrow_copy(HasCopyAssign), "");
-  static_assert(__has_nothrow_copy(HasMoveAssign), "");
-  static_assert(__has_nothrow_copy(HasNoThrowCopy), "");
-  static_assert(__has_nothrow_copy(HasMultipleNoThrowCopy), "");
-  static_assert(__has_nothrow_copy(HasVirtDest), "");
-  static_assert(__has_nothrow_copy(HasTemplateCons), "");
-  static_assert(__has_nothrow_copy(AllPrivate), "");
-  static_assert(__has_nothrow_copy(DerivesAr), "");
-  static_assert(__has_nothrow_copy(ACompleteType[]), "");
+  static_assert(__has_nothrow_copy(Int));
+  static_assert(__has_nothrow_copy(IntAr));
+  static_assert(__has_nothrow_copy(Union));
+  static_assert(__has_nothrow_copy(UnionAr));
+  static_assert(__has_nothrow_copy(POD));
+  static_assert(__has_nothrow_copy(const Int));
+  static_assert(__has_nothrow_copy(ConstIntAr));
+  static_assert(__has_nothrow_copy(ConstIntArAr));
+  static_assert(__has_nothrow_copy(Derives));
+  static_assert(__has_nothrow_copy(IntRef));
+  static_assert(__has_nothrow_copy(HasDest));
+  static_assert(__has_nothrow_copy(HasPriv));
+  static_assert(__has_nothrow_copy(HasCons));
+  static_assert(__has_nothrow_copy(HasRef));
+  static_assert(__has_nothrow_copy(HasMove));
+  static_assert(__has_nothrow_copy(HasCopyAssign));
+  static_assert(__has_nothrow_copy(HasMoveAssign));
+  static_assert(__has_nothrow_copy(HasNoThrowCopy));
+  static_assert(__has_nothrow_copy(HasMultipleNoThrowCopy));
+  static_assert(__has_nothrow_copy(HasVirtDest));
+  static_assert(__has_nothrow_copy(HasTemplateCons));
+  static_assert(__has_nothrow_copy(AllPrivate));
+  static_assert(__has_nothrow_copy(DerivesAr));
+  static_assert(__has_nothrow_copy(ACompleteType[]));
 
-  static_assert(!__has_nothrow_copy(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_nothrow_copy(HasCopy), "");
-  static_assert(!__has_nothrow_copy(HasMultipleCopy), "");
-  static_assert(!__has_nothrow_copy(VirtAr), "");
-  static_assert(!__has_nothrow_copy(void), "");
-  static_assert(!__has_nothrow_copy(cvoid), "");
+  static_assert(!__has_nothrow_copy(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_nothrow_copy(HasCopy));
+  static_assert(!__has_nothrow_copy(HasMultipleCopy));
+  static_assert(!__has_nothrow_copy(VirtAr));
+  static_assert(!__has_nothrow_copy(void));
+  static_assert(!__has_nothrow_copy(cvoid));
 }
 
 void has_nothrow_constructor() {
-  static_assert(__has_nothrow_constructor(Int), "");
-  static_assert(__has_nothrow_constructor(IntAr), "");
-  static_assert(__has_nothrow_constructor(Union), "");
-  static_assert(__has_nothrow_constructor(UnionAr), "");
-  static_assert(__has_nothrow_constructor(POD), "");
-  static_assert(__has_nothrow_constructor(Derives), "");
-  static_assert(__has_nothrow_constructor(DerivesAr), "");
-  static_assert(__has_nothrow_constructor(ConstIntAr), "");
-  static_assert(__has_nothrow_constructor(ConstIntArAr), "");
-  static_assert(__has_nothrow_constructor(HasDest), "");
-  static_assert(__has_nothrow_constructor(HasPriv), "");
-  static_assert(__has_nothrow_constructor(HasCopyAssign), "");
-  static_assert(__has_nothrow_constructor(const Int), "");
-  static_assert(__has_nothrow_constructor(HasNoThrowConstructor), "");
-  static_assert(__has_nothrow_constructor(HasVirtDest), "");
-  // static_assert(__has_nothrow_constructor(VirtAr), ""); // not implemented
-  static_assert(__has_nothrow_constructor(AllPrivate), "");
-  static_assert(__has_nothrow_constructor(ACompleteType[]), "");
+  static_assert(__has_nothrow_constructor(Int));
+  static_assert(__has_nothrow_constructor(IntAr));
+  static_assert(__has_nothrow_constructor(Union));
+  static_assert(__has_nothrow_constructor(UnionAr));
+  static_assert(__has_nothrow_constructor(POD));
+  static_assert(__has_nothrow_constructor(Derives));
+  static_assert(__has_nothrow_constructor(DerivesAr));
+  static_assert(__has_nothrow_constructor(ConstIntAr));
+  static_assert(__has_nothrow_constructor(ConstIntArAr));
+  static_assert(__has_nothrow_constructor(HasDest));
+  static_assert(__has_nothrow_constructor(HasPriv));
+  static_assert(__has_nothrow_constructor(HasCopyAssign));
+  static_assert(__has_nothrow_constructor(const Int));
+  static_assert(__has_nothrow_constructor(HasNoThrowConstructor));
+  static_assert(__has_nothrow_constructor(HasVirtDest));
+  // static_assert(__has_nothrow_constructor(VirtAr)); // not implemented
+  static_assert(__has_nothrow_constructor(AllPrivate));
+  static_assert(__has_nothrow_constructor(ACompleteType[]));
 
-  static_assert(!__has_nothrow_constructor(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(!__has_nothrow_constructor(HasCons), "");
-  static_assert(!__has_nothrow_constructor(HasRef), "");
-  static_assert(!__has_nothrow_constructor(HasCopy), "");
-  static_assert(!__has_nothrow_constructor(HasMove), "");
-  static_assert(!__has_nothrow_constructor(HasNoThrowConstructorWithArgs), "");
-  static_assert(!__has_nothrow_constructor(IntRef), "");
-  static_assert(!__has_nothrow_constructor(void), "");
-  static_assert(!__has_nothrow_constructor(cvoid), "");
-  static_assert(!__has_nothrow_constructor(HasTemplateCons), "");
+  static_assert(!__has_nothrow_constructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(!__has_nothrow_constructor(HasCons));
+  static_assert(!__has_nothrow_constructor(HasRef));
+  static_assert(!__has_nothrow_constructor(HasCopy));
+  static_assert(!__has_nothrow_constructor(HasMove));
+  static_assert(!__has_nothrow_constructor(HasNoThrowConstructorWithArgs));
+  static_assert(!__has_nothrow_constructor(IntRef));
+  static_assert(!__has_nothrow_constructor(void));
+  static_assert(!__has_nothrow_constructor(cvoid));
+  static_assert(!__has_nothrow_constructor(HasTemplateCons));
 
-  static_assert(!__has_nothrow_constructor(HasMultipleDefaultConstructor1), "");
-  static_assert(!__has_nothrow_constructor(HasMultipleDefaultConstructor2), "");
+  static_assert(!__has_nothrow_constructor(HasMultipleDefaultConstructor1));
+  static_assert(!__has_nothrow_constructor(HasMultipleDefaultConstructor2));
 }
 
 void has_virtual_destructor() {
-  static_assert(!__has_virtual_destructor(Int), "");
-  static_assert(!__has_virtual_destructor(IntAr), "");
-  static_assert(!__has_virtual_destructor(Union), "");
-  static_assert(!__has_virtual_destructor(UnionAr), "");
-  static_assert(!__has_virtual_destructor(POD), "");
-  static_assert(!__has_virtual_destructor(Derives), "");
-  static_assert(!__has_virtual_destructor(DerivesAr), "");
-  static_assert(!__has_virtual_destructor(const Int), "");
-  static_assert(!__has_virtual_destructor(ConstIntAr), "");
-  static_assert(!__has_virtual_destructor(ConstIntArAr), "");
-  static_assert(!__has_virtual_destructor(HasDest), "");
-  static_assert(!__has_virtual_destructor(HasPriv), "");
-  static_assert(!__has_virtual_destructor(HasCons), "");
-  static_assert(!__has_virtual_destructor(HasRef), "");
-  static_assert(!__has_virtual_destructor(HasCopy), "");
-  static_assert(!__has_virtual_destructor(HasMove), "");
-  static_assert(!__has_virtual_destructor(HasCopyAssign), "");
-  static_assert(!__has_virtual_destructor(HasMoveAssign), "");
-  static_assert(!__has_virtual_destructor(IntRef), "");
-  static_assert(!__has_virtual_destructor(VirtAr), "");
-  static_assert(!__has_virtual_destructor(ACompleteType[]), "");
+  static_assert(!__has_virtual_destructor(Int));
+  static_assert(!__has_virtual_destructor(IntAr));
+  static_assert(!__has_virtual_destructor(Union));
+  static_assert(!__has_virtual_destructor(UnionAr));
+  static_assert(!__has_virtual_destructor(POD));
+  static_assert(!__has_virtual_destructor(Derives));
+  static_assert(!__has_virtual_destructor(DerivesAr));
+  static_assert(!__has_virtual_destructor(const Int));
+  static_assert(!__has_virtual_destructor(ConstIntAr));
+  static_assert(!__has_virtual_destructor(ConstIntArAr));
+  static_assert(!__has_virtual_destructor(HasDest));
+  static_assert(!__has_virtual_destructor(HasPriv));
+  static_assert(!__has_virtual_destructor(HasCons));
+  static_assert(!__has_virtual_destructor(HasRef));
+  static_assert(!__has_virtual_destructor(HasCopy));
+  static_assert(!__has_virtual_destructor(HasMove));
+  static_assert(!__has_virtual_destructor(HasCopyAssign));
+  static_assert(!__has_virtual_destructor(HasMoveAssign));
+  static_assert(!__has_virtual_destructor(IntRef));
+  static_assert(!__has_virtual_destructor(VirtAr));
+  static_assert(!__has_virtual_destructor(ACompleteType[]));
 
-  static_assert(!__has_virtual_destructor(AnIncompleteType[]), ""); // expected-error {{incomplete type}}
-  static_assert(__has_virtual_destructor(HasVirtDest), "");
-  static_assert(__has_virtual_destructor(DerivedVirtDest), "");
-  static_assert(!__has_virtual_destructor(VirtDestAr), "");
-  static_assert(!__has_virtual_destructor(void), "");
-  static_assert(!__has_virtual_destructor(cvoid), "");
-  static_assert(!__has_virtual_destructor(AllPrivate), "");
+  static_assert(!__has_virtual_destructor(AnIncompleteType[])); // expected-error {{incomplete type}}
+  static_assert(__has_virtual_destructor(HasVirtDest));
+  static_assert(__has_virtual_destructor(DerivedVirtDest));
+  static_assert(!__has_virtual_destructor(VirtDestAr));
+  static_assert(!__has_virtual_destructor(void));
+  static_assert(!__has_virtual_destructor(cvoid));
+  static_assert(!__has_virtual_destructor(AllPrivate));
 }
 
 
@@ -2032,52 +2032,52 @@ template <class T> class NonderivedTemp {};
 template <class T> class UndefinedTemp; // expected-note {{declared here}}
 
 void is_base_of() {
-  static_assert(__is_base_of(Base, Derived), "");
-  static_assert(__is_base_of(const Base, Derived), "");
-  static_assert(!__is_base_of(Derived, Base), "");
-  static_assert(!__is_base_of(Derived, int), "");
-  static_assert(__is_base_of(Base, Base), "");
-  static_assert(__is_base_of(Base, Derived3), "");
-  static_assert(__is_base_of(Derived, Derived3), "");
-  static_assert(__is_base_of(Derived2b, Derived3), "");
-  static_assert(__is_base_of(Derived2a, Derived3), "");
-  static_assert(__is_base_of(BaseA<int>, DerivedB<int>), "");
-  static_assert(!__is_base_of(DerivedB<int>, BaseA<int>), "");
-  static_assert(__is_base_of(Base, CrazyDerived<Base>), "");
-  static_assert(!__is_base_of(Union, Union), "");
-  static_assert(__is_base_of(Empty, Empty), "");
-  static_assert(__is_base_of(class_forward, class_forward), "");
-  static_assert(!__is_base_of(Empty, class_forward), ""); // expected-error {{incomplete type 'class_forward' used in type trait expression}}
-  static_assert(!__is_base_of(Base&, Derived&), "");
-  static_assert(!__is_base_of(Base[10], Derived[10]), "");
-  static_assert(!__is_base_of(int, int), "");
-  static_assert(!__is_base_of(long, int), "");
-  static_assert(__is_base_of(Base, DerivedTemp<int>), "");
-  static_assert(!__is_base_of(Base, NonderivedTemp<int>), "");
-  static_assert(!__is_base_of(Base, UndefinedTemp<int>), ""); // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
+  static_assert(__is_base_of(Base, Derived));
+  static_assert(__is_base_of(const Base, Derived));
+  static_assert(!__is_base_of(Derived, Base));
+  static_assert(!__is_base_of(Derived, int));
+  static_assert(__is_base_of(Base, Base));
+  static_assert(__is_base_of(Base, Derived3));
+  static_assert(__is_base_of(Derived, Derived3));
+  static_assert(__is_base_of(Derived2b, Derived3));
+  static_assert(__is_base_of(Derived2a, Derived3));
+  static_assert(__is_base_of(BaseA<int>, DerivedB<int>));
+  static_assert(!__is_base_of(DerivedB<int>, BaseA<int>));
+  static_assert(__is_base_of(Base, CrazyDerived<Base>));
+  static_assert(!__is_base_of(Union, Union));
+  static_assert(__is_base_of(Empty, Empty));
+  static_assert(__is_base_of(class_forward, class_forward));
+  static_assert(!__is_base_of(Empty, class_forward)); // expected-error {{incomplete type 'class_forward' used in type trait expression}}
+  static_assert(!__is_base_of(Base&, Derived&));
+  static_assert(!__is_base_of(Base[10], Derived[10]));
+  static_assert(!__is_base_of(int, int));
+  static_assert(!__is_base_of(long, int));
+  static_assert(__is_base_of(Base, DerivedTemp<int>));
+  static_assert(!__is_base_of(Base, NonderivedTemp<int>));
+  static_assert(!__is_base_of(Base, UndefinedTemp<int>)); // expected-error {{implicit instantiation of undefined template 'UndefinedTemp<int>'}}
 
-  static_assert(!__is_base_of(IncompleteUnion, IncompleteUnion), "");
-  static_assert(!__is_base_of(Union, IncompleteUnion), "");
-  static_assert(!__is_base_of(IncompleteUnion, Union), "");
-  static_assert(!__is_base_of(IncompleteStruct, IncompleteUnion), "");
-  static_assert(!__is_base_of(IncompleteUnion, IncompleteStruct), "");
-  static_assert(!__is_base_of(Empty, IncompleteUnion), "");
-  static_assert(!__is_base_of(IncompleteUnion, Empty), "");
-  static_assert(!__is_base_of(int, IncompleteUnion), "");
-  static_assert(!__is_base_of(IncompleteUnion, int), "");
-  static_assert(!__is_base_of(Empty, Union), "");
-  static_assert(!__is_base_of(Union, Empty), "");
-  static_assert(!__is_base_of(int, Empty), "");
-  static_assert(!__is_base_of(Union, int), "");
+  static_assert(!__is_base_of(IncompleteUnion, IncompleteUnion));
+  static_assert(!__is_base_of(Union, IncompleteUnion));
+  static_assert(!__is_base_of(IncompleteUnion, Union));
+  static_assert(!__is_base_of(IncompleteStruct, IncompleteUnion));
+  static_assert(!__is_base_of(IncompleteUnion, IncompleteStruct));
+  static_assert(!__is_base_of(Empty, IncompleteUnion));
+  static_assert(!__is_base_of(IncompleteUnion, Empty));
+  static_assert(!__is_base_of(int, IncompleteUnion));
+  static_assert(!__is_base_of(IncompleteUnion, int));
+  static_assert(!__is_base_of(Empty, Union));
+  static_assert(!__is_base_of(Union, Empty));
+  static_assert(!__is_base_of(int, Empty));
+  static_assert(!__is_base_of(Union, int));
 
-  static_assert(__is_base_of(Base, Derived), "");
-  static_assert(!__is_base_of(Derived, Base), "");
+  static_assert(__is_base_of(Base, Derived));
+  static_assert(!__is_base_of(Derived, Base));
 
-  static_assert(__is_base_of(Base, CrazyDerived<Base>), "");
-  static_assert(!__is_base_of(CrazyDerived<Base>, Base), "");
+  static_assert(__is_base_of(Base, CrazyDerived<Base>));
+  static_assert(!__is_base_of(CrazyDerived<Base>, Base));
 
-  static_assert(__is_base_of(BaseA<int>, DerivedB<int>), "");
-  static_assert(!__is_base_of(DerivedB<int>, BaseA<int>), "");
+  static_assert(__is_base_of(BaseA<int>, DerivedB<int>));
+  static_assert(!__is_base_of(DerivedB<int>, BaseA<int>));
 }
 
 template<class T, class U>
@@ -2090,17 +2090,17 @@ typedef class Base BaseTypedef;
 
 void is_same()
 {
-  static_assert(__is_same(Base, Base), "");
-  static_assert(__is_same(Base, BaseTypedef), "");
-  static_assert(__is_same(TemplateClass<int, int>, TemplateAlias<int>), "");
+  static_assert(__is_same(Base, Base));
+  static_assert(__is_same(Base, BaseTypedef));
+  static_assert(__is_same(TemplateClass<int, int>, TemplateAlias<int>));
 
-  static_assert(!__is_same(Base, const Base), "");
-  static_assert(!__is_same(Base, Base&), "");
-  static_assert(!__is_same(Base, Derived), "");
+  static_assert(!__is_same(Base, const Base));
+  static_assert(!__is_same(Base, Base&));
+  static_assert(!__is_same(Base, Derived));
 
   // __is_same_as is a GCC compatibility synonym for __is_same.
-  static_assert(__is_same_as(int, int), "");
-  static_assert(!__is_same_as(int, float), "");
+  static_assert(__is_same_as(int, int));
+  static_assert(!__is_same_as(int, float));
 }
 
 struct IntWrapper
@@ -2128,14 +2128,14 @@ struct FloatWrapper
 
 void is_convertible()
 {
-  static_assert(__is_convertible(IntWrapper, IntWrapper), "");
-  static_assert(__is_convertible(IntWrapper, const IntWrapper), "");
-  static_assert(__is_convertible(IntWrapper, int), "");
-  static_assert(__is_convertible(int, IntWrapper), "");
-  static_assert(__is_convertible(IntWrapper, FloatWrapper), "");
-  static_assert(__is_convertible(FloatWrapper, IntWrapper), "");
-  static_assert(__is_convertible(FloatWrapper, float), "");
-  static_assert(__is_convertible(float, FloatWrapper), "");
+  static_assert(__is_convertible(IntWrapper, IntWrapper));
+  static_assert(__is_convertible(IntWrapper, const IntWrapper));
+  static_assert(__is_convertible(IntWrapper, int));
+  static_assert(__is_convertible(int, IntWrapper));
+  static_assert(__is_convertible(IntWrapper, FloatWrapper));
+  static_assert(__is_convertible(FloatWrapper, IntWrapper));
+  static_assert(__is_convertible(FloatWrapper, float));
+  static_assert(__is_convertible(float, FloatWrapper));
 }
 
 struct FromInt { FromInt(int); };
@@ -2156,30 +2156,30 @@ struct X0 {
 struct Abstract { virtual void f() = 0; };
 
 void is_convertible_to() {
-  static_assert(__is_convertible_to(Int, Int), "");
-  static_assert(!__is_convertible_to(Int, IntAr), "");
-  static_assert(!__is_convertible_to(IntAr, IntAr), "");
-  static_assert(__is_convertible_to(void, void), "");
-  static_assert(__is_convertible_to(cvoid, void), "");
-  static_assert(__is_convertible_to(void, cvoid), "");
-  static_assert(__is_convertible_to(cvoid, cvoid), "");
-  static_assert(__is_convertible_to(int, FromInt), "");
-  static_assert(__is_convertible_to(long, FromInt), "");
-  static_assert(__is_convertible_to(double, FromInt), "");
-  static_assert(__is_convertible_to(const int, FromInt), "");
-  static_assert(__is_convertible_to(const int&, FromInt), "");
-  static_assert(__is_convertible_to(ToInt, int), "");
-  static_assert(__is_convertible_to(ToInt, const int&), "");
-  static_assert(__is_convertible_to(ToInt, long), "");
-  static_assert(!__is_convertible_to(ToInt, int&), "");
-  static_assert(!__is_convertible_to(ToInt, FromInt), "");
-  static_assert(__is_convertible_to(IntAr&, IntAr&), "");
-  static_assert(__is_convertible_to(IntAr&, const IntAr&), "");
-  static_assert(!__is_convertible_to(const IntAr&, IntAr&), "");
-  static_assert(!__is_convertible_to(Function, Function), "");
-  static_assert(!__is_convertible_to(PrivateCopy, PrivateCopy), "");
-  static_assert(__is_convertible_to(X0<int>, X0<float>), "");
-  static_assert(!__is_convertible_to(Abstract, Abstract), "");
+  static_assert(__is_convertible_to(Int, Int));
+  static_assert(!__is_convertible_to(Int, IntAr));
+  static_assert(!__is_convertible_to(IntAr, IntAr));
+  static_assert(__is_convertible_to(void, void));
+  static_assert(__is_convertible_to(cvoid, void));
+  static_assert(__is_convertible_to(void, cvoid));
+  static_assert(__is_convertible_to(cvoid, cvoid));
+  static_assert(__is_convertible_to(int, FromInt));
+  static_assert(__is_convertible_to(long, FromInt));
+  static_assert(__is_convertible_to(double, FromInt));
+  static_assert(__is_convertible_to(const int, FromInt));
+  static_assert(__is_convertible_to(const int&, FromInt));
+  static_assert(__is_convertible_to(ToInt, int));
+  static_assert(__is_convertible_to(ToInt, const int&));
+  static_assert(__is_convertible_to(ToInt, long));
+  static_assert(!__is_convertible_to(ToInt, int&));
+  static_assert(!__is_convertible_to(ToInt, FromInt));
+  static_assert(__is_convertible_to(IntAr&, IntAr&));
+  static_assert(__is_convertible_to(IntAr&, const IntAr&));
+  static_assert(!__is_convertible_to(const IntAr&, IntAr&));
+  static_assert(!__is_convertible_to(Function, Function));
+  static_assert(!__is_convertible_to(PrivateCopy, PrivateCopy));
+  static_assert(__is_convertible_to(X0<int>, X0<float>));
+  static_assert(!__is_convertible_to(Abstract, Abstract));
 }
 
 namespace is_convertible_to_instantiate {
@@ -2190,269 +2190,269 @@ namespace is_convertible_to_instantiate {
 
 void is_trivial()
 {
-  static_assert(__is_trivial(int), "");
-  static_assert(__is_trivial(Enum), "");
-  static_assert(__is_trivial(POD), "");
-  static_assert(__is_trivial(Int), "");
-  static_assert(__is_trivial(IntAr), "");
-  static_assert(__is_trivial(IntArNB), "");
-  static_assert(__is_trivial(Statics), "");
-  static_assert(__is_trivial(Empty), "");
-  static_assert(__is_trivial(EmptyUnion), "");
-  static_assert(__is_trivial(Union), "");
-  static_assert(__is_trivial(Derives), "");
-  static_assert(__is_trivial(DerivesAr), "");
-  static_assert(__is_trivial(DerivesArNB), "");
-  static_assert(__is_trivial(DerivesEmpty), "");
-  static_assert(__is_trivial(HasFunc), "");
-  static_assert(__is_trivial(HasOp), "");
-  static_assert(__is_trivial(HasConv), "");
-  static_assert(__is_trivial(HasAssign), "");
-  static_assert(__is_trivial(HasAnonymousUnion), "");
-  static_assert(__is_trivial(HasPriv), "");
-  static_assert(__is_trivial(HasProt), "");
-  static_assert(__is_trivial(DerivesHasPriv), "");
-  static_assert(__is_trivial(DerivesHasProt), "");
-  static_assert(__is_trivial(Vector), "");
-  static_assert(__is_trivial(VectorExt), "");
+  static_assert(__is_trivial(int));
+  static_assert(__is_trivial(Enum));
+  static_assert(__is_trivial(POD));
+  static_assert(__is_trivial(Int));
+  static_assert(__is_trivial(IntAr));
+  static_assert(__is_trivial(IntArNB));
+  static_assert(__is_trivial(Statics));
+  static_assert(__is_trivial(Empty));
+  static_assert(__is_trivial(EmptyUnion));
+  static_assert(__is_trivial(Union));
+  static_assert(__is_trivial(Derives));
+  static_assert(__is_trivial(DerivesAr));
+  static_assert(__is_trivial(DerivesArNB));
+  static_assert(__is_trivial(DerivesEmpty));
+  static_assert(__is_trivial(HasFunc));
+  static_assert(__is_trivial(HasOp));
+  static_assert(__is_trivial(HasConv));
+  static_assert(__is_trivial(HasAssign));
+  static_assert(__is_trivial(HasAnonymousUnion));
+  static_assert(__is_trivial(HasPriv));
+  static_assert(__is_trivial(HasProt));
+  static_assert(__is_trivial(DerivesHasPriv));
+  static_assert(__is_trivial(DerivesHasProt));
+  static_assert(__is_trivial(Vector));
+  static_assert(__is_trivial(VectorExt));
 
-  static_assert(!__is_trivial(HasCons), "");
-  static_assert(!__is_trivial(HasCopyAssign), "");
-  static_assert(!__is_trivial(HasMoveAssign), "");
-  static_assert(!__is_trivial(HasDest), "");
-  static_assert(!__is_trivial(HasRef), "");
-  static_assert(!__is_trivial(HasNonPOD), "");
-  static_assert(!__is_trivial(HasVirt), "");
-  static_assert(!__is_trivial(DerivesHasCons), "");
-  static_assert(!__is_trivial(DerivesHasCopyAssign), "");
-  static_assert(!__is_trivial(DerivesHasMoveAssign), "");
-  static_assert(!__is_trivial(DerivesHasDest), "");
-  static_assert(!__is_trivial(DerivesHasRef), "");
-  static_assert(!__is_trivial(DerivesHasVirt), "");
-  static_assert(!__is_trivial(void), "");
-  static_assert(!__is_trivial(cvoid), "");
+  static_assert(!__is_trivial(HasCons));
+  static_assert(!__is_trivial(HasCopyAssign));
+  static_assert(!__is_trivial(HasMoveAssign));
+  static_assert(!__is_trivial(HasDest));
+  static_assert(!__is_trivial(HasRef));
+  static_assert(!__is_trivial(HasNonPOD));
+  static_assert(!__is_trivial(HasVirt));
+  static_assert(!__is_trivial(DerivesHasCons));
+  static_assert(!__is_trivial(DerivesHasCopyAssign));
+  static_assert(!__is_trivial(DerivesHasMoveAssign));
+  static_assert(!__is_trivial(DerivesHasDest));
+  static_assert(!__is_trivial(DerivesHasRef));
+  static_assert(!__is_trivial(DerivesHasVirt));
+  static_assert(!__is_trivial(void));
+  static_assert(!__is_trivial(cvoid));
 }
 
 template<typename T> struct TriviallyConstructibleTemplate {};
 
 void trivial_checks()
 {
-  static_assert(__is_trivially_copyable(int), "");
-  static_assert(__is_trivially_copyable(Enum), "");
-  static_assert(__is_trivially_copyable(POD), "");
-  static_assert(__is_trivially_copyable(Int), "");
-  static_assert(__is_trivially_copyable(IntAr), "");
-  static_assert(__is_trivially_copyable(IntArNB), "");
-  static_assert(__is_trivially_copyable(Statics), "");
-  static_assert(__is_trivially_copyable(Empty), "");
-  static_assert(__is_trivially_copyable(EmptyUnion), "");
-  static_assert(__is_trivially_copyable(Union), "");
-  static_assert(__is_trivially_copyable(Derives), "");
-  static_assert(__is_trivially_copyable(DerivesAr), "");
-  static_assert(__is_trivially_copyable(DerivesArNB), "");
-  static_assert(__is_trivially_copyable(DerivesEmpty), "");
-  static_assert(__is_trivially_copyable(HasFunc), "");
-  static_assert(__is_trivially_copyable(HasOp), "");
-  static_assert(__is_trivially_copyable(HasConv), "");
-  static_assert(__is_trivially_copyable(HasAssign), "");
-  static_assert(__is_trivially_copyable(HasAnonymousUnion), "");
-  static_assert(__is_trivially_copyable(HasPriv), "");
-  static_assert(__is_trivially_copyable(HasProt), "");
-  static_assert(__is_trivially_copyable(DerivesHasPriv), "");
-  static_assert(__is_trivially_copyable(DerivesHasProt), "");
-  static_assert(__is_trivially_copyable(Vector), "");
-  static_assert(__is_trivially_copyable(VectorExt), "");
-  static_assert(__is_trivially_copyable(HasCons), "");
-  static_assert(__is_trivially_copyable(HasRef), "");
-  static_assert(__is_trivially_copyable(HasNonPOD), "");
-  static_assert(__is_trivially_copyable(DerivesHasCons), "");
-  static_assert(__is_trivially_copyable(DerivesHasRef), "");
-  static_assert(__is_trivially_copyable(NonTrivialDefault), "");
-  static_assert(__is_trivially_copyable(NonTrivialDefault[]), "");
-  static_assert(__is_trivially_copyable(NonTrivialDefault[3]), "");
+  static_assert(__is_trivially_copyable(int));
+  static_assert(__is_trivially_copyable(Enum));
+  static_assert(__is_trivially_copyable(POD));
+  static_assert(__is_trivially_copyable(Int));
+  static_assert(__is_trivially_copyable(IntAr));
+  static_assert(__is_trivially_copyable(IntArNB));
+  static_assert(__is_trivially_copyable(Statics));
+  static_assert(__is_trivially_copyable(Empty));
+  static_assert(__is_trivially_copyable(EmptyUnion));
+  static_assert(__is_trivially_copyable(Union));
+  static_assert(__is_trivially_copyable(Derives));
+  static_assert(__is_trivially_copyable(DerivesAr));
+  static_assert(__is_trivially_copyable(DerivesArNB));
+  static_assert(__is_trivially_copyable(DerivesEmpty));
+  static_assert(__is_trivially_copyable(HasFunc));
+  static_assert(__is_trivially_copyable(HasOp));
+  static_assert(__is_trivially_copyable(HasConv));
+  static_assert(__is_trivially_copyable(HasAssign));
+  static_assert(__is_trivially_copyable(HasAnonymousUnion));
+  static_assert(__is_trivially_copyable(HasPriv));
+  static_assert(__is_trivially_copyable(HasProt));
+  static_assert(__is_trivially_copyable(DerivesHasPriv));
+  static_assert(__is_trivially_copyable(DerivesHasProt));
+  static_assert(__is_trivially_copyable(Vector));
+  static_assert(__is_trivially_copyable(VectorExt));
+  static_assert(__is_trivially_copyable(HasCons));
+  static_assert(__is_trivially_copyable(HasRef));
+  static_assert(__is_trivially_copyable(HasNonPOD));
+  static_assert(__is_trivially_copyable(DerivesHasCons));
+  static_assert(__is_trivially_copyable(DerivesHasRef));
+  static_assert(__is_trivially_copyable(NonTrivialDefault));
+  static_assert(__is_trivially_copyable(NonTrivialDefault[]));
+  static_assert(__is_trivially_copyable(NonTrivialDefault[3]));
 
-  static_assert(!__is_trivially_copyable(HasCopyAssign), "");
-  static_assert(!__is_trivially_copyable(HasMoveAssign), "");
-  static_assert(!__is_trivially_copyable(HasDest), "");
-  static_assert(!__is_trivially_copyable(HasVirt), "");
-  static_assert(!__is_trivially_copyable(DerivesHasCopyAssign), "");
-  static_assert(!__is_trivially_copyable(DerivesHasMoveAssign), "");
-  static_assert(!__is_trivially_copyable(DerivesHasDest), "");
-  static_assert(!__is_trivially_copyable(DerivesHasVirt), "");
-  static_assert(!__is_trivially_copyable(void), "");
-  static_assert(!__is_trivially_copyable(cvoid), "");
+  static_assert(!__is_trivially_copyable(HasCopyAssign));
+  static_assert(!__is_trivially_copyable(HasMoveAssign));
+  static_assert(!__is_trivially_copyable(HasDest));
+  static_assert(!__is_trivially_copyable(HasVirt));
+  static_assert(!__is_trivially_copyable(DerivesHasCopyAssign));
+  static_assert(!__is_trivially_copyable(DerivesHasMoveAssign));
+  static_assert(!__is_trivially_copyable(DerivesHasDest));
+  static_assert(!__is_trivially_copyable(DerivesHasVirt));
+  static_assert(!__is_trivially_copyable(void));
+  static_assert(!__is_trivially_copyable(cvoid));
 
-  static_assert((__is_trivially_constructible(int)), "");
-  static_assert((__is_trivially_constructible(int, int)), "");
-  static_assert((__is_trivially_constructible(int, float)), "");
-  static_assert((__is_trivially_constructible(int, int&)), "");
-  static_assert((__is_trivially_constructible(int, const int&)), "");
-  static_assert((__is_trivially_constructible(int, int)), "");
-  static_assert((__is_trivially_constructible(HasCopyAssign, HasCopyAssign)), "");
-  static_assert((__is_trivially_constructible(HasCopyAssign, const HasCopyAssign&)), "");
-  static_assert((__is_trivially_constructible(HasCopyAssign, HasCopyAssign&&)), "");
-  static_assert((__is_trivially_constructible(HasCopyAssign)), "");
+  static_assert((__is_trivially_constructible(int)));
+  static_assert((__is_trivially_constructible(int, int)));
+  static_assert((__is_trivially_constructible(int, float)));
+  static_assert((__is_trivially_constructible(int, int&)));
+  static_assert((__is_trivially_constructible(int, const int&)));
+  static_assert((__is_trivially_constructible(int, int)));
+  static_assert((__is_trivially_constructible(HasCopyAssign, HasCopyAssign)));
+  static_assert((__is_trivially_constructible(HasCopyAssign, const HasCopyAssign&)));
+  static_assert((__is_trivially_constructible(HasCopyAssign, HasCopyAssign&&)));
+  static_assert((__is_trivially_constructible(HasCopyAssign)));
   static_assert((__is_trivially_constructible(NonTrivialDefault,
-                                            const NonTrivialDefault&)), "");
+                                            const NonTrivialDefault&)));
   static_assert((__is_trivially_constructible(NonTrivialDefault,
-                                            NonTrivialDefault&&)), "");
-  static_assert((__is_trivially_constructible(AllDefaulted)), "");
+                                            NonTrivialDefault&&)));
+  static_assert((__is_trivially_constructible(AllDefaulted)));
   static_assert((__is_trivially_constructible(AllDefaulted,
-                                            const AllDefaulted &)), "");
+                                            const AllDefaulted &)));
   static_assert((__is_trivially_constructible(AllDefaulted,
-                                            AllDefaulted &&)), "");
+                                            AllDefaulted &&)));
 
-  static_assert(!(__is_trivially_constructible(int, int*)), "");
-  static_assert(!(__is_trivially_constructible(NonTrivialDefault)), "");
-  static_assert(!(__is_trivially_constructible(ThreeArgCtor, int*, char*, int&)), "");
-  static_assert(!(__is_trivially_constructible(AllDeleted)), "");
+  static_assert(!(__is_trivially_constructible(int, int*)));
+  static_assert(!(__is_trivially_constructible(NonTrivialDefault)));
+  static_assert(!(__is_trivially_constructible(ThreeArgCtor, int*, char*, int&)));
+  static_assert(!(__is_trivially_constructible(AllDeleted)));
   static_assert(!(__is_trivially_constructible(AllDeleted,
-                                            const AllDeleted &)), "");
+                                            const AllDeleted &)));
   static_assert(!(__is_trivially_constructible(AllDeleted,
-                                            AllDeleted &&)), "");
-  static_assert(!(__is_trivially_constructible(ExtDefaulted)), "");
+                                            AllDeleted &&)));
+  static_assert(!(__is_trivially_constructible(ExtDefaulted)));
   static_assert(!(__is_trivially_constructible(ExtDefaulted,
-                                            const ExtDefaulted &)), "");
+                                            const ExtDefaulted &)));
   static_assert(!(__is_trivially_constructible(ExtDefaulted,
-                                            ExtDefaulted &&)), "");
+                                            ExtDefaulted &&)));
 
-  static_assert((__is_trivially_constructible(TriviallyConstructibleTemplate<int>)), "");
-  static_assert(!(__is_trivially_constructible(class_forward)), ""); // expected-error {{incomplete type 'class_forward' used in type trait expression}}
-  static_assert(!(__is_trivially_constructible(class_forward[])), "");
-  static_assert(!(__is_trivially_constructible(void)), "");
+  static_assert((__is_trivially_constructible(TriviallyConstructibleTemplate<int>)));
+  static_assert(!(__is_trivially_constructible(class_forward))); // expected-error {{incomplete type 'class_forward' used in type trait expression}}
+  static_assert(!(__is_trivially_constructible(class_forward[])));
+  static_assert(!(__is_trivially_constructible(void)));
 
-  static_assert((__is_trivially_assignable(int&, int)), "");
-  static_assert((__is_trivially_assignable(int&, int&)), "");
-  static_assert((__is_trivially_assignable(int&, int&&)), "");
-  static_assert((__is_trivially_assignable(int&, const int&)), "");
-  static_assert((__is_trivially_assignable(POD&, POD)), "");
-  static_assert((__is_trivially_assignable(POD&, POD&)), "");
-  static_assert((__is_trivially_assignable(POD&, POD&&)), "");
-  static_assert((__is_trivially_assignable(POD&, const POD&)), "");
-  static_assert((__is_trivially_assignable(int*&, int*)), "");
+  static_assert((__is_trivially_assignable(int&, int)));
+  static_assert((__is_trivially_assignable(int&, int&)));
+  static_assert((__is_trivially_assignable(int&, int&&)));
+  static_assert((__is_trivially_assignable(int&, const int&)));
+  static_assert((__is_trivially_assignable(POD&, POD)));
+  static_assert((__is_trivially_assignable(POD&, POD&)));
+  static_assert((__is_trivially_assignable(POD&, POD&&)));
+  static_assert((__is_trivially_assignable(POD&, const POD&)));
+  static_assert((__is_trivially_assignable(int*&, int*)));
   static_assert((__is_trivially_assignable(AllDefaulted,
-                                         const AllDefaulted &)), "");
+                                         const AllDefaulted &)));
   static_assert((__is_trivially_assignable(AllDefaulted,
-                                         AllDefaulted &&)), "");
+                                         AllDefaulted &&)));
 
-  static_assert(!(__is_trivially_assignable(int*&, float*)), "");
-  static_assert(!(__is_trivially_assignable(HasCopyAssign&, HasCopyAssign)), "");
-  static_assert(!(__is_trivially_assignable(HasCopyAssign&, HasCopyAssign&)), "");
-  static_assert(!(__is_trivially_assignable(HasCopyAssign&, const HasCopyAssign&)), "");
-  static_assert(!(__is_trivially_assignable(HasCopyAssign&, HasCopyAssign&&)), "");
+  static_assert(!(__is_trivially_assignable(int*&, float*)));
+  static_assert(!(__is_trivially_assignable(HasCopyAssign&, HasCopyAssign)));
+  static_assert(!(__is_trivially_assignable(HasCopyAssign&, HasCopyAssign&)));
+  static_assert(!(__is_trivially_assignable(HasCopyAssign&, const HasCopyAssign&)));
+  static_assert(!(__is_trivially_assignable(HasCopyAssign&, HasCopyAssign&&)));
   static_assert(!(__is_trivially_assignable(TrivialMoveButNotCopy&,
-                                        TrivialMoveButNotCopy&)), "");
+                                        TrivialMoveButNotCopy&)));
   static_assert(!(__is_trivially_assignable(TrivialMoveButNotCopy&,
-                                        const TrivialMoveButNotCopy&)), "");
+                                        const TrivialMoveButNotCopy&)));
   static_assert(!(__is_trivially_assignable(AllDeleted,
-                                         const AllDeleted &)), "");
+                                         const AllDeleted &)));
   static_assert(!(__is_trivially_assignable(AllDeleted,
-                                         AllDeleted &&)), "");
+                                         AllDeleted &&)));
   static_assert(!(__is_trivially_assignable(ExtDefaulted,
-                                         const ExtDefaulted &)), "");
+                                         const ExtDefaulted &)));
   static_assert(!(__is_trivially_assignable(ExtDefaulted,
-                                         ExtDefaulted &&)), "");
+                                         ExtDefaulted &&)));
 
   static_assert((__is_trivially_assignable(HasDefaultTrivialCopyAssign&,
-                                         HasDefaultTrivialCopyAssign&)), "");
+                                         HasDefaultTrivialCopyAssign&)));
   static_assert((__is_trivially_assignable(HasDefaultTrivialCopyAssign&,
-                                       const HasDefaultTrivialCopyAssign&)), "");
+                                       const HasDefaultTrivialCopyAssign&)));
   static_assert((__is_trivially_assignable(TrivialMoveButNotCopy&,
-                                         TrivialMoveButNotCopy)), "");
+                                         TrivialMoveButNotCopy)));
   static_assert((__is_trivially_assignable(TrivialMoveButNotCopy&,
-                                         TrivialMoveButNotCopy&&)), "");
-  static_assert((__is_trivially_assignable(int&, int)), "");
-  static_assert((__is_trivially_assignable(int&, int&)), "");
-  static_assert((__is_trivially_assignable(int&, int&&)), "");
-  static_assert((__is_trivially_assignable(int&, const int&)), "");
-  static_assert((__is_trivially_assignable(POD&, POD)), "");
-  static_assert((__is_trivially_assignable(POD&, POD&)), "");
-  static_assert((__is_trivially_assignable(POD&, POD&&)), "");
-  static_assert((__is_trivially_assignable(POD&, const POD&)), "");
-  static_assert((__is_trivially_assignable(int*&, int*)), "");
+                                         TrivialMoveButNotCopy&&)));
+  static_assert((__is_trivially_assignable(int&, int)));
+  static_assert((__is_trivially_assignable(int&, int&)));
+  static_assert((__is_trivially_assignable(int&, int&&)));
+  static_assert((__is_trivially_assignable(int&, const int&)));
+  static_assert((__is_trivially_assignable(POD&, POD)));
+  static_assert((__is_trivially_assignable(POD&, POD&)));
+  static_assert((__is_trivially_assignable(POD&, POD&&)));
+  static_assert((__is_trivially_assignable(POD&, const POD&)));
+  static_assert((__is_trivially_assignable(int*&, int*)));
   static_assert((__is_trivially_assignable(AllDefaulted,
-                                         const AllDefaulted &)), "");
+                                         const AllDefaulted &)));
   static_assert((__is_trivially_assignable(AllDefaulted,
-                                         AllDefaulted &&)), "");
+                                         AllDefaulted &&)));
 
-  static_assert(!(__is_assignable(int *&, float *)), "");
-  static_assert((__is_assignable(HasCopyAssign &, HasCopyAssign)), "");
-  static_assert((__is_assignable(HasCopyAssign &, HasCopyAssign &)), "");
-  static_assert((__is_assignable(HasCopyAssign &, const HasCopyAssign &)), "");
-  static_assert((__is_assignable(HasCopyAssign &, HasCopyAssign &&)), "");
+  static_assert(!(__is_assignable(int *&, float *)));
+  static_assert((__is_assignable(HasCopyAssign &, HasCopyAssign)));
+  static_assert((__is_assignable(HasCopyAssign &, HasCopyAssign &)));
+  static_assert((__is_assignable(HasCopyAssign &, const HasCopyAssign &)));
+  static_assert((__is_assignable(HasCopyAssign &, HasCopyAssign &&)));
   static_assert((__is_assignable(TrivialMoveButNotCopy &,
-                               TrivialMoveButNotCopy &)), "");
+                               TrivialMoveButNotCopy &)));
   static_assert((__is_assignable(TrivialMoveButNotCopy &,
-                               const TrivialMoveButNotCopy &)), "");
+                               const TrivialMoveButNotCopy &)));
   static_assert(!(__is_assignable(AllDeleted,
-                               const AllDeleted &)), "");
+                               const AllDeleted &)));
   static_assert(!(__is_assignable(AllDeleted,
-                               AllDeleted &&)), "");
+                               AllDeleted &&)));
   static_assert((__is_assignable(ExtDefaulted,
-                               const ExtDefaulted &)), "");
+                               const ExtDefaulted &)));
   static_assert((__is_assignable(ExtDefaulted,
-                               ExtDefaulted &&)), "");
+                               ExtDefaulted &&)));
 
   static_assert((__is_assignable(HasDefaultTrivialCopyAssign &,
-                               HasDefaultTrivialCopyAssign &)), "");
+                               HasDefaultTrivialCopyAssign &)));
   static_assert((__is_assignable(HasDefaultTrivialCopyAssign &,
-                               const HasDefaultTrivialCopyAssign &)), "");
+                               const HasDefaultTrivialCopyAssign &)));
   static_assert((__is_assignable(TrivialMoveButNotCopy &,
-                               TrivialMoveButNotCopy)), "");
+                               TrivialMoveButNotCopy)));
   static_assert((__is_assignable(TrivialMoveButNotCopy &,
-                               TrivialMoveButNotCopy &&)), "");
+                               TrivialMoveButNotCopy &&)));
 
-  static_assert(__is_assignable(ACompleteType, ACompleteType), "");
-  static_assert(!__is_assignable(AnIncompleteType, AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_assignable(AnIncompleteType[], AnIncompleteType[]), "");
-  static_assert(!__is_assignable(AnIncompleteType[1], AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_assignable(void, void), "");
-  static_assert(!__is_assignable(const volatile void, const volatile void), "");
+  static_assert(__is_assignable(ACompleteType, ACompleteType));
+  static_assert(!__is_assignable(AnIncompleteType, AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_assignable(AnIncompleteType[], AnIncompleteType[]));
+  static_assert(!__is_assignable(AnIncompleteType[1], AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_assignable(void, void));
+  static_assert(!__is_assignable(const volatile void, const volatile void));
 }
 
 void constructible_checks() {
-  static_assert(__is_constructible(HasNoThrowConstructorWithArgs), "");
-  static_assert(!__is_nothrow_constructible(HasNoThrowConstructorWithArgs), ""); // MSVC doesn't look into default args and gets this wrong.
+  static_assert(__is_constructible(HasNoThrowConstructorWithArgs));
+  static_assert(!__is_nothrow_constructible(HasNoThrowConstructorWithArgs)); // MSVC doesn't look into default args and gets this wrong.
 
-  static_assert(__is_constructible(HasNoThrowConstructorWithArgs, HasCons), "");
-  static_assert(__is_nothrow_constructible(HasNoThrowConstructorWithArgs, HasCons), "");
+  static_assert(__is_constructible(HasNoThrowConstructorWithArgs, HasCons));
+  static_assert(__is_nothrow_constructible(HasNoThrowConstructorWithArgs, HasCons));
 
-  static_assert(__is_constructible(NonTrivialDefault), "");
-  static_assert(!__is_nothrow_constructible(NonTrivialDefault), "");
+  static_assert(__is_constructible(NonTrivialDefault));
+  static_assert(!__is_nothrow_constructible(NonTrivialDefault));
 
-  static_assert(__is_constructible(int), "");
-  static_assert(__is_nothrow_constructible(int), "");
+  static_assert(__is_constructible(int));
+  static_assert(__is_nothrow_constructible(int));
 
-  static_assert(!__is_constructible(NonPOD), "");
-  static_assert(!__is_nothrow_constructible(NonPOD), "");
+  static_assert(!__is_constructible(NonPOD));
+  static_assert(!__is_nothrow_constructible(NonPOD));
 
-  static_assert(__is_constructible(NonPOD, int), "");
-  static_assert(!__is_nothrow_constructible(NonPOD, int), "");
+  static_assert(__is_constructible(NonPOD, int));
+  static_assert(!__is_nothrow_constructible(NonPOD, int));
 
   // PR19178
-  static_assert(!__is_constructible(Abstract), "");
-  static_assert(!__is_nothrow_constructible(Abstract), "");
+  static_assert(!__is_constructible(Abstract));
+  static_assert(!__is_nothrow_constructible(Abstract));
 
   // PR20228
   static_assert(__is_constructible(VariadicCtor,
-                                 int, int, int, int, int, int, int, int, int), "");
+                                 int, int, int, int, int, int, int, int, int));
 
   // PR25513
-  static_assert(!__is_constructible(int(int)), "");
-  static_assert(__is_constructible(int const &, long), "");
+  static_assert(!__is_constructible(int(int)));
+  static_assert(__is_constructible(int const &, long));
 
-  static_assert(__is_constructible(ACompleteType), "");
-  static_assert(__is_nothrow_constructible(ACompleteType), "");
-  static_assert(!__is_constructible(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_nothrow_constructible(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_constructible(AnIncompleteType[]), "");
-  static_assert(!__is_nothrow_constructible(AnIncompleteType[]), "");
-  static_assert(!__is_constructible(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_nothrow_constructible(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_constructible(void), "");
-  static_assert(!__is_nothrow_constructible(void), "");
-  static_assert(!__is_constructible(const volatile void), "");
-  static_assert(!__is_nothrow_constructible(const volatile void), "");
+  static_assert(__is_constructible(ACompleteType));
+  static_assert(__is_nothrow_constructible(ACompleteType));
+  static_assert(!__is_constructible(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_nothrow_constructible(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_constructible(AnIncompleteType[]));
+  static_assert(!__is_nothrow_constructible(AnIncompleteType[]));
+  static_assert(!__is_constructible(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_nothrow_constructible(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_constructible(void));
+  static_assert(!__is_nothrow_constructible(void));
+  static_assert(!__is_constructible(const volatile void));
+  static_assert(!__is_nothrow_constructible(const volatile void));
 }
 
 // Instantiation of __is_trivially_constructible
@@ -2462,32 +2462,32 @@ struct is_trivially_constructible {
 };
 
 void is_trivially_constructible_test() {
-  static_assert((is_trivially_constructible<int>::value), "");
-  static_assert((is_trivially_constructible<int, int>::value), "");
-  static_assert((is_trivially_constructible<int, float>::value), "");
-  static_assert((is_trivially_constructible<int, int&>::value), "");
-  static_assert((is_trivially_constructible<int, const int&>::value), "");
-  static_assert((is_trivially_constructible<int, int>::value), "");
-  static_assert((is_trivially_constructible<HasCopyAssign, HasCopyAssign>::value), "");
-  static_assert((is_trivially_constructible<HasCopyAssign, const HasCopyAssign&>::value), "");
-  static_assert((is_trivially_constructible<HasCopyAssign, HasCopyAssign&&>::value), "");
-  static_assert((is_trivially_constructible<HasCopyAssign>::value), "");
+  static_assert((is_trivially_constructible<int>::value));
+  static_assert((is_trivially_constructible<int, int>::value));
+  static_assert((is_trivially_constructible<int, float>::value));
+  static_assert((is_trivially_constructible<int, int&>::value));
+  static_assert((is_trivially_constructible<int, const int&>::value));
+  static_assert((is_trivially_constructible<int, int>::value));
+  static_assert((is_trivially_constructible<HasCopyAssign, HasCopyAssign>::value));
+  static_assert((is_trivially_constructible<HasCopyAssign, const HasCopyAssign&>::value));
+  static_assert((is_trivially_constructible<HasCopyAssign, HasCopyAssign&&>::value));
+  static_assert((is_trivially_constructible<HasCopyAssign>::value));
   static_assert((is_trivially_constructible<NonTrivialDefault,
-                                            const NonTrivialDefault&>::value), "");
+                                            const NonTrivialDefault&>::value));
   static_assert((is_trivially_constructible<NonTrivialDefault,
-                                            NonTrivialDefault&&>::value), "");
+                                            NonTrivialDefault&&>::value));
 
-  static_assert(!(is_trivially_constructible<int, int*>::value), "");
-  static_assert(!(is_trivially_constructible<NonTrivialDefault>::value), "");
-  static_assert(!(is_trivially_constructible<ThreeArgCtor, int*, char*, int&>::value), "");
-  static_assert(!(is_trivially_constructible<Abstract>::value), ""); // PR19178
+  static_assert(!(is_trivially_constructible<int, int*>::value));
+  static_assert(!(is_trivially_constructible<NonTrivialDefault>::value));
+  static_assert(!(is_trivially_constructible<ThreeArgCtor, int*, char*, int&>::value));
+  static_assert(!(is_trivially_constructible<Abstract>::value)); // PR19178
 
-  static_assert(__is_trivially_constructible(ACompleteType), "");
-  static_assert(!__is_trivially_constructible(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_constructible(AnIncompleteType[]), "");
-  static_assert(!__is_trivially_constructible(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_constructible(void), "");
-  static_assert(!__is_trivially_constructible(const volatile void), "");
+  static_assert(__is_trivially_constructible(ACompleteType));
+  static_assert(!__is_trivially_constructible(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_constructible(AnIncompleteType[]));
+  static_assert(!__is_trivially_constructible(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_constructible(void));
+  static_assert(!__is_trivially_constructible(const volatile void));
 }
 
 template <class T, class RefType = T &>
@@ -2497,161 +2497,161 @@ struct ConvertsToRef {
 };
 
 void reference_binds_to_temporary_checks() {
-  static_assert(!(__reference_binds_to_temporary(int &, int &)), "");
-  static_assert(!(__reference_binds_to_temporary(int &, int &&)), "");
+  static_assert(!(__reference_binds_to_temporary(int &, int &)));
+  static_assert(!(__reference_binds_to_temporary(int &, int &&)));
 
-  static_assert(!(__reference_binds_to_temporary(int const &, int &)), "");
-  static_assert(!(__reference_binds_to_temporary(int const &, int const &)), "");
-  static_assert(!(__reference_binds_to_temporary(int const &, int &&)), "");
+  static_assert(!(__reference_binds_to_temporary(int const &, int &)));
+  static_assert(!(__reference_binds_to_temporary(int const &, int const &)));
+  static_assert(!(__reference_binds_to_temporary(int const &, int &&)));
 
-  static_assert(!(__reference_binds_to_temporary(int &, long &)), ""); // doesn't construct
-  static_assert((__reference_binds_to_temporary(int const &, long &)), "");
-  static_assert((__reference_binds_to_temporary(int const &, long &&)), "");
-  static_assert((__reference_binds_to_temporary(int &&, long &)), "");
+  static_assert(!(__reference_binds_to_temporary(int &, long &))); // doesn't construct
+  static_assert((__reference_binds_to_temporary(int const &, long &)));
+  static_assert((__reference_binds_to_temporary(int const &, long &&)));
+  static_assert((__reference_binds_to_temporary(int &&, long &)));
 
   using LRef = ConvertsToRef<int, int &>;
   using RRef = ConvertsToRef<int, int &&>;
   using CLRef = ConvertsToRef<int, const int &>;
   using LongRef = ConvertsToRef<long, long &>;
-  static_assert((__is_constructible(int &, LRef)), "");
-  static_assert(!(__reference_binds_to_temporary(int &, LRef)), "");
+  static_assert((__is_constructible(int &, LRef)));
+  static_assert(!(__reference_binds_to_temporary(int &, LRef)));
 
-  static_assert((__is_constructible(int &&, RRef)), "");
-  static_assert(!(__reference_binds_to_temporary(int &&, RRef)), "");
+  static_assert((__is_constructible(int &&, RRef)));
+  static_assert(!(__reference_binds_to_temporary(int &&, RRef)));
 
-  static_assert((__is_constructible(int const &, CLRef)), "");
-  static_assert(!(__reference_binds_to_temporary(int &&, CLRef)), "");
+  static_assert((__is_constructible(int const &, CLRef)));
+  static_assert(!(__reference_binds_to_temporary(int &&, CLRef)));
 
-  static_assert((__is_constructible(int const &, LongRef)), "");
-  static_assert((__reference_binds_to_temporary(int const &, LongRef)), "");
+  static_assert((__is_constructible(int const &, LongRef)));
+  static_assert((__reference_binds_to_temporary(int const &, LongRef)));
 
   // Test that it doesn't accept non-reference types as input.
-  static_assert(!(__reference_binds_to_temporary(int, long)), "");
+  static_assert(!(__reference_binds_to_temporary(int, long)));
 
-  static_assert((__reference_binds_to_temporary(const int &, long)), "");
+  static_assert((__reference_binds_to_temporary(const int &, long)));
 }
 
 void reference_constructs_from_temporary_checks() {
-  static_assert(!__reference_constructs_from_temporary(int &, int &), "");
-  static_assert(!__reference_constructs_from_temporary(int &, int &&), "");
+  static_assert(!__reference_constructs_from_temporary(int &, int &));
+  static_assert(!__reference_constructs_from_temporary(int &, int &&));
 
-  static_assert(!__reference_constructs_from_temporary(int const &, int &), "");
-  static_assert(!__reference_constructs_from_temporary(int const &, int const &), "");
-  static_assert(!__reference_constructs_from_temporary(int const &, int &&), "");
+  static_assert(!__reference_constructs_from_temporary(int const &, int &));
+  static_assert(!__reference_constructs_from_temporary(int const &, int const &));
+  static_assert(!__reference_constructs_from_temporary(int const &, int &&));
 
-  static_assert(!__reference_constructs_from_temporary(int &, long &), ""); // doesn't construct
+  static_assert(!__reference_constructs_from_temporary(int &, long &)); // doesn't construct
 
-  static_assert(__reference_constructs_from_temporary(int const &, long &), "");
-  static_assert(__reference_constructs_from_temporary(int const &, long &&), "");
-  static_assert(__reference_constructs_from_temporary(int &&, long &), "");
+  static_assert(__reference_constructs_from_temporary(int const &, long &));
+  static_assert(__reference_constructs_from_temporary(int const &, long &&));
+  static_assert(__reference_constructs_from_temporary(int &&, long &));
 
   using LRef = ConvertsToRef<int, int &>;
   using RRef = ConvertsToRef<int, int &&>;
   using CLRef = ConvertsToRef<int, const int &>;
   using LongRef = ConvertsToRef<long, long &>;
-  static_assert(__is_constructible(int &, LRef), "");
-  static_assert(!__reference_constructs_from_temporary(int &, LRef), "");
+  static_assert(__is_constructible(int &, LRef));
+  static_assert(!__reference_constructs_from_temporary(int &, LRef));
 
-  static_assert(__is_constructible(int &&, RRef), "");
-  static_assert(!__reference_constructs_from_temporary(int &&, RRef), "");
+  static_assert(__is_constructible(int &&, RRef));
+  static_assert(!__reference_constructs_from_temporary(int &&, RRef));
 
-  static_assert(__is_constructible(int const &, CLRef), "");
-  static_assert(!__reference_constructs_from_temporary(int &&, CLRef), "");
+  static_assert(__is_constructible(int const &, CLRef));
+  static_assert(!__reference_constructs_from_temporary(int &&, CLRef));
 
-  static_assert(__is_constructible(int const &, LongRef), "");
-  static_assert(__reference_constructs_from_temporary(int const &, LongRef), "");
+  static_assert(__is_constructible(int const &, LongRef));
+  static_assert(__reference_constructs_from_temporary(int const &, LongRef));
 
   // Test that it doesn't accept non-reference types as input.
-  static_assert(!__reference_constructs_from_temporary(int, long), "");
+  static_assert(!__reference_constructs_from_temporary(int, long));
 
-  static_assert(__reference_constructs_from_temporary(const int &, long), "");
+  static_assert(__reference_constructs_from_temporary(const int &, long));
 
   // Additional checks
-  static_assert(__reference_constructs_from_temporary(POD const&, Derives), "");
-  static_assert(__reference_constructs_from_temporary(int&&, int), "");
-  static_assert(__reference_constructs_from_temporary(const int&, int), "");
-  static_assert(!__reference_constructs_from_temporary(int&&, int&&), "");
-  static_assert(!__reference_constructs_from_temporary(const int&, int&&), "");
-  static_assert(__reference_constructs_from_temporary(int&&, long&&), "");
-  static_assert(__reference_constructs_from_temporary(int&&, long), "");
+  static_assert(__reference_constructs_from_temporary(POD const&, Derives));
+  static_assert(__reference_constructs_from_temporary(int&&, int));
+  static_assert(__reference_constructs_from_temporary(const int&, int));
+  static_assert(!__reference_constructs_from_temporary(int&&, int&&));
+  static_assert(!__reference_constructs_from_temporary(const int&, int&&));
+  static_assert(__reference_constructs_from_temporary(int&&, long&&));
+  static_assert(__reference_constructs_from_temporary(int&&, long));
 }
 
 void array_rank() {
-  static_assert(__array_rank(IntAr) == 1, "");
-  static_assert(__array_rank(ConstIntArAr) == 2, "");
+  static_assert(__array_rank(IntAr) == 1);
+  static_assert(__array_rank(ConstIntArAr) == 2);
 }
 
 void array_extent() {
-  static_assert(__array_extent(IntAr, 0) == 10, "");
-  static_assert(__array_extent(ConstIntArAr, 0) == 4, "");
-  static_assert(__array_extent(ConstIntArAr, 1) == 10, "");
+  static_assert(__array_extent(IntAr, 0) == 10);
+  static_assert(__array_extent(ConstIntArAr, 0) == 4);
+  static_assert(__array_extent(ConstIntArAr, 1) == 10);
 }
 
 void is_destructible_test() {
-  static_assert(__is_destructible(int), "");
-  static_assert(__is_destructible(int[2]), "");
-  static_assert(!__is_destructible(int[]), "");
-  static_assert(!__is_destructible(void), "");
-  static_assert(__is_destructible(int &), "");
-  static_assert(__is_destructible(HasDest), "");
-  static_assert(!__is_destructible(AllPrivate), "");
-  static_assert(__is_destructible(SuperNonTrivialStruct), "");
-  static_assert(__is_destructible(AllDefaulted), "");
-  static_assert(!__is_destructible(AllDeleted), "");
-  static_assert(__is_destructible(ThrowingDtor), "");
-  static_assert(__is_destructible(NoThrowDtor), "");
+  static_assert(__is_destructible(int));
+  static_assert(__is_destructible(int[2]));
+  static_assert(!__is_destructible(int[]));
+  static_assert(!__is_destructible(void));
+  static_assert(__is_destructible(int &));
+  static_assert(__is_destructible(HasDest));
+  static_assert(!__is_destructible(AllPrivate));
+  static_assert(__is_destructible(SuperNonTrivialStruct));
+  static_assert(__is_destructible(AllDefaulted));
+  static_assert(!__is_destructible(AllDeleted));
+  static_assert(__is_destructible(ThrowingDtor));
+  static_assert(__is_destructible(NoThrowDtor));
 
-  static_assert(__is_destructible(ACompleteType), "");
-  static_assert(!__is_destructible(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_destructible(AnIncompleteType[]), "");
-  static_assert(!__is_destructible(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_destructible(void), "");
-  static_assert(!__is_destructible(const volatile void), "");
+  static_assert(__is_destructible(ACompleteType));
+  static_assert(!__is_destructible(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_destructible(AnIncompleteType[]));
+  static_assert(!__is_destructible(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_destructible(void));
+  static_assert(!__is_destructible(const volatile void));
 }
 
 void is_nothrow_destructible_test() {
-  static_assert(__is_nothrow_destructible(int), "");
-  static_assert(__is_nothrow_destructible(int[2]), "");
-  static_assert(!__is_nothrow_destructible(int[]), "");
-  static_assert(!__is_nothrow_destructible(void), "");
-  static_assert(__is_nothrow_destructible(int &), "");
-  static_assert(__is_nothrow_destructible(HasDest), "");
-  static_assert(!__is_nothrow_destructible(AllPrivate), "");
-  static_assert(__is_nothrow_destructible(SuperNonTrivialStruct), "");
-  static_assert(__is_nothrow_destructible(AllDefaulted), "");
-  static_assert(!__is_nothrow_destructible(AllDeleted), "");
-  static_assert(!__is_nothrow_destructible(ThrowingDtor), "");
-  static_assert(__is_nothrow_destructible(NoExceptDtor), "");
-  static_assert(__is_nothrow_destructible(NoThrowDtor), "");
+  static_assert(__is_nothrow_destructible(int));
+  static_assert(__is_nothrow_destructible(int[2]));
+  static_assert(!__is_nothrow_destructible(int[]));
+  static_assert(!__is_nothrow_destructible(void));
+  static_assert(__is_nothrow_destructible(int &));
+  static_assert(__is_nothrow_destructible(HasDest));
+  static_assert(!__is_nothrow_destructible(AllPrivate));
+  static_assert(__is_nothrow_destructible(SuperNonTrivialStruct));
+  static_assert(__is_nothrow_destructible(AllDefaulted));
+  static_assert(!__is_nothrow_destructible(AllDeleted));
+  static_assert(!__is_nothrow_destructible(ThrowingDtor));
+  static_assert(__is_nothrow_destructible(NoExceptDtor));
+  static_assert(__is_nothrow_destructible(NoThrowDtor));
 
-  static_assert(__is_nothrow_destructible(ACompleteType), "");
-  static_assert(!__is_nothrow_destructible(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_nothrow_destructible(AnIncompleteType[]), "");
-  static_assert(!__is_nothrow_destructible(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_nothrow_destructible(void), "");
-  static_assert(!__is_nothrow_destructible(const volatile void), "");
+  static_assert(__is_nothrow_destructible(ACompleteType));
+  static_assert(!__is_nothrow_destructible(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_nothrow_destructible(AnIncompleteType[]));
+  static_assert(!__is_nothrow_destructible(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_nothrow_destructible(void));
+  static_assert(!__is_nothrow_destructible(const volatile void));
 }
 
 void is_trivially_destructible_test() {
-  static_assert(__is_trivially_destructible(int), "");
-  static_assert(__is_trivially_destructible(int[2]), "");
-  static_assert(!__is_trivially_destructible(int[]), "");
-  static_assert(!__is_trivially_destructible(void), "");
-  static_assert(__is_trivially_destructible(int &), "");
-  static_assert(!__is_trivially_destructible(HasDest), "");
-  static_assert(!__is_trivially_destructible(AllPrivate), "");
-  static_assert(!__is_trivially_destructible(SuperNonTrivialStruct), "");
-  static_assert(__is_trivially_destructible(AllDefaulted), "");
-  static_assert(!__is_trivially_destructible(AllDeleted), "");
-  static_assert(!__is_trivially_destructible(ThrowingDtor), "");
-  static_assert(!__is_trivially_destructible(NoThrowDtor), "");
+  static_assert(__is_trivially_destructible(int));
+  static_assert(__is_trivially_destructible(int[2]));
+  static_assert(!__is_trivially_destructible(int[]));
+  static_assert(!__is_trivially_destructible(void));
+  static_assert(__is_trivially_destructible(int &));
+  static_assert(!__is_trivially_destructible(HasDest));
+  static_assert(!__is_trivially_destructible(AllPrivate));
+  static_assert(!__is_trivially_destructible(SuperNonTrivialStruct));
+  static_assert(__is_trivially_destructible(AllDefaulted));
+  static_assert(!__is_trivially_destructible(AllDeleted));
+  static_assert(!__is_trivially_destructible(ThrowingDtor));
+  static_assert(!__is_trivially_destructible(NoThrowDtor));
 
-  static_assert(__is_trivially_destructible(ACompleteType), "");
-  static_assert(!__is_trivially_destructible(AnIncompleteType), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_destructible(AnIncompleteType[]), "");
-  static_assert(!__is_trivially_destructible(AnIncompleteType[1]), ""); // expected-error {{incomplete type}}
-  static_assert(!__is_trivially_destructible(void), "");
-  static_assert(!__is_trivially_destructible(const volatile void), "");
+  static_assert(__is_trivially_destructible(ACompleteType));
+  static_assert(!__is_trivially_destructible(AnIncompleteType)); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_destructible(AnIncompleteType[]));
+  static_assert(!__is_trivially_destructible(AnIncompleteType[1])); // expected-error {{incomplete type}}
+  static_assert(!__is_trivially_destructible(void));
+  static_assert(!__is_trivially_destructible(const volatile void));
 }
 
 // Instantiation of __has_unique_object_representations
@@ -3027,8 +3027,8 @@ namespace PR46209 {
     Foo foo;
   };
 
-  static_assert(!__is_trivially_assignable(Foo &, const Foo &), "");
-  static_assert(!__is_trivially_assignable(Bar &, const Bar &), "");
+  static_assert(!__is_trivially_assignable(Foo &, const Foo &));
+  static_assert(!__is_trivially_assignable(Bar &, const Bar &));
 
   // Foo2 has both a trivial assignment operator and a non-trivial one.
   struct Foo2 {
@@ -3041,8 +3041,8 @@ namespace PR46209 {
     Foo2 foo;
   };
 
-  static_assert(__is_trivially_assignable(Foo2 &, const Foo2 &), "");
-  static_assert(__is_trivially_assignable(Bar2 &, const Bar2 &), "");
+  static_assert(__is_trivially_assignable(Foo2 &, const Foo2 &));
+  static_assert(__is_trivially_assignable(Bar2 &, const Bar2 &));
 }
 
 namespace ConstClass {
@@ -3052,7 +3052,7 @@ namespace ConstClass {
   struct B {
     const A a;
   };
-  static_assert(!__is_trivially_assignable(B&, const B&), "");
+  static_assert(!__is_trivially_assignable(B&, const B&));
 }
 
 namespace type_trait_expr_numargs_overflow {
@@ -3078,21 +3078,21 @@ void test() { (void) __is_constructible(int, T32768(int)); }
 
 namespace is_trivially_relocatable {
 
-static_assert(!__is_trivially_relocatable(void), "");
-static_assert(__is_trivially_relocatable(int), "");
-static_assert(__is_trivially_relocatable(int[]), "");
+static_assert(!__is_trivially_relocatable(void));
+static_assert(__is_trivially_relocatable(int));
+static_assert(__is_trivially_relocatable(int[]));
 
 enum Enum {};
-static_assert(__is_trivially_relocatable(Enum), "");
-static_assert(__is_trivially_relocatable(Enum[]), "");
+static_assert(__is_trivially_relocatable(Enum));
+static_assert(__is_trivially_relocatable(Enum[]));
 
 union Union {int x;};
-static_assert(__is_trivially_relocatable(Union), "");
-static_assert(__is_trivially_relocatable(Union[]), "");
+static_assert(__is_trivially_relocatable(Union));
+static_assert(__is_trivially_relocatable(Union[]));
 
 struct Trivial {};
-static_assert(__is_trivially_relocatable(Trivial), "");
-static_assert(__is_trivially_relocatable(Trivial[]), "");
+static_assert(__is_trivially_relocatable(Trivial));
+static_assert(__is_trivially_relocatable(Trivial[]));
 
 struct Incomplete; // expected-note {{forward declaration of 'is_trivially_relocatable::Incomplete'}}
 bool unused = __is_trivially_relocatable(Incomplete); // expected-error {{incomplete type}}
@@ -3100,67 +3100,67 @@ bool unused = __is_trivially_relocatable(Incomplete); // expected-error {{incomp
 struct NontrivialDtor {
   ~NontrivialDtor() {}
 };
-static_assert(!__is_trivially_relocatable(NontrivialDtor), "");
-static_assert(!__is_trivially_relocatable(NontrivialDtor[]), "");
+static_assert(!__is_trivially_relocatable(NontrivialDtor));
+static_assert(!__is_trivially_relocatable(NontrivialDtor[]));
 
 struct NontrivialCopyCtor {
   NontrivialCopyCtor(const NontrivialCopyCtor&) {}
 };
-static_assert(!__is_trivially_relocatable(NontrivialCopyCtor), "");
-static_assert(!__is_trivially_relocatable(NontrivialCopyCtor[]), "");
+static_assert(!__is_trivially_relocatable(NontrivialCopyCtor));
+static_assert(!__is_trivially_relocatable(NontrivialCopyCtor[]));
 
 struct NontrivialMoveCtor {
   NontrivialMoveCtor(NontrivialMoveCtor&&) {}
 };
-static_assert(!__is_trivially_relocatable(NontrivialMoveCtor), "");
-static_assert(!__is_trivially_relocatable(NontrivialMoveCtor[]), "");
+static_assert(!__is_trivially_relocatable(NontrivialMoveCtor));
+static_assert(!__is_trivially_relocatable(NontrivialMoveCtor[]));
 
 struct [[clang::trivial_abi]] TrivialAbiNontrivialDtor {
   ~TrivialAbiNontrivialDtor() {}
 };
-static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor), "");
-static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor[]), "");
+static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor));
+static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor[]));
 
 struct [[clang::trivial_abi]] TrivialAbiNontrivialCopyCtor {
   TrivialAbiNontrivialCopyCtor(const TrivialAbiNontrivialCopyCtor&) {}
 };
-static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor), "");
-static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor[]), "");
+static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor));
+static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor[]));
 
 // A more complete set of tests for the behavior of trivial_abi can be found in
 // clang/test/SemaCXX/attr-trivial-abi.cpp
 struct [[clang::trivial_abi]] TrivialAbiNontrivialMoveCtor {
   TrivialAbiNontrivialMoveCtor(TrivialAbiNontrivialMoveCtor&&) {}
 };
-static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor), "");
-static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor[]), "");
+static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor));
+static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor[]));
 
 } // namespace is_trivially_relocatable
 
 namespace is_trivially_equality_comparable {
 struct ForwardDeclared; // expected-note {{forward declaration of 'is_trivially_equality_comparable::ForwardDeclared'}}
-static_assert(!__is_trivially_equality_comparable(ForwardDeclared), ""); // expected-error {{incomplete type 'ForwardDeclared' used in type trait expression}}
+static_assert(!__is_trivially_equality_comparable(ForwardDeclared)); // expected-error {{incomplete type 'ForwardDeclared' used in type trait expression}}
 
-static_assert(!__is_trivially_equality_comparable(void), "");
-static_assert(__is_trivially_equality_comparable(int), "");
-static_assert(!__is_trivially_equality_comparable(int[]), "");
-static_assert(!__is_trivially_equality_comparable(int[3]), "");
-static_assert(!__is_trivially_equality_comparable(float), "");
-static_assert(!__is_trivially_equality_comparable(double), "");
-static_assert(!__is_trivially_equality_comparable(long double), "");
+static_assert(!__is_trivially_equality_comparable(void));
+static_assert(__is_trivially_equality_comparable(int));
+static_assert(!__is_trivially_equality_comparable(int[]));
+static_assert(!__is_trivially_equality_comparable(int[3]));
+static_assert(!__is_trivially_equality_comparable(float));
+static_assert(!__is_trivially_equality_comparable(double));
+static_assert(!__is_trivially_equality_comparable(long double));
 
 struct NonTriviallyEqualityComparableNoComparator {
   int i;
   int j;
 };
-static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator), "");
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator));
 
 struct NonTriviallyEqualityComparableNonDefaultedComparator {
   int i;
   int j;
   bool operator==(const NonTriviallyEqualityComparableNonDefaultedComparator&);
 };
-static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNonDefaultedComparator), "");
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNonDefaultedComparator));
 
 #if __cplusplus >= 202002L
 
@@ -3214,7 +3214,7 @@ struct NotTriviallyEqualityComparableHasPadding {
 
   bool operator==(const NotTriviallyEqualityComparableHasPadding&) const = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasPadding), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasPadding));
 
 struct NotTriviallyEqualityComparableHasFloat {
   float i;
@@ -3222,7 +3222,7 @@ struct NotTriviallyEqualityComparableHasFloat {
 
   bool operator==(const NotTriviallyEqualityComparableHasFloat&) const = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasFloat), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasFloat));
 
 struct NotTriviallyEqualityComparableHasTailPadding {
   int i;
@@ -3230,14 +3230,14 @@ struct NotTriviallyEqualityComparableHasTailPadding {
 
   bool operator==(const NotTriviallyEqualityComparableHasTailPadding&) const = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasTailPadding), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasTailPadding));
 
 struct NotTriviallyEqualityComparableBase : NotTriviallyEqualityComparableHasTailPadding {
   char j;
 
   bool operator==(const NotTriviallyEqualityComparableBase&) const = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableBase), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableBase));
 
 class TriviallyEqualityComparablePaddedOutBase {
   int i;
@@ -3246,14 +3246,14 @@ class TriviallyEqualityComparablePaddedOutBase {
 public:
   bool operator==(const TriviallyEqualityComparablePaddedOutBase&) const = default;
 };
-static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOutBase), "");
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOutBase));
 
 struct TriviallyEqualityComparablePaddedOut : TriviallyEqualityComparablePaddedOutBase {
   char j[3];
 
   bool operator==(const TriviallyEqualityComparablePaddedOut&) const = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOut), "");
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOut));
 
 struct TriviallyEqualityComparable1 {
   char i;
@@ -3376,7 +3376,7 @@ struct TriviallyEqualityComparable {
 
   friend bool operator==(const TriviallyEqualityComparable&, const TriviallyEqualityComparable&) = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable), "");
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
 
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
@@ -3392,7 +3392,7 @@ struct NotTriviallyEqualityComparableHasPadding {
 
   friend bool operator==(const NotTriviallyEqualityComparableHasPadding&, const NotTriviallyEqualityComparableHasPadding&) = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasPadding), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasPadding));
 
 struct NotTriviallyEqualityComparableHasFloat {
   float i;
@@ -3400,7 +3400,7 @@ struct NotTriviallyEqualityComparableHasFloat {
 
   friend bool operator==(const NotTriviallyEqualityComparableHasFloat&, const NotTriviallyEqualityComparableHasFloat&) = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasFloat), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasFloat));
 
 struct NotTriviallyEqualityComparableHasTailPadding {
   int i;
@@ -3408,14 +3408,14 @@ struct NotTriviallyEqualityComparableHasTailPadding {
 
   friend bool operator==(const NotTriviallyEqualityComparableHasTailPadding&, const NotTriviallyEqualityComparableHasTailPadding&) = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasTailPadding), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasTailPadding));
 
 struct NotTriviallyEqualityComparableBase : NotTriviallyEqualityComparableHasTailPadding {
   char j;
 
   friend bool operator==(const NotTriviallyEqualityComparableBase&, const NotTriviallyEqualityComparableBase&) = default;
 };
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableBase), "");
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableBase));
 
 class TriviallyEqualityComparablePaddedOutBase {
   int i;
@@ -3424,14 +3424,14 @@ class TriviallyEqualityComparablePaddedOutBase {
 public:
   friend bool operator==(const TriviallyEqualityComparablePaddedOutBase&, const TriviallyEqualityComparablePaddedOutBase&) = default;
 };
-static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOutBase), "");
+static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOutBase));
 
 struct TriviallyEqualityComparablePaddedOut : TriviallyEqualityComparablePaddedOutBase {
   char j[3];
 
   friend bool operator==(const TriviallyEqualityComparablePaddedOut&, const TriviallyEqualityComparablePaddedOut&) = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOut), "");
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparablePaddedOut));
 
 struct TriviallyEqualityComparable1 {
   char i;
@@ -3548,10 +3548,10 @@ union D {
   int x;
 };
 
-static_assert(__can_pass_in_regs(A), "");
-static_assert(__can_pass_in_regs(A), "");
-static_assert(!__can_pass_in_regs(B), "");
-static_assert(__can_pass_in_regs(D), "");
+static_assert(__can_pass_in_regs(A));
+static_assert(__can_pass_in_regs(A));
+static_assert(!__can_pass_in_regs(B));
+static_assert(__can_pass_in_regs(D));
 
 void test_errors() {
   (void)__can_pass_in_regs(const A); // expected-error {{not an unqualified class type}}
@@ -3568,379 +3568,379 @@ struct S {};
 template <class T> using remove_const_t = __remove_const(T);
 
 void check_remove_const() {
-  static_assert(__is_same(remove_const_t<void>, void), "");
-  static_assert(__is_same(remove_const_t<const void>, void), "");
-  static_assert(__is_same(remove_const_t<int>, int), "");
-  static_assert(__is_same(remove_const_t<const int>, int), "");
-  static_assert(__is_same(remove_const_t<volatile int>, volatile int), "");
-  static_assert(__is_same(remove_const_t<const volatile int>, volatile int), "");
-  static_assert(__is_same(remove_const_t<int *>, int *), "");
-  static_assert(__is_same(remove_const_t<int *const>, int *), "");
-  static_assert(__is_same(remove_const_t<int const *const>, int const *), "");
-  static_assert(__is_same(remove_const_t<int const *const __restrict>, int const *__restrict), "");
-  static_assert(__is_same(remove_const_t<int &>, int &), "");
-  static_assert(__is_same(remove_const_t<int const &>, int const &), "");
-  static_assert(__is_same(remove_const_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_const_t<int const &&>, int const &&), "");
-  static_assert(__is_same(remove_const_t<int()>, int()), "");
-  static_assert(__is_same(remove_const_t<int (*const)()>, int (*)()), "");
-  static_assert(__is_same(remove_const_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_const_t<void>, void));
+  static_assert(__is_same(remove_const_t<const void>, void));
+  static_assert(__is_same(remove_const_t<int>, int));
+  static_assert(__is_same(remove_const_t<const int>, int));
+  static_assert(__is_same(remove_const_t<volatile int>, volatile int));
+  static_assert(__is_same(remove_const_t<const volatile int>, volatile int));
+  static_assert(__is_same(remove_const_t<int *>, int *));
+  static_assert(__is_same(remove_const_t<int *const>, int *));
+  static_assert(__is_same(remove_const_t<int const *const>, int const *));
+  static_assert(__is_same(remove_const_t<int const *const __restrict>, int const *__restrict));
+  static_assert(__is_same(remove_const_t<int &>, int &));
+  static_assert(__is_same(remove_const_t<int const &>, int const &));
+  static_assert(__is_same(remove_const_t<int &&>, int &&));
+  static_assert(__is_same(remove_const_t<int const &&>, int const &&));
+  static_assert(__is_same(remove_const_t<int()>, int()));
+  static_assert(__is_same(remove_const_t<int (*const)()>, int (*)()));
+  static_assert(__is_same(remove_const_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_const_t<S>, S), "");
-  static_assert(__is_same(remove_const_t<const S>, S), "");
-  static_assert(__is_same(remove_const_t<volatile S>, volatile S), "");
-  static_assert(__is_same(remove_const_t<S *__restrict>, S *__restrict), "");
-  static_assert(__is_same(remove_const_t<const volatile S>, volatile S), "");
-  static_assert(__is_same(remove_const_t<S *const volatile __restrict>, S *volatile __restrict), "");
-  static_assert(__is_same(remove_const_t<int S::*const>, int S::*), "");
-  static_assert(__is_same(remove_const_t<int (S::*const)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_const_t<S>, S));
+  static_assert(__is_same(remove_const_t<const S>, S));
+  static_assert(__is_same(remove_const_t<volatile S>, volatile S));
+  static_assert(__is_same(remove_const_t<S *__restrict>, S *__restrict));
+  static_assert(__is_same(remove_const_t<const volatile S>, volatile S));
+  static_assert(__is_same(remove_const_t<S *const volatile __restrict>, S *volatile __restrict));
+  static_assert(__is_same(remove_const_t<int S::*const>, int S::*));
+  static_assert(__is_same(remove_const_t<int (S::*const)()>, int(S::*)()));
 }
 
 template <class T> using remove_restrict_t = __remove_restrict(T);
 
 void check_remove_restrict() {
-  static_assert(__is_same(remove_restrict_t<void>, void), "");
-  static_assert(__is_same(remove_restrict_t<int>, int), "");
-  static_assert(__is_same(remove_restrict_t<const int>, const int), "");
-  static_assert(__is_same(remove_restrict_t<volatile int>, volatile int), "");
-  static_assert(__is_same(remove_restrict_t<int *__restrict>, int *), "");
-  static_assert(__is_same(remove_restrict_t<int *const volatile __restrict>, int *const volatile), "");
-  static_assert(__is_same(remove_restrict_t<int *>, int *), "");
-  static_assert(__is_same(remove_restrict_t<int *__restrict>, int *), "");
-  static_assert(__is_same(remove_restrict_t<int &>, int &), "");
-  static_assert(__is_same(remove_restrict_t<int &__restrict>, int &), "");
-  static_assert(__is_same(remove_restrict_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_restrict_t<int &&__restrict>, int &&), "");
-  static_assert(__is_same(remove_restrict_t<int()>, int()), "");
-  static_assert(__is_same(remove_restrict_t<int (*const volatile)()>, int (*const volatile)()), "");
-  static_assert(__is_same(remove_restrict_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_restrict_t<void>, void));
+  static_assert(__is_same(remove_restrict_t<int>, int));
+  static_assert(__is_same(remove_restrict_t<const int>, const int));
+  static_assert(__is_same(remove_restrict_t<volatile int>, volatile int));
+  static_assert(__is_same(remove_restrict_t<int *__restrict>, int *));
+  static_assert(__is_same(remove_restrict_t<int *const volatile __restrict>, int *const volatile));
+  static_assert(__is_same(remove_restrict_t<int *>, int *));
+  static_assert(__is_same(remove_restrict_t<int *__restrict>, int *));
+  static_assert(__is_same(remove_restrict_t<int &>, int &));
+  static_assert(__is_same(remove_restrict_t<int &__restrict>, int &));
+  static_assert(__is_same(remove_restrict_t<int &&>, int &&));
+  static_assert(__is_same(remove_restrict_t<int &&__restrict>, int &&));
+  static_assert(__is_same(remove_restrict_t<int()>, int()));
+  static_assert(__is_same(remove_restrict_t<int (*const volatile)()>, int (*const volatile)()));
+  static_assert(__is_same(remove_restrict_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_restrict_t<S>, S), "");
-  static_assert(__is_same(remove_restrict_t<const S>, const S), "");
-  static_assert(__is_same(remove_restrict_t<volatile S>, volatile S), "");
-  static_assert(__is_same(remove_restrict_t<S *__restrict>, S *), "");
-  static_assert(__is_same(remove_restrict_t<S *const volatile __restrict>, S *const volatile), "");
-  static_assert(__is_same(remove_restrict_t<int S::*__restrict>, int S::*), "");
-  static_assert(__is_same(remove_restrict_t<int (S::*const volatile)()>, int(S::*const volatile)()), "");
+  static_assert(__is_same(remove_restrict_t<S>, S));
+  static_assert(__is_same(remove_restrict_t<const S>, const S));
+  static_assert(__is_same(remove_restrict_t<volatile S>, volatile S));
+  static_assert(__is_same(remove_restrict_t<S *__restrict>, S *));
+  static_assert(__is_same(remove_restrict_t<S *const volatile __restrict>, S *const volatile));
+  static_assert(__is_same(remove_restrict_t<int S::*__restrict>, int S::*));
+  static_assert(__is_same(remove_restrict_t<int (S::*const volatile)()>, int(S::*const volatile)()));
 }
 
 template <class T> using remove_volatile_t = __remove_volatile(T);
 
 void check_remove_volatile() {
-  static_assert(__is_same(remove_volatile_t<void>, void), "");
-  static_assert(__is_same(remove_volatile_t<volatile void>, void), "");
-  static_assert(__is_same(remove_volatile_t<int>, int), "");
-  static_assert(__is_same(remove_volatile_t<const int>, const int), "");
-  static_assert(__is_same(remove_volatile_t<volatile int>, int), "");
-  static_assert(__is_same(remove_volatile_t<int *__restrict>, int *__restrict), "");
-  static_assert(__is_same(remove_volatile_t<const volatile int>, const int), "");
-  static_assert(__is_same(remove_volatile_t<int *const volatile __restrict>, int *const __restrict), "");
-  static_assert(__is_same(remove_volatile_t<int *>, int *), "");
-  static_assert(__is_same(remove_volatile_t<int *volatile>, int *), "");
-  static_assert(__is_same(remove_volatile_t<int volatile *volatile>, int volatile *), "");
-  static_assert(__is_same(remove_volatile_t<int &>, int &), "");
-  static_assert(__is_same(remove_volatile_t<int volatile &>, int volatile &), "");
-  static_assert(__is_same(remove_volatile_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_volatile_t<int volatile &&>, int volatile &&), "");
-  static_assert(__is_same(remove_volatile_t<int()>, int()), "");
-  static_assert(__is_same(remove_volatile_t<int (*volatile)()>, int (*)()), "");
-  static_assert(__is_same(remove_volatile_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_volatile_t<void>, void));
+  static_assert(__is_same(remove_volatile_t<volatile void>, void));
+  static_assert(__is_same(remove_volatile_t<int>, int));
+  static_assert(__is_same(remove_volatile_t<const int>, const int));
+  static_assert(__is_same(remove_volatile_t<volatile int>, int));
+  static_assert(__is_same(remove_volatile_t<int *__restrict>, int *__restrict));
+  static_assert(__is_same(remove_volatile_t<const volatile int>, const int));
+  static_assert(__is_same(remove_volatile_t<int *const volatile __restrict>, int *const __restrict));
+  static_assert(__is_same(remove_volatile_t<int *>, int *));
+  static_assert(__is_same(remove_volatile_t<int *volatile>, int *));
+  static_assert(__is_same(remove_volatile_t<int volatile *volatile>, int volatile *));
+  static_assert(__is_same(remove_volatile_t<int &>, int &));
+  static_assert(__is_same(remove_volatile_t<int volatile &>, int volatile &));
+  static_assert(__is_same(remove_volatile_t<int &&>, int &&));
+  static_assert(__is_same(remove_volatile_t<int volatile &&>, int volatile &&));
+  static_assert(__is_same(remove_volatile_t<int()>, int()));
+  static_assert(__is_same(remove_volatile_t<int (*volatile)()>, int (*)()));
+  static_assert(__is_same(remove_volatile_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_volatile_t<S>, S), "");
-  static_assert(__is_same(remove_volatile_t<const S>, const S), "");
-  static_assert(__is_same(remove_volatile_t<volatile S>, S), "");
-  static_assert(__is_same(remove_volatile_t<const volatile S>, const S), "");
-  static_assert(__is_same(remove_volatile_t<int S::*volatile>, int S::*), "");
-  static_assert(__is_same(remove_volatile_t<int (S::*volatile)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_volatile_t<S>, S));
+  static_assert(__is_same(remove_volatile_t<const S>, const S));
+  static_assert(__is_same(remove_volatile_t<volatile S>, S));
+  static_assert(__is_same(remove_volatile_t<const volatile S>, const S));
+  static_assert(__is_same(remove_volatile_t<int S::*volatile>, int S::*));
+  static_assert(__is_same(remove_volatile_t<int (S::*volatile)()>, int(S::*)()));
 }
 
 template <class T> using remove_cv_t = __remove_cv(T);
 
 void check_remove_cv() {
-  static_assert(__is_same(remove_cv_t<void>, void), "");
-  static_assert(__is_same(remove_cv_t<const volatile void>, void), "");
-  static_assert(__is_same(remove_cv_t<int>, int), "");
-  static_assert(__is_same(remove_cv_t<const int>, int), "");
-  static_assert(__is_same(remove_cv_t<volatile int>, int), "");
-  static_assert(__is_same(remove_cv_t<const volatile int>, int), "");
-  static_assert(__is_same(remove_cv_t<int *>, int *), "");
-  static_assert(__is_same(remove_cv_t<int *const volatile>, int *), "");
-  static_assert(__is_same(remove_cv_t<int const *const volatile>, int const *), "");
-  static_assert(__is_same(remove_cv_t<int const *const volatile __restrict>, int const *__restrict), "");
-  static_assert(__is_same(remove_cv_t<int const *const volatile _Nonnull>, int const *_Nonnull), "");
-  static_assert(__is_same(remove_cv_t<int &>, int &), "");
-  static_assert(__is_same(remove_cv_t<int const volatile &>, int const volatile &), "");
-  static_assert(__is_same(remove_cv_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_cv_t<int const volatile &&>, int const volatile &&), "");
-  static_assert(__is_same(remove_cv_t<int()>, int()), "");
-  static_assert(__is_same(remove_cv_t<int (*const volatile)()>, int (*)()), "");
-  static_assert(__is_same(remove_cv_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_cv_t<void>, void));
+  static_assert(__is_same(remove_cv_t<const volatile void>, void));
+  static_assert(__is_same(remove_cv_t<int>, int));
+  static_assert(__is_same(remove_cv_t<const int>, int));
+  static_assert(__is_same(remove_cv_t<volatile int>, int));
+  static_assert(__is_same(remove_cv_t<const volatile int>, int));
+  static_assert(__is_same(remove_cv_t<int *>, int *));
+  static_assert(__is_same(remove_cv_t<int *const volatile>, int *));
+  static_assert(__is_same(remove_cv_t<int const *const volatile>, int const *));
+  static_assert(__is_same(remove_cv_t<int const *const volatile __restrict>, int const *__restrict));
+  static_assert(__is_same(remove_cv_t<int const *const volatile _Nonnull>, int const *_Nonnull));
+  static_assert(__is_same(remove_cv_t<int &>, int &));
+  static_assert(__is_same(remove_cv_t<int const volatile &>, int const volatile &));
+  static_assert(__is_same(remove_cv_t<int &&>, int &&));
+  static_assert(__is_same(remove_cv_t<int const volatile &&>, int const volatile &&));
+  static_assert(__is_same(remove_cv_t<int()>, int()));
+  static_assert(__is_same(remove_cv_t<int (*const volatile)()>, int (*)()));
+  static_assert(__is_same(remove_cv_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_cv_t<S>, S), "");
-  static_assert(__is_same(remove_cv_t<const S>, S), "");
-  static_assert(__is_same(remove_cv_t<volatile S>, S), "");
-  static_assert(__is_same(remove_cv_t<const volatile S>, S), "");
-  static_assert(__is_same(remove_cv_t<int S::*const volatile>, int S::*), "");
-  static_assert(__is_same(remove_cv_t<int (S::*const volatile)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_cv_t<S>, S));
+  static_assert(__is_same(remove_cv_t<const S>, S));
+  static_assert(__is_same(remove_cv_t<volatile S>, S));
+  static_assert(__is_same(remove_cv_t<const volatile S>, S));
+  static_assert(__is_same(remove_cv_t<int S::*const volatile>, int S::*));
+  static_assert(__is_same(remove_cv_t<int (S::*const volatile)()>, int(S::*)()));
 }
 
 template <class T> using add_pointer_t = __add_pointer(T);
 
 void add_pointer() {
-  static_assert(__is_same(add_pointer_t<void>, void *), "");
-  static_assert(__is_same(add_pointer_t<const void>, const void *), "");
-  static_assert(__is_same(add_pointer_t<volatile void>, volatile void *), "");
-  static_assert(__is_same(add_pointer_t<const volatile void>, const volatile void *), "");
-  static_assert(__is_same(add_pointer_t<int>, int *), "");
-  static_assert(__is_same(add_pointer_t<const int>, const int *), "");
-  static_assert(__is_same(add_pointer_t<volatile int>, volatile int *), "");
-  static_assert(__is_same(add_pointer_t<const volatile int>, const volatile int *), "");
-  static_assert(__is_same(add_pointer_t<int *>, int **), "");
-  static_assert(__is_same(add_pointer_t<int &>, int *), "");
-  static_assert(__is_same(add_pointer_t<int &&>, int *), "");
-  static_assert(__is_same(add_pointer_t<int()>, int (*)()), "");
-  static_assert(__is_same(add_pointer_t<int (*)()>, int (**)()), "");
-  static_assert(__is_same(add_pointer_t<int (&)()>, int (*)()), "");
+  static_assert(__is_same(add_pointer_t<void>, void *));
+  static_assert(__is_same(add_pointer_t<const void>, const void *));
+  static_assert(__is_same(add_pointer_t<volatile void>, volatile void *));
+  static_assert(__is_same(add_pointer_t<const volatile void>, const volatile void *));
+  static_assert(__is_same(add_pointer_t<int>, int *));
+  static_assert(__is_same(add_pointer_t<const int>, const int *));
+  static_assert(__is_same(add_pointer_t<volatile int>, volatile int *));
+  static_assert(__is_same(add_pointer_t<const volatile int>, const volatile int *));
+  static_assert(__is_same(add_pointer_t<int *>, int **));
+  static_assert(__is_same(add_pointer_t<int &>, int *));
+  static_assert(__is_same(add_pointer_t<int &&>, int *));
+  static_assert(__is_same(add_pointer_t<int()>, int (*)()));
+  static_assert(__is_same(add_pointer_t<int (*)()>, int (**)()));
+  static_assert(__is_same(add_pointer_t<int (&)()>, int (*)()));
 
-  static_assert(__is_same(add_pointer_t<S>, S *), "");
-  static_assert(__is_same(add_pointer_t<const S>, const S *), "");
-  static_assert(__is_same(add_pointer_t<volatile S>, volatile S *), "");
-  static_assert(__is_same(add_pointer_t<const volatile S>, const volatile S *), "");
-  static_assert(__is_same(add_pointer_t<int S::*>, int S::**), "");
-  static_assert(__is_same(add_pointer_t<int (S::*)()>, int(S::**)()), "");
+  static_assert(__is_same(add_pointer_t<S>, S *));
+  static_assert(__is_same(add_pointer_t<const S>, const S *));
+  static_assert(__is_same(add_pointer_t<volatile S>, volatile S *));
+  static_assert(__is_same(add_pointer_t<const volatile S>, const volatile S *));
+  static_assert(__is_same(add_pointer_t<int S::*>, int S::**));
+  static_assert(__is_same(add_pointer_t<int (S::*)()>, int(S::**)()));
 
-  static_assert(__is_same(add_pointer_t<int __attribute__((address_space(1)))>, int __attribute__((address_space(1))) *), "");
-  static_assert(__is_same(add_pointer_t<S __attribute__((address_space(2)))>, S __attribute__((address_space(2))) *), "");
+  static_assert(__is_same(add_pointer_t<int __attribute__((address_space(1)))>, int __attribute__((address_space(1))) *));
+  static_assert(__is_same(add_pointer_t<S __attribute__((address_space(2)))>, S __attribute__((address_space(2))) *));
 }
 
 template <class T> using remove_pointer_t = __remove_pointer(T);
 
 void remove_pointer() {
-  static_assert(__is_same(remove_pointer_t<void>, void), "");
-  static_assert(__is_same(remove_pointer_t<const void>, const void), "");
-  static_assert(__is_same(remove_pointer_t<volatile void>, volatile void), "");
-  static_assert(__is_same(remove_pointer_t<const volatile void>, const volatile void), "");
-  static_assert(__is_same(remove_pointer_t<int>, int), "");
-  static_assert(__is_same(remove_pointer_t<const int>, const int), "");
-  static_assert(__is_same(remove_pointer_t<volatile int>, volatile int), "");
-  static_assert(__is_same(remove_pointer_t<const volatile int>, const volatile int), "");
-  static_assert(__is_same(remove_pointer_t<int *>, int), "");
-  static_assert(__is_same(remove_pointer_t<const int *>, const int), "");
-  static_assert(__is_same(remove_pointer_t<volatile int *>, volatile int), "");
-  static_assert(__is_same(remove_pointer_t<const volatile int *>, const volatile int), "");
-  static_assert(__is_same(remove_pointer_t<int *const>, int), "");
-  static_assert(__is_same(remove_pointer_t<int *volatile>, int), "");
-  static_assert(__is_same(remove_pointer_t<int *const volatile>, int), "");
-  static_assert(__is_same(remove_pointer_t<int &>, int &), "");
-  static_assert(__is_same(remove_pointer_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_pointer_t<int()>, int()), "");
-  static_assert(__is_same(remove_pointer_t<int (*)()>, int()), "");
-  static_assert(__is_same(remove_pointer_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_pointer_t<void>, void));
+  static_assert(__is_same(remove_pointer_t<const void>, const void));
+  static_assert(__is_same(remove_pointer_t<volatile void>, volatile void));
+  static_assert(__is_same(remove_pointer_t<const volatile void>, const volatile void));
+  static_assert(__is_same(remove_pointer_t<int>, int));
+  static_assert(__is_same(remove_pointer_t<const int>, const int));
+  static_assert(__is_same(remove_pointer_t<volatile int>, volatile int));
+  static_assert(__is_same(remove_pointer_t<const volatile int>, const volatile int));
+  static_assert(__is_same(remove_pointer_t<int *>, int));
+  static_assert(__is_same(remove_pointer_t<const int *>, const int));
+  static_assert(__is_same(remove_pointer_t<volatile int *>, volatile int));
+  static_assert(__is_same(remove_pointer_t<const volatile int *>, const volatile int));
+  static_assert(__is_same(remove_pointer_t<int *const>, int));
+  static_assert(__is_same(remove_pointer_t<int *volatile>, int));
+  static_assert(__is_same(remove_pointer_t<int *const volatile>, int));
+  static_assert(__is_same(remove_pointer_t<int &>, int &));
+  static_assert(__is_same(remove_pointer_t<int &&>, int &&));
+  static_assert(__is_same(remove_pointer_t<int()>, int()));
+  static_assert(__is_same(remove_pointer_t<int (*)()>, int()));
+  static_assert(__is_same(remove_pointer_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_pointer_t<S>, S), "");
-  static_assert(__is_same(remove_pointer_t<const S>, const S), "");
-  static_assert(__is_same(remove_pointer_t<volatile S>, volatile S), "");
-  static_assert(__is_same(remove_pointer_t<const volatile S>, const volatile S), "");
-  static_assert(__is_same(remove_pointer_t<int S::*>, int S::*), "");
-  static_assert(__is_same(remove_pointer_t<int (S::*)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_pointer_t<S>, S));
+  static_assert(__is_same(remove_pointer_t<const S>, const S));
+  static_assert(__is_same(remove_pointer_t<volatile S>, volatile S));
+  static_assert(__is_same(remove_pointer_t<const volatile S>, const volatile S));
+  static_assert(__is_same(remove_pointer_t<int S::*>, int S::*));
+  static_assert(__is_same(remove_pointer_t<int (S::*)()>, int(S::*)()));
 
-  static_assert(__is_same(remove_pointer_t<int __attribute__((address_space(1))) *>, int __attribute__((address_space(1)))), "");
-  static_assert(__is_same(remove_pointer_t<S __attribute__((address_space(2))) *>, S  __attribute__((address_space(2)))), "");
+  static_assert(__is_same(remove_pointer_t<int __attribute__((address_space(1))) *>, int __attribute__((address_space(1)))));
+  static_assert(__is_same(remove_pointer_t<S __attribute__((address_space(2))) *>, S  __attribute__((address_space(2)))));
 
-  static_assert(__is_same(remove_pointer_t<int (^)(char)>, int (^)(char)), "");
+  static_assert(__is_same(remove_pointer_t<int (^)(char)>, int (^)(char)));
 }
 
 template <class T> using add_lvalue_reference_t = __add_lvalue_reference(T);
 
 void add_lvalue_reference() {
-  static_assert(__is_same(add_lvalue_reference_t<void>, void), "");
-  static_assert(__is_same(add_lvalue_reference_t<const void>, const void), "");
-  static_assert(__is_same(add_lvalue_reference_t<volatile void>, volatile void), "");
-  static_assert(__is_same(add_lvalue_reference_t<const volatile void>, const volatile void), "");
-  static_assert(__is_same(add_lvalue_reference_t<int>, int &), "");
-  static_assert(__is_same(add_lvalue_reference_t<const int>, const int &), "");
-  static_assert(__is_same(add_lvalue_reference_t<volatile int>, volatile int &), "");
-  static_assert(__is_same(add_lvalue_reference_t<const volatile int>, const volatile int &), "");
-  static_assert(__is_same(add_lvalue_reference_t<int *>, int *&), "");
-  static_assert(__is_same(add_lvalue_reference_t<int &>, int &), "");
-  static_assert(__is_same(add_lvalue_reference_t<int &&>, int &), ""); // reference collapsing
-  static_assert(__is_same(add_lvalue_reference_t<int()>, int (&)()), "");
-  static_assert(__is_same(add_lvalue_reference_t<int (*)()>, int (*&)()), "");
-  static_assert(__is_same(add_lvalue_reference_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(add_lvalue_reference_t<void>, void));
+  static_assert(__is_same(add_lvalue_reference_t<const void>, const void));
+  static_assert(__is_same(add_lvalue_reference_t<volatile void>, volatile void));
+  static_assert(__is_same(add_lvalue_reference_t<const volatile void>, const volatile void));
+  static_assert(__is_same(add_lvalue_reference_t<int>, int &));
+  static_assert(__is_same(add_lvalue_reference_t<const int>, const int &));
+  static_assert(__is_same(add_lvalue_reference_t<volatile int>, volatile int &));
+  static_assert(__is_same(add_lvalue_reference_t<const volatile int>, const volatile int &));
+  static_assert(__is_same(add_lvalue_reference_t<int *>, int *&));
+  static_assert(__is_same(add_lvalue_reference_t<int &>, int &));
+  static_assert(__is_same(add_lvalue_reference_t<int &&>, int &)); // reference collapsing
+  static_assert(__is_same(add_lvalue_reference_t<int()>, int (&)()));
+  static_assert(__is_same(add_lvalue_reference_t<int (*)()>, int (*&)()));
+  static_assert(__is_same(add_lvalue_reference_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(add_lvalue_reference_t<S>, S &), "");
-  static_assert(__is_same(add_lvalue_reference_t<const S>, const S &), "");
-  static_assert(__is_same(add_lvalue_reference_t<volatile S>, volatile S &), "");
-  static_assert(__is_same(add_lvalue_reference_t<const volatile S>, const volatile S &), "");
-  static_assert(__is_same(add_lvalue_reference_t<int S::*>, int S::*&), "");
-  static_assert(__is_same(add_lvalue_reference_t<int (S::*)()>, int(S::*&)()), "");
+  static_assert(__is_same(add_lvalue_reference_t<S>, S &));
+  static_assert(__is_same(add_lvalue_reference_t<const S>, const S &));
+  static_assert(__is_same(add_lvalue_reference_t<volatile S>, volatile S &));
+  static_assert(__is_same(add_lvalue_reference_t<const volatile S>, const volatile S &));
+  static_assert(__is_same(add_lvalue_reference_t<int S::*>, int S::*&));
+  static_assert(__is_same(add_lvalue_reference_t<int (S::*)()>, int(S::*&)()));
 }
 
 template <class T> using add_rvalue_reference_t = __add_rvalue_reference(T);
 
 void add_rvalue_reference() {
-  static_assert(__is_same(add_rvalue_reference_t<void>, void), "");
-  static_assert(__is_same(add_rvalue_reference_t<const void>, const void), "");
-  static_assert(__is_same(add_rvalue_reference_t<volatile void>, volatile void), "");
-  static_assert(__is_same(add_rvalue_reference_t<const volatile void>, const volatile void), "");
-  static_assert(__is_same(add_rvalue_reference_t<int>, int &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<const int>, const int &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<volatile int>, volatile int &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<const volatile int>, const volatile int &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<int *>, int *&&), "");
-  static_assert(__is_same(add_rvalue_reference_t<int &>, int &), ""); // reference collapsing
-  static_assert(__is_same(add_rvalue_reference_t<int &&>, int &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<int()>, int(&&)()), "");
-  static_assert(__is_same(add_rvalue_reference_t<int (*)()>, int (*&&)()), "");
-  static_assert(__is_same(add_rvalue_reference_t<int (&)()>, int (&)()), ""); // reference collapsing
+  static_assert(__is_same(add_rvalue_reference_t<void>, void));
+  static_assert(__is_same(add_rvalue_reference_t<const void>, const void));
+  static_assert(__is_same(add_rvalue_reference_t<volatile void>, volatile void));
+  static_assert(__is_same(add_rvalue_reference_t<const volatile void>, const volatile void));
+  static_assert(__is_same(add_rvalue_reference_t<int>, int &&));
+  static_assert(__is_same(add_rvalue_reference_t<const int>, const int &&));
+  static_assert(__is_same(add_rvalue_reference_t<volatile int>, volatile int &&));
+  static_assert(__is_same(add_rvalue_reference_t<const volatile int>, const volatile int &&));
+  static_assert(__is_same(add_rvalue_reference_t<int *>, int *&&));
+  static_assert(__is_same(add_rvalue_reference_t<int &>, int &)); // reference collapsing
+  static_assert(__is_same(add_rvalue_reference_t<int &&>, int &&));
+  static_assert(__is_same(add_rvalue_reference_t<int()>, int(&&)()));
+  static_assert(__is_same(add_rvalue_reference_t<int (*)()>, int (*&&)()));
+  static_assert(__is_same(add_rvalue_reference_t<int (&)()>, int (&)())); // reference collapsing
 
-  static_assert(__is_same(add_rvalue_reference_t<S>, S &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<const S>, const S &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<volatile S>, volatile S &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<const volatile S>, const volatile S &&), "");
-  static_assert(__is_same(add_rvalue_reference_t<int S::*>, int S::*&&), "");
-  static_assert(__is_same(add_rvalue_reference_t<int (S::*)()>, int(S::* &&)()), "");
+  static_assert(__is_same(add_rvalue_reference_t<S>, S &&));
+  static_assert(__is_same(add_rvalue_reference_t<const S>, const S &&));
+  static_assert(__is_same(add_rvalue_reference_t<volatile S>, volatile S &&));
+  static_assert(__is_same(add_rvalue_reference_t<const volatile S>, const volatile S &&));
+  static_assert(__is_same(add_rvalue_reference_t<int S::*>, int S::*&&));
+  static_assert(__is_same(add_rvalue_reference_t<int (S::*)()>, int(S::* &&)()));
 }
 
 template <class T> using remove_reference_t = __remove_reference_t(T);
 
 void check_remove_reference() {
-  static_assert(__is_same(remove_reference_t<void>, void), "");
-  static_assert(__is_same(remove_reference_t<const volatile void>, const volatile void), "");
-  static_assert(__is_same(remove_reference_t<int>, int), "");
-  static_assert(__is_same(remove_reference_t<const int>, const int), "");
-  static_assert(__is_same(remove_reference_t<volatile int>, volatile int), "");
-  static_assert(__is_same(remove_reference_t<const volatile int>, const volatile int), "");
-  static_assert(__is_same(remove_reference_t<int *>, int *), "");
-  static_assert(__is_same(remove_reference_t<int *const volatile>, int *const volatile), "");
-  static_assert(__is_same(remove_reference_t<int const *const volatile>, int const *const volatile), "");
-  static_assert(__is_same(remove_reference_t<int &>, int), "");
-  static_assert(__is_same(remove_reference_t<int const volatile &>, int const volatile), "");
-  static_assert(__is_same(remove_reference_t<int &&>, int), "");
-  static_assert(__is_same(remove_reference_t<int const volatile &&>, int const volatile), "");
-  static_assert(__is_same(remove_reference_t<int()>, int()), "");
-  static_assert(__is_same(remove_reference_t<int (*const volatile)()>, int (*const volatile)()), "");
-  static_assert(__is_same(remove_reference_t<int (&)()>, int()), "");
+  static_assert(__is_same(remove_reference_t<void>, void));
+  static_assert(__is_same(remove_reference_t<const volatile void>, const volatile void));
+  static_assert(__is_same(remove_reference_t<int>, int));
+  static_assert(__is_same(remove_reference_t<const int>, const int));
+  static_assert(__is_same(remove_reference_t<volatile int>, volatile int));
+  static_assert(__is_same(remove_reference_t<const volatile int>, const volatile int));
+  static_assert(__is_same(remove_reference_t<int *>, int *));
+  static_assert(__is_same(remove_reference_t<int *const volatile>, int *const volatile));
+  static_assert(__is_same(remove_reference_t<int const *const volatile>, int const *const volatile));
+  static_assert(__is_same(remove_reference_t<int &>, int));
+  static_assert(__is_same(remove_reference_t<int const volatile &>, int const volatile));
+  static_assert(__is_same(remove_reference_t<int &&>, int));
+  static_assert(__is_same(remove_reference_t<int const volatile &&>, int const volatile));
+  static_assert(__is_same(remove_reference_t<int()>, int()));
+  static_assert(__is_same(remove_reference_t<int (*const volatile)()>, int (*const volatile)()));
+  static_assert(__is_same(remove_reference_t<int (&)()>, int()));
 
-  static_assert(__is_same(remove_reference_t<S>, S), "");
-  static_assert(__is_same(remove_reference_t<S &>, S), "");
-  static_assert(__is_same(remove_reference_t<S &&>, S), "");
-  static_assert(__is_same(remove_reference_t<const S>, const S), "");
-  static_assert(__is_same(remove_reference_t<const S &>, const S), "");
-  static_assert(__is_same(remove_reference_t<const S &&>, const S), "");
-  static_assert(__is_same(remove_reference_t<volatile S>, volatile S), "");
-  static_assert(__is_same(remove_reference_t<volatile S &>, volatile S), "");
-  static_assert(__is_same(remove_reference_t<volatile S &&>, volatile S), "");
-  static_assert(__is_same(remove_reference_t<const volatile S>, const volatile S), "");
-  static_assert(__is_same(remove_reference_t<const volatile S &>, const volatile S), "");
-  static_assert(__is_same(remove_reference_t<const volatile S &&>, const volatile S), "");
-  static_assert(__is_same(remove_reference_t<int S::*const volatile &>, int S::*const volatile), "");
-  static_assert(__is_same(remove_reference_t<int (S::*const volatile &)()>, int(S::*const volatile)()), "");
-  static_assert(__is_same(remove_reference_t<int (S::*const volatile &&)() &>, int(S::*const volatile)() &), "");
+  static_assert(__is_same(remove_reference_t<S>, S));
+  static_assert(__is_same(remove_reference_t<S &>, S));
+  static_assert(__is_same(remove_reference_t<S &&>, S));
+  static_assert(__is_same(remove_reference_t<const S>, const S));
+  static_assert(__is_same(remove_reference_t<const S &>, const S));
+  static_assert(__is_same(remove_reference_t<const S &&>, const S));
+  static_assert(__is_same(remove_reference_t<volatile S>, volatile S));
+  static_assert(__is_same(remove_reference_t<volatile S &>, volatile S));
+  static_assert(__is_same(remove_reference_t<volatile S &&>, volatile S));
+  static_assert(__is_same(remove_reference_t<const volatile S>, const volatile S));
+  static_assert(__is_same(remove_reference_t<const volatile S &>, const volatile S));
+  static_assert(__is_same(remove_reference_t<const volatile S &&>, const volatile S));
+  static_assert(__is_same(remove_reference_t<int S::*const volatile &>, int S::*const volatile));
+  static_assert(__is_same(remove_reference_t<int (S::*const volatile &)()>, int(S::*const volatile)()));
+  static_assert(__is_same(remove_reference_t<int (S::*const volatile &&)() &>, int(S::*const volatile)() &));
 }
 
 template <class T> using remove_cvref_t = __remove_cvref(T);
 
 void check_remove_cvref() {
-  static_assert(__is_same(remove_cvref_t<void>, void), "");
-  static_assert(__is_same(remove_cvref_t<const volatile void>, void), "");
-  static_assert(__is_same(remove_cvref_t<int>, int), "");
-  static_assert(__is_same(remove_cvref_t<const int>, int), "");
-  static_assert(__is_same(remove_cvref_t<volatile int>, int), "");
-  static_assert(__is_same(remove_cvref_t<const volatile int>, int), "");
-  static_assert(__is_same(remove_cvref_t<int *>, int *), "");
-  static_assert(__is_same(remove_cvref_t<int *const volatile>, int *), "");
-  static_assert(__is_same(remove_cvref_t<int const *const volatile>, int const *), "");
-  static_assert(__is_same(remove_cvref_t<int const *const volatile __restrict>, int const *__restrict), "");
-  static_assert(__is_same(remove_cvref_t<int const *const volatile _Nonnull>, int const *_Nonnull), "");
-  static_assert(__is_same(remove_cvref_t<int &>, int), "");
-  static_assert(__is_same(remove_cvref_t<int const volatile &>, int), "");
-  static_assert(__is_same(remove_cvref_t<int &&>, int), "");
-  static_assert(__is_same(remove_cvref_t<int const volatile &&>, int), "");
-  static_assert(__is_same(remove_cvref_t<int()>, int()), "");
-  static_assert(__is_same(remove_cvref_t<int (*const volatile)()>, int (*)()), "");
-  static_assert(__is_same(remove_cvref_t<int (&)()>, int()), "");
+  static_assert(__is_same(remove_cvref_t<void>, void));
+  static_assert(__is_same(remove_cvref_t<const volatile void>, void));
+  static_assert(__is_same(remove_cvref_t<int>, int));
+  static_assert(__is_same(remove_cvref_t<const int>, int));
+  static_assert(__is_same(remove_cvref_t<volatile int>, int));
+  static_assert(__is_same(remove_cvref_t<const volatile int>, int));
+  static_assert(__is_same(remove_cvref_t<int *>, int *));
+  static_assert(__is_same(remove_cvref_t<int *const volatile>, int *));
+  static_assert(__is_same(remove_cvref_t<int const *const volatile>, int const *));
+  static_assert(__is_same(remove_cvref_t<int const *const volatile __restrict>, int const *__restrict));
+  static_assert(__is_same(remove_cvref_t<int const *const volatile _Nonnull>, int const *_Nonnull));
+  static_assert(__is_same(remove_cvref_t<int &>, int));
+  static_assert(__is_same(remove_cvref_t<int const volatile &>, int));
+  static_assert(__is_same(remove_cvref_t<int &&>, int));
+  static_assert(__is_same(remove_cvref_t<int const volatile &&>, int));
+  static_assert(__is_same(remove_cvref_t<int()>, int()));
+  static_assert(__is_same(remove_cvref_t<int (*const volatile)()>, int (*)()));
+  static_assert(__is_same(remove_cvref_t<int (&)()>, int()));
 
-  static_assert(__is_same(remove_cvref_t<S>, S), "");
-  static_assert(__is_same(remove_cvref_t<S &>, S), "");
-  static_assert(__is_same(remove_cvref_t<S &&>, S), "");
-  static_assert(__is_same(remove_cvref_t<const S>, S), "");
-  static_assert(__is_same(remove_cvref_t<const S &>, S), "");
-  static_assert(__is_same(remove_cvref_t<const S &&>, S), "");
-  static_assert(__is_same(remove_cvref_t<volatile S>, S), "");
-  static_assert(__is_same(remove_cvref_t<volatile S &>, S), "");
-  static_assert(__is_same(remove_cvref_t<volatile S &&>, S), "");
-  static_assert(__is_same(remove_cvref_t<const volatile S>, S), "");
-  static_assert(__is_same(remove_cvref_t<const volatile S &>, S), "");
-  static_assert(__is_same(remove_cvref_t<const volatile S &&>, S), "");
-  static_assert(__is_same(remove_cvref_t<int S::*const volatile>, int S::*), "");
-  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)()>, int(S::*)()), "");
-  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &>, int(S::*)() &), "");
-  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &&>, int(S::*)() &&), "");
+  static_assert(__is_same(remove_cvref_t<S>, S));
+  static_assert(__is_same(remove_cvref_t<S &>, S));
+  static_assert(__is_same(remove_cvref_t<S &&>, S));
+  static_assert(__is_same(remove_cvref_t<const S>, S));
+  static_assert(__is_same(remove_cvref_t<const S &>, S));
+  static_assert(__is_same(remove_cvref_t<const S &&>, S));
+  static_assert(__is_same(remove_cvref_t<volatile S>, S));
+  static_assert(__is_same(remove_cvref_t<volatile S &>, S));
+  static_assert(__is_same(remove_cvref_t<volatile S &&>, S));
+  static_assert(__is_same(remove_cvref_t<const volatile S>, S));
+  static_assert(__is_same(remove_cvref_t<const volatile S &>, S));
+  static_assert(__is_same(remove_cvref_t<const volatile S &&>, S));
+  static_assert(__is_same(remove_cvref_t<int S::*const volatile>, int S::*));
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)()>, int(S::*)()));
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &>, int(S::*)() &));
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &&>, int(S::*)() &&));
 }
 
 template <class T> using decay_t = __decay(T);
 
 void check_decay() {
-  static_assert(__is_same(decay_t<void>, void), "");
-  static_assert(__is_same(decay_t<const volatile void>, void), "");
-  static_assert(__is_same(decay_t<int>, int), "");
-  static_assert(__is_same(decay_t<const int>, int), "");
-  static_assert(__is_same(decay_t<volatile int>, int), "");
-  static_assert(__is_same(decay_t<const volatile int>, int), "");
-  static_assert(__is_same(decay_t<int *>, int *), "");
-  static_assert(__is_same(decay_t<int *const volatile>, int *), "");
-  static_assert(__is_same(decay_t<int *const volatile __restrict>, int *), "");
-  static_assert(__is_same(decay_t<int const *const volatile>, int const *), "");
-  static_assert(__is_same(decay_t<int const *const volatile _Nonnull>, int const *), "");
-  static_assert(__is_same(decay_t<int &>, int), "");
-  static_assert(__is_same(decay_t<int const volatile &>, int), "");
-  static_assert(__is_same(decay_t<int &&>, int), "");
-  static_assert(__is_same(decay_t<int const volatile &&>, int), "");
-  static_assert(__is_same(decay_t<int()>, int (*)()), "");
-  static_assert(__is_same(decay_t<int (*)()>, int (*)()), "");
-  static_assert(__is_same(decay_t<int (*const)()>, int (*)()), "");
-  static_assert(__is_same(decay_t<int (*volatile)()>, int (*)()), "");
-  static_assert(__is_same(decay_t<int (*const volatile)()>, int (*)()), "");
-  static_assert(__is_same(decay_t<int (&)()>, int (*)()), "");
-  static_assert(__is_same(decay_t<IntAr>, int *), "");
-  static_assert(__is_same(decay_t<IntArNB>, int *), "");
+  static_assert(__is_same(decay_t<void>, void));
+  static_assert(__is_same(decay_t<const volatile void>, void));
+  static_assert(__is_same(decay_t<int>, int));
+  static_assert(__is_same(decay_t<const int>, int));
+  static_assert(__is_same(decay_t<volatile int>, int));
+  static_assert(__is_same(decay_t<const volatile int>, int));
+  static_assert(__is_same(decay_t<int *>, int *));
+  static_assert(__is_same(decay_t<int *const volatile>, int *));
+  static_assert(__is_same(decay_t<int *const volatile __restrict>, int *));
+  static_assert(__is_same(decay_t<int const *const volatile>, int const *));
+  static_assert(__is_same(decay_t<int const *const volatile _Nonnull>, int const *));
+  static_assert(__is_same(decay_t<int &>, int));
+  static_assert(__is_same(decay_t<int const volatile &>, int));
+  static_assert(__is_same(decay_t<int &&>, int));
+  static_assert(__is_same(decay_t<int const volatile &&>, int));
+  static_assert(__is_same(decay_t<int()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*const)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*volatile)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (*const volatile)()>, int (*)()));
+  static_assert(__is_same(decay_t<int (&)()>, int (*)()));
+  static_assert(__is_same(decay_t<IntAr>, int *));
+  static_assert(__is_same(decay_t<IntArNB>, int *));
 
-  static_assert(__is_same(decay_t<S>, S), "");
-  static_assert(__is_same(decay_t<S &>, S), "");
-  static_assert(__is_same(decay_t<S &&>, S), "");
-  static_assert(__is_same(decay_t<const S>, S), "");
-  static_assert(__is_same(decay_t<const S &>, S), "");
-  static_assert(__is_same(decay_t<const S &&>, S), "");
-  static_assert(__is_same(decay_t<volatile S>, S), "");
-  static_assert(__is_same(decay_t<volatile S &>, S), "");
-  static_assert(__is_same(decay_t<volatile S &&>, S), "");
-  static_assert(__is_same(decay_t<const volatile S>, S), "");
-  static_assert(__is_same(decay_t<const volatile S &>, S), "");
-  static_assert(__is_same(decay_t<const volatile S &&>, S), "");
-  static_assert(__is_same(decay_t<int S::*const volatile>, int S::*), "");
-  static_assert(__is_same(decay_t<int (S::*const volatile)()>, int(S::*)()), "");
-  static_assert(__is_same(decay_t<int S::*const volatile &>, int S::*), "");
-  static_assert(__is_same(decay_t<int (S::*const volatile &)()>, int(S::*)()), "");
-  static_assert(__is_same(decay_t<int S::*const volatile &&>, int S::*), "");
+  static_assert(__is_same(decay_t<S>, S));
+  static_assert(__is_same(decay_t<S &>, S));
+  static_assert(__is_same(decay_t<S &&>, S));
+  static_assert(__is_same(decay_t<const S>, S));
+  static_assert(__is_same(decay_t<const S &>, S));
+  static_assert(__is_same(decay_t<const S &&>, S));
+  static_assert(__is_same(decay_t<volatile S>, S));
+  static_assert(__is_same(decay_t<volatile S &>, S));
+  static_assert(__is_same(decay_t<volatile S &&>, S));
+  static_assert(__is_same(decay_t<const volatile S>, S));
+  static_assert(__is_same(decay_t<const volatile S &>, S));
+  static_assert(__is_same(decay_t<const volatile S &&>, S));
+  static_assert(__is_same(decay_t<int S::*const volatile>, int S::*));
+  static_assert(__is_same(decay_t<int (S::*const volatile)()>, int(S::*)()));
+  static_assert(__is_same(decay_t<int S::*const volatile &>, int S::*));
+  static_assert(__is_same(decay_t<int (S::*const volatile &)()>, int(S::*)()));
+  static_assert(__is_same(decay_t<int S::*const volatile &&>, int S::*));
 }
 
 template <class T> struct CheckAbominableFunction {};
 template <class M>
 struct CheckAbominableFunction<M S::*> {
   static void checks() {
-    static_assert(__is_same(add_lvalue_reference_t<M>, M), "");
-    static_assert(__is_same(add_pointer_t<M>, M), "");
-    static_assert(__is_same(add_rvalue_reference_t<M>, M), "");
-    static_assert(__is_same(decay_t<M>, M), "");
-    static_assert(__is_same(remove_const_t<M>, M), "");
-    static_assert(__is_same(remove_volatile_t<M>, M), "");
-    static_assert(__is_same(remove_cv_t<M>, M), "");
-    static_assert(__is_same(remove_cvref_t<M>, M), "");
-    static_assert(__is_same(remove_pointer_t<M>, M), "");
-    static_assert(__is_same(remove_reference_t<M>, M), "");
+    static_assert(__is_same(add_lvalue_reference_t<M>, M));
+    static_assert(__is_same(add_pointer_t<M>, M));
+    static_assert(__is_same(add_rvalue_reference_t<M>, M));
+    static_assert(__is_same(decay_t<M>, M));
+    static_assert(__is_same(remove_const_t<M>, M));
+    static_assert(__is_same(remove_volatile_t<M>, M));
+    static_assert(__is_same(remove_cv_t<M>, M));
+    static_assert(__is_same(remove_cvref_t<M>, M));
+    static_assert(__is_same(remove_pointer_t<M>, M));
+    static_assert(__is_same(remove_reference_t<M>, M));
 
-    static_assert(!__is_referenceable(M), "");
+    static_assert(!__is_referenceable(M));
   }
 };
 
@@ -3961,10 +3961,10 @@ void check_abominable_function() {
 template <class T> using make_signed_t = __make_signed(T);
 template <class T, class Expected>
 void check_make_signed() {
-  static_assert(__is_same(make_signed_t<T>, Expected), "");
-  static_assert(__is_same(make_signed_t<const T>, const Expected), "");
-  static_assert(__is_same(make_signed_t<volatile T>, volatile Expected), "");
-  static_assert(__is_same(make_signed_t<const volatile T>, const volatile Expected), "");
+  static_assert(__is_same(make_signed_t<T>, Expected));
+  static_assert(__is_same(make_signed_t<const T>, const Expected));
+  static_assert(__is_same(make_signed_t<volatile T>, volatile Expected));
+  static_assert(__is_same(make_signed_t<const volatile T>, const volatile Expected));
 }
 
 #if defined(__ILP32__) || defined(__LLP64__)
@@ -4074,10 +4074,10 @@ using make_unsigned_t = __make_unsigned(T);
 
 template <class T, class Expected>
 void check_make_unsigned() {
-  static_assert(__is_same(make_unsigned_t<T>, Expected), "");
-  static_assert(__is_same(make_unsigned_t<const T>, const Expected), "");
-  static_assert(__is_same(make_unsigned_t<volatile T>, volatile Expected), "");
-  static_assert(__is_same(make_unsigned_t<const volatile T>, const volatile Expected), "");
+  static_assert(__is_same(make_unsigned_t<T>, Expected));
+  static_assert(__is_same(make_unsigned_t<const T>, const Expected));
+  static_assert(__is_same(make_unsigned_t<volatile T>, volatile Expected));
+  static_assert(__is_same(make_unsigned_t<const volatile T>, const volatile Expected));
 }
 
 void make_unsigned() {
@@ -4160,74 +4160,74 @@ void make_unsigned() {
 template <class T> using remove_extent_t = __remove_extent(T);
 
 void remove_extent() {
-  static_assert(__is_same(remove_extent_t<void>, void), "");
-  static_assert(__is_same(remove_extent_t<int>, int), "");
-  static_assert(__is_same(remove_extent_t<int[]>, int), "");
-  static_assert(__is_same(remove_extent_t<int[1]>, int), "");
-  static_assert(__is_same(remove_extent_t<int[1][2]>, int[2]), "");
-  static_assert(__is_same(remove_extent_t<int[][2]>, int[2]), "");
-  static_assert(__is_same(remove_extent_t<const int[]>, const int), "");
-  static_assert(__is_same(remove_extent_t<const int[1]>, const int), "");
-  static_assert(__is_same(remove_extent_t<const int[1][2]>, const int[2]), "");
-  static_assert(__is_same(remove_extent_t<const int[][2]>, const int[2]), "");
-  static_assert(__is_same(remove_extent_t<volatile int[]>, volatile int), "");
-  static_assert(__is_same(remove_extent_t<volatile int[1]>, volatile int), "");
-  static_assert(__is_same(remove_extent_t<volatile int[1][2]>, volatile int[2]), "");
-  static_assert(__is_same(remove_extent_t<volatile int[][2]>, volatile int[2]), "");
-  static_assert(__is_same(remove_extent_t<const volatile int[]>, const volatile int), "");
-  static_assert(__is_same(remove_extent_t<const volatile int[1]>, const volatile int), "");
-  static_assert(__is_same(remove_extent_t<const volatile int[1][2]>, const volatile int[2]), "");
-  static_assert(__is_same(remove_extent_t<const volatile int[][2]>, const volatile int[2]), "");
-  static_assert(__is_same(remove_extent_t<int *>, int *), "");
-  static_assert(__is_same(remove_extent_t<int &>, int &), "");
-  static_assert(__is_same(remove_extent_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_extent_t<int()>, int()), "");
-  static_assert(__is_same(remove_extent_t<int (*)()>, int (*)()), "");
-  static_assert(__is_same(remove_extent_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_extent_t<void>, void));
+  static_assert(__is_same(remove_extent_t<int>, int));
+  static_assert(__is_same(remove_extent_t<int[]>, int));
+  static_assert(__is_same(remove_extent_t<int[1]>, int));
+  static_assert(__is_same(remove_extent_t<int[1][2]>, int[2]));
+  static_assert(__is_same(remove_extent_t<int[][2]>, int[2]));
+  static_assert(__is_same(remove_extent_t<const int[]>, const int));
+  static_assert(__is_same(remove_extent_t<const int[1]>, const int));
+  static_assert(__is_same(remove_extent_t<const int[1][2]>, const int[2]));
+  static_assert(__is_same(remove_extent_t<const int[][2]>, const int[2]));
+  static_assert(__is_same(remove_extent_t<volatile int[]>, volatile int));
+  static_assert(__is_same(remove_extent_t<volatile int[1]>, volatile int));
+  static_assert(__is_same(remove_extent_t<volatile int[1][2]>, volatile int[2]));
+  static_assert(__is_same(remove_extent_t<volatile int[][2]>, volatile int[2]));
+  static_assert(__is_same(remove_extent_t<const volatile int[]>, const volatile int));
+  static_assert(__is_same(remove_extent_t<const volatile int[1]>, const volatile int));
+  static_assert(__is_same(remove_extent_t<const volatile int[1][2]>, const volatile int[2]));
+  static_assert(__is_same(remove_extent_t<const volatile int[][2]>, const volatile int[2]));
+  static_assert(__is_same(remove_extent_t<int *>, int *));
+  static_assert(__is_same(remove_extent_t<int &>, int &));
+  static_assert(__is_same(remove_extent_t<int &&>, int &&));
+  static_assert(__is_same(remove_extent_t<int()>, int()));
+  static_assert(__is_same(remove_extent_t<int (*)()>, int (*)()));
+  static_assert(__is_same(remove_extent_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_extent_t<S>, S), "");
-  static_assert(__is_same(remove_extent_t<int S::*>, int S::*), "");
-  static_assert(__is_same(remove_extent_t<int (S::*)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_extent_t<S>, S));
+  static_assert(__is_same(remove_extent_t<int S::*>, int S::*));
+  static_assert(__is_same(remove_extent_t<int (S::*)()>, int(S::*)()));
 
   using SomeArray = int[1][2];
-  static_assert(__is_same(remove_extent_t<const SomeArray>, const int[2]), "");
+  static_assert(__is_same(remove_extent_t<const SomeArray>, const int[2]));
 }
 
 template <class T> using remove_all_extents_t = __remove_all_extents(T);
 
 void remove_all_extents() {
-  static_assert(__is_same(remove_all_extents_t<void>, void), "");
-  static_assert(__is_same(remove_all_extents_t<int>, int), "");
-  static_assert(__is_same(remove_all_extents_t<const int>, const int), "");
-  static_assert(__is_same(remove_all_extents_t<volatile int>, volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<const volatile int>, const volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<int[]>, int), "");
-  static_assert(__is_same(remove_all_extents_t<int[1]>, int), "");
-  static_assert(__is_same(remove_all_extents_t<int[1][2]>, int), "");
-  static_assert(__is_same(remove_all_extents_t<int[][2]>, int), "");
-  static_assert(__is_same(remove_all_extents_t<const int[]>, const int), "");
-  static_assert(__is_same(remove_all_extents_t<const int[1]>, const int), "");
-  static_assert(__is_same(remove_all_extents_t<const int[1][2]>, const int), "");
-  static_assert(__is_same(remove_all_extents_t<const int[][2]>, const int), "");
-  static_assert(__is_same(remove_all_extents_t<volatile int[]>, volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<volatile int[1]>, volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<volatile int[1][2]>, volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<volatile int[][2]>, volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<const volatile int[]>, const volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<const volatile int[1]>, const volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<const volatile int[1][2]>, const volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<const volatile int[][2]>, const volatile int), "");
-  static_assert(__is_same(remove_all_extents_t<int *>, int *), "");
-  static_assert(__is_same(remove_all_extents_t<int &>, int &), "");
-  static_assert(__is_same(remove_all_extents_t<int &&>, int &&), "");
-  static_assert(__is_same(remove_all_extents_t<int()>, int()), "");
-  static_assert(__is_same(remove_all_extents_t<int (*)()>, int (*)()), "");
-  static_assert(__is_same(remove_all_extents_t<int (&)()>, int (&)()), "");
+  static_assert(__is_same(remove_all_extents_t<void>, void));
+  static_assert(__is_same(remove_all_extents_t<int>, int));
+  static_assert(__is_same(remove_all_extents_t<const int>, const int));
+  static_assert(__is_same(remove_all_extents_t<volatile int>, volatile int));
+  static_assert(__is_same(remove_all_extents_t<const volatile int>, const volatile int));
+  static_assert(__is_same(remove_all_extents_t<int[]>, int));
+  static_assert(__is_same(remove_all_extents_t<int[1]>, int));
+  static_assert(__is_same(remove_all_extents_t<int[1][2]>, int));
+  static_assert(__is_same(remove_all_extents_t<int[][2]>, int));
+  static_assert(__is_same(remove_all_extents_t<const int[]>, const int));
+  static_assert(__is_same(remove_all_extents_t<const int[1]>, const int));
+  static_assert(__is_same(remove_all_extents_t<const int[1][2]>, const int));
+  static_assert(__is_same(remove_all_extents_t<const int[][2]>, const int));
+  static_assert(__is_same(remove_all_extents_t<volatile int[]>, volatile int));
+  static_assert(__is_same(remove_all_extents_t<volatile int[1]>, volatile int));
+  static_assert(__is_same(remove_all_extents_t<volatile int[1][2]>, volatile int));
+  static_assert(__is_same(remove_all_extents_t<volatile int[][2]>, volatile int));
+  static_assert(__is_same(remove_all_extents_t<const volatile int[]>, const volatile int));
+  static_assert(__is_same(remove_all_extents_t<const volatile int[1]>, const volatile int));
+  static_assert(__is_same(remove_all_extents_t<const volatile int[1][2]>, const volatile int));
+  static_assert(__is_same(remove_all_extents_t<const volatile int[][2]>, const volatile int));
+  static_assert(__is_same(remove_all_extents_t<int *>, int *));
+  static_assert(__is_same(remove_all_extents_t<int &>, int &));
+  static_assert(__is_same(remove_all_extents_t<int &&>, int &&));
+  static_assert(__is_same(remove_all_extents_t<int()>, int()));
+  static_assert(__is_same(remove_all_extents_t<int (*)()>, int (*)()));
+  static_assert(__is_same(remove_all_extents_t<int (&)()>, int (&)()));
 
-  static_assert(__is_same(remove_all_extents_t<S>, S), "");
-  static_assert(__is_same(remove_all_extents_t<int S::*>, int S::*), "");
-  static_assert(__is_same(remove_all_extents_t<int (S::*)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_all_extents_t<S>, S));
+  static_assert(__is_same(remove_all_extents_t<int S::*>, int S::*));
+  static_assert(__is_same(remove_all_extents_t<int (S::*)()>, int(S::*)()));
 
   using SomeArray = int[1][2];
-  static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int), "");
+  static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int));
 }
