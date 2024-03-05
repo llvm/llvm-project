@@ -41,9 +41,40 @@ public:
   using OpRewritePattern<OpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+
+    // Only match a target op with a  'depend' clause on it.
     if (op.getDependVars().empty()) {
       return rewriter.notifyMatchFailure(op, "depend clause not found on op");
     }
+
+    // Step 1: Create a new task op and tack on the dependency from the 'depend'
+    // clause on it.
+    omp::TaskOp taskOp = rewriter.create<omp::TaskOp>(
+        op.getLoc(), /*if_expr*/ Value(),
+        /*final_expr*/ Value(),
+        /*untied*/ UnitAttr(),
+        /*mergeable*/ UnitAttr(),
+        /*in_reduction_vars*/ ValueRange(),
+        /*in_reductions*/ nullptr,
+        /*priority*/ Value(), op.getDepends().value(), op.getDependVars(),
+        /*allocate_vars*/ ValueRange(),
+        /*allocate_vars*/ ValueRange());
+    Block *block = rewriter.createBlock(&taskOp.getRegion());
+    rewriter.setInsertionPointToEnd(block);
+    // Step 2: Clone and put the entire target op inside the newly created
+    // task's region.
+    Operation *clonedTargetOperation = rewriter.clone(*op.getOperation());
+    rewriter.create<mlir::omp::TerminatorOp>(op.getLoc());
+
+    // Step 3: Remove the dependency information from the clone target op.
+    omp::TargetOp clonedTargetOp =
+        llvm::dyn_cast<omp::TargetOp>(clonedTargetOperation);
+    if (clonedTargetOp) {
+      clonedTargetOp.removeDependsAttr();
+      clonedTargetOp.getDependVarsMutable().clear();
+    }
+    // Step 4: Erase the original target op
+    rewriter.eraseOp(op.getOperation());
     return success();
   }
 };
@@ -56,11 +87,10 @@ populateOmpTaskBasedTargetRewritePatterns(RewritePatternSet &patterns) {
 
 void OpenMPTaskBasedTargetPass::runOnOperation() {
   Operation *op = getOperation();
-  LLVM_DEBUG(llvm::dbgs() << "Running on the following operation\n");
-  //  LLVM_DEBUG(llvm::dbgs() << op->dump());
 
   RewritePatternSet patterns(op->getContext());
   populateOmpTaskBasedTargetRewritePatterns(patterns);
+
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     signalPassFailure();
 }
