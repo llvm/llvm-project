@@ -324,16 +324,6 @@ CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent16_4)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);
-}
-CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent16_8)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
-}
 #endif
 
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Floor4_1)(
@@ -441,12 +431,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Fraction10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Fraction(x);
 }
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Fraction16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Fraction(x);
-}
 #endif
 
 bool RTDEF(IsFinite4)(CppTypeFor<TypeCategory::Real, 4> x) {
@@ -529,13 +513,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ModReal10)(
     const char *sourceFile, int sourceLine) {
   return RealMod<false>(x, p, sourceFile, sourceLine);
 }
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(ModReal16)(
-    CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
-    const char *sourceFile, int sourceLine) {
-  return RealMod<false>(x, p, sourceFile, sourceLine);
-}
 #endif
 
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(ModuloInteger1)(
@@ -586,13 +563,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ModuloReal10)(
     const char *sourceFile, int sourceLine) {
   return RealMod<true>(x, p, sourceFile, sourceLine);
 }
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(ModuloReal16)(
-    CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
-    const char *sourceFile, int sourceLine) {
-  return RealMod<true>(x, p, sourceFile, sourceLine);
-}
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Nearest4)(
@@ -607,12 +577,6 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Nearest8)(
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Nearest10)(
     CppTypeFor<TypeCategory::Real, 10> x, bool positive) {
   return Nearest<64>(x, positive);
-}
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Nearest16)(
-    CppTypeFor<TypeCategory::Real, 16> x, bool positive) {
-  return Nearest<113>(x, positive);
 }
 #endif
 
@@ -721,12 +685,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(RRSpacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return RRSpacing<64>(x);
 }
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(RRSpacing16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return RRSpacing<113>(x);
-}
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTDEF(SetExponent4)(
@@ -742,12 +700,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(SetExponent10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
   return SetExponent(x, p);
 }
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(SetExponent16)(
-    CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
-  return SetExponent(x, p);
-}
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Scale4)(
@@ -761,12 +713,6 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Scale8)(
 #if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Scale10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
-  return Scale(x, p);
-}
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Scale16)(
-    CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
   return Scale(x, p);
 }
 #endif
@@ -822,12 +768,6 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Spacing8)(
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Spacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Spacing<64>(x);
-}
-#elif LDBL_MANT_DIG == 113
-// The __float128 implementation resides in FortranFloat128Math library.
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Spacing16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Spacing<113>(x);
 }
 #endif
 
