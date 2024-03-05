@@ -226,11 +226,25 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
-    if (A->getOption().getID() == options::OPT_HLSL_Version) {
+    if (A->getOption().getID() == options::OPT_dxc_hlsl_version) {
       // Translate -HV into -std for llvm
-      DAL->AddSeparateArg(nullptr,
-                          Opts.getOption(options::OPT_stdlibxx_isystem),
-                          A->getValue());
+      // depending on the value given, assign std to:
+      // c++14,c++17,c++20,c++latest,c11,c17
+      const char *value = A->getValue();
+      if (strcmp(value, "2016") == 0) {
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            "hlsl2016");
+      } else if (strcmp(value, "2017") == 0) {
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            "hlsl2017");
+      } else if (strcmp(value, "2018") == 0) {
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            "hlsl2018");
+      } else if (strcmp(value, "2021") == 0) {
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            "hlsl2021");
+      }
+
       A->claim();
       continue;
     }

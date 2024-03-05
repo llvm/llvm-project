@@ -8545,7 +8545,7 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"Entry point name">;
-def dxc_HlslVersion : Option<["--", "/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
+def dxc_hlsl_version : Option<["--", "/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"HLSL Version">;
