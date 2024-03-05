@@ -265,6 +265,8 @@ Bug Fixes to C++ Support
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter. (#GH80971)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
+- Fix parsing of abominable function types inside type traits.
+  Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
 - Clang now classifies aggregate initialization in C++17 and newer as constant
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Partially fixes

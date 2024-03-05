@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c11 -Wgnu-folding-constant -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fms-compatibility -Wgnu-folding-constant -DMS -fsyntax-only -verify=expected,ms %s
-// RUN: %clang_cc1 -std=c99 -pedantic -Wgnu-folding-constant -fsyntax-only -verify=expected,ext %s
+// RUN: %clang_cc1 -std=c11 -Wgnu-folding-constant -fsyntax-only -verify=expected,c %s
+// RUN: %clang_cc1 -fms-compatibility -Wgnu-folding-constant -DMS -fsyntax-only -verify=expected,ms,c %s
+// RUN: %clang_cc1 -std=c99 -pedantic -Wgnu-folding-constant -fsyntax-only -verify=expected,ext,c %s
 // RUN: %clang_cc1 -xc++ -std=c++11 -pedantic -fsyntax-only -verify=expected,ext,cxx %s
 
 _Static_assert("foo", "string is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
@@ -57,7 +57,8 @@ UNION(char[2], short) u2 = { .one = { 'a', 'b' } }; // ext-warning 3 {{'_Static_
 typedef UNION(char, short) U3; // expected-error {{static assertion failed due to requirement 'sizeof(char) == sizeof(short)': type size mismatch}} \
                                // expected-note{{evaluates to '1 == 2'}} \
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
-typedef UNION(float, 0.5f) U4; // expected-error {{expected a type}} \
+typedef UNION(float, 0.5f) U4; // c-error {{expected a type}} \
+                               // cxx-error {{type name requires a specifier or qualifier}} \
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
 
 // After defining the assert macro in MS-compatibility mode, we should
