@@ -149,27 +149,34 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
 
 addr_t ABI::FixCodeAddress(lldb::addr_t pc) {
   ProcessSP process_sp(GetProcessSP());
+
   addr_t mask = process_sp->GetCodeAddressMask();
-  bool is_highmem = pc & (1ULL << 63);
-  if (is_highmem &&
-      process_sp->GetHighmemCodeAddressMask() != LLDB_INVALID_ADDRESS_MASK)
-    mask = process_sp->GetHighmemCodeAddressMask();
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     return pc;
 
+  // Assume the high bit is used for addressing, which
+  // may not be correct on all architectures e.g. AArch64
+  // where Top Byte Ignore mode is often used to store
+  // metadata in the top byte, and b55 is the bit used for
+  // differentiating between low- and high-memory addresses.
+  // That target's ABIs need to override this method.
+  bool is_highmem = pc & (1ULL << 63);
   return is_highmem ? pc | mask : pc & (~mask);
 }
 
 addr_t ABI::FixDataAddress(lldb::addr_t pc) {
   ProcessSP process_sp(GetProcessSP());
   addr_t mask = process_sp->GetDataAddressMask();
-  bool is_highmem = pc & (1ULL << 63);
-  if (is_highmem &&
-      process_sp->GetHighmemDataAddressMask() != LLDB_INVALID_ADDRESS_MASK)
-    mask = process_sp->GetHighmemCodeAddressMask();
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     return pc;
 
+  // Assume the high bit is used for addressing, which
+  // may not be correct on all architectures e.g. AArch64
+  // where Top Byte Ignore mode is often used to store
+  // metadata in the top byte, and b55 is the bit used for
+  // differentiating between low- and high-memory addresses.
+  // That target's ABIs need to override this method.
+  bool is_highmem = pc & (1ULL << 63);
   return is_highmem ? pc | mask : pc & (~mask);
 }
 
