@@ -34,6 +34,8 @@ void test() {
   CharT arr[4];
   std::span<CharT> sp{arr};
 
+  // TODO:
+
   // Mode: default
   {
     SpStream rhsSpSt{sp};
