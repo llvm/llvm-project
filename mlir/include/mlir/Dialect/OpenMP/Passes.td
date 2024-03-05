@@ -42,10 +42,11 @@ def OpenMPTaskBasedTarget : Pass<"openmp-task-based-target", "func::FuncOp"> {
           "test.foobar"() : ()->()
            omp.terminator
     }
+    omp.terminator
   }
   ```
   The intent is to make it easier to translate to LLVMIR by avoiding the
-  creation of such tasks in the OMPIRBuilder
+  creation of such tasks in the OMPIRBuilder.
   }];
 
   let dependentDialects = ["omp::OpenMPDialect"];
