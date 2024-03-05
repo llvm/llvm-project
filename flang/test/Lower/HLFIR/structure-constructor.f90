@@ -161,6 +161,8 @@ end subroutine test4
 ! CHECK:             hlfir.assign %[[VAL_26]] to %[[VAL_20]] realloc keep_lhs_len temporary_lhs : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_12]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>, !fir.ref<!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>
+! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroyWithoutFinalization(%[[VAL_27]]
 ! CHECK:           return
 ! CHECK:         }
 
@@ -201,6 +203,8 @@ end subroutine test5
 ! CHECK:             hlfir.assign %[[VAL_24]] to %[[VAL_18]] realloc temporary_lhs : !fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_11]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>>, !fir.ref<!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>>
+! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroyWithoutFinalization(%[[VAL_24]]
 ! CHECK:           return
 ! CHECK:         }
 
@@ -291,6 +295,10 @@ end subroutine test6
 ! CHECK:           %[[VAL_70:.*]] = hlfir.as_expr %[[VAL_48]]#0 move %[[VAL_69]] : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>, i1) -> !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
 ! CHECK:           hlfir.assign %[[VAL_70]] to %[[VAL_44]] temporary_lhs : !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>
 ! CHECK:           hlfir.assign %[[VAL_20]]#0 to %[[VAL_12]]#0 : !fir.ref<!fir.type<_QMtypesTt6{t5:!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>, !fir.ref<!fir.type<_QMtypesTt6{t5:!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>
+! CHECK:           %[[VAL_71:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.type<_QMtypesTt6{t5:!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroyWithoutFinalization(%[[VAL_71]]
+! CHECK:           %[[VAL_72:.*]] = fir.convert %[[VAL_29]] : (!fir.box<!fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroyWithoutFinalization(%[[VAL_72]]
 ! CHECK:           return
 ! CHECK:         }
 
@@ -375,6 +383,8 @@ end subroutine test8
 ! CHECK:             hlfir.assign %[[VAL_29]] to %[[VAL_22]] realloc keep_lhs_len temporary_lhs : !fir.heap<!fir.char<1,12>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroyWithoutFinalization(%[[VAL_30]]
 ! CHECK:           return
 ! CHECK:         }
 
@@ -410,6 +420,8 @@ end subroutine test9
 ! CHECK:           %[[VAL_20:.*]] = hlfir.designate %[[VAL_12]]#0{"c"}   typeparams %[[VAL_19]] {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
 ! CHECK:           hlfir.assign %[[VAL_11]]#0 to %[[VAL_20]] realloc keep_lhs_len temporary_lhs : !fir.ref<!fir.char<1,12>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
 ! CHECK:           hlfir.assign %[[VAL_12]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<none>
+! CHECK:           fir.call @_FortranADestroyWithoutFinalization(%[[VAL_21]]
 ! CHECK:           return
 ! CHECK:         }
 
