@@ -31,14 +31,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
-  using SpStream =
-#ifndef TEST_HAS_NO_NASTY_STRING
-      std::conditional_t<std::same_as<CharT, nasty_char>,
-                         std::basic_ispanstream<nasty_char, nasty_char_traits>,
-                         std::basic_ispanstream<CharT, TraitsT>>;
-#else
-      std::basic_ispanstream<CharT, TraitsT>;
-#endif
+  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   // Non-const convertible
   static_assert(std::constructible_from<SpStream, ReadOnlySpan<CharT>>);
