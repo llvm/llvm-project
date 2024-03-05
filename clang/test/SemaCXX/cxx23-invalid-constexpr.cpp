@@ -1,8 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx23 -std=c++23 -Wpre-c++23-compat %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -std=c++20 -Wno-c++23-extensions -Wno-invalid-constexpr %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx20 -std=c++17 -Wno-c++23-extensions -Wno-invalid-constexpr %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx20 -std=c++14 -Wno-c++23-extensions -Wno-invalid-constexpr %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx20,cxx11 -std=c++11 -Wno-c++14-extensions -Wno-c++23-extensions -Wno-invalid-constexpr -Wno-constexpr-not-const %s
 
 // This test covers modifications made by P2448R2.
 
@@ -158,5 +154,33 @@ void test() {
                                               // expected-note {{in call to}}
   constexpr bool FFF = (NonDefaultMembers() == NonDefaultMembers()); // expected-error{{must be initialized by a constant expression}} \
                                                                      // expected-note{{non-literal}}
-
 }
+
+struct A {
+  A ();
+  ~A();
+};
+
+template <class T>
+struct opt
+{
+  union {
+    char c;
+    T data;
+  };
+
+  constexpr opt() {}
+
+  constexpr ~opt()  {
+   if (engaged)
+     data.~T();
+ }
+
+  bool engaged = false;
+};
+
+consteval void foo() {
+  opt<A> a;
+}
+
+void bar() { foo(); }

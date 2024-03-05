@@ -1724,8 +1724,8 @@ static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
     if (Kind == Sema::CheckConstexprKind::Diagnose) {
       SemaRef.Diag(DD->getLocation(),
                    SemaRef.getLangOpts().CPlusPlus23
-                       ? diag::warn_cxx23_compat_constexpr_dtor_subobject
-                       : diag::ext_constexpr_dtor_subobject)
+                       ? diag::warn_cxx20_compat_constexpr_dtor_subobject
+                       : diag::err_constexpr_dtor_subobject)
           << static_cast<int>(DD->getConstexprKind()) << !FD
           << (FD ? FD->getDeclName() : DeclarationName()) << T;
       SemaRef.Diag(Loc, diag::note_constexpr_dtor_subobject)
@@ -1760,8 +1760,8 @@ static bool CheckConstexprParameterTypes(Sema &SemaRef,
     if (CheckLiteralType(
             SemaRef, Kind, ParamLoc, *i,
             SemaRef.getLangOpts().CPlusPlus23
-                ? diag::warn_cxx23_compat_constexpr_non_literal_param
-                : diag::ext_constexpr_non_literal_param,
+                ? diag::warn_cxx20_compat_constexpr_non_literal_param
+                : diag::err_constexpr_non_literal_param,
             ArgIndex + 1, PD->getSourceRange(), isa<CXXConstructorDecl>(FD),
             FD->isConsteval()))
       return SemaRef.getLangOpts().CPlusPlus23;
@@ -1776,8 +1776,8 @@ static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
   if (CheckLiteralType(
           SemaRef, Kind, FD->getLocation(), FD->getReturnType(),
           SemaRef.getLangOpts().CPlusPlus23
-              ? diag::warn_cxx23_compat_constexpr_non_literal_return
-              : diag::ext_constexpr_non_literal_return,
+              ? diag::warn_cxx20_compat_constexpr_non_literal_return
+              : diag::err_constexpr_non_literal_return,
           FD->isConsteval()))
     return SemaRef.getLangOpts().CPlusPlus23;
   return true;
@@ -2471,7 +2471,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     SemaRef.Diag(
         Dcl->getLocation(),
         SemaRef.getLangOpts().CPlusPlus23
-            ? diag::warn_cxx23_compat_constexpr_function_never_constant_expr
+            ? diag::warn_cxx20_compat_constexpr_function_never_constant_expr
             : diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
         << Dcl->getNameInfo().getSourceRange();
@@ -7881,7 +7881,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
             Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
           HadError = true;
         } else {
-          Diag(MD->getBeginLoc(), diag::ext_incorrect_defaulted_constexpr)
+          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr)
               << CSM << MD->isConsteval();
         }
         // FIXME: Explain why the special member can't be constexpr.
@@ -9121,7 +9121,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
         !Info.Constexpr) {
       Diag(FD->getBeginLoc(),
            getLangOpts().CPlusPlus23
-               ? diag::warn_cxx23_compat_defaulted_comparison_constexpr_mismatch
+               ? diag::warn_cxx20_compat_defaulted_comparison_constexpr_mismatch
                : diag::ext_defaulted_comparison_constexpr_mismatch)
           << FD->isImplicit() << (int)DCK << FD->isConsteval();
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
@@ -9135,8 +9135,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   //   declaration, it is implicitly considered to be constexpr.
   // FIXME: Only applying this to the first declaration seems problematic, as
   // simple reorderings can affect the meaning of the program.
-  if ((First && !FD->isConstexpr() && Info.Constexpr) ||
-      getLangOpts().CPlusPlus23)
+  if (First && !FD->isConstexpr() && Info.Constexpr)
     FD->setConstexprKind(ConstexprSpecKind::Constexpr);
 
   // C++2a [except.spec]p3:
