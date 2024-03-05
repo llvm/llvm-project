@@ -58,6 +58,7 @@ struct UnimplementedFeature {
   static bool pointerOverflowSanitizer() { return false; }
   static bool sanitizeDtor() { return false; }
   static bool sanitizeVLABound() { return false; }
+  static bool sanitizerBuiltin() { return false; }
   static bool sanitizerReturn() { return false; }
 
   // ObjC
