@@ -2682,11 +2682,10 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym, const TargetMachine &TM) const {
   const XCOFF::StorageMappingClass SMC = [](const MCSymbol *Sym,
                                             const TargetMachine &TM) {
-
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(Sym);
 
-    // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC, otherwise
-    // the AIX assembler will complain.
+    // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC,
+    // otherwise the AIX assembler will complain.
     if (XSym->getSymbolTableName() == "_$TLSML")
       return XCOFF::XMC_TC;
 
