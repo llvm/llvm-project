@@ -2942,6 +2942,17 @@ libc_function(
 )
 
 libc_function(
+    name = "pipe",
+    srcs = ["src/unistd/linux/pipe.cpp"],
+    hdrs = ["src/unistd/pipe.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
     name = "lseek",
     srcs = ["src/unistd/linux/lseek.cpp"],
     hdrs = ["src/unistd/lseek.h"],
@@ -3424,6 +3435,39 @@ libc_support_library(
 libc_support_library(
   name = "types_struct_epoll_event",
   hdrs = ["hdr/types/struct_epoll_event.h"],
+)
+
+libc_function(
+    name = "epoll_create",
+    srcs = ["src/sys/epoll/linux/epoll_create.cpp"],
+    hdrs = ["src/sys/epoll/epoll_create.h"],
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_create1",
+    srcs = ["src/sys/epoll/linux/epoll_create1.cpp"],
+    hdrs = ["src/sys/epoll/epoll_create1.h"],
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_ctl",
+    srcs = ["src/sys/epoll/linux/epoll_ctl.cpp"],
+    hdrs = ["src/sys/epoll/epoll_ctl.h"],
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
 )
 
 libc_function(

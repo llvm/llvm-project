@@ -25,7 +25,7 @@ LLVM_LIBC_FUNCTION(int, epoll_pwait2,
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_epoll_pwait2, epfd, reinterpret_cast<long>(events), maxevents,
       reinterpret_cast<long>(timeout), reinterpret_cast<long>(sigmask),
-      sizeof(sigset_t));
+      NSIG / 8);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, epoll_pwait2,
     return -1;
   }
 
-  return 0;
+  return ret;
 }
 
 } // namespace LIBC_NAMESPACE
