@@ -238,10 +238,7 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
 
 /// Return true if the subtarget allows calls to immediate address.
 bool X86Subtarget::isLegalToCallImmediateAddr() const {
-  // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
-  // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
-  // the following check for Win32 should be removed.
-  if (Is64Bit || isTargetWin32())
+  if (Is64Bit)
     return false;
   return isTargetELF() || TM.getRelocationModel() == Reloc::Static;
 }
