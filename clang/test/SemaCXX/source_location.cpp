@@ -463,7 +463,71 @@ void ctor_tests() {
 constexpr SL global_sl = SL::current();
 static_assert(is_equal(global_sl.function(), ""));
 
+template <class T>
+class TestBI {
+public:
+   TestBI() {
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
+     static_assert(is_equal(__func__, "TestBI"));
+#else
+     static_assert(is_equal(__FUNCTION__, "TestBI"));
+     static_assert(is_equal(__func__, "TestBI"));
+#endif
+   }
+};
+
+template <class T>
+class TestClass {
+public:
+   TestClass() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
+      static_assert(is_equal(__func__, "TestClass"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestClass"));
+      static_assert(is_equal(__func__, "TestClass"));
+#endif
+   }
+};
+
+template <class T>
+class TestStruct {
+public:
+   TestStruct() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestStruct<struct test_func::S>::TestStruct"));
+      static_assert(is_equal(__func__, "TestStruct"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestStruct"));
+      static_assert(is_equal(__func__, "TestStruct"));
+#endif
+   }
+};
+
+template <class T>
+class TestEnum {
+public:
+   TestEnum() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestEnum<enum test_func::E>::TestEnum"));
+      static_assert(is_equal(__func__, "TestEnum"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestEnum"));
+      static_assert(is_equal(__func__, "TestEnum"));
+#endif
+   }
+};
+
+class C {};
+struct S {};
+enum E {};
 } // namespace test_func
+
+test_func::TestBI<int> t1;
+test_func::TestClass<test_func::C> t2;
+test_func::TestStruct<test_func::S> t3;
+test_func::TestEnum<test_func::E> t4;
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_FUNCSIG()

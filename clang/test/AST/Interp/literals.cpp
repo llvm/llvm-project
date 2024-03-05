@@ -1039,7 +1039,7 @@ namespace PredefinedExprs {
     static_assert(strings_match(__FUNCSIG__, "void __cdecl PredefinedExprs::foo(void)"), "");
     static_assert(strings_match(L__FUNCSIG__, L"void __cdecl PredefinedExprs::foo(void)"), "");
     static_assert(strings_match(L__FUNCTION__, L"foo"), "");
-    static_assert(strings_match(__FUNCTION__, "foo"), "");
+    static_assert(strings_match(__FUNCTION__, "PredefinedExprs::foo"), "");
     static_assert(strings_match(__func__, "foo"), "");
     static_assert(strings_match(__PRETTY_FUNCTION__, "void PredefinedExprs::foo()"), "");
   }
@@ -1049,9 +1049,9 @@ namespace PredefinedExprs {
     __extension__ __FUNCTION__; // both-warning {{result unused}}
     return __FUNCTION__[index];
   }
-  static_assert(heh(0) == 'h', "");
-  static_assert(heh(1) == 'e', "");
-  static_assert(heh(2) == 'h', "");
+  static_assert(heh(0) == 'P', "");
+  static_assert(heh(1) == 'r', "");
+  static_assert(heh(2) == 'e', "");
 #endif
 }
 

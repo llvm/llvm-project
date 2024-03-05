@@ -1635,6 +1635,17 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+        !Policy.SuppressUnwrittenScope) {
+      std::string prefix = T->isClassType()       ? "class "
+                           : T->isStructureType() ? "struct "
+                           : T->isUnionType()     ? "union "
+                                                  : "";
+      OS << prefix;
+      Policy.SuppressTagKeyword = true;
+      Policy.SuppressScope = false;
+      return printBefore(T->getNamedType(), OS);
+    }
     if (Qualifier)
       Qualifier->print(OS, Policy);
   }
@@ -2260,10 +2271,15 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      // Tries to print the argument with location info if exists.
-      printArgument(Arg, Policy, ArgOS,
-                    TemplateParameterList::shouldIncludeTypeForArgument(
-                        Policy, TPL, ParmIndex));
+      if (!Policy.SuppressTagKeyword &&
+          Argument.getKind() == TemplateArgument::Type &&
+          isa<TagType>(Argument.getAsType()))
+        OS << Argument.getAsType().getAsString().data();
+      else
+        // Tries to print the argument with location info if exists.
+        printArgument(Arg, Policy, ArgOS,
+                      TemplateParameterList::shouldIncludeTypeForArgument(
+                          Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
