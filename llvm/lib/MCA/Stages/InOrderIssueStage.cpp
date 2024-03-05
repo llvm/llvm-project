@@ -286,7 +286,17 @@ void InOrderIssueStage::updateIssuedInst() {
     InstRef &IR = *I;
     Instruction &IS = *IR.getInstruction();
 
-    IS.cycleEvent();
+    // Do not call cycleEvent if this instruction issue is carried over to the
+    // next cycle since the extra issue cycles are not modeled inside
+    // Instruction
+    if (!CarriedOver) {
+      IS.cycleEvent();
+    } else {
+      LLVM_DEBUG(dbgs() << "[N] Instruction #" << IR << " is still issuing\n");
+      ++I;
+      continue;
+    }
+
     if (!IS.isExecuted()) {
       LLVM_DEBUG(dbgs() << "[N] Instruction #" << IR
                         << " is still executing\n");
@@ -294,16 +304,12 @@ void InOrderIssueStage::updateIssuedInst() {
       continue;
     }
 
-    // Allow updateCarriedOver to handle the instruction being executed if the
-    // instruction takes multiple cycles to issue.
-    if (!CarriedOver) {
-      PRF.onInstructionExecuted(&IS);
-      LSU.onInstructionExecuted(IR);
-      notifyInstructionExecuted(IR);
-      ++NumExecuted;
+    PRF.onInstructionExecuted(&IS);
+    LSU.onInstructionExecuted(IR);
+    notifyInstructionExecuted(IR);
+    ++NumExecuted;
 
-      retireInstruction(*I);
-    }
+    retireInstruction(*I);
 
     std::iter_swap(I, E - NumExecuted);
   }
@@ -340,6 +346,8 @@ void InOrderIssueStage::updateCarriedOver() {
     notifyInstructionExecuted(CarriedOver);
 
     retireInstruction(CarriedOver);
+
+    IssuedInst.erase(llvm::find(IssuedInst, CarriedOver));
   }
 
   CarriedOver = InstRef();
