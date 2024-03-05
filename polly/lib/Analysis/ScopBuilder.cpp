@@ -2567,7 +2567,6 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
                      .intersect_domain(isl::manage(Domain.copy()));
     isl::set RS = R.range();
     isl::set WS = W.range();
-
     isl::set InterAccs =
         isl::manage(RS.copy()).intersect(isl::manage(WS.copy()));
     Valid = !InterAccs.is_empty();
@@ -2583,22 +2582,21 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
     isl::set AllAccs = AllAccsRel.range();
 
     Valid = !hasIntersectingAccesses(AllAccs, LoadMA, StoreMA, Domain, MemAccs);
-
-    LLVM_DEBUG(dbgs() << " == The accessed memory is " << (Valid ? "not " : "")
-                      << "accessed by other instructions!\n");
+    POLLY_DEBUG(dbgs() << " == The accessed memory is " << (Valid ? "not " : "")
+                       << "accessed by other instructions!\n");
   }
 
   return Valid;
 }
 
-/// Perform a data flow analysis on the current basic block to propagate the
-/// uses of loaded values. Then check and mark the memory accesses which are
-/// part of reduction like chains.
-///
-/// NOTE: This assumes independent blocks and breaks otherwise.
-void ScopBuilder::checkForReductions(ScopStmt &Stmt, BasicBlock *Block) {
-  // During the data flow anaylis we use the State variable to keep track of
-  // the used "load-instructions" for each instruction in the basic block.
+// Perform a data flow analysis on the current scop statement to propagate the
+// uses of loaded values. Then check and mark the memory accesses which are
+// part of reduction like chains.
+//
+// NOTE: This assumes independent scop statements and breaks otherwise.
+void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
+  // During the data flow analysis we use the State variable to keep track of
+  // the used "load-instructions" for each instruction in the scop statement.
   // This includes the LLVM-IR of the load and the "number of uses" (or the
   // number of paths in the operand tree which end in this load).
   using StatePairTy = std::pair<unsigned, MemoryAccess::ReductionType>;
@@ -2614,96 +2612,109 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt, BasicBlock *Block) {
   //     and associative (e.g., A[i] = A[i] % 3)
   //   o might change the control flow            (e.g., if (A[i]))
   //   o are used in indirect memory accesses     (e.g., A[B[i]])
-  //   o are used outside the current basic block
+  //   o are used outside the current scop statement
   SmallPtrSet<const Instruction *, 8> InvalidLoads;
-
-  // Run the data flow analysis for all values in the basic block
-  for (Instruction &Inst : *Block) {
-    bool UsedOutsideBlock = any_of(Inst.users(), [Block](User *U) {
-      return cast<Instruction>(U)->getParent() != Block;
-    });
-
-    // Treat loads and stores special
-    if (auto *Load = dyn_cast<LoadInst>(&Inst)) {
-      // Invalidate all loads used which feed into the address of this load.
-      if (auto *Ptr = dyn_cast<Instruction>(Load->getPointerOperand())) {
-        const auto &It = State.find(Ptr);
-        if (It != State.end())
-          for (const auto &FlowInSetElem : It->second)
-            InvalidLoads.insert(FlowInSetElem.first);
-      }
-
-      // If this load is used outside this block, invalidate it.
-      if (UsedOutsideBlock)
-        InvalidLoads.insert(Load);
-
-      // And indicate that this load uses itself once but without specifying
-      // any reduction operator.
-      State[Load].insert(
-          std::make_pair(Load, std::make_pair(1, MemoryAccess::RT_BOTTOM)));
-      continue;
-    }
-
-    if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
-      // Invalidate all loads which feed into the address of this store.
-      if (const Instruction *Ptr =
-              dyn_cast<Instruction>(Store->getPointerOperand())) {
-        const auto &It = State.find(Ptr);
-        if (It != State.end())
-          for (const auto &FlowInSetElem : It->second)
-            InvalidLoads.insert(FlowInSetElem.first);
-      }
-
-      // Propagate the uses of the value operand to the store
-      if (auto *ValueInst = dyn_cast<Instruction>(Store->getValueOperand()))
-        State.insert(std::make_pair(Store, State[ValueInst]));
-      continue;
-    }
-
-    // Non load and store instructions are either binary operators or they will
-    // invalidate all used loads.
-    auto *BinOp = dyn_cast<BinaryOperator>(&Inst);
-    auto CurRedType = getReductionType(BinOp);
-    LLVM_DEBUG(dbgs() << "CurInst: " << Inst << " RT: " << CurRedType << "\n");
-
-    // Iterate over all operands and propagate their input loads to instruction.
-    FlowInSetTy &InstInFlowSet = State[&Inst];
-    for (Use &Op : Inst.operands()) {
-      auto *OpInst = dyn_cast<Instruction>(Op);
-      if (!OpInst)
+  SmallVector<BasicBlock *, 8> ScopBlocks;
+  BasicBlock *BB = Stmt.getBasicBlock();
+  if (BB)
+    ScopBlocks.push_back(BB);
+  else
+    for (BasicBlock *Block : Stmt.getRegion()->blocks())
+      ScopBlocks.push_back(Block);
+  // Run the data flow analysis for all values in the scop statement
+  for (BasicBlock *Block : ScopBlocks) {
+    for (Instruction &Inst : *Block) {
+      if ((Stmt.getParent())->getStmtFor(&Inst) != &Stmt)
         continue;
+      bool UsedOutsideStmt = any_of(Inst.users(), [&Stmt](User *U) {
+        return (Stmt.getParent())->getStmtFor(cast<Instruction>(U)) != &Stmt;
+      });
+      //  Treat loads and stores special
+      if (auto *Load = dyn_cast<LoadInst>(&Inst)) {
+        // Invalidate all loads used which feed into the address of this load.
+        if (auto *Ptr = dyn_cast<Instruction>(Load->getPointerOperand())) {
+          const auto &It = State.find(Ptr);
+          if (It != State.end())
+            for (const auto &FlowInSetElem : It->second)
+              InvalidLoads.insert(FlowInSetElem.first);
+        }
 
-      LLVM_DEBUG(dbgs().indent(4) << "Op Inst: " << *OpInst << "\n");
-      const StateTy::iterator &OpInFlowSetIt = State.find(OpInst);
-      if (OpInFlowSetIt == State.end())
+        // If this load is used outside this stmt, invalidate it.
+        if (UsedOutsideStmt)
+          InvalidLoads.insert(Load);
+
+        // And indicate that this load uses itself once but without specifying
+        // any reduction operator.
+        State[Load].insert(
+            std::make_pair(Load, std::make_pair(1, MemoryAccess::RT_BOTTOM)));
         continue;
-
-      // Iterate over all the input loads of the operand and combine them
-      // with the input loads of current instruction.
-      FlowInSetTy &OpInFlowSet = OpInFlowSetIt->second;
-      for (auto &OpInFlowPair : OpInFlowSet) {
-        unsigned OpFlowIn = OpInFlowPair.second.first;
-        unsigned InstFlowIn = InstInFlowSet[OpInFlowPair.first].first;
-
-        auto OpRedType = OpInFlowPair.second.second;
-        auto InstRedType = InstInFlowSet[OpInFlowPair.first].second;
-
-        auto NewRedType = combineReductionType(OpRedType, CurRedType);
-        if (InstFlowIn)
-          NewRedType = combineReductionType(NewRedType, InstRedType);
-
-        LLVM_DEBUG(dbgs().indent(8) << "OpRedType: " << OpRedType << "\n");
-        LLVM_DEBUG(dbgs().indent(8) << "NewRedType: " << NewRedType << "\n");
-        InstInFlowSet[OpInFlowPair.first] =
-            std::make_pair(OpFlowIn + InstFlowIn, NewRedType);
       }
-    }
 
-    // If this operation is used outside the block, invalidate all the loads
-    // which feed into it.
-    if (UsedOutsideBlock)
-      for (const auto &FlowInSetElem : InstInFlowSet)
-        InvalidLoads.insert(FlowInSetElem.first);
+      if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
+        // Invalidate all loads which feed into the address of this store.
+        if (const Instruction *Ptr =
+                dyn_cast<Instruction>(Store->getPointerOperand())) {
+          const auto &It = State.find(Ptr);
+          if (It != State.end())
+            for (const auto &FlowInSetElem : It->second)
+              InvalidLoads.insert(FlowInSetElem.first);
+        }
+
+        // Propagate the uses of the value operand to the store
+        if (auto *ValueInst = dyn_cast<Instruction>(Store->getValueOperand()))
+          State.insert(std::make_pair(Store, State[ValueInst]));
+        continue;
+      }
+
+      // Non load and store instructions are either binary operators or they
+      // will invalidate all used loads.
+      auto *BinOp = dyn_cast<BinaryOperator>(&Inst);
+      auto CurRedType = getReductionType(BinOp);
+      POLLY_DEBUG(dbgs() << "CurInst: " << Inst << " RT: " << CurRedType
+                         << "\n");
+
+      // Iterate over all operands and propagate their input loads to
+      // instruction.
+      FlowInSetTy &InstInFlowSet = State[&Inst];
+      for (Use &Op : Inst.operands()) {
+        auto *OpInst = dyn_cast<Instruction>(Op);
+        if (!OpInst)
+          continue;
+
+        POLLY_DEBUG(dbgs().indent(4) << "Op Inst: " << *OpInst << "\n");
+        const StateTy::iterator &OpInFlowSetIt = State.find(OpInst);
+        if (OpInFlowSetIt == State.end())
+          continue;
+
+        // Iterate over all the input loads of the operand and combine them
+        // with the input loads of current instruction.
+        FlowInSetTy &OpInFlowSet = OpInFlowSetIt->second;
+        for (auto &OpInFlowPair : OpInFlowSet) {
+          unsigned OpFlowIn = OpInFlowPair.second.first;
+          unsigned InstFlowIn = InstInFlowSet[OpInFlowPair.first].first;
+
+          MemoryAccess::ReductionType OpRedType = OpInFlowPair.second.second;
+          MemoryAccess::ReductionType InstRedType =
+              InstInFlowSet[OpInFlowPair.first].second;
+
+          MemoryAccess::ReductionType NewRedType =
+              combineReductionType(OpRedType, CurRedType);
+          if (InstFlowIn)
+            NewRedType = combineReductionType(NewRedType, InstRedType);
+
+          POLLY_DEBUG(dbgs().indent(8) << "OpRedType: " << OpRedType << "\n");
+          POLLY_DEBUG(dbgs().indent(8) << "NewRedType: " << NewRedType << "\n");
+          InstInFlowSet[OpInFlowPair.first] =
+              std::make_pair(OpFlowIn + InstFlowIn, NewRedType);
+        }
+      }
+
+      // If this operation is used outside the stmt, invalidate all the loads
+      // which feed into it.
+      if (UsedOutsideStmt)
+        for (const auto &FlowInSetElem : InstInFlowSet)
+          InvalidLoads.insert(FlowInSetElem.first);
+    }
   }
 
   // All used loads are propagated through the whole basic block; now try to
@@ -2721,27 +2732,26 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt, BasicBlock *Block) {
     if (WriteMA->isRead())
       continue;
     StoreInst *St = dyn_cast<StoreInst>(WriteMA->getAccessInstruction());
-    if (!St || St->isVolatile())
+    if (!St)
       continue;
+    assert(!St->isVolatile());
 
     FlowInSetTy &MaInFlowSet = State[WriteMA->getAccessInstruction()];
-    bool Valid = false;
-
     for (auto &MaInFlowSetElem : MaInFlowSet) {
       MemoryAccess *ReadMA = &Stmt.getArrayAccessFor(MaInFlowSetElem.first);
       assert(ReadMA && "Couldn't find memory access for incoming load!");
 
-      LLVM_DEBUG(dbgs() << "'" << *ReadMA->getAccessInstruction()
-                        << "'\n\tflows into\n'"
-                        << *WriteMA->getAccessInstruction() << "'\n\t #"
-                        << MaInFlowSetElem.second.first << " times & RT: "
-                        << MaInFlowSetElem.second.second << "\n");
+      POLLY_DEBUG(dbgs() << "'" << *ReadMA->getAccessInstruction()
+                         << "'\n\tflows into\n'"
+                         << *WriteMA->getAccessInstruction() << "'\n\t #"
+                         << MaInFlowSetElem.second.first << " times & RT: "
+                         << MaInFlowSetElem.second.second << "\n");
 
       MemoryAccess::ReductionType RT = MaInFlowSetElem.second.second;
       unsigned NumAllowableInFlow = 1;
 
       // We allow the load to flow in exactly once for binary reductions
-      Valid = (MaInFlowSetElem.second.first == NumAllowableInFlow);
+      bool Valid = (MaInFlowSetElem.second.first == NumAllowableInFlow);
 
       // Check if we saw a valid chain of binary operators.
       Valid = Valid && RT != MemoryAccess::RT_BOTTOM;
@@ -2765,7 +2775,12 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt, BasicBlock *Block) {
     MemoryAccess *LoadMA = CandidatePair.first.first;
     if (InvalidLoads.count(LoadMA->getAccessInstruction()))
       continue;
-
+    POLLY_DEBUG(
+        dbgs() << " Load :: "
+               << *((CandidatePair.first.first)->getAccessInstruction())
+               << "\n Store :: "
+               << *((CandidatePair.first.second)->getAccessInstruction())
+               << "\n are marked as reduction like\n");
     MemoryAccess::ReductionType RT = CandidatePair.second;
     CandidatePair.first.first->markAsReductionLike(RT);
     CandidatePair.first.second->markAsReductionLike(RT);
