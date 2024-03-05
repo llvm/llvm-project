@@ -252,7 +252,7 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
       Args.push_back(Op);
   B.SetInsertPoint(&I);
   B.CreateIntrinsic(Intrinsic::spv_switch, {I.getOperand(0)->getType()},
-                       {Args});
+                    {Args});
   return &I;
 }
 
@@ -540,8 +540,8 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
       TLI->getLoadMemOperandFlags(I, F->getParent()->getDataLayout());
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
-                           {I.getPointerOperand(), B.getInt16(Flags),
-                            B.getInt8(I.getAlign().value())});
+                        {I.getPointerOperand(), B.getInt16(Flags),
+                         B.getInt8(I.getAlign().value())});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -581,10 +581,9 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   TrackConstants = false;
   Type *PtrTy = I.getType();
   auto *NewI =
-      ArraySize
-          ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
-                                 {PtrTy, ArraySize->getType()}, {ArraySize})
-          : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
+      ArraySize ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
+                                    {PtrTy, ArraySize->getType()}, {ArraySize})
+                : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
   std::string InstName = I.hasName() ? I.getName().str() : "";
   I.replaceAllUsesWith(NewI);
   I.eraseFromParent();
@@ -605,7 +604,7 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering()))));
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_cmpxchg,
-                                    {I.getPointerOperand()->getType()}, {Args});
+                                 {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
