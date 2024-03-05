@@ -22,7 +22,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -513,10 +512,6 @@ public:
     if (previous.isSet())
       return;
     setCommonAttributes(op);
-    mlir::omp::TargetOp targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(op);
-    if (targetOp)
-      llvm::errs() << "Inserted operation\n";
-    // op->dump();
   }
 
 private:
