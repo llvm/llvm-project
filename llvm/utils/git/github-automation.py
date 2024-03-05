@@ -64,7 +64,8 @@ class IssueSubscriber:
 
     def __init__(self, token: str, repo: str, issue_number: int, label_name: str):
         self.repo = github.Github(token).get_repo(repo)
-        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.org = github.Github(token).get_organization(
+            self.repo.organization.login)
         self.issue = self.repo.get_issue(issue_number)
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
@@ -109,7 +110,8 @@ class PRSubscriber:
 
     def __init__(self, token: str, repo: str, pr_number: int, label_name: str):
         self.repo = github.Github(token).get_repo(repo)
-        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.org = github.Github(token).get_organization(
+            self.repo.organization.login)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
         self._team_name = "pr-subscribers-{}".format(
             label_name.replace("+", "x")
@@ -318,7 +320,7 @@ def extract_commit_hash(arg: str):
     """
     github_prefix = "https://github.com/llvm/llvm-project/commit/"
     if arg.startswith(github_prefix):
-        return arg[len(github_prefix) :]
+        return arg[len(github_prefix):]
     return arg
 
 
@@ -538,7 +540,8 @@ class ReleaseWorkflow:
 
         push_url = self.push_url
         print("Pushing to {} {}".format(push_url, branch_name))
-        local_repo.git.push(push_url, "HEAD:{}".format(branch_name), force=True)
+        local_repo.git.push(
+            push_url, "HEAD:{}".format(branch_name), force=True)
 
         self.issue_remove_cherry_pick_failed_label()
         return self.create_pull_request(
@@ -624,7 +627,7 @@ class ReleaseWorkflow:
             m = re.search(r"/cherry-pick\s*:? *(.*)", line)
             if not m:
                 continue
-            
+
             args = m.group(1)
 
             arg_list = args.split()
@@ -659,9 +662,12 @@ pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 pr_greeter_parser = subparsers.add_parser("pr-greeter")
 pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
 
-pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information")
-pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
-pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
+pr_buildbot_information_parser = subparsers.add_parser(
+    "pr-buildbot-information")
+pr_buildbot_information_parser.add_argument(
+    "--issue-number", type=int, required=True)
+pr_buildbot_information_parser.add_argument(
+    "--author", type=str, required=True)
 
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
