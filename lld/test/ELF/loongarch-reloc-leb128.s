@@ -99,4 +99,4 @@ w2:
 .reloc ., R_LARCH_ADD_ULEB128, w2
 .reloc ., R_LARCH_SUB_ULEB128, w1
 .fill 10, 1, 0x80
-.byte 0
+.byte 1
