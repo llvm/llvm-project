@@ -517,6 +517,13 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     LLT RegLLTy = LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), 32);
     MRI->setType(Reg, RegLLTy);
     assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
+  } else {
+    // Our knowledge about the type may be updated.
+    // If that's the case, we need to update a type
+    // associated with the register.
+    SPIRVType *DefType = getSPIRVTypeForVReg(ResVReg);
+    if (!DefType || DefType != BaseType)
+      assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
   }
 
   // If it's a global variable with name, output OpName for it.
