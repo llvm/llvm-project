@@ -1924,8 +1924,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   if ((TSFlags & X86II::OpMapMask) == X86II::ThreeDNow)
     emitByte(X86II::getBaseOpcodeFor(TSFlags), CB);
 
-  assert(CB.size() - StartByte <= 15 &&
-         "The size of instruction must be no longer than 15.");
+  if (CB.size() - StartByte > 15)
+    Ctx.reportError(MI.getLoc(), "instruction length exceeds the limit of 15");
 #ifndef NDEBUG
   // FIXME: Verify.
   if (/*!Desc.isVariadic() &&*/ CurOp != NumOps) {
