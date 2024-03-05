@@ -415,18 +415,18 @@
 
 ## ccmp
 
-# ATT:   ccmpob {}	%r16b, %r17b
-# INTEL: ccmpo {}	r17b, r16b
+# ATT:   ccmpob {dfv=}	%r16b, %r17b
+# INTEL: ccmpo {dfv=}	r17b, r16b
 0x62,0xec,0x04,0x00,0x3a,0xc8
 
-# ATT:   ccmpow {}	%r16w, %r17w
-# INTEL: ccmpo {}	r17w, r16w
+# ATT:   ccmpow {dfv=}	%r16w, %r17w
+# INTEL: ccmpo {dfv=}	r17w, r16w
 0x62,0xec,0x05,0x00,0x3b,0xc8
 
-# ATT:   ccmpol {}	%r16d, %r17d
-# INTEL: ccmpo {}	r17d, r16d
+# ATT:   ccmpol {dfv=}	%r16d, %r17d
+# INTEL: ccmpo {dfv=}	r17d, r16d
 0x62,0xec,0x04,0x00,0x3b,0xc8
 
-# ATT:   ccmpoq {}	%r16, %r17
-# INTEL: ccmpo {}	r17, r16
+# ATT:   ccmpoq {dfv=}	%r16, %r17
+# INTEL: ccmpo {dfv=}	r17, r16
 0x62,0xec,0x84,0x00,0x3b,0xc8

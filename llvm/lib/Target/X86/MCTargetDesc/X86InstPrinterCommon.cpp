@@ -63,7 +63,7 @@ void X86InstPrinterCommon::printCondFlags(const MCInst *MI, unsigned Op,
   // +----+----+----+----+
   int64_t Imm = MI->getOperand(Op).getImm();
   assert(Imm >= 0 && Imm < 16 && "Invalid condition flags");
-  O << "{";
+  O << "{dfv=";
   std::string Flags;
   if (Imm & 0x8)
     Flags += "of,";

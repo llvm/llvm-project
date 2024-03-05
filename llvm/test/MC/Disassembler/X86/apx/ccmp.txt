@@ -3,1596 +3,1596 @@
 
 ## Condition flags
 
-# ATT:   ccmpoq {}	%rax, %rbx
-# INTEL: ccmpo {}	rbx, rax
+# ATT:   ccmpoq {dfv=}	%rax, %rbx
+# INTEL: ccmpo {dfv=}	rbx, rax
 0x62,0xf4,0x84,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {of}	%rax, %rbx
-# INTEL: ccmpo {of}	rbx, rax
+# ATT:   ccmpoq {dfv=of}	%rax, %rbx
+# INTEL: ccmpo {dfv=of}	rbx, rax
 0x62,0xf4,0xc4,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {sf}	%rax, %rbx
-# INTEL: ccmpo {sf}	rbx, rax
+# ATT:   ccmpoq {dfv=sf}	%rax, %rbx
+# INTEL: ccmpo {dfv=sf}	rbx, rax
 0x62,0xf4,0xa4,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {zf}	%rax, %rbx
-# INTEL: ccmpo {zf}	rbx, rax
+# ATT:   ccmpoq {dfv=zf}	%rax, %rbx
+# INTEL: ccmpo {dfv=zf}	rbx, rax
 0x62,0xf4,0x94,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {cf}	%rax, %rbx
-# INTEL: ccmpo {cf}	rbx, rax
+# ATT:   ccmpoq {dfv=cf}	%rax, %rbx
+# INTEL: ccmpo {dfv=cf}	rbx, rax
 0x62,0xf4,0x8c,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {of,sf}	%rax, %rbx
-# INTEL: ccmpo {of,sf}	rbx, rax
+# ATT:   ccmpoq {dfv=of,sf}	%rax, %rbx
+# INTEL: ccmpo {dfv=of,sf}	rbx, rax
 0x62,0xf4,0xe4,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {of,sf,zf}	%rax, %rbx
-# INTEL: ccmpo {of,sf,zf}	rbx, rax
+# ATT:   ccmpoq {dfv=of,sf,zf}	%rax, %rbx
+# INTEL: ccmpo {dfv=of,sf,zf}	rbx, rax
 0x62,0xf4,0xf4,0x00,0x39,0xc3
 
-# ATT:   ccmpoq {of,sf,zf,cf}	%rax, %rbx
-# INTEL: ccmpo {of,sf,zf,cf}	rbx, rax
+# ATT:   ccmpoq {dfv=of,sf,zf,cf}	%rax, %rbx
+# INTEL: ccmpo {dfv=of,sf,zf,cf}	rbx, rax
 0x62,0xf4,0xfc,0x00,0x39,0xc3
 
 ## Condition code
 
-# ATT:   ccmpbb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpbb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x02,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpbw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpbw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x02,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpbw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpbw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x02,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpbl	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpbl	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x02,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpbl	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpbl	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x02,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpbq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpbq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x02,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpbq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpbq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x02,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpbb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpbb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x02,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpbw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpbw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x02,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpbl	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpbl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x02,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpbq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpb	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpbq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpb	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x02,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpbb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpb	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpbb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpb	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x02,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpbw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpb	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpbw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpb	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x02,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpbl	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpb	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpbl	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpb	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x02,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpbq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpb	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpbq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpb	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x02,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpbb	{of}	$123, %bl
-# INTEL: ccmpb	{of}	bl, 123
+# ATT:   ccmpbb	{dfv=of}	$123, %bl
+# INTEL: ccmpb	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x02,0x80,0xfb,0x7b
 
-# ATT:   ccmpbw	{of}	$123, %dx
-# INTEL: ccmpb	{of}	dx, 123
+# ATT:   ccmpbw	{dfv=of}	$123, %dx
+# INTEL: ccmpb	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x02,0x83,0xfa,0x7b
 
-# ATT:   ccmpbl	{of}	$123, %ecx
-# INTEL: ccmpb	{of}	ecx, 123
+# ATT:   ccmpbl	{dfv=of}	$123, %ecx
+# INTEL: ccmpb	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x02,0x83,0xf9,0x7b
 
-# ATT:   ccmpbq	{of}	$123, %r9
-# INTEL: ccmpb	{of}	r9, 123
+# ATT:   ccmpbq	{dfv=of}	$123, %r9
+# INTEL: ccmpb	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x02,0x83,0xf9,0x7b
 
-# ATT:   ccmpbw	{of}	$1234, %dx
-# INTEL: ccmpb	{of}	dx, 1234
+# ATT:   ccmpbw	{dfv=of}	$1234, %dx
+# INTEL: ccmpb	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x02,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpbl	{of}	$123456, %ecx
-# INTEL: ccmpb	{of}	ecx, 123456
+# ATT:   ccmpbl	{dfv=of}	$123456, %ecx
+# INTEL: ccmpb	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x02,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpbq	{of}	$123456, %r9
-# INTEL: ccmpb	{of}	r9, 123456
+# ATT:   ccmpbq	{dfv=of}	$123456, %r9
+# INTEL: ccmpb	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x02,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpbb	{of}	%bl, %dl
-# INTEL: ccmpb	{of}	dl, bl
+# ATT:   ccmpbb	{dfv=of}	%bl, %dl
+# INTEL: ccmpb	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x02,0x3a,0xd3
 
-# ATT:   ccmpbw	{of}	%dx, %ax
-# INTEL: ccmpb	{of}	ax, dx
+# ATT:   ccmpbw	{dfv=of}	%dx, %ax
+# INTEL: ccmpb	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x02,0x3b,0xc2
 
-# ATT:   ccmpbl	{of}	%ecx, %edx
-# INTEL: ccmpb	{of}	edx, ecx
+# ATT:   ccmpbl	{dfv=of}	%ecx, %edx
+# INTEL: ccmpb	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x02,0x3b,0xd1
 
-# ATT:   ccmpbq	{of}	%r9, %r15
-# INTEL: ccmpb	{of}	r15, r9
+# ATT:   ccmpbq	{dfv=of}	%r9, %r15
+# INTEL: ccmpb	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x02,0x3b,0xf9
 
-# ATT:   ccmpfb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpfb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0b,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpfw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpfw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x0b,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpfw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpfw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x0b,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpfl	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpfl	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0b,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpfl	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpfl	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x0b,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpfq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpfq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x0b,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpfq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpfq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x0b,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpfb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpfb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x0b,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpfw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpfw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x0b,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpfl	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpfl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x0b,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpfq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpf	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpfq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpf	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x0b,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpfb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpf	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpfb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpf	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0b,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpfw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpf	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpfw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpf	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x0b,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpfl	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpf	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpfl	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpf	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0b,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpfq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpf	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpfq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpf	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x0b,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpfb	{of}	$123, %bl
-# INTEL: ccmpf	{of}	bl, 123
+# ATT:   ccmpfb	{dfv=of}	$123, %bl
+# INTEL: ccmpf	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x0b,0x80,0xfb,0x7b
 
-# ATT:   ccmpfw	{of}	$123, %dx
-# INTEL: ccmpf	{of}	dx, 123
+# ATT:   ccmpfw	{dfv=of}	$123, %dx
+# INTEL: ccmpf	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x0b,0x83,0xfa,0x7b
 
-# ATT:   ccmpfl	{of}	$123, %ecx
-# INTEL: ccmpf	{of}	ecx, 123
+# ATT:   ccmpfl	{dfv=of}	$123, %ecx
+# INTEL: ccmpf	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x0b,0x83,0xf9,0x7b
 
-# ATT:   ccmpfq	{of}	$123, %r9
-# INTEL: ccmpf	{of}	r9, 123
+# ATT:   ccmpfq	{dfv=of}	$123, %r9
+# INTEL: ccmpf	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x0b,0x83,0xf9,0x7b
 
-# ATT:   ccmpfw	{of}	$1234, %dx
-# INTEL: ccmpf	{of}	dx, 1234
+# ATT:   ccmpfw	{dfv=of}	$1234, %dx
+# INTEL: ccmpf	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x0b,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpfl	{of}	$123456, %ecx
-# INTEL: ccmpf	{of}	ecx, 123456
+# ATT:   ccmpfl	{dfv=of}	$123456, %ecx
+# INTEL: ccmpf	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x0b,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpfq	{of}	$123456, %r9
-# INTEL: ccmpf	{of}	r9, 123456
+# ATT:   ccmpfq	{dfv=of}	$123456, %r9
+# INTEL: ccmpf	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x0b,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpfb	{of}	%bl, %dl
-# INTEL: ccmpf	{of}	dl, bl
+# ATT:   ccmpfb	{dfv=of}	%bl, %dl
+# INTEL: ccmpf	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x0b,0x3a,0xd3
 
-# ATT:   ccmpfw	{of}	%dx, %ax
-# INTEL: ccmpf	{of}	ax, dx
+# ATT:   ccmpfw	{dfv=of}	%dx, %ax
+# INTEL: ccmpf	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x0b,0x3b,0xc2
 
-# ATT:   ccmpfl	{of}	%ecx, %edx
-# INTEL: ccmpf	{of}	edx, ecx
+# ATT:   ccmpfl	{dfv=of}	%ecx, %edx
+# INTEL: ccmpf	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x0b,0x3b,0xd1
 
-# ATT:   ccmpfq	{of}	%r9, %r15
-# INTEL: ccmpf	{of}	r15, r9
+# ATT:   ccmpfq	{dfv=of}	%r9, %r15
+# INTEL: ccmpf	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x0b,0x3b,0xf9
 
-# ATT:   ccmplb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmplb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0c,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmplw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmplw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x0c,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmplw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmplw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x0c,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpll	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpll	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0c,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpll	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpll	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x0c,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmplq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmplq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x0c,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmplq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmplq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x0c,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmplb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmplb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x0c,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmplw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmplw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x0c,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpll	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpll	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x0c,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmplq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpl	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmplq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpl	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x0c,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmplb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpl	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmplb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpl	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0c,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmplw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpl	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmplw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpl	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x0c,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpll	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpl	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpll	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpl	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0c,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmplq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpl	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmplq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpl	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x0c,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmplb	{of}	$123, %bl
-# INTEL: ccmpl	{of}	bl, 123
+# ATT:   ccmplb	{dfv=of}	$123, %bl
+# INTEL: ccmpl	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x0c,0x80,0xfb,0x7b
 
-# ATT:   ccmplw	{of}	$123, %dx
-# INTEL: ccmpl	{of}	dx, 123
+# ATT:   ccmplw	{dfv=of}	$123, %dx
+# INTEL: ccmpl	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x0c,0x83,0xfa,0x7b
 
-# ATT:   ccmpll	{of}	$123, %ecx
-# INTEL: ccmpl	{of}	ecx, 123
+# ATT:   ccmpll	{dfv=of}	$123, %ecx
+# INTEL: ccmpl	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x0c,0x83,0xf9,0x7b
 
-# ATT:   ccmplq	{of}	$123, %r9
-# INTEL: ccmpl	{of}	r9, 123
+# ATT:   ccmplq	{dfv=of}	$123, %r9
+# INTEL: ccmpl	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x0c,0x83,0xf9,0x7b
 
-# ATT:   ccmplw	{of}	$1234, %dx
-# INTEL: ccmpl	{of}	dx, 1234
+# ATT:   ccmplw	{dfv=of}	$1234, %dx
+# INTEL: ccmpl	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x0c,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpll	{of}	$123456, %ecx
-# INTEL: ccmpl	{of}	ecx, 123456
+# ATT:   ccmpll	{dfv=of}	$123456, %ecx
+# INTEL: ccmpl	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x0c,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmplq	{of}	$123456, %r9
-# INTEL: ccmpl	{of}	r9, 123456
+# ATT:   ccmplq	{dfv=of}	$123456, %r9
+# INTEL: ccmpl	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x0c,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmplb	{of}	%bl, %dl
-# INTEL: ccmpl	{of}	dl, bl
+# ATT:   ccmplb	{dfv=of}	%bl, %dl
+# INTEL: ccmpl	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x0c,0x3a,0xd3
 
-# ATT:   ccmplw	{of}	%dx, %ax
-# INTEL: ccmpl	{of}	ax, dx
+# ATT:   ccmplw	{dfv=of}	%dx, %ax
+# INTEL: ccmpl	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x0c,0x3b,0xc2
 
-# ATT:   ccmpll	{of}	%ecx, %edx
-# INTEL: ccmpl	{of}	edx, ecx
+# ATT:   ccmpll	{dfv=of}	%ecx, %edx
+# INTEL: ccmpl	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x0c,0x3b,0xd1
 
-# ATT:   ccmplq	{of}	%r9, %r15
-# INTEL: ccmpl	{of}	r15, r9
+# ATT:   ccmplq	{dfv=of}	%r9, %r15
+# INTEL: ccmpl	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x0c,0x3b,0xf9
 
-# ATT:   ccmpleb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpleb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0e,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmplew	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmplew	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x0e,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmplew	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmplew	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x0e,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmplel	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmplel	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0e,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmplel	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmplel	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x0e,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpleq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpleq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x0e,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpleq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpleq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x0e,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpleb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpleb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x0e,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmplew	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmplew	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x0e,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmplel	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmplel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x0e,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpleq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmple	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpleq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmple	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x0e,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpleb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmple	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpleb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmple	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0e,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmplew	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmple	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmplew	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmple	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x0e,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmplel	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmple	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmplel	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmple	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0e,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpleq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmple	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpleq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmple	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x0e,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpleb	{of}	$123, %bl
-# INTEL: ccmple	{of}	bl, 123
+# ATT:   ccmpleb	{dfv=of}	$123, %bl
+# INTEL: ccmple	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x0e,0x80,0xfb,0x7b
 
-# ATT:   ccmplew	{of}	$123, %dx
-# INTEL: ccmple	{of}	dx, 123
+# ATT:   ccmplew	{dfv=of}	$123, %dx
+# INTEL: ccmple	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x0e,0x83,0xfa,0x7b
 
-# ATT:   ccmplel	{of}	$123, %ecx
-# INTEL: ccmple	{of}	ecx, 123
+# ATT:   ccmplel	{dfv=of}	$123, %ecx
+# INTEL: ccmple	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x0e,0x83,0xf9,0x7b
 
-# ATT:   ccmpleq	{of}	$123, %r9
-# INTEL: ccmple	{of}	r9, 123
+# ATT:   ccmpleq	{dfv=of}	$123, %r9
+# INTEL: ccmple	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x0e,0x83,0xf9,0x7b
 
-# ATT:   ccmplew	{of}	$1234, %dx
-# INTEL: ccmple	{of}	dx, 1234
+# ATT:   ccmplew	{dfv=of}	$1234, %dx
+# INTEL: ccmple	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x0e,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmplel	{of}	$123456, %ecx
-# INTEL: ccmple	{of}	ecx, 123456
+# ATT:   ccmplel	{dfv=of}	$123456, %ecx
+# INTEL: ccmple	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x0e,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpleq	{of}	$123456, %r9
-# INTEL: ccmple	{of}	r9, 123456
+# ATT:   ccmpleq	{dfv=of}	$123456, %r9
+# INTEL: ccmple	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x0e,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpleb	{of}	%bl, %dl
-# INTEL: ccmple	{of}	dl, bl
+# ATT:   ccmpleb	{dfv=of}	%bl, %dl
+# INTEL: ccmple	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x0e,0x3a,0xd3
 
-# ATT:   ccmplew	{of}	%dx, %ax
-# INTEL: ccmple	{of}	ax, dx
+# ATT:   ccmplew	{dfv=of}	%dx, %ax
+# INTEL: ccmple	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x0e,0x3b,0xc2
 
-# ATT:   ccmplel	{of}	%ecx, %edx
-# INTEL: ccmple	{of}	edx, ecx
+# ATT:   ccmplel	{dfv=of}	%ecx, %edx
+# INTEL: ccmple	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x0e,0x3b,0xd1
 
-# ATT:   ccmpleq	{of}	%r9, %r15
-# INTEL: ccmple	{of}	r15, r9
+# ATT:   ccmpleq	{dfv=of}	%r9, %r15
+# INTEL: ccmple	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x0e,0x3b,0xf9
 
-# ATT:   ccmpaeb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpaeb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x03,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpaew	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpaew	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x03,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpaew	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpaew	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x03,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpael	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpael	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x03,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpael	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpael	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x03,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpaeq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpaeq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x03,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpaeq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpaeq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x03,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpaeb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpaeb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x03,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpaew	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpaew	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x03,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpael	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpael	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x03,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpaeq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpae	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpaeq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpae	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x03,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpaeb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpae	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpaeb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpae	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x03,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpaew	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpae	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpaew	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpae	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x03,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpael	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpae	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpael	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpae	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x03,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpaeq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpae	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpaeq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpae	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x03,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpaeb	{of}	$123, %bl
-# INTEL: ccmpae	{of}	bl, 123
+# ATT:   ccmpaeb	{dfv=of}	$123, %bl
+# INTEL: ccmpae	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x03,0x80,0xfb,0x7b
 
-# ATT:   ccmpaew	{of}	$123, %dx
-# INTEL: ccmpae	{of}	dx, 123
+# ATT:   ccmpaew	{dfv=of}	$123, %dx
+# INTEL: ccmpae	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x03,0x83,0xfa,0x7b
 
-# ATT:   ccmpael	{of}	$123, %ecx
-# INTEL: ccmpae	{of}	ecx, 123
+# ATT:   ccmpael	{dfv=of}	$123, %ecx
+# INTEL: ccmpae	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x03,0x83,0xf9,0x7b
 
-# ATT:   ccmpaeq	{of}	$123, %r9
-# INTEL: ccmpae	{of}	r9, 123
+# ATT:   ccmpaeq	{dfv=of}	$123, %r9
+# INTEL: ccmpae	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x03,0x83,0xf9,0x7b
 
-# ATT:   ccmpaew	{of}	$1234, %dx
-# INTEL: ccmpae	{of}	dx, 1234
+# ATT:   ccmpaew	{dfv=of}	$1234, %dx
+# INTEL: ccmpae	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x03,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpael	{of}	$123456, %ecx
-# INTEL: ccmpae	{of}	ecx, 123456
+# ATT:   ccmpael	{dfv=of}	$123456, %ecx
+# INTEL: ccmpae	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x03,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpaeq	{of}	$123456, %r9
-# INTEL: ccmpae	{of}	r9, 123456
+# ATT:   ccmpaeq	{dfv=of}	$123456, %r9
+# INTEL: ccmpae	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x03,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpaeb	{of}	%bl, %dl
-# INTEL: ccmpae	{of}	dl, bl
+# ATT:   ccmpaeb	{dfv=of}	%bl, %dl
+# INTEL: ccmpae	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x03,0x3a,0xd3
 
-# ATT:   ccmpaew	{of}	%dx, %ax
-# INTEL: ccmpae	{of}	ax, dx
+# ATT:   ccmpaew	{dfv=of}	%dx, %ax
+# INTEL: ccmpae	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x03,0x3b,0xc2
 
-# ATT:   ccmpael	{of}	%ecx, %edx
-# INTEL: ccmpae	{of}	edx, ecx
+# ATT:   ccmpael	{dfv=of}	%ecx, %edx
+# INTEL: ccmpae	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x03,0x3b,0xd1
 
-# ATT:   ccmpaeq	{of}	%r9, %r15
-# INTEL: ccmpae	{of}	r15, r9
+# ATT:   ccmpaeq	{dfv=of}	%r9, %r15
+# INTEL: ccmpae	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x03,0x3b,0xf9
 
-# ATT:   ccmpab	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpab	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x07,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpaw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpaw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x07,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpaw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpaw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x07,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpal	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpal	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x07,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpal	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpal	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x07,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpaq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpaq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x07,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpaq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpaq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x07,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpab	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpab	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x07,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpaw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpaw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x07,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpal	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpal	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x07,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpaq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpa	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpaq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpa	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x07,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpab	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpa	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpab	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpa	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x07,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpaw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpa	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpaw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpa	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x07,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpal	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpa	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpal	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpa	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x07,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpaq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpa	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpaq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpa	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x07,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpab	{of}	$123, %bl
-# INTEL: ccmpa	{of}	bl, 123
+# ATT:   ccmpab	{dfv=of}	$123, %bl
+# INTEL: ccmpa	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x07,0x80,0xfb,0x7b
 
-# ATT:   ccmpaw	{of}	$123, %dx
-# INTEL: ccmpa	{of}	dx, 123
+# ATT:   ccmpaw	{dfv=of}	$123, %dx
+# INTEL: ccmpa	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x07,0x83,0xfa,0x7b
 
-# ATT:   ccmpal	{of}	$123, %ecx
-# INTEL: ccmpa	{of}	ecx, 123
+# ATT:   ccmpal	{dfv=of}	$123, %ecx
+# INTEL: ccmpa	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x07,0x83,0xf9,0x7b
 
-# ATT:   ccmpaq	{of}	$123, %r9
-# INTEL: ccmpa	{of}	r9, 123
+# ATT:   ccmpaq	{dfv=of}	$123, %r9
+# INTEL: ccmpa	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x07,0x83,0xf9,0x7b
 
-# ATT:   ccmpaw	{of}	$1234, %dx
-# INTEL: ccmpa	{of}	dx, 1234
+# ATT:   ccmpaw	{dfv=of}	$1234, %dx
+# INTEL: ccmpa	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x07,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpal	{of}	$123456, %ecx
-# INTEL: ccmpa	{of}	ecx, 123456
+# ATT:   ccmpal	{dfv=of}	$123456, %ecx
+# INTEL: ccmpa	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x07,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpaq	{of}	$123456, %r9
-# INTEL: ccmpa	{of}	r9, 123456
+# ATT:   ccmpaq	{dfv=of}	$123456, %r9
+# INTEL: ccmpa	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x07,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpab	{of}	%bl, %dl
-# INTEL: ccmpa	{of}	dl, bl
+# ATT:   ccmpab	{dfv=of}	%bl, %dl
+# INTEL: ccmpa	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x07,0x3a,0xd3
 
-# ATT:   ccmpaw	{of}	%dx, %ax
-# INTEL: ccmpa	{of}	ax, dx
+# ATT:   ccmpaw	{dfv=of}	%dx, %ax
+# INTEL: ccmpa	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x07,0x3b,0xc2
 
-# ATT:   ccmpal	{of}	%ecx, %edx
-# INTEL: ccmpa	{of}	edx, ecx
+# ATT:   ccmpal	{dfv=of}	%ecx, %edx
+# INTEL: ccmpa	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x07,0x3b,0xd1
 
-# ATT:   ccmpaq	{of}	%r9, %r15
-# INTEL: ccmpa	{of}	r15, r9
+# ATT:   ccmpaq	{dfv=of}	%r9, %r15
+# INTEL: ccmpa	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x07,0x3b,0xf9
 
-# ATT:   ccmpgeb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgeb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0d,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgew	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgew	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x0d,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgew	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpgew	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x0d,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpgel	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgel	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0d,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgel	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpgel	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x0d,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgeq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgeq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x0d,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgeq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpgeq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x0d,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgeb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpgeb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x0d,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpgew	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpgew	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x0d,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpgel	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpgel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x0d,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpgeq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpge	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpgeq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpge	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x0d,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpgeb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpge	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgeb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpge	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0d,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpgew	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpge	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgew	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpge	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x0d,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpgel	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpge	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgel	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpge	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0d,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpgeq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpge	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgeq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpge	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x0d,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpgeb	{of}	$123, %bl
-# INTEL: ccmpge	{of}	bl, 123
+# ATT:   ccmpgeb	{dfv=of}	$123, %bl
+# INTEL: ccmpge	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x0d,0x80,0xfb,0x7b
 
-# ATT:   ccmpgew	{of}	$123, %dx
-# INTEL: ccmpge	{of}	dx, 123
+# ATT:   ccmpgew	{dfv=of}	$123, %dx
+# INTEL: ccmpge	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x0d,0x83,0xfa,0x7b
 
-# ATT:   ccmpgel	{of}	$123, %ecx
-# INTEL: ccmpge	{of}	ecx, 123
+# ATT:   ccmpgel	{dfv=of}	$123, %ecx
+# INTEL: ccmpge	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x0d,0x83,0xf9,0x7b
 
-# ATT:   ccmpgeq	{of}	$123, %r9
-# INTEL: ccmpge	{of}	r9, 123
+# ATT:   ccmpgeq	{dfv=of}	$123, %r9
+# INTEL: ccmpge	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x0d,0x83,0xf9,0x7b
 
-# ATT:   ccmpgew	{of}	$1234, %dx
-# INTEL: ccmpge	{of}	dx, 1234
+# ATT:   ccmpgew	{dfv=of}	$1234, %dx
+# INTEL: ccmpge	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x0d,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpgel	{of}	$123456, %ecx
-# INTEL: ccmpge	{of}	ecx, 123456
+# ATT:   ccmpgel	{dfv=of}	$123456, %ecx
+# INTEL: ccmpge	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x0d,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgeq	{of}	$123456, %r9
-# INTEL: ccmpge	{of}	r9, 123456
+# ATT:   ccmpgeq	{dfv=of}	$123456, %r9
+# INTEL: ccmpge	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x0d,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgeb	{of}	%bl, %dl
-# INTEL: ccmpge	{of}	dl, bl
+# ATT:   ccmpgeb	{dfv=of}	%bl, %dl
+# INTEL: ccmpge	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x0d,0x3a,0xd3
 
-# ATT:   ccmpgew	{of}	%dx, %ax
-# INTEL: ccmpge	{of}	ax, dx
+# ATT:   ccmpgew	{dfv=of}	%dx, %ax
+# INTEL: ccmpge	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x0d,0x3b,0xc2
 
-# ATT:   ccmpgel	{of}	%ecx, %edx
-# INTEL: ccmpge	{of}	edx, ecx
+# ATT:   ccmpgel	{dfv=of}	%ecx, %edx
+# INTEL: ccmpge	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x0d,0x3b,0xd1
 
-# ATT:   ccmpgeq	{of}	%r9, %r15
-# INTEL: ccmpge	{of}	r15, r9
+# ATT:   ccmpgeq	{dfv=of}	%r9, %r15
+# INTEL: ccmpge	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x0d,0x3b,0xf9
 
-# ATT:   ccmpgb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0f,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x0f,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpgw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x0f,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpgl	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgl	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0f,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgl	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpgl	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x0f,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpgq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x0f,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpgq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpgq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x0f,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpgb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x0f,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpgw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpgw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x0f,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpgl	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpgl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x0f,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpgq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpg	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpgq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpg	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x0f,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpgb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpg	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpg	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0f,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpgw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpg	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpg	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x0f,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpgl	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpg	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgl	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpg	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0f,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpgq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpg	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpgq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpg	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x0f,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpgb	{of}	$123, %bl
-# INTEL: ccmpg	{of}	bl, 123
+# ATT:   ccmpgb	{dfv=of}	$123, %bl
+# INTEL: ccmpg	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x0f,0x80,0xfb,0x7b
 
-# ATT:   ccmpgw	{of}	$123, %dx
-# INTEL: ccmpg	{of}	dx, 123
+# ATT:   ccmpgw	{dfv=of}	$123, %dx
+# INTEL: ccmpg	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x0f,0x83,0xfa,0x7b
 
-# ATT:   ccmpgl	{of}	$123, %ecx
-# INTEL: ccmpg	{of}	ecx, 123
+# ATT:   ccmpgl	{dfv=of}	$123, %ecx
+# INTEL: ccmpg	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x0f,0x83,0xf9,0x7b
 
-# ATT:   ccmpgq	{of}	$123, %r9
-# INTEL: ccmpg	{of}	r9, 123
+# ATT:   ccmpgq	{dfv=of}	$123, %r9
+# INTEL: ccmpg	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x0f,0x83,0xf9,0x7b
 
-# ATT:   ccmpgw	{of}	$1234, %dx
-# INTEL: ccmpg	{of}	dx, 1234
+# ATT:   ccmpgw	{dfv=of}	$1234, %dx
+# INTEL: ccmpg	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x0f,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpgl	{of}	$123456, %ecx
-# INTEL: ccmpg	{of}	ecx, 123456
+# ATT:   ccmpgl	{dfv=of}	$123456, %ecx
+# INTEL: ccmpg	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x0f,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgq	{of}	$123456, %r9
-# INTEL: ccmpg	{of}	r9, 123456
+# ATT:   ccmpgq	{dfv=of}	$123456, %r9
+# INTEL: ccmpg	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x0f,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpgb	{of}	%bl, %dl
-# INTEL: ccmpg	{of}	dl, bl
+# ATT:   ccmpgb	{dfv=of}	%bl, %dl
+# INTEL: ccmpg	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x0f,0x3a,0xd3
 
-# ATT:   ccmpgw	{of}	%dx, %ax
-# INTEL: ccmpg	{of}	ax, dx
+# ATT:   ccmpgw	{dfv=of}	%dx, %ax
+# INTEL: ccmpg	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x0f,0x3b,0xc2
 
-# ATT:   ccmpgl	{of}	%ecx, %edx
-# INTEL: ccmpg	{of}	edx, ecx
+# ATT:   ccmpgl	{dfv=of}	%ecx, %edx
+# INTEL: ccmpg	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x0f,0x3b,0xd1
 
-# ATT:   ccmpgq	{of}	%r9, %r15
-# INTEL: ccmpg	{of}	r15, r9
+# ATT:   ccmpgq	{dfv=of}	%r9, %r15
+# INTEL: ccmpg	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x0f,0x3b,0xf9
 
-# ATT:   ccmpnob	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnob	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x01,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnow	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnow	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x01,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnow	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpnow	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x01,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpnol	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnol	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x01,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnol	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpnol	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x01,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnoq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnoq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x01,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnoq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpnoq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x01,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnob	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpnob	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x01,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpnow	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpnow	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x01,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpnol	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpnol	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x01,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpnoq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpno	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpnoq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpno	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x01,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpnob	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpno	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnob	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpno	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x01,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpnow	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpno	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnow	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpno	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x01,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpnol	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpno	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnol	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpno	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x01,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpnoq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpno	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnoq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpno	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x01,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpnob	{of}	$123, %bl
-# INTEL: ccmpno	{of}	bl, 123
+# ATT:   ccmpnob	{dfv=of}	$123, %bl
+# INTEL: ccmpno	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x01,0x80,0xfb,0x7b
 
-# ATT:   ccmpnow	{of}	$123, %dx
-# INTEL: ccmpno	{of}	dx, 123
+# ATT:   ccmpnow	{dfv=of}	$123, %dx
+# INTEL: ccmpno	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x01,0x83,0xfa,0x7b
 
-# ATT:   ccmpnol	{of}	$123, %ecx
-# INTEL: ccmpno	{of}	ecx, 123
+# ATT:   ccmpnol	{dfv=of}	$123, %ecx
+# INTEL: ccmpno	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x01,0x83,0xf9,0x7b
 
-# ATT:   ccmpnoq	{of}	$123, %r9
-# INTEL: ccmpno	{of}	r9, 123
+# ATT:   ccmpnoq	{dfv=of}	$123, %r9
+# INTEL: ccmpno	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x01,0x83,0xf9,0x7b
 
-# ATT:   ccmpnow	{of}	$1234, %dx
-# INTEL: ccmpno	{of}	dx, 1234
+# ATT:   ccmpnow	{dfv=of}	$1234, %dx
+# INTEL: ccmpno	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x01,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpnol	{of}	$123456, %ecx
-# INTEL: ccmpno	{of}	ecx, 123456
+# ATT:   ccmpnol	{dfv=of}	$123456, %ecx
+# INTEL: ccmpno	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x01,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnoq	{of}	$123456, %r9
-# INTEL: ccmpno	{of}	r9, 123456
+# ATT:   ccmpnoq	{dfv=of}	$123456, %r9
+# INTEL: ccmpno	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x01,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnob	{of}	%bl, %dl
-# INTEL: ccmpno	{of}	dl, bl
+# ATT:   ccmpnob	{dfv=of}	%bl, %dl
+# INTEL: ccmpno	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x01,0x3a,0xd3
 
-# ATT:   ccmpnow	{of}	%dx, %ax
-# INTEL: ccmpno	{of}	ax, dx
+# ATT:   ccmpnow	{dfv=of}	%dx, %ax
+# INTEL: ccmpno	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x01,0x3b,0xc2
 
-# ATT:   ccmpnol	{of}	%ecx, %edx
-# INTEL: ccmpno	{of}	edx, ecx
+# ATT:   ccmpnol	{dfv=of}	%ecx, %edx
+# INTEL: ccmpno	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x01,0x3b,0xd1
 
-# ATT:   ccmpnoq	{of}	%r9, %r15
-# INTEL: ccmpno	{of}	r15, r9
+# ATT:   ccmpnoq	{dfv=of}	%r9, %r15
+# INTEL: ccmpno	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x01,0x3b,0xf9
 
-# ATT:   ccmpnsb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnsb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x09,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnsw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnsw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x09,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnsw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpnsw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x09,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpnsl	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnsl	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x09,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnsl	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpnsl	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x09,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnsq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnsq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x09,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnsq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpnsq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x09,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnsb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpnsb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x09,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpnsw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpnsw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x09,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpnsl	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpnsl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x09,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpnsq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpns	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpnsq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpns	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x09,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpnsb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpns	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnsb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpns	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x09,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpnsw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpns	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnsw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpns	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x09,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpnsl	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpns	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnsl	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpns	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x09,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpnsq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpns	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnsq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpns	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x09,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpnsb	{of}	$123, %bl
-# INTEL: ccmpns	{of}	bl, 123
+# ATT:   ccmpnsb	{dfv=of}	$123, %bl
+# INTEL: ccmpns	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x09,0x80,0xfb,0x7b
 
-# ATT:   ccmpnsw	{of}	$123, %dx
-# INTEL: ccmpns	{of}	dx, 123
+# ATT:   ccmpnsw	{dfv=of}	$123, %dx
+# INTEL: ccmpns	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x09,0x83,0xfa,0x7b
 
-# ATT:   ccmpnsl	{of}	$123, %ecx
-# INTEL: ccmpns	{of}	ecx, 123
+# ATT:   ccmpnsl	{dfv=of}	$123, %ecx
+# INTEL: ccmpns	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x09,0x83,0xf9,0x7b
 
-# ATT:   ccmpnsq	{of}	$123, %r9
-# INTEL: ccmpns	{of}	r9, 123
+# ATT:   ccmpnsq	{dfv=of}	$123, %r9
+# INTEL: ccmpns	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x09,0x83,0xf9,0x7b
 
-# ATT:   ccmpnsw	{of}	$1234, %dx
-# INTEL: ccmpns	{of}	dx, 1234
+# ATT:   ccmpnsw	{dfv=of}	$1234, %dx
+# INTEL: ccmpns	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x09,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpnsl	{of}	$123456, %ecx
-# INTEL: ccmpns	{of}	ecx, 123456
+# ATT:   ccmpnsl	{dfv=of}	$123456, %ecx
+# INTEL: ccmpns	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x09,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnsq	{of}	$123456, %r9
-# INTEL: ccmpns	{of}	r9, 123456
+# ATT:   ccmpnsq	{dfv=of}	$123456, %r9
+# INTEL: ccmpns	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x09,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpnsb	{of}	%bl, %dl
-# INTEL: ccmpns	{of}	dl, bl
+# ATT:   ccmpnsb	{dfv=of}	%bl, %dl
+# INTEL: ccmpns	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x09,0x3a,0xd3
 
-# ATT:   ccmpnsw	{of}	%dx, %ax
-# INTEL: ccmpns	{of}	ax, dx
+# ATT:   ccmpnsw	{dfv=of}	%dx, %ax
+# INTEL: ccmpns	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x09,0x3b,0xc2
 
-# ATT:   ccmpnsl	{of}	%ecx, %edx
-# INTEL: ccmpns	{of}	edx, ecx
+# ATT:   ccmpnsl	{dfv=of}	%ecx, %edx
+# INTEL: ccmpns	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x09,0x3b,0xd1
 
-# ATT:   ccmpnsq	{of}	%r9, %r15
-# INTEL: ccmpns	{of}	r15, r9
+# ATT:   ccmpnsq	{dfv=of}	%r9, %r15
+# INTEL: ccmpns	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x09,0x3b,0xf9
 
-# ATT:   ccmpneb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpneb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x05,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnew	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnew	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x05,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnew	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpnew	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x05,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpnel	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpnel	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x05,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpnel	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpnel	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x05,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpneq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpneq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x05,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpneq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpneq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x05,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpneb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpneb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x05,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpnew	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpnew	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x05,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpnel	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpnel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x05,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpneq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpne	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpneq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpne	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x05,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpneb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpne	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpneb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpne	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x05,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpnew	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpne	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnew	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpne	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x05,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpnel	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpne	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpnel	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpne	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x05,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpneq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpne	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpneq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpne	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x05,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpneb	{of}	$123, %bl
-# INTEL: ccmpne	{of}	bl, 123
+# ATT:   ccmpneb	{dfv=of}	$123, %bl
+# INTEL: ccmpne	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x05,0x80,0xfb,0x7b
 
-# ATT:   ccmpnew	{of}	$123, %dx
-# INTEL: ccmpne	{of}	dx, 123
+# ATT:   ccmpnew	{dfv=of}	$123, %dx
+# INTEL: ccmpne	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x05,0x83,0xfa,0x7b
 
-# ATT:   ccmpnel	{of}	$123, %ecx
-# INTEL: ccmpne	{of}	ecx, 123
+# ATT:   ccmpnel	{dfv=of}	$123, %ecx
+# INTEL: ccmpne	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x05,0x83,0xf9,0x7b
 
-# ATT:   ccmpneq	{of}	$123, %r9
-# INTEL: ccmpne	{of}	r9, 123
+# ATT:   ccmpneq	{dfv=of}	$123, %r9
+# INTEL: ccmpne	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x05,0x83,0xf9,0x7b
 
-# ATT:   ccmpnew	{of}	$1234, %dx
-# INTEL: ccmpne	{of}	dx, 1234
+# ATT:   ccmpnew	{dfv=of}	$1234, %dx
+# INTEL: ccmpne	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x05,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpnel	{of}	$123456, %ecx
-# INTEL: ccmpne	{of}	ecx, 123456
+# ATT:   ccmpnel	{dfv=of}	$123456, %ecx
+# INTEL: ccmpne	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x05,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpneq	{of}	$123456, %r9
-# INTEL: ccmpne	{of}	r9, 123456
+# ATT:   ccmpneq	{dfv=of}	$123456, %r9
+# INTEL: ccmpne	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x05,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpneb	{of}	%bl, %dl
-# INTEL: ccmpne	{of}	dl, bl
+# ATT:   ccmpneb	{dfv=of}	%bl, %dl
+# INTEL: ccmpne	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x05,0x3a,0xd3
 
-# ATT:   ccmpnew	{of}	%dx, %ax
-# INTEL: ccmpne	{of}	ax, dx
+# ATT:   ccmpnew	{dfv=of}	%dx, %ax
+# INTEL: ccmpne	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x05,0x3b,0xc2
 
-# ATT:   ccmpnel	{of}	%ecx, %edx
-# INTEL: ccmpne	{of}	edx, ecx
+# ATT:   ccmpnel	{dfv=of}	%ecx, %edx
+# INTEL: ccmpne	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x05,0x3b,0xd1
 
-# ATT:   ccmpneq	{of}	%r9, %r15
-# INTEL: ccmpne	{of}	r15, r9
+# ATT:   ccmpneq	{dfv=of}	%r9, %r15
+# INTEL: ccmpne	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x05,0x3b,0xf9
 
-# ATT:   ccmpob	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpob	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x00,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpow	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpow	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x00,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpow	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpow	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x00,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpol	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpol	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x00,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpol	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpol	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x00,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpoq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpoq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x00,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpoq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpoq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x00,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpob	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpob	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x00,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpow	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpow	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x00,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpol	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpol	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x00,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpoq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpo	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpoq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpo	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x00,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpob	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpo	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpob	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpo	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x00,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpow	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpo	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpow	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpo	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x00,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpol	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpo	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpol	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpo	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x00,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpoq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpo	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpoq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpo	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x00,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpob	{of}	$123, %bl
-# INTEL: ccmpo	{of}	bl, 123
+# ATT:   ccmpob	{dfv=of}	$123, %bl
+# INTEL: ccmpo	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x00,0x80,0xfb,0x7b
 
-# ATT:   ccmpow	{of}	$123, %dx
-# INTEL: ccmpo	{of}	dx, 123
+# ATT:   ccmpow	{dfv=of}	$123, %dx
+# INTEL: ccmpo	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x00,0x83,0xfa,0x7b
 
-# ATT:   ccmpol	{of}	$123, %ecx
-# INTEL: ccmpo	{of}	ecx, 123
+# ATT:   ccmpol	{dfv=of}	$123, %ecx
+# INTEL: ccmpo	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x00,0x83,0xf9,0x7b
 
-# ATT:   ccmpoq	{of}	$123, %r9
-# INTEL: ccmpo	{of}	r9, 123
+# ATT:   ccmpoq	{dfv=of}	$123, %r9
+# INTEL: ccmpo	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x00,0x83,0xf9,0x7b
 
-# ATT:   ccmpow	{of}	$1234, %dx
-# INTEL: ccmpo	{of}	dx, 1234
+# ATT:   ccmpow	{dfv=of}	$1234, %dx
+# INTEL: ccmpo	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x00,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpol	{of}	$123456, %ecx
-# INTEL: ccmpo	{of}	ecx, 123456
+# ATT:   ccmpol	{dfv=of}	$123456, %ecx
+# INTEL: ccmpo	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x00,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpoq	{of}	$123456, %r9
-# INTEL: ccmpo	{of}	r9, 123456
+# ATT:   ccmpoq	{dfv=of}	$123456, %r9
+# INTEL: ccmpo	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x00,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpob	{of}	%bl, %dl
-# INTEL: ccmpo	{of}	dl, bl
+# ATT:   ccmpob	{dfv=of}	%bl, %dl
+# INTEL: ccmpo	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x00,0x3a,0xd3
 
-# ATT:   ccmpow	{of}	%dx, %ax
-# INTEL: ccmpo	{of}	ax, dx
+# ATT:   ccmpow	{dfv=of}	%dx, %ax
+# INTEL: ccmpo	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x00,0x3b,0xc2
 
-# ATT:   ccmpol	{of}	%ecx, %edx
-# INTEL: ccmpo	{of}	edx, ecx
+# ATT:   ccmpol	{dfv=of}	%ecx, %edx
+# INTEL: ccmpo	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x00,0x3b,0xd1
 
-# ATT:   ccmpoq	{of}	%r9, %r15
-# INTEL: ccmpo	{of}	r15, r9
+# ATT:   ccmpoq	{dfv=of}	%r9, %r15
+# INTEL: ccmpo	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x00,0x3b,0xf9
 
-# ATT:   ccmpsb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpsb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x08,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpsw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpsw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x08,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpsw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpsw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x08,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpsl	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpsl	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x08,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpsl	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpsl	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x08,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpsq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpsq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x08,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpsq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpsq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x08,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpsb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpsb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x08,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpsw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpsw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x08,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpsl	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpsl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x08,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpsq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmps	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpsq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmps	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x08,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpsb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmps	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpsb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmps	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x08,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpsw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmps	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpsw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmps	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x08,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpsl	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmps	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpsl	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmps	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x08,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpsq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmps	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpsq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmps	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x08,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpsb	{of}	$123, %bl
-# INTEL: ccmps	{of}	bl, 123
+# ATT:   ccmpsb	{dfv=of}	$123, %bl
+# INTEL: ccmps	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x08,0x80,0xfb,0x7b
 
-# ATT:   ccmpsw	{of}	$123, %dx
-# INTEL: ccmps	{of}	dx, 123
+# ATT:   ccmpsw	{dfv=of}	$123, %dx
+# INTEL: ccmps	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x08,0x83,0xfa,0x7b
 
-# ATT:   ccmpsl	{of}	$123, %ecx
-# INTEL: ccmps	{of}	ecx, 123
+# ATT:   ccmpsl	{dfv=of}	$123, %ecx
+# INTEL: ccmps	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x08,0x83,0xf9,0x7b
 
-# ATT:   ccmpsq	{of}	$123, %r9
-# INTEL: ccmps	{of}	r9, 123
+# ATT:   ccmpsq	{dfv=of}	$123, %r9
+# INTEL: ccmps	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x08,0x83,0xf9,0x7b
 
-# ATT:   ccmpsw	{of}	$1234, %dx
-# INTEL: ccmps	{of}	dx, 1234
+# ATT:   ccmpsw	{dfv=of}	$1234, %dx
+# INTEL: ccmps	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x08,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpsl	{of}	$123456, %ecx
-# INTEL: ccmps	{of}	ecx, 123456
+# ATT:   ccmpsl	{dfv=of}	$123456, %ecx
+# INTEL: ccmps	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x08,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpsq	{of}	$123456, %r9
-# INTEL: ccmps	{of}	r9, 123456
+# ATT:   ccmpsq	{dfv=of}	$123456, %r9
+# INTEL: ccmps	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x08,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpsb	{of}	%bl, %dl
-# INTEL: ccmps	{of}	dl, bl
+# ATT:   ccmpsb	{dfv=of}	%bl, %dl
+# INTEL: ccmps	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x08,0x3a,0xd3
 
-# ATT:   ccmpsw	{of}	%dx, %ax
-# INTEL: ccmps	{of}	ax, dx
+# ATT:   ccmpsw	{dfv=of}	%dx, %ax
+# INTEL: ccmps	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x08,0x3b,0xc2
 
-# ATT:   ccmpsl	{of}	%ecx, %edx
-# INTEL: ccmps	{of}	edx, ecx
+# ATT:   ccmpsl	{dfv=of}	%ecx, %edx
+# INTEL: ccmps	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x08,0x3b,0xd1
 
-# ATT:   ccmpsq	{of}	%r9, %r15
-# INTEL: ccmps	{of}	r15, r9
+# ATT:   ccmpsq	{dfv=of}	%r9, %r15
+# INTEL: ccmps	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x08,0x3b,0xf9
 
-# ATT:   ccmptb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmptb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0a,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmptw	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmptw	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x0a,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmptw	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmptw	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x0a,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmptl	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmptl	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x0a,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmptl	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmptl	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x0a,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmptq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmptq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x0a,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmptq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmptq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x0a,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmptb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmptb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x0a,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmptw	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmptw	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x0a,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmptl	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmptl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x0a,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmptq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpt	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmptq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpt	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x0a,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmptb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpt	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmptb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpt	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0a,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmptw	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpt	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmptw	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpt	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x0a,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmptl	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpt	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmptl	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpt	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x0a,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmptq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpt	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmptq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpt	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x0a,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmptb	{of}	$123, %bl
-# INTEL: ccmpt	{of}	bl, 123
+# ATT:   ccmptb	{dfv=of}	$123, %bl
+# INTEL: ccmpt	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x0a,0x80,0xfb,0x7b
 
-# ATT:   ccmptw	{of}	$123, %dx
-# INTEL: ccmpt	{of}	dx, 123
+# ATT:   ccmptw	{dfv=of}	$123, %dx
+# INTEL: ccmpt	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x0a,0x83,0xfa,0x7b
 
-# ATT:   ccmptl	{of}	$123, %ecx
-# INTEL: ccmpt	{of}	ecx, 123
+# ATT:   ccmptl	{dfv=of}	$123, %ecx
+# INTEL: ccmpt	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x0a,0x83,0xf9,0x7b
 
-# ATT:   ccmptq	{of}	$123, %r9
-# INTEL: ccmpt	{of}	r9, 123
+# ATT:   ccmptq	{dfv=of}	$123, %r9
+# INTEL: ccmpt	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x0a,0x83,0xf9,0x7b
 
-# ATT:   ccmptw	{of}	$1234, %dx
-# INTEL: ccmpt	{of}	dx, 1234
+# ATT:   ccmptw	{dfv=of}	$1234, %dx
+# INTEL: ccmpt	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x0a,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmptl	{of}	$123456, %ecx
-# INTEL: ccmpt	{of}	ecx, 123456
+# ATT:   ccmptl	{dfv=of}	$123456, %ecx
+# INTEL: ccmpt	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x0a,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmptq	{of}	$123456, %r9
-# INTEL: ccmpt	{of}	r9, 123456
+# ATT:   ccmptq	{dfv=of}	$123456, %r9
+# INTEL: ccmpt	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x0a,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmptb	{of}	%bl, %dl
-# INTEL: ccmpt	{of}	dl, bl
+# ATT:   ccmptb	{dfv=of}	%bl, %dl
+# INTEL: ccmpt	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x0a,0x3a,0xd3
 
-# ATT:   ccmptw	{of}	%dx, %ax
-# INTEL: ccmpt	{of}	ax, dx
+# ATT:   ccmptw	{dfv=of}	%dx, %ax
+# INTEL: ccmpt	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x0a,0x3b,0xc2
 
-# ATT:   ccmptl	{of}	%ecx, %edx
-# INTEL: ccmpt	{of}	edx, ecx
+# ATT:   ccmptl	{dfv=of}	%ecx, %edx
+# INTEL: ccmpt	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x0a,0x3b,0xd1
 
-# ATT:   ccmptq	{of}	%r9, %r15
-# INTEL: ccmpt	{of}	r15, r9
+# ATT:   ccmptq	{dfv=of}	%r9, %r15
+# INTEL: ccmpt	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x0a,0x3b,0xf9
 
-# ATT:   ccmpeb	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	byte ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpeb	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	byte ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x04,0x80,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpew	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	word ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpew	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	word ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x45,0x04,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpew	{of}	$1234, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	word ptr [r8 + 4*rax + 123], 1234
+# ATT:   ccmpew	{dfv=of}	$1234, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	word ptr [r8 + 4*rax + 123], 1234
 0x62,0xd4,0x45,0x04,0x81,0x7c,0x80,0x7b,0xd2,0x04
 
-# ATT:   ccmpel	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	dword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpel	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0x44,0x04,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpel	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	dword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpel	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	dword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0x44,0x04,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpeq	{of}	$123, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	qword ptr [r8 + 4*rax + 123], 123
+# ATT:   ccmpeq	{dfv=of}	$123, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123
 0x62,0xd4,0xc4,0x04,0x83,0x7c,0x80,0x7b,0x7b
 
-# ATT:   ccmpeq	{of}	$123456, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	qword ptr [r8 + 4*rax + 123], 123456
+# ATT:   ccmpeq	{dfv=of}	$123456, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	qword ptr [r8 + 4*rax + 123], 123456
 0x62,0xd4,0xc4,0x04,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpeb	{of}	%bl, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	byte ptr [r8 + 4*rax + 123], bl
+# ATT:   ccmpeb	{dfv=of}	%bl, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	byte ptr [r8 + 4*rax + 123], bl
 0x62,0xd4,0x44,0x04,0x38,0x5c,0x80,0x7b
 
-# ATT:   ccmpew	{of}	%dx, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	word ptr [r8 + 4*rax + 123], dx
+# ATT:   ccmpew	{dfv=of}	%dx, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	word ptr [r8 + 4*rax + 123], dx
 0x62,0xd4,0x45,0x04,0x39,0x54,0x80,0x7b
 
-# ATT:   ccmpel	{of}	%ecx, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	dword ptr [r8 + 4*rax + 123], ecx
+# ATT:   ccmpel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	dword ptr [r8 + 4*rax + 123], ecx
 0x62,0xd4,0x44,0x04,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpeq	{of}	%r9, 123(%r8,%rax,4)
-# INTEL: ccmpe	{of}	qword ptr [r8 + 4*rax + 123], r9
+# ATT:   ccmpeq	{dfv=of}	%r9, 123(%r8,%rax,4)
+# INTEL: ccmpe	{dfv=of}	qword ptr [r8 + 4*rax + 123], r9
 0x62,0x54,0xc4,0x04,0x39,0x4c,0x80,0x7b
 
-# ATT:   ccmpeb	{of}	123(%r8,%rax,4), %bl
-# INTEL: ccmpe	{of}	bl, byte ptr [r8 + 4*rax + 123]
+# ATT:   ccmpeb	{dfv=of}	123(%r8,%rax,4), %bl
+# INTEL: ccmpe	{dfv=of}	bl, byte ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x04,0x3a,0x5c,0x80,0x7b
 
-# ATT:   ccmpew	{of}	123(%r8,%rax,4), %dx
-# INTEL: ccmpe	{of}	dx, word ptr [r8 + 4*rax + 123]
+# ATT:   ccmpew	{dfv=of}	123(%r8,%rax,4), %dx
+# INTEL: ccmpe	{dfv=of}	dx, word ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x45,0x04,0x3b,0x54,0x80,0x7b
 
-# ATT:   ccmpel	{of}	123(%r8,%rax,4), %ecx
-# INTEL: ccmpe	{of}	ecx, dword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpel	{dfv=of}	123(%r8,%rax,4), %ecx
+# INTEL: ccmpe	{dfv=of}	ecx, dword ptr [r8 + 4*rax + 123]
 0x62,0xd4,0x44,0x04,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpeq	{of}	123(%r8,%rax,4), %r9
-# INTEL: ccmpe	{of}	r9, qword ptr [r8 + 4*rax + 123]
+# ATT:   ccmpeq	{dfv=of}	123(%r8,%rax,4), %r9
+# INTEL: ccmpe	{dfv=of}	r9, qword ptr [r8 + 4*rax + 123]
 0x62,0x54,0xc4,0x04,0x3b,0x4c,0x80,0x7b
 
-# ATT:   ccmpeb	{of}	$123, %bl
-# INTEL: ccmpe	{of}	bl, 123
+# ATT:   ccmpeb	{dfv=of}	$123, %bl
+# INTEL: ccmpe	{dfv=of}	bl, 123
 0x62,0xf4,0x44,0x04,0x80,0xfb,0x7b
 
-# ATT:   ccmpew	{of}	$123, %dx
-# INTEL: ccmpe	{of}	dx, 123
+# ATT:   ccmpew	{dfv=of}	$123, %dx
+# INTEL: ccmpe	{dfv=of}	dx, 123
 0x62,0xf4,0x45,0x04,0x83,0xfa,0x7b
 
-# ATT:   ccmpel	{of}	$123, %ecx
-# INTEL: ccmpe	{of}	ecx, 123
+# ATT:   ccmpel	{dfv=of}	$123, %ecx
+# INTEL: ccmpe	{dfv=of}	ecx, 123
 0x62,0xf4,0x44,0x04,0x83,0xf9,0x7b
 
-# ATT:   ccmpeq	{of}	$123, %r9
-# INTEL: ccmpe	{of}	r9, 123
+# ATT:   ccmpeq	{dfv=of}	$123, %r9
+# INTEL: ccmpe	{dfv=of}	r9, 123
 0x62,0xd4,0xc4,0x04,0x83,0xf9,0x7b
 
-# ATT:   ccmpew	{of}	$1234, %dx
-# INTEL: ccmpe	{of}	dx, 1234
+# ATT:   ccmpew	{dfv=of}	$1234, %dx
+# INTEL: ccmpe	{dfv=of}	dx, 1234
 0x62,0xf4,0x45,0x04,0x81,0xfa,0xd2,0x04
 
-# ATT:   ccmpel	{of}	$123456, %ecx
-# INTEL: ccmpe	{of}	ecx, 123456
+# ATT:   ccmpel	{dfv=of}	$123456, %ecx
+# INTEL: ccmpe	{dfv=of}	ecx, 123456
 0x62,0xf4,0x44,0x04,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpeq	{of}	$123456, %r9
-# INTEL: ccmpe	{of}	r9, 123456
+# ATT:   ccmpeq	{dfv=of}	$123456, %r9
+# INTEL: ccmpe	{dfv=of}	r9, 123456
 0x62,0xd4,0xc4,0x04,0x81,0xf9,0x40,0xe2,0x01,0x00
 
-# ATT:   ccmpeb	{of}	%bl, %dl
-# INTEL: ccmpe	{of}	dl, bl
+# ATT:   ccmpeb	{dfv=of}	%bl, %dl
+# INTEL: ccmpe	{dfv=of}	dl, bl
 0x62,0xf4,0x44,0x04,0x3a,0xd3
 
-# ATT:   ccmpew	{of}	%dx, %ax
-# INTEL: ccmpe	{of}	ax, dx
+# ATT:   ccmpew	{dfv=of}	%dx, %ax
+# INTEL: ccmpe	{dfv=of}	ax, dx
 0x62,0xf4,0x45,0x04,0x3b,0xc2
 
-# ATT:   ccmpel	{of}	%ecx, %edx
-# INTEL: ccmpe	{of}	edx, ecx
+# ATT:   ccmpel	{dfv=of}	%ecx, %edx
+# INTEL: ccmpe	{dfv=of}	edx, ecx
 0x62,0xf4,0x44,0x04,0x3b,0xd1
 
-# ATT:   ccmpeq	{of}	%r9, %r15
-# INTEL: ccmpe	{of}	r15, r9
+# ATT:   ccmpeq	{dfv=of}	%r9, %r15
+# INTEL: ccmpe	{dfv=of}	r15, r9
 0x62,0x54,0xc4,0x04,0x3b,0xf9

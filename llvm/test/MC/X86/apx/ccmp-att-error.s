@@ -4,18 +4,26 @@
 # CHECK: ccmpeq $1 %rax, %rbx
 ccmpeq $1 %rax, %rbx
 
-# CHECK: [[#@LINE+2]]:14: error: Expected } or , at this point
-# CHECK: ccmpeq {sf,cf%rax, %rbx
-ccmpeq {sf,cf%rax, %rbx
+# CHECK: [[#@LINE+2]]:9: error: Expected dfv at this point
+# CHECK: ccmpeq {sf} %rax, %rbx
+ccmpeq {sf} %rax, %rbx
 
-# CHECK: [[#@LINE+2]]:9: error: Invalid conditional flags
-# CHECK: ccmpeq {pf} %rax, %rbx
-ccmpeq {pf} %rax, %rbx
+# CHECK: [[#@LINE+2]]:12: error: Expected = at this point
+# CHECK: ccmpeq {dfv:sf} %rax, %rbx
+ccmpeq {dfv:sf} %rax, %rbx
 
-# CHECK: [[#@LINE+2]]:15: error: Duplicated conditional flag
-# CHECK: ccmpeq {of,zf,of} %rax, %rbx
-ccmpeq {of,zf,of} %rax, %rbx
+# CHECK: [[#@LINE+2]]:18: error: Expected } or , at this point
+# CHECK: ccmpeq {dfv=sf,cf%rax, %rbx
+ccmpeq {dfv=sf,cf%rax, %rbx
 
-# CHECK: [[#@LINE+2]]:20: error: Expected } at this point
-# CHECK: ccmpeq {of,sf,zf,cf,of} %rax, %rbx
-ccmpeq {of,sf,zf,cf,of} %rax, %rbx
+# CHECK: [[#@LINE+2]]:13: error: Invalid conditional flags
+# CHECK: ccmpeq {dfv=pf} %rax, %rbx
+ccmpeq {dfv=pf} %rax, %rbx
+
+# CHECK: [[#@LINE+2]]:19: error: Duplicated conditional flag
+# CHECK: ccmpeq {dfv=of,zf,of} %rax, %rbx
+ccmpeq {dfv=of,zf,of} %rax, %rbx
+
+# CHECK: [[#@LINE+2]]:24: error: Expected } at this point
+# CHECK: ccmpeq {dfv=of,sf,zf,cf,of} %rax, %rbx
+ccmpeq {dfv=of,sf,zf,cf,of} %rax, %rbx

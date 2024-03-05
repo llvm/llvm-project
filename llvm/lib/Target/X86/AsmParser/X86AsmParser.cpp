@@ -2307,7 +2307,7 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
   return Error(Tok.getLoc(), "unknown token in expression");
 }
 
-/// Parse condtional flags for CCMP/CTEST, e.g {of,sf,zf,cf} right after
+/// Parse condtional flags for CCMP/CTEST, e.g {dfv=of,sf,zf,cf} right after
 /// mnemonic.
 bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
@@ -2316,6 +2316,15 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   if (!Tok.is(AsmToken::LCurly))
     return Error(Tok.getLoc(), "Expected { at this point");
   Parser.Lex(); // Eat "{"
+  Tok = Parser.getTok();
+  if (Tok.getIdentifier() != "dfv")
+    return Error(Tok.getLoc(), "Expected dfv at this point");
+  Parser.Lex(); // Eat "dfv"
+  Tok = Parser.getTok();
+  if (!Tok.is(AsmToken::Equal))
+    return Error(Tok.getLoc(), "Expected = at this point");
+  Parser.Lex(); // Eat "="
+
   Tok = Parser.getTok();
   SMLoc End;
   if (Tok.is(AsmToken::RCurly)) {
