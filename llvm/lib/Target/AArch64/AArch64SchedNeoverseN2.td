@@ -2110,24 +2110,24 @@ def : InstRW<[N2Write_6cyc_1L], (instregex "^LDNT1[BHWD]_ZRI$")>;
 def : InstRW<[N2Write_6cyc_1L_1S], (instregex "^LDNT1[BHWD]_ZRR$")>;
 
 // Non temporal gather load, vector + scalar 32-bit element size
-def : InstRW<[N2Write_9cyc_1L_1V], (instregex "^LDNT1[BHW]_ZZR_S_REAL$",
-                                              "^LDNT1S[BH]_ZZR_S_REAL$")>;
+def : InstRW<[N2Write_9cyc_1L_1V], (instregex "^LDNT1[BHW]_ZZR_S$",
+                                              "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[N2Write_10cyc_2L_2V1], (instregex "^LDNT1S?[BHW]_ZZR_D_REAL$")>;
-def : InstRW<[N2Write_10cyc_2L_2V1], (instrs LDNT1D_ZZR_D_REAL)>;
+def : InstRW<[N2Write_10cyc_2L_2V1], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[N2Write_10cyc_2L_2V1], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
-def : InstRW<[N2Write_6cyc_1L_1S], (instregex "^LDFF1[BHWD]_REAL$",
-                                              "^LDFF1S?B_[HSD]_REAL$",
-                                              "^LDFF1S?H_[SD]_REAL$",
-                                              "^LDFF1S?W_D_REAL$")>;
+def : InstRW<[N2Write_6cyc_1L_1S], (instregex "^LDFF1[BHWD]$",
+                                              "^LDFF1S?B_[HSD]$",
+                                              "^LDFF1S?H_[SD]$",
+                                              "^LDFF1S?W_D$")>;
 
 // Contiguous non faulting load, scalar + imm
-def : InstRW<[N2Write_6cyc_1L], (instregex "^LDNF1[BHWD]_IMM_REAL$",
-                                           "^LDNF1S?B_[HSD]_IMM_REAL$",
-                                           "^LDNF1S?H_[SD]_IMM_REAL$",
-                                           "^LDNF1S?W_D_IMM_REAL$")>;
+def : InstRW<[N2Write_6cyc_1L], (instregex "^LDNF1[BHWD]_IMM$",
+                                           "^LDNF1S?B_[HSD]_IMM$",
+                                           "^LDNF1S?H_[SD]_IMM$",
+                                           "^LDNF1S?W_D_IMM$")>;
 
 // Contiguous Load two structures to two vectors, scalar + imm
 def : InstRW<[N2Write_8cyc_1L_1V], (instregex "^LD2[BHWD]_IMM$")>;
@@ -2148,28 +2148,28 @@ def : InstRW<[N2Write_9cyc_2L_2V], (instregex "^LD4[BHWD]_IMM$")>;
 def : InstRW<[N2Write_10cyc_2L_2V_2S], (instregex "^LD4[BHWD]$")>;
 
 // Gather load, vector + imm, 32-bit element size
-def : InstRW<[N2Write_9cyc_1L_1V], (instregex "^GLD(FF)?1S?[BH]_S_IMM_REAL$",
-                                              "^GLD(FF)?1W_IMM_REAL$")>;
+def : InstRW<[N2Write_9cyc_1L_1V], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
+                                              "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[N2Write_9cyc_2L_2V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM_REAL$",
-                                              "^GLD(FF)?1D_IMM_REAL$")>;
+def : InstRW<[N2Write_9cyc_2L_2V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+                                              "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
 def : InstRW<[N2Write_9cyc_2L_2V],
-             (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW_(SCALED_)?REAL$",
-                        "^GLD(FF)?1S?[BHW]_D_(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_[SU]XTW_(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_(SCALED_)?REAL$")>;
+             (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
+                        "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
+                        "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",
+                        "^GLD(FF)?1D(_SCALED)?$")>;
 
 // Gather load, 32-bit scaled offset
 def : InstRW<[N2Write_10cyc_2L_2V],
-             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED_REAL$",
-                        "^GLD(FF)?1W_[SU]XTW_SCALED_REAL")>;
+             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED$",
+                        "^GLD(FF)?1W_[SU]XTW_SCALED")>;
 
 // Gather load, 32-bit unpacked unscaled offset
-def : InstRW<[N2Write_9cyc_1L_1V], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW_REAL$",
-                                              "^GLD(FF)?1W_[SU]XTW_REAL$")>;
+def : InstRW<[N2Write_9cyc_1L_1V], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
+                                              "^GLD(FF)?1W_[SU]XTW$")>;
 
 // SVE Store instructions
 // -----------------------------------------------------------------------------
@@ -2268,10 +2268,10 @@ def : InstRW<[N2Write_2cyc_1L01_1V], (instregex "^SST1[BHW]_D$",
 // -----------------------------------------------------------------------------
 
 // Read first fault register, unpredicated
-def : InstRW<[N2Write_2cyc_1M0], (instrs RDFFR_P_REAL)>;
+def : InstRW<[N2Write_2cyc_1M0], (instrs RDFFR_P)>;
 
 // Read first fault register, predicated
-def : InstRW<[N2Write_3cyc_1M0_1M], (instrs RDFFR_PPz_REAL)>;
+def : InstRW<[N2Write_3cyc_1M0_1M], (instrs RDFFR_PPz)>;
 
 // Read first fault register and set flags
 def : InstRW<[N2Write_4cyc_2M0_2M], (instrs RDFFRS_PPz)>;
