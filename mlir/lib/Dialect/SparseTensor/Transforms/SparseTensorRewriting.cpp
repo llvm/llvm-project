@@ -692,7 +692,21 @@ private:
     rewriter.setInsertionPointToStart(forOp.getBody());
     auto idx = forOp.getInductionVar();
     auto val = rewriter.create<memref::LoadOp>(loc, vec, idx);
-    rewriter.create<vector::PrintOp>(loc, val, vector::PrintPunctuation::Comma);
+    if (llvm::isa<ComplexType>(val.getType())) {
+      // Since the vector dialect does not support complex types in any op,
+      // we split those into (real, imag) pairs here.
+      Value real = rewriter.create<complex::ReOp>(loc, val);
+      Value imag = rewriter.create<complex::ImOp>(loc, val);
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+      rewriter.create<vector::PrintOp>(loc, real,
+                                       vector::PrintPunctuation::Comma);
+      rewriter.create<vector::PrintOp>(loc, imag,
+                                       vector::PrintPunctuation::Close);
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
+    } else {
+      rewriter.create<vector::PrintOp>(loc, val,
+                                       vector::PrintPunctuation::Comma);
+    }
     rewriter.setInsertionPointAfter(forOp);
     // Close bracket and end of line.
     rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Close);
