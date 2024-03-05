@@ -410,7 +410,7 @@ define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ;
 ; ZVFHMIN-LABEL: vsitofp_nxv32f16_nxv32i32:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vmv1r.v v1, v0
+; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a1, vlenb
 ; ZVFHMIN-NEXT:    srli a2, a1, 2
 ; ZVFHMIN-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
@@ -429,7 +429,7 @@ define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFHMIN-NEXT:    mv a0, a1
 ; ZVFHMIN-NEXT:  .LBB25_2:
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v1
+; ZVFHMIN-NEXT:    vmv1r.v v0, v7
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v16, v8

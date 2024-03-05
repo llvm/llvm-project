@@ -25,9 +25,9 @@ add_header_library(
 )
 
 add_header_library(
-  float
+  types
   HDRS
-    float.h
+    types.h
   DEPENDS
     .architectures
     .compiler

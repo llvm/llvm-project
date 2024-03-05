@@ -57,7 +57,6 @@ intermediate LLVM representation.
    JITLink
    NewPassManager
    NVPTXUsage
-   Phabricator
    Passes
    ReportingGuide
    ResponseGuide
