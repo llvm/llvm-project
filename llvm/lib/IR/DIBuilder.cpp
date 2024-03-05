@@ -1027,10 +1027,19 @@ static Function *getDeclareIntrin(Module &M) {
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
     llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
     const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
-  if (!ValueFn)
-    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
-  return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
-                            InsertBefore);
+  if (M.IsNewDbgInfoFormat) {
+    DPValue *DPV = DPValue::createDPValue(Val, VarInfo, Expr, DL);
+    if (InsertBefore && InsertBB)
+      InsertBB->insertDPValueBefore(DPV, InsertBefore->getIterator());
+    else if (InsertBB)
+      InsertBB->insertDPValueBefore(DPV, InsertBB->end());
+    return DPV;
+  } else {
+    if (!ValueFn)
+      ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
+    return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
+                              InsertBefore);
+  }
 }
 
 Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,

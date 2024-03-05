@@ -912,7 +912,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
     // inserting debug intrinsics before, to make end-checking easier.
     I = Builder.CreateAlloca(Builder.getInt1Ty());
 
-    // Label metadata and records.
+    // Label metadata and records
+    // --------------------------
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
     DILabel *AlwaysPreserveLabel = DIB.createLabel(
         BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
@@ -928,15 +929,31 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
     // Specifically do not insert a terminator, to check this works. `I` should
     // have absorbed the DPLabel in the new debug info mode.
-    I = Builder.CreateAlloca(Builder.getInt1Ty());
+    I = Builder.CreateAlloca(Builder.getInt32Ty());
     ExpectOrder(LabelRecord, I->getIterator());
 
-    DIB.finalize();
+    // Variable metadata and records
+    // -----------------------------
+    DILocation *VarLoc = DILocation::get(Ctx, 2, 0, BarScope);
+    auto *IntType = DIB.createBasicType("int", 32, dwarf::DW_ATE_signed);
+    DILocalVariable *VarX =
+        DIB.createAutoVariable(BarSP, "X", File, 2, IntType, true);
+    ExpectOrder(
+        DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(), VarLoc, I),
+        I->getIterator());
+    // Check inserting at end of the block works as with labels.
+    DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
+        I, VarX, DIB.createExpression(), VarLoc, BB);
+    I = Builder.CreateAlloca(Builder.getInt32Ty());
+    ExpectOrder(VarXValue, I->getIterator());
 
+    DIB.finalize();
     // Check the labels are not/are added to Bar's retainedNodes array (AlwaysPreserve).
     EXPECT_EQ(find(BarSP->getRetainedNodes(), Label),
               BarSP->getRetainedNodes().end());
     EXPECT_NE(find(BarSP->getRetainedNodes(), AlwaysPreserveLabel),
+              BarSP->getRetainedNodes().end());
+    EXPECT_NE(find(BarSP->getRetainedNodes(), VarX),
               BarSP->getRetainedNodes().end());
 
     EXPECT_TRUE(verifyModule(*M));
