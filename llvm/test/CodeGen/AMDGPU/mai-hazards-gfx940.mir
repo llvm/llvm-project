@@ -749,6 +749,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_vgpr_flat_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_vgpr_flat_read
@@ -803,7 +804,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_vgpr_valu_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 1
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_read
 body:             |
@@ -867,7 +868,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_vgpr_dot_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 1
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_DOT
 name:            dmfma16x16_write_vgpr_dot_read
 body:             |
@@ -987,7 +988,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_vgpr_valu_write
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 1
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_write
 body:             |
@@ -1483,6 +1484,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_agpr_flat_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_agpr_flat_read
@@ -1504,7 +1506,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 1
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            dmfma16x16_write_agpr_valu_read
 body:             |
@@ -1525,7 +1527,7 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_write
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 1
+# GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dmfma16x16_write_agpr_valu_write
 body:             |

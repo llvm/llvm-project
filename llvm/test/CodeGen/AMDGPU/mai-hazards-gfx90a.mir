@@ -481,7 +481,8 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_vgpr_flat_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_vgpr_flat_read
 body:             |
@@ -1218,7 +1219,8 @@ body:             |
 # GCN-LABEL: name: dmfma16x16_write_agpr_flat_read
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_agpr_flat_read
 body:             |
