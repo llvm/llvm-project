@@ -810,6 +810,7 @@ def FeatureStdExtSsccptr
 def FeatureStdExtSscofpmf
     : SubtargetFeature<"sscofpmf", "HasStdExtSscofpmf", "true",
                        "'Sscofpmf' (Count Overflow and Mode-Based Filtering)", []>;
+
 def FeatureStdExtShcounterenw
     : SubtargetFeature<"shcounterenw", "HasStdExtShcounterenw", "true",
                        "'Shcounterenw' (Support writeable hcounteren enable "
