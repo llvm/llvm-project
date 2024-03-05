@@ -112,3 +112,20 @@ entry:
   store <4 x float> <float 1.5, float 2.5, float 3.5, float 4.5>, ptr %t, align 16
   ret void
 }
+
+; FIXME: This is miscompiled. This will create -2147483648.0 instead of
+; 2147483648.0 for the 4th element.
+define void @foo_9(ptr nocapture noundef writeonly %t) {
+; CHECK-LABEL: foo_9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 31
+; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  store <4 x float> <float 0.0, float -2147483648.0, float 0.0, float 2147483648.0>, ptr %t, align 16
+  ret void
+}
