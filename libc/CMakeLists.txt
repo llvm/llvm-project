@@ -291,7 +291,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
           result : '${CLANG_TIDY_RESULT}'
           ")
       endif()
-      string(REGEX MATCH "+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
+      string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
       string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
         "${CMAKE_CXX_COMPILER_VERSION}")
 
