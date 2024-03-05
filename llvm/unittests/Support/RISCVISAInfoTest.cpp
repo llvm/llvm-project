@@ -752,6 +752,7 @@ R"(All available -march extensions for RISC-V
     zmmul               1.0
     za128rs             1.0
     za64rs              1.0
+    zacas               1.0
     zawrs               1.0
     zfa                 1.0
     zfh                 1.0
@@ -829,6 +830,7 @@ R"(All available -march extensions for RISC-V
     smepmp              1.0
     ssaia               1.0
     ssccptr             1.0
+    sscofpmf            1.0
     sscounterenw        1.0
     ssstateen           1.0
     ssstrict            1.0
@@ -873,7 +875,6 @@ Experimental extensions
     zimop               0.1
     zaamo               0.2
     zabha               1.0
-    zacas               1.0
     zalasr              0.1
     zalrsc              0.2
     zfbfmin             1.0

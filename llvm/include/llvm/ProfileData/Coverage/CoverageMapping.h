@@ -384,7 +384,58 @@ struct MCDCRecord {
   /// are effectively ignored.
   enum CondState { MCDC_DontCare = -1, MCDC_False = 0, MCDC_True = 1 };
 
-  using TestVector = llvm::SmallVector<CondState>;
+  /// Emulate SmallVector<CondState> with a pair of BitVector.
+  ///
+  ///          True  False DontCare (Impossible)
+  /// Values:  True  False False    True
+  /// Visited: True  True  False    False
+  class TestVector {
+    BitVector Values;  /// True/False (False when DontCare)
+    BitVector Visited; /// ~DontCare
+
+  public:
+    /// Default values are filled with DontCare.
+    TestVector(unsigned N) : Values(N), Visited(N) {}
+
+    /// Emulate RHS SmallVector::operator[]
+    CondState operator[](int I) const {
+      return (Visited[I] ? (Values[I] ? MCDC_True : MCDC_False)
+                         : MCDC_DontCare);
+    }
+
+    /// Equivalent to buildTestVector's Index.
+    auto getIndex() const { return Values.getData()[0]; }
+
+    /// Set the condition \p Val at position \p I.
+    /// This emulates LHS SmallVector::operator[].
+    void set(int I, CondState Val) {
+      Visited[I] = (Val != MCDC_DontCare);
+      Values[I] = (Val == MCDC_True);
+    }
+
+    /// Emulate SmallVector::push_back.
+    void push_back(CondState Val) {
+      Visited.push_back(Val != MCDC_DontCare);
+      Values.push_back(Val == MCDC_True);
+      assert(Values.size() == Visited.size());
+    }
+
+    /// For each element:
+    /// - False if either is DontCare
+    /// - False if both have the same value
+    /// - True if both have the opposite value
+    /// ((A.Values ^ B.Values) & A.Visited & B.Visited)
+    /// Dedicated to findIndependencePairs().
+    auto getDifferences(const TestVector &B) const {
+      const auto &A = *this;
+      BitVector AB = A.Values;
+      AB ^= B.Values;
+      AB &= A.Visited;
+      AB &= B.Visited;
+      return AB;
+    }
+  };
+
   using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
   using BoolVector = llvm::SmallVector<bool>;
   using TVRowPair = std::pair<unsigned, unsigned>;

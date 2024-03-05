@@ -326,8 +326,8 @@ def GetPtrBasePop : Opcode {
   let Args = [ArgUint32];
 }
 
-def InitPtrPop : Opcode;
-def InitPtr : Opcode;
+def FinishInitPop : Opcode;
+def FinishInit    : Opcode;
 
 def GetPtrDerivedPop : Opcode {
   let Args = [ArgUint32];
@@ -476,6 +476,7 @@ def StoreBitField : StoreBitFieldOpcode {}
 def StoreBitFieldPop : StoreBitFieldOpcode {}
 
 // [Pointer, Value] -> []
+def Init : StoreOpcode {}
 def InitPop : StoreOpcode {}
 // [Pointer, Value] -> [Pointer]
 def InitElem : Opcode {
@@ -562,10 +563,10 @@ def Inv: Opcode {
 }
 
 // Increment and decrement.
-def Inc: IntegerOpcode;
-def IncPop : IntegerOpcode;
-def Dec: IntegerOpcode;
-def DecPop: IntegerOpcode;
+def Inc: AluOpcode;
+def IncPop : AluOpcode;
+def Dec: AluOpcode;
+def DecPop: AluOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;

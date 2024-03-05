@@ -400,26 +400,23 @@ private:
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
-                       int TVIdx, unsigned Index) {
-    assert((Index & (1 << ID)) == 0);
-
+                       int TVIdx) {
     for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
       static_assert(MCDCRecord::MCDC_False == 0);
       static_assert(MCDCRecord::MCDC_True == 1);
-      Index |= MCDCCond << ID;
-      TV[ID] = MCDCCond;
+      TV.set(ID, MCDCCond);
       auto NextID = NextIDs[ID][MCDCCond];
       auto NextTVIdx = TVIdx + Indices[ID][MCDCCond];
       assert(NextID == SavedNodes[ID].NextIDs[MCDCCond]);
       if (NextID >= 0) {
-        buildTestVector(TV, NextID, NextTVIdx, Index);
+        buildTestVector(TV, NextID, NextTVIdx);
         continue;
       }
 
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
-      if (!Bitmap[DecisionParams.BitmapIdx * CHAR_BIT + Index])
+      if (!Bitmap[DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
@@ -429,7 +426,7 @@ private:
     }
 
     // Reset back to DontCare.
-    TV[ID] = MCDCRecord::MCDC_DontCare;
+    TV.set(ID, MCDCRecord::MCDC_DontCare);
   }
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
@@ -439,8 +436,8 @@ private:
     // We start at the root node (ID == 0) with all values being DontCare.
     // `TVIdx` starts with 0 and is in the traversal.
     // `Index` encodes the bitmask of true values and is initially 0.
-    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 0, 0, 0);
+    MCDCRecord::TestVector TV(NumConditions);
+    buildTestVector(TV, 0, 0);
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
 
@@ -465,20 +462,12 @@ private:
       for (unsigned J = 0; J < NumExecVectorsF; ++J) {
         const auto &[B, BCond] = ExecVectors[J];
         assert(BCond == MCDCRecord::MCDC_False);
-        unsigned Flip = NumConditions, Idx;
-        for (Idx = 0; Idx < NumConditions; ++Idx) {
-          MCDCRecord::CondState ACond = A[Idx], BCond = B[Idx];
-          if (ACond == BCond || ACond == MCDCRecord::MCDC_DontCare ||
-              BCond == MCDCRecord::MCDC_DontCare)
-            continue;
-          if (Flip != NumConditions)
-            break;
-          Flip = Idx;
-        }
         // If the two vectors differ in exactly one condition, ignoring DontCare
         // conditions, we have found an independence pair.
-        if (Idx == NumConditions && Flip != NumConditions)
-          IndependencePairs.insert({Flip, std::make_pair(J + 1, I + 1)});
+        auto AB = A.getDifferences(B);
+        if (AB.count() == 1)
+          IndependencePairs.insert(
+              {AB.find_first(), std::make_pair(J + 1, I + 1)});
       }
     }
   }
