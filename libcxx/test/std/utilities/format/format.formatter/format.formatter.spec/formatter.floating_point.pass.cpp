@@ -33,6 +33,7 @@
 #include <charconv>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -49,7 +50,8 @@ void test(std::basic_string_view<CharT> fmt, ArithmeticT arg, std::basic_string<
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename std::basic_string_view<CharT>::iterator> auto it = formatter.parse(parse_ctx);
-  assert(std::to_address(it) == std::to_address(fmt.end()) - offset); // LWG3989
+  // std::to_address works around LWG3989 and MSVC STL's iterator debugging mechanism.
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
   std::basic_string<CharT> result;
   auto out = std::back_inserter(result);
