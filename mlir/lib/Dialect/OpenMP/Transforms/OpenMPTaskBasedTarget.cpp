@@ -7,7 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements scf.parallel to scf.for + async.execute conversion pass.
+// This file implements a pass that transforms certain omp.target.
+// Specifically, an omp.target op that has the depend clause on it is
+// transformed into an omp.task clause with the same depend clause on it.
+// The original omp.target loses its depend clause and is contained in
+// the new task region.
+//
+// omp.target depend(..) {
+//  omp.terminator
+//
+// }
+//
+// =>
+//
+// omp.task depend(..) {
+//   omp.target {
+//     omp.terminator
+//   }
+//   omp.terminator
+// }
+//
 //
 //===----------------------------------------------------------------------===//
 
