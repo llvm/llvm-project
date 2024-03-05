@@ -624,7 +624,7 @@ class ReleaseWorkflow:
             m = re.search(r"/cherry-pick\s*:? *(.*)", line)
             if not m:
                 continue
-            
+
             args = m.group(1)
 
             arg_list = args.split()
