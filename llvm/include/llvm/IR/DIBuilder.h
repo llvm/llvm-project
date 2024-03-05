@@ -947,11 +947,10 @@ namespace llvm {
     /// \param DL            Debug info location, usually: (line: 0,
     ///                      column: 0, scope: var-decl-scope). See
     ///                      getDebugValueLoc.
-    DbgAssignIntrinsic *insertDbgAssign(Instruction *LinkedInstr, Value *Val,
-                                        DILocalVariable *SrcVar,
-                                        DIExpression *ValExpr, Value *Addr,
-                                        DIExpression *AddrExpr,
-                                        const DILocation *DL);
+    DbgInstPtr insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+                               DILocalVariable *SrcVar, DIExpression *ValExpr,
+                               Value *Addr, DIExpression *AddrExpr,
+                               const DILocation *DL);
 
     /// Insert a new llvm.dbg.declare intrinsic call.
     /// \param Storage      llvm::Value of the variable

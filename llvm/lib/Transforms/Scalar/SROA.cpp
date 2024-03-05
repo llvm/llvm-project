@@ -324,25 +324,6 @@ static DebugVariable getAggregateVariable(DPValue *DPV) {
                        DPV->getDebugLoc().getInlinedAt());
 }
 
-static DPValue *createLinkedAssign(DPValue *, DIBuilder &DIB,
-                                   Instruction *LinkedInstr, Value *NewValue,
-                                   DILocalVariable *Variable,
-                                   DIExpression *Expression, Value *Address,
-                                   DIExpression *AddressExpression,
-                                   const DILocation *DI) {
-  (void)DIB;
-  return DPValue::createLinkedDPVAssign(LinkedInstr, NewValue, Variable,
-                                        Expression, Address, AddressExpression,
-                                        DI);
-}
-static DbgAssignIntrinsic *createLinkedAssign(
-    DbgAssignIntrinsic *, DIBuilder &DIB, Instruction *LinkedInstr,
-    Value *NewValue, DILocalVariable *Variable, DIExpression *Expression,
-    Value *Address, DIExpression *AddressExpression, const DILocation *DI) {
-  return DIB.insertDbgAssign(LinkedInstr, NewValue, Variable, Expression,
-                             Address, AddressExpression, DI);
-}
-
 /// Find linked dbg.assign and generate a new one with the correct
 /// FragmentInfo. Link Inst to the new dbg.assign.  If Value is nullptr the
 /// value component is copied from the old dbg.assign to the new.
@@ -398,7 +379,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto DbgAssign) {
+  auto MigrateDbgAssign = [&](auto *DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -452,10 +433,15 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     }
 
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-    auto *NewAssign = createLinkedAssign(
-        DbgAssign, DIB, Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
-        DIExpression::get(Expr->getContext(), std::nullopt),
-        DbgAssign->getDebugLoc());
+    // insertDbgAssign returns a PointerUnion of {Instruction* | DbgRecord*}.
+    // If DbgAssign is a DPValue* it'll return a DbgRecord*, otherwise if
+    // DbgAssign is a DbgAssignIntrinsic* it'll return a Instruction*.
+    decltype(DbgAssign) NewAssign = reinterpret_cast<decltype(DbgAssign)>(
+        DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
+                            Dest,
+                            DIExpression::get(Expr->getContext(), std::nullopt),
+                            DbgAssign->getDebugLoc())
+            .getOpaqueValue());
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -5031,9 +5017,11 @@ static void insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig,
     NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
                          DIAssignID::getDistinct(NewAddr->getContext()));
   }
-  auto *NewAssign = DIB.insertDbgAssign(
-      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
-      Orig->getAddressExpression(), Orig->getDebugLoc());
+  Instruction *NewAssign =
+      DIB.insertDbgAssign(NewAddr, Orig->getValue(), Orig->getVariable(),
+                          NewFragmentExpr, NewAddr,
+                          Orig->getAddressExpression(), Orig->getDebugLoc())
+          .get<Instruction *>();
   LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
   (void)NewAssign;
 }
@@ -5052,7 +5040,7 @@ static void insertNewDbgInst(DIBuilder &DIB, DPValue *Orig, AllocaInst *NewAddr,
     NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
                          DIAssignID::getDistinct(NewAddr->getContext()));
   }
-  auto *NewAssign = DPValue::createLinkedDPVAssign(
+  DPValue *NewAssign = DPValue::createLinkedDPVAssign(
       NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
       Orig->getAddressExpression(), Orig->getDebugLoc());
   LLVM_DEBUG(dbgs() << "Created new DPVAssign: " << *NewAssign << "\n");

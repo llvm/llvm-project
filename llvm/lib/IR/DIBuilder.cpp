@@ -941,18 +941,28 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return insertDeclare(Storage, VarInfo, Expr, DL, InsertAtEnd, InsertBefore);
 }
 
-DbgAssignIntrinsic *
-DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
-                           DILocalVariable *SrcVar, DIExpression *ValExpr,
-                           Value *Addr, DIExpression *AddrExpr,
-                           const DILocation *DL) {
+DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+                                      DILocalVariable *SrcVar,
+                                      DIExpression *ValExpr, Value *Addr,
+                                      DIExpression *AddrExpr,
+                                      const DILocation *DL) {
+  auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
+  assert(Link && "Linked instruction must have DIAssign metadata attached");
+
+  if (M.IsNewDbgInfoFormat) {
+    DPValue *DPV = DPValue::createLinkedDPVAssign(LinkedInstr, Val, SrcVar,
+                                                  ValExpr, Addr, AddrExpr, DL);
+    BasicBlock *InsertBB = LinkedInstr->getParent();
+    BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
+    Instruction *InsertBefore = NextIt == InsertBB->end() ? nullptr : &*NextIt;
+    insertDPValue(DPV, InsertBB, InsertBefore);
+    return DPV;
+  }
+
   LLVMContext &Ctx = LinkedInstr->getContext();
   Module *M = LinkedInstr->getModule();
   if (!AssignFn)
     AssignFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
-
-  auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
-  assert(Link && "Linked instruction must have DIAssign metadata attached");
 
   std::array<Value *, 6> Args = {
       MetadataAsValue::get(Ctx, ValueAsMetadata::get(Val)),

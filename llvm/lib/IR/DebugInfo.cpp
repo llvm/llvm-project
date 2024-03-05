@@ -2131,10 +2131,15 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
     return;
   }
-  auto *Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr,
-                                     Dest, AddrExpr, VarRec.DL);
+  auto Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
+                                    AddrExpr, VarRec.DL);
   (void)Assign;
-  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
+  LLVM_DEBUG(if (!Assign.isNull()) {
+    if (Assign.is<DbgRecord *>())
+      errs() << " > INSERT: " << *Assign.get<DbgRecord *>() << "\n";
+    else
+      errs() << " > INSERT: " << *Assign.get<Instruction *>() << "\n";
+  });
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
