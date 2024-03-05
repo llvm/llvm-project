@@ -1015,9 +1015,10 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   if (VTuneSupport && TT.isOSBinFormatELF()) {
     ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
-    ObjLayer.addPlugin(ExitOnErr(VTuneSupportPlugin::Create(
-        this->ES.getExecutorProcessControl(), *ProcessSymsJD, /*EmitDebugInfo=*/true,
-        /*TestMode=*/true)));
+    ObjLayer.addPlugin(ExitOnErr(
+        VTuneSupportPlugin::Create(this->ES.getExecutorProcessControl(),
+                                   *ProcessSymsJD, /*EmitDebugInfo=*/true,
+                                   /*TestMode=*/true)));
   }
 
   // Set up the platform.
