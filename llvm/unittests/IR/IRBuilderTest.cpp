@@ -951,6 +951,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
           I, VarX, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarXValue, I->getIterator());
+      EXPECT_EQ(BB->getTrailingDPValues(), nullptr);
     }
     { /* dbg.declare | DPValue::Declare */
       ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
@@ -960,19 +961,20 @@ TEST_F(IRBuilderTest, DIBuilder) {
           DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarYDeclare, I->getIterator());
+      EXPECT_EQ(BB->getTrailingDPValues(), nullptr);
     }
     { /* dbg.assign | DPValue::Assign */
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       I->setMetadata(LLVMContext::MD_DIAssignID, DIAssignID::getDistinct(Ctx));
-      Instruction *Before = I;
       // DbgAssign interface is slightly different - it always inserts after the
-      // linked instr. The old debug mode doesn't support inserting these after
-      // the last instruction.
-      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      // linked instr. Check we can do this with no instruction to insert
+      // before.
       DbgInstPtr VarXAssign =
-          DIB.insertDbgAssign(Before, Before, VarX, DIB.createExpression(), Before,
+          DIB.insertDbgAssign(I, I, VarX, DIB.createExpression(), I,
                               DIB.createExpression(), VarLoc);
-      //ExpectOrder(VarXAssign, I->getIterator());
+      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      ExpectOrder(VarXAssign, I->getIterator());
+      EXPECT_EQ(BB->getTrailingDPValues(), nullptr);
     }
 
     Builder.CreateRet(nullptr);

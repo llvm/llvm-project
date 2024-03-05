@@ -946,12 +946,13 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
                                       DIExpression *ValExpr, Value *Addr,
                                       DIExpression *AddrExpr,
                                       const DILocation *DL) {
-  auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
+  auto *Link = cast_or_null<DIAssignID>(
+      LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID));
   assert(Link && "Linked instruction must have DIAssign metadata attached");
 
   if (M.IsNewDbgInfoFormat) {
-    DPValue *DPV = DPValue::createLinkedDPVAssign(LinkedInstr, Val, SrcVar,
-                                                  ValExpr, Addr, AddrExpr, DL);
+    DPValue *DPV = DPValue::createDPVAssign(Val, SrcVar, ValExpr, Link, Addr,
+                                            AddrExpr, DL);
     BasicBlock *InsertBB = LinkedInstr->getParent();
     BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
     Instruction *InsertBefore = NextIt == InsertBB->end() ? nullptr : &*NextIt;
