@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86ISelLowering.h"
+#include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "X86.h"
 #include "X86CallingConv.h"
@@ -18622,6 +18624,47 @@ LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                     X86::RAX, X86II::MO_TLSGD);
 }
 
+static SDValue LowerToTLSDESC(SDValue Sym, SelectionDAG &DAG, const EVT PtrVT,
+                              bool Is64Bit) {
+
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SDValue Chain = DAG.getEntryNode();
+  SDValue Target;
+  SDLoc DL(Sym);
+
+  if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Sym)) {
+    Target =
+        DAG.getTargetGlobalAddress(GA->getGlobal(), DL, GA->getValueType(0),
+                                   GA->getOffset(), X86II::MO_TLSDESC);
+  } else {
+    const auto *ES = cast<ExternalSymbolSDNode>(Sym);
+    Target =
+        DAG.getTargetExternalSymbol(ES->getSymbol(), PtrVT, X86II::MO_TLSDESC);
+  }
+
+  SDValue Offset = DAG.getNode(X86ISD::Wrapper, DL, PtrVT, Target);
+  SDValue Ops[] = {Chain, Offset};
+  Chain = DAG.getNode(X86ISD::TLSCALL, Target, NodeTys, Ops);
+
+  // TLSCALL will be codegen'ed as call. Inform MFI that function has calls.
+  MFI.setAdjustsStack(true);
+  MFI.setHasCalls(true);
+  unsigned ReturnReg = Is64Bit ? X86::RAX : X86::EAX;
+
+  SDValue Glue = Chain.getValue(1);
+  Offset = DAG.getCopyFromReg(Chain, DL, ReturnReg, PtrVT, Glue);
+  // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
+  Value *Ptr = Constant::getNullValue(
+      PointerType::get(*DAG.getContext(), Is64Bit ? 257 : 256));
+
+  SDValue ThreadPointer =
+      DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), DAG.getIntPtrConstant(0, DL),
+                  MachinePointerInfo(Ptr));
+
+  return DAG.getNode(ISD::ADD, DL, PtrVT, ThreadPointer, Offset);
+}
+
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit ILP32
 static SDValue
 LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
@@ -18641,7 +18684,12 @@ static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
   MFI->incNumLocalDynamicTLSAccesses();
 
   SDValue Base;
-  if (Is64Bit) {
+
+  if (DAG.getTarget().useTLSDESC()) {
+    SDValue SymAddr = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT,
+                                                  X86II::MO_TLSDESC);
+    Base = LowerToTLSDESC(SymAddr, DAG, PtrVT, Is64Bit);
+  } else if (Is64Bit) {
     unsigned ReturnReg = Is64BitLP64 ? X86::RAX : X86::EAX;
     Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, ReturnReg,
                       X86II::MO_TLSLD, /*LocalDynamic=*/true);
@@ -18740,6 +18788,8 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
     switch (model) {
       case TLSModel::GeneralDynamic:
+        if (DAG.getTarget().useTLSDESC())
+          return LowerToTLSDESC(Op, DAG, PtrVT, Subtarget.is64Bit());
         if (Subtarget.is64Bit()) {
           if (Subtarget.isTarget64BitLP64())
             return LowerToTLSGeneralDynamicModel64(GA, DAG, PtrVT);
@@ -35203,60 +35253,117 @@ X86TargetLowering::EmitLoweredTLSAddr(MachineInstr &MI,
 MachineBasicBlock *
 X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
                                       MachineBasicBlock *BB) const {
-  // This is pretty easy.  We're taking the value that we received from
-  // our load from the relocation, sticking it in either RDI (x86-64)
-  // or EAX and doing an indirect call.  The return value will then
-  // be in the normal return register.
   MachineFunction *F = BB->getParent();
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
   const MIMetadata MIMD(MI);
 
-  assert(Subtarget.isTargetDarwin() && "Darwin only instr emitted?");
-  assert(MI.getOperand(3).isGlobal() && "This should be a global");
+  assert((Subtarget.isTargetDarwin() || Subtarget.isTargetELF()) &&
+         "Incompatible Target for TLSCALL");
+  assert((MI.getOperand(3).isGlobal() || MI.getOperand(3).isSymbol()) &&
+         "This should be a global or symbol");
 
-  // Get a register mask for the lowered call.
-  // FIXME: The 32-bit calls have non-standard calling conventions. Use a
-  // proper register mask.
-  const uint32_t *RegMask =
-      Subtarget.is64Bit() ?
-      Subtarget.getRegisterInfo()->getDarwinTLSCallPreservedMask() :
-      Subtarget.getRegisterInfo()->getCallPreservedMask(*F, CallingConv::C);
-  if (Subtarget.is64Bit()) {
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, MI, MIMD, TII->get(X86::MOV64rm), X86::RDI)
-            .addReg(X86::RIP)
-            .addImm(0)
-            .addReg(0)
-            .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
-                              MI.getOperand(3).getTargetFlags())
-            .addReg(0);
-    MIB = BuildMI(*BB, MI, MIMD, TII->get(X86::CALL64m));
-    addDirectMem(MIB, X86::RDI);
-    MIB.addReg(X86::RAX, RegState::ImplicitDefine).addRegMask(RegMask);
-  } else if (!isPositionIndependent()) {
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), X86::EAX)
-            .addReg(0)
-            .addImm(0)
-            .addReg(0)
-            .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
-                              MI.getOperand(3).getTargetFlags())
-            .addReg(0);
-    MIB = BuildMI(*BB, MI, MIMD, TII->get(X86::CALL32m));
-    addDirectMem(MIB, X86::EAX);
-    MIB.addReg(X86::EAX, RegState::ImplicitDefine).addRegMask(RegMask);
+  if (Subtarget.isTargetDarwin()) {
+    // This is pretty easy.  We're taking the value that we received from
+    // our load from the relocation, sticking it in either RDI (x86-64)
+    // or EAX and doing an indirect call.  The return value will then
+    // be in the normal return register.
+
+    // Get a register mask for the lowered call.
+    // FIXME: The 32-bit calls have non-standard calling conventions. Use a
+    // proper register mask.
+    const uint32_t *RegMask =
+        Subtarget.is64Bit()
+            ? Subtarget.getRegisterInfo()->getDarwinTLSCallPreservedMask()
+            : Subtarget.getRegisterInfo()->getCallPreservedMask(*F,
+                                                                CallingConv::C);
+    if (Subtarget.is64Bit()) {
+      MachineInstrBuilder MIB =
+          BuildMI(*BB, MI, MIMD, TII->get(X86::MOV64rm), X86::RDI)
+              .addReg(X86::RIP)
+              .addImm(0)
+              .addReg(0)
+              .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
+                                MI.getOperand(3).getTargetFlags())
+              .addReg(0);
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(X86::CALL64m));
+      addDirectMem(MIB, X86::RDI);
+      MIB.addReg(X86::RAX, RegState::ImplicitDefine).addRegMask(RegMask);
+    } else if (!isPositionIndependent()) {
+      MachineInstrBuilder MIB =
+          BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), X86::EAX)
+              .addReg(0)
+              .addImm(0)
+              .addReg(0)
+              .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
+                                MI.getOperand(3).getTargetFlags())
+              .addReg(0);
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(X86::CALL32m));
+      addDirectMem(MIB, X86::EAX);
+      MIB.addReg(X86::EAX, RegState::ImplicitDefine).addRegMask(RegMask);
+    } else {
+      MachineInstrBuilder MIB =
+          BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), X86::EAX)
+              .addReg(TII->getGlobalBaseReg(F))
+              .addImm(0)
+              .addReg(0)
+              .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
+                                MI.getOperand(3).getTargetFlags())
+              .addReg(0);
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(X86::CALL32m));
+      addDirectMem(MIB, X86::EAX);
+      MIB.addReg(X86::EAX, RegState::ImplicitDefine).addRegMask(RegMask);
+    }
   } else {
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), X86::EAX)
-            .addReg(TII->getGlobalBaseReg(F))
-            .addImm(0)
-            .addReg(0)
-            .addGlobalAddress(MI.getOperand(3).getGlobal(), 0,
-                              MI.getOperand(3).getTargetFlags())
-            .addReg(0);
-    MIB = BuildMI(*BB, MI, MIMD, TII->get(X86::CALL32m));
-    addDirectMem(MIB, X86::EAX);
-    MIB.addReg(X86::EAX, RegState::ImplicitDefine).addRegMask(RegMask);
+    // For ELF TLS Descriptors, we create the correct ELF relocations so that
+    // we generate:
+    //   lea a@tlsdesc(%rip), %rax
+    //   call *a@tlsdesc(%rax)
+    // The TLSCALL will call a resolver function with a custom ABI that
+    // preserves all registers, and places the offset from the thread pointer
+    // in %rax/%eax.
+
+    // Get a register mask for the lowered call.
+    const uint32_t *RegMask = Subtarget.getRegisterInfo()->getCallPreservedMask(
+        *F, CallingConv::PreserveAll);
+    const unsigned Reg = Subtarget.is64Bit() ? X86::RAX : X86::EAX;
+    const unsigned IP = Subtarget.is64Bit() ? X86::RIP : X86::IP;
+    const auto LoadOp = Subtarget.is64Bit() ? X86::LEA64r : X86::LEA32r;
+    const auto CallOp = Subtarget.is64Bit() ? X86::CALL64m : X86::CALL32m;
+
+    MachineOperand Sym = MI.getOperand(3);
+
+    MachineInstrBuilder MIB;
+    if (Sym.isGlobal()) {
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(LoadOp), Reg)
+                .addReg(IP)
+                .addImm(0)
+                .addReg(0)
+                .addGlobalAddress(Sym.getGlobal(), 0, Sym.getTargetFlags())
+                .addReg(0);
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(CallOp))
+                .addReg(Reg)
+                .addImm(1)
+                .addReg(0)
+                .addGlobalAddress(Sym.getGlobal(), 0, X86II::MO_TLSCALL)
+                .addReg(0);
+
+    } else {
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(LoadOp), Reg)
+                .addReg(IP)
+                .addImm(0)
+                .addReg(0)
+                .add({Sym})
+                .addReg(0);
+      Sym.setTargetFlags(X86II::MO_TLSCALL);
+      MIB = BuildMI(*BB, MI, MIMD, TII->get(CallOp))
+                .addReg(Reg)
+                .addImm(1)
+                .addReg(0)
+                .add({Sym})
+                .addReg(0);
+    }
+
+    MIB.addReg(Reg, RegState::ImplicitDefine).addRegMask(RegMask);
   }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.

@@ -257,6 +257,12 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_TLSLDM:
     RefKind = MCSymbolRefExpr::VK_TLSLDM;
     break;
+  case X86II::MO_TLSDESC:
+    RefKind = MCSymbolRefExpr::VK_TLSDESC;
+    break;
+  case X86II::MO_TLSCALL:
+    RefKind = MCSymbolRefExpr::VK_TLSCALL;
+    break;
   case X86II::MO_GOTTPOFF:
     RefKind = MCSymbolRefExpr::VK_GOTTPOFF;
     break;
