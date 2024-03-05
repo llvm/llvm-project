@@ -148,6 +148,7 @@ module {
     // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1,
     // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5,
     // CHECK-NEXT: ----
+    //
     %2 = call @concat_mix_sparse(%m24, %sm34cd, %sm44dc)
                : (tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C>
     sparse_tensor.print %2 : tensor<9x4xf64, #MAT_C_C>
