@@ -52,7 +52,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override = 0;
 
@@ -216,7 +216,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -304,7 +304,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -321,7 +321,7 @@ public:
 
   uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -484,7 +484,7 @@ uint32_t lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (idx >= CalculateNumChildren())
     return lldb::ValueObjectSP();
   lldb::addr_t object_at_idx = GetDataAddress();
@@ -684,7 +684,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 template <typename D32, typename D64, bool Inline>
 lldb::ValueObjectSP
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
-  GetChildAtIndex(size_t idx) {
+  GetChildAtIndex(uint32_t idx) {
   if (idx >= CalculateNumChildren())
     return lldb::ValueObjectSP();
   lldb::addr_t object_at_idx;
@@ -735,7 +735,7 @@ bool lldb_private::formatters::NSArray0SyntheticFrontEnd::MightHaveChildren() {
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSArray0SyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   return lldb::ValueObjectSP();
 }
 
@@ -770,7 +770,7 @@ bool lldb_private::formatters::NSArray1SyntheticFrontEnd::MightHaveChildren() {
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   static const ConstString g_zero("[0]");
 
   if (idx == 0) {

@@ -358,7 +358,7 @@ uint32_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (m_pair_ptr)
     return m_pair_ptr->GetChildAtIndex(idx);
   if (m_pair_sp)
@@ -515,7 +515,7 @@ uint32_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_sp)
     return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
@@ -573,7 +573,7 @@ uint32_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_cntrl)
     return lldb::ValueObjectSP();
 
@@ -670,7 +670,7 @@ uint32_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_value_ptr_sp)
     return lldb::ValueObjectSP();
 
