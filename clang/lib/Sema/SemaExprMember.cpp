@@ -1058,8 +1058,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
 
   if (R.wasNotFoundInCurrentInstantiation() ||
-      (SS.isValid() && !computeDeclContext(SS, false)) ||
-      (R.isUnresolvableResult() && R.isClassLookup() && R.getNamingClass()->isDependentContext())) {
+      (SS.isValid() && !computeDeclContext(SS, false))) {
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType,
                                     IsArrow, OpLoc,
                                     SS, TemplateKWLoc, FirstQualifierInScope,
