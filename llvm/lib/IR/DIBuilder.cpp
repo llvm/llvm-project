@@ -1081,6 +1081,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
 
 void DIBuilder::insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
                               Instruction *InsertBefore) {
+  assert(InsertBefore || InsertBB);
   trackIfUnresolved(DPV->getVariable());
   trackIfUnresolved(DPV->getExpression());
   if (DPV->isDbgAssign())

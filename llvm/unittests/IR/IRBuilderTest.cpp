@@ -961,7 +961,21 @@ TEST_F(IRBuilderTest, DIBuilder) {
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarYDeclare, I->getIterator());
     }
+    { /* dbg.assign | DPValue::Assign */
+      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      I->setMetadata(LLVMContext::MD_DIAssignID, DIAssignID::getDistinct(Ctx));
+      Instruction *Before = I;
+      // DbgAssign interface is slightly different - it always inserts after the
+      // linked instr. The old debug mode doesn't support inserting these after
+      // the last instruction.
+      I = Builder.CreateAlloca(Builder.getInt32Ty());
+      DbgInstPtr VarXAssign =
+          DIB.insertDbgAssign(Before, Before, VarX, DIB.createExpression(), Before,
+                              DIB.createExpression(), VarLoc);
+      //ExpectOrder(VarXAssign, I->getIterator());
+    }
 
+    Builder.CreateRet(nullptr);
     DIB.finalize();
     // Check the labels are not/are added to Bar's retainedNodes array (AlwaysPreserve).
     EXPECT_EQ(find(BarSP->getRetainedNodes(), Label),
