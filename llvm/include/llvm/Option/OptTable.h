@@ -154,8 +154,8 @@ public:
     return getInfo(id).MetaVar;
   }
 
- /// Get the meta-variable name to use when describing
-  /// this options values in the help text.
+  /// Get the string of acceptable argument value choices
+  /// that could be supplied to this option.
   const char *getOptionValues(OptSpecifier id) const {
     return getInfo(id).Values;
   }
