@@ -36,7 +36,7 @@ public:
   ElementsAttrIndexer()
       : ElementsAttrIndexer(/*isContiguous=*/true, /*isSplat=*/true) {}
   ElementsAttrIndexer(ElementsAttrIndexer &&rhs)
-      : isContiguous(rhs.isContiguous), isSplat(rhs.isSplat) {
+      : isContiguous(rhs.isContiguous), isSplat(rhs.isSplat) noexcept {
     if (isContiguous)
       conState = rhs.conState;
     else
