@@ -19,7 +19,7 @@ class GlobalModuleCacheTestCase(TestBase):
     def check_counter_var(self, thread, value):
         frame = thread.frames[0]
         var = frame.FindVariable("counter")
-        self.assertTrue(var.GetError().Success(), "Got counter variable")
+        self.assertSuccess(var.GetError(), "Didn't get counter variable")
         self.assertEqual(var.GetValueAsUnsigned(), value, "This was one-print")
 
     def copy_to_main(self, src, dst):
@@ -28,12 +28,13 @@ class GlobalModuleCacheTestCase(TestBase):
         time.sleep(2)
         try:
             # Make sure dst is writeable before trying to write to it.
-            subprocess.run(
-                ["chmod", "777", dst],
-                stdin=None,
-                capture_output=False,
-                encoding="utf-8",
-            )
+            if os.path.exists(dst):
+                subprocess.run(
+                    ["chmod", "777", dst],
+                    stdin=None,
+                    capture_output=False,
+                    encoding="utf-8",
+                )
             shutil.copy(src, dst)
         except:
             self.fail(f"Could not copy {src} to {dst}")
@@ -49,19 +50,16 @@ class GlobalModuleCacheTestCase(TestBase):
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
-    # This behaves as implemented but that behavior is not desirable.
-    # This test tests for the desired behavior as an expected fail.
+
     @skipIfWindows
-    @expectedFailureAll
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
     @skipIfWindows
-    @expectedFailureAll
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
-    def test_OneTargetTwoDebuggers(self):
-        self.do_test(True, False)
+    def test_TwoTargetsTwoDebuggers(self):
+        self.do_test(False, False)
 
     def do_test(self, one_target, one_debugger):
         # Make sure that if we have one target, and we run, then
@@ -94,7 +92,6 @@ class GlobalModuleCacheTestCase(TestBase):
         process.Kill()
 
         # Now copy two-print.c over main.c, rebuild, and rerun:
-        # os.unlink(target.GetExecutable().fullpath)
         self.copy_to_main(two_print_path, main_c_path)
 
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
@@ -109,15 +106,17 @@ class GlobalModuleCacheTestCase(TestBase):
                     self, "return counter;", main_filespec
                 )
         else:
-            if one_target:
+            if not one_target:
                 new_debugger = lldb.SBDebugger().Create()
+                new_debugger.SetAsync(False)
                 self.old_debugger = self.dbg
                 self.dbg = new_debugger
 
                 def cleanupDebugger(self):
-                    lldb.SBDebugger.Destroy(self.dbg)
-                    self.dbg = self.old_debugger
-                    self.old_debugger = None
+                    if self.old_debugger != None:
+                        lldb.SBDebugger.Destroy(self.dbg)
+                        self.dbg = self.old_debugger
+                        self.old_debugger = None
 
                 self.addTearDownHook(cleanupDebugger)
                 (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -129,19 +128,31 @@ class GlobalModuleCacheTestCase(TestBase):
 
         # If we made two targets, destroy the first one, that should free up the
         # unreachable Modules:
-        if not one_target:
-            target.Clear()
 
-        num_a_dot_out_entries = 1
+        # The original debugger is the one that owns the first target:
+        if not one_target:
+            dbg = None
+            if one_debugger:
+                dbg = self.dbg
+            else:
+                dbg = self.old_debugger
+            dbg.HandleCommand(f"target delete {dbg.GetIndexOfTarget(target)}")
+
         # For dSYM's there will be two lines of output, one for the a.out and one
-        # for the dSYM.
+        # for the dSYM, and no .o entries:
+        num_a_dot_out_entries = 1
+        num_main_dot_o_entries = 1
         if debug_style == "dsym":
             num_a_dot_out_entries += 1
+            num_main_dot_o_entries -= 1
 
         error = self.check_image_list_result(num_a_dot_out_entries, 1)
         # Even if this fails, MemoryPressureDetected should fix this.
+        if self.TraceOn():
+            print("*** Calling MemoryPressureDetected")
         lldb.SBDebugger.MemoryPressureDetected()
-        error_after_mpd = self.check_image_list_result(num_a_dot_out_entries, 1)
+        error_after_mpd = self.check_image_list_result(num_a_dot_out_entries,
+                                                       num_main_dot_o_entries)
         fail_msg = ""
         if error != "":
             fail_msg = "Error before MPD: " + error
@@ -158,7 +169,7 @@ class GlobalModuleCacheTestCase(TestBase):
         # failing.
         image_cmd_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
-        interp.HandleCommand("image list -g", image_cmd_result)
+        interp.HandleCommand("image list -g -r -u -h -f -S", image_cmd_result)
         if self.TraceOn():
             print(f"Expected: a.out: {num_a_dot_out} main.o: {num_main_dot_o}")
             print(image_cmd_result)
