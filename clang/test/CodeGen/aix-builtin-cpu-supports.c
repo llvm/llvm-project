@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=46 -DOP=ugt -DBIT=i32 -DVALUE=0 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCONF
 
+// RUN: echo "int main() { return __builtin_cpu_supports(\"archpmu\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
+
 // RUN: echo "int main() { return __builtin_cpu_supports(\"booke\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
 
@@ -13,6 +16,14 @@
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"darn\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=uge -DBIT=i32 -DVALUE=262144 \
+// RUN:   --check-prefixes=CHECKOP,OPRT,SYSCONF
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"dscr\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=uge -DBIT=i32 -DVALUE=65536 \
+// RUN:   --check-prefixes=CHECKOP,OPRT,SYSCONF
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"ebb\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=uge -DBIT=i32 -DVALUE=65536 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCONF
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"efpdouble\");}" > %t.c
@@ -31,12 +42,27 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=ugt -DLABLE=59  -DBIT=i64 -DVALUE=0 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCALL
 
+// RUN: echo "int main() { return __builtin_cpu_supports(\"htm-nosc\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"htm-no-suspend\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"ic_snoop\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"isel\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=1 %s
+
 // RUN: echo "int main() { return __builtin_cpu_supports(\"mma\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=ugt -DLABLE=62 -DBIT=i64 -DVALUE=0 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCALL
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"mmu\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=1 %s
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"notb\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"arch_2_05\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=1 %s
@@ -92,12 +118,22 @@
 // RUN: echo "int main() { return __builtin_cpu_supports(\"spe\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
 
+// RUN: echo "int main() { return __builtin_cpu_supports(\"scv\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"tar\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=uge -DBIT=i32 -DVALUE=65536 \
+// RUN:   --check-prefixes=CHECKOP,OPRT,SYSCONF
+
 // RUN: echo "int main() { return __builtin_cpu_supports(\"true_le\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=1 %s
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"ucache\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=5 -DMASK=2 -DOP=eq -DBIT=i32 -DVALUE=2 \
 // RUN:   --check-prefixes=CHECKOP,OPMASK,SYSCONF
+
+// RUN: echo "int main() { return __builtin_cpu_supports(\"vcrypto\");}" > %t.c
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"vsx\");}" > %t.c
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=46 -DOP=ugt -DBIT=i32 -DVALUE=1 \

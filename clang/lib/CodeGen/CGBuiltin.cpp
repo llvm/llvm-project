@@ -16654,7 +16654,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 #define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE)            \
   .Case(NAME, {SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-          );
+                                   .Default({AIX_BUILTIN_PPC_FALSE, 0, 0, 0}));
       return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, 0, CompareOp,
                                      CpuIdValue);
     }
@@ -16681,12 +16681,13 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       typedef std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>
           CPUSupportType;
       std::tie(SupportMethod, FieldIdx, Mask, CompOp, Value) =
-          static_cast<CPUSupportType>(StringSwitch<CPUSupportType>(CPUStr)
+          static_cast<CPUSupportType>(
+              StringSwitch<CPUSupportType>(CPUStr)
 #define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
                         VALUE)                                                 \
   .Case(NAME, {SUPPORT_METHOD, INDEX, MASK, COMP_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-          );
+                  .Default({AIX_BUILTIN_PPC_FALSE, 0, 0, 0, 0}));
       return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, Mask, CompOp,
                                      Value);
     }
