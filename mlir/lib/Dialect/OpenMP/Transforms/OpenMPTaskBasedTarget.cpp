@@ -67,8 +67,7 @@ public:
     rewriter.create<mlir::omp::TerminatorOp>(op.getLoc());
 
     // Step 3: Remove the dependency information from the clone target op.
-    omp::TargetOp clonedTargetOp =
-        llvm::dyn_cast<omp::TargetOp>(clonedTargetOperation);
+    OpTy clonedTargetOp = llvm::dyn_cast<OpTy>(clonedTargetOperation);
     if (clonedTargetOp) {
       clonedTargetOp.removeDependsAttr();
       clonedTargetOp.getDependVarsMutable().clear();
@@ -81,7 +80,10 @@ public:
 } // namespace
 static void
 populateOmpTaskBasedTargetRewritePatterns(RewritePatternSet &patterns) {
-  patterns.add<OmpTaskBasedTargetRewritePattern<omp::TargetOp>>(
+  patterns.add<OmpTaskBasedTargetRewritePattern<omp::TargetOp>,
+               OmpTaskBasedTargetRewritePattern<omp::EnterDataOp>,
+               OmpTaskBasedTargetRewritePattern<omp::UpdateDataOp>,
+               OmpTaskBasedTargetRewritePattern<omp::ExitDataOp>>(
       patterns.getContext());
 }
 
