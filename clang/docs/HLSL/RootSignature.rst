@@ -229,18 +229,28 @@ resource in the root signature. It will bind to the entry function in the AST.
 For case compile to a standalone root signature blob, the HLSLRootSignatureAttr 
 will be bind to the TU.
 
-In clang code generation, the HLSLRootSignatureAttr in AST will be translated into 
-a global variable with struct type to express the layout and a constant initializer
-to save things like space and NumDescriptors in LLVM IR. 
+In clang code generation, the HLSLRootSignatureAttr in AST will be translated 
+into a global variable with struct type to express the layout and a constant 
+initializer to save things like space and NumDescriptors in LLVM IR. 
 
 CGHLSLRuntime will generate metadata to link the global variable as root 
 signature for given entry function or just nullptr for the standalone root 
 signature blob case. 
 
-In LLVM DirectX backend, the global variable will be serialized and saved as another 
-global variable with section 'RTS0' with the serialized root signature as initializer.
-The MC ObjectWriter for DXContainer will take the global and write it to the correct 
-part based on the section name given to the global.
+In LLVM DirectX backend, the global variable will be serialized and saved as 
+another global variable with section 'RTS0' with the serialized root signature 
+as initializer. 
+The MC ObjectWriter for DXContainer will take the global and write it to the 
+correct part based on the section name given to the global.
 
 In DXIL validation, the root signature part will be deserialized and check if 
-the resource binding in the root signature exists in the resource table.
+resource used in the shader (the information is in pipeline state validation 
+part) exists in the root signature. 
+
+Same check could be done in Sema as well. But at AST level, it is impossible 
+to identify unused resource which will be removed later. And the resource 
+binding allocation is not done. 
+So the only case could be caught in Sema is for resources that are known to be 
+used for sure (like resources used in entry function and not under any control 
+flow) and binded by user. 
+If the resource is not in root signature, error should be reported in Sema.
