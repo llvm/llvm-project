@@ -330,3 +330,30 @@ void f7(int n, int array[n]) {
   int (*(*fp)(int n))[n];
   constexpr typeof(fp) bar = 0; // expected-error {{constexpr variable cannot have type 'const typeof (fp)' (aka 'int (*(*const)(int))[n]')}}
 }
+
+// Check how constexpr works with NaNs and infinities.
+#define FLT_NAN __builtin_nanf("1")
+#define DBL_NAN __builtin_nan("1")
+#define LD_NAN __builtin_nanf("1")
+#define FLT_SNAN __builtin_nansf("1")
+#define DBL_SNAN __builtin_nans("1")
+#define LD_SNAN __builtin_nansl("1")
+#define INF __builtin_inf()
+void infsNaNs() {
+  // Inf and quiet NaN is always fine, signaling NaN must have the same type.
+  constexpr float fl0 = INF;
+  constexpr float fl1 = (long double)INF;
+  constexpr float fl2 = (long double)FLT_NAN;
+  constexpr float fl3 = FLT_NAN;
+  constexpr float fl5 = DBL_NAN;
+  constexpr float fl6 = LD_NAN;
+  constexpr float fl7 = DBL_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const float'}}
+  constexpr float fl8 = LD_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const float'}}
+
+  constexpr double db0 = FLT_NAN;
+  constexpr double db2 = DBL_NAN;
+  constexpr double db3 = DBL_SNAN;
+  constexpr double db4 = FLT_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const double'}}
+  constexpr double db5 = LD_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const double'}}
+  constexpr double db6 = INF;
+}

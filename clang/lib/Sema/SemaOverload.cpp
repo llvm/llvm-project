@@ -432,6 +432,14 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         Converted.convert(Ctx.getFloatTypeSemantics(FromType),
                           llvm::APFloat::rmNearestTiesToEven, &ignored);
         if (Ctx.getLangOpts().C23) {
+          if (FloatVal.isNaN() && Converted.isNaN()) {
+            if (!FloatVal.isSignaling() && !Converted.isSignaling()) {
+              // Quiet NaNs are considered the same value, regardless of
+              // payloads.
+              return NK_Not_Narrowing;
+            }
+          }
+          // For normal values, check exact equality.
           if (!Converted.bitwiseIsEqual(FloatVal)) {
             ConstantType = Initializer->getType();
             return NK_Constant_Narrowing;
@@ -514,6 +522,25 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       return NK_Type_Narrowing;
     return NK_Not_Narrowing;
 
+  case ICK_Floating_Promotion:
+    if (Ctx.getLangOpts().C23) {
+      const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
+      Expr::EvalResult R;
+      if (Initializer->EvaluateAsRValue(R, Ctx)) {
+        ConstantValue = R.Val;
+        assert(ConstantValue.isFloat());
+        llvm::APFloat FloatVal = ConstantValue.getFloat();
+        // C23 6.7.3p6 If the initializer has real type and a signaling NaN
+        // value, the unqualified versions of the type of the initializer and
+        // the corresponding real type of the object declared shall be
+        // compatible.
+        if (FloatVal.isNaN() && FloatVal.isSignaling()) {
+          ConstantType = Initializer->getType();
+          return NK_Constant_Narrowing;
+        }
+      }
+    }
+    return NK_Not_Narrowing;
   default:
     // Other kinds of conversions are not narrowings.
     return NK_Not_Narrowing;
