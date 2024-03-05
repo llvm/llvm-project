@@ -100,7 +100,7 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 };
 
 // Diagnostic classes.
-enum {
+enum DiagnosticClass {
   CLASS_NOTE       = 0x01,
   CLASS_REMARK     = 0x02,
   CLASS_WARNING    = 0x03,
@@ -110,15 +110,22 @@ enum {
 
 struct StaticDiagInfoRec {
   uint16_t DiagID;
+  LLVM_PREFERRED_TYPE(diag::Severity)
   uint8_t DefaultSeverity : 3;
+  LLVM_PREFERRED_TYPE(DiagnosticClass)
   uint8_t Class : 3;
+  LLVM_PREFERRED_TYPE(DiagnosticIDs::SFINAEResponse)
   uint8_t SFINAE : 2;
   uint8_t Category : 6;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t WarnNoWerror : 1;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t WarnShowInSystemHeader : 1;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t WarnShowInSystemMacro : 1;
 
   uint16_t OptionGroupIndex : 15;
+  LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
   uint16_t DescriptionLen;

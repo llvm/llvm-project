@@ -488,6 +488,16 @@ namespace dr1467 {  // dr1467: 3.7 c++11
     }
   } // nonaggregate
 
+  namespace SelfInitIsNotListInit {
+    struct S {
+      S();
+      explicit S(S &);
+      S(const S &);
+    };
+    S s1;
+    S s2 = {s1}; // ok, not list-initialization so we pick the non-explicit constructor
+  }
+
   struct NestedInit { int a, b, c; };
   NestedInit ni[1] = {{NestedInit{1, 2, 3}}};
 
@@ -603,6 +613,30 @@ enum E2 : S<E2>::I { e };
 // since-cxx11-error@-1 {{use of undeclared identifier 'E2'}}
 #endif
 } // namespace dr1482
+
+namespace dr1487 { // dr1487: 3.3
+#if __cplusplus >= 201103L
+struct A { // #dr1482-A
+  struct B {
+    using A::A;
+    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'B'}}
+  };
+
+  struct C : A {
+  // since-cxx11-error@-1 {{base class has incomplete type}}
+  //   since-cxx11-note@#dr1482-A {{definition of 'dr1487::A' is not complete until the closing '}'}}
+    using A::A;
+    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'C'}}
+  };
+
+  struct D;
+};
+
+struct D : A {
+  using A::A;
+};
+#endif
+} // namespace dr1487
 
 namespace dr1490 {  // dr1490: 3.7 c++11
 #if __cplusplus >= 201103L

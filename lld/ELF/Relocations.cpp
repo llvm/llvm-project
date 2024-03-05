@@ -203,8 +203,9 @@ static bool isAbsoluteValue(const Symbol &sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr expr) {
-  return oneof<R_PLT, R_PLT_PC, R_PLT_GOTPLT, R_LOONGARCH_PLT_PAGE_PC,
-               R_PPC32_PLTREL, R_PPC64_CALL_PLT>(expr);
+  return oneof<R_PLT, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL,
+               R_GOTPLT_PC, R_LOONGARCH_PLT_PAGE_PC, R_PPC32_PLTREL,
+               R_PPC64_CALL_PLT>(expr);
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
@@ -233,6 +234,8 @@ static RelExpr toPlt(RelExpr expr) {
     return R_PLT_PC;
   case R_ABS:
     return R_PLT;
+  case R_GOTREL:
+    return R_PLT_GOTREL;
   default:
     return expr;
   }
@@ -253,6 +256,8 @@ static RelExpr fromPlt(RelExpr expr) {
     return R_ABS;
   case R_PLT_GOTPLT:
     return R_GOTPLTREL;
+  case R_PLT_GOTREL:
+    return R_GOTREL;
   default:
     return expr;
   }
@@ -935,7 +940,7 @@ void elf::addGotEntry(Symbol &sym) {
 static void addTpOffsetGotEntry(Symbol &sym) {
   in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
-  if (!sym.isPreemptible && !config->isPic) {
+  if (!sym.isPreemptible && !config->shared) {
     in.got->addConstant({R_TPREL, target->symbolicRel, off, 0, &sym});
     return;
   }
@@ -979,10 +984,10 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, R_MIPS_GOT_LOCAL_PAGE,
             R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
-            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE,
-            R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT, R_LOONGARCH_GOT_PAGE_PC>(
-          e))
+            R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL, R_GOTPLT_PC,
+            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
+            R_AARCH64_GOT_PAGE, R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT,
+            R_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -1274,29 +1279,34 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+  bool isRISCV = config->emachine == EM_RISCV;
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
+    // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      sym.setFlags(NEEDS_TLSDESC);
+      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+        sym.setFlags(NEEDS_TLSDESC);
       c.addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
 
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
-  // relaxation.
+  // optimizations.
+  // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
-  // relaxation as well.
-  bool toExecRelax = !config->shared && config->emachine != EM_ARM &&
-                     config->emachine != EM_HEXAGON &&
-                     config->emachine != EM_LOONGARCH &&
-                     config->emachine != EM_RISCV &&
-                     !c.file->ppc64DisableTLSRelax;
+  // optimization as well.
+  bool execOptimize =
+      !config->shared && config->emachine != EM_ARM &&
+      config->emachine != EM_HEXAGON && config->emachine != EM_LOONGARCH &&
+      !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
+      !c.file->ppc64DisableTLSRelax;
 
   // If we are producing an executable and the symbol is non-preemptable, it
-  // must be defined and the code sequence can be relaxed to use Local-Exec.
+  // must be defined and the code sequence can be optimized to use Local-Exec.
   //
   // ARM and RISC-V do not support any relaxations for TLS relocations, however,
   // we can omit the DTPMOD dynamic relocations and resolve them at link time
@@ -1309,8 +1319,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   // module index, with a special value of 0 for the current module. GOT[e1] is
   // unused. There only needs to be one module index entry.
   if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(expr)) {
-    // Local-Dynamic relocs can be relaxed to Local-Exec.
-    if (toExecRelax) {
+    // Local-Dynamic relocs can be optimized to Local-Exec.
+    if (execOptimize) {
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE), type,
                   offset, addend, &sym});
       return target->getTlsGdRelaxSkip(type);
@@ -1322,16 +1332,17 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     return 1;
   }
 
-  // Local-Dynamic relocs can be relaxed to Local-Exec.
+  // Local-Dynamic relocs can be optimized to Local-Exec.
   if (expr == R_DTPREL) {
-    if (toExecRelax)
+    if (execOptimize)
       expr = target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
     c.addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
 
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
-  // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
+  // thread pointer is stored in the got. This cannot be optimized to
+  // Local-Exec.
   if (expr == R_TLSLD_GOT_OFF) {
     sym.setFlags(NEEDS_GOT_DTPREL);
     c.addReloc({expr, type, offset, addend, &sym});
@@ -1341,14 +1352,18 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
             R_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
-    if (!toExecRelax) {
+    if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
       c.addReloc({expr, type, offset, addend, &sym});
       return 1;
     }
 
-    // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
+    // Global-Dynamic/TLSDESC can be optimized to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
+    //
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
+    // label, so the LE optimization will be categorized as
+    // R_RELAX_TLS_GD_TO_LE. We fix the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSGD_TO_IE);
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type,
@@ -1363,9 +1378,9 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC,
             R_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
     ctx.hasTlsIe.store(true, std::memory_order_relaxed);
-    // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
-    // defined.
-    if (toExecRelax && isLocalInExecutable) {
+    // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
+    // locally defined.  This is not supported on SystemZ.
+    if (execOptimize && isLocalInExecutable && config->emachine != EM_S390) {
       c.addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
@@ -1463,7 +1478,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
   }
 
-  // Process TLS relocations, including relaxing TLS relocations. Note that
+  // Process TLS relocations, including TLS optimizations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
   if (sym.isTls()) {
     if (unsigned processed =
@@ -1524,8 +1539,10 @@ void RelocationScanner::scan(ArrayRef<RelTy> rels) {
   // For EhInputSection, OffsetGetter expects the relocations to be sorted by
   // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
   // script), the relocations may be unordered.
+  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
+  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
   SmallVector<RelTy, 0> storage;
-  if (isa<EhInputSection>(sec))
+  if (isa<EhInputSection>(sec) || config->emachine == EM_S390)
     rels = sortRels(rels, storage);
 
   end = static_cast<const void *>(rels.end());

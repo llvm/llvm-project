@@ -1,7 +1,7 @@
 ; Test for handling of asm constraints in MSan instrumentation.
 ; RUN: opt < %s -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | \
 ; RUN:   FileCheck %s
-; RUN: opt < %s -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | \
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | \
 ; RUN:   FileCheck --check-prefixes=CHECK,USER-CONS %s
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN:   -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck      \
@@ -14,6 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.pair = type { i32, i32 }
+%struct.large = type { [33 x i8] }
 
 @id1 = common dso_local global i32 0, align 4
 @is1 = common dso_local global i32 0, align 4
@@ -28,6 +29,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @memcpy_d2 = common dso_local global ptr null, align 8
 @memcpy_s1 = common dso_local global ptr null, align 8
 @memcpy_s2 = common dso_local global ptr null, align 8
+@large = common dso_local global %struct.pair zeroinitializer, align 4
 
 ; The functions below were generated from a C source that contains declarations like follows:
 ;   void f1() {
@@ -201,7 +203,6 @@ entry:
 ; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id1, i32 [[IS1_F7]], ptr elementtype(i32) @is1)
 
-
 ; Three outputs, first and last returned via regs, second via mem:
 ;  asm("" : "=r" (id1), "=m"(id2), "=r" (id3):);
 define dso_local void @f_3o_reg_mem_reg() sanitize_memory {
@@ -265,6 +266,17 @@ entry:
 ; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
 ; CHECK: call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.pair) @pair2, ptr elementtype(i8) @c2, ptr elementtype(ptr) @memcpy_d1, ptr elementtype(%struct.pair) @pair1, ptr elementtype(i8) @c1, ptr elementtype(ptr) @memcpy_s1)
 
+; Use memset when the size is larger.
+define dso_local void @f_1i_1o_mem_large() sanitize_memory {
+entry:
+  %0 = call i32 asm "", "=r,=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.large) @large, ptr elementtype(%struct.large) @large)
+  store i32 %0, ptr @id1, align 4
+  ret void
+}
+; CHECK-LABEL: @f_1i_1o_mem_large(
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @large to i64), i64 87960930222080) to ptr), i8 0, i64 33, i1 false)
+; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@large{{.*}}, i64 33)
+; CHECK: call i32 asm "", "=r,=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.large) @large, ptr elementtype(%struct.large) @large)
 
 ; A simple asm goto construct to check that callbr is handled correctly:
 ;  int asm_goto(int n) {

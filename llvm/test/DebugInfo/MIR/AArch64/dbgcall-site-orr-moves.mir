@@ -55,7 +55,7 @@
     call void @llvm.dbg.value(metadata i32 %p, metadata !40, metadata !DIExpression()), !dbg !42
     call void @llvm.dbg.value(metadata i64 %q, metadata !41, metadata !DIExpression()), !dbg !42
     %conv = trunc i64 %q to i32, !dbg !43
-    %0 = load i32, i32* @global, align 4, !dbg !43
+    %0 = load i32, ptr @global, align 4, !dbg !43
     tail call void @call_int_int(i32 %conv, i32 %0), !dbg !43
     ret i32 %p, !dbg !44
   }

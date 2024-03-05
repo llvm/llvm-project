@@ -1,3 +1,5 @@
+.. _developer_policy:
+
 =====================
 LLVM Developer Policy
 =====================
@@ -89,8 +91,7 @@ to read it as possible.  As such, we recommend that you:
 
 #. Make your patch against git main, not a branch, and not an old version
    of LLVM.  This makes it easy to apply the patch.  For information on how to
-   clone from git, please see the :ref:`Getting Started Guide
-   <checkout>`.
+   clone from git, please see the :ref:`Getting Started Guide <sources>`.
 
 #. Similarly, patches should be submitted soon after they are generated.  Old
    patches may not apply correctly if the underlying code changes between the
@@ -103,6 +104,7 @@ to read it as possible.  As such, we recommend that you:
 When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
+
 
 .. _code review:
 
@@ -127,8 +129,8 @@ awareness of. For such changes, the following should be done:
 
 .. warning::
 
-  Phabricator is deprecated and will be switched to read-only mode in October
-  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  Phabricator is deprecated is available in read-only mode,
+  for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
   This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
@@ -468,6 +470,8 @@ What are the expectations around a revert?
 * When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
 
+.. _obtaining_commit_access:
+
 Obtaining Commit Access
 -----------------------
 
@@ -633,6 +637,24 @@ author and the committer like git does. As such, older commits used a different
 attribution mechanism. The previous method was to include "Patch by John Doe."
 in a separate line of the commit message and there are automated processes that
 rely on this format.
+
+Bans
+----
+
+The goal of a ban is to protect people in the community from having to interact
+with people who are consistently not respecting the
+:ref:`LLVM Community Code of Conduct` in LLVM project spaces. Contributions of
+any variety (pull requests, issue reports, forum posts, etc.) require
+interacting with the community. Therefore, we do not accept any form of direct
+contribution from a banned individual.
+
+Indirect contributions are permissible only by someone taking full ownership of
+such a contribution and they are responsible for all related interactions with
+the community regarding that contribution.
+
+When in doubt how to act in a specific instance, please reach out to
+conduct@llvm.org for advice.
+
 
 .. _IR backwards compatibility:
 

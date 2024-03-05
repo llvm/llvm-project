@@ -296,6 +296,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   case Ampere1:
   case Ampere1A:
+  case Ampere1B:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
@@ -539,4 +540,8 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+bool AArch64Subtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
 }

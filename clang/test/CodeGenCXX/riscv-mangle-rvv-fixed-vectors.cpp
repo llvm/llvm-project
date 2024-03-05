@@ -85,6 +85,14 @@ typedef __rvv_float16m8_t vfloat16m8_t;
 typedef __rvv_float32m8_t vfloat32m8_t;
 typedef __rvv_float64m8_t vfloat64m8_t;
 
+typedef __rvv_bool1_t vbool1_t;
+typedef __rvv_bool2_t vbool2_t;
+typedef __rvv_bool4_t vbool4_t;
+typedef __rvv_bool8_t vbool8_t;
+typedef __rvv_bool16_t vbool16_t;
+typedef __rvv_bool32_t vbool32_t;
+typedef __rvv_bool64_t vbool64_t;
+
 typedef vint8mf8_t fixed_int8mf8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/8)));
 
 typedef vuint8mf8_t fixed_uint8mf8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/8)));
@@ -163,6 +171,20 @@ typedef vuint64m8_t fixed_uint64m8_t __attribute__((riscv_rvv_vector_bits(__risc
 typedef vfloat16m8_t fixed_float16m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen*8)));
 typedef vfloat32m8_t fixed_float32m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen*8)));
 typedef vfloat64m8_t fixed_float64m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen*8)));
+
+typedef vbool1_t fixed_bool1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool2_t fixed_bool2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/2)));
+typedef vbool4_t fixed_bool4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/4)));
+typedef vbool8_t fixed_bool8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/8)));
+#if __riscv_v_fixed_vlen >= 128
+typedef vbool16_t fixed_bool16_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/16)));
+#endif
+#if __riscv_v_fixed_vlen >= 256
+typedef vbool32_t fixed_bool32_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/32)));
+#endif
+#if __riscv_v_fixed_vlen >= 512
+typedef vbool64_t fixed_bool64_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/64)));
+#endif
 
 template <typename T> struct S {};
 
@@ -578,3 +600,53 @@ void mf8f1(S<fixed_int8mf8_t>) {}
 // CHECK-512: _Z5mf8f51SI9__RVV_VLSIu16__rvv_uint8mf8_tLj64EEE
 // CHECK-1024: _Z5mf8f51SI9__RVV_VLSIu16__rvv_uint8mf8_tLj128EEE
 void mf8f5(S<fixed_uint8mf8_t>) {}
+
+// CHECK-64: _Z5bool11SI9__RVV_VLSIu13__rvv_bool1_tLj64EEE
+// CHECK-128: _Z5bool11SI9__RVV_VLSIu13__rvv_bool1_tLj128EEE
+// CHECK-256: _Z5bool11SI9__RVV_VLSIu13__rvv_bool1_tLj256EEE
+// CHECK-512: _Z5bool11SI9__RVV_VLSIu13__rvv_bool1_tLj512EEE
+// CHECK-1024: _Z5bool11SI9__RVV_VLSIu13__rvv_bool1_tLj1024EEE
+void bool1(S<fixed_bool1_t>) {}
+
+// CHECK-64: _Z5bool21SI9__RVV_VLSIu13__rvv_bool2_tLj32EEE
+// CHECK-128: _Z5bool21SI9__RVV_VLSIu13__rvv_bool2_tLj64EEE
+// CHECK-256: _Z5bool21SI9__RVV_VLSIu13__rvv_bool2_tLj128EEE
+// CHECK-512: _Z5bool21SI9__RVV_VLSIu13__rvv_bool2_tLj256EEE
+// CHECK-1024: _Z5bool21SI9__RVV_VLSIu13__rvv_bool2_tLj512EEE
+void bool2(S<fixed_bool2_t>) {}
+
+// CHECK-64: _Z5bool41SI9__RVV_VLSIu13__rvv_bool4_tLj16EEE
+// CHECK-128: _Z5bool41SI9__RVV_VLSIu13__rvv_bool4_tLj32EEE
+// CHECK-256: _Z5bool41SI9__RVV_VLSIu13__rvv_bool4_tLj64EEE
+// CHECK-512: _Z5bool41SI9__RVV_VLSIu13__rvv_bool4_tLj128EEE
+// CHECK-1024: _Z5bool41SI9__RVV_VLSIu13__rvv_bool4_tLj256EEE
+void bool4(S<fixed_bool4_t>) {}
+
+// CHECK-64: _Z5bool81SI9__RVV_VLSIu13__rvv_bool8_tLj8EEE
+// CHECK-128: _Z5bool81SI9__RVV_VLSIu13__rvv_bool8_tLj16EEE
+// CHECK-256: _Z5bool81SI9__RVV_VLSIu13__rvv_bool8_tLj32EEE
+// CHECK-512: _Z5bool81SI9__RVV_VLSIu13__rvv_bool8_tLj64EEE
+// CHECK-1024: _Z5bool81SI9__RVV_VLSIu13__rvv_bool8_tLj128EEE
+void bool8(S<fixed_bool8_t>) {}
+
+#if __riscv_v_fixed_vlen >= 128
+// CHECK-128: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj8EEE
+// CHECK-256: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj16EEE
+// CHECK-512: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj32EEE
+// CHECK-1024: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj64EEE
+//
+void bool16(S<fixed_bool16_t>) {}
+#endif
+
+#if __riscv_v_fixed_vlen >= 256
+// CHECK-256: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj8EEE
+// CHECK-512: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj16EEE
+// CHECK-1024: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj32EEE
+void bool32(S<fixed_bool32_t>) {}
+#endif
+
+#if __riscv_v_fixed_vlen >= 512
+// CHECK-512: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj8EEE
+// CHECK-1024: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj16EEE
+void bool64(S<fixed_bool64_t>) {}
+#endif

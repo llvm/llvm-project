@@ -40,7 +40,8 @@ protected:
 
   void initializeBOLT() {
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile.get(), true, DWARFContext::create(*ObjFile.get())));
+        ObjFile.get(), true, DWARFContext::create(*ObjFile.get()),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 
@@ -76,10 +77,11 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   // 12: bl func2
   // 16: func2
 
-  char Data[20] = {};
+  constexpr size_t DataSize = 20;
+  uint8_t *Data = new uint8_t[DataSize];
   BinarySection &BS = BC->registerOrUpdateSection(
-      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC,
-      (uint8_t *)Data, sizeof(Data), 4);
+      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC, Data,
+      DataSize, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
   BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0, true);
@@ -88,7 +90,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0, true);
 
   std::error_code EC;
-  SmallVector<char> Vect(sizeof(Data));
+  SmallVector<char> Vect(DataSize);
   raw_svector_ostream OS(Vect);
 
   BS.flushPendingRelocations(OS, [&](const MCSymbol *S) {
@@ -100,6 +102,49 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
 
   EXPECT_FALSE(memcmp(Func1Call, &Vect[8], 4)) << "Wrong backward call value\n";
   EXPECT_FALSE(memcmp(Func2Call, &Vect[12], 4)) << "Wrong forward call value\n";
+}
+
+TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // returns correctly encoded values for R_AARCH64_JUMP26 relocation for both
+  // backward and forward branches.
+  //
+  // The offsets layout is:
+  // 4:  func1
+  // 8:  b func1
+  // 12: b func2
+  // 16: func2
+
+  const uint64_t Size = 20;
+  char *Data = new char[Size];
+  BinarySection &BS = BC->registerOrUpdateSection(
+      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC,
+      (uint8_t *)Data, Size, 4);
+  MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
+  ASSERT_TRUE(RelSymbol1);
+  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0, true);
+  MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
+  ASSERT_TRUE(RelSymbol2);
+  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0, true);
+
+  std::error_code EC;
+  SmallVector<char> Vect(Size);
+  raw_svector_ostream OS(Vect);
+
+  BS.flushPendingRelocations(OS, [&](const MCSymbol *S) {
+    return S == RelSymbol1 ? 4 : S == RelSymbol2 ? 16 : 0;
+  });
+
+  const uint8_t Func1Call[4] = {255, 255, 255, 23};
+  const uint8_t Func2Call[4] = {1, 0, 0, 20};
+
+  EXPECT_FALSE(memcmp(Func1Call, &Vect[8], 4))
+      << "Wrong backward branch value\n";
+  EXPECT_FALSE(memcmp(Func2Call, &Vect[12], 4))
+      << "Wrong forward branch value\n";
 }
 
 #endif

@@ -401,7 +401,7 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
     Changed |= replaceNonLocalUsesWith(Cond, ToVal);
   for (Instruction &I : reverse(*KnownAtEndOfBB)) {
     // Replace any debug-info record users of Cond with ToVal.
-    for (DPValue &DPV : I.getDbgValueRange())
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
       DPV.replaceVariableLocationOp(Cond, ToVal, true);
 
     // Reached the Cond whose uses we are trying to replace, so there are no
@@ -1260,8 +1260,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // the entry to its block.
   BasicBlock::iterator BBIt(LoadI);
   bool IsLoadCSE;
+  BatchAAResults BatchAA(*AA);
+  // The dominator tree is updated lazily and may not be valid at this point.
+  BatchAA.disableDominatorTree();
   if (Value *AvailableVal = FindAvailableLoadedValue(
-          LoadI, LoadBB, BBIt, DefMaxInstsToScan, AA, &IsLoadCSE)) {
+          LoadI, LoadBB, BBIt, DefMaxInstsToScan, &BatchAA, &IsLoadCSE)) {
     // If the value of the load is locally available within the block, just use
     // it.  This frequently occurs for reg2mem'd allocas.
 
@@ -1322,9 +1325,9 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     MemoryLocation Loc(LoadedPtr->DoPHITranslation(LoadBB, PredBB),
                        LocationSize::precise(DL.getTypeStoreSize(AccessTy)),
                        AATags);
-    PredAvailable = findAvailablePtrLoadStore(Loc, AccessTy, LoadI->isAtomic(),
-                                              PredBB, BBIt, DefMaxInstsToScan,
-                                              AA, &IsLoadCSE, &NumScanedInst);
+    PredAvailable = findAvailablePtrLoadStore(
+        Loc, AccessTy, LoadI->isAtomic(), PredBB, BBIt, DefMaxInstsToScan,
+        &BatchAA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the
     // single predecessor.
@@ -1336,7 +1339,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
         BBIt = SinglePredBB->end();
         PredAvailable = findAvailablePtrLoadStore(
             Loc, AccessTy, LoadI->isAtomic(), SinglePredBB, BBIt,
-            (DefMaxInstsToScan - NumScanedInst), AA, &IsLoadCSE,
+            (DefMaxInstsToScan - NumScanedInst), &BatchAA, &IsLoadCSE,
             &NumScanedInst);
       }
     }
@@ -1431,16 +1434,14 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   array_pod_sort(AvailablePreds.begin(), AvailablePreds.end());
 
   // Create a PHI node at the start of the block for the PRE'd load value.
-  pred_iterator PB = pred_begin(LoadBB), PE = pred_end(LoadBB);
-  PHINode *PN = PHINode::Create(LoadI->getType(), std::distance(PB, PE), "");
+  PHINode *PN = PHINode::Create(LoadI->getType(), pred_size(LoadBB), "");
   PN->insertBefore(LoadBB->begin());
   PN->takeName(LoadI);
   PN->setDebugLoc(LoadI->getDebugLoc());
 
   // Insert new entries into the PHI for each predecessor.  A single block may
   // have multiple entries here.
-  for (pred_iterator PI = PB; PI != PE; ++PI) {
-    BasicBlock *P = *PI;
+  for (BasicBlock *P : predecessors(LoadBB)) {
     AvailablePredsTy::iterator I =
         llvm::lower_bound(AvailablePreds, std::make_pair(P, (Value *)nullptr));
 
@@ -2081,7 +2082,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
 
   auto CloneAndRemapDbgInfo = [&](Instruction *NewInst, Instruction *From) {
     auto DPVRange = NewInst->cloneDebugInfoFrom(From);
-    for (DPValue &DPV : DPVRange)
+    for (DPValue &DPV : DPValue::filter(DPVRange))
       RetargetDPValueIfPossible(&DPV);
   };
 
@@ -2116,7 +2117,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     DPMarker *Marker = RangeBB->getMarker(BE);
     DPMarker *EndMarker = NewBB->createMarker(NewBB->end());
     auto DPVRange = EndMarker->cloneDebugInfoFrom(Marker, std::nullopt);
-    for (DPValue &DPV : DPVRange)
+    for (DPValue &DPV : DPValue::filter(DPVRange))
       RetargetDPValueIfPossible(&DPV);
   }
 

@@ -10,7 +10,7 @@
 #define _LIBCPP___MUTEX_MUTEX_H
 
 #include <__config>
-#include <__threading_support>
+#include <__thread/support.h>
 #include <__type_traits/is_nothrow_default_constructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

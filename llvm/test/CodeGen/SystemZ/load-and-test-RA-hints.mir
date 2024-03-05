@@ -25,20 +25,20 @@
     br label %bb20
   
   bb1:                                              ; preds = %bb1.preheader, %bb15
-    %lsr.iv3 = phi [512 x i32]* [ undef, %bb1.preheader ], [ %2, %bb15 ]
-    %lsr.iv1 = phi [300 x i32]* [ @rootlosers, %bb1.preheader ], [ %1, %bb15 ]
+    %lsr.iv3 = phi ptr [ undef, %bb1.preheader ], [ %2, %bb15 ]
+    %lsr.iv1 = phi ptr [ @rootlosers, %bb1.preheader ], [ %1, %bb15 ]
     %lsr.iv = phi i32 [ 0, %bb1.preheader ], [ %lsr.iv.next, %bb15 ]
     %tmp2 = phi i32 [ %tmp18, %bb15 ], [ 0, %bb1.preheader ]
     %tmp3 = phi i32 [ %tmp17, %bb15 ], [ 100000000, %bb1.preheader ]
-    %lsr.iv35 = bitcast [512 x i32]* %lsr.iv3 to i32*
-    %tmp5 = load i32, i32* %lsr.iv35, align 4, !tbaa !1
-    %tmp6 = load i32, i32* undef, align 4, !tbaa !1
+    %lsr.iv35 = bitcast ptr %lsr.iv3 to ptr
+    %tmp5 = load i32, ptr %lsr.iv35, align 4, !tbaa !1
+    %tmp6 = load i32, ptr undef, align 4, !tbaa !1
     %tmp7 = icmp eq i32 %tmp6, 0
     br i1 %tmp7, label %bb15, label %bb8
   
   bb8:                                              ; preds = %bb1
-    %0 = bitcast [300 x i32]* %lsr.iv1 to i32*
-    %tmp10 = load i32, i32* %0, align 4, !tbaa !1
+    %0 = bitcast ptr %lsr.iv1 to ptr
+    %tmp10 = load i32, ptr %0, align 4, !tbaa !1
     %tmp11 = icmp eq i32 %tmp10, 0
     %tmp12 = select i1 %tmp11, i32 %tmp5, i32 %tmp3
     %tmp14 = select i1 %tmp11, i32 %lsr.iv, i32 %tmp2
@@ -49,10 +49,10 @@
     %tmp17 = phi i32 [ %tmp3, %bb1 ], [ %tmp12, %bb8 ]
     %tmp18 = phi i32 [ %tmp2, %bb1 ], [ %tmp14, %bb8 ]
     %lsr.iv.next = add i32 %lsr.iv, 4
-    %scevgep = getelementptr [300 x i32], [300 x i32]* %lsr.iv1, i64 0, i64 4
-    %1 = bitcast i32* %scevgep to [300 x i32]*
-    %scevgep4 = getelementptr [512 x i32], [512 x i32]* %lsr.iv3, i64 0, i64 4
-    %2 = bitcast i32* %scevgep4 to [512 x i32]*
+    %scevgep = getelementptr [300 x i32], ptr %lsr.iv1, i64 0, i64 4
+    %1 = bitcast ptr %scevgep to ptr
+    %scevgep4 = getelementptr [512 x i32], ptr %lsr.iv3, i64 0, i64 4
+    %2 = bitcast ptr %scevgep4 to ptr
     br label %bb1
   
   bb20:                                             ; preds = %bb20, %bb20.preheader
@@ -141,7 +141,7 @@ body:             |
     successors: %bb.7(0x30000000), %bb.4(0x50000000)
   
     %5:grx32bit = LMux %21, 0, $noreg :: (load (s32) from %ir.lsr.iv35, !tbaa !1)
-    %6:grx32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `i32* undef`, !tbaa !1)
+    %6:grx32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `ptr undef`, !tbaa !1)
     CHIMux %6, 0, implicit-def $cc
     BRC 14, 6, %bb.4, implicit killed $cc
   

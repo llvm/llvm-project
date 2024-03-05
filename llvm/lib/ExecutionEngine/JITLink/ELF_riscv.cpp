@@ -133,38 +133,6 @@ const uint8_t
 namespace llvm {
 namespace jitlink {
 
-static Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) {
-  using namespace riscv;
-  assert((E.getKind() == R_RISCV_PCREL_LO12_I ||
-          E.getKind() == R_RISCV_PCREL_LO12_S) &&
-         "Can only have high relocation for R_RISCV_PCREL_LO12_I or "
-         "R_RISCV_PCREL_LO12_S");
-
-  const Symbol &Sym = E.getTarget();
-  const Block &B = Sym.getBlock();
-  orc::ExecutorAddrDiff Offset = Sym.getOffset();
-
-  struct Comp {
-    bool operator()(const Edge &Lhs, orc::ExecutorAddrDiff Offset) {
-      return Lhs.getOffset() < Offset;
-    }
-    bool operator()(orc::ExecutorAddrDiff Offset, const Edge &Rhs) {
-      return Offset < Rhs.getOffset();
-    }
-  };
-
-  auto Bound =
-      std::equal_range(B.edges().begin(), B.edges().end(), Offset, Comp{});
-
-  for (auto It = Bound.first; It != Bound.second; ++It) {
-    if (It->getKind() == R_RISCV_PCREL_HI20)
-      return *It;
-  }
-
-  return make_error<JITLinkError>(
-      "No HI20 PCREL relocation type be found for LO12 PCREL relocation type");
-}
-
 static uint32_t extractBits(uint32_t Num, unsigned Low, unsigned Size) {
   return (Num & (((1ULL << Size) - 1) << Low)) >> Low;
 }
@@ -184,9 +152,43 @@ class ELFJITLinker_riscv : public JITLinker<ELFJITLinker_riscv> {
 public:
   ELFJITLinker_riscv(std::unique_ptr<JITLinkContext> Ctx,
                      std::unique_ptr<LinkGraph> G, PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    JITLinkerBase::getPassConfig().PostAllocationPasses.push_back(
+        [this](LinkGraph &G) { return gatherRISCVPCRelHi20(G); });
+  }
 
 private:
+  DenseMap<std::pair<const Block *, orc::ExecutorAddrDiff>, const Edge *>
+      RelHi20;
+
+  Error gatherRISCVPCRelHi20(LinkGraph &G) {
+    for (Block *B : G.blocks())
+      for (Edge &E : B->edges())
+        if (E.getKind() == R_RISCV_PCREL_HI20)
+          RelHi20[{B, E.getOffset()}] = &E;
+
+    return Error::success();
+  }
+
+  Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) const {
+    using namespace riscv;
+    assert((E.getKind() == R_RISCV_PCREL_LO12_I ||
+            E.getKind() == R_RISCV_PCREL_LO12_S) &&
+           "Can only have high relocation for R_RISCV_PCREL_LO12_I or "
+           "R_RISCV_PCREL_LO12_S");
+
+    const Symbol &Sym = E.getTarget();
+    const Block &B = Sym.getBlock();
+    orc::ExecutorAddrDiff Offset = Sym.getOffset();
+
+    auto It = RelHi20.find({&B, Offset});
+    if (It != RelHi20.end())
+      return *It->second;
+
+    return make_error<JITLinkError>("No HI20 PCREL relocation type be found "
+                                    "for LO12 PCREL relocation type");
+  }
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
     using namespace riscv;
     using namespace llvm::support;
@@ -525,7 +527,8 @@ static RelaxAux initRelaxAux(LinkGraph &G) {
   RelaxAux Aux;
   Aux.Config.IsRV32 = G.getTargetTriple().isRISCV32();
   const auto &Features = G.getFeatures().getFeatures();
-  Aux.Config.HasRVC = llvm::is_contained(Features, "+c");
+  Aux.Config.HasRVC = llvm::is_contained(Features, "+c") ||
+                      llvm::is_contained(Features, "+zca");
 
   for (auto &S : G.sections()) {
     if (!shouldRelax(S))

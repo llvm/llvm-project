@@ -48,7 +48,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -61,6 +60,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1461,9 +1461,8 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
     if (DI && processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
                                 DI->getVariable(), DI->getDebugLoc()))
       FuncInfo.PreprocessedDbgDeclares.insert(DI);
-
-    for (const DPValue &DPV : I.getDbgValueRange()) {
-      if (DPV.getType() == DPValue::LocationType::Declare &&
+    for (const DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      if (DPV.Type == DPValue::LocationType::Declare &&
           processDbgDeclare(FuncInfo, DPV.getVariableLocationOp(0),
                             DPV.getExpression(), DPV.getVariable(),
                             DPV.getDebugLoc()))

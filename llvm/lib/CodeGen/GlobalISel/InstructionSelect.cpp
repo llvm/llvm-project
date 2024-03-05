@@ -281,7 +281,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
 
     const LLT Ty = MRI.getType(VReg);
-    if (Ty.isValid() && Ty.getSizeInBits() > TRI.getRegSizeInBits(*RC)) {
+    if (Ty.isValid() &&
+        TypeSize::isKnownGT(Ty.getSizeInBits(), TRI.getRegSizeInBits(*RC))) {
       reportGISelFailure(
           MF, TPC, MORE, "gisel-select",
           "VReg's low-level type and register class have different sizes", *MI);

@@ -61,7 +61,7 @@ function(add_diff_binary target_name)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  
+
   if(DIFF_CXX_STANDARD)
     set_target_properties(
       ${fq_target_name}

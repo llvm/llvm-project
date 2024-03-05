@@ -2174,6 +2174,18 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   }
 }
 
+void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  VisitExpr(E);
+  E->TransformedExpressions = Record.readInt();
+  E->EllipsisLoc = readSourceLocation();
+  E->RSquareLoc = readSourceLocation();
+  E->SubExprs[0] = Record.readStmt();
+  E->SubExprs[1] = Record.readStmt();
+  auto **Exprs = E->getTrailingObjects<Expr *>();
+  for (unsigned I = 0; I < E->TransformedExpressions; ++I)
+    Exprs[I] = Record.readExpr();
+}
+
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -2774,6 +2786,26 @@ void ASTStmtReader::VisitOMPParallelGenericLoopDirective(
 void ASTStmtReader::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC Constructs/Directives.
+//===----------------------------------------------------------------------===//
+void ASTStmtReader::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  S->Kind = Record.readEnum<OpenACCDirectiveKind>();
+  S->Range = Record.readSourceRange();
+  // TODO OpenACC: Deserialize Clauses.
+}
+
+void ASTStmtReader::VisitOpenACCAssociatedStmtConstruct(
+    OpenACCAssociatedStmtConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  S->setAssociatedStmt(Record.readSubStmt());
+}
+
+void ASTStmtReader::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4102,6 +4134,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
               /*NumPartialArgs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
+    case EXPR_PACK_INDEXING:
+      S = PackIndexingExpr::CreateDeserialized(
+          Context,
+          /*TransformedExprs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
     case EXPR_SUBST_NON_TYPE_TEMPLATE_PARM:
       S = new (Context) SubstNonTypeTemplateParmExpr(Empty);
       break;
@@ -4188,6 +4226,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
+    case STMT_OPENACC_COMPUTE_CONSTRUCT:
+      S = OpenACCComputeConstruct::CreateEmpty(Context, Empty);
+      break;
 
     case EXPR_REQUIRES:
       unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];

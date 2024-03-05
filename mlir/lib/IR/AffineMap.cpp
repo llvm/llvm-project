@@ -272,12 +272,16 @@ AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
   return result;
 }
 
+/// Creates an affine map each for each list of AffineExpr's in `exprsList`
+/// while inferring the right number of dimensional and symbolic inputs needed
+/// based on the maximum dimensional and symbolic identifier appearing in the
+/// expressions.
 template <typename AffineExprContainer>
 static SmallVector<AffineMap, 4>
-inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
-  assert(!exprsList.empty());
-  assert(!exprsList[0].empty());
-  auto context = exprsList[0][0].getContext();
+inferFromExprList(ArrayRef<AffineExprContainer> exprsList,
+                  MLIRContext *context) {
+  if (exprsList.empty())
+    return {};
   int64_t maxDim = -1, maxSym = -1;
   getMaxDimAndSymbol(exprsList, maxDim, maxSym);
   SmallVector<AffineMap, 4> maps;
@@ -289,13 +293,15 @@ inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
 }
 
 SmallVector<AffineMap, 4>
-AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList) {
-  return ::inferFromExprList(exprsList);
+AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                             MLIRContext *context) {
+  return ::inferFromExprList(exprsList, context);
 }
 
 SmallVector<AffineMap, 4>
-AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList) {
-  return ::inferFromExprList(exprsList);
+AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                             MLIRContext *context) {
+  return ::inferFromExprList(exprsList, context);
 }
 
 uint64_t AffineMap::getLargestKnownDivisorOfMapExprs() {
@@ -521,7 +527,7 @@ AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
   newResults.reserve(getNumResults());
   for (AffineExpr e : getResults())
     newResults.push_back(e.replace(map));
-  return AffineMap::inferFromExprList(newResults).front();
+  return AffineMap::inferFromExprList(newResults, getContext()).front();
 }
 
 AffineMap AffineMap::dropResults(const llvm::SmallBitVector &positions) const {

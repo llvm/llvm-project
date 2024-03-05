@@ -15,6 +15,7 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Type.h"
 
@@ -45,6 +46,13 @@ public:
 
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
+
+  /// Is this the box for an assumed rank?
+  bool isAssumedRank() const;
+
+  /// Return the same type, except for the shape, that is taken the shape
+  /// of shapeMold.
+  BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(mlir::Type type);
@@ -313,6 +321,9 @@ bool isBoxNone(mlir::Type ty);
 /// e.g. !fir.box<!fir.type<derived>>
 bool isBoxedRecordType(mlir::Type ty);
 
+/// Return true iff `ty` is a type that contains descriptor information.
+bool isTypeWithDescriptor(mlir::Type ty);
+
 /// Return true iff `ty` is a scalar boxed record type.
 /// e.g. !fir.box<!fir.type<derived>>
 ///      !fir.box<!fir.heap<!fir.type<derived>>>
@@ -428,6 +439,13 @@ inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
   return ty;
 }
 
+/// Replace the element type of \p type by \p newElementType, preserving
+/// all other layers of the type (fir.ref/ptr/heap/array/box/class).
+/// If \p turnBoxIntoClass and the input is a fir.box, it will be turned into
+/// a fir.class in the result.
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass);
+
 /// Is `t` an address to fir.box or class type?
 inline bool isBoxAddress(mlir::Type t) {
   return fir::isa_ref_type(t) && fir::unwrapRefType(t).isa<fir::BaseBoxType>();
@@ -450,6 +468,17 @@ inline bool isBoxProcAddressType(mlir::Type t) {
 /// fir.ref<i32> -> prefix_ref_i32
 std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
                             llvm::StringRef prefix = "");
+
+/// Return the size and alignment of FIR types.
+/// TODO: consider moving this to a DataLayoutTypeInterface implementation
+/// for FIR types. It should first be ensured that it is OK to open the gate of
+/// target dependent type size inquiries in lowering. It would also not be
+/// straightforward given the need for a kind map that would need to be
+/// converted in terms of mlir::DataLayoutEntryKey.
+std::pair<std::uint64_t, unsigned short>
+getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                        const mlir::DataLayout &dl,
+                        const fir::KindMapping &kindMap);
 
 } // namespace fir
 

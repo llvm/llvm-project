@@ -1,4 +1,4 @@
-// FIXME: pthread_create() definition in Builtins.def doesn't match the real one, so it doesn't get recognized as a builtin and attributes aren't added.
+// FIXME: pthread_create() definition in Builtins.td doesn't match the real one, so it doesn't get recognized as a builtin and attributes aren't added.
 // RUN: false
 // XFAIL: *
 

@@ -110,7 +110,7 @@ private:
 
 void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                     const MachineInstr &MI) {
-  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
   unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
 
   auto &Ctx = OutStreamer.getContext();
@@ -143,7 +143,7 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
 void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
 
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
@@ -165,7 +165,7 @@ void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
 void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
 
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
@@ -779,6 +779,18 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     break;
   case RISCVII::MO_TLS_GD_HI:
     Kind = RISCVMCExpr::VK_RISCV_TLS_GD_HI;
+    break;
+  case RISCVII::MO_TLSDESC_HI:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_HI;
+    break;
+  case RISCVII::MO_TLSDESC_LOAD_LO:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO;
+    break;
+  case RISCVII::MO_TLSDESC_ADD_LO:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO;
+    break;
+  case RISCVII::MO_TLSDESC_CALL:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_CALL;
     break;
   }
 

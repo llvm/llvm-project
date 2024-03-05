@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 ;; Similar to dbg-assign-tag-offset.ll except the variable 'x' has been removed
 ;; and 'y' has an implicit location range as well as stack location range

@@ -15,6 +15,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/Path.h"
@@ -81,6 +82,9 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
     std::unique_ptr<Binary> bin =
         CHECK(createBinary(mb), mb.getBufferIdentifier());
     auto *obj = cast<WasmObjectFile>(bin.get());
+    if (obj->hasUnmodeledTypes())
+      fatal(toString(mb.getBufferIdentifier()) +
+            "file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
     return make<ObjFile>(mb, archiveName, lazy);
@@ -319,20 +323,19 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
   }
 
-  auto *info = make<WasmSymbolInfo>();
-  info->Name = tableImport->Field;
-  info->Kind = WASM_SYMBOL_TYPE_TABLE;
-  info->ImportModule = tableImport->Module;
-  info->ImportName = tableImport->Field;
-  info->Flags = WASM_SYMBOL_UNDEFINED;
-  info->Flags |= WASM_SYMBOL_NO_STRIP;
-  info->ElementIndex = 0;
-  LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info->Name
+  WasmSymbolInfo info;
+  info.Name = tableImport->Field;
+  info.Kind = WASM_SYMBOL_TYPE_TABLE;
+  info.ImportModule = tableImport->Module;
+  info.ImportName = tableImport->Field;
+  info.Flags = WASM_SYMBOL_UNDEFINED | WASM_SYMBOL_NO_STRIP;
+  info.ElementIndex = 0;
+  LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info.Name
                     << "\n");
   const WasmGlobalType *globalType = nullptr;
   const WasmSignature *signature = nullptr;
   auto *wasmSym =
-      make<WasmSymbol>(*info, globalType, &tableImport->Table, signature);
+      make<WasmSymbol>(info, globalType, &tableImport->Table, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())

@@ -6,10 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_FLOAT_MACROS_H
-#define __LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#define LLVM_LIBC_MACROS_FLOAT_MACROS_H
+
+// Suppress `#include_next is a language extension` warnings.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-include-next"
+#pragma clang diagnostic ignored "-Winclude-next-absolute-path"
+#else // gcc
+#pragma GCC system_header
+#endif //__clang__
 
 #include_next <float.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif //__clang__
 
 #ifndef FLT_RADIX
 #define FLT_RADIX __FLT_RADIX__
@@ -157,4 +170,4 @@
 
 // TODO: Add FLT16 and FLT128 constants.
 
-#endif // __LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#endif // LLVM_LIBC_MACROS_FLOAT_MACROS_H

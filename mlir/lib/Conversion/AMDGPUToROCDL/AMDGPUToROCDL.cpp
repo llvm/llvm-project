@@ -38,7 +38,7 @@ static Value createI32Constant(ConversionPatternRewriter &rewriter,
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
                               bool value) {
   Type llvmI1 = rewriter.getI1Type();
-  return rewriter.createOrFold<LLVM::ConstantOp>(loc, llvmI1, value);
+  return rewriter.create<LLVM::ConstantOp>(loc, llvmI1, value);
 }
 
 namespace {
@@ -163,7 +163,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value ptr = memrefDescriptor.alignedPtr(rewriter, loc);
     // The stride value is always 0 for raw buffers. This also disables
     // swizling.
-    Value stride = rewriter.createOrFold<LLVM::ConstantOp>(
+    Value stride = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI16, rewriter.getI16IntegerAttr(0));
     Value numRecords;
     if (memrefType.hasStaticShape()) {

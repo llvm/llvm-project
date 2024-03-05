@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
 #define _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
 
+#include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__utility/cmp.h>
@@ -18,6 +19,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -106,5 +110,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
 #endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H

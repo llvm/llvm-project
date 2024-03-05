@@ -268,7 +268,7 @@ const char BinaryFunctionPassManager::TimerGroupName[] = "passman";
 const char BinaryFunctionPassManager::TimerGroupDesc[] =
     "Binary Function Pass Manager";
 
-void BinaryFunctionPassManager::runPasses() {
+Error BinaryFunctionPassManager::runPasses() {
   auto &BFs = BC.getBinaryFunctions();
   for (size_t PassIdx = 0; PassIdx < Passes.size(); PassIdx++) {
     const std::pair<const bool, std::unique_ptr<BinaryFunctionPass>>
@@ -281,13 +281,20 @@ void BinaryFunctionPassManager::runPasses() {
         formatv("{0:2}_{1}", PassIdx, Pass->getName()).str();
 
     if (opts::Verbosity > 0)
-      outs() << "BOLT-INFO: Starting pass: " << Pass->getName() << "\n";
+      BC.outs() << "BOLT-INFO: Starting pass: " << Pass->getName() << "\n";
 
     NamedRegionTimer T(Pass->getName(), Pass->getName(), TimerGroupName,
                        TimerGroupDesc, TimeOpts);
 
-    callWithDynoStats([this, &Pass] { Pass->runOnFunctions(BC); }, BFs,
-                      Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
+    Error E = Error::success();
+    callWithDynoStats(
+        BC.outs(),
+        [this, &E, &Pass] {
+          E = joinErrors(std::move(E), Pass->runOnFunctions(BC));
+        },
+        BFs, Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
+    if (E)
+      return Error(std::move(E));
 
     if (opts::VerifyCFG &&
         !std::accumulate(
@@ -296,13 +303,13 @@ void BinaryFunctionPassManager::runPasses() {
                const std::pair<const uint64_t, BinaryFunction> &It) {
               return Valid && It.second.validateCFG();
             })) {
-      errs() << "BOLT-ERROR: Invalid CFG detected after pass "
-             << Pass->getName() << "\n";
-      exit(1);
+      return createFatalBOLTError(
+          Twine("BOLT-ERROR: Invalid CFG detected after pass ") +
+          Twine(Pass->getName()) + Twine("\n"));
     }
 
     if (opts::Verbosity > 0)
-      outs() << "BOLT-INFO: Finished pass: " << Pass->getName() << "\n";
+      BC.outs() << "BOLT-INFO: Finished pass: " << Pass->getName() << "\n";
 
     if (!opts::PrintAll && !opts::DumpDotAll && !Pass->printPass())
       continue;
@@ -315,15 +322,16 @@ void BinaryFunctionPassManager::runPasses() {
       if (!Pass->shouldPrint(Function))
         continue;
 
-      Function.print(outs(), Message);
+      Function.print(BC.outs(), Message);
 
       if (opts::DumpDotAll)
         Function.dumpGraphForPass(PassIdName);
     }
   }
+  return Error::success();
 }
 
-void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
+Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
   const DynoStats InitialDynoStats =
@@ -516,7 +524,7 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // in parallel and restore them
   Manager.registerPass(std::make_unique<CleanMCState>(NeverPrint));
 
-  Manager.runPasses();
+  return Manager.runPasses();
 }
 
 } // namespace bolt

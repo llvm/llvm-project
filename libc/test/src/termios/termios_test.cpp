@@ -30,35 +30,35 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcTermiosTest, SpeedSmokeTest) {
   struct termios t;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, B50), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::cfgetispeed(&t), speed_t(B50));
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, B75), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::cfgetospeed(&t), speed_t(B75));
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, ~CBAUD), Fails(EINVAL));
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, ~CBAUD), Fails(EINVAL));
 }
 
 TEST(LlvmLibcTermiosTest, GetAttrSmokeTest) {
   struct termios t;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
   if (fd < 0)
     return; // When /dev/tty is not available, no point continuing.
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::tcgetattr(fd, &t), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
 }
 
 TEST(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
   if (fd < 0)
     return; // When /dev/tty is not available, no point continuing.
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(LIBC_NAMESPACE::tcgetsid(fd), pid_t(0));
   ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
 }

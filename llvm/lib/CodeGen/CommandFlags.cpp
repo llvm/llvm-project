@@ -90,9 +90,11 @@ CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
+CGOPT(bool, EnableBBAddrMap)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
 CGOPT_EXP(bool, EmulatedTLS)
+CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(EABI, EABIVersion)
@@ -389,6 +391,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(true));
   CGBINDOPT(XCOFFTracebackTable);
 
+  static cl::opt<bool> EnableBBAddrMap(
+      "basic-block-address-map",
+      cl::desc("Emit the basic block address map section"), cl::init(false));
+  CGBINDOPT(EnableBBAddrMap);
+
   static cl::opt<std::string> BBSections(
       "basic-block-sections",
       cl::desc("Emit basic blocks into separate sections"),
@@ -403,6 +410,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   static cl::opt<bool> EmulatedTLS(
       "emulated-tls", cl::desc("Use emulated TLS model"), cl::init(false));
   CGBINDOPT(EmulatedTLS);
+
+  static cl::opt<bool> EnableTLSDESC(
+      "enable-tlsdesc", cl::desc("Enable the use of TLS Descriptors"),
+      cl::init(false));
+  CGBINDOPT(EnableTLSDESC);
 
   static cl::opt<bool> UniqueSectionNames(
       "unique-section-names", cl::desc("Give unique names to every section"),
@@ -562,12 +574,15 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.FunctionSections = getFunctionSections();
   Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
   Options.XCOFFTracebackTable = getXCOFFTracebackTable();
+  Options.BBAddrMap = getEnableBBAddrMap();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS =
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
+  Options.EnableTLSDESC =
+      getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();

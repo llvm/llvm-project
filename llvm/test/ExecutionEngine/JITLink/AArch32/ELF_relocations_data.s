@@ -1,4 +1,9 @@
-# RUN: rm -rf %t && mkdir -p %t/armv7 && mkdir -p %t/thumbv7
+# RUN: rm -rf %t && mkdir -p %t/armv6 && mkdir -p %t/armv7 && mkdir -p %t/thumbv7
+# RUN: llvm-mc -triple=armv6-none-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t/armv6/out.o %s
+# RUN: llvm-objdump -r %t/armv6/out.o | FileCheck --check-prefix=CHECK-TYPE %s
+# RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb -slab-page-size 4096 \
+# RUN:              -abs target=0x76bbe88f -check %s %t/armv6/out.o
+
 # RUN: llvm-mc -triple=armv7-none-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t/armv7/out.o %s
 # RUN: llvm-objdump -r %t/armv7/out.o | FileCheck --check-prefix=CHECK-TYPE %s
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb -slab-page-size 4096 \

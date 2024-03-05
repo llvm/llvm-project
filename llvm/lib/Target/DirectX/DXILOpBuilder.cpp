@@ -13,7 +13,7 @@
 #include "DXILConstants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/DXILOperationCommon.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -221,12 +221,26 @@ static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
   return nullptr;
 }
 
+/// Construct DXIL function type. This is the type of a function with
+/// the following prototype
+///     OverloadType dx.op.<opclass>.<return-type>(int opcode, <param types>)
+/// <param-types> are constructed from types in Prop.
+/// \param Prop  Structure containing DXIL Operation properties based on
+///               its specification in DXIL.td.
+/// \param OverloadTy Return type to be used to construct DXIL function type.
 static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
                                            Type *OverloadTy) {
   SmallVector<Type *> ArgTys;
 
   auto ParamKinds = getOpCodeParameterKind(*Prop);
 
+  // Add OverloadTy as return type of the function
+  ArgTys.emplace_back(OverloadTy);
+
+  // Add DXIL Opcode value type viz., Int32 as first argument
+  ArgTys.emplace_back(Type::getInt32Ty(OverloadTy->getContext()));
+
+  // Add DXIL Operation parameter types as specified in DXIL properties
   for (unsigned I = 0; I < Prop->NumOfParameters; ++I) {
     ParameterKind Kind = ParamKinds[I];
     ArgTys.emplace_back(getTypeFromParameterKind(Kind, OverloadTy));
@@ -267,13 +281,13 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *OverloadTy,
   return B.CreateCall(Fn, FullArgs);
 }
 
-Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT,
-                                   bool NoOpCodeParam) {
+Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
 
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
+  // If DXIL Op has no overload parameter, just return the
+  // precise return type specified.
   if (Prop->OverloadParamIndex < 0) {
     auto &Ctx = FT->getContext();
-    // When only has 1 overload type, just return it.
     switch (Prop->OverloadTys) {
     case OverloadKind::VOID:
       return Type::getVoidTy(Ctx);
@@ -302,9 +316,8 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT,
   // Prop->OverloadParamIndex is 0, overload type is FT->getReturnType().
   Type *OverloadType = FT->getReturnType();
   if (Prop->OverloadParamIndex != 0) {
-    // Skip Return Type and Type for DXIL opcode.
-    const unsigned SkipedParam = NoOpCodeParam ? 2 : 1;
-    OverloadType = FT->getParamType(Prop->OverloadParamIndex - SkipedParam);
+    // Skip Return Type.
+    OverloadType = FT->getParamType(Prop->OverloadParamIndex - 1);
   }
 
   auto ParamKinds = getOpCodeParameterKind(*Prop);

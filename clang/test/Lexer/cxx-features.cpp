@@ -309,7 +309,7 @@
 #error "wrong value for __cpp_constexpr"
 #endif
 
-#if check(range_based_for, 0, 200907, 200907, 201603, 201603, 201603, 201603)
+#if check(range_based_for, 0, 200907, 200907, 201603, 201603, 202211, 202211)
 #error "wrong value for __cpp_range_based_for"
 #endif
 

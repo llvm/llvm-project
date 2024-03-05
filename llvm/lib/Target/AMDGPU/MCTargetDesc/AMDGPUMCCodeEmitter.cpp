@@ -157,6 +157,27 @@ static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
   return 255;
 }
 
+static uint32_t getLitBF16Encoding(uint16_t Val) {
+  uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
+  if (IntImm != 0)
+    return IntImm;
+
+  // clang-format off
+  switch (Val) {
+  case 0x3F00: return 240; // 0.5
+  case 0xBF00: return 241; // -0.5
+  case 0x3F80: return 242; // 1.0
+  case 0xBF80: return 243; // -1.0
+  case 0x4000: return 244; // 2.0
+  case 0xC000: return 245; // -2.0
+  case 0x4080: return 246; // 4.0
+  case 0xC080: return 247; // -4.0
+  case 0x3E22: return 248; // 1.0 / (2.0 * pi)
+  default:     return 255;
+  }
+  // clang-format on
+}
+
 static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int32_t>(Val));
   if (IntImm != 0)
@@ -276,6 +297,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     return getLit16IntEncoding(static_cast<uint16_t>(Imm), STI);
+
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -283,16 +305,33 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     // FIXME Is this correct? What do inline immediates do on SI for f16 src
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
+
+  case AMDGPU::OPERAND_REG_IMM_BF16:
+  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
+  case AMDGPU::OPERAND_REG_INLINE_C_BF16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
+    // We don't actually need to check Inv2Pi here because BF16 instructions can
+    // only be emitted for targets that already support the feature.
+    return getLitBF16Encoding(static_cast<uint16_t>(Imm));
+
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     return AMDGPU::getInlineEncodingV2I16(static_cast<uint32_t>(Imm))
         .value_or(255);
+
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     return AMDGPU::getInlineEncodingV2F16(static_cast<uint32_t>(Imm))
         .value_or(255);
+
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
+    return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))
+        .value_or(255);
+
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
     return MO.getImm();
@@ -402,8 +441,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     else if (Op.isExpr()) {
       if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
         Imm = C->getValue();
-
-    } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
+    } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
     if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)

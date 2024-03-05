@@ -311,9 +311,8 @@ void Broadcaster::BroadcasterImpl::BroadcastEvent(
   PrivateBroadcastEvent(event_sp, false);
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(
-    uint32_t event_type, EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, true);
 }
 

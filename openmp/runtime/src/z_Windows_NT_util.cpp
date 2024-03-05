@@ -22,6 +22,7 @@
    number of running threads in the system. */
 
 #include <ntsecapi.h> // UNICODE_STRING
+#undef WIN32_NO_STATUS
 #include <ntstatus.h>
 #include <psapi.h>
 #ifdef _MSC_VER
@@ -1635,7 +1636,7 @@ int __kmp_get_load_balance(int max) {
     // threads on all cores. So, we don't consider the running threads of this
     // process.
     if (pid != 0) {
-      for (int i = 0; i < num; ++i) {
+      for (ULONG i = 0; i < num; ++i) {
         THREAD_STATE state = spi->Threads[i].State;
         // Count threads that have Ready or Running state.
         // !!! TODO: Why comment does not match the code???

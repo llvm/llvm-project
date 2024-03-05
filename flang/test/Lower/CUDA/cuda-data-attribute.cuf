@@ -1,0 +1,54 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | fir-opt -convert-hlfir-to-fir | FileCheck %s --check-prefix=FIR
+
+! Test lowering of CUDA attribute on variables.
+
+module cuda_var
+  real, constant :: mod_a_rc
+! CHECK: fir.global @_QMcuda_varEmod_a_rc {cuda_attr = #fir.cuda<constant>} : f32 
+  real, device :: mod_b_ra
+! CHECK: fir.global @_QMcuda_varEmod_b_ra {cuda_attr = #fir.cuda<device>} : f32
+  real, allocatable, managed :: mod_c_rm
+! CHECK: fir.global @_QMcuda_varEmod_c_rm {cuda_attr = #fir.cuda<managed>} : !fir.box<!fir.heap<f32>>
+  real, allocatable, pinned :: mod_d_rp
+! CHECK: fir.global @_QMcuda_varEmod_d_rp {cuda_attr = #fir.cuda<pinned>} : !fir.box<!fir.heap<f32>>
+
+contains
+
+subroutine local_var_attrs
+  real, device :: rd
+  real, allocatable, managed :: rm
+  real, allocatable, pinned :: rp
+end subroutine
+
+! CHECK-LABEL: func.func @_QMcuda_varPlocal_var_attrs()
+! CHECK: %{{.*}}:2 = hlfir.declare %{{.*}} {cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuda_varFlocal_var_attrsErd"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %{{.*}}:2 = hlfir.declare %{{.*}} {cuda_attr = #fir.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFlocal_var_attrsErm"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+! CHECK: %{{.*}}:2 = hlfir.declare %{{.*}} {cuda_attr = #fir.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFlocal_var_attrsErp"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+
+! FIR: %{{.*}} = fir.declare %{{.*}} {cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuda_varFlocal_var_attrsErd"} : (!fir.ref<f32>) -> !fir.ref<f32>
+! FIR: %{{.*}} = fir.declare %{{.*}} {cuda_attr = #fir.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFlocal_var_attrsErm"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+! FIR: %{{.*}} = fir.declare %{{.*}} {cuda_attr = #fir.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFlocal_var_attrsErp"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+
+subroutine dummy_arg_device(dd)
+  real, device :: dd
+end subroutine
+! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_device(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f32> {fir.bindc_name = "dd", fir.cuda_attr = #fir.cuda<device>}) {
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] {cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuda_varFdummy_arg_deviceEdd"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+
+subroutine dummy_arg_managed(dm)
+  real, allocatable, managed :: dm
+end subroutine
+! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_managed(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "dm", fir.cuda_attr = #fir.cuda<managed>}) {
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] {cuda_attr = #fir.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFdummy_arg_managedEdm"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+
+subroutine dummy_arg_pinned(dp)
+  real, allocatable, pinned :: dp
+end subroutine
+! CHECK-LABEL: func.func @_QMcuda_varPdummy_arg_pinned(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "dp", fir.cuda_attr = #fir.cuda<pinned>}) {
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] {cuda_attr = #fir.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcuda_varFdummy_arg_pinnedEdp"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+
+end module

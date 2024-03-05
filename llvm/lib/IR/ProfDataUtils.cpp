@@ -70,7 +70,7 @@ bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
 namespace llvm {
 
 bool hasProfMD(const Instruction &I) {
-  return nullptr != I.getMetadata(LLVMContext::MD_prof);
+  return I.hasMetadata(LLVMContext::MD_prof);
 }
 
 bool isBranchWeightMD(const MDNode *ProfileData) {

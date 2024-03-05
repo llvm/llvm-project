@@ -722,8 +722,9 @@ public:
   /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
+    Function::iterator FIt = BasicBlocks.insert(Position, BB);
     BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
-    return BasicBlocks.insert(Position, BB);
+    return FIt;
   }
 
   /// Transfer all blocks from \p FromF to this function at \p ToIt.

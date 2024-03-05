@@ -313,7 +313,7 @@ static bool HandleSubstring(
         desc.raw().elem_len = 0;
         return true;
       }
-      if (*lower >= 1 || *upper <= chars) {
+      if (*lower >= 1 && *upper <= chars) {
         // Offset the base address & adjust the element byte length
         desc.raw().elem_len = (*upper - *lower + 1) * kind;
         desc.set_base_addr(reinterpret_cast<void *>(

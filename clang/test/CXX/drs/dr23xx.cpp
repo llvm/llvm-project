@@ -6,16 +6,6 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 
-namespace std {
-  __extension__ typedef __SIZE_TYPE__ size_t;
-
-  template<typename E> struct initializer_list {
-    const E *p; size_t n;
-    initializer_list(const E *p, size_t n);
-    initializer_list();
-  };
-}
-
 #if __cplusplus >= 201103L
 namespace dr2303 { // dr2303: 12
 template <typename... T>
@@ -54,83 +44,8 @@ void g() {
     struct dr2303::F -> B -> A<int, int>
     struct dr2303::F -> E -> A<int, int>}} */
 }
-} //namespace dr2303
+} // namespace dr2303
 #endif
-
-namespace dr2311 {  // dr2311: 18 open
-#if __cplusplus >= 201707L
-template<typename T>
-void test() {
-  // Ensure none of these try to call a move constructor.
-  T a = T{T(0)};
-  T b{T(0)};
-  auto c{T(0)};
-  T d = {T(0)};
-  auto e = {T(0)};
-#if __cplusplus >= 202302L
-  auto f = auto{T(0)};
-#endif
-  void(*fn)(T);
-  fn({T(0)});
-}
-
-struct NonMovable {
-  NonMovable(int);
-  NonMovable(NonMovable&&) = delete;
-};
-struct NonMovableNonApplicableIList {
-  NonMovableNonApplicableIList(int);
-  NonMovableNonApplicableIList(NonMovableNonApplicableIList&&) = delete;
-  NonMovableNonApplicableIList(std::initializer_list<int>);
-};
-struct ExplicitMovable {
-  ExplicitMovable(int);
-  explicit ExplicitMovable(ExplicitMovable&&);
-};
-struct ExplicitNonMovable {
-  ExplicitNonMovable(int);
-  explicit ExplicitNonMovable(ExplicitNonMovable&&) = delete;
-};
-struct ExplicitNonMovableNonApplicableIList {
-  ExplicitNonMovableNonApplicableIList(int);
-  explicit ExplicitNonMovableNonApplicableIList(ExplicitNonMovableNonApplicableIList&&) = delete;
-  ExplicitNonMovableNonApplicableIList(std::initializer_list<int>);
-};
-struct CopyOnly {
-  CopyOnly(int);
-  CopyOnly(const CopyOnly&);
-  CopyOnly(CopyOnly&&) = delete;
-};
-struct ExplicitCopyOnly {
-  ExplicitCopyOnly(int);
-  explicit ExplicitCopyOnly(const ExplicitCopyOnly&);
-  explicit ExplicitCopyOnly(ExplicitCopyOnly&&) = delete;
-};
-
-template void test<NonMovable>();
-template void test<NonMovableNonApplicableIList>();
-template void test<ExplicitMovable>();
-template void test<ExplicitNonMovable>();
-template void test<ExplicitNonMovableNonApplicableIList>();
-template void test<CopyOnly>();
-template void test<ExplicitCopyOnly>();
-
-struct any {
-    template<typename T>
-    any(T&&);
-};
-
-template<typename T>
-struct X {
-    X();
-    X(T) = delete; // #dr2311-X
-};
-
-X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
-// since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
-//   since-cxx17-note@#dr2311-X {{'X' has been explicitly marked deleted here}}
-#endif
-}
 
 // dr2331: na
 // dr2335 is in dr2335.cxx
@@ -232,6 +147,31 @@ enum struct alignas(64) B {};
 #endif
 } // namespace dr2354
 
+namespace dr2356 { // dr2356: 4
+#if __cplusplus >= 201103L
+struct A {
+  A();
+  A(A &&);                        // #1
+  template<typename T> A(T &&);   // #2
+};
+struct B : A {
+  using A::A;
+  B(const B &);                   // #3
+  B(B &&) = default;              // #4, implicitly deleted
+  // since-cxx11-warning@-1 {{explicitly defaulted move constructor is implicitly deleted}}
+  //   since-cxx11-note@#dr2356-X {{move constructor of 'B' is implicitly deleted because field 'x' has a deleted move constructor}}
+  //   since-cxx11-note@#dr2356-X {{'X' has been explicitly marked deleted here}}
+  //   since-cxx11-note@-4 {{replace 'default' with 'delete'}}
+
+  struct X { X(X &&) = delete; } x; // #dr2356-X
+};
+extern B b1;
+B b2 = static_cast<B&&>(b1);      // calls #3: #1, #2, and #4 are not viable
+struct C { operator B&&(); };
+B b3 = C();                       // calls #3
+#endif
+}
+
 #if __cplusplus >= 201402L
 namespace dr2358 { // dr2358: 16
   void f2() {
@@ -242,6 +182,40 @@ namespace dr2358 { // dr2358: 16
   }
 }
 #endif
+
+// CWG2363 was closed as NAD, but its resolution does affirm that
+// a friend declaration cannot have an opaque-enumm-specifier.
+namespace dr2363 { // dr2363: yes
+#if __cplusplus >= 201103L
+enum class E0;
+enum E1 : int;
+
+struct A {
+  friend enum class E0;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E0;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E1;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E1;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E2;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+};
+#endif
+} // namespace dr2363
 
 namespace dr2370 { // dr2370: no
 namespace N {
@@ -267,8 +241,8 @@ struct Bad2 { int a, b; };
 } // namespace dr2386
 namespace std {
 template <typename T> struct tuple_size;
-template <> struct std::tuple_size<dr2386::Bad1> {};
-template <> struct std::tuple_size<dr2386::Bad2> {
+template <> struct tuple_size<dr2386::Bad1> {};
+template <> struct tuple_size<dr2386::Bad2> {
   static const int value = 42;
 };
 } // namespace std
@@ -321,9 +295,9 @@ namespace dr2396 { // dr2396: no
 
   // FIXME: per P1787 "Calling a conversion function" example, all of the
   // examples below are well-formed, with B resolving to A::B, but currently
-  // it's been resolved to dr2396::B. 
+  // it's been resolved to dr2396::B.
 
-  // void f(A a) { a.operator B B::*(); }            
+  // void f(A a) { a.operator B B::*(); }
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
 }
@@ -337,4 +311,5 @@ namespace dr2397 { // dr2397: 17
     auto (*c)[5] = &a;
   }
 } // namespace dr2397
+
 #endif

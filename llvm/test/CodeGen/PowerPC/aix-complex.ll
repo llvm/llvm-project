@@ -31,7 +31,7 @@ entry:
   %call = call { double, double } @dblCmplxRetCallee()
   %0 = extractvalue { double, double } %call, 0
   %1 = extractvalue { double, double } %call, 1
-  store double %0, ptr getelementptr inbounds ({ double, double }, ptr @gcd, i32 0, i32 0), align 8
+  store double %0, ptr @gcd, align 8
   store double %1, ptr getelementptr inbounds ({ double, double }, ptr @gcd, i32 0, i32 1), align 8
   call void @anchor()
   ret void
@@ -68,7 +68,7 @@ entry:
   %call = call { float, float } @fltCmplxRetCallee()
   %0 = extractvalue { float, float } %call, 0
   %1 = extractvalue { float, float } %call, 1
-  store float %0, ptr getelementptr inbounds ({ float, float }, ptr @gcf, i32 0, i32 0), align 4
+  store float %0, ptr @gcf, align 4
   store float %1, ptr getelementptr inbounds ({ float, float }, ptr @gcf, i32 0, i32 1), align 4
   call void @anchor()
   ret void
@@ -107,7 +107,7 @@ entry:
   %call = call { ppc_fp128, ppc_fp128 } @fp128CmplxRetCallee()
   %0 = extractvalue { ppc_fp128, ppc_fp128 } %call, 0
   %1 = extractvalue { ppc_fp128, ppc_fp128 } %call, 1
-  store ppc_fp128 %0, ptr getelementptr inbounds ({ ppc_fp128, ppc_fp128 }, ptr @gcfp128, i32 0, i32 0), align 16
+  store ppc_fp128 %0, ptr @gcfp128, align 16
   store ppc_fp128 %1, ptr getelementptr inbounds ({ ppc_fp128, ppc_fp128 }, ptr @gcfp128, i32 0, i32 1), align 16
   call void @anchor()
   ret void

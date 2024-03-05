@@ -32,16 +32,16 @@
   entry:
     %x.addr = alloca i32, align 4
     tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !19, metadata !22), !dbg !23
-    store i32 %x, i32* %x.addr, align 4, !tbaa !24
+    store i32 %x, ptr %x.addr, align 4, !tbaa !24
     tail call void @llvm.dbg.value(metadata i32 %y, i64 0, metadata !20, metadata !22), !dbg !28
-    tail call void @llvm.dbg.declare(metadata %struct.Rect* undef, metadata !21, metadata !22), !dbg !29
+    tail call void @llvm.dbg.declare(metadata ptr undef, metadata !21, metadata !22), !dbg !29
     tail call void @g([4 x double] %s.coerce) #4, !dbg !30
     %tobool = icmp eq i32 %y, 0, !dbg !31
     br i1 %tobool, label %if.end, label %if.then, !dbg !33
 
   if.then:                                          ; preds = %entry
-    tail call void @llvm.dbg.value(metadata i32* %x.addr, i64 0, metadata !19, metadata !22), !dbg !23
-    call void @h(i32* nonnull %x.addr) #4, !dbg !34
+    tail call void @llvm.dbg.value(metadata ptr %x.addr, i64 0, metadata !19, metadata !22), !dbg !23
+    call void @h(ptr nonnull %x.addr) #4, !dbg !34
     br label %if.end, !dbg !34
 
   if.end:                                           ; preds = %if.then, %entry
@@ -50,9 +50,9 @@
 
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
   declare void @g([4 x double]) local_unnamed_addr #2
-  declare void @h(i32*) local_unnamed_addr #2
+  declare void @h(ptr) local_unnamed_addr #2
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
 
   attributes #0 = { nounwind optsize ssp }
   attributes #1 = { nounwind readnone speculatable }

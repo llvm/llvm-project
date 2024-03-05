@@ -1,4 +1,3 @@
-## NOTE: This file needs to be updated after promoted instruction is supported
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 
 ## MRMDestMem
@@ -97,6 +96,10 @@
 # CHECK: encoding: [0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00]
          vpslldq	$0, (%r16,%r17), %zmm0
 
+# CHECK: sarq	$123, 291(%r16,%r17), %r18
+# CHECK: encoding: [0x62,0xfc,0xe8,0x10,0xc1,0xbc,0x08,0x23,0x01,0x00,0x00,0x7b]
+         sarq	$123, 291(%r16,%r17), %r18
+
 ## MRMDestMem4VOp3CC
 
 # CHECK: cmpbexadd	%r18d, %r22d, 291(%r28,%r29,4)
@@ -172,6 +175,12 @@
 # CHECK: xorq	$127, %r16, %r17
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0x83,0xf0,0x7f]
          xorq	$127, %r16, %r17
+
+## MRM7r
+
+# CHECK: sarq	$123, %r16, %r17
+# CHECK: encoding: [0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b]
+         sarq	$123, %r16, %r17
 
 ## NoCD8
 

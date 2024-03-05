@@ -368,7 +368,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
           // regalloc aware CFI generation to insert new CFIs along with the
           // intermediate spills is implemented. There is no such support
           // currently exist in the LLVM compiler.
-          if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI, true)) {
+          if (FuncInfo->allocateSGPRSpillToVGPRLane(
+                  MF, FI, /*SpillToPhysVGPRLane=*/true)) {
             bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
                 MI, FI, nullptr, Indexes, LIS, true);
             if (!Spilled)

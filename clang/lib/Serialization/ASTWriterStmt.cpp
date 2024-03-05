@@ -2153,6 +2153,19 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   Code = serialization::EXPR_SIZEOF_PACK;
 }
 
+void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->TransformedExpressions);
+  Record.AddSourceLocation(E->getEllipsisLoc());
+  Record.AddSourceLocation(E->getRSquareLoc());
+  Record.AddStmt(E->getPackIdExpression());
+  Record.AddStmt(E->getIndexExpr());
+  Record.push_back(E->TransformedExpressions);
+  for (Expr *Sub : E->getExpressions())
+    Record.AddStmt(Sub);
+  Code = serialization::EXPR_PACK_INDEXING;
+}
+
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -2823,6 +2836,27 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE;
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC Constructs/Directives.
+//===----------------------------------------------------------------------===//
+void ASTStmtWriter::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  Record.writeEnum(S->Kind);
+  Record.AddSourceRange(S->Range);
+  // TODO OpenACC: Serialize Clauses.
+}
+
+void ASTStmtWriter::VisitOpenACCAssociatedStmtConstruct(
+    OpenACCAssociatedStmtConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  Record.AddStmt(S->getAssociatedStmt());
+}
+
+void ASTStmtWriter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_COMPUTE_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

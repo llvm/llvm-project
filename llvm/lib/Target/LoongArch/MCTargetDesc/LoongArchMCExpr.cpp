@@ -73,7 +73,7 @@ StringRef LoongArchMCExpr::getVariantKindName(VariantKind Kind) {
   case VK_LoongArch_B21:
     return "b21";
   case VK_LoongArch_B26:
-    return "b21";
+    return "b26";
   case VK_LoongArch_ABS_HI20:
     return "abs_hi20";
   case VK_LoongArch_ABS_LO12:

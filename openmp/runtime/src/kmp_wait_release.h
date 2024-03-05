@@ -1038,15 +1038,9 @@ static inline void __kmp_null_resume_wrapper(kmp_info_t *thr) {
   case flag_oncore:
     __kmp_resume_oncore(gtid, RCAST(kmp_flag_oncore *, flag));
     break;
-#ifdef KMP_DEBUG
   case flag_unset:
     KF_TRACE(100, ("__kmp_null_resume_wrapper: flag type %d is unset\n", type));
     break;
-  default:
-    KF_TRACE(100, ("__kmp_null_resume_wrapper: flag type %d does not match any "
-                   "known flag type\n",
-                   type));
-#endif
   }
 }
 

@@ -3,9 +3,18 @@
 
 module m_struct_ctor
   implicit none
+
   type t_alloc
     real :: x
     integer, allocatable :: a(:)
+  end type
+
+  type t_alloc_char
+    character(:), allocatable :: a
+  end type
+
+  type t_alloc_char_cst_len
+    character(2), allocatable :: a
   end type
 
 contains
@@ -15,22 +24,6 @@ contains
 ! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc1(
 ! HLFIR-SAME:      %[[ARG_0:.*]]: !fir.ref<f32> {fir.bindc_name = "y"}) {
 ! HLFIR:    %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
-! HLFIR:    %[[VAL_1:.*]] = fir.address_of(@_QMm_struct_ctorE.n.x) : !fir.ref<!fir.char<1>>
-! HLFIR:    %[[CONS_1:.*]] = arith.constant 1 : index
-! HLFIR:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}}"_QMm_struct_ctorE.n.x"
-! HLFIR:    %[[VAL_3:.*]] = fir.address_of(@_QMm_struct_ctorE.n.a) : !fir.ref<!fir.char<1>>
-! HLFIR:    %[[CONS_2:.* ]]= arith.constant 1 : index
-! HLFIR:    %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {{.*}}"_QMm_struct_ctorE.n.a"
-! HLFIR:    %[[VAL_5:.*]] = fir.address_of(@_QMm_struct_ctorE.n.t_alloc) : !fir.ref<!fir.char<1,7>>
-! HLFIR:    %[[CONS_3:.*]] = arith.constant 7 : index
-! HLFIR:    %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {{.*}}"_QMm_struct_ctorE.n.t_alloc"
-! HLFIR:    %[[VAL_7:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc)
-! HLFIR:    %[[CONS_4:.*]] = arith.constant 0 : index
-! HLFIR:    %[[CONS_5:.*]] = arith.constant 2 : index
-! HLFIR:    %[[VAL_8:.*]] = fir.shape_shift %[[CONS_4]], %[[CONS_5]] : (index, index) -> !fir.shapeshift<1>
-! HLFIR:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {{.*}}"_QMm_struct_ctorE.c.t_alloc"
-! HLFIR:    %[[VAL_10:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc)
-! HLFIR:    %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {{.*}}"_QMm_struct_ctorE.dt.t_alloc"
 ! HLFIR:    %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG_0]] {uniq_name = "_QMm_struct_ctorFtest_alloc1Ey"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! HLFIR:    %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
 ! HLFIR:    %[[VAL_14:.*]] = fir.embox %[[VAL_13]]#0 : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
@@ -54,22 +47,6 @@ contains
 ! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc2
 ! HLFIR-SAME:     (%[[ARG_0:.*]]: !fir.ref<f32> {fir.bindc_name = "y"}, %[[ARG_1:.*]]: !fir.ref<!fir.array<5xi32>> {fir.bindc_name = "b"}) {
 ! HLFIR:    %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
-! HLFIR:    %[[VAL_1:.*]] = fir.address_of(@_QMm_struct_ctorE.n.x) : !fir.ref<!fir.char<1>>
-! HLFIR:    %[[CONS_1:.*]] = arith.constant 1 : index
-! HLFIR:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[CONS_1]] {{.*}}"_QMm_struct_ctorE.n.x"
-! HLFIR:    %[[VAL_3:.*]] = fir.address_of(@_QMm_struct_ctorE.n.a) : !fir.ref<!fir.char<1>>
-! HLFIR:    %[[CONS_2:.*]] = arith.constant 1 : index
-! HLFIR:    %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] typeparams %[[CONS_2]] {{.*}}"_QMm_struct_ctorE.n.a"
-! HLFIR:    %[[VAL_5:.*]] = fir.address_of(@_QMm_struct_ctorE.n.t_alloc) : !fir.ref<!fir.char<1,7>>
-! HLFIR:    %[[CONS_3:.*]] = arith.constant 7 : index
-! HLFIR:    %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[CONS_3]] {{.*}}"_QMm_struct_ctorE.n.t_alloc"
-! HLFIR:    %[[VAL_7:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc)
-! HLFIR:    %[[CONS_4:.*]] = arith.constant 0 : index
-! HLFIR:    %[[CONS_5:.*]] = arith.constant 2 : index
-! HLFIR:    %[[VAL_8:.*]] = fir.shape_shift %[[CONS_4]], %[[CONS_5]] : (index, index) -> !fir.shapeshift<1>
-! HLFIR:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {{.*}}"_QMm_struct_ctorE.c.t_alloc"
-! HLFIR:    %[[VAL_10:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc)
-! HLFIR:    %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {{.*}}"_QMm_struct_ctorE.dt.t_alloc"
 ! HLFIR:    %[[CONS_6:.*]] = arith.constant 5 : index
 ! HLFIR:    %[[VAL_12:.*]] = fir.shape %[[CONS_6]] : (index) -> !fir.shape<1>
 ! HLFIR:    %[[VAL_13:.*]]:2 = hlfir.declare %[[ARG_1]](%[[VAL_12]]) {uniq_name = "_QMm_struct_ctorFtest_alloc2Eb"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
@@ -94,22 +71,6 @@ contains
   subroutine test_alloc3()
     type(t_alloc) :: t1 = t_alloc(x=5, a=null())
 ! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc3() {
-! HLFIR:    %[[VAL_0:.*]] = fir.address_of(@_QMm_struct_ctorE.n.x) : !fir.ref<!fir.char<1>>
-! HLFIR:    %c1 = arith.constant 1 : index
-! HLFIR:    %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %c1 {{.*}}"_QMm_struct_ctorE.n.x"
-! HLFIR:    %[[VAL_2:.*]] = fir.address_of(@_QMm_struct_ctorE.n.a) : !fir.ref<!fir.char<1>>
-! HLFIR:    %c1_0 = arith.constant 1 : index
-! HLFIR:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %c1_0 {{.*}}"_QMm_struct_ctorE.n.a"
-! HLFIR:    %[[VAL_4:.*]] = fir.address_of(@_QMm_struct_ctorE.n.t_alloc) : !fir.ref<!fir.char<1,7>>
-! HLFIR:    %c7 = arith.constant 7 : index
-! HLFIR:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %c7 {{.*}}"_QMm_struct_ctorE.n.t_alloc"
-! HLFIR:    %[[VAL_6:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc)
-! HLFIR:    %c0 = arith.constant 0 : index
-! HLFIR:    %c2 = arith.constant 2 : index
-! HLFIR:    %[[VAL_7:.*]] = fir.shape_shift %c0, %c2 : (index, index) -> !fir.shapeshift<1>
-! HLFIR:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_7]]) {{.*}}"_QMm_struct_ctorE.c.t_alloc"
-! HLFIR:    %[[VAL_9:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc)
-! HLFIR:    %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {{.*}}"_QMm_struct_ctorE.dt.t_alloc"
 ! HLFIR:    %[[VAL_11:.*]] = fir.address_of(@_QMm_struct_ctorFtest_alloc3Et1) : !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
 ! HLFIR:    {{.*}}:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QMm_struct_ctorFtest_alloc3Et1"}
 ! HLFIR:    return
@@ -120,22 +81,6 @@ contains
     integer, pointer :: p(:)
     type(t_alloc) :: t1 = t_alloc(x=5, a=null(p))
 ! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc4() {
-! HLFIR:    %[[VAL_0:.*]] = fir.address_of(@_QMm_struct_ctorE.n.x) : !fir.ref<!fir.char<1>>
-! HLFIR:    %[[CONS_1:.*]] = arith.constant 1 : index
-! HLFIR:    %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[CONS_1]] {{.*}}"_QMm_struct_ctorE.n.x"
-! HLFIR:    %[[VAL_2:.*]] = fir.address_of(@_QMm_struct_ctorE.n.a) : !fir.ref<!fir.char<1>>
-! HLFIR:    %[[CONS_2:.*]] = arith.constant 1 : index
-! HLFIR:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[CONS_2]] {{.*}}"_QMm_struct_ctorE.n.a"
-! HLFIR:    %[[VAL_4:.*]] = fir.address_of(@_QMm_struct_ctorE.n.t_alloc) : !fir.ref<!fir.char<1,7>>
-! HLFIR:    %[[CONS_3:.*]] = arith.constant 7 : index
-! HLFIR:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[CONS_3]] {{.*}}"_QMm_struct_ctorE.n.t_alloc"
-! HLFIR:    %[[VAL_6:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc)
-! HLFIR:    %[[CONS_4:.*]] = arith.constant 0 : index
-! HLFIR:    %[[CONS_5:.*]] = arith.constant 2 : index
-! HLFIR:    %[[VAL_7:.*]] = fir.shape_shift %[[CONS_4]], %[[CONS_5]] : (index, index) -> !fir.shapeshift<1>
-! HLFIR:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_7]]) {{.*}}"_QMm_struct_ctorE.c.t_alloc"
-! HLFIR:    %[[VAL_9:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc)
-! HLFIR:    %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {{.*}}"_QMm_struct_ctorE.dt.t_alloc"
 ! HLFIR:    %[[VAL_11:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p", uniq_name = "_QMm_struct_ctorFtest_alloc4Ep"}
 ! HLFIR:    %[[VAL_12:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
 ! HLFIR:    %[[CONS_6:.*]] = arith.constant 0 : index
@@ -150,3 +95,50 @@ contains
   end subroutine
 
 end module m_struct_ctor
+
+subroutine test_character_1()
+  use m_struct_ctor, only : t_alloc_char
+  interface
+    subroutine takes_ta_alloc_char(x)
+      import t_alloc_char
+      type(t_alloc_char) :: x
+    end subroutine
+  end interface
+  call takes_ta_alloc_char(t_alloc_char("hello"))
+end subroutine
+! HLFIR-LABEL:   func.func @_QPtest_character_1() {
+! HLFIR:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>
+! HLFIR:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>) -> (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>, !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>)
+! HLFIR:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]]#0 : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>) -> !fir.box<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>
+! HLFIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_2]] : (!fir.box<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>) -> !fir.box<none>
+! HLFIR:           %[[VAL_7:.*]] = fir.call @_FortranAInitialize(%[[VAL_5]],
+! HLFIR:           %[[VAL_8:.*]] = hlfir.designate %[[VAL_1]]#0{"a"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! HLFIR:           %[[VAL_9:.*]] = fir.address_of(@_QQclX68656C6C6F) : !fir.ref<!fir.char<1,5>>
+! HLFIR:           %[[VAL_10:.*]] = arith.constant 5 : index
+! HLFIR:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! HLFIR:           hlfir.assign %[[VAL_11]]#0 to %[[VAL_8]] realloc temporary_lhs : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! HLFIR:           fir.call @_QPtakes_ta_alloc_char(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char{a:!fir.box<!fir.heap<!fir.char<1,?>>>}>>) -> ()
+
+subroutine test_character_2()
+  use m_struct_ctor, only : t_alloc_char_cst_len
+  interface
+    subroutine takes_ta_alloc_char_cst_len(x)
+      import t_alloc_char_cst_len
+      type(t_alloc_char_cst_len) :: x
+    end subroutine
+  end interface
+  call takes_ta_alloc_char_cst_len(t_alloc_char_cst_len("hello"))
+end subroutine
+! HLFIR-LABEL:   func.func @_QPtest_character_2() {
+! HLFIR:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>
+! HLFIR:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>) -> (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>, !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>)
+! HLFIR:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]]#0 : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>) -> !fir.box<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>
+! HLFIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_2]] : (!fir.box<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>) -> !fir.box<none>
+! HLFIR:           %[[VAL_7:.*]] = fir.call @_FortranAInitialize(%[[VAL_5]],
+! HLFIR:           %[[VAL_8:.*]] = arith.constant 2 : index
+! HLFIR:           %[[VAL_9:.*]] = hlfir.designate %[[VAL_1]]#0{"a"}   typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,2>>>>
+! HLFIR:           %[[VAL_10:.*]] = fir.address_of(@_QQclX68656C6C6F) : !fir.ref<!fir.char<1,5>>
+! HLFIR:           %[[VAL_11:.*]] = arith.constant 5 : index
+! HLFIR:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! HLFIR:           hlfir.assign %[[VAL_12]]#0 to %[[VAL_9]] realloc keep_lhs_len temporary_lhs : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,2>>>>
+! HLFIR:           fir.call @_QPtakes_ta_alloc_char_cst_len(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<!fir.type<_QMm_struct_ctorTt_alloc_char_cst_len{a:!fir.box<!fir.heap<!fir.char<1,2>>>}>>) -> ()

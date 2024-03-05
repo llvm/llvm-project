@@ -1331,9 +1331,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v2, exec_lo, 0
 ; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-NEXT:    s_clause 0x1
-; GFX1164-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1164-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1164-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1164-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1164-NEXT:    scratch_store_b32 off, v1, off
+; GFX1164-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, exec_hi, v2
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v2
@@ -1375,9 +1375,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1132-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_clause 0x1
-; GFX1132-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1132-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1132-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1132-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1132-NEXT:    scratch_store_b32 off, v1, off
+; GFX1132-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1132-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1132-NEXT:  ; %bb.1:
@@ -1535,9 +1535,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1164-DPP-NEXT:    v_mbcnt_lo_u32_b32 v2, exec_lo, 0
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-DPP-NEXT:    s_clause 0x1
-; GFX1164-DPP-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1164-DPP-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1164-DPP-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1164-DPP-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1164-DPP-NEXT:    scratch_store_b32 off, v1, off
+; GFX1164-DPP-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v2, exec_hi, v2
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v2
@@ -1579,9 +1579,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_one_as_scope
 ; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_clause 0x1
-; GFX1132-DPP-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1132-DPP-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1132-DPP-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1132-DPP-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1132-DPP-NEXT:    scratch_store_b32 off, v1, off
+; GFX1132-DPP-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
@@ -2380,7 +2380,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB3_2
 ; GFX1132-DPP-NEXT:  .LBB3_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %divValue = call float @div.float.value()
+  %divValue = call float @div.float.value() strictfp
   %result = atomicrmw fsub ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic
   ret void
 }
@@ -2561,9 +2561,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_agent_scope_
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v2, exec_lo, 0
 ; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-NEXT:    s_clause 0x1
-; GFX1164-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1164-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1164-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1164-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1164-NEXT:    scratch_store_b32 off, v1, off
+; GFX1164-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, exec_hi, v2
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v2
@@ -2605,9 +2605,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_agent_scope_
 ; GFX1132-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_clause 0x1
-; GFX1132-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1132-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1132-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1132-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1132-NEXT:    scratch_store_b32 off, v1, off
+; GFX1132-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1132-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1132-NEXT:  ; %bb.1:
@@ -2765,9 +2765,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_agent_scope_
 ; GFX1164-DPP-NEXT:    v_mbcnt_lo_u32_b32 v2, exec_lo, 0
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-DPP-NEXT:    s_clause 0x1
-; GFX1164-DPP-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1164-DPP-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1164-DPP-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1164-DPP-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1164-DPP-NEXT:    scratch_store_b32 off, v1, off
+; GFX1164-DPP-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v2, exec_hi, v2
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v2
@@ -2809,9 +2809,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_clause 0x1
-; GFX1132-DPP-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1132-DPP-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1132-DPP-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1132-DPP-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1132-DPP-NEXT:    scratch_store_b32 off, v1, off
+; GFX1132-DPP-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
@@ -4382,7 +4382,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB6_2
 ; GFX1132-DPP-NEXT:  .LBB6_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %divValue = call float @div.float.value()
+  %divValue = call float @div.float.value() strictfp
   %result = atomicrmw fsub ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic
   ret void
 }
@@ -4563,9 +4563,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_defalut_scop
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v2, exec_lo, 0
 ; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-NEXT:    s_clause 0x1
-; GFX1164-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1164-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1164-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1164-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1164-NEXT:    scratch_store_b32 off, v1, off
+; GFX1164-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, exec_hi, v2
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v2
@@ -4607,9 +4607,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_defalut_scop
 ; GFX1132-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_clause 0x1
-; GFX1132-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1132-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1132-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1132-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1132-NEXT:    scratch_store_b32 off, v1, off
+; GFX1132-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1132-NEXT:    s_cbranch_execz .LBB7_3
 ; GFX1132-NEXT:  ; %bb.1:
@@ -4767,9 +4767,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_defalut_scop
 ; GFX1164-DPP-NEXT:    v_mbcnt_lo_u32_b32 v2, exec_lo, 0
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-DPP-NEXT:    s_clause 0x1
-; GFX1164-DPP-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1164-DPP-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1164-DPP-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1164-DPP-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1164-DPP-NEXT:    scratch_store_b32 off, v1, off
+; GFX1164-DPP-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v2, exec_hi, v2
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v2
@@ -4811,9 +4811,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_uni_value_defalut_scop
 ; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_clause 0x1
-; GFX1132-DPP-NEXT:    scratch_store_b32 off, v0, off offset:12
-; GFX1132-DPP-NEXT:    scratch_store_b32 off, v1, off offset:8
-; GFX1132-DPP-NEXT:    scratch_load_b64 v[0:1], off, off offset:8
+; GFX1132-DPP-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX1132-DPP-NEXT:    scratch_store_b32 off, v1, off
+; GFX1132-DPP-NEXT:    scratch_load_b64 v[0:1], off, off
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB7_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
@@ -5611,7 +5611,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB8_2
 ; GFX1132-DPP-NEXT:  .LBB8_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %divValue = call float @div.float.value()
+  %divValue = call float @div.float.value() strictfp
   %result = atomicrmw fsub ptr addrspace(1) %ptr, float %divValue monotonic, align 4
   ret void
 }

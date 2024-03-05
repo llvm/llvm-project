@@ -231,8 +231,9 @@ public:
   UnwrappedLine takeResult() &&;
 
 private:
-  void add(FormatToken *Token, FormatToken *ExpandedParent, bool First);
-  void prepareParent(FormatToken *ExpandedParent, bool First);
+  void add(FormatToken *Token, FormatToken *ExpandedParent, bool First,
+           unsigned Level);
+  void prepareParent(FormatToken *ExpandedParent, bool First, unsigned Level);
   FormatToken *getParentInResult(FormatToken *Parent);
   void reconstruct(FormatToken *Token);
   void startReconstruction(FormatToken *Token);
@@ -272,6 +273,8 @@ private:
   // FIXME: Investigate changing UnwrappedLine to a pointer type and using it
   // instead of rolling our own type.
   struct ReconstructedLine {
+    explicit ReconstructedLine(unsigned Level) : Level(Level) {}
+    unsigned Level;
     llvm::SmallVector<std::unique_ptr<LineNode>> Tokens;
   };
 
@@ -372,9 +375,6 @@ private:
   // |  \- <argument>
   // \- )
   llvm::SmallVector<MacroCallState> MacroCallStructure;
-
-  // Level the generated UnwrappedLine will be at.
-  const unsigned Level;
 
   // Maps from identifier of the macro call to an unwrapped line containing
   // all tokens of the macro call.

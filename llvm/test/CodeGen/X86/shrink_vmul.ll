@@ -1745,7 +1745,7 @@ define void @mul_2xi16_varconst1(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl c, %edx
 ; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,u,u,u,u,u,u]
+; X86-SSE-NEXT:    movd {{.*#+}} xmm1 = [0,65535,0,0,0,0,0,0]
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
 ; X86-SSE-NEXT:    pmulhuw %xmm1, %xmm2
 ; X86-SSE-NEXT:    pmullw %xmm1, %xmm0
@@ -1768,7 +1768,7 @@ define void @mul_2xi16_varconst1(ptr nocapture readonly %a, i64 %index) {
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    movq c(%rip), %rax
 ; X64-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,u,u,u,u,u,u]
+; X64-SSE-NEXT:    movd {{.*#+}} xmm1 = [0,65535,0,0,0,0,0,0]
 ; X64-SSE-NEXT:    movdqa %xmm0, %xmm2
 ; X64-SSE-NEXT:    pmulhuw %xmm1, %xmm2
 ; X64-SSE-NEXT:    pmullw %xmm1, %xmm0

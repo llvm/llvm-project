@@ -1,4 +1,4 @@
-//===- X86RecognizableInstr.cpp - Disassembler instruction spec --*- C++ -*-===//
+//===- X86RecognizableInstr.cpp - Disassembler instruction spec -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,17 +26,18 @@ using namespace X86Disassembler;
 
 std::string X86Disassembler::getMnemonic(const CodeGenInstruction *I,
                                          unsigned Variant) {
-  std::string AsmString = I->FlattenAsmStringVariants(I->AsmString, Variant);
-  StringRef Mnemonic(AsmString);
   // Extract a mnemonic assuming it's separated by \t
-  Mnemonic = Mnemonic.take_until([](char C) { return C == '\t'; });
+  std::string Mnemonic =
+      StringRef(I->FlattenAsmStringVariants(I->AsmString, Variant))
+          .take_until([](char C) { return C == '\t'; })
+          .str();
 
-  // Special case: CMOVCC, JCC, SETCC have "${cond}" in mnemonic.
+  // Special case: CMOVCC, JCC, SETCC, CMPCCXADD have "${cond}" in mnemonic.
   // Replace it with "CC" in-place.
-  size_t CondPos = Mnemonic.find("${cond}");
-  if (CondPos != StringRef::npos)
-    Mnemonic = AsmString.replace(CondPos, StringRef::npos, "CC");
-  return Mnemonic.upper();
+  auto CondPos = Mnemonic.find("${cond}");
+  if (CondPos != std::string::npos)
+    Mnemonic = Mnemonic.replace(CondPos, 7, "CC");
+  return StringRef(Mnemonic).upper();
 }
 
 bool X86Disassembler::isRegisterOperand(const Record *Rec) {
@@ -188,6 +189,7 @@ void RecognizableInstr::processInstr(DisassemblerTables &tables,
 
 #define EVEX_NF(n) (HasEVEX_NF ? n##_NF : n)
 #define EVEX_B_NF(n) (HasEVEX_B ? EVEX_NF(n##_B) : EVEX_NF(n))
+#define EVEX_KB_ADSIZE(n) AdSize == X86Local::AdSize32 ? n##_ADSIZE : EVEX_KB(n)
 
 InstructionContext RecognizableInstr::insnContext() const {
   InstructionContext insnContext;
@@ -277,14 +279,11 @@ InstructionContext RecognizableInstr::insnContext() const {
     }
     // No L, no W
     else if (OpPrefix == X86Local::PD) {
-      if (AdSize == X86Local::AdSize32)
-        insnContext = IC_EVEX_OPSIZE_ADSIZE;
-      else
-        insnContext = EVEX_KB(IC_EVEX_OPSIZE);
+      insnContext = EVEX_KB_ADSIZE(IC_EVEX_OPSIZE);
     } else if (OpPrefix == X86Local::XD)
-      insnContext = EVEX_KB(IC_EVEX_XD);
+      insnContext = EVEX_KB_ADSIZE(IC_EVEX_XD);
     else if (OpPrefix == X86Local::XS)
-      insnContext = EVEX_KB(IC_EVEX_XS);
+      insnContext = EVEX_KB_ADSIZE(IC_EVEX_XS);
     else if (OpPrefix == X86Local::PS)
       insnContext = EVEX_KB(IC_EVEX);
     else {

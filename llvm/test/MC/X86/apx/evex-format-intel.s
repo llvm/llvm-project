@@ -1,4 +1,3 @@
-## NOTE: This file needs to be updated after promoted instruction is supported
 # RUN: llvm-mc -triple x86_64 -show-encoding -x86-asm-syntax=intel -output-asm-variant=1 %s | FileCheck %s
 
 ## MRMDestMem
@@ -97,6 +96,10 @@
 # CHECK: encoding: [0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00]
          vpslldq	zmm0, zmmword ptr [r16 + r17], 0
 
+# CHECK: sar	r18, qword ptr [r16 + r17 + 291], 123
+# CHECK: encoding: [0x62,0xfc,0xe8,0x10,0xc1,0xbc,0x08,0x23,0x01,0x00,0x00,0x7b]
+         sar	r18, qword ptr [r16 + r17 + 291], 123
+
 ## MRMDestMem4VOp3CC
 
 # CHECK: cmpbexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
@@ -172,6 +175,12 @@
 # CHECK: xor	r17, r16, 127
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0x83,0xf0,0x7f]
          xor	r17, r16, 127
+
+## MRM7r
+
+# CHECK: sar	r17, r16, 123
+# CHECK: encoding: [0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b]
+         sar	r17, r16, 123
 
 ## NoCD8
 

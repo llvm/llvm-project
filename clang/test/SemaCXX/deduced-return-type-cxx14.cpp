@@ -724,3 +724,12 @@ struct DeducedTargetTypeOfConversionFunction {
   // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
 #endif
 };
+
+namespace GH79745 {
+template <typename = int> struct a; // expected-note {{template is declared here}}
+auto f() {
+  a c; // cxx20_23-error {{implicit instantiation of undefined template}} \
+       // cxx14-error {{use of class template 'a' requires template arguments}}
+  return c;
+}
+}

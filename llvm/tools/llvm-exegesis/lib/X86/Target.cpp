@@ -696,17 +696,17 @@ public:
       // TODO(boomanaiden154): Add in support for using validation counters when
       // using LBR counters.
       if (ValidationCounters.size() > 0)
-        return llvm::make_error<llvm::StringError>(
+        return make_error<StringError>(
             "Using LBR is not currently supported with validation counters",
-            llvm::errc::invalid_argument);
+            errc::invalid_argument);
 
       return std::make_unique<X86LbrCounter>(
           X86LbrPerfEvent(LbrSamplingPeriod));
 #else
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "LBR counter requested without HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES, "
           "or running on Linux.",
-          llvm::errc::invalid_argument);
+          errc::invalid_argument);
 #endif
     }
     return ExegesisTarget::createCounter(CounterName, State, ValidationCounters,
@@ -720,7 +720,7 @@ private:
 
   unsigned getScratchMemoryRegister(const Triple &TT) const override;
 
-  unsigned getLoopCounterRegister(const Triple &) const override;
+  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
@@ -733,7 +733,8 @@ private:
 
   void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                    MachineBasicBlock &TargetMBB,
-                                   const MCInstrInfo &MII) const override;
+                                   const MCInstrInfo &MII,
+                                   unsigned LoopRegister) const override;
 
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
@@ -825,9 +826,9 @@ private:
     report_fatal_error("Running X86 exegesis on unsupported target");
 #endif
 #endif
-    return llvm::make_error<llvm::StringError>(
+    return make_error<StringError>(
         "LBR not supported on this kernel and/or platform",
-        llvm::errc::not_supported);
+        errc::not_supported);
   }
 
   std::unique_ptr<SavedState> withSavedState() const override {
@@ -852,7 +853,7 @@ const unsigned ExegesisX86Target::kUnavailableRegistersSSE[12] = {
 // We're using one of R8-R15 because these registers are never hardcoded in
 // instructions (e.g. MOVS writes to EDI, ESI, EDX), so they have less
 // conflicts.
-constexpr const unsigned kLoopCounterReg = X86::R8;
+constexpr const unsigned kDefaultLoopCounterReg = X86::R8;
 
 } // namespace
 
@@ -870,11 +871,12 @@ unsigned ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {
   return TT.isOSWindows() ? X86::RCX : X86::RDI;
 }
 
-unsigned ExegesisX86Target::getLoopCounterRegister(const Triple &TT) const {
+unsigned
+ExegesisX86Target::getDefaultLoopCounterRegister(const Triple &TT) const {
   if (!TT.isArch64Bit()) {
     return 0;
   }
-  return kLoopCounterReg;
+  return kDefaultLoopCounterReg;
 }
 
 Error ExegesisX86Target::randomizeTargetMCOperand(
@@ -912,10 +914,10 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
 
 void ExegesisX86Target::decrementLoopCounterAndJump(
     MachineBasicBlock &MBB, MachineBasicBlock &TargetMBB,
-    const MCInstrInfo &MII) const {
+    const MCInstrInfo &MII, unsigned LoopRegister) const {
   BuildMI(&MBB, DebugLoc(), MII.get(X86::ADD64ri8))
-      .addDef(kLoopCounterReg)
-      .addUse(kLoopCounterReg)
+      .addDef(LoopRegister)
+      .addUse(LoopRegister)
       .addImm(-1);
   BuildMI(&MBB, DebugLoc(), MII.get(X86::JCC_1))
       .addMBB(&TargetMBB)
@@ -1296,7 +1298,7 @@ std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
   bool Exploration = false;
   SmallVector<SmallVector<MCOperand, 1>, 4> VariableChoices;
   VariableChoices.resize(Instr.Variables.size());
-  for (auto I : llvm::zip(Instr.Variables, VariableChoices)) {
+  for (auto I : zip(Instr.Variables, VariableChoices)) {
     const Variable &Var = std::get<0>(I);
     SmallVectorImpl<MCOperand> &Choices = std::get<1>(I);
 

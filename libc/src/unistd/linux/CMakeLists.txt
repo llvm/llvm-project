@@ -283,6 +283,7 @@ add_entrypoint_object(
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 
@@ -309,6 +310,7 @@ add_entrypoint_object(
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 
@@ -402,7 +404,9 @@ add_entrypoint_object(
     ../sysconf.h
   DEPENDS
     libc.include.unistd
+    libc.include.sys_auxv
     libc.src.errno.errno
+    libc.src.sys.auxv.getauxval
 )
 
 add_entrypoint_object(

@@ -46,7 +46,7 @@ def inst_d : Instruction {
   let InOperandList = (ins GPR32:$src0, GPR32:$src1);
 }
 
-// SDAG: case 1: {
+// SDAG: case 0: {
 // SDAG-NEXT: // Predicate_pat_frag_b
 // SDAG-NEXT: // Predicate_truncstorei16_addrspace
 // SDAG-NEXT: SDNode *N = Node;
@@ -69,7 +69,7 @@ def : Pat <
 >;
 
 
-// SDAG: case 6: {
+// SDAG: case 4: {
 // SDAG: // Predicate_pat_frag_a
 // SDAG-NEXT: SDNode *N = Node;
 // SDAG-NEXT: (void)N;

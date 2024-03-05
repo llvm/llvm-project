@@ -17,7 +17,6 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/different_from.h>
 #include <__config>
-#include <__fwd/get.h>
 #include <__fwd/subrange.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>

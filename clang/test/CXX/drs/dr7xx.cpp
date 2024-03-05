@@ -105,7 +105,8 @@ namespace dr727 { // dr727: partial
       //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
 
       template<> struct A::C<double>;
-      // expected-error@-1 {{class template specialization of 'C' not in class 'A' or an enclosing namespace}}
+      // expected-error@-1 {{non-friend class member 'C' cannot have a qualified name}}
+      // expected-error@-2 {{class template specialization of 'C' not in class 'A' or an enclosing namespace}}
       //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
       template<> void A::f<double>();
       // expected-error@-1 {{o function template matches function template specialization 'f'}}
@@ -116,7 +117,8 @@ namespace dr727 { // dr727: partial
       //   expected-note@#dr727-N {{explicitly specialized declaration is here}}
 
       template<typename T> struct A::C<T***>;
-      // expected-error@-1 {{class template partial specialization of 'C' not in class 'A' or an enclosing namespace}}
+      // expected-error@-1 {{non-friend class member 'C' cannot have a qualified name}}
+      // expected-error@-2 {{class template partial specialization of 'C' not in class 'A' or an enclosing namespace}}
       //   expected-note@#dr727-C {{explicitly specialized declaration is here}}
       template<typename T> static int A::N<T***>;
       // expected-error@-1 {{non-friend class member 'N' cannot have a qualified name}}

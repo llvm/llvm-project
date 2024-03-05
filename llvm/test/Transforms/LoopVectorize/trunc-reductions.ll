@@ -245,3 +245,68 @@ for.end:
   %ret = trunc i32 %min to i16
   ret i16 %ret
 }
+
+; Test case for https://github.com/llvm/llvm-project/issues/81415.
+define i32 @reduction_and_or(i16 %a, i32 %b, ptr %src) {
+; CHECK-LABEL: @reduction_and_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ <i32 10, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2]] = or <8 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP2]])
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 992, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR67:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[IV]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP5]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[OR]] = or i32 [[OR67]], [[L]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 999
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], [[LOOP]] ], [ poison, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[OR_LCSSA]]
+;
+entry:
+  %ext1 = zext i16 %a to i32
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %or67 = phi i32 [ 10, %entry ], [ %or, %loop ]
+  %t = trunc i32 %b to i16
+  %ext = sext i16 %t to i32
+  %cmp = icmp sgt i32 %ext, %ext1
+  %ext2 = zext i1 %cmp to i32
+  %cmp3 = icmp sge i32 %iv, %ext2
+  %ext4 = zext i1 %cmp3 to i32
+  %div = sdiv i32 %ext4, %b
+  %and = and i32 %div, 0
+  %gep = getelementptr inbounds i32, ptr %src, i32 %iv
+  %l = load i32, ptr %gep
+  %add = add i32 %and, %l
+  %or = or i32 %or67, %add
+  %iv.next = add nsw i32 %iv, 1
+  %tobool.not = icmp eq i32 %iv.next, 999
+  br i1 %tobool.not, label %exit, label %loop
+
+exit:
+  %or.lcssa = phi i32 [ %or, %loop ]
+  ret i32 %or.lcssa
+}

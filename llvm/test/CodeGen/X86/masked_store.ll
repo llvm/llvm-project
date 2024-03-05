@@ -4758,9 +4758,9 @@ define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 
 ;
 ; AVX2-LABEL: mstore_constmask_allones_split:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [18446744073709551615,0,18446744073709551615,18446744073709551615]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551615,0,18446744073709551615,18446744073709551615]
 ; AVX2-NEXT:    vpmaskmovq %ymm5, %ymm0, 32(%rdi)
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,0,18446744073709551615]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,0,18446744073709551615]
 ; AVX2-NEXT:    vpmaskmovq %ymm4, %ymm0, (%rdi)
 ; AVX2-NEXT:    vmovups %ymm7, 96(%rdi)
 ; AVX2-NEXT:    vmovups %ymm6, 64(%rdi)
@@ -4969,9 +4969,9 @@ define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) {
 ;
 ; AVX2-LABEL: one_mask_bit_set6:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,0,0,18446744073709551615]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,0,0,18446744073709551615]
 ; AVX2-NEXT:    vpmaskmovq %ymm2, %ymm0, 64(%rdi)
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,0,18446744073709551615,0]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,0,18446744073709551615,0]
 ; AVX2-NEXT:    vpmaskmovq %ymm1, %ymm0, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

@@ -20,7 +20,6 @@ define amdgpu_kernel void @return_type_is_too_big_vector() {
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12
   %sgpr = call <4 x i32> asm sideeffect "; def $0", "={s[8:12]}" ()
@@ -39,7 +38,6 @@ define i64 @return_type_is_too_big_scalar() {
   ; CHECK-LABEL: name: return_type_is_too_big_scalar
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8
@@ -64,7 +62,6 @@ define ptr addrspace(1) @return_type_is_too_big_pointer() {
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8
   %reg = call ptr addrspace(1) asm sideeffect "; def $0", "={v8}" ()
@@ -75,7 +72,6 @@ define ptr addrspace(3) @return_type_is_too_small_pointer() {
   ; CHECK-LABEL: name: return_type_is_too_small_pointer
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8_vgpr9
