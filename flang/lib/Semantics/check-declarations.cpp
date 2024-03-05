@@ -3236,6 +3236,8 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   const Symbol *result{FindFunctionResult(symbol)};
   const Symbol &relevant{result ? *result : symbol};
   if (IsAllocatable(relevant)) { // always ok
+  } else if (IsProcedurePointer(symbol) && result && IsPointer(*result)) {
+    // procedure pointer returning allocatable or pointer: ok
   } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
     // object pointers are always ok
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
