@@ -105,14 +105,13 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
 elseif (HAVE_LDBL_MANT_DIG_113)
   # We can use 'long double' versions from libc.
   check_library_exists(m sinl "" FOUND_LIBM)
-  if (NOT FOUND_LIBM)
-    message(FATAL_ERROR "FortranRuntime cannot build without libm")
-  endif()
   if (FOUND_LIBM)
     target_compile_definitions(FortranFloat128MathILib INTERFACE
       HAS_LIBM
       )
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
+  else()
+    message(FATAL_ERROR "FortranRuntime cannot build without libm")
   endif()
 else()
   # We can use '__float128' version from libc, if it has them.
