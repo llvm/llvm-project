@@ -173,12 +173,8 @@ if.end:
 
 define i32 @uadd_no_overflow(i32 %a, i32 %b) {
 ; CHECK-LABEL: @uadd_no_overflow(
-; CHECK-NEXT:    [[VAL:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[VAL]], 1
-; CHECK-NEXT:    [[NOWRAP:%.*]] = xor i1 [[OV]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOWRAP]])
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %val = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %ov = extractvalue { i32, i1 } %val, 1
@@ -190,12 +186,8 @@ define i32 @uadd_no_overflow(i32 %a, i32 %b) {
 
 define i32 @smul_no_overflow(i32 %a, i32 %b) {
 ; CHECK-LABEL: @smul_no_overflow(
-; CHECK-NEXT:    [[VAL:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[VAL]], 1
-; CHECK-NEXT:    [[NOWRAP:%.*]] = xor i1 [[OV]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOWRAP]])
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %val = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
   %ov = extractvalue { i32, i1 } %val, 1
