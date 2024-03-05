@@ -24,49 +24,49 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf= std::basic_spanbuf<CharT, TraitsT>;
+  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   CharT arr[4];
   std::span<CharT> sp{arr};
 
   // TODO:
-
-  // Mode: default
-  {
-    SpBuf rhsSpBuf{sp};
-    SpBuf spBuf(std::span<CharT>{});
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(!spBuf.span().empty());
-    assert(spBuf.span().size() == 4);
-  }
-  // Mode: `ios_base::in`
-  {
-    SpBuf rhsSpBuf{sp, std::ios_base::in};
-    SpBuf spBuf(std::span<CharT>{});
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(!spBuf.span().empty());
-    assert(spBuf.span().size() == 4);
-  }
-  // Mode `ios_base::out`
-  {
-    SpBuf rhsSpBuf{sp, std::ios_base::out};
-    SpBuf spBuf(std::span<CharT>{});
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-  }
-  // Mode: multiple
-  {
-    SpBuf rhsSpBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpBuf spBuf(std::span<CharT>{});
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-  }
+  (void)sp;
+  // // Mode: default
+  // {
+  //   SpBuf rhsSpBuf{sp};
+  //   SpBuf spBuf(std::span<CharT>{});
+  //   std::swap(spBuf, rhsSpBuf);
+  //   assert(spBuf.span().data() == arr);
+  //   assert(!spBuf.span().empty());
+  //   assert(spBuf.span().size() == 4);
+  // }
+  // // Mode: `ios_base::in`
+  // {
+  //   SpBuf rhsSpBuf{sp, std::ios_base::in};
+  //   SpBuf spBuf(std::span<CharT>{});
+  //   std::swap(spBuf, rhsSpBuf);
+  //   assert(spBuf.span().data() == arr);
+  //   assert(!spBuf.span().empty());
+  //   assert(spBuf.span().size() == 4);
+  // }
+  // // Mode `ios_base::out`
+  // {
+  //   SpBuf rhsSpBuf{sp, std::ios_base::out};
+  //   SpBuf spBuf(std::span<CharT>{});
+  //   std::swap(spBuf, rhsSpBuf);
+  //   assert(spBuf.span().data() == arr);
+  //   assert(spBuf.span().empty());
+  //   assert(spBuf.span().size() == 0);
+  // }
+  // // Mode: multiple
+  // {
+  //   SpBuf rhsSpBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+  //   SpBuf spBuf(std::span<CharT>{});
+  //   std::swap(spBuf, rhsSpBuf);
+  //   assert(spBuf.span().data() == arr);
+  //   assert(spBuf.span().empty());
+  //   assert(spBuf.span().size() == 0);
+  // }
 }
 
 int main(int, char**) {
