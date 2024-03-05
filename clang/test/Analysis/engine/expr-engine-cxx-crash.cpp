@@ -1,15 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core.DivideZero -std=c++23 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -std=c++23 -verify %s
 // expected-no-diagnostics
 
-struct S
-{
-    constexpr auto operator==(this auto, S)
-    {
-        return true;
-    }
+struct S {
+  bool operator==(this auto, S) {
+    return true;
+  }
 };
-
-int main()
-{
-    return S {} == S {};
+int use_deducing_this() {
+  return S{} == S{};
 }
