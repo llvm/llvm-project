@@ -6182,6 +6182,7 @@ cc_library(
         ":config",
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
