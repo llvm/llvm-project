@@ -16,6 +16,8 @@ class AddressMasksTestCase(TestBase):
             lldb.LLDB_INVALID_ADDRESS_MASK,
             lldb.eAddressMaskRangeAll,
         )
+        self.runCmd("settings set target.process.virtual-addressable-bits 0")
+        self.runCmd("settings set target.process.highmem-virtual-addressable-bits 0")
 
     def test_address_masks(self):
         self.build()
@@ -51,7 +53,6 @@ class AddressMasksTestCase(TestBase):
         )
         mask = process.GetAddressMask(lldb.eAddressMaskTypeAny)
         process.SetAddressMask(lldb.eAddressMaskTypeCode, mask | 0x3)
-        process.SetAddressMask(lldb.eAddressMaskTypeCode, 0xFFFFFC0000000003)
         self.assertEqual(0x000002950001F697, process.FixAddress(0x00265E950001F697))
         self.assertEqual(0xFFFFFE950000F697, process.FixAddress(0xFFA65E950000F697))
         self.assertEqual(
