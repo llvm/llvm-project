@@ -68,8 +68,7 @@ void test_T_ctor_sfinae() {
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(!std::is_constructible<V, int>::value,
-                  "no matching constructor");
+    static_assert(!std::is_constructible<V, int>::value, "no matching constructor");
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
@@ -78,10 +77,8 @@ void test_T_ctor_sfinae() {
     struct X {
       operator void*();
     };
-    static_assert(!std::is_constructible<V, X>::value,
-                  "no boolean conversion in constructor");
-    static_assert(std::is_constructible<V, std::false_type>::value,
-                  "converted to bool in constructor");
+    static_assert(!std::is_constructible<V, X>::value, "no boolean conversion in constructor");
+    static_assert(std::is_constructible<V, std::false_type>::value, "converted to bool in constructor");
   }
   {
     struct X {};
