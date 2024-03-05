@@ -39,7 +39,43 @@ namespace addressof {
   struct U { int n : 5; } u;
   int *pbf = __builtin_addressof(u.n); // expected-error {{address of bit-field requested}}
 
-  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}} expected-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}}
+  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}}
+  int *memtmp = __builtin_addressof(T{}.n); // expected-error {{cannot take the address of an rvalue of type 'int'}}
+  S *pxval = __builtin_addressof(static_cast<S&&>(s)); // expected-error {{cannot take the address of an rvalue of type 'S'}}
+
+  void a(int) {} // expected-note 3 {{possible target for call}}
+  void a(float) {} // expected-note 3 {{possible target for call}}
+
+  int A = __builtin_addressof(a); // expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}}
+  int B = &__builtin_addressof(a); // expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}}
+  int C = __builtin_addressof(&a); // expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}}
+
+  template<typename T>
+  constexpr decltype(void(__builtin_addressof(T::f)), true) can_take_address_of_f(int) { return true; }
+  template<typename T>
+  constexpr bool can_take_address_of_f(...) { return false; }
+
+  struct V1 { static void f(int); static void f(char); };
+  struct V2 { static void f(int); };
+  struct V3 { static int f; };
+  struct V4 {
+    int f;
+    int* g() {
+      return __builtin_addressof(f);
+    }
+    int* h() {
+      return __builtin_addressof(V4::f);
+    }
+  };
+  struct V5 { void f(int); };
+  struct V6 { using f = int; };
+
+  static_assert(!can_take_address_of_f<V1>(0), "");
+  static_assert( can_take_address_of_f<V2>(0), "");
+  static_assert( can_take_address_of_f<V3>(0), "");
+  static_assert(!can_take_address_of_f<V4>(0), "");
+  static_assert(!can_take_address_of_f<V5>(0), "");
+  static_assert(!can_take_address_of_f<V6>(0), "");
 }
 
 namespace function_start {

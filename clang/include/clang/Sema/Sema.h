@@ -5955,7 +5955,8 @@ public:
                                              const Expr *Op,
                                              const CXXMethodDecl *MD);
 
-  QualType CheckAddressOfOperand(ExprResult &Operand, SourceLocation OpLoc);
+  QualType CheckAddressOfOperand(ExprResult &Operand, SourceLocation OpLoc,
+                                 bool IsBuiltinAddressof = false);
 
   bool CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N);
 

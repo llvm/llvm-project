@@ -15027,9 +15027,15 @@ bool Sema::CheckUseOfCXXMethodAsAddressOfOperand(SourceLocation OpLoc,
 /// operator (C99 6.3.2.1p[2-4]), and its result is never an lvalue.
 /// In C++, the operand might be an overloaded function name, in which case
 /// we allow the '&' but retain the overloaded-function type.
-QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
+/// If IsBuiltinAddressof is true, this is spelt __builtin_addressof(E)
+/// instead of &E.
+QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc,
+                                     bool IsBuiltinAddressof) {
   if (const BuiltinType *PTy = OrigOp.get()->getType()->getAsPlaceholderType()){
     if (PTy->getKind() == BuiltinType::Overload) {
+      if (IsBuiltinAddressof)
+        return QualType();
+
       Expr *E = OrigOp.get()->IgnoreParens();
       if (!isa<OverloadExpr>(E)) {
         assert(cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf);
@@ -15083,7 +15089,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     }
   }
 
-  if (getLangOpts().C99) {
+  if (!IsBuiltinAddressof && getLangOpts().C99) {
     // Implement C99-only parts of addressof rules.
     if (UnaryOperator* uOp = dyn_cast<UnaryOperator>(op)) {
       if (uOp->getOpcode() == UO_Deref)
@@ -15105,11 +15111,11 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   unsigned AddressOfError = AO_No_Error;
 
   if (lval == Expr::LV_ClassTemporary || lval == Expr::LV_ArrayTemporary) {
-    bool sfinae = (bool)isSFINAEContext();
-    Diag(OpLoc, isSFINAEContext() ? diag::err_typecheck_addrof_temporary
-                                  : diag::ext_typecheck_addrof_temporary)
-      << op->getType() << op->getSourceRange();
-    if (sfinae)
+    bool AllowTemporaryAddress = !isSFINAEContext() && !IsBuiltinAddressof;
+    Diag(OpLoc, AllowTemporaryAddress ? diag::ext_typecheck_addrof_temporary
+                                      : diag::err_typecheck_addrof_temporary)
+        << op->getType() << op->getSourceRange();
+    if (!AllowTemporaryAddress)
       return QualType();
     // Materialize the temporary as an lvalue so that we can take its address.
     OrigOp = op =
@@ -15119,6 +15125,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   } else if (lval == Expr::LV_MemberFunction) {
     // If it's an instance method, make a member pointer.
     // The expression must have exactly the form &A::foo.
+    if (IsBuiltinAddressof)
+      return QualType();
 
     // If the underlying expression isn't a decl ref, give up.
     if (!isa<DeclRefExpr>(op)) {
@@ -15176,12 +15184,14 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     } else if (isa<MSPropertyDecl>(dcl)) {
       AddressOfError = AO_Property_Expansion;
     } else if (isa<FunctionTemplateDecl>(dcl)) {
-      return Context.OverloadTy;
+      return IsBuiltinAddressof ? QualType() : Context.OverloadTy;
     } else if (isa<FieldDecl>(dcl) || isa<IndirectFieldDecl>(dcl)) {
       // Okay: we can take the address of a field.
       // Could be a pointer to member, though, if there is an explicit
       // scope qualifier for the class.
       if (isa<DeclRefExpr>(op) && cast<DeclRefExpr>(op)->getQualifier()) {
+        if (IsBuiltinAddressof)
+          return QualType();
         DeclContext *Ctx = dcl->getDeclContext();
         if (Ctx && Ctx->isRecord()) {
           if (dcl->getType()->isReferenceType()) {
