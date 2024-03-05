@@ -2150,11 +2150,7 @@ public:
     VariadicDoesNotApply
   };
 
-  /// Determine if type T is a valid subject for a nonnull and similar
-  /// attributes. By default, we look through references (the behavior used by
-  /// nonnull), but if the second parameter is true, then we treat a reference
-  /// type as valid.
-  bool isValidPointerAttrType(QualType T, bool RefOkay = false);
+  bool IsLayoutCompatible(QualType T1, QualType T2) const;
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -10410,7 +10406,9 @@ public:
       if (FD) {
         FD->setWillHaveBody(true);
         S.ExprEvalContexts.back().InImmediateFunctionContext =
-            FD->isImmediateFunction();
+            FD->isImmediateFunction() ||
+            S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
+                .isConstantEvaluated();
         S.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
             S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
       } else
@@ -13296,6 +13294,11 @@ public:
                              SourceLocation KwLoc, IdentifierInfo *Ident,
                              SourceLocation IdentLoc, SourceLocation LBrace);
   void ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace);
+
+  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
 
   ///@}
 
