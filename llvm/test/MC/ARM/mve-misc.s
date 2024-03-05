@@ -7,11 +7,11 @@
 # RUN:     FileCheck --check-prefix=ERROR-NOMVE < %t %s
 
 # CHECK: vpsel   q0, q5, q2  @ encoding: [0x3b,0xfe,0x05,0x0f]
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:1: error: instruction requires: mve
 vpsel   q0, q5, q2
 
 # CHECK: vpnot  @ encoding: [0x31,0xfe,0x4d,0x0f]
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:1: error: instruction requires: mve
 vpnot
 
 # CHECK: wlstp.8     lr, r0, #1668  @ encoding: [0x00,0xf0,0x43,0xc3]

@@ -1742,6 +1742,7 @@ def ARMAsmWriter : AsmWriter {
 
 def ARMAsmParser : AsmParser {
   bit ReportMultipleNearMisses = 1;
+  let PreferSmallerInstructions = true;
 }
 
 def ARMAsmParserVariant : AsmParserVariant {
@@ -1757,5 +1758,4 @@ def ARM : Target {
   let AssemblyParsers = [ARMAsmParser];
   let AssemblyParserVariants = [ARMAsmParserVariant];
   let AllowRegisterRenaming = 1;
-  let PreferSmallerInstructions= true;
 }

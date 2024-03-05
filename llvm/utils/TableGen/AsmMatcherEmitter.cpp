@@ -217,19 +217,6 @@ struct ClassInfo {
   /// Is this operand optional and not always required.
   bool IsOptional;
 
-  /// OptionalShouldOffsetCustomParsers - Only used if IsOptional is true.
-  /// Specifies if this optional operand should be assumed to be
-  ///   present for the sake of determining if a custom parser should be
-  ///   used, which is determined by the mnemonic and operand index.
-  /// If true, then the parser will always assume a value representing this
-  ///   operand will always be present when parsing and thus the custom parser
-  ///   will be applied to later tokens in the input stream.
-  /// If false, then the parse will assume it will not be present in the operand
-  ///   vector and therefore will apply the custom parser earlier.
-  /// For example of usage, see ARMAsmParser and the CondCode operands which are
-  ///   always present at parse time.
-  bool OptionalShouldOffsetCustomParsers;
-
   /// DefaultMethod - The name of the method that returns the default operand
   /// for optional operand
   std::string DefaultMethod;
@@ -1467,11 +1454,6 @@ void AsmMatcherInfo::buildOperandClasses() {
     if (BitInit *BI = dyn_cast<BitInit>(IsOptional))
       CI->IsOptional = BI->getValue();
 
-    Init *OptionalShouldOffsetCustomParsers =
-        Rec->getValueInit("OptionalShouldOffsetCustomParsers");
-    if (BitInit *BI = dyn_cast<BitInit>(OptionalShouldOffsetCustomParsers))
-      CI->OptionalShouldOffsetCustomParsers = BI->getValue();
-
     // Get or construct the default method name.
     Init *DMName = Rec->getValueInit("DefaultMethod");
     if (StringInit *SI = dyn_cast<StringInit>(DMName)) {
@@ -1513,7 +1495,7 @@ void AsmMatcherInfo::buildOperandMatchInfo() {
         OperandMask |= maskTrailingOnes<unsigned>(NumOptionalOps + 1)
                        << (i - NumOptionalOps);
       }
-      if (Op.Class->IsOptional && Op.Class->OptionalShouldOffsetCustomParsers)
+      if (Op.Class->IsOptional)
         ++NumOptionalOps;
     }
 

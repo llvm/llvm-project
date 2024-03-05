@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -511,6 +512,7 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   std::unique_ptr<ARMOperand> defaultCondCodeOp();
   std::unique_ptr<ARMOperand> defaultCCOutOp();
+  std::unique_ptr<ARMOperand> defaultVPTPredOp();
 
   bool isMnemonicVPTPredicable(StringRef Mnemonic, StringRef ExtraToken);
   StringRef splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
@@ -1367,6 +1369,14 @@ public:
   bool isRegListWithAPSR() const {
     return Kind == k_RegisterListWithAPSR || Kind == k_RegisterList;
   }
+  bool isDReg() const {
+    return isReg() &&
+           ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg.RegNum);
+  }
+  bool isQReg() const {
+    return isReg() &&
+           ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg.RegNum);
+  }
   bool isDPRRegList() const { return Kind == k_DPRRegisterList; }
   bool isSPRRegList() const { return Kind == k_SPRRegisterList; }
   bool isFPSRegListWithVPR() const { return Kind == k_FPSRegisterListWithVPR; }
@@ -2032,6 +2042,8 @@ public:
   bool isProcIFlags() const { return Kind == k_ProcIFlags; }
 
   // NEON operands.
+  bool isVectorList() const { return Kind == k_VectorList; }
+
   bool isSingleSpacedVectorList() const {
     return Kind == k_VectorList && !VectorList.isDoubleSpaced;
   }
@@ -2470,6 +2482,20 @@ public:
     ARMCC::CondCodes CC = getCondCode();
     return CC == ARMCC::EQ || CC == ARMCC::NE || CC == ARMCC::LT ||
            CC == ARMCC::GT || CC == ARMCC::LE || CC == ARMCC::GE;
+  }
+
+  void setVecListDPair(unsigned int DPair) {
+    Kind = k_VectorList;
+    VectorList.RegNum = DPair;
+    VectorList.Count = 2;
+    VectorList.isDoubleSpaced = false;
+  }
+
+  void setVecListOneD(unsigned int DReg) {
+    Kind = k_VectorList;
+    VectorList.RegNum = DReg;
+    VectorList.Count = 1;
+    VectorList.isDoubleSpaced = false;
   }
 
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
@@ -4759,6 +4785,8 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
   // As an extension (to match gas), support a plain D register or Q register
   // (without encosing curly braces) as a single or double entry list,
   // respectively.
+  // If there is no lane supplied, just parse as a register and
+  // use the custom matcher to convert to list if necessary
   if (!hasMVE() && Parser.getTok().is(AsmToken::Identifier)) {
     SMLoc E = Parser.getTok().getEndLoc();
     int Reg = tryParseRegister();
@@ -4770,7 +4798,7 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
         return Res;
       switch (LaneKind) {
       case NoLanes:
-        Operands.push_back(ARMOperand::CreateVectorList(Reg, 1, false, S, E));
+        Operands.push_back(ARMOperand::CreateReg(Reg, S, E));
         break;
       case AllLanes:
         Operands.push_back(ARMOperand::CreateVectorListAllLanes(Reg, 1, false,
@@ -4791,9 +4819,7 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
         return Res;
       switch (LaneKind) {
       case NoLanes:
-        Reg = MRI->getMatchingSuperReg(Reg, ARM::dsub_0,
-                                   &ARMMCRegisterClasses[ARM::DPairRegClassID]);
-        Operands.push_back(ARMOperand::CreateVectorList(Reg, 2, false, S, E));
+        Operands.push_back(ARMOperand::CreateReg(Reg, S, E));
         break;
       case AllLanes:
         Reg = MRI->getMatchingSuperReg(Reg, ARM::dsub_0,
@@ -4809,7 +4835,8 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
       }
       return ParseStatus::Success;
     }
-    return Error(S, "vector register expected");
+    Operands.push_back(ARMOperand::CreateReg(Reg, S, E));
+    return ParseStatus::Success;
   }
 
   if (Parser.getTok().isNot(AsmToken::LCurly))
@@ -5139,6 +5166,10 @@ ParseStatus ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
 
 /// parseMSRMaskOperand - Try to parse mask flags from MSR instruction.
 ParseStatus ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
+  // Don't parse two MSR registers in a row
+  if (static_cast<ARMOperand &>(*Operands.back()).isMSRMask() ||
+      static_cast<ARMOperand &>(*Operands.back()).isBankedReg())
+    return ParseStatus::NoMatch;
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
@@ -5236,6 +5267,10 @@ ParseStatus ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
 /// parseBankedRegOperand - Try to parse a banked register (e.g. "lr_irq") for
 /// use in the MRS/MSR instructions added to support virtualization.
 ParseStatus ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
+  // Don't parse two Banked registers in a row
+  if (static_cast<ARMOperand &>(*Operands.back()).isBankedReg() ||
+      static_cast<ARMOperand &>(*Operands.back()).isMSRMask())
+    return ParseStatus::NoMatch;
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
@@ -5269,7 +5304,7 @@ ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op,
   // There must be a '#' and a shift amount.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
       Parser.getTok().isNot(AsmToken::Dollar))
-    return Error(Parser.getTok().getLoc(), "'#' expected");
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat hash token.
 
   const MCExpr *ShiftAmount;
@@ -5319,7 +5354,7 @@ ParseStatus ARMAsmParser::parseShifterImm(OperandVector &Operands) {
   const AsmToken &Tok = Parser.getTok();
   SMLoc S = Tok.getLoc();
   if (Tok.isNot(AsmToken::Identifier))
-    return Error(S, "shift operator 'asr' or 'lsl' expected");
+    return ParseStatus::NoMatch;
   StringRef ShiftName = Tok.getString();
   bool isASR;
   if (ShiftName == "lsl" || ShiftName == "LSL")
@@ -5327,7 +5362,7 @@ ParseStatus ARMAsmParser::parseShifterImm(OperandVector &Operands) {
   else if (ShiftName == "asr" || ShiftName == "ASR")
     isASR = true;
   else
-    return Error(S, "shift operator 'asr' or 'lsl' expected");
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat the operator.
 
   // A '#' and a shift amount.
@@ -5520,7 +5555,7 @@ ParseStatus ARMAsmParser::parseBitfield(OperandVector &Operands) {
   // The bitfield descriptor is really two operands, the LSB and the width.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
       Parser.getTok().isNot(AsmToken::Dollar))
-    return Error(Parser.getTok().getLoc(), "'#' expected");
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat hash token.
 
   const MCExpr *LSBExpr;
@@ -6093,6 +6128,8 @@ bool ARMAsmParser::parseMemRegOffsetShift(ARM_AM::ShiftOpc &St,
 
 /// parseFPImm - A floating point immediate expression operand.
 ParseStatus ARMAsmParser::parseFPImm(OperandVector &Operands) {
+  LLVM_DEBUG(dbgs() << "PARSE FPImm, Ops: " << Operands.size());
+
   MCAsmParser &Parser = getParser();
   // Anything that can accept a floating point constant as an operand
   // needs to go through here, as the regular parseExpression is
@@ -6138,7 +6175,11 @@ ParseStatus ARMAsmParser::parseFPImm(OperandVector &Operands) {
   if (!(isVmovf || isFconst))
     return ParseStatus::NoMatch;
 
-  Parser.Lex(); // Eat '#' or '$'.
+  if (Parser.getTok().getKind() == llvm::AsmToken::Hash ||
+      Parser.getTok().getKind() == llvm::AsmToken::Dollar)
+    Parser.Lex(); // Eat '#' or '$'.
+  else
+    return ParseStatus::NoMatch;
 
   // Handle negation, as that still comes through as a separate token.
   bool isNegative = false;
@@ -6768,7 +6809,7 @@ static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
 
 bool ARMAsmParser::shouldOmitVectorPredicateOperand(
     StringRef Mnemonic, OperandVector &Operands, unsigned MnemonicOpsEndInd) {
-  if (!hasMVE() || Operands.size() < MnemonicOpsEndInd)
+  if (!hasMVE() || Operands.size() <= MnemonicOpsEndInd)
     return true;
 
   if (Mnemonic.starts_with("vld2") || Mnemonic.starts_with("vld4") ||
@@ -6798,9 +6839,7 @@ bool ARMAsmParser::shouldOmitVectorPredicateOperand(
       // MQPR, to more accurately report errors when using Q registers
       // outside of the allowed range.
       if (static_cast<ARMOperand &>(*Operand).isVectorIndex() ||
-          (Operand->isReg() &&
-           (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(
-               Operand->getReg()))))
+          static_cast<ARMOperand &>(*Operand).isQReg())
         return false;
     }
     return true;
@@ -7064,14 +7103,14 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // Add the carry setting operand, if necessary.
-  if (CanAcceptCarrySet) {
+  if (CanAcceptCarrySet && CarrySetting != 0) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size());
     Operands.push_back(ARMOperand::CreateCCOut(CarrySetting ? ARM::CPSR : 0,
                                                Loc));
   }
 
   // Add the predication code operand, if necessary.
-  if (CanAcceptPredicationCode) {
+  if (CanAcceptPredicationCode && PredicationCode != llvm::ARMCC::AL) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size() +
                                       CarrySetting);
     Operands.push_back(ARMOperand::CreateCondCode(
@@ -7079,14 +7118,9 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // Add the VPT predication code operand, if necessary.
-  // FIXME: We don't add them for the instructions filtered below as these can
-  // have custom operands which need special parsing.  This parsing requires
-  // the operand to be in the same place in the OperandVector as their
-  // definition in tblgen.  Since these instructions may also have the
-  // scalar predication operand we do not add the vector one and leave until
-  // now to fix it up.
-  if (CanAcceptVPTPredicationCode && Mnemonic != "vmov" &&
-      !Mnemonic.starts_with("vcmp") &&
+  // Dont add in certain cases of VCVT as this needs to be disambiguated
+  // after operand parsing
+  if (CanAcceptVPTPredicationCode && VPTPredicationCode != llvm::ARMVCC::None &&
       !(Mnemonic.starts_with("vcvt") && Mnemonic != "vcvta" &&
         Mnemonic != "vcvtn" && Mnemonic != "vcvtp" && Mnemonic != "vcvtm")) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size() +
@@ -7155,15 +7189,6 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;
 
-  // Remove the optional tokens if they are the default values
-  // This can only be done after parsing as the index of the operands
-  //  is used for custom parsers.
-  // CCOut
-  if (!CarrySetting && CanAcceptCarrySet)
-    removeCCOut(Operands, MnemonicOpsEndInd);
-  if (PredicationCode == llvm::ARMCC::AL && CanAcceptPredicationCode)
-    removeCondCode(Operands, MnemonicOpsEndInd);
-
   tryConvertingToTwoOperandForm(Mnemonic, PredicationCode, CarrySetting,
                                 Operands, MnemonicOpsEndInd);
 
@@ -7226,17 +7251,10 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
       Operands.insert(Operands.begin(),
                       ARMOperand::CreateToken(StringRef("vmullt"), MLoc));
-    }
-    // For vmov and vcmp, as mentioned earlier, we did not add the vector
-    // predication code, since these may contain operands that require
-    // special parsing.  So now we have to see if they require vector
-    // predication and replace the scalar one with the vector predication
-    // operand if that is the case.
-    else if (Mnemonic == "vmov" || Mnemonic.starts_with("vcmp") ||
-             (Mnemonic.starts_with("vcvt") && !Mnemonic.starts_with("vcvta") &&
-              !Mnemonic.starts_with("vcvtn") &&
-              !Mnemonic.starts_with("vcvtp") &&
-              !Mnemonic.starts_with("vcvtm"))) {
+    } else if (Mnemonic.starts_with("vcvt") && !Mnemonic.starts_with("vcvta") &&
+               !Mnemonic.starts_with("vcvtn") &&
+               !Mnemonic.starts_with("vcvtp") &&
+               !Mnemonic.starts_with("vcvtm")) {
       if (!shouldOmitVectorPredicateOperand(Mnemonic, Operands,
                                             MnemonicOpsEndInd)) {
         // We could not split the vector predicate off vcvt because it might
@@ -7261,8 +7279,6 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                             ARMOperand::CreateToken(Mnemonic, MLoc));
           }
         }
-        // Remove CondCode
-        removeCondCode(Operands, MnemonicOpsEndInd);
         SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
                                           Mnemonic.size() + CarrySetting);
         // Add VPTPred
@@ -7278,8 +7294,6 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       if (shouldOmitVectorPredicateOperand(Mnemonic, Operands,
                                            MnemonicOpsEndInd)) {
         removeVPTCondCode(Operands, MnemonicOpsEndInd);
-      } else if (CanAcceptPredicationCode && PredicationCode == ARMCC::AL) {
-        removeCondCode(Operands, MnemonicOpsEndInd);
       }
     }
   }
@@ -12974,11 +12988,24 @@ unsigned ARMAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     if (hasV8Ops() && Op.isReg() && Op.getReg() == ARM::SP)
       return Match_Success;
     return Match_rGPR;
-  case MCK_GPRPair:
-    if (Op.isReg() &&
-        MRI->getRegClass(ARM::GPRRegClassID).contains(Op.getReg()))
+  // If trying to match a VecListDPair with a Q register, convert Q to list
+  case MCK_VecListDPair:
+    if (Op.isQReg() && !hasMVE()) {
+      auto DPair = getDRegFromQReg(Op.getReg());
+      DPair = MRI->getMatchingSuperReg(
+          DPair, ARM::dsub_0, &ARMMCRegisterClasses[ARM::DPairRegClassID]);
+      Op.setVecListDPair(DPair);
       return Match_Success;
-    break;
+    }
+    return Match_InvalidOperand;
+  // If trying to match a VecListDPair with a D register, convert D singleton
+  // list
+  case MCK_VecListOneD:
+    if (Op.isDReg() && !hasMVE()) {
+      Op.setVecListOneD(Op.getReg());
+      return Match_Success;
+    }
+    return Match_InvalidOperand;
   }
   return Match_InvalidOperand;
 }
@@ -13033,4 +13060,8 @@ std::unique_ptr<ARMOperand> ARMAsmParser::defaultCondCodeOp() {
 
 std::unique_ptr<ARMOperand> ARMAsmParser::defaultCCOutOp() {
   return ARMOperand::CreateCCOut(0, SMLoc());
+}
+
+std::unique_ptr<ARMOperand> ARMAsmParser::defaultVPTPredOp() {
+  return ARMOperand::CreateVPTPred(ARMVCC::None, SMLoc());
 }

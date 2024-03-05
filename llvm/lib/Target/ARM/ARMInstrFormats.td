@@ -160,7 +160,6 @@ def CondCodeOperand : AsmOperandClass {
   let PredicateMethod = "isCondCode";
   let DefaultMethod = "defaultCondCodeOp";
   let IsOptional = true;
-  let OptionalShouldOffsetCustomParsers = false;
 }
 def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
                                      (ops (i32 14), (i32 zero_reg))> {
@@ -184,7 +183,6 @@ def CCOutOperand : AsmOperandClass {
   let Name = "CCOut";
   let DefaultMethod = "defaultCCOutOp";
   let IsOptional = true;
-  let OptionalShouldOffsetCustomParsers = false;
 }
 def cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 zero_reg))> {
   let EncoderMethod = "getCCOutOpValue";
@@ -213,10 +211,14 @@ def inv_cond_XFORM : SDNodeXForm<imm, [{
 def VPTPredNOperand : AsmOperandClass {
   let Name = "VPTPredN";
   let PredicateMethod = "isVPTPred";
+  let DefaultMethod = "defaultVPTPredOp";
+  let IsOptional = true;
 }
 def VPTPredROperand : AsmOperandClass {
   let Name = "VPTPredR";
   let PredicateMethod = "isVPTPred";
+  let DefaultMethod = "defaultVPTPredOp";
+  let IsOptional = true;
 }
 
 // Operand classes for the cluster of MC operands describing a

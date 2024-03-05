@@ -5092,7 +5092,7 @@ def : InstAlias<"dmb${p}.w", (t2DMB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}.w\t$opt", (t2DSB memb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}.w", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
-def : InstAlias<"isb${p}.w\t$opt", (t2ISB memb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
+def : InstAlias<"isb${p}.w\t$opt", (t2ISB instsyncb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}.w", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 

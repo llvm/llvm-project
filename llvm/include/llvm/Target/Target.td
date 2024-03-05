@@ -947,18 +947,7 @@ class AsmOperandClass {
   /// instruction if it hasn't matched all the operands yet.  However, this
   /// error will be suppressed if all of the remaining unmatched operands are
   /// marked as IsOptional.
-  ///
-  /// Note: Optional arguments have caveats if they are not at the end of this list
-  /// when regarding custom operand parsing. See below
   bit IsOptional = false;
-
-  // Fixme: Ideally this would not be necessary however this would involve interleaving the
-  // parsing and matching processes.
-  /// Set to 1 if the parser should assume this operand will always be present
-  /// for the sake of calculating the operand index in regards to which custom operand
-  /// parser should be used.
-  /// This is only used for custom operands that are not at the end of the instruction.
-  bit OptionalShouldOffsetCustomParsers = true;
 
   /// The name of the method on the target specific asm parser that returns the
   /// default operand for this optional operand. This method is only used if
