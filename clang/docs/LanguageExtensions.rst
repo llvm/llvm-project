@@ -3518,6 +3518,9 @@ users need to enable debug information to enable this feature. A call to this
 builtin is equivalent to a call to ``__builtin_trap`` if debug information isn't
 enabled.
 
+The optimizer can merge calls to trap with different messages, which degrades
+the debugging experience.
+
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
@@ -3565,6 +3568,7 @@ guarded check. It's unused now. It will enable kind-specific lowering in future.
 E.g. a higher hotness cutoff can be used for more expensive kind of check.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
+
 ``__builtin_nondeterministic_value``
 ------------------------------------
 

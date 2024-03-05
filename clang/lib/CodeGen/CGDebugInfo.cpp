@@ -1695,6 +1695,9 @@ llvm::DIType *CGDebugInfo::createFieldType(
 llvm::DISubprogram *
 CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
                                          llvm::DIFile *FileScope) {
+  // We are caching the subprogram because we don't want to duplicate
+  // subprograms with the same message. Note that `SPFlagDefinition` prevents
+  // subprograms from being uniqued.
   llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
 
   if (!SP) {
@@ -3515,8 +3518,6 @@ CGDebugInfo::CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
   const char *Prefix = "__llvm_verbose_trap";
   SmallString<64> FuncName(Prefix);
   if (!FailureMsg.empty()) {
-    // A space in the function name identifies this as not being a real function
-    // because it's not a valid symbol name.
     FuncName += ": ";
     FuncName += FailureMsg;
   }

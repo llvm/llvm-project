@@ -617,8 +617,7 @@ public:
   // frame where the frame name is
   //
   // * `<Prefix>: <FailureMsg>` if `<FailureMsg>` is not empty.
-  // * `<Prefix>` if `<FailureMsg>` is empty. Note `<Prefix>` must
-  //   contain a space.
+  // * `<Prefix>` if `<FailureMsg>` is empty.
   //
   // Currently `<Prefix>` is always "__llvm_verbose_trap".
   //

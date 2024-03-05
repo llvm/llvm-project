@@ -16844,12 +16844,15 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
   }
 }
 
-bool Expr::tryEvaluateString(std::string &StringResult, ASTContext &Ctx) const {
+std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
   uint64_t Result;
+  std::string StringResult;
 
-  return EvaluateBuiltinStrLen(this, Result, Info, &StringResult);
+  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+    return StringResult;
+  return {};
 }
 
 bool Expr::EvaluateCharRangeAsString(std::string &Result,

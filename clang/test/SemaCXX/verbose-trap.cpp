@@ -19,7 +19,7 @@ void f(const char * arg) {
   __builtin_verbose_trap("");
   __builtin_verbose_trap(); // expected-error {{too few arguments}}
   __builtin_verbose_trap(0); // expected-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
-  __builtin_verbose_trap(1); // expected-error {{cannot initialize a parameter of type 'const char *' with}}
+  __builtin_verbose_trap(1); // expected-error {{cannot initialize a parameter of type 'const char *' with an rvalue of type 'int'}}
   __builtin_verbose_trap(arg); // expected-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
   __builtin_verbose_trap(str);
   __builtin_verbose_trap(u8"hello");

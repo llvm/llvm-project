@@ -788,9 +788,9 @@ public:
                                  EvalResult &Status) const;
 
   /// If the current Expr can be evaluated to a pointer to a null-terminated
-  /// constant string, return the constant string (without the terminating null)
-  /// in Result. Return true if it succeeds.
-  bool tryEvaluateString(std::string &Result, ASTContext &Ctx) const;
+  /// constant string, return the constant string (without the terminating
+  /// null).
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const;
 
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
