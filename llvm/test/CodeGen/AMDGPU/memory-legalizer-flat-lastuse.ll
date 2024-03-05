@@ -41,8 +41,8 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @flat_last_use_volatile_load(ptr %in, ptr %out) {
-; GFX12-LABEL: flat_last_use_volatile_load:
+define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
+; GFX12-LABEL: flat_last_use_and_volatile_load:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -55,6 +55,23 @@ define amdgpu_kernel void @flat_last_use_volatile_load(ptr %in, ptr %out) {
 ; GFX12-NEXT:    s_endpgm
 entry:
   %val = load volatile i32, ptr %in, align 4, !amdgpu.last.use !{}
+  store i32 %val, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out) {
+; GFX12-LABEL: flat_last_use_and_nontemporal_load:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-NEXT:    s_endpgm
+entry:
+  %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}, !nontemporal !0
   store i32 %val, ptr %out
   ret void
 }
