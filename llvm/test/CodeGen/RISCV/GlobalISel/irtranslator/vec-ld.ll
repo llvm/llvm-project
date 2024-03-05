@@ -486,72 +486,159 @@ define <vscale x 8 x i64>  @vload_nx8i64(ptr %pa) {
   ret <vscale x 8 x i64> %va
 }
 
-define <vscale x 1 x i8>  @vload_nx1i8_align2(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx1i8_align2
+define <vscale x 16 x i8>  @vload_nx16i8_align1(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx16i8_align1
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa, align 2)
-  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
-  ; RV32-NEXT:   PseudoRET implicit $v8
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
-  ; RV64-LABEL: name: vload_nx1i8_align2
+  ; RV64-LABEL: name: vload_nx16i8_align1
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa, align 2)
-  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
-  ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 1 x i8>, ptr %pa, align 2
-  ret <vscale x 1 x i8> %va
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 16 x i8>, ptr %pa, align 1
+  ret <vscale x 16 x i8> %va
 }
 
-define <vscale x 1 x i8>  @vload_nx1i8_align8(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx1i8_align8
+define <vscale x 16 x i8>  @vload_nx16i8_align2(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx16i8_align2
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa, align 8)
-  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
-  ; RV32-NEXT:   PseudoRET implicit $v8
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
-  ; RV64-LABEL: name: vload_nx1i8_align8
+  ; RV64-LABEL: name: vload_nx16i8_align2
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa, align 8)
-  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
-  ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 1 x i8>, ptr %pa, align 8
-  ret <vscale x 1 x i8> %va
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 16 x i8>, ptr %pa, align 2
+  ret <vscale x 16 x i8> %va
 }
 
-define <vscale x 1 x i8>  @vload_nx1i8_align32(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx1i8_align32
+define <vscale x 16 x i8>  @vload_nx16i8_align16(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx16i8_align16
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa, align 32)
-  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
-  ; RV32-NEXT:   PseudoRET implicit $v8
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
-  ; RV64-LABEL: name: vload_nx1i8_align32
+  ; RV64-LABEL: name: vload_nx16i8_align16
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa, align 32)
-  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
-  ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 1 x i8>, ptr %pa, align 32
-  ret <vscale x 1 x i8> %va
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 16 x i8>, ptr %pa, align 16
+  ret <vscale x 16 x i8> %va
 }
 
+define <vscale x 16 x i8>  @vload_nx16i8_align64(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx16i8_align64
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
+  ;
+  ; RV64-LABEL: name: vload_nx16i8_align64
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 16 x i8>, ptr %pa, align 64
+  ret <vscale x 16 x i8> %va
+}
+
+define <vscale x 4 x i16>  @vload_nx4i16_align1(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx4i16_align1
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 1)
+  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   PseudoRET implicit $v8
+  ;
+  ; RV64-LABEL: name: vload_nx4i16_align1
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 1)
+  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   PseudoRET implicit $v8
+  %va = load <vscale x 4 x i16>, ptr %pa, align 1
+  ret <vscale x 4 x i16> %va
+}
+
+define <vscale x 4 x i16>  @vload_nx4i16_align2(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx4i16_align2
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
+  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   PseudoRET implicit $v8
+  ;
+  ; RV64-LABEL: name: vload_nx4i16_align2
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
+  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   PseudoRET implicit $v8
+  %va = load <vscale x 4 x i16>, ptr %pa, align 2
+  ret <vscale x 4 x i16> %va
+}
+
+define <vscale x 4 x i16>  @vload_nx4i16_align4(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx4i16_align4
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
+  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   PseudoRET implicit $v8
+  ;
+  ; RV64-LABEL: name: vload_nx4i16_align4
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
+  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   PseudoRET implicit $v8
+  %va = load <vscale x 4 x i16>, ptr %pa, align 4
+  ret <vscale x 4 x i16> %va
+}
 define <vscale x 4 x i16>  @vload_nx4i16_align8(ptr %pa) {
   ; RV32-LABEL: name: vload_nx4i16_align8
   ; RV32: bb.1 (%ir-block.0):
@@ -596,48 +683,26 @@ define <vscale x 4 x i16>  @vload_nx4i16_align16(ptr %pa) {
   ret <vscale x 4 x i16> %va
 }
 
-define <vscale x 4 x i16>  @vload_nx4i16_align64(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx4i16_align64
+define <vscale x 2 x i32>  @vload_nx2i32_align2(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i32_align2
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 64)
-  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 2)
+  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
-  ; RV64-LABEL: name: vload_nx4i16_align64
+  ; RV64-LABEL: name: vload_nx2i32_align2
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 64)
-  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 2)
+  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 4 x i16>, ptr %pa, align 64
-  ret <vscale x 4 x i16> %va
-}
-
-define <vscale x 4 x i16>  @vload_nx4i16_align128(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx4i16_align128
-  ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   liveins: $x10
-  ; RV32-NEXT: {{  $}}
-  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 128)
-  ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
-  ; RV32-NEXT:   PseudoRET implicit $v8
-  ;
-  ; RV64-LABEL: name: vload_nx4i16_align128
-  ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   liveins: $x10
-  ; RV64-NEXT: {{  $}}
-  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 128)
-  ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
-  ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 4 x i16>, ptr %pa, align 128
-  ret <vscale x 4 x i16> %va
+  %va = load <vscale x 2 x i32>, ptr %pa, align 2
+  ret <vscale x 2 x i32> %va
 }
 
 define <vscale x 2 x i32>  @vload_nx2i32_align4(ptr %pa) {
@@ -662,70 +727,135 @@ define <vscale x 2 x i32>  @vload_nx2i32_align4(ptr %pa) {
   ret <vscale x 2 x i32> %va
 }
 
-define <vscale x 2 x i32>  @vload_nx2i32_align32(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx2i32_align32
+define <vscale x 2 x i32>  @vload_nx2i32_align8(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i32_align8
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 32)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
   ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
-  ; RV64-LABEL: name: vload_nx2i32_align32
+  ; RV64-LABEL: name: vload_nx2i32_align8
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 32)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
   ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 2 x i32>, ptr %pa, align 32
+  %va = load <vscale x 2 x i32>, ptr %pa, align 8
   ret <vscale x 2 x i32> %va
 }
 
-define <vscale x 2 x i32>  @vload_nx2i32_align64(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx2i32_align64
+define <vscale x 2 x i32>  @vload_nx2i32_align16(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i32_align16
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 64)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
   ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
-  ; RV64-LABEL: name: vload_nx2i32_align64
+  ; RV64-LABEL: name: vload_nx2i32_align16
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 64)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
   ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 2 x i32>, ptr %pa, align 64
+  %va = load <vscale x 2 x i32>, ptr %pa, align 16
   ret <vscale x 2 x i32> %va
 }
 
-define <vscale x 2 x i32>  @vload_nx2i32_align128(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx2i32_align128
+define <vscale x 2 x i32>  @vload_nx2i32_align256(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i32_align256
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 128)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
   ; RV32-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
-  ; RV64-LABEL: name: vload_nx2i32_align128
+  ; RV64-LABEL: name: vload_nx2i32_align256
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 128)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
   ; RV64-NEXT:   $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
-  %va = load <vscale x 2 x i32>, ptr %pa, align 128
+  %va = load <vscale x 2 x i32>, ptr %pa, align 256
   ret <vscale x 2 x i32> %va
+}
+define <vscale x 2 x i64>  @vload_nx2i64_align4(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i64_align4
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 4)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
+  ;
+  ; RV64-LABEL: name: vload_nx2i64_align4
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 4)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 2 x i64>, ptr %pa, align 4
+  ret <vscale x 2 x i64> %va
+}
+
+define <vscale x 2 x i64>  @vload_nx2i64_align8(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i64_align8
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
+  ;
+  ; RV64-LABEL: name: vload_nx2i64_align8
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 2 x i64>, ptr %pa, align 8
+  ret <vscale x 2 x i64> %va
+}
+
+define <vscale x 2 x i64>  @vload_nx2i64_align16(ptr %pa) {
+  ; RV32-LABEL: name: vload_nx2i64_align16
+  ; RV32: bb.1 (%ir-block.0):
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
+  ; RV32-NEXT:   PseudoRET implicit $v8m2
+  ;
+  ; RV64-LABEL: name: vload_nx2i64_align16
+  ; RV64: bb.1 (%ir-block.0):
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   PseudoRET implicit $v8m2
+  %va = load <vscale x 2 x i64>, ptr %pa, align 16
+  ret <vscale x 2 x i64> %va
 }
 
 define <vscale x 2 x i64>  @vload_nx2i64_align32(ptr %pa) {
@@ -747,72 +877,6 @@ define <vscale x 2 x i64>  @vload_nx2i64_align32(ptr %pa) {
   ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
   %va = load <vscale x 2 x i64>, ptr %pa, align 32
-  ret <vscale x 2 x i64> %va
-}
-
-define <vscale x 2 x i64>  @vload_nx2i64_align64(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx2i64_align64
-  ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   liveins: $x10
-  ; RV32-NEXT: {{  $}}
-  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 64)
-  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
-  ; RV32-NEXT:   PseudoRET implicit $v8m2
-  ;
-  ; RV64-LABEL: name: vload_nx2i64_align64
-  ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   liveins: $x10
-  ; RV64-NEXT: {{  $}}
-  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 64)
-  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
-  ; RV64-NEXT:   PseudoRET implicit $v8m2
-  %va = load <vscale x 2 x i64>, ptr %pa, align 64
-  ret <vscale x 2 x i64> %va
-}
-
-define <vscale x 2 x i64>  @vload_nx2i64_align128(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx2i64_align128
-  ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   liveins: $x10
-  ; RV32-NEXT: {{  $}}
-  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 128)
-  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
-  ; RV32-NEXT:   PseudoRET implicit $v8m2
-  ;
-  ; RV64-LABEL: name: vload_nx2i64_align128
-  ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   liveins: $x10
-  ; RV64-NEXT: {{  $}}
-  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 128)
-  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
-  ; RV64-NEXT:   PseudoRET implicit $v8m2
-  %va = load <vscale x 2 x i64>, ptr %pa, align 128
-  ret <vscale x 2 x i64> %va
-}
-
-define <vscale x 2 x i64>  @vload_nx2i64_align256(ptr %pa) {
-  ; RV32-LABEL: name: vload_nx2i64_align256
-  ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   liveins: $x10
-  ; RV32-NEXT: {{  $}}
-  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 256)
-  ; RV32-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
-  ; RV32-NEXT:   PseudoRET implicit $v8m2
-  ;
-  ; RV64-LABEL: name: vload_nx2i64_align256
-  ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   liveins: $x10
-  ; RV64-NEXT: {{  $}}
-  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 256)
-  ; RV64-NEXT:   $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
-  ; RV64-NEXT:   PseudoRET implicit $v8m2
-  %va = load <vscale x 2 x i64>, ptr %pa, align 256
   ret <vscale x 2 x i64> %va
 }
 
