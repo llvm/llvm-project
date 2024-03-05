@@ -217,8 +217,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     ConstantActions.customFor({s64});
   ConstantActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen);
 
+  // TODO: transform illegal vector types into legal vector type
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({s32, sXLen, p0})
+      .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
+      .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
