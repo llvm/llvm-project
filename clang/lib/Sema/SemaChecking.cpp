@@ -5271,6 +5271,11 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
 // returning an ExprError
 bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_any: {
+    if (checkArgCount(*this, TheCall, 1))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     if (checkArgCount(*this, TheCall, 2))
       return true;
