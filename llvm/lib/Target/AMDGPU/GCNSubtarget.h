@@ -675,6 +675,10 @@ public:
     return !hasGFX940Insts() && !hasGFX12_10Insts();
   }
 
+  bool hasInterpInsts() const {
+    return GFX11Insts && !hasGFX12_10Insts();
+  }
+
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const {
     return hasGFX90AInsts() || hasGFX12_10Insts();

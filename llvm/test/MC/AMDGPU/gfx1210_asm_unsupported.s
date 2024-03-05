@@ -1,5 +1,25 @@
 ; RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1210 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1210-ERR --implicit-check-not=error: --strict-whitespace %s
 
+;; VINTERP instructions
+
+v_interp_p10_f32 v0, v1, v2, v3
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p2_f32 v0, v1, v2, v3
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p10_f16_f32 v0, v1, v2, v3
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p2_f16_f32 v0, v1, v2, v3
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p10_rtz_f16_f32 v0, v1, v2, v3
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_interp_p2_rtz_f16_f32 v0, v1, v2, v3
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; Export, S_WAIT_EXPCNT and S_WAIT_EVENT
 
 export mrt0 off, off, off, off
