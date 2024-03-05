@@ -1879,7 +1879,7 @@ void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit,
   // Add calls to unpoison all globals before each return instruction.
   for (auto &BB : GlobalInit)
     if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
-      CallInst::Create(AsanUnpoisonGlobals, "", RI);
+      CallInst::Create(AsanUnpoisonGlobals, "", RI->getIterator());
 }
 
 void ModuleAddressSanitizer::createInitializerPoisonCalls(
