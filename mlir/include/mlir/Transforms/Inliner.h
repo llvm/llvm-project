@@ -67,15 +67,11 @@ private:
 /// that operates bottom up over the Strongly Connected Components(SCCs)
 /// of the CallGraph. This enables a more incremental propagation
 /// of inlining decisions from the leafs to the roots of the callgraph.
-///
-/// Derived implementations may rely on the same algorithm, but override
-/// the provided hooks to tune various algorithm aspects.
 class Inliner {
 public:
   using RunPipelineHelperTy = std::function<LogicalResult(
       Pass &pass, OpPassManager &pipeline, Operation *op)>;
 
-  virtual ~Inliner() {}
   Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
           RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config)
       : op(op), cg(cg), pass(pass), am(am),
