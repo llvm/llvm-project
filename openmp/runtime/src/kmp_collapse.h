@@ -131,14 +131,14 @@ struct bounds_info_t {
 // It's represented in kmp_uint64, but each dimention is calculated in
 // that loop IV type. Also dimentions have to be converted to those types
 // when used in generated code.
-typedef kmp_uint64* kmp_point_t;
+typedef kmp_uint64 *kmp_point_t;
 
 // Array: Number of loop iterations on each nesting level to achieve some point,
 // in expanded space or in original space.
 // OMPTODO: move from using iterations to using offsets (iterations multiplied
 // by steps). For those we need to be careful with the types, as step can be
 // negative, but it'll remove multiplications and divisions in several places.
-typedef kmp_loop_nest_iv_t* kmp_iterations_t;
+typedef kmp_loop_nest_iv_t *kmp_iterations_t;
 
 // Internal struct with additional info:
 template <typename T> struct bounds_info_internalXX_template {
