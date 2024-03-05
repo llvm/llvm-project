@@ -33,23 +33,16 @@
 #include "../../helper_macros.h"
 #include "../../helper_types.h"
 
-#ifndef TEST_HAS_NO_NASTY_STRING
-void test_sfinae_with_nasty_char() {
-  using SpStream = std::basic_ospanstream<nasty_char, nasty_char_traits>;
-
-  // Mode
-  static_assert(std::constructible_from<SpStream, const std::span<nasty_char>, std::ios_base::openmode>);
-  static_assert(!test_convertible<SpStream, std::ios_base::openmode>());
-
-  // Non-mode
-  static_assert(!std::constructible_from<SpStream, const std::span<nasty_char>, const NonMode>);
-  static_assert(!test_convertible<SpStream, const std::span<nasty_char>, const NonMode>());
-}
-#endif // TEST_HAS_NO_NASTY_STRING
-
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
-  using SpStream = std::basic_ospanstream<CharT, TraitsT>;
+  using SpStream =
+#ifndef TEST_HAS_NO_NASTY_STRING
+      std::conditional_t<std::same_as<CharT, nasty_char>,
+                         std::basic_ispanstream<nasty_char, nasty_char_traits>,
+                         std::basic_ispanstream<CharT, TraitsT>>;
+#else
+      std::basic_ispanstream<CharT, TraitsT>;
+#endif
 
   // Mode
   static_assert(std::constructible_from<SpStream, const std::span<CharT>, std::ios_base::openmode>);
@@ -123,7 +116,7 @@ void test() {
 
 int main(int, char**) {
 #ifndef TEST_HAS_NO_NASTY_STRING
-  test_sfinae_with_nasty_char();
+  test_sfinae<nasty_char, nasty_char_traits>();
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
