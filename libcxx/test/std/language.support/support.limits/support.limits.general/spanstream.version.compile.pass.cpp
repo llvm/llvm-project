@@ -11,6 +11,8 @@
 //
 // clang-format off
 
+// UNSUPPORTED: no-localization
+
 // <spanstream>
 
 // Test the feature test macros defined by <spanstream>
