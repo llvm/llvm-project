@@ -621,11 +621,11 @@ class ReleaseWorkflow:
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search(r"/([a-z-]+)\s*:? *(.*)", line)
+            m = re.search(r"/cherry-pick\s*:? *(.*)", line)
             if not m:
                 continue
-            command = m.group(1)
-            args = m.group(2)
+            
+            args = m.group(1)
 
             arg_list = args.split()
             commits = list(map(lambda a: extract_commit_hash(a), arg_list))
