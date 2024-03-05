@@ -60,7 +60,9 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include <optional>
+#include <random>
 
 using namespace llvm;
 
@@ -183,9 +185,9 @@ static cl::opt<bool> ClWithTls(
     cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
-    CSkipHotCode("hwasan-skip-hot-code",
-                 cl::desc("Do not instument hot functions based on FDO."),
-                 cl::Hidden, cl::init(false));
+    CSelectiveInstrumentation("hwasan-selective-instrumentation",
+                              cl::desc("IUse selective instrumentation"),
+                              cl::Hidden, cl::init(false));
 
 static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                         cl::init(0));
@@ -1532,22 +1534,28 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   NumTotalFuncs++;
-  if (CSkipHotCode) {
-    if ((F.getGUID() % MaxRandomRate) < SkipInstRandomRate) {
+  if (CSelectiveInstrumentation) {
+    if (RandomSkipRate.getNumOccurrences()) {
+      std::unique_ptr<RandomNumberGenerator> Rng = F.getParent()->createRNG(F.getName());
+      std::bernoulli_distribution D(RandomSkipRate);
+      if (D(*Rng)) return;
+    } else {
+      if ((F.getGUID() % MaxRandomRate) < SkipInstRandomRate) {
       return;
     }
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    if (PSI && PSI->hasProfileSummary()) {
-      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-      if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
-              ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
-                                                           &F, BFI)
-              : PSI->isFunctionHotInCallGraph(&F, BFI))
-        return;
-    } else {
-      ++NumNoProfileSummaryFuncs;
+      ProfileSummaryInfo *PSI =
+          MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+      if (PSI && PSI->hasProfileSummary()) {
+        auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+        if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
+                ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
+                                                            &F, BFI)
+                : PSI->isFunctionHotInCallGraph(&F, BFI))
+          return;
+      } else {
+        ++NumNoProfileSummaryFuncs;
+      }
     }
   }
   NumInstrumentedFuncs++;
