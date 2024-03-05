@@ -2450,11 +2450,10 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
 
 // Collect dependencies on V recursively. This is used for the cost analysis in
 // `shouldKeepJumpConditionsTogether`.
-static bool
-collectInstructionDeps(SmallPtrSet<const Instruction *, 8> *Deps,
-                       const Value *V,
-                       SmallPtrSet<const Instruction *, 8> *Necessary = nullptr,
-                       unsigned Depth = 0) {
+static bool collectInstructionDeps(
+    SmallMapVector<const Instruction *, bool, 8> *Deps, const Value *V,
+    SmallMapVector<const Instruction *, bool, 8> *Necessary = nullptr,
+    unsigned Depth = 0) {
   // Return false if we have an incomplete count.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return false;
@@ -2471,7 +2470,7 @@ collectInstructionDeps(SmallPtrSet<const Instruction *, 8> *Deps,
   }
 
   // Already added this dep.
-  if (!Deps->insert(I).second)
+  if (!Deps->try_emplace(I, false).second)
     return true;
 
   for (unsigned OpIdx = 0, E = I->getNumOperands(); OpIdx < E; ++OpIdx)
@@ -2486,6 +2485,9 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
     TargetLoweringBase::CondMergingParams Params) const {
   if (I.getNumSuccessors() != 2)
+    return false;
+
+  if (!I.isConditional())
     return false;
 
   if (Params.BaseCost < 0)
@@ -2526,7 +2528,9 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     return false;
 
   // Collect "all" instructions that lhs condition is dependent on.
-  SmallPtrSet<const Instruction *, 8> LhsDeps, RhsDeps;
+  // Use map for stable iteration (to avoid non-determanism of iteration of
+  // SmallPtrSet). The `bool` value is just a dummy.
+  SmallMapVector<const Instruction *, bool, 8> LhsDeps, RhsDeps;
   collectInstructionDeps(&LhsDeps, Lhs);
   // Collect "all" instructions that rhs condition is dependent on AND are
   // dependencies of lhs. This gives us an estimate on which instructions we
@@ -2536,7 +2540,7 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // Add the compare instruction itself unless its a dependency on the LHS.
   if (const auto *RhsI = dyn_cast<Instruction>(Rhs))
     if (!LhsDeps.contains(RhsI))
-      RhsDeps.insert(RhsI);
+      RhsDeps.try_emplace(RhsI, false);
 
   const auto &TLI = DAG.getTargetLoweringInfo();
   const auto &TTI =
@@ -2545,11 +2549,12 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   InstructionCost CostOfIncluding = 0;
   // See if this instruction will need to computed independently of whether RHS
   // is.
-  auto ShouldCountInsn = [&RhsDeps](const Instruction *Ins) {
+  Value *BrCond = I.getCondition();
+  auto ShouldCountInsn = [&RhsDeps, &BrCond](const Instruction *Ins) {
     for (const auto *U : Ins->users()) {
       // If user is independent of RHS calculation we don't need to count it.
       if (auto *UIns = dyn_cast<Instruction>(U))
-        if (!RhsDeps.contains(UIns))
+        if (UIns != BrCond && !RhsDeps.contains(UIns))
           return false;
     }
     return true;
@@ -2564,9 +2569,9 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // instructions.
   for (unsigned PruneIters = 0; PruneIters < MaxPruneIters; ++PruneIters) {
     const Instruction *ToDrop = nullptr;
-    for (const auto *Ins : RhsDeps) {
-      if (!ShouldCountInsn(Ins)) {
-        ToDrop = Ins;
+    for (const auto &InsPair : RhsDeps) {
+      if (!ShouldCountInsn(InsPair.first)) {
+        ToDrop = InsPair.first;
         break;
       }
     }
@@ -2575,13 +2580,13 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     RhsDeps.erase(ToDrop);
   }
 
-  for (const auto *Ins : RhsDeps) {
+  for (const auto &InsPair : RhsDeps) {
     // Finally accumulate latency that we can only attribute to computing the
     // RHS condition. Use latency because we are essentially trying to calculate
     // the cost of the dependency chain.
     // Possible TODO: We could try to estimate ILP and make this more precise.
     CostOfIncluding +=
-        TTI.getInstructionCost(Ins, TargetTransformInfo::TCK_Latency);
+        TTI.getInstructionCost(InsPair.first, TargetTransformInfo::TCK_Latency);
 
     if (CostOfIncluding > CostThresh)
       return false;

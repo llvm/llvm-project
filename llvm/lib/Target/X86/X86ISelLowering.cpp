@@ -78,13 +78,14 @@ static cl::opt<int> ExperimentalPrefInnermostLoopAlignment(
     cl::Hidden);
 
 static cl::opt<int> BrMergingBaseCostThresh(
-    "x86-br-merging-base-cost", cl::init(1),
+    "x86-br-merging-base-cost", cl::init(2),
     cl::desc(
         "Sets the cost threshold for when multiple conditionals will be merged "
         "into one branch versus be split in multiple branches. Merging "
         "conditionals saves branches at the cost of additional instructions. "
         "This value sets the instruction cost limit, below which conditionals "
-        "will be merged, and above which conditionals will be split."),
+        "will be merged, and above which conditionals will be split. Set to -1 "
+        "to never merge branches."),
     cl::Hidden);
 
 static cl::opt<int> BrMergingLikelyBias(
@@ -94,18 +95,20 @@ static cl::opt<int> BrMergingLikelyBias(
              "the conditionals (a == b && c > d), if its known that a == b is "
              "likely, then it is likely that if the conditionals are split "
              "both sides will be executed, so it may be desirable to increase "
-             "the instruction cost threshold."),
+             "the instruction cost threshold. Set to -1 to never merge likely "
+             "branches."),
     cl::Hidden);
 
 static cl::opt<int> BrMergingUnlikelyBias(
-    "x86-br-merging-unlikely-bias", cl::init(1),
+    "x86-br-merging-unlikely-bias", cl::init(-1),
     cl::desc(
         "Decreases 'x86-br-merging-base-cost' in cases that it is unlikely "
         "that all conditionals will be executed. For example for merging "
         "the conditionals (a == b && c > d), if its known that a == b is "
         "unlikely, then it is unlikely that if the conditionals are split "
         "both sides will be executed, so it may be desirable to decrease "
-        "the instruction cost threshold."),
+        "the instruction cost threshold. Set to -1 to never merge unlikely "
+        "branches."),
     cl::Hidden);
 
 static cl::opt<bool> MulConstantOptimization(
@@ -435,6 +438,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(Op, MVT::f64, Expand);
     setOperationAction(Op, MVT::f80, Expand);
     setOperationAction(Op, MVT::f128, Expand);
+  }
+
+  for (auto VT : {MVT::f32, MVT::f64, MVT::f80, MVT::f128}) {
+    setOperationAction(ISD::STRICT_FP_TO_BF16, VT, Expand);
+    setOperationAction(ISD::STRICT_BF16_TO_FP, VT, Expand);
   }
 
   for (MVT VT : {MVT::f32, MVT::f64, MVT::f80, MVT::f128}) {
