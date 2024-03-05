@@ -8446,3 +8446,72 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
+
+def WrapsDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+This attribute can be used with type or variable declarations to denote that
+arithmetic containing these marked components have defined overflow behavior.
+Specifically, the behavior is defined as being consistent with two's complement
+wrap-around. For the purposes of sanitizers or warnings that concern themselves
+with the definedness of integer arithmetic, they will cease to instrument or
+warn about arithmetic that directly involves a "wrapping" component.
+
+For example, ``-fsanitize=signed-integer-overflow`` or ``-Winteger-overflow``
+will not warn about suspicious overflowing arithmetic -- assuming correct usage
+of the wraps attribute.
+
+This example shows some basic usage of ``__attribute__((wraps))`` on a type
+definition when building with ``-fsanitize=signed-integer-overflow``
+
+.. code-block:: c
+
+  typedef int __attribute__((wraps)) wrapping_int;
+
+  void foo() {
+    wrapping_int a = INT_MAX;
+    ++a; // no sanitizer warning
+  }
+
+  int main() { foo(); }
+
+In the following example, we use ``__attribute__((wraps))`` on a variable to
+disable overflow instrumentation for arithmetic expressions it appears in. We
+do so with a popular overflow-checking pattern which we might not want to trip
+sanitizers (like ``-fsanitize=unsigned-integer-overflow``).
+
+.. code-block:: c
+
+  void foo(int offset) {
+    unsigned int A __attribute__((wraps)) = UINT_MAX;
+
+    // check for overflow using a common pattern, however we may accidentally
+    // perform a real overflow thus triggering sanitizers to step in. Since "A"
+    // is "wrapping", we can avoid sanitizer warnings.
+    if (A + offset < A) {
+      // handle overflow manually
+      // ...
+      return;
+    }
+
+    // now, handle non-overflow case ...
+  }
+
+The above example demonstrates some of the power and elegance this attribute
+provides. We can use code patterns we are already familiar with (like ``if (x +
+y < x)``) while gaining control over the overflow behavior on a case-by-case
+basis.
+
+When combined with ``-fwrapv``, this attribute can still be applied as normal
+but has no function apart from annotating types and variables for readers. This
+is because ``-fwrapv`` defines all arithmetic as being "wrapping", rendering
+this attribute's efforts redundant.
+
+When using this attribute without ``-fwrapv`` and without any sanitizers, it
+still has an impact on the definedness of arithmetic expressions containing
+wrapping components. Since the behavior of said expressions is now technically
+defined, the compiler will forgo some eager optimizations that are used on
+expressions containing UB.
+}];
+}
+

@@ -216,6 +216,7 @@
 // CHECK-NEXT: WebAssemblyImportModule (SubjectMatchRule_function)
 // CHECK-NEXT: WebAssemblyImportName (SubjectMatchRule_function)
 // CHECK-NEXT: WorkGroupSizeHint (SubjectMatchRule_function)
+// CHECK-NEXT: Wraps (SubjectMatchRule_variable, SubjectMatchRule_type_alias, SubjectMatchRule_field)
 // CHECK-NEXT: XRayInstrument (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: XRayLogArgs (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: ZeroCallUsedRegs (SubjectMatchRule_function)

@@ -10461,7 +10461,8 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
   // We want to recurse on the RHS as normal unless we're assigning to
   // a bitfield.
   if (FieldDecl *Bitfield = E->getLHS()->getSourceBitField()) {
-    if (AnalyzeBitFieldAssignment(S, Bitfield, E->getRHS(),
+    if (!E->hasWrappingOperand(S.Context) &&
+        AnalyzeBitFieldAssignment(S, Bitfield, E->getRHS(),
                                   E->getOperatorLoc())) {
       // Recurse, ignoring any implicit conversions on the RHS.
       return AnalyzeImplicitConversions(S, E->getRHS()->IgnoreParenImpCasts(),
@@ -10679,11 +10680,37 @@ static bool IsImplicitBoolFloatConversion(Sema &S, Expr *Ex, bool ToBool) {
           FloatCandidateBT && (FloatCandidateBT->isFloatingPoint()));
 }
 
+/// Check to see if the wraps attribute may have been lost through a function
+/// call. For cases where we are unsure, assume not.
+static bool IsWrapsAttrLost(Sema &S, const CallExpr *TheCall,
+                            const FunctionDecl *FD, unsigned i) {
+  // We may not have a FunctionDecl if this CallExpr is associated virtual,
+  // templated or overloaded functions.
+  if (!FD)
+    return false;
+
+  if (i >= TheCall->getNumArgs() || i >= FD->getNumParams())
+    return false;
+
+  const QualType ProvidedArgTy = TheCall->getArg(i)->getType();
+  const QualType PrototypedArgTy = FD->getParamDecl(i)->getType();
+
+  return ProvidedArgTy.hasWrapsAttr() && !PrototypedArgTy.hasWrapsAttr();
+}
+
 static void CheckImplicitArgumentConversions(Sema &S, CallExpr *TheCall,
                                              SourceLocation CC) {
   unsigned NumArgs = TheCall->getNumArgs();
+  const FunctionDecl *FD = TheCall->getDirectCallee();
+
   for (unsigned i = 0; i < NumArgs; ++i) {
     Expr *CurrA = TheCall->getArg(i);
+
+    if (IsWrapsAttrLost(S, TheCall, FD, i))
+      S.Diag(CurrA->getSourceRange().getBegin(),
+             diag::warn_wraps_attr_maybe_lost)
+          << FD->getParamDecl(i)->getType();
+
     if (!IsImplicitBoolFloatConversion(S, CurrA, true))
       continue;
 
@@ -11182,7 +11209,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       Context, E, isConstantEvaluatedContext(), /*Approximate=*/true);
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(Context, Target);
 
-  if (LikelySourceRange.Width > TargetRange.Width) {
+  if (LikelySourceRange.Width > TargetRange.Width && !T.hasWrapsAttr()) {
     // If the source is a constant, use a default-on diagnostic.
     // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
@@ -11231,7 +11258,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (TargetRange.Width == LikelySourceRange.Width &&
       !TargetRange.NonNegative && LikelySourceRange.NonNegative &&
-      Source->isSignedIntegerType()) {
+      Source->isSignedIntegerType() && !T.hasWrapsAttr()) {
     // Warn when doing a signed to signed conversion, warn if the positive
     // source value is exactly the width of the target type, which will
     // cause a negative value to be stored.
