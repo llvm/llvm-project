@@ -1113,6 +1113,47 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// rcp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T rcp(T x)
+/// \brief Calculates a fast, approximate, per-component reciprocal ie 1 / \a x.
+/// \param x The specified input value.
+///
+/// The return value is the reciprocal of the \a x parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half rcp(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half2 rcp(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half3 rcp(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half4 rcp(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float rcp(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float2 rcp(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float3 rcp(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float4 rcp(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double rcp(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double2 rcp(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double3 rcp(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double4 rcp(double4);
+
+//===----------------------------------------------------------------------===//
 // round builtins
 //===----------------------------------------------------------------------===//
 
