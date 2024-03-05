@@ -22,7 +22,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#define DEBUG_TYPE "arm-neon-vector-lowering"
+#define DEBUG_TYPE "arm-neon-lower-vector"
 
 using namespace mlir;
 using namespace mlir::arm_neon;
