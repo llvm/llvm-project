@@ -411,7 +411,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
 static StringRef filename(StringRef Path, bool UseBackSlash) {
   llvm::sys::path::Style PathStyle =
       UseBackSlash ? llvm::sys::path::Style::windows_backslash
-             : llvm::sys::path::Style::native;
+                   : llvm::sys::path::Style::native;
   StringRef FileName = llvm::sys::path::filename(Path, PathStyle);
 
   // In case this file use \r\n as newline.
