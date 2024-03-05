@@ -3027,21 +3027,21 @@ The checker maintains information about the C stream objects (``FILE *``) and
 can detect error conditions related to use of streams. The following conditions
 are detected:
 
-* The ``FILE *`` pointer passed to the function is NULL. (At ``fflush``
-  NULL is allowed.)
+* The ``FILE *`` pointer passed to the function is NULL (the single exception is
+  ``fflush`` where NULL is allowed).
 * Use of stream after close.
 * Opened stream is not closed.
 * Read from a stream after end-of-file. (This is not a fatal error but reported
   by the checker. Stream remains in EOF state and the read operation fails.)
 * Use of stream when the file position is indeterminate after a previous failed
-  operation. Some functions are allowed in this state.
+  operation. Some functions (like ``ferror``, ``clearerr``, ``fseek``) are
+  allowed in this state.
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
-The checker is not capable of maintaining a relation between integer file
-descriptors and ``FILE *`` pointers. Operations on standard streams like
-``stdin`` are not treated specially and are therefore often not recognized
-(because these streams are usually not opened explicitly by the program, and
-are global variables).
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
+treated specially and are therefore often not recognized (because these streams
+are usually not opened explicitly by the program, and are global variables).
 
 .. code-block:: c
 
