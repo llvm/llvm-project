@@ -2892,8 +2892,8 @@ class Base_MTBUF_Real_gfx6_gfx7_gfx10_gfx11<MTBUF_Pseudo ps, int ef,
   let Inst{63-56} = !if(ps.has_soffset, soffset, ?);
 }
 
-class Base_MTBUF_Real_gfx11<bits<4> op, MTBUF_Pseudo ps,
-                            string real_name = ps.Mnemonic> :
+class MTBUF_Real_gfx11<bits<4> op, MTBUF_Pseudo ps,
+                       string real_name = ps.Mnemonic> :
   Base_MTBUF_Real_gfx6_gfx7_gfx10_gfx11<ps, SIEncodingFamily.GFX11, real_name> {
   let Inst{12}    = !if(ps.has_slc, cpol{CPolBit.SLC}, ?);
   let Inst{13}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlc_value);
@@ -2921,13 +2921,13 @@ class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
 
 multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<bits<4> op, string real_name> {
   def _BOTHEN_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
+    MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN"), real_name>;
   def _IDXEN_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN"), real_name>;
+    MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN"), real_name>;
   def _OFFEN_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN"), real_name>;
+    MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN"), real_name>;
   def _OFFSET_gfx11 :
-    Base_MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET"), real_name>;
+    MTBUF_Real_gfx11<op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET"), real_name>;
 
   def _BOTHEN_gfx12 :
     VBUFFER_MTBUF_Real_gfx12<op, !cast<MTBUF_Pseudo>(NAME#"_VBUFFER_BOTHEN"), real_name>;
