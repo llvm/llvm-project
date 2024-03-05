@@ -1531,8 +1531,19 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_MatrixCast:
     llvm_unreachable("NYI");
-  case CK_VectorSplat:
-    llvm_unreachable("NYI");
+  case CK_VectorSplat: {
+    // Create a vector object and fill all elements with the same scalar value.
+    assert(DestTy->isVectorType() && "CK_VectorSplat to non-vector type");
+    mlir::Value Value = Visit(E);
+    SmallVector<mlir::Value, 16> Elements;
+    auto VecType = CGF.getCIRType(DestTy).dyn_cast<mlir::cir::VectorType>();
+    auto NumElements = VecType.getSize();
+    for (uint64_t Index = 0; Index < NumElements; ++Index) {
+      Elements.push_back(Value);
+    }
+    return CGF.getBuilder().create<mlir::cir::VecCreateOp>(
+        CGF.getLoc(E->getSourceRange()), VecType, Elements);
+  }
   case CK_FixedPointCast:
     llvm_unreachable("NYI");
   case CK_FixedPointToBoolean:
@@ -1660,13 +1671,23 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     assert(!UnimplementedFeature::scalableVectors() &&
            "NYI: scalable vector init");
     assert(!UnimplementedFeature::vectorConstants() && "NYI: vector constants");
+    auto VectorType =
+        CGF.getCIRType(E->getType()).dyn_cast<mlir::cir::VectorType>();
     SmallVector<mlir::Value, 16> Elements;
     for (Expr *init : E->inits()) {
       Elements.push_back(Visit(init));
     }
+    // Zero-initialize any remaining values.
+    if (NumInitElements < VectorType.getSize()) {
+      mlir::Value ZeroValue = CGF.getBuilder().create<mlir::cir::ConstantOp>(
+          CGF.getLoc(E->getSourceRange()), VectorType.getEltType(),
+          CGF.getBuilder().getZeroInitAttr(VectorType.getEltType()));
+      for (uint64_t i = NumInitElements; i < VectorType.getSize(); ++i) {
+        Elements.push_back(ZeroValue);
+      }
+    }
     return CGF.getBuilder().create<mlir::cir::VecCreateOp>(
-        CGF.getLoc(E->getSourceRange()), CGF.getCIRType(E->getType()),
-        Elements);
+        CGF.getLoc(E->getSourceRange()), VectorType, Elements);
   }
 
   if (NumInitElements == 0) {

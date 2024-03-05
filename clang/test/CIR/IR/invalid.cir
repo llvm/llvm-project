@@ -141,7 +141,7 @@ cir.func @cast3(%p: !cir.ptr<!u32i>) {
 
 !u32i = !cir.int<u, 32>
 cir.func @cast4(%p: !cir.ptr<!u32i>) {
-  %2 = cir.cast(bitcast, %p : !cir.ptr<!u32i>), !u32i // expected-error {{requires !cir.ptr type for source and result}}
+  %2 = cir.cast(bitcast, %p : !cir.ptr<!u32i>), !u32i // expected-error {{requires !cir.ptr or !cir.vector type for source and result}}
   cir.return
 }
 

@@ -428,9 +428,12 @@ LogicalResult CastOp::verify() {
     return success();
   }
   case cir::CastKind::bitcast: {
-    if (!srcType.dyn_cast<mlir::cir::PointerType>() ||
-        !resType.dyn_cast<mlir::cir::PointerType>())
-      return emitOpError() << "requires !cir.ptr type for source and result";
+    if ((!srcType.isa<mlir::cir::PointerType>() ||
+         !resType.isa<mlir::cir::PointerType>()) &&
+        (!srcType.isa<mlir::cir::VectorType>() ||
+         !resType.isa<mlir::cir::VectorType>()))
+      return emitOpError()
+             << "requires !cir.ptr or !cir.vector type for source and result";
     return success();
   }
   case cir::CastKind::floating: {
