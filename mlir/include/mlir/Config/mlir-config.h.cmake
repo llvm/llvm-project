@@ -33,4 +33,8 @@
    and targets. */
 #cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS
 
+/* If set, enables ROCm-related features in ROCM-related transforms, pipelines,
+   and targets. */
+#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS
+
 #endif
