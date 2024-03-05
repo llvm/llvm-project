@@ -56,52 +56,71 @@ Root Signature Grammar
 
     RootFlags : 'RootFlags' '(' (RootFlag(|RootFlag)?)? ')'
 
-    RootFlag : 'ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT' | 'DENY_VERTEX_SHADER_ROOT_ACCESS'
+    RootFlag : 'ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT' | 
+               'DENY_VERTEX_SHADER_ROOT_ACCESS'
 
     RootConstants : 'RootConstants' '(' 'num32BitConstants' '=' NUMBER ',' 
-           bReg (',' 'space' '=' NUMBER)? (',' 'visibility' '=' SHADER_VISIBILITY)? ')'
+           bReg (',' 'space' '=' NUMBER)? 
+           (',' 'visibility' '=' SHADER_VISIBILITY)? ')'
 
     RootCBV : 'CBV' '(' bReg (',' 'space' '=' NUMBER)? 
-          (',' 'visibility' '=' SHADER_VISIBILITY)? (',' 'flags' '=' DATA_FLAGS)? ')'
+          (',' 'visibility' '=' SHADER_VISIBILITY)? 
+          (',' 'flags' '=' DATA_FLAGS)? ')'
 
     RootSRV : 'SRV' '(' tReg (',' 'space' '=' NUMBER)? 
-          (',' 'visibility' '=' SHADER_VISIBILITY)? (',' 'flags' '=' DATA_FLAGS)? ')'
+          (',' 'visibility' '=' SHADER_VISIBILITY)? 
+          (',' 'flags' '=' DATA_FLAGS)? ')'
 
     RootUAV : 'UAV' '(' uReg (',' 'space' '=' NUMBER)? 
-          (',' 'visibility' '=' SHADER_VISIBILITY)? (',' 'flags' '=' DATA_FLAGS)? ')'
+          (',' 'visibility' '=' SHADER_VISIBILITY)? 
+          (',' 'flags' '=' DATA_FLAGS)? ')'
 
     DescriptorTable : 'DescriptorTable' '(' (DTClause(|DTClause)?)? 
           (',' 'visibility' '=' SHADER_VISIBILITY)? ')'
 
     DTClause : CBV | SRV | UAV | Sampler
 
-    CBV : 'CBV' '(' bReg (',' 'numDescriptors' '=' NUMBER)? (',' 'space' '=' NUMBER)? 
-          (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? (',' 'flags' '=' DATA_FLAGS)? ')'
+    CBV : 'CBV' '(' bReg (',' 'numDescriptors' '=' NUMBER)? 
+          (',' 'space' '=' NUMBER)? 
+          (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? 
+          (',' 'flags' '=' DATA_FLAGS)? ')'
 
-    SRV : 'SRV' '(' tReg (',' 'numDescriptors' '=' NUMBER)? (',' 'space' '=' NUMBER)? 
-          (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? (',' 'flags' '=' DATA_FLAGS)? ')'
+    SRV : 'SRV' '(' tReg (',' 'numDescriptors' '=' NUMBER)? 
+    (',' 'space' '=' NUMBER)? 
+          (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? 
+          (',' 'flags' '=' DATA_FLAGS)? ')'
 
-    UAV : 'UAV' '(' uReg (',' 'numDescriptors' '=' NUMBER)? (',' 'space' '=' NUMBER)? 
-          (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? (',' 'flags' '=' DATA_FLAGS)? ')'
+    UAV : 'UAV' '(' uReg (',' 'numDescriptors' '=' NUMBER)? 
+          (',' 'space' '=' NUMBER)? 
+          (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? 
+          (',' 'flags' '=' DATA_FLAGS)? ')'
 
-    Sampler : 'Sampler' '(' sReg (',' 'numDescriptors' '=' NUMBER)? (',' 'space' '=' NUMBER)? 
+    Sampler : 'Sampler' '(' sReg (',' 'numDescriptors' '=' NUMBER)? 
+          (',' 'space' '=' NUMBER)? 
           (',' 'offset' '=' DESCRIPTOR_RANGE_OFFSET)? (',' 'flags' '=' NUMBER)? ')'
 
 
     SHADER_VISIBILITY : 'SHADER_VISIBILITY_ALL' | 'SHADER_VISIBILITY_VERTEX' | 
-                        'SHADER_VISIBILITY_HULL' | 'SHADER_VISIBILITY_DOMAIN' | 
-                        'SHADER_VISIBILITY_GEOMETRY' | 'SHADER_VISIBILITY_PIXEL' | 
-                        'SHADER_VISIBILITY_AMPLIFICATION' | 'SHADER_VISIBILITY_MESH'
+                        'SHADER_VISIBILITY_HULL' | 
+                        'SHADER_VISIBILITY_DOMAIN' | 
+                        'SHADER_VISIBILITY_GEOMETRY' | 
+                        'SHADER_VISIBILITY_PIXEL' | 
+                        'SHADER_VISIBILITY_AMPLIFICATION' | 
+                        'SHADER_VISIBILITY_MESH'
 
     DATA_FLAGS : 'DATA_STATIC_WHILE_SET_AT_EXECUTE' | 'DATA_VOLATILE'
 
     DESCRIPTOR_RANGE_OFFSET : 'DESCRIPTOR_RANGE_OFFSET_APPEND' | NUMBER
 
     StaticSampler : 'StaticSampler' '(' sReg (',' 'filter' '=' FILTER)? 
-             (',' 'addressU' '=' TEXTURE_ADDRESS)? (',' 'addressV' '=' TEXTURE_ADDRESS)? 
-             (',' 'addressW' '=' TEXTURE_ADDRESS)? (',' 'mipLODBias' '=' NUMBER)? 
-             (',' 'maxAnisotropy' '=' NUMBER)? (',' 'comparisonFunc' '=' COMPARISON_FUNC)? 
-             (',' 'borderColor' '=' STATIC_BORDER_COLOR)? (',' 'minLOD' '=' NUMBER)? 
+             (',' 'addressU' '=' TEXTURE_ADDRESS)? 
+             (',' 'addressV' '=' TEXTURE_ADDRESS)? 
+             (',' 'addressW' '=' TEXTURE_ADDRESS)? 
+             (',' 'mipLODBias' '=' NUMBER)? 
+             (',' 'maxAnisotropy' '=' NUMBER)? 
+             (',' 'comparisonFunc' '=' COMPARISON_FUNC)? 
+             (',' 'borderColor' '=' STATIC_BORDER_COLOR)? 
+             (',' 'minLOD' '=' NUMBER)? 
              (',' 'maxLOD' '=' NUMBER)? (',' 'space' '=' NUMBER)? 
              (',' 'visibility' '=' SHADER_VISIBILITY)? ')'
 
@@ -258,16 +277,19 @@ HLSLRootSignatureAttr.
 For case compile to a standalone root signature blob, the global variable will 
 be saved in the ASTContext.
 
-The global variable in AST will have a struct type that represents the root signature
-layout and a initializer that contains the values like space and 
+The global variable in AST will have a struct type that represents the root 
+signature layout and a initializer that contains the values like space and 
 numDescriptors of the root signature.
 
-In clang code generation, the global variable in AST will be translated into a global 
-variable with cosntant initializer in LLVM IR. 
+In clang code generation, the global variable in AST will be translated into 
+a global variable with constant initializer in LLVM IR. 
 
 CGHLSLRuntime will generate metadata to link the global variable as root 
 signature for given entry function or just nullptr for the standalone root 
 signature blob case. 
 
-In LLVM DirectX backend, the global variable will be serialized and save into the root
-signature part of dx container when emit DXIL.
+In LLVM DirectX backend, the global variable will be serialized and save into
+ the root signature part of dx container when emit DXIL.
+
+In DXIL validation, the root signature part will be deserialized and check if 
+the resource binding in the root signature exists in the resource table.
