@@ -43,7 +43,8 @@ lldb::addr_t ABIAArch64::FixCodeAddress(lldb::addr_t pc) {
         process_sp->GetHighmemCodeAddressMask() != LLDB_INVALID_ADDRESS_MASK)
       mask = process_sp->GetHighmemCodeAddressMask();
 
-    return FixAddress(pc, mask);
+    if (mask != LLDB_INVALID_ADDRESS_MASK)
+      return FixAddress(pc, mask);
   }
   return pc;
 }
@@ -58,7 +59,8 @@ lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
     if (pc & pac_sign_extension &&
         process_sp->GetHighmemDataAddressMask() != LLDB_INVALID_ADDRESS_MASK)
       mask = process_sp->GetHighmemDataAddressMask();
-    return FixAddress(pc, mask);
+    if (mask != LLDB_INVALID_ADDRESS_MASK)
+      return FixAddress(pc, mask);
   }
   return pc;
 }
