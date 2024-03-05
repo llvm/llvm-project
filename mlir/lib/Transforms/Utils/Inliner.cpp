@@ -565,16 +565,15 @@ Inliner::Impl::optimizeCallable(CallGraphNode *node,
   Operation *callable = node->getCallableRegion()->getParentOp();
   StringRef opName = callable->getName().getStringRef();
   auto pipelineIt = pipelines.find(opName);
-  const auto &preInlineCallableOptPipeline =
-      inliner.config.getPreInlineCallableOptPipeline();
+  const auto &defaultPipeline = inliner.config.getDefaultPipeline();
   if (pipelineIt == pipelines.end()) {
     // If a pipeline didn't exist, use the generic pipeline if possible.
-    if (!preInlineCallableOptPipeline)
+    if (!defaultPipeline)
       return success();
 
-    OpPassManager pm(opName);
-    preInlineCallableOptPipeline(pm);
-    pipelineIt = pipelines.try_emplace(opName, std::move(pm)).first;
+    OpPassManager defaultPM(opName);
+    defaultPipeline(defaultPM);
+    pipelineIt = pipelines.try_emplace(opName, std::move(defaultPM)).first;
   }
   return inliner.runPipelineHelper(inliner.pass, pipelineIt->second, callable);
 }

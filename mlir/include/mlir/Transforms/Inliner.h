@@ -26,24 +26,22 @@ class Operation;
 
 class InlinerConfig {
 public:
-  using PreInlineCallableOptPipelineTy = std::function<void(OpPassManager &)>;
+  using DefaultPipelineTy = std::function<void(OpPassManager &)>;
   using OpPipelinesTy = llvm::StringMap<OpPassManager>;
 
   InlinerConfig() = default;
-  InlinerConfig(PreInlineCallableOptPipelineTy preInlineCallableOptPipeline,
+  InlinerConfig(DefaultPipelineTy defaultPipeline,
                 unsigned maxInliningIterations)
-      : preInlineCallableOptPipeline(std::move(preInlineCallableOptPipeline)),
+      : defaultPipeline(std::move(defaultPipeline)),
         maxInliningIterations(maxInliningIterations) {}
 
-  const PreInlineCallableOptPipelineTy &
-  getPreInlineCallableOptPipeline() const {
-    return preInlineCallableOptPipeline;
+  const DefaultPipelineTy &getDefaultPipeline() const {
+    return defaultPipeline;
   }
   const OpPipelinesTy &getOpPipelines() const { return opPipelines; }
   unsigned getMaxInliningIterations() const { return maxInliningIterations; }
-  void
-  setPreInlineCallableOptPipeline(PreInlineCallableOptPipelineTy pipeline) {
-    preInlineCallableOptPipeline = std::move(pipeline);
+  void setDefaultPipeline(DefaultPipelineTy pipeline) {
+    defaultPipeline = std::move(pipeline);
   }
   void setOpPipelines(OpPipelinesTy pipelines) {
     opPipelines = std::move(pipelines);
@@ -52,11 +50,13 @@ public:
 
 private:
   /// An optional function that constructs an optimization pipeline for
-  /// a given operation.
-  PreInlineCallableOptPipelineTy preInlineCallableOptPipeline;
+  /// a given operation. This optimization pipeline is applied
+  /// only to those callable operations that do not have dedicated
+  /// optimization pipeline in opPipelines (based on the operation name).
+  DefaultPipelineTy defaultPipeline;
   /// A map of operation names to pass pipelines to use when optimizing
   /// callable operations of these types. This provides a specialized pipeline
-  /// instead of the one produced by preInlineCallableOptPipeline.
+  /// instead of the one produced by defaultPipeline.
   OpPipelinesTy opPipelines;
   /// For SCC-based inlining algorithms, specifies maximum number of iterations
   /// when inlining within an SCC.

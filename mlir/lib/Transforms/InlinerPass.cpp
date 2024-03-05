@@ -40,9 +40,8 @@ class InlinerPass : public impl::InlinerBase<InlinerPass> {
 public:
   InlinerPass();
   InlinerPass(const InlinerPass &) = default;
-  InlinerPass(
-      std::function<void(OpPassManager &)> preInlineCallableOptPipeline);
-  InlinerPass(std::function<void(OpPassManager &)> preInlineCallableOptPipeline,
+  InlinerPass(std::function<void(OpPassManager &)> defaultPipeline);
+  InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
               llvm::StringMap<OpPassManager> opPipelines);
   void runOnOperation() override;
 
@@ -73,14 +72,13 @@ private:
 InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
 
 InlinerPass::InlinerPass(
-    std::function<void(OpPassManager &)> preInlineCallableOptPipelineArg)
-    : InlinerPass(std::move(preInlineCallableOptPipelineArg),
+    std::function<void(OpPassManager &)> defaultPipelineArg)
+    : InlinerPass(std::move(defaultPipelineArg),
                   llvm::StringMap<OpPassManager>{}) {}
 
-InlinerPass::InlinerPass(
-    std::function<void(OpPassManager &)> preInlineCallableOptPipeline,
-    llvm::StringMap<OpPassManager> opPipelines)
-    : config(std::move(preInlineCallableOptPipeline), maxInliningIterations) {
+InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
+                         llvm::StringMap<OpPassManager> opPipelines)
+    : config(std::move(defaultPipeline), maxInliningIterations) {
   if (opPipelines.empty())
     return;
 
@@ -120,14 +118,13 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
   // optimization pipeline in opPipelineList to use the option string.
   // TODO: Use a generic pass manager for the pre-inline pipeline, and remove
   // this.
-  if (!preInlineCallableOptPipelineStr.empty()) {
-    std::string preInlineCallableOptPipelineCopy =
-        preInlineCallableOptPipelineStr;
-    config.setPreInlineCallableOptPipeline([=](OpPassManager &pm) {
-      (void)parsePassPipeline(preInlineCallableOptPipelineCopy, pm);
+  if (!defaultPipelineStr.empty()) {
+    std::string defaultPipelineCopy = defaultPipelineStr;
+    config.setDefaultPipeline([=](OpPassManager &pm) {
+      (void)parsePassPipeline(defaultPipelineCopy, pm);
     });
-  } else if (preInlineCallableOptPipelineStr.getNumOccurrences()) {
-    config.setPreInlineCallableOptPipeline(nullptr);
+  } else if (defaultPipelineStr.getNumOccurrences()) {
+    config.setDefaultPipeline(nullptr);
   }
 
   // Initialize the op specific pass pipelines.
@@ -152,7 +149,7 @@ mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
 }
 std::unique_ptr<Pass> mlir::createInlinerPass(
     llvm::StringMap<OpPassManager> opPipelines,
-    std::function<void(OpPassManager &)> preInlineCallableOptPipelineBuilder) {
-  return std::make_unique<InlinerPass>(
-      std::move(preInlineCallableOptPipelineBuilder), std::move(opPipelines));
+    std::function<void(OpPassManager &)> defaultPipelineBuilder) {
+  return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
+                                       std::move(opPipelines));
 }
