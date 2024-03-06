@@ -63,7 +63,7 @@ def EXP          : EXP_Pseudo<0, 0>;
 def EXP_DONE     : EXP_Pseudo<0, 1>;
 def EXP_ROW      : EXP_Pseudo<1, 0>;
 def EXP_ROW_DONE : EXP_Pseudo<1, 1>;
-} // let SubtargetPredicate = HasExpOrExportInsts.
+} // let SubtargetPredicate = HasExpOrExportInsts
 
 //===----------------------------------------------------------------------===//
 // SI, VI, GFX10.

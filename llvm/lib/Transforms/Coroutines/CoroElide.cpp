@@ -141,8 +141,9 @@ static std::unique_ptr<raw_fd_ostream> getOrCreateLogFile() {
 void Lowerer::elideHeapAllocations(Function *F, uint64_t FrameSize,
                                    Align FrameAlign, AAResults &AA) {
   LLVMContext &C = F->getContext();
-  auto *InsertPt =
-      getFirstNonAllocaInTheEntryBlock(CoroIds.front()->getFunction());
+  BasicBlock::iterator InsertPt =
+      getFirstNonAllocaInTheEntryBlock(CoroIds.front()->getFunction())
+          ->getIterator();
 
   // Replacing llvm.coro.alloc with false will suppress dynamic
   // allocation as it is expected for the frontend to generate the code that

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX12
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX12
 
 # GFX12: export dual_src_blend0 v4, v3, v2, v1   ; encoding: [0x5f,0x01,0x00,0xf8,0x04,0x03,0x02,0x01]
 0x5f,0x01,0x00,0xf8,0x04,0x03,0x02,0x01

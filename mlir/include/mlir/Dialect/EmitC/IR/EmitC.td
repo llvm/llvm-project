@@ -389,17 +389,17 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
 
     As the operation is to be emitted as a C expression, the operations within
     its body must form a single Def-Use tree of emitc ops whose result is
-    yielded by a terminating `yield`.
+    yielded by a terminating `emitc.yield`.
 
     Example:
 
     ```mlir
-    %r = emitc.expression : () -> i32 {
+    %r = emitc.expression : i32 {
       %0 = emitc.add %a, %b : (i32, i32) -> i32
-      %1 = emitc.call "foo"(%0) : () -> i32
+      %1 = emitc.call_opaque "foo"(%0) : (i32) -> i32
       %2 = emitc.add %c, %d : (i32, i32) -> i32
       %3 = emitc.mul %1, %2 : (i32, i32) -> i32
-      yield %3
+      emitc.yield %3 : i32
     }
     ```
 
@@ -409,9 +409,9 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
     int32_t v7 = foo(v1 + v2) * (v3 + v4);
     ```
 
-    The operations allowed within expression body are emitc.add, emitc.apply,
-    emitc.call, emitc.cast, emitc.cmp, emitc.div, emitc.mul, emitc.rem and
-    emitc.sub.
+    The operations allowed within expression body are `emitc.add`,
+    `emitc.apply`, `emitc.call_opaque`, `emitc.cast`, `emitc.cmp`, `emitc.div`,
+    `emitc.mul`, `emitc.rem`, and `emitc.sub`.
 
     When specified, the optional `do_not_inline` indicates that the expression is
     to be emitted as seen above, i.e. as the rhs of an EmitC SSA value

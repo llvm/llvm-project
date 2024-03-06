@@ -222,8 +222,11 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
-      GPRCS2Size += 4;
-      break;
+      if (STI.splitFramePushPop(MF)) {
+        GPRCS2Size += 4;
+        break;
+      }
+      [[fallthrough]];
     case ARM::LR:
       if (HasFrameRecordArea) {
         FRSize += 4;
@@ -358,6 +361,14 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       Register Reg = I.getReg();
       int FI = I.getFrameIdx();
       switch (Reg) {
+      case ARM::R8:
+      case ARM::R9:
+      case ARM::R10:
+      case ARM::R11:
+      case ARM::R12:
+        if (STI.splitFramePushPop(MF))
+          break;
+        [[fallthrough]];
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -601,11 +612,11 @@ bool Thumb1FrameLowering::needPopSpecialFixUp(const MachineFunction &MF) const {
 
 static void findTemporariesForLR(const BitVector &GPRsNoLRSP,
                                  const BitVector &PopFriendly,
-                                 const LivePhysRegs &UsedRegs, unsigned &PopReg,
+                                 const LiveRegUnits &UsedRegs, unsigned &PopReg,
                                  unsigned &TmpReg, MachineRegisterInfo &MRI) {
   PopReg = TmpReg = 0;
   for (auto Reg : GPRsNoLRSP.set_bits()) {
-    if (UsedRegs.available(MRI, Reg)) {
+    if (UsedRegs.available(Reg)) {
       // Remember the first pop-friendly register and exit.
       if (PopFriendly.test(Reg)) {
         PopReg = Reg;
@@ -673,7 +684,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   // Look for a temporary register to use.
   // First, compute the liveness information.
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  LivePhysRegs UsedRegs(TRI);
+  LiveRegUnits UsedRegs(TRI);
   UsedRegs.addLiveOuts(MBB);
   // The semantic of pristines changed recently and now,
   // the callee-saved registers that are touched in the function
