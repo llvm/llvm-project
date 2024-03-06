@@ -225,7 +225,11 @@ void dumpICFGNode(int u, ordered_json &jPath) {
 
     // FIXME: compile_commands
     // 中一个文件可能对应多条编译命令，所以这里可能有多个AST
-    requireTrue(ASTs.size() == 1, "Multiple ASTs for one file!");
+    // TODO: 想办法记录 function 用的是哪一条命令，然后只用这一条生成的
+    requireTrue(ASTs.size() != 0, "No AST for file");
+    if (ASTs.size() > 1) {
+        llvm::errs() << "Warning: multiple ASTs for file " << loc.file << "\n";
+    }
     std::unique_ptr<ASTUnit> AST = std::move(ASTs[0]);
 
     fif functionsInFile;
