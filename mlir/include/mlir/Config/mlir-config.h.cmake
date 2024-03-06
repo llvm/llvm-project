@@ -8,6 +8,13 @@
 
 /* This file enumerates variables from the MLIR configuration so that they
    can be in exported headers and won't override package specific directives.
+   Defining the variables here is preferable over specifying them in CMake files
+   via `target_compile_definitions` because it is easier to ensure that they are
+   defined consistently across all targets: They are guaranteed to be 0/1
+   variables thanks to #cmakedefine01, so we can test with `#if` and find
+   missing definitions or includes with `-Wundef`. With `#ifdef`, these mistakes
+   can go unnoticed.
+
    This is a C header that can be included in the mlir-c headers. */
 
 #ifndef MLIR_CONFIG_H
