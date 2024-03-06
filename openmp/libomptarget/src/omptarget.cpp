@@ -297,10 +297,6 @@ static int initLibrary(DeviceTy &Device) {
   static BoolEnvar FSTEnvVar = BoolEnvar("OMPX_FORCE_SYNC_REGIONS", false);
   Device.ForceSynchronousTargetRegions = FSTEnvVar.get();
 
-  static BoolEnvar OMPX_EagerMaps =
-      BoolEnvar("OMPX_EAGER_ZERO_COPY_MAPS", false);
-  Device.EagerZeroCopyMaps = OMPX_EagerMaps.get();
-
   return OFFLOAD_SUCCESS;
 }
 

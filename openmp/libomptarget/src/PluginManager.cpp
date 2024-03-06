@@ -139,9 +139,6 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
   // The following properties must have the same value for all devices.
   // They are surfaced per-device because the related properties
   // are computed as such in the plugins.
-  bool EagerMapsRequested = false;
-  bool IsAPU = false;
-  bool SupportsUnifiedMemory = false;
   for (int32_t PDevI = 0, UserDevId = DeviceOffset; PDevI < NumPD; PDevI++) {
     auto Device = std::make_unique<DeviceTy>(this, UserDevId, PDevI);
     if (auto Err = Device->init()) {
@@ -150,23 +147,24 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
       continue;
     }
     UseAutoZeroCopy = UseAutoZeroCopy && Device->useAutoZeroCopy();
-    SupportsUnifiedMemory =
-        SupportsUnifiedMemory && Device->supportsUnifiedMemory();
 
     ExclusiveDevicesAccessor->push_back(std::move(Device));
     ++NumberOfUserDevices;
     ++UserDevId;
   }
 
-  // IsAPU and EagerMapsRequested are properties associated
-  // with devices but they must be the same for all devices.
-  // We do not mix APUs with discrete GPUs and eager maps
-  // is set by an host environment variable.
+  // IsAPU, EagerMapsRequested and SupportsUnifiedMemory are properties
+  // associated with devices but they must be the same for all devices.
+  // We do not mix APUs with discrete GPUs. Eager maps is set by a host
+  // environment variable.
+  bool IsAPU = false;
+  bool SupportsUnifiedMemory = false;
   if (ExclusiveDevicesAccessor->size() > 0) {
     auto &Device = *(*ExclusiveDevicesAccessor)[0];
     IsAPU = Device.checkIfAPU();
-    EagerMapsRequested = Device.EagerZeroCopyMaps;
+    SupportsUnifiedMemory = Device.supportsUnifiedMemory();
   }
+  bool EagerMapsRequested = BoolEnvar("OMPX_EAGER_ZERO_COPY_MAPS", false).get();
 
   // Auto Zero-Copy can only be currently triggered when the system is an
   // homogeneous APU architecture without attached discrete GPUs.
@@ -185,7 +183,6 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
   }
 
   // sanity checks for zero-copy depend on specific devices: request it here
-  // TODO: check if there are no devices and bail if so.
   if ((ExclusiveDevicesAccessor->size() > 0) &&
       ((PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
        (PM.getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {

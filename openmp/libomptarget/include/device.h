@@ -51,12 +51,6 @@ struct DeviceTy {
   /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
   bool ForceSynchronousTargetRegions = false;
 
-  /// Flag that indicates whether the user requested eager zero-copy maps
-  /// to execute their application. Even if true, this is only valid on certain
-  /// architectures and configurations, which is checked upon device
-  /// initialization.
-  bool EagerZeroCopyMaps = false;
-
   DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;

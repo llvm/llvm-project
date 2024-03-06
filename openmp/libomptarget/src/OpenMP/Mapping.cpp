@@ -280,7 +280,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // If we are here, it means that we are either in auto zero-copy or USM.
       // Enable GPU page table prefaulting if selected by the user. This feature
       // is only enabled for APUs.
-      if (Device.EagerZeroCopyMaps) {
+      if (PM->getRequirements() & OMPX_REQ_EAGER_ZERO_COPY_MAPS) {
         Device.RTL->prepopulate_page_table(Device.DeviceID, HstPtrBegin, Size);
         INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
              "Prefaulted " DPxMOD " Size=%" PRId64 " on GPU page table\n",
