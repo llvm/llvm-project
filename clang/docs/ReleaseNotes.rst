@@ -225,7 +225,7 @@ Bug Fixes in This Version
   Fixes (#GH64356) (#GH79518).
 
 - Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
-  Fixes (GH#66114).
+  Fixes (#GH66114).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
