@@ -1,4 +1,4 @@
-//===- RISCVBaseInfoTest.cpp - RISCVBaseInfo unit tests ----------===//
+//===---- RISCVTargetParserTest.cpp - RISCVTargetParser unit tests --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVBaseInfo.h"
-
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
-TEST(RISCVBaseInfo, CheckSameRatioLMUL) {
+TEST(RISCVVType, CheckSameRatioLMUL) {
   // Smaller LMUL.
   EXPECT_EQ(RISCVII::LMUL_1,
             RISCVVType::getSameRatioLMUL(16, RISCVII::LMUL_2, 8));
