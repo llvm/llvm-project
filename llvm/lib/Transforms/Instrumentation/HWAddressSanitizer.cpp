@@ -187,10 +187,10 @@ static cl::opt<bool>
                               cl::desc("Use selective instrumentation"),
                               cl::Hidden, cl::init(false));
 
-static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                        cl::init(0),
-                                        cl::desc("Alternative hot percentile cuttoff."
-                                        "By default `-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> HotPercentileCutoff(
+    "hwasan-percentile-cutoff-hot", cl::init(0),
+    cl::desc("Alternative hot percentile cuttoff."
+             "By default `-profile-summary-cutoff-hot` is used."));
 
 static cl::opt<float>
     RandomSkipRate("hwasan-random-skip-rate", cl::init(0),
