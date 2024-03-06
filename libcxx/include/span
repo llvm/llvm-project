@@ -564,10 +564,8 @@ _LIBCPP_HIDE_FROM_ABI auto as_writable_bytes(span<_Tp, _Extent> __s) noexcept {
   return __s.__as_writable_bytes();
 }
 
-#  if _LIBCPP_STD_VER >= 20
 template <contiguous_iterator _It, class _EndOrSize>
 span(_It, _EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
-#  endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp, size_t _Sz>
 span(_Tp (&)[_Sz]) -> span<_Tp, _Sz>;

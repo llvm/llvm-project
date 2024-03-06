@@ -1145,8 +1145,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   return false;
 }
 
-// Helper for DAGCombiner::reassociateOps. Try to reassociate an expression
-// such as (Opc N0, N1), if \p N0 is the same kind of operation as \p Opc.
+/// Helper for DAGCombiner::reassociateOps. Try to reassociate (Opc N0, N1) if
+/// \p N0 is the same kind of operation as \p Opc.
 SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
                                                SDValue N0, SDValue N1,
                                                SDNodeFlags Flags) {
@@ -1244,7 +1244,8 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   return SDValue();
 }
 
-// Try to reassociate commutative binops.
+/// Try to reassociate commutative (Opc N0, N1) if either \p N0 or \p N1 is the
+/// same kind of operation as \p Opc.
 SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                                     SDValue N1, SDNodeFlags Flags) {
   assert(TLI.isCommutativeBinOp(Opc) && "Operation not commutative.");
@@ -12073,6 +12074,17 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
   if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
     return DAG.getSelect(DL, VT, F, N2, N1);
+
+  // select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
+  if (N1.getOpcode() == ISD::ADD && N1.getOperand(0) == N2 && N1->hasOneUse() &&
+      DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) &&
+      N0.getScalarValueSizeInBits() == N1.getScalarValueSizeInBits() &&
+      TLI.getBooleanContents(N0.getValueType()) ==
+          TargetLowering::ZeroOrNegativeOneBooleanContent) {
+    return DAG.getNode(
+        ISD::ADD, DL, N1.getValueType(), N2,
+        DAG.getNode(ISD::AND, DL, N0.getValueType(), N1.getOperand(1), N0));
+  }
 
   // Canonicalize integer abs.
   // vselect (setg[te] X,  0),  X, -X ->

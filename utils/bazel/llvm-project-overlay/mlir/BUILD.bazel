@@ -32,13 +32,20 @@ expand_template(
     name = "mlir_config_h_gen",
     out = "include/mlir/Config/mlir-config.h",
     substitutions = {
+        "#cmakedefine01 MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE": "#define MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE 0",
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
         "#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS": "#define MLIR_ENABLE_ROCM_CONVERSIONS 0",
     } | if_cuda_available(
-        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 1"},
-        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 0"},
+        {
+            "#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 1",
+            "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 1",
+        },
+        {
+            "#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 0",
+            "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 0",
+        },
     ),
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
@@ -6183,6 +6190,7 @@ cc_library(
         ":config",
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -9171,6 +9179,7 @@ cc_binary(
         ":SCFToGPU",
         ":Support",
         ":Transforms",
+        ":config",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Support",
         "//mlir/test:TestAffine",

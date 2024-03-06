@@ -349,7 +349,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR64_IDX64-NEXT:    --> {2,+,1}<nuw><%for.body> U: [2,0) S: [2,0) Exits: (trunc i64 (ptrtoint ptr @sext_like_noop to i64) to i32) LoopDispositions: { %for.body: Computable }
 ; PTR64_IDX64-NEXT:  Determining loop execution counts for: @sext_like_noop
 ; PTR64_IDX64-NEXT:  Loop %for.body: backedge-taken count is (-2 + (trunc i64 (ptrtoint ptr @sext_like_noop to i64) to i32))
-; PTR64_IDX64-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; PTR64_IDX64-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; PTR64_IDX64-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-2 + (trunc i64 (ptrtoint ptr @sext_like_noop to i64) to i32))
 ; PTR64_IDX64-NEXT:  Loop %for.body: Predicated backedge-taken count is (-2 + (trunc i64 (ptrtoint ptr @sext_like_noop to i64) to i32))
 ; PTR64_IDX64-NEXT:   Predicates:
@@ -367,7 +367,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR64_IDX32-NEXT:    --> {2,+,1}<nuw><%for.body> U: [2,0) S: [2,0) Exits: ptrtoint (ptr @sext_like_noop to i32) LoopDispositions: { %for.body: Computable }
 ; PTR64_IDX32-NEXT:  Determining loop execution counts for: @sext_like_noop
 ; PTR64_IDX32-NEXT:  Loop %for.body: backedge-taken count is (-2 + ptrtoint (ptr @sext_like_noop to i32))
-; PTR64_IDX32-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; PTR64_IDX32-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; PTR64_IDX32-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-2 + ptrtoint (ptr @sext_like_noop to i32))
 ; PTR64_IDX32-NEXT:  Loop %for.body: Predicated backedge-taken count is (-2 + ptrtoint (ptr @sext_like_noop to i32))
 ; PTR64_IDX32-NEXT:   Predicates:
@@ -385,7 +385,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR16_IDX16-NEXT:    --> {2,+,1}<nuw><%for.body> U: [2,0) S: [2,0) Exits: (zext i16 (ptrtoint ptr @sext_like_noop to i16) to i32) LoopDispositions: { %for.body: Computable }
 ; PTR16_IDX16-NEXT:  Determining loop execution counts for: @sext_like_noop
 ; PTR16_IDX16-NEXT:  Loop %for.body: backedge-taken count is (-2 + (zext i16 (ptrtoint ptr @sext_like_noop to i16) to i32))<nsw>
-; PTR16_IDX16-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; PTR16_IDX16-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; PTR16_IDX16-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-2 + (zext i16 (ptrtoint ptr @sext_like_noop to i16) to i32))<nsw>
 ; PTR16_IDX16-NEXT:  Loop %for.body: Predicated backedge-taken count is (-2 + (zext i16 (ptrtoint ptr @sext_like_noop to i16) to i32))<nsw>
 ; PTR16_IDX16-NEXT:   Predicates:

@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
-#if MLIR_GPU_TO_HSACO_PASS_ENABLE
+#if MLIR_ENABLE_ROCM_CONVERSIONS
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
@@ -454,6 +455,6 @@ std::unique_ptr<Pass> mlir::createGpuSerializeToHsacoPass(StringRef triple,
                                                 optLevel);
 }
 
-#else  // MLIR_GPU_TO_HSACO_PASS_ENABLE
+#else  // MLIR_ENABLE_ROCM_CONVERSIONS
 void mlir::registerGpuSerializeToHsacoPass() {}
-#endif // MLIR_GPU_TO_HSACO_PASS_ENABLE
+#endif // MLIR_ENABLE_ROCM_CONVERSIONS
