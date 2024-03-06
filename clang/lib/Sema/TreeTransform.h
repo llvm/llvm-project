@@ -13650,6 +13650,23 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   CXXRecordDecl::LambdaDependencyKind DependencyKind =
       CXXRecordDecl::LDK_Unknown;
   DeclContext *DC = getSema().CurContext;
+  // A RequiresExprBodyDecl is not interesting for dependencies.
+  // For the following case,
+  //
+  // template <typename>
+  // concept C = requires { [] {}; };
+  //
+  // template <class F>
+  // struct Widget;
+  //
+  // template <C F>
+  // struct Widget<F> {};
+  //
+  // While we are here in substitution for Widget<F>, the parent of DC would be
+  // the template specialization itself. Thus, the lambda expression
+  // will be deemed as dependent even if we have non-dependent template
+  // arguments.
+  // (A ClassTemplateSpecializationDecl is always a dependent context.)
   if (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
     DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||

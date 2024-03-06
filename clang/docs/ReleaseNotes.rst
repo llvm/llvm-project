@@ -302,6 +302,8 @@ Bug Fixes to C++ Support
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 - Fix evaluation of some immediate calls in default arguments.
   Fixes (#GH80630)
+- Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
+  calculation. (#GH56556), (#GH82849).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
