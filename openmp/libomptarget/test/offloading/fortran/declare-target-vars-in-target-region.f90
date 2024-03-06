@@ -10,16 +10,16 @@
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 module test_0
-    implicit none
-    INTEGER :: arr1(10) = (/0,0,0,0,0,0,0,0,0,0/)
-    INTEGER :: arr2(10) = (/0,0,0,0,0,0,0,0,0,0/)
-    !$omp declare target link(arr1) enter(arr2)
-    INTEGER :: scalar = 1
-    !$omp declare target link(scalar)
+  implicit none
+  INTEGER :: arr1(10) = (/0,0,0,0,0,0,0,0,0,0/)
+  INTEGER :: arr2(10) = (/0,0,0,0,0,0,0,0,0,0/)
+  !$omp declare target link(arr1) enter(arr2)
+  INTEGER :: scalar = 1
+  !$omp declare target link(scalar)
 end module test_0
 
 subroutine test_with_array_link_and_tofrom()
-    use test_0
+  use test_0
   integer :: i = 1
   integer :: j = 11
   !$omp target map(tofrom:arr1, i, j)
