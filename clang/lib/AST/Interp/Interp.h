@@ -287,7 +287,9 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
     SmallString<32> Trunc;
-    Value.trunc(Result.bitWidth()).toString(Trunc, 10);
+    Value.trunc(Result.bitWidth())
+        .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
@@ -499,7 +501,9 @@ bool Neg(InterpState &S, CodePtr OpPC) {
 
   if (S.checkingForUndefinedBehavior()) {
     SmallString<32> Trunc;
-    NegatedValue.trunc(Result.bitWidth()).toString(Trunc, 10);
+    NegatedValue.trunc(Result.bitWidth())
+        .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
@@ -561,7 +565,9 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
     SmallString<32> Trunc;
-    APResult.trunc(Result.bitWidth()).toString(Trunc, 10);
+    APResult.trunc(Result.bitWidth())
+        .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
@@ -1218,7 +1224,8 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (S.inConstantContext() && !CheckNull(S, OpPC, Ptr, CSK_Field))
+  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
+      !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (CheckDummy(S, OpPC, Ptr)) {

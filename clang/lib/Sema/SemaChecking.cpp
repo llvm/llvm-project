@@ -5271,6 +5271,11 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
 // returning an ExprError
 bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_any: {
+    if (checkArgCount(*this, TheCall, 1))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     if (checkArgCount(*this, TheCall, 2))
       return true;
@@ -5280,6 +5285,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_rcp:
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -5297,6 +5303,14 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
       return true;
     break;
+  }
+  case Builtin::BI__builtin_hlsl_mad: {
+    if (checkArgCount(*this, TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(this, TheCall))
+      return true;
+    if (SemaBuiltinElementwiseTernaryMath(TheCall, /*CheckForFloatArgs*/ false))
+      return true;
   }
   }
   return false;
@@ -6377,10 +6391,14 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   unsigned EltSize = Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
+  if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
+      !TI.hasFeature("zve64d"))
+    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
-  if (((EltSize == 64 && Info.ElementType->isIntegerType()) || MinElts == 1) &&
-      !TI.hasFeature("zve64x"))
+  else if (((EltSize == 64 && Info.ElementType->isIntegerType()) ||
+            MinElts == 1) &&
+           !TI.hasFeature("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
   else if (Info.ElementType->isFloat16Type() && !TI.hasFeature("zvfh") &&
            !TI.hasFeature("zvfhmin"))
@@ -6392,9 +6410,6 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
            !TI.hasFeature("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
-  else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
-           !TI.hasFeature("zve64d"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // Given that caller already checked isRVVType() before calling this function,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!TI.hasFeature("zve32x"))
@@ -17624,20 +17639,8 @@ public:
       return VisitExpr(CCE);
 
     // In C++11, list initializations are sequenced.
-    SmallVector<SequenceTree::Seq, 32> Elts;
-    SequenceTree::Seq Parent = Region;
-    for (CXXConstructExpr::const_arg_iterator I = CCE->arg_begin(),
-                                              E = CCE->arg_end();
-         I != E; ++I) {
-      Region = Tree.allocate(Parent);
-      Elts.push_back(Region);
-      Visit(*I);
-    }
-
-    // Forget that the initializers are sequenced.
-    Region = Parent;
-    for (unsigned I = 0; I < Elts.size(); ++I)
-      Tree.merge(Elts[I]);
+    SequenceExpressionsInOrder(
+        llvm::ArrayRef(CCE->getArgs(), CCE->getNumArgs()));
   }
 
   void VisitInitListExpr(const InitListExpr *ILE) {
@@ -17645,10 +17648,20 @@ public:
       return VisitExpr(ILE);
 
     // In C++11, list initializations are sequenced.
+    SequenceExpressionsInOrder(ILE->inits());
+  }
+
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *PLIE) {
+    // C++20 parenthesized list initializations are sequenced. See C++20
+    // [decl.init.general]p16.5 and [decl.init.general]p16.6.2.2.
+    SequenceExpressionsInOrder(PLIE->getInitExprs());
+  }
+
+private:
+  void SequenceExpressionsInOrder(ArrayRef<const Expr *> ExpressionList) {
     SmallVector<SequenceTree::Seq, 32> Elts;
     SequenceTree::Seq Parent = Region;
-    for (unsigned I = 0; I < ILE->getNumInits(); ++I) {
-      const Expr *E = ILE->getInit(I);
+    for (const Expr *E : ExpressionList) {
       if (!E)
         continue;
       Region = Tree.allocate(Parent);
@@ -19800,7 +19813,8 @@ bool Sema::SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
   return false;
 }
 
-bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall) {
+bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                             bool CheckForFloatArgs) {
   if (checkArgCount(*this, TheCall, 3))
     return true;
 
@@ -19812,11 +19826,20 @@ bool Sema::SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall) {
     Args[I] = Converted.get();
   }
 
-  int ArgOrdinal = 1;
-  for (Expr *Arg : Args) {
-    if (checkFPMathBuiltinElementType(*this, Arg->getBeginLoc(), Arg->getType(),
+  if (CheckForFloatArgs) {
+    int ArgOrdinal = 1;
+    for (Expr *Arg : Args) {
+      if (checkFPMathBuiltinElementType(*this, Arg->getBeginLoc(),
+                                        Arg->getType(), ArgOrdinal++))
+        return true;
+    }
+  } else {
+    int ArgOrdinal = 1;
+    for (Expr *Arg : Args) {
+      if (checkMathBuiltinElementType(*this, Arg->getBeginLoc(), Arg->getType(),
                                       ArgOrdinal++))
-      return true;
+        return true;
+    }
   }
 
   for (int I = 1; I < 3; ++I) {
