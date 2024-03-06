@@ -102,6 +102,15 @@ SECTIONS {
   .text : { *(.a* { ) }
 }
 
+#--- lbrace2.lds
+# RUN: not ld.lld -T lbrace2.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-LBRACE2 --match-full-lines --strict-whitespace
+#      ERR-LBRACE2:{{.*}}: section pattern is expected
+# ERR-LBRACE2-NEXT:>>>   .text : { *(.a*{) }
+# ERR-LBRACE2-NEXT:>>>                  ^
+SECTIONS {
+  .text : { *(.a*{) }
+}
+
 #--- lparen.lds
 # RUN: not ld.lld -T lparen.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-LPAREN --match-full-lines --strict-whitespace
 #      ERR-LPAREN:{{.*}}: section pattern is expected
