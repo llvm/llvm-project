@@ -3143,9 +3143,8 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
           // If we don't have an accmulator yet, create it and copy DestReg.
           if (!Acc) {
             Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-            BuildMI(MBB, II, DL, get(RISCV::ADDI), Acc)
+            BuildMI(MBB, II, DL, get(TargetOpcode::COPY), Acc)
                 .addReg(DestReg)
-                .addImm(0)
                 .setMIFlag(Flag);
           } else {
             BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
