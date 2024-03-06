@@ -462,8 +462,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
 void ProfiledBinary::decodePseudoProbe() {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
-  if (auto *Obj = dyn_cast<ELFObjectFileBase>(&ExeBinary))
-    decodePseudoProbe(Obj);
+  auto *Obj = cast<ELFObjectFileBase>(&ExeBinary);
+  decodePseudoProbe(Obj);
 }
 
 void ProfiledBinary::setIsFuncEntry(FuncRange *FuncRange,
