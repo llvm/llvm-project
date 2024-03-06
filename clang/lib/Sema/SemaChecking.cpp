@@ -6391,10 +6391,14 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   unsigned EltSize = Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
+  if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
+      !TI.hasFeature("zve64d"))
+    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
-  if (((EltSize == 64 && Info.ElementType->isIntegerType()) || MinElts == 1) &&
-      !TI.hasFeature("zve64x"))
+  else if (((EltSize == 64 && Info.ElementType->isIntegerType()) ||
+            MinElts == 1) &&
+           !TI.hasFeature("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
   else if (Info.ElementType->isFloat16Type() && !TI.hasFeature("zvfh") &&
            !TI.hasFeature("zvfhmin"))
@@ -6406,9 +6410,6 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
            !TI.hasFeature("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
-  else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
-           !TI.hasFeature("zve64d"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // Given that caller already checked isRVVType() before calling this function,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!TI.hasFeature("zve32x"))
