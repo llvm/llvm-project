@@ -6,9 +6,9 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(TargetParserTests
   CSKYTargetParserTest.cpp
   Host.cpp
+  RISCVTargetParserTest.cpp
   TargetParserTest.cpp
   TripleTest.cpp
-  RISCVTargetParserTest.cpp
   )
 
 target_link_libraries(TargetParserTests PRIVATE LLVMTestingSupport)
