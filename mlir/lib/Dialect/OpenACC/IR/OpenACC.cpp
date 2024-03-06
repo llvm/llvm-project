@@ -815,8 +815,8 @@ LogicalResult acc::ParallelOp::verify() {
   if (failed(checkWaitAndAsyncConflict<acc::ParallelOp>(*this)))
     return failure();
 
-  if (getCombined().has_value() &&
-      getCombined().value() != acc::CombinedConstructsType::ParallelLoop) {
+  if (getCombined() &&
+      *getCombined() != acc::CombinedConstructsType::ParallelLoop) {
     return emitError("unexpected combined constructs attribute");
   }
 
@@ -1412,8 +1412,8 @@ LogicalResult acc::SerialOp::verify() {
   if (failed(checkWaitAndAsyncConflict<acc::SerialOp>(*this)))
     return failure();
 
-  if (getCombined().has_value() &&
-      getCombined().value() != acc::CombinedConstructsType::SerialLoop) {
+  if (getCombined() &&
+      *getCombined() != acc::CombinedConstructsType::SerialLoop) {
     return emitError("unexpected combined constructs attribute");
   }
 
@@ -1544,8 +1544,8 @@ LogicalResult acc::KernelsOp::verify() {
   if (failed(checkWaitAndAsyncConflict<acc::KernelsOp>(*this)))
     return failure();
 
-  if (getCombined().has_value() &&
-      getCombined().value() != acc::CombinedConstructsType::KernelsLoop) {
+  if (getCombined() &&
+      *getCombined() != acc::CombinedConstructsType::KernelsLoop) {
     return emitError("unexpected combined constructs attribute");
   }
 
