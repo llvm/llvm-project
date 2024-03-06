@@ -169,7 +169,7 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr T bit_floor(T value) {
   if (!value)
     return 0;
-  return T(1) << (cpp::bit_width(value) - 1);
+  return static_cast<T>(T(1) << (cpp::bit_width(value) - 1));
 }
 
 /// Returns the smallest integral power of two no smaller than value if value is
