@@ -1224,7 +1224,8 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (S.inConstantContext() && !CheckNull(S, OpPC, Ptr, CSK_Field))
+  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
+      !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (CheckDummy(S, OpPC, Ptr)) {
