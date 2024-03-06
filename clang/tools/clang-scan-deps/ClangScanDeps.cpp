@@ -1184,7 +1184,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   DependencyScanningService Service(ScanMode, Format, CASOpts, CAS, Cache, FS,
                                     OptimizeArgs, EagerLoadModules);
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
 
   if (EmitCASCompDB) {
     if (!CAS) {
