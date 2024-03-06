@@ -1468,14 +1468,14 @@ void MallocChecker::checkGetdelim(const CallEvent &Call,
   if (!CE)
     return;
 
-  SValBuilder &svalBuilder = C.getSValBuilder();
+  SValBuilder &SVB = C.getSValBuilder();
 
   const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
   const auto Size = getPointeeDefVal(Call.getArgSVal(1), State);
   if (!LinePtr || !Size || !LinePtr->getAsRegion())
     return;
 
-  State = setDynamicExtent(State, LinePtr->getAsRegion(), *Size, svalBuilder);
+  State = setDynamicExtent(State, LinePtr->getAsRegion(), *Size, SVB);
   C.addTransition(MallocUpdateRefState(C, CE, State, AF_Malloc, *LinePtr));
 }
 
