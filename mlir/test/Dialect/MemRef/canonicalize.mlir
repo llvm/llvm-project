@@ -242,48 +242,6 @@ func.func @dim_of_alloca_with_dynamic_size(%arg0: memref<*xf32>) -> index {
 
 // -----
 
-// Test case: Folding of memref.dim(memref.reshape %v %shp, %idx) -> memref.load %shp[%idx]
-// CHECK-LABEL: func @dim_of_memref_reshape(
-//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>,
-//  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: memref<?xindex>
-//  CHECK-NEXT:   %[[IDX:.*]] = arith.constant 3
-//  CHECK-NEXT:   %[[DIM:.*]] = memref.load %[[SHP]][%[[IDX]]]
-//  CHECK-NEXT:   memref.store
-//   CHECK-NOT:   memref.dim
-//       CHECK:   return %[[DIM]] : index
-func.func @dim_of_memref_reshape(%arg0: memref<*xf32>, %arg1: memref<?xindex>)
-    -> index {
-  %c3 = arith.constant 3 : index
-  %0 = memref.reshape %arg0(%arg1)
-      : (memref<*xf32>, memref<?xindex>) -> memref<*xf32>
-  // Update the shape to test that he load ends up in the right place.
-  memref.store %c3, %arg1[%c3] : memref<?xindex>
-  %1 = memref.dim %0, %c3 : memref<*xf32>
-  return %1 : index
-}
-
-// -----
-
-// Test case: Folding of memref.dim(memref.reshape %v %shp, %idx) -> memref.load %shp[%idx]
-// CHECK-LABEL: func @dim_of_memref_reshape_i32(
-//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>,
-//  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: memref<?xi32>
-//  CHECK-NEXT:   %[[IDX:.*]] = arith.constant 3
-//  CHECK-NEXT:   %[[DIM:.*]] = memref.load %[[SHP]][%[[IDX]]]
-//  CHECK-NEXT:   %[[CAST:.*]] = arith.index_cast %[[DIM]]
-//   CHECK-NOT:   memref.dim
-//       CHECK:   return %[[CAST]] : index
-func.func @dim_of_memref_reshape_i32(%arg0: memref<*xf32>, %arg1: memref<?xi32>)
-    -> index {
-  %c3 = arith.constant 3 : index
-  %0 = memref.reshape %arg0(%arg1)
-      : (memref<*xf32>, memref<?xi32>) -> memref<*xf32>
-  %1 = memref.dim %0, %c3 : memref<*xf32>
-  return %1 : index
-}
-
-// -----
-
 // CHECK-LABEL: func @alloc_const_fold
 func.func @alloc_const_fold() -> memref<?xf32> {
   // CHECK-NEXT: memref.alloc() : memref<4xf32>

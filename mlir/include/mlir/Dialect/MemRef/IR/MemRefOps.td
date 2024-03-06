@@ -629,7 +629,6 @@ def MemRef_DimOp : MemRef_Op<"dim", [
     Speculation::Speculatability getSpeculatability();
   }];
 
-  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
