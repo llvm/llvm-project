@@ -228,15 +228,14 @@ represents the root signature string and the parsed information for each
 resource in the root signature. It will bind to the entry function in the AST. 
 
 For case compile to a standalone root signature blob, the HLSLRootSignatureAttr 
-will be bind to the TU.
+will be bind to a fake empty entry.
 
 In clang code generation, the HLSLRootSignatureAttr in AST will be translated 
 into a global variable with struct type to express the layout and a constant 
 initializer to save things like space and NumDescriptors in LLVM IR. 
 
 CGHLSLRuntime will generate metadata to link the global variable as root 
-signature for given entry function or just nullptr for the standalone root 
-signature blob case. 
+signature for given entry function. 
 
 In LLVM DirectX backend, the global variable will be serialized and saved as 
 another global variable with section 'RTS0' with the serialized root signature 
@@ -244,9 +243,11 @@ as initializer.
 The MC ObjectWriter for DXContainer will take the global and write it to the 
 correct part based on the section name given to the global.
 
-In DXIL validation, the root signature part will be deserialized and check if 
-resource used in the shader (the information is in pipeline state validation 
-part) exists in the root signature. 
+In DXIL validation for DXC, the root signature part will be deserialized and 
+check if resource used in the shader (the information is in pipeline state 
+validation part) exists in the root signature. 
+For LLVM DirectX backend, this could be done in IR pass before emit DXIL 
+instead of validation.
 
 Same check could be done in Sema as well. But at AST level, it is impossible 
 to identify unused resource which will be removed later. And the resource 
