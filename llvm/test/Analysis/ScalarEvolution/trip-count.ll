@@ -140,3 +140,74 @@ loop:
 exit:
   ret void
 }
+
+define void @dual_sext_ne_with_slt_guard(i8 %s, i8 %n) {
+; CHECK-LABEL: 'dual_sext_ne_with_slt_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @dual_sext_ne_with_slt_guard
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (sext i8 %n to i64) + (-1 * (sext i8 %s to i64))<nsw>)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (sext i8 %n to i64) + (-1 * (sext i8 %s to i64))<nsw>)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %cmp4 = icmp slt i8 %s, %n
+  br i1 %cmp4, label %for.body.preheader, label %exit
+
+for.body.preheader:
+  %0 = sext i8 %s to i64
+  %wide.trip.count = sext i8 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %0, %for.body.preheader ], [ %iv.next, %for.body ]
+  %iv.next = add nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @dual_sext_ne_with_nsw_inc(i8 %s, i64 %n) {
+; CHECK-LABEL: 'dual_sext_ne_with_nsw_inc'
+; CHECK-NEXT:  Determining loop execution counts for: @dual_sext_ne_with_nsw_inc
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %0 = sext i8 %s to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %0, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @dual_sext_ne_with_nuw_inc(i8 %s, i64 %n) {
+; CHECK-LABEL: 'dual_sext_ne_with_nuw_inc'
+; CHECK-NEXT:  Determining loop execution counts for: @dual_sext_ne_with_nuw_inc
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * (sext i8 %s to i64))<nsw> + %n)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %0 = sext i8 %s to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %0, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
