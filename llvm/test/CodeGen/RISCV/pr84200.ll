@@ -9,9 +9,8 @@ define i64 @foo(i64 %1) {
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    sltiu a0, a0, 2
-; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    xori a1, a1, 1
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:

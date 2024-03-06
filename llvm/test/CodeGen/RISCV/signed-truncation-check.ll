@@ -422,7 +422,8 @@ define i1 @add_ugecmp_i64_i16(i64 %x) nounwind {
 ; RV32I-NEXT:    lui a1, 1048560
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    sltu a1, a1, a2
-; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -462,7 +463,8 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 ; RV32I-NEXT:    addi a2, a0, -128
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    sltiu a1, a2, -256
 ; RV32I-NEXT:    xori a1, a1, 1
 ; RV32I-NEXT:    and a0, a0, a1
@@ -691,7 +693,8 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 ; RV32I-NEXT:    addi a2, a0, 128
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    sltiu a1, a2, 256
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret

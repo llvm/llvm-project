@@ -7246,25 +7246,25 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select c, -1, y) -> -c | y
     if (isAllOnesConstant(TrueV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, -1) -> (c-1) | y
     if (isAllOnesConstant(FalseV)) {
       SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
                                 DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
     // (select c, 0, y) -> (c-1) & y
     if (isNullConstant(TrueV)) {
       SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
                                 DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, 0) -> -c & y
     if (isNullConstant(FalseV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
   }
 
@@ -7274,6 +7274,7 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     const APInt &FalseVal = FalseV->getAsAPIntVal();
     if (~TrueVal == FalseVal) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      FalseV = DAG.getFreeze(FalseV);
       return DAG.getNode(ISD::XOR, DL, VT, Neg, FalseV);
     }
   }
@@ -7289,14 +7290,14 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select x, x, y) -> x | y
     // (select !x, x, y) -> x & y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, TrueV)) {
-      return DAG.getNode(*MatchResult ? ISD::OR : ISD::AND, DL, VT, TrueV,
-                         FalseV);
+      return DAG.getNode(*MatchResult ? ISD::OR : ISD::AND, DL, VT, DAG.getFreeze(TrueV),
+                         DAG.getFreeze(FalseV));
     }
     // (select x, y, x) -> x & y
     // (select !x, y, x) -> x | y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, FalseV)) {
-      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT, TrueV,
-                         FalseV);
+      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT, DAG.getFreeze(TrueV),
+                         DAG.getFreeze(FalseV));
     }
   }
 
