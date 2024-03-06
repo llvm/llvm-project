@@ -733,6 +733,9 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
   if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
     return false;
 
+  if (!inliner.isProfitableToInline(resolvedCall))
+    return false;
+
   // Otherwise, inline.
   return true;
 }

@@ -100,9 +100,12 @@ void InlinerPass::runOnOperation() {
     return signalPassFailure();
   }
 
+  // By default, assume that any inlining is profitable.
+  auto profitabilityCb = [](Inliner::ResolvedCall &) { return true; };
+
   // Get an instance of the inliner.
   Inliner inliner(op, cg, *this, getAnalysisManager(), runPipelineHelper,
-                  config);
+                  config, profitabilityCb);
 
   // Run the inlining.
   if (failed(inliner.doInlining()))
