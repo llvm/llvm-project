@@ -340,6 +340,26 @@ use m
 ! CHECK: fir.call @_QPfoo2(%[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
 end 
 
+subroutine test_opt_pointer()
+  interface
+    subroutine takes_opt_proc_ptr(p)
+      procedure(), pointer, optional :: p
+    end subroutine
+  end interface
+  call takes_opt_proc_ptr(NULL())
+  call takes_opt_proc_ptr()
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_opt_pointer() {
+! CHECK:    %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()>
+! CHECK:    %[[VAL_1:.*]] = fir.zero_bits () -> ()
+! CHECK:    %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> ()) -> !fir.boxproc<() -> ()>
+! CHECK:    fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:    fir.call @_QPtakes_opt_proc_ptr(%[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
+! CHECK:    %[[VAL_3:.*]] = fir.absent !fir.ref<!fir.boxproc<() -> ()>>
+! CHECK:    fir.call @_QPtakes_opt_proc_ptr(%[[VAL_3]]) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
+
+
+
 ! CHECK-LABEL: fir.global internal @_QFsub1Ep2 : !fir.boxproc<(!fir.ref<f32>) -> f32> {
 ! CHECK: %[[VAL_0:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_1:.*]] = fir.emboxproc %[[VAL_0]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>

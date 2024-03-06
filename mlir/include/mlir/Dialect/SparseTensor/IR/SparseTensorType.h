@@ -18,6 +18,19 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// A simple structure that encodes a range of levels in the sparse tensors that
+/// forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isAoS() const { return !isSoA; }
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// A wrapper around `RankedTensorType`, which has three goals:
 ///
@@ -234,10 +247,21 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
-  /// Returns the Level-shape.
+  /// Returns the level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
+  }
+
+  /// Returns the batched level-rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched level-shape.
+  SmallVector<Size> getBatchLvlShape() const {
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
+    lvlShape.truncate(getEncoding().getBatchLvlRank());
+    return lvlShape;
   }
 
   /// Returns the type with an identity mapping.
@@ -291,7 +315,7 @@ public:
     return isLooseCompressedLT(getLvlType(l));
   }
   bool isSingletonLvl(Level l) const { return isSingletonLT(getLvlType(l)); }
-  bool is2OutOf4Lvl(Level l) const { return is2OutOf4LT(getLvlType(l)); }
+  bool isNOutOfMLvl(Level l) const { return isNOutOfMLT(getLvlType(l)); }
   bool isOrderedLvl(Level l) const { return isOrderedLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueLT(getLvlType(l)); }
   bool isWithPos(Level l) const { return isWithPosLT(getLvlType(l)); }
@@ -325,10 +349,15 @@ public:
   /// Returns the starting level of this sparse tensor type for a
   /// trailing COO region that spans **at least** two levels. If
   /// no such COO region is found, then returns the level-rank.
-  Level getCOOStart() const;
+  ///
+  /// DEPRECATED: use getCOOSegment instead;
+  Level getAoSCOOStart() const;
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;
+
+  /// Returns a list of COO segments in the sparse tensor types.
+  SmallVector<COOSegment> getCOOSegments() const;
 
 private:
   // These two must be const, to ensure coherence of the memoized fields.

@@ -11,11 +11,11 @@ define dso_local void @foo(ptr %A) #0 !dbg !7 {
 entry:
   %A.addr = alloca ptr, align 8, !DIAssignID !62
   %i = alloca i32, align 4
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !62, metadata ptr %A.addr, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !62, metadata ptr %A.addr, metadata !DIExpression()), !dbg !20
   store ptr %A, ptr %A.addr, align 8, !tbaa !16
-  call void @llvm.dbg.declare(metadata ptr %A.addr, metadata !13, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.declare(metadata ptr %A.addr, metadata !13, metadata !DIExpression()), !dbg !20
   call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3, !dbg !21
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !14, metadata !DIExpression()), !dbg !22
+  tail call void @llvm.dbg.declare(metadata ptr %i, metadata !14, metadata !DIExpression()), !dbg !22
   store i32 0, ptr %i, align 4, !dbg !22, !tbaa !23
   br label %for.cond, !dbg !21
 
@@ -63,9 +63,9 @@ entry:
   %A.addr = alloca ptr, align 8
   %i = alloca i32, align 4
   store ptr %A, ptr %A.addr, align 8, !tbaa !16
-  call void @llvm.dbg.declare(metadata ptr %A.addr, metadata !41, metadata !DIExpression()), !dbg !44
+  tail call void @llvm.dbg.declare(metadata ptr %A.addr, metadata !41, metadata !DIExpression()), !dbg !44
   call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3, !dbg !45
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !42, metadata !DIExpression()), !dbg !46
+  tail call void @llvm.dbg.declare(metadata ptr %i, metadata !42, metadata !DIExpression()), !dbg !46
   store i32 0, ptr %i, align 4, !dbg !46, !tbaa !23
   br label %for.cond, !dbg !45
 

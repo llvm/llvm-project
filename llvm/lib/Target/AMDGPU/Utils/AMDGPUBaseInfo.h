@@ -42,7 +42,18 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
+/// Generic target versions emitted by this version of LLVM.
+///
+/// These numbers are incremented every time a codegen breaking change occurs
+/// within a generic family.
+namespace GenericVersion {
+static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX10_1 = 1;
+static constexpr unsigned GFX10_3 = 1;
+static constexpr unsigned GFX11 = 1;
+} // namespace GenericVersion
+
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
@@ -50,12 +61,15 @@ bool isHsaAbi(const MCSubtargetInfo &STI);
 /// \returns Code object version from the IR module flag.
 unsigned getAMDHSACodeObjectVersion(const Module &M);
 
+/// \returns Code object version from ELF's e_ident[EI_ABIVERSION].
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
+
 /// \returns The default HSA code object version. This should only be used when
 /// we lack a more accurate CodeObjectVersion value (e.g. from the IR module
 /// flag or a .amdhsa_code_object_version directive)
 unsigned getDefaultAMDHSACodeObjectVersion();
 
-/// \returns ABIVersion suitable for use in ELF's e_ident[ABIVERSION]. \param
+/// \returns ABIVersion suitable for use in ELF's e_ident[EI_ABIVERSION]. \param
 /// CodeObjectVersion is a value returned by getAMDHSACodeObjectVersion().
 uint8_t getELFABIVersion(const Triple &OS, unsigned CodeObjectVersion);
 
@@ -281,6 +295,10 @@ unsigned getVGPREncodingGranule(
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
+/// \returns Addressable number of architectural VGPRs for a given subtarget \p
+/// STI.
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
+
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
 
@@ -307,6 +325,35 @@ getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
                  std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
+
+// Represents a field in an encoded value.
+template <unsigned HighBit, unsigned LowBit, unsigned D = 0>
+struct EncodingField {
+  static_assert(HighBit >= LowBit, "Invalid bit range!");
+  static constexpr unsigned Offset = LowBit;
+  static constexpr unsigned Width = HighBit - LowBit + 1;
+
+  using ValueType = unsigned;
+  static constexpr ValueType Default = D;
+
+  ValueType Value;
+  constexpr EncodingField(ValueType Value) : Value(Value) {}
+
+  constexpr uint64_t encode() const { return Value; }
+  static ValueType decode(uint64_t Encoded) { return Encoded; }
+};
+
+// A helper for encoding and decoding multiple fields.
+template <typename... Fields> struct EncodingFields {
+  static constexpr uint64_t encode(Fields... Values) {
+    return ((Values.encode() << Values.Offset) | ...);
+  }
+
+  static std::tuple<typename Fields::ValueType...> decode(uint64_t Encoded) {
+    return {Fields::decode((Encoded >> Fields::Offset) &
+                           maxUIntN(Fields::Width))...};
+  }
+};
 
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
@@ -485,6 +532,9 @@ bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 bool isVOPC64DPP(unsigned Opc);
+
+LLVM_READONLY
+bool isVOPCAsmOnly(unsigned Opc);
 
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
@@ -806,14 +856,6 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
-/// \returns Integer value requested using \p F's \p Name attribute.
-///
-/// \returns \p Default if attribute is not present.
-///
-/// \returns \p Default and emits error if requested value cannot be converted
-/// to integer.
-int getIntegerAttribute(const Function &F, StringRef Name, int Default);
-
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
 /// is false).
@@ -852,15 +894,6 @@ struct Waitcnt {
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
-
-  static Waitcnt allZero(bool Extended, bool HasStorecnt) {
-    return Extended ? Waitcnt(0, 0, 0, 0, 0, 0, 0)
-                    : Waitcnt(0, 0, 0, HasStorecnt ? 0 : ~0u);
-  }
-
-  static Waitcnt allZeroExceptVsCnt(bool Extended) {
-    return Extended ? Waitcnt(0, 0, 0, ~0u, 0, 0, 0) : Waitcnt(0, 0, 0, ~0u);
-  }
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
@@ -1013,25 +1046,22 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
 namespace Hwreg {
 
+using HwregId = EncodingField<5, 0>;
+using HwregOffset = EncodingField<10, 6>;
+
+struct HwregSize : EncodingField<15, 11, 32> {
+  using EncodingField::EncodingField;
+  constexpr uint64_t encode() const { return Value - 1; }
+  static ValueType decode(uint64_t Encoded) { return Encoded + 1; }
+};
+
+using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
+
 LLVM_READONLY
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
-bool isValidHwreg(int64_t Id);
-
-LLVM_READNONE
-bool isValidHwregOffset(int64_t Offset);
-
-LLVM_READNONE
-bool isValidHwregWidth(int64_t Width);
-
-LLVM_READNONE
-uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width);
-
-LLVM_READNONE
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
-
-void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
 
@@ -1318,17 +1348,24 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
     return 8;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
     return 2;
 
@@ -1357,10 +1394,16 @@ LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
 bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);
+
+LLVM_READNONE
+std::optional<unsigned> getInlineEncodingV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
@@ -1370,6 +1413,9 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
 bool isInlinableLiteralV2I16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 bool isInlinableLiteralV2F16(uint32_t Literal);

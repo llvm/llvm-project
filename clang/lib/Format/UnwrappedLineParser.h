@@ -324,6 +324,7 @@ private:
   llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
+  bool IsCpp;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;
@@ -419,6 +420,8 @@ struct UnwrappedLineNode {
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;
 };
+
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
 
 } // end namespace format
 } // end namespace clang

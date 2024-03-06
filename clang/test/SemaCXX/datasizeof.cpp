@@ -51,3 +51,11 @@ struct S {
 };
 
 static_assert(S{}.i == 9);
+
+namespace GH80284 {
+struct Bar; // expected-note{{forward declaration}}
+struct Foo {
+  Bar x; // expected-error{{field has incomplete type}}
+};
+constexpr int a = __datasizeof(Foo);
+}

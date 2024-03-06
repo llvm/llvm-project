@@ -67,6 +67,7 @@ static_assert(test(std::ranges::binary_search, a, 42));
 static_assert(test(std::ranges::clamp, 42, 42, 42));
 #if TEST_STD_VER >= 23
 static_assert(test(std::ranges::contains, a, 42));
+static_assert(test(std::ranges::contains_subrange, a, a));
 #endif
 static_assert(test(std::ranges::copy, a, a));
 static_assert(test(std::ranges::copy_backward, a, a));

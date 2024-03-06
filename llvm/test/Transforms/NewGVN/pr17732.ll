@@ -13,10 +13,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @main() {
 entry:
-  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 @array_with_zeroinit, ptr align 4 getelementptr inbounds ({ [2 x i8], i32, i8, [3 x i8] }, ptr @main.obj_with_array, i64 0, i32 0, i64 0), i64 12, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 @array_with_zeroinit, ptr align 4 @main.obj_with_array, i64 12, i1 false)
   %0 = load i8, ptr getelementptr inbounds (%struct.with_array, ptr @array_with_zeroinit, i64 0, i32 2), align 4
 
-  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 @vector_with_zeroinit, ptr align 4 getelementptr inbounds ({ <2 x i8>, i32, i8, [3 x i8] }, ptr @main.obj_with_vector, i64 0, i32 0, i64 0), i64 12, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 @vector_with_zeroinit, ptr align 4 @main.obj_with_vector, i64 12, i1 false)
   %1 = load i8, ptr getelementptr inbounds (%struct.with_vector, ptr @vector_with_zeroinit, i64 0, i32 2), align 4
   %conv0 = sext i8 %0 to i32
   %conv1 = sext i8 %1 to i32

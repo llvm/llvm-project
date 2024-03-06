@@ -3,6 +3,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s -o %t/cat1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s -o %t/cat2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s -o %t/klass.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s -g -o %t/cat1_w_sym.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s -g -o %t/cat2_w_sym.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s -g -o %t/klass_w_sym.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s --defsym MAKE_LOAD_METHOD=1 -o %t/cat1-with-load.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s --defsym MAKE_LOAD_METHOD=1 -o %t/cat2-with-load.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s --defsym MAKE_LOAD_METHOD=1 -o %t/klass-with-load.o
@@ -13,6 +16,11 @@
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
 # RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
+
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass_w_sym.o %t/cat1_w_sym.o %t/cat2_w_sym.o -o \
+# RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS_W_SYM,CATCAT_W_SYM
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1_w_sym.o \
+# RUN:   %t/cat2_w_sym.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT_W_SYM
 
 ## Check that we don't emit spurious warnings around the +load method while
 ## still emitting the other warnings. Note that we have made separate
@@ -45,6 +53,24 @@
 # CATCAT-NEXT: >>> defined in category Cat2 from {{.*}}cat2{{.*}}.o
 # CATCAT-NEXT: >>> defined in category Cat1 from {{.*}}cat1{{.*}}.o
 
+
+# CATCLS_W_SYM:      warning: method '+s1' has conflicting definitions:
+# CATCLS_W_SYM-NEXT: >>> defined in category Cat1 from {{.*}}cat1_w_sym{{.*}}.o ({{.*}}cat1.s{{.*}})
+# CATCLS_W_SYM-NEXT: >>> defined in class Foo from {{.*}}klass_w_sym{{.*}}.o ({{.*}}klass.s{{.*}})
+
+# CATCLS_W_SYM:      warning: method '-m1' has conflicting definitions:
+# CATCLS_W_SYM-NEXT: >>> defined in category Cat1 from {{.*}}cat1_w_sym{{.*}}.o ({{.*}}cat1.s{{.*}})
+# CATCLS_W_SYM-NEXT: >>> defined in class Foo from {{.*}}klass_w_sym{{.*}}.o ({{.*}}klass.s{{.*}})
+
+# CATCAT_W_SYM:      warning: method '+s2' has conflicting definitions:
+# CATCAT_W_SYM-NEXT: >>> defined in category Cat2 from {{.*}}cat2_w_sym{{.*}}.o ({{.*}}cat2.s{{.*}})
+# CATCAT_W_SYM-NEXT: >>> defined in category Cat1 from {{.*}}cat1_w_sym{{.*}}.o ({{.*}}cat1.s{{.*}})
+
+# CATCAT_W_SYM:      warning: method '-m2' has conflicting definitions:
+# CATCAT_W_SYM-NEXT: >>> defined in category Cat2 from {{.*}}cat2_w_sym{{.*}}.o ({{.*}}cat2.s{{.*}})
+# CATCAT_W_SYM-NEXT: >>> defined in category Cat1 from {{.*}}cat1_w_sym{{.*}}.o ({{.*}}cat1.s{{.*}})
+
+
 #--- cat1.s
 
 .include "objc-macros.s"
@@ -55,7 +81,7 @@
 ## +(void) s1;
 ## +(void) s2;
 ## @end
-## 
+##
 ## @implementation Foo(Cat1)
 ## -(void) m1 {}
 ## -(void) m2 {}
@@ -114,7 +140,7 @@ __OBJC_$_CATEGORY_CLASS_METHODS_Foo_$_Cat1:
 ## -(void) m2;
 ## +(void) s2;
 ## @end
-## 
+##
 ## @implementation Foo(Cat2)
 ## -(void) m2 {}
 ## +(void) s2 {}

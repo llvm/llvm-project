@@ -19,7 +19,7 @@
 #include "llvm/IR/DebugProgramInstruction.h"
 
 namespace llvm {
-void reduceDPValuesDeltaPass(TestRunner &Test);
+void reduceDbgRecordDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

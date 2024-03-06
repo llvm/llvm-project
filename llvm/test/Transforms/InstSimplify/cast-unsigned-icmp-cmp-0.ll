@@ -57,6 +57,19 @@ define <2 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_float_vec(<2 x i32> %i) {
   ret <2 x i1> %cmp
 }
 
+define i1 @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_mismatch(<2 x i32> %i) {
+; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_mismatch(
+; CHECK-NEXT:    [[F:%.*]] = uitofp <2 x i32> [[I:%.*]] to <2 x float>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x float> [[F]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = uitofp <2 x i32> %i to <2 x float>
+  %b = bitcast <2 x float> %f to i64
+  %cmp = icmp sgt i64 %b, -1
+  ret i1 %cmp
+}
+
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_undef(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_undef(
 ; CHECK-NEXT:    ret <3 x i1> <i1 true, i1 true, i1 true>

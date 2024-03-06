@@ -826,8 +826,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   auto &FileMgr = CI.getFileManager();
   auto Buffer = FileMgr.getBufferForFile(getCurrentFile());
   StringRef Magic = (*Buffer)->getMemBufferRef().getBuffer();
-  bool IsRaw = (Magic.size() >= 4 && Magic[0] == 'C' && Magic[1] == 'P' &&
-                Magic[2] == 'C' && Magic[3] == 'H');
+  bool IsRaw = Magic.starts_with("CPCH");
   Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
 
   Preprocessor &PP = CI.getPreprocessor();

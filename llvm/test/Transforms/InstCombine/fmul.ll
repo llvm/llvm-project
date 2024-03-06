@@ -794,12 +794,12 @@ define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 
 define <vscale x 2 x float> @fmul_fadd_distribute_scalablevec(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_scalablevec(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 6.000000e+03, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 6.000000e+03, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[T3]]
 ;
-  %t1 = fadd <vscale x 2 x float> shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 2.0e+3, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer), %x
-  %t3 = fmul reassoc <vscale x 2 x float> %t1, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 6.0e+3, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+  %t1 = fadd <vscale x 2 x float> splat (float 2.0e+3), %x
+  %t3 = fmul reassoc <vscale x 2 x float> %t1, splat (float 6.0e+3)
 
 
   ret <vscale x 2 x float> %t3
@@ -1051,7 +1051,7 @@ define float @fmul_fdiv_factor_extra_use(float %x, float %y) {
   ret float %mul
 }
 
-define void @fmul_loop_invariant_fdiv(float* %a, float %x) {
+define void @fmul_loop_invariant_fdiv(ptr %a, float %x) {
 ; CHECK-LABEL: @fmul_loop_invariant_fdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1078,10 +1078,10 @@ for.cond.cleanup:
 for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %idxprom = zext i32 %i.08 to i64
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %idxprom
-  %f = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
+  %f = load float, ptr %arrayidx, align 4
   %m = fmul fast float %f, %d
-  store float %m, float* %arrayidx, align 4
+  store float %m, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.08, 1
   %cmp.not = icmp eq i32 %inc, 1024
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body

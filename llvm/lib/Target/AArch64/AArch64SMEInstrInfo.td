@@ -233,6 +233,8 @@ def MSRpstatePseudo :
            (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
     Sched<[WriteSys]> {
   let hasPostISelHook = 1;
+  let Uses = [VG];
+  let Defs = [VG];
 }
 
 def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),

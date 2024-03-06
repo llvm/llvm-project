@@ -509,6 +509,13 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
+const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
+  const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
+  if (EC.isScalable())
+    Res = getMulExpr(Res, getVScale(Ty));
+  return Res;
+}
+
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
     : SCEV(ID, SCEVTy, computeExpressionSize(op)), Op(op), Ty(ty) {}
@@ -4182,6 +4189,68 @@ void ScalarEvolution::getPoisonGeneratingValues(
   visitAll(S, PC);
   for (const SCEVUnknown *SU : PC.MaybePoison)
     Result.insert(SU->getValue());
+}
+
+bool ScalarEvolution::canReuseInstruction(
+    const SCEV *S, Instruction *I,
+    SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
+  // If the instruction cannot be poison, it's always safe to reuse.
+  if (programUndefinedIfPoison(I))
+    return true;
+
+  // Otherwise, it is possible that I is more poisonous that S. Collect the
+  // poison-contributors of S, and then check whether I has any additional
+  // poison-contributors. Poison that is contributed through poison-generating
+  // flags is handled by dropping those flags instead.
+  SmallPtrSet<const Value *, 8> PoisonVals;
+  getPoisonGeneratingValues(PoisonVals, S);
+
+  SmallVector<Value *> Worklist;
+  SmallPtrSet<Value *, 8> Visited;
+  Worklist.push_back(I);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    // Avoid walking large instruction graphs.
+    if (Visited.size() > 16)
+      return false;
+
+    // Either the value can't be poison, or the S would also be poison if it
+    // is.
+    if (PoisonVals.contains(V) || isGuaranteedNotToBePoison(V))
+      continue;
+
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+
+    // Disjoint or instructions are interpreted as adds by SCEV. However, we
+    // can't replace an arbitrary add with disjoint or, even if we drop the
+    // flag. We would need to convert the or into an add.
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I))
+      if (PDI->isDisjoint())
+        return false;
+
+    // FIXME: Ignore vscale, even though it technically could be poison. Do this
+    // because SCEV currently assumes it can't be poison. Remove this special
+    // case once we proper model when vscale can be poison.
+    if (auto *II = dyn_cast<IntrinsicInst>(I);
+        II && II->getIntrinsicID() == Intrinsic::vscale)
+      continue;
+
+    if (canCreatePoison(cast<Operator>(I), /*ConsiderFlagsAndMetadata*/ false))
+      return false;
+
+    // If the instruction can't create poison, we can recurse to its operands.
+    if (I->hasPoisonGeneratingFlagsOrMetadata())
+      DropPoisonGeneratingInsts.push_back(I);
+
+    for (Value *Op : I->operands())
+      Worklist.push_back(Op);
+  }
+  return true;
 }
 
 const SCEV *
@@ -13415,8 +13484,9 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   if (ExitingBlocks.size() != 1)
     OS << "<multiple exits> ";
 
-  if (SE->hasLoopInvariantBackedgeTakenCount(L))
-    OS << "backedge-taken count is " << *SE->getBackedgeTakenCount(L) << "\n";
+  auto *BTC = SE->getBackedgeTakenCount(L);
+  if (!isa<SCEVCouldNotCompute>(BTC))
+    OS << "backedge-taken count is " << *BTC << "\n";
   else
     OS << "Unpredictable backedge-taken count.\n";
 
@@ -13432,7 +13502,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *ConstantBTC = SE->getConstantMaxBackedgeTakenCount(L);
   if (!isa<SCEVCouldNotCompute>(ConstantBTC)) {
-    OS << "constant max backedge-taken count is " << *ConstantBTC;
+    OS << "constant max backedge-taken count is "
+       << *ConstantBTC->getType() << " " << *ConstantBTC;
     if (SE->isBackedgeTakenCountMaxOrZero(L))
       OS << ", actual taken count either this or zero.";
   } else {
@@ -13461,19 +13532,19 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
          << "\n";
     }
 
-  OS << "Loop ";
-  L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
-  OS << ": ";
-
   SmallVector<const SCEVPredicate *, 4> Preds;
-  auto PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
-  if (!isa<SCEVCouldNotCompute>(PBT)) {
-    OS << "Predicated backedge-taken count is " << *PBT << "\n";
+  auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
+  if (PBT != BTC || !Preds.empty()) {
+    OS << "Loop ";
+    L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+    OS << ": ";
+    if (!isa<SCEVCouldNotCompute>(PBT))
+      OS << "Predicated backedge-taken count is " << *PBT << "\n";
+    else
+      OS << "Unpredictable predicated backedge-taken count.\n";
     OS << " Predicates:\n";
     for (const auto *P : Preds)
       P->print(OS, 4);
-  } else {
-    OS << "Unpredictable predicated backedge-taken count.\n";
   }
 
   if (SE->hasLoopInvariantBackedgeTakenCount(L)) {

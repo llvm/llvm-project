@@ -721,6 +721,7 @@ private:
     unsigned ID;
 
     /// Whether this is a wildcard export.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsWildcard : 1;
 
     /// String data.
@@ -2456,8 +2457,10 @@ private:
   uint32_t CurrentBitsIndex = ~0;
 };
 
-inline bool isFromExplicitGMF(const Decl *D) {
-  return D->getOwningModule() && D->getOwningModule()->isExplicitGlobalModule();
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getOwningModule() &&
+         D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->getOwningModule()->isExplicitGlobalModule();
 }
 
 } // namespace clang

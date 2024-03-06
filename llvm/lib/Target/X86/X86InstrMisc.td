@@ -1166,11 +1166,12 @@ multiclass Lzcnt<bits<8> o, string m, SDPatternOperator node, X86TypeInfo t,
                       [(set t.RegClass:$dst, (node t.RegClass:$src1)),
                                               (implicit EFLAGS)]>,
                   TB, Sched<[schedrr]>;
-  def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
-                      (ins t.MemOperand:$src1), m, unaryop_ndd_args,
-                      [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1))),
-                                              (implicit EFLAGS)]>,
-                  TB, Sched<[schedrm]>;
+  let mayLoad = 1 in
+    def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
+                        (ins t.MemOperand:$src1), m, unaryop_ndd_args,
+                        [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1))),
+                                                (implicit EFLAGS)]>,
+                    TB, Sched<[schedrm]>;
 }
 
 let Predicates = [HasLZCNT], Defs = [EFLAGS] in {

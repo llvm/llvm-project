@@ -237,12 +237,23 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
     StringRef newCatName =
         getReferentString(*containerIsec->getRelocAt(catLayout.nameOffset));
 
+    auto formatObjAndSrcFileName = [](const InputSection *section) {
+      lld::macho::InputFile *inputFile = section->getFile();
+      std::string result = toString(inputFile);
+
+      auto objFile = dyn_cast_or_null<ObjFile>(inputFile);
+      if (objFile && objFile->compileUnit)
+        result += " (" + objFile->sourceFile() + ")";
+
+      return result;
+    };
+
     StringRef containerType = mc.kind == MCK_Category ? "category" : "class";
     warn("method '" + methPrefix + methodName.val() +
          "' has conflicting definitions:\n>>> defined in category " +
-         newCatName + " from " + toString(containerIsec->getFile()) +
+         newCatName + " from " + formatObjAndSrcFileName(containerIsec) +
          "\n>>> defined in " + containerType + " " + containerName + " from " +
-         toString(mc.isec->getFile()));
+         formatObjAndSrcFileName(mc.isec));
   }
 }
 

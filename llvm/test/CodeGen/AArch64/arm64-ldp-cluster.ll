@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefixes=CHECK,CHECK-A57
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=exynos-m3 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 
 ; Test ldr clustering.
@@ -225,5 +225,75 @@ entry:
   %r53 = load i64, ptr %arg, align 8
   store i64 %r52, ptr %wa
   store i64 %r53, ptr %wb
+  ret void
+}
+
+; CHECK: ********** MI Scheduling **********
+; CHECK: STURWi_STRWui:%bb.0 entry
+; CHECK: Cluster ld/st SU(3) - SU(4)
+; CHECK: SU(3):   STURWi %{{[0-9]+}}:gpr32
+; CHECK: SU(4):   STRWui %{{[0-9]+}}:gpr32
+;
+define void @STURWi_STRWui(ptr nocapture readonly %arg, i32 %b, i32 %c) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -4
+  store i32 %b, ptr %r51
+  store i32 %c, ptr %arg
+  ret void
+}
+
+; CHECK: ********** MI Scheduling **********
+; CHECK: STURXi_STRXui:%bb.0 entry
+; CHECK: Cluster ld/st SU(3) - SU(4)
+; CHECK: SU(3):   STURXi %{{[0-9]+}}:gpr64
+; CHECK: SU(4):   STRXui %{{[0-9]+}}:gpr64
+;
+define void @STURXi_STRXui(ptr nocapture readonly %arg, i64 %b, i64 %c) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -8
+  store i64 %b, ptr %r51
+  store i64 %c, ptr %arg
+  ret void
+}
+
+; CHECK-A57: ********** MI Scheduling **********
+; CHECK-A57: STURSi_STRSui:%bb.0 entry
+; CHECK-A57: Cluster ld/st SU(3) - SU(4)
+; CHECK-A57: SU(3):   STURSi %{{[0-9]+}}:fpr32
+; CHECK-A57: SU(4):   STRSui %{{[0-9]+}}:fpr32
+;
+define void @STURSi_STRSui(ptr nocapture readonly %arg, float %b, float %c) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -4
+  store float %b, ptr %r51
+  store float %c, ptr %arg
+  ret void
+}
+
+; CHECK-A57: ********** MI Scheduling **********
+; CHECK-A57: STURDi_STRDui:%bb.0 entry
+; CHECK-A57: Cluster ld/st SU(3) - SU(4)
+; CHECK-A57: SU(3):   STURDi %{{[0-9]+}}:fpr64
+; CHECK-A57: SU(4):   STRDui %{{[0-9]+}}:fpr64
+;
+define void @STURDi_STRDui(ptr nocapture readonly %arg, <2 x float> %b, <2 x float> %c) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -8
+  store <2 x float> %b, ptr %r51
+  store <2 x float> %c, ptr %arg
+  ret void
+}
+
+; CHECK-A57: ********** MI Scheduling **********
+; CHECK-A57: STURQi_STRQui:%bb.0 entry
+; CHECK-A57: Cluster ld/st SU(3) - SU(4)
+; CHECK-A57: SU(3):   STURQi %{{[0-9]+}}:fpr128
+; CHECK-A57: SU(4):   STRQui %{{[0-9]+}}:fpr128
+;
+define void @STURQi_STRQui(ptr nocapture readonly %arg, <2 x double> %b, <2 x double> %c) {
+entry:
+  %r51 = getelementptr i8, ptr %arg, i64 -16
+  store <2 x double> %b, ptr %r51
+  store <2 x double> %c, ptr %arg
   ret void
 }

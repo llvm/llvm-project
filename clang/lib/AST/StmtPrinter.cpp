@@ -1138,6 +1138,15 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 }
 
 //===----------------------------------------------------------------------===//
+//  OpenACC construct printing methods
+//===----------------------------------------------------------------------===//
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  // TODO OpenACC: Print Clauses.
+  PrintStmt(S->getStructuredBlock());
+}
+
+//===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
 

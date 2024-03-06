@@ -176,10 +176,10 @@ def err_verify_inconsistent_diags : Error<
     "'%0' diagnostics %select{expected|seen}1 but not %select{seen|expected}1: "
     "%2">;
 def err_verify_invalid_no_diags : Error<
-    "%select{expected|'expected-no-diagnostics'}0 directive cannot follow "
-    "%select{'expected-no-diagnostics' directive|other expected directives}0">;
+    "%select{expected|'%0-no-diagnostics'}1 directive cannot follow "
+    "%select{'%0-no-diagnostics' directive|other expected directives}1">;
 def err_verify_no_directives : Error<
-    "no expected directives found: consider use of 'expected-no-diagnostics'">;
+    "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 
@@ -279,6 +279,10 @@ def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
+def err_function_always_inline_attribute_mismatch : Error<
+  "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
+def err_function_always_inline_new_za : Error<
+  "always_inline function %0 has new za state">;
 
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "

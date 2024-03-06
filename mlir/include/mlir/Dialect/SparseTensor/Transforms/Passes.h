@@ -47,8 +47,22 @@ enum class ReinterpretMapScope {
   kExceptGeneric, // reinterprets operation other than linalg.generic
 };
 
+/// Defines a scope for reinterpret map pass.
+enum class SparseEmitStrategy {
+  kFunctional,     // generate fully inlined (and functional) sparse iteration
+  kDebugInterface, // generate only place-holder for sparse iteration
+};
+
 #define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
+
+//===----------------------------------------------------------------------===//
+// The SparseAssembler pass.
+//===----------------------------------------------------------------------===//
+
+void populateSparseAssembler(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createSparseAssembler();
 
 //===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
@@ -74,11 +88,20 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
+  SparsificationOptions(SparseParallelizationStrategy p, SparseEmitStrategy d,
+                        bool enableRT)
+      : parallelizationStrategy(p), sparseEmitStrategy(d),
+        enableRuntimeLibrary(enableRT) {}
+
   SparsificationOptions(SparseParallelizationStrategy p, bool enableRT)
-      : parallelizationStrategy(p), enableRuntimeLibrary(enableRT) {}
+      : SparsificationOptions(p, SparseEmitStrategy::kFunctional, enableRT) {}
+
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone, true) {}
+      : SparsificationOptions(SparseParallelizationStrategy::kNone,
+                              SparseEmitStrategy::kFunctional, true) {}
+
   SparseParallelizationStrategy parallelizationStrategy;
+  SparseEmitStrategy sparseEmitStrategy;
   bool enableRuntimeLibrary;
 };
 

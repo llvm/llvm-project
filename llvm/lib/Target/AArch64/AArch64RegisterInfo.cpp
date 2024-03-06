@@ -437,11 +437,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     markSuperRegs(Reserved, AArch64::W16);
 
+  // FFR is modelled as global state that cannot be allocated.
+  if (MF.getSubtarget<AArch64Subtarget>().hasSVE())
+    Reserved.set(AArch64::FFR);
+
   // SME tiles are not allocatable.
   if (MF.getSubtarget<AArch64Subtarget>().hasSME()) {
     for (MCPhysReg SubReg : subregs_inclusive(AArch64::ZA))
       Reserved.set(SubReg);
   }
+
+  // VG cannot be allocated
+  Reserved.set(AArch64::VG);
 
   if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
     for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
@@ -450,6 +457,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     markSuperRegs(Reserved, AArch64::X27);
@@ -505,6 +513,10 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
   // for normal codegen.
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening) &&
         MCRegisterInfo::regsOverlap(PhysReg, AArch64::X16))
+    return true;
+
+  // ZA/ZT0 registers are reserved but may be permitted in the clobber list.
+  if (PhysReg == AArch64::ZA || PhysReg == AArch64::ZT0)
     return true;
 
   return !isReservedReg(MF, PhysReg);

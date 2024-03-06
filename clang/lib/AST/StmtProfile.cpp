@@ -2441,6 +2441,13 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
   }
 }
 
+void StmtProfiler::VisitOpenACCComputeConstruct(
+    const OpenACCComputeConstruct *S) {
+  // VisitStmt handles children, so the AssociatedStmt is handled.
+  VisitStmt(S);
+  // TODO OpenACC: Visit Clauses.
+}
+
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                    bool Canonical, bool ProfileLambdaExpr) const {
   StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr);

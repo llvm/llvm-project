@@ -1,5 +1,9 @@
 name: "Check code formatting"
-on: pull_request_target
+on:
+  pull_request_target:
+    branches:
+      - main
+
 permissions:
   pull-requests: write
 

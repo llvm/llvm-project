@@ -1219,8 +1219,11 @@ struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity string,
                                          hlfir::Entity length) {
+    // The input length may be a user input and needs to be sanitized as per
+    // Fortran 2018 7.4.4.2 point 5.
+    mlir::Value safeLength = fir::factory::genMaxWithZero(builder, loc, length);
     return hlfir::EntityWithAttributes{
-        builder.create<hlfir::SetLengthOp>(loc, string, length)};
+        builder.create<hlfir::SetLengthOp>(loc, string, safeLength)};
   }
   static void
   genResultTypeParams(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
@@ -1841,6 +1844,16 @@ private:
       builder.genIfThen(loc, isAlloc).genThen(genAssign).end();
     }
 
+    if (fir::isRecordWithAllocatableMember(recTy)) {
+      // Deallocate allocatable components without calling final subroutines.
+      // The Fortran 2018 section 9.7.3.2 about deallocation is not ruling
+      // about the fate of allocatable components of structure constructors,
+      // and there is no behavior consensus in other compilers.
+      fir::FirOpBuilder *bldr = &builder;
+      getStmtCtx().attachCleanup([=]() {
+        fir::runtime::genDerivedTypeDestroyWithoutFinalization(*bldr, loc, box);
+      });
+    }
     return varOp;
   }
 

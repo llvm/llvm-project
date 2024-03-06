@@ -66,7 +66,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   assert(tensorType && "expected TensorType");
 
   BaseMemRefType memrefType = options.functionArgTypeConverterFn(
-      tensorType, *options.defaultMemorySpace, funcOp, options);
+      tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
       index, BufferizationDialect::kBufferLayoutAttrName);
@@ -443,7 +443,8 @@ struct FuncOpInterface
       // Note: If `inferFunctionResultLayout = true`, cast are later folded
       // away.
       BaseMemRefType resultType = options.functionArgTypeConverterFn(
-          tensorType, *options.defaultMemorySpace, funcOp, options);
+          tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp,
+          options);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           loc, resultType, returnVal);
       returnValues.push_back(toMemrefOp);

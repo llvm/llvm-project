@@ -29,9 +29,9 @@ define dso_local arm_aapcscc void @f([2 x i64] %c.coerce) #0 !dbg !8 {
 entry:
   %c = alloca { double, double }, align 8, !DIAssignID !14
   call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !14, metadata ptr %c, metadata !DIExpression()), !dbg !15
-  %0 = bitcast ptr %c to [2 x i64]*
-  store [2 x i64] %c.coerce, [2 x i64]* %0, align 8, !DIAssignID !16
-  call void @llvm.dbg.assign(metadata [2 x i64] %c.coerce, metadata !13, metadata !DIExpression(), metadata !16, metadata [2 x i64]* %0, metadata !DIExpression()), !dbg !15
+  %0 = bitcast ptr %c to ptr
+  store [2 x i64] %c.coerce, ptr %0, align 8, !DIAssignID !16
+  call void @llvm.dbg.assign(metadata [2 x i64] %c.coerce, metadata !13, metadata !DIExpression(), metadata !16, metadata ptr %0, metadata !DIExpression()), !dbg !15
   ; --- The rest of this function isn't useful for the test ---
   ;%c.realp = getelementptr inbounds { double, double }, ptr %c, i32 0, i32 0, !dbg !17
   ;%c.imagp = getelementptr inbounds { double, double }, ptr %c, i32 0, i32 1, !dbg !17

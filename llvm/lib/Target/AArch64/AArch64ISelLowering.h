@@ -218,6 +218,7 @@ enum NodeType : unsigned {
   SQSHLU_I,
   SRSHR_I,
   URSHR_I,
+  URSHR_I_PRED,
 
   // Vector narrowing shift by immediate (bottom)
   RSHRNB_I,
@@ -247,6 +248,9 @@ enum NodeType : unsigned {
   FCMGTz,
   FCMLEz,
   FCMLTz,
+
+  // Round wide FP to narrow FP with inexact results to odd.
+  FCVTXN,
 
   // Vector across-lanes addition
   // Only the lower result lane is defined.
@@ -283,9 +287,6 @@ enum NodeType : unsigned {
   ORV_PRED,
   EORV_PRED,
   ANDV_PRED,
-
-  // Vector bitwise insertion
-  BIT,
 
   // Compare-and-branch
   CBZ,
@@ -1307,6 +1308,8 @@ private:
   bool preferScalarizeSplat(SDNode *N) const override;
 
   unsigned getMinimumJumpTableEntries() const override;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 
 namespace AArch64 {

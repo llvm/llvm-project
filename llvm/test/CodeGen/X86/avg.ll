@@ -1191,7 +1191,7 @@ define void @avg_v16i16_const(ptr %a) nounwind {
 ;
 ; AVX1-LABEL: avg_v16i16_const:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
+; AVX1-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpavgw (%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpavgw 16(%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
@@ -1241,7 +1241,7 @@ define void @avg_v32i16_const(ptr %a) nounwind {
 ;
 ; AVX1-LABEL: avg_v32i16_const:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
+; AVX1-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpavgw (%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpavgw 16(%rdi), %xmm0, %xmm2
 ; AVX1-NEXT:    vpavgw 32(%rdi), %xmm0, %xmm3

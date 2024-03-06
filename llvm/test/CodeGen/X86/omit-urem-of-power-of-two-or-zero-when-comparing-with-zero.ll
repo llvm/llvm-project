@@ -149,7 +149,7 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [1,u,2147483648,u]
+; SSE4-NEXT:    pmovzxdq {{.*#+}} xmm1 = [1,2147483648]
 ; SSE4-NEXT:    pmuludq %xmm0, %xmm1
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; SSE4-NEXT:    psrlq $32, %xmm1

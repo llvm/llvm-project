@@ -98,3 +98,10 @@ add_header(ENTRY HDR ENTRY.h)
 add_header(struct_hsearch_data HDR struct_hsearch_data.h)
 add_header(struct_epoll_event HDR struct_epoll_event.h)
 add_header(struct_epoll_data HDR struct_epoll_data.h)
+add_header(
+  float128
+  HDR
+    float128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+)

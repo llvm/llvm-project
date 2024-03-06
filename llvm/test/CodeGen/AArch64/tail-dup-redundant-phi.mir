@@ -252,7 +252,6 @@ body:             |
   ; CHECK-NEXT: bb.7.bb24:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.bb25:
   ; CHECK-NEXT:   successors: %bb.18(0x30000000), %bb.14(0x50000000)
   ; CHECK-NEXT: {{  $}}
@@ -297,7 +296,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.11.bb35:
   ; CHECK-NEXT:   successors:
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.13.bb40:
   ; CHECK-NEXT:   successors:

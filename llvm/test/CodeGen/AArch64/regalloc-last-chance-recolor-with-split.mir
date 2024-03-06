@@ -371,7 +371,6 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.bb79:
   ; CHECK-NEXT:   successors: %bb.9(0x04000000), %bb.8(0x7c000000)
   ; CHECK-NEXT:   liveins: $fp, $w23, $w24, $x10, $x19, $x20, $x22, $x25, $x26, $x27

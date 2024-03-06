@@ -24,11 +24,10 @@ define void @test_and(i1 %boolcond) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: 2
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:    symbolic max exit count for loop: 2
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %conv = zext i1 %boolcond to i32
@@ -74,11 +73,10 @@ define void @test_or(i1 %boolcond) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: 2
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:    symbolic max exit count for loop: 2
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %conv = zext i1 %boolcond to i32

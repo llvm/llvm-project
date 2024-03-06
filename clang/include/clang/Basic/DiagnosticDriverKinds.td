@@ -93,6 +93,10 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to "
   "SPIR-V%select{| unless %1 is given}0.">;
 
+// TODO: Remove when COV6 is fully supported by ROCm.
+def warn_drv_amdgpu_cov6: Warning<
+  "code object v6 is still in development and not ready for production use yet;"
+  " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via "
   "'%2'">;
@@ -689,7 +693,6 @@ def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
 
-def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
 def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;
 

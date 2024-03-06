@@ -190,11 +190,13 @@ size_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, max);
 }
 
-bool ScriptedSyntheticChildren::FrontEnd::Update() {
+lldb::ChildCacheState ScriptedSyntheticChildren::FrontEnd::Update() {
   if (!m_wrapper_sp || m_interpreter == nullptr)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
-  return m_interpreter->UpdateSynthProviderInstance(m_wrapper_sp);
+  return m_interpreter->UpdateSynthProviderInstance(m_wrapper_sp)
+             ? lldb::ChildCacheState::eReuse
+             : lldb::ChildCacheState::eRefetch;
 }
 
 bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
