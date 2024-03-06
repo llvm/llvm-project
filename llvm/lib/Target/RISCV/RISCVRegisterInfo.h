@@ -110,14 +110,19 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
     return RC;
   }
 
-  bool isRVVRegClass(const TargetRegisterClass *RC) const {
+  bool doesRegClassHavePseudoInitUndef(
+      const TargetRegisterClass *RC) const override {
+    return isVRRegClass(RC);
+  }
+
+  bool isVRRegClass(const TargetRegisterClass *RC) const {
     return RISCV::VRRegClass.hasSubClassEq(RC) ||
            RISCV::VRM2RegClass.hasSubClassEq(RC) ||
            RISCV::VRM4RegClass.hasSubClassEq(RC) ||
            RISCV::VRM8RegClass.hasSubClassEq(RC);
   }
 
-  bool isRVVSegmentRegClass(const TargetRegisterClass *RC) const {
+  bool isVRNRegClass(const TargetRegisterClass *RC) const {
     return RISCV::VRN2M1RegClass.hasSubClassEq(RC) ||
            RISCV::VRN2M2RegClass.hasSubClassEq(RC) ||
            RISCV::VRN2M4RegClass.hasSubClassEq(RC) ||
@@ -131,9 +136,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
            RISCV::VRN8M1RegClass.hasSubClassEq(RC);
   }
 
-  bool doesRegClassHavePseudoInitUndef(
-      const TargetRegisterClass *RC) const override {
-    return isRVVRegClass(RC);
+  bool isRVVRegClass(const TargetRegisterClass *RC) const {
+    return isVRRegClass(RC) || isVRNRegClass(RC);
   }
 };
 }
