@@ -1,11 +1,11 @@
 # REQUIRES: x86
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/asm -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux asm -o a.o
 
 ## Default case: abc and abx included in text.
 # RUN: echo "SECTIONS { \
-# RUN:      .text : { *(.abc .abx) } }" > %t.script
-# RUN: ld.lld -o out --script %t.script a.o
+# RUN:      .text : { *(.abc .abx) } }" > a.t
+# RUN: ld.lld -o out --script a.t a.o
 # RUN: llvm-objdump --section-headers out | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 # SEC-DEFAULT:      Sections:
@@ -22,15 +22,15 @@
 
 ## Now replace the symbol with '?' and check that results are the same.
 # RUN: echo "SECTIONS { \
-# RUN:      .text : { *(.abc .ab?) } }" > %t.script
-# RUN: ld.lld -o out --script %t.script a.o
+# RUN:      .text : { *(.abc .ab?) } }" > b.t
+# RUN: ld.lld -o out -T b.t a.o
 # RUN: llvm-objdump --section-headers out | \
 # RUN:   FileCheck -check-prefix=SEC-DEFAULT %s
 
 ## Now see how replacing '?' with '*' will consume whole abcd.
 # RUN: echo "SECTIONS { \
-# RUN:      .text : { *(.abc .ab*) } }" > %t.script
-# RUN: ld.lld -o out --script %t.script a.o
+# RUN:      .text : { *(.abc .ab*) } }" > c.t
+# RUN: ld.lld -o out --script c.t a.o
 # RUN: llvm-objdump --section-headers out | \
 # RUN:   FileCheck -check-prefix=SEC-ALL %s
 # SEC-ALL:      Sections:
@@ -46,8 +46,8 @@
 
 ## All sections started with .a are merged.
 # RUN: echo "SECTIONS { \
-# RUN:      .text : { *(.a*) } }" > %t.script
-# RUN: ld.lld -o out --script %t.script a.o
+# RUN:      .text : { *(.a*) } }" > d.t
+# RUN: ld.lld -o out --script d.t a.o
 # RUN: llvm-objdump --section-headers out | \
 # RUN:   FileCheck -check-prefix=SEC-NO %s
 # SEC-NO: Sections:
@@ -114,7 +114,7 @@ SECTIONS {
 }
 
 #--- rparen.lds
-# RUN: not ld.lld -T rparen.lds %t.o 2>&1 | FileCheck %s --check-prefix=ERR-RPAREN --match-full-lines --strict-whitespace
+# RUN: not ld.lld -T rparen.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-RPAREN --match-full-lines --strict-whitespace
 #      ERR-RPAREN:{{.*}}: expected filename pattern
 # ERR-RPAREN-NEXT:>>>   .text : { *(.a* ) ) }
 # ERR-RPAREN-NEXT:>>>                     ^
