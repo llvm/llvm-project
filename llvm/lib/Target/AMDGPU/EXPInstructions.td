@@ -58,12 +58,12 @@ class EXP_Real_Row<string pseudo, int subtarget, string name = "exp", EXP_Pseudo
 
 // DONE variants have mayLoad = 1.
 // ROW variants have an implicit use of M0.
-let SubtargetPredicate = HasExpOrExportInsts in {
+let SubtargetPredicate = HasExportInsts in {
 def EXP          : EXP_Pseudo<0, 0>;
 def EXP_DONE     : EXP_Pseudo<0, 1>;
 def EXP_ROW      : EXP_Pseudo<1, 0>;
 def EXP_ROW_DONE : EXP_Pseudo<1, 1>;
-} // let SubtargetPredicate = HasExpOrExportInsts
+} // let SubtargetPredicate = HasExportInsts
 
 //===----------------------------------------------------------------------===//
 // SI, VI, GFX10.
@@ -117,7 +117,7 @@ multiclass EXP_Real_gfx11 {
 multiclass VEXPORT_Real_gfx12 {
   defvar ps = !cast<EXP_Pseudo>(NAME);
   def _gfx12 : EXP_Real_Row<NAME, SIEncodingFamily.GFX12, "export">,
-    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus, HasExpOrExportInsts]> {
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus, HasExportInsts]> {
     let AssemblerPredicate = isGFX12Only;
     let DecoderNamespace = "GFX12";
     let row = ps.row;
