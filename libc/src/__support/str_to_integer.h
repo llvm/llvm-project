@@ -51,30 +51,22 @@ is_hex_start(const char *__restrict src,
          b36_char_to_int(*(src + 2)) < 16;
 }
 
-struct BaseAndLen {
-  int base;
-  size_t len;
-};
-
 // Takes the address of the string pointer and parses the base from the start of
-// it. This function will advance |src| to the first valid digit in the inferred
-// base.
-LIBC_INLINE BaseAndLen infer_base(const char *__restrict src, size_t src_len) {
+// it.
+LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
   // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
   // sequence of the decimal digits and the letters a (or A) through f (or F)
   // with values 10 through 15 respectively." (C standard 6.4.4.1)
-  if (is_hex_start(src, src_len)) {
-    return {16, 2};
-  } // An octal number is defined as "the prefix 0 optionally followed by a
-    // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
-    // number that starts with 0, including just 0, is an octal number.
-  else if (src_len > 0 && src[0] == '0') {
-    return {8, 0};
-  } // A decimal number is defined as beginning "with a nonzero digit and
-    // consist[ing] of a sequence of decimal digits." (C standard 6.4.4.1)
-  else {
-    return {10, 0};
-  }
+  if (is_hex_start(src, src_len))
+    return 16;
+  // An octal number is defined as "the prefix 0 optionally followed by a
+  // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
+  // number that starts with 0, including just 0, is an octal number.
+  if (src_len > 0 && src[0] == '0')
+    return 8;
+  // A decimal number is defined as beginning "with a nonzero digit and
+  // consist[ing] of a sequence of decimal digits." (C standard 6.4.4.1)
+  return 10;
 }
 
 // Takes a pointer to a string and the base to convert to. This function is used
@@ -92,10 +84,8 @@ strtointeger(const char *__restrict src, int base,
   if (src_len == 0)
     return {0, 0, 0};
 
-  if (base < 0 || base == 1 || base > 36) {
-    error_val = EINVAL;
-    return {0, 0, error_val};
-  }
+  if (base < 0 || base == 1 || base > 36)
+    return {0, 0, EINVAL};
 
   src_cur = first_non_whitespace(src, src_len) - src;
 
@@ -105,13 +95,11 @@ strtointeger(const char *__restrict src, int base,
     ++src_cur;
   }
 
-  if (base == 0) {
-    auto base_and_len = infer_base(src + src_cur, src_len - src_cur);
-    base = base_and_len.base;
-    src_cur += base_and_len.len;
-  } else if (base == 16 && is_hex_start(src + src_cur, src_len - src_cur)) {
+  if (base == 0)
+    base = infer_base(src + src_cur, src_len - src_cur);
+
+  if (base == 16 && is_hex_start(src + src_cur, src_len - src_cur))
     src_cur = src_cur + 2;
-  }
 
   constexpr bool IS_UNSIGNED = (cpp::numeric_limits<T>::min() == 0);
   const bool is_positive = (result_sign == '+');
