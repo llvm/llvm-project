@@ -101,6 +101,7 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_mov_b64 s[20:21], s[0:1]
 ; GCN-O0-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; GCN-O0-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[28:29], -1

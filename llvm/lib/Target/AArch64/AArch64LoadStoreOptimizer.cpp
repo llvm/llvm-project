@@ -2370,15 +2370,15 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
       }
     }
 
+    ++NumPairCreated;
+    if (TII->hasUnscaledLdStOffset(MI))
+      ++NumUnscaledPairCreated;
+
     MBBI = mergePairedInsns(MBBI, Paired, Flags);
     // Collect liveness info for instructions between Prev and the new position
     // MBBI.
     for (auto I = std::next(Prev); I != MBBI; I++)
       updateDefinedRegisters(*I, DefinedInBB, TRI);
-
-    ++NumPairCreated;
-    if (TII->hasUnscaledLdStOffset(MI))
-      ++NumUnscaledPairCreated;
 
     return true;
   }

@@ -140,7 +140,7 @@ TYPED_TEST(ThreadPoolTest, AsyncBarrier) {
 
   std::atomic_int checked_in{0};
 
-  TypeParam Pool;
+  DefaultThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async([this, &checked_in] {
       this->waitForMainThread();
@@ -160,7 +160,7 @@ TYPED_TEST(ThreadPoolTest, AsyncBarrierArgs) {
   // Test that async works with a function requiring multiple parameters.
   std::atomic_int checked_in{0};
 
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async(TestFunc, std::ref(checked_in), i);
   }
@@ -170,7 +170,7 @@ TYPED_TEST(ThreadPoolTest, AsyncBarrierArgs) {
 
 TYPED_TEST(ThreadPoolTest, Async) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   std::atomic_int i{0};
   Pool.async([this, &i] {
     this->waitForMainThread();
@@ -185,7 +185,7 @@ TYPED_TEST(ThreadPoolTest, Async) {
 
 TYPED_TEST(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool(hardware_concurrency(2));
+  DefaultThreadPool Pool(hardware_concurrency(2));
   std::atomic_int i{0};
   Pool.async([this, &i] {
     this->waitForMainThread();
@@ -201,7 +201,7 @@ TYPED_TEST(ThreadPoolTest, GetFuture) {
 
 TYPED_TEST(ThreadPoolTest, GetFutureWithResult) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool(hardware_concurrency(2));
+  DefaultThreadPool Pool(hardware_concurrency(2));
   auto F1 = Pool.async([] { return 1; });
   auto F2 = Pool.async([] { return 2; });
 
@@ -213,7 +213,7 @@ TYPED_TEST(ThreadPoolTest, GetFutureWithResult) {
 
 TYPED_TEST(ThreadPoolTest, GetFutureWithResultAndArgs) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool(hardware_concurrency(2));
+  DefaultThreadPool Pool(hardware_concurrency(2));
   auto Fn = [](int x) { return x; };
   auto F1 = Pool.async(Fn, 1);
   auto F2 = Pool.async(Fn, 2);
@@ -229,7 +229,7 @@ TYPED_TEST(ThreadPoolTest, PoolDestruction) {
   // Test that we are waiting on destruction
   std::atomic_int checked_in{0};
   {
-    ThreadPool Pool;
+    DefaultThreadPool Pool;
     for (size_t i = 0; i < 5; ++i) {
       Pool.async([this, &checked_in] {
         this->waitForMainThread();
@@ -250,7 +250,7 @@ TYPED_TEST(ThreadPoolTest, Groups) {
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
     GTEST_SKIP();
-  ThreadPool Pool(S);
+  DefaultThreadPool Pool(S);
   typename TestFixture::PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group1(Pool);
   ThreadPoolTaskGroup Group2(Pool);
@@ -288,7 +288,7 @@ TYPED_TEST(ThreadPoolTest, Groups) {
 // Check recursive tasks.
 TYPED_TEST(ThreadPoolTest, RecursiveGroups) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   ThreadPoolTaskGroup Group(Pool);
 
   std::atomic_int checked_in1{0};
@@ -323,7 +323,7 @@ TYPED_TEST(ThreadPoolTest, RecursiveWaitDeadlock) {
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
     GTEST_SKIP();
-  ThreadPool Pool(S);
+  DefaultThreadPool Pool(S);
   typename TestFixture::PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group(Pool);
 
@@ -378,7 +378,7 @@ ThreadPoolTest<ThreadPoolImpl>::RunOnAllSockets(ThreadPoolStrategy S) {
     std::mutex AllThreadsLock;
     unsigned Active = 0;
 
-    ThreadPool Pool(S);
+    DefaultThreadPool Pool(S);
     for (size_t I = 0; I < S.compute_thread_count(); ++I) {
       Pool.async([&] {
         {
