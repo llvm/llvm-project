@@ -223,7 +223,9 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
     Tool.buildASTs(ASTs);
 
-    requireTrue(ASTs.size() == 1);
+    // FIXME: compile_commands
+    // 中一个文件可能对应多条编译命令，所以这里可能有多个AST
+    requireTrue(ASTs.size() == 1, "Multiple ASTs for one file!");
     std::unique_ptr<ASTUnit> AST = std::move(ASTs[0]);
 
     fif functionsInFile;
