@@ -26,8 +26,6 @@ define signext i32 @f0() {
 ; CHECK-NEXT:  Loop %b1: backedge-taken count is 255
 ; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i16 255
 ; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 255
-; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 255
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %b1: Trip multiple is 256
 ;
 b0:

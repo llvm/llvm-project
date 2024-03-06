@@ -20,8 +20,6 @@ define void @f0(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
@@ -88,8 +86,6 @@ define void @f1(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 15
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 15
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 15
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 15
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 16
 ;
 entry:
@@ -149,8 +145,6 @@ define void @f2(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
@@ -192,8 +186,6 @@ define void @f3(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
@@ -242,8 +234,6 @@ define void @f4(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 
@@ -286,8 +276,6 @@ define void @f5(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
@@ -332,8 +320,6 @@ define void @f6(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
@@ -381,8 +367,6 @@ define void @f7(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 127
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:

@@ -26,8 +26,6 @@ define dso_local i32 @test_loop(ptr nocapture noundef readonly %x) {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 8
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 8
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 8
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 8
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 9
 ;
 entry:

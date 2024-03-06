@@ -16,8 +16,6 @@ define void @loop_guard_improves_exact_backedge_taken_count_1(i32 %conv) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -52,8 +50,6 @@ define void @loop_guard_improves_exact_backedge_taken_count_2(i32 %conv) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i1 (trunc i32 %conv to i1) to i64)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i1 (trunc i32 %conv to i1) to i64)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i1 (trunc i32 %conv to i1) to i64)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
 entry:

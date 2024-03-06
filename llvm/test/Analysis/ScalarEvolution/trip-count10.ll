@@ -9,7 +9,6 @@ define void @a(i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %t0 = icmp sgt i64 %n, 0
@@ -30,8 +29,6 @@ define void @b(i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -53,8 +50,6 @@ define void @c(i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -76,7 +71,6 @@ define void @d(i64 %n) nounwind {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %t0 = icmp sgt i64 %n, 0
@@ -105,7 +99,6 @@ define void @nonpolynomial() {
 ; CHECK-NEXT:  Loop %loophead: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loophead: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loophead: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loophead: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loophead
@@ -134,8 +127,6 @@ define void @constant_phi_operands() nounwind {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
 entry:
@@ -160,7 +151,6 @@ define void @exit_orcond_nsw(ptr %a) nounwind {
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body.i: constant max backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %for.body.i: symbolic max backedge-taken count is 1
-; CHECK-NEXT:  Loop %for.body.i: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body.i

@@ -10,8 +10,6 @@ define void @le(i64 %n, ptr nocapture %p) nounwind {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 9223372036854775807
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %n
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:

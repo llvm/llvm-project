@@ -13,8 +13,6 @@ define void @test(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-2 + %N) /u 2)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-2 + %N) /u 2)
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-2 + %N) /u 2)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -36,8 +34,6 @@ define void @test_preinc(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (%N /u 2)
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -62,7 +58,6 @@ define void @test_well_defined_infinite_st(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -84,7 +79,6 @@ define void @test_well_defined_infinite_ld(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -106,7 +100,6 @@ define void @test_no_mustprogress(i32 %N) {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -129,8 +122,6 @@ define void @test_1024(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1024 + %N) /u 1024)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 4194303
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1024 + %N) /u 1024)
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1024 + %N) /u 1024)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -152,8 +143,6 @@ define void @test_uneven_divide(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1431655765 * %N))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1431655765 * %N))
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1431655765 * %N))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -175,7 +164,6 @@ define void @test_non_invariant_rhs() mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -199,7 +187,6 @@ define void @test_abnormal_exit(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -226,7 +213,6 @@ define void @test_other_exit(i32 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 9
 ; CHECK-NEXT:    symbolic max exit count for for.body: 9
 ; CHECK-NEXT:    symbolic max exit count for for.latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -275,7 +261,6 @@ define void @test_sext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -297,7 +282,6 @@ define void @test_zext_of_sext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -320,7 +304,6 @@ define void @test_zext_offset(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body
@@ -343,7 +326,6 @@ define void @test_sext_offset(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %for.body

@@ -49,8 +49,6 @@ define void @f(ptr %A, i32 %N) {
 ; CHECK-NEXT:  Loop %bb1: backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is (0 smax %N)
-; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is (0 smax %N)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb1: Trip multiple is 1
 ;
 bb:

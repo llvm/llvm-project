@@ -44,8 +44,6 @@ define void @foo(i32 %no, ptr nocapture %d, ptr nocapture %q) nounwind {
 ; CHECK-NEXT:  Loop %bb: backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
 ; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 1073741822
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
-; CHECK-NEXT:  Loop %bb: Predicated backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb: Trip multiple is 1
 ;
 entry:

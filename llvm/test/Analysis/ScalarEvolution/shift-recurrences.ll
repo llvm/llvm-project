@@ -12,7 +12,6 @@ define void @test_lshr() {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -36,7 +35,6 @@ define void @test_lshr2() {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -60,7 +58,6 @@ define void @test_ashr_zeros() {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -83,7 +80,6 @@ define void @test_ashr_ones() {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -107,7 +103,6 @@ define void @test_ashr_ones2() {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -132,7 +127,6 @@ define void @test_ashr_unknown(i64 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -157,7 +151,6 @@ define void @test_ashr_wrong_op(i64 %start) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -181,7 +174,6 @@ define void @test_shl() {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -209,8 +201,6 @@ define void @test_shl2() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -244,8 +234,6 @@ define void @test_shl3(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -278,8 +266,6 @@ define void @test_shl4() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 60
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 60
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 60
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 60
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 61
 ;
 entry:
@@ -311,8 +297,6 @@ define void @test_shl5() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 61
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 61
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 61
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 61
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 62
 ;
 entry:
@@ -346,8 +330,6 @@ define void @test_shl6(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -380,8 +362,6 @@ define void @test_shl7(i1 %c, i64 %shiftamt) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -434,7 +414,6 @@ define void @unreachable_binop() {
 ; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %header
@@ -492,7 +471,6 @@ define void @nonloop_recurrence_2() {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 bb:
   br label %loop
@@ -527,8 +505,6 @@ define void @test_ashr_tc_positive() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -559,8 +535,6 @@ define void @test_ashr_tc_negative() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -593,8 +567,6 @@ define void @test_ashr_tc_either(i1 %a) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 60
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 60
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 60
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 60
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 61
 ;
 entry:
@@ -626,8 +598,6 @@ define void @test_ashr_zero_shift() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -658,8 +628,6 @@ define void @test_lshr_tc_positive() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -690,8 +658,6 @@ define void @test_lshr_tc_negative() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -724,8 +690,6 @@ define void @test_lshr_tc_either(i1 %a) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -757,8 +721,6 @@ define void @test_lshr_zero_shift() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -790,8 +752,6 @@ define void @test_lshr_power_of_2_start() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -823,8 +783,6 @@ define void @test_lshr_arbitrary_start() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
@@ -855,8 +813,6 @@ define void @test_lshr_start_power_of_2_plus_one() {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:

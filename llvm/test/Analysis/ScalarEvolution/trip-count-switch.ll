@@ -10,8 +10,6 @@ define void @test1() nounwind {
 ; CHECK-NEXT:  Loop %for.cond: backedge-taken count is 2
 ; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is i32 2
 ; CHECK-NEXT:  Loop %for.cond: symbolic max backedge-taken count is 2
-; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is 2
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.cond: Trip multiple is 3
 ;
 entry:

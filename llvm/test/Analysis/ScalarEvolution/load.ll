@@ -33,8 +33,6 @@ define i32 @test1() nounwind readnone {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 49
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 49
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 49
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 49
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 50
 ;
 entry:
@@ -87,8 +85,6 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 4
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 5
 ;
 entry:
