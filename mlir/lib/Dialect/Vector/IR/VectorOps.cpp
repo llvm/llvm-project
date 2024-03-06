@@ -2498,8 +2498,7 @@ public:
 
     VectorType sourceType = op.getV1VectorType();
     if (sourceType != op.getV2VectorType() ||
-        ArrayRef<int64_t>{sourceType.getNumElements() * 2} !=
-            resultType.getShape()) {
+        sourceType.getNumElements() * 2 != resultType.getNumElements()) {
       return rewriter.notifyMatchFailure(
           op, "ShuffleOp types don't match an interleave");
     }
