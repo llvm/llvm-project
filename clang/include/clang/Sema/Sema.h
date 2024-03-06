@@ -69,7 +69,6 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <deque>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -1024,9 +1023,9 @@ public:
     OpaqueParser = P;
   }
 
-  /// \brief Callback to the parser to parse a type expressed as a string.
+  /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
-    ParseTypeFromStringCallback;
+      ParseTypeFromStringCallback;
 
   class DelayedDiagnostics;
 
@@ -4955,25 +4954,25 @@ public:
   /// Check whether a nullability type specifier can be added to the given
   /// type through some means not written in source (e.g. API notes).
   ///
-  /// \param type The type to which the nullability specifier will be
+  /// \param Type The type to which the nullability specifier will be
   /// added. On success, this type will be updated appropriately.
   ///
-  /// \param nullability The nullability specifier to add.
+  /// \param Nullability The nullability specifier to add.
   ///
-  /// \param diagLoc The location to use for diagnostics.
+  /// \param DiagLoc The location to use for diagnostics.
   ///
-  /// \param allowArrayTypes Whether to accept nullability specifiers on an
+  /// \param AllowArrayTypes Whether to accept nullability specifiers on an
   /// array type (e.g., because it will decay to a pointer).
   ///
-  /// \param overrideExisting Whether to override an existing, locally-specified
+  /// \param OverrideExisting Whether to override an existing, locally-specified
   /// nullability specifier rather than complaining about the conflict.
   ///
   /// \returns true if nullability cannot be applied, false otherwise.
-  bool checkImplicitNullabilityTypeSpecifier(QualType &type,
-                                             NullabilityKind nullability,
-                                             SourceLocation diagLoc,
-                                             bool allowArrayTypes,
-                                             bool overrideExisting);
+  bool checkImplicitNullabilityTypeSpecifier(QualType &Type,
+                                             NullabilityKind Nullability,
+                                             SourceLocation DiagLoc,
+                                             bool AllowArrayTypes,
+                                             bool OverrideExisting);
 
   /// Process the attributes before creating an attributed statement. Returns
   /// the semantic attributes that have been processed.
