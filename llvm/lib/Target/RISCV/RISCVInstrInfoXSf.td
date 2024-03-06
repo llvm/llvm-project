@@ -814,7 +814,7 @@ let Predicates = [HasVendorXSiFivecdiscarddlone] in {
       DecoderNamespace = "XSiFivecdiscarddlone" in
   def SF_CDISCARD_D_L1
       : RVInstR<0b1111110, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
-                "cdiscard.d.l1", "$rs1">, Sched<[]> {
+                "sf.cdiscard.d.l1", "$rs1">, Sched<[]> {
     let rd = 0;
     let rs2 = 0b00010;
   }
@@ -825,7 +825,7 @@ let Predicates = [HasVendorXSiFivecflushdlone] in {
       DecoderNamespace = "XSiFivecflushdlone" in
   def SF_CFLUSH_D_L1
       : RVInstR<0b1111110, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
-                "cflush.d.l1", "$rs1">, Sched<[]> {
+                "sf.cflush.d.l1", "$rs1">, Sched<[]> {
     let rd = 0;
     let rs2 = 0b00000;
   }

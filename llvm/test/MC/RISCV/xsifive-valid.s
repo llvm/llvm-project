@@ -9,18 +9,18 @@
 # RUN:     | llvm-objdump --mattr=+xsifivecdiscarddlone,+xsifivecflushdlone -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# CHECK-INST: cflush.d.l1     zero
+# CHECK-INST: sf.cflush.d.l1     zero
 # CHECK-ENC: encoding: [0x73,0x00,0x00,0xfc]
-cflush.d.l1 x0
+sf.cflush.d.l1 x0
 
-# CHECK-INST: cflush.d.l1     t2
+# CHECK-INST: sf.cflush.d.l1     t2
 # CHECK-ENC: encoding: [0x73,0x80,0x03,0xfc]
-cflush.d.l1 x7
+sf.cflush.d.l1 x7
 
-# CHECK-INST: cdiscard.d.l1   zero
+# CHECK-INST: sf.cdiscard.d.l1   zero
 # CHECK-ENC: encoding: [0x73,0x00,0x20,0xfc]
-cdiscard.d.l1 x0
+sf.cdiscard.d.l1 x0
 
-# CHECK-INST: cdiscard.d.l1   t2
+# CHECK-INST: sf.cdiscard.d.l1   t2
 # CHECK-ENC: encoding: [0x73,0x80,0x23,0xfc]
-cdiscard.d.l1 x7
+sf.cdiscard.d.l1 x7

@@ -1060,19 +1060,19 @@ def HasVendorXSfvfnrclipxfqf
 
 def FeatureVendorXSiFivecdiscarddlone
     : SubtargetFeature<"xsifivecdiscarddlone", "HasVendorXSiFivecdiscarddlone", "true",
-                       "'XSiFivecdiscarddlone' (SiFive cdiscard.d.l1 Instruction)", []>;
+                       "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)", []>;
 def HasVendorXSiFivecdiscarddlone
     : Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
       AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
-                         "'XSiFivecdiscarddlone' (SiFive cdiscard.d.l1 Instruction)">;
+                         "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)">;
 
 def FeatureVendorXSiFivecflushdlone
     : SubtargetFeature<"xsifivecflushdlone", "HasVendorXSiFivecflushdlone", "true",
-                       "'XSiFivecflushdlone' (SiFive cflush.d.l1 Instruction)", []>;
+                       "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)", []>;
 def HasVendorXSiFivecflushdlone
     : Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
       AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
-                         "'XSiFivecflushdlone' (SiFive cflush.d.l1 Instruction)">;
+                         "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
 
 // Core-V Extensions
 
