@@ -447,9 +447,7 @@ def collect_original_check_lines(ti: TestInfo, prefix_set: set):
                 ):
                     if m.group(1) not in current_function:
                         current_function[m.group(1)] = []
-                    current_function[m.group(1)].append(
-                        input_line[m.end() :].strip()
-                    )
+                    current_function[m.group(1)].append(input_line[m.end() :].strip())
                 continue
             current_function = None
 
@@ -462,7 +460,7 @@ def collect_original_check_lines(ti: TestInfo, prefix_set: set):
 
             assert func_name not in result
             current_function = result[func_name] = {}
-    
+
     return result
 
 
@@ -1233,7 +1231,7 @@ def may_clash_with_default_check_prefix_name(check_prefix, var):
     )
 
 
-def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[int]:
+def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
     """
     Find a large ordered matching between strings in lhs and rhs.
 
@@ -1243,123 +1241,130 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[int]:
     Returns a list of matched (lhs_idx, rhs_idx) pairs.
     """
 
+    if not lhs or not rhs:
+        return []
+
     # Collect matches in reverse order.
     matches = []
 
-    def recurse(lhs_start, lhs_end, rhs_start, rhs_end):
-        if lhs_start == lhs_end or rhs_start == rhs_end:
-            return
+    # First, collect a set of candidate matching edges. We limit this to a
+    # constant multiple of the input size to avoid quadratic runtime.
+    patterns = collections.defaultdict(lambda: ([], []))
 
-        # First, collect a set of candidate matching edges. We limit this to a
-        # constant multiple of the input size to avoid quadratic runtime.
-        patterns = collections.defaultdict(lambda: ([], []))
+    for idx in range(len(lhs)):
+        patterns[lhs[idx]][0].append(idx)
+    for idx in range(len(rhs)):
+        patterns[rhs[idx]][1].append(idx)
 
-        for idx in range(lhs_start, lhs_end):
-            patterns[lhs[idx]][0].append(idx)
-        for idx in range(rhs_start, rhs_end):
-            patterns[rhs[idx]][1].append(idx)
+    multiple_patterns = []
 
-        multiple_patterns = []
+    candidates = []
+    for pattern in patterns.values():
+        if not pattern[0] or not pattern[1]:
+            continue
 
-        candidates = []
-        for pattern in patterns.values():
-            if not pattern[0] or not pattern[1]:
-                continue
+        if len(pattern[0]) == len(pattern[1]) == 1:
+            candidates.append((pattern[0][0], pattern[1][0]))
+        else:
+            multiple_patterns.append(pattern)
 
-            if len(pattern[0]) == len(pattern[1]) == 1:
-                candidates.append((pattern[0][0], pattern[1][0]))
-            else:
-                multiple_patterns.append(pattern)
+    multiple_patterns.sort(key=lambda pattern: len(pattern[0]) * len(pattern[1]))
 
-        multiple_patterns.sort(key=lambda pattern: len(pattern[0]) * len(pattern[1]))
+    for pattern in multiple_patterns:
+        if len(candidates) + len(pattern[0]) * len(pattern[1]) > 2 * (
+            len(lhs) + len(rhs)
+        ):
+            break
+        for lhs_idx in pattern[0]:
+            for rhs_idx in pattern[1]:
+                candidates.append((lhs_idx, rhs_idx))
 
-        for pattern in multiple_patterns:
-            if len(candidates) + len(pattern[0]) * len(pattern[1]) > 2 * (len(lhs) + len(rhs)):
-                break
-            for lhs_idx in pattern[0]:
-                for rhs_idx in pattern[1]:
-                    candidates.append((lhs_idx, rhs_idx))
+    if not candidates:
+        # The LHS and RHS either share nothing in common, or lines are just too
+        # identical. In that case, let's give up and not match anything.
+        return []
 
-        if not candidates:
-            # The LHS and RHS either share nothing in common, or lines are just too
-            # identical. In that case, let's give up and not match anything.
-            return
+    # Compute a maximal crossing-free matching via an algorithm that is
+    # inspired by a mixture of dynamic programming and line-sweeping in
+    # discrete geometry.
+    #
+    # I would be surprised if this algorithm didn't exist somewhere in the
+    # literature, but I found it without consciously recalling any
+    # references, so you'll have to make do with the explanation below.
+    # Sorry.
+    #
+    # The underlying graph is bipartite:
+    #  - nodes on the LHS represent lines in the original check
+    #  - nodes on the RHS represent lines in the new (updated) check
+    #
+    # Nodes are implicitly sorted by the corresponding line number.
+    # Edges (unique_matches) are sorted by the line number on the LHS.
+    #
+    # Here's the geometric intuition for the algorithm.
+    #
+    #  * Plot the edges as points in the plane, with the original line
+    #    number on the X axis and the updated line number on the Y axis.
+    #  * The goal is to find a longest "chain" of points where each point
+    #    is strictly above and to the right of the previous point.
+    #  * The algorithm proceeds by sweeping a vertical line from left to
+    #    right.
+    #  * The algorithm maintains a table where `table[N]` answers the
+    #    question "What is currently the 'best' way to build a chain of N+1
+    #    points to the left of the vertical line". Here, 'best' means
+    #    that the last point of the chain is a as low as possible (minimal
+    #    Y coordinate).
+    #   * `table[N]` is `(y, point_idx)` where `point_idx` is the index of
+    #     the last point in the chain and `y` is its Y coordinate
+    #   * A key invariant is that the Y values in the table are
+    #     monotonically increasing
+    #  * Thanks to these properties, the table can be used to answer the
+    #    question "What is the longest chain that can be built to the left
+    #    of the vertical line using only points below a certain Y value",
+    #    using a binary search over the table.
+    #  * The algorithm also builds a backlink structure in which every point
+    #    links back to the previous point on a best (longest) chain ending
+    #    at that point
+    #
+    # The core loop of the algorithm sweeps the line and updates the table
+    # and backlink structure for every point that we cross during the sweep.
+    # Therefore, the algorithm is trivially O(M log M) in the number of
+    # points.
+    candidates.sort(key=lambda candidate: (candidate[0], -candidate[1]))
 
-        # Compute a maximal crossing-free matching via an algorithm that is
-        # inspired by a mixture of dynamic programming and line-sweeping in
-        # discrete geometry.
+    backlinks = []
+    table = []
+    for _, rhs_idx in candidates:
+        candidate_idx = len(backlinks)
+        ti = bisect.bisect_left(table, rhs_idx, key=lambda entry: entry[0])
+
+        # Update the table to record a best chain ending in the current point.
+        # There always is one, and if any of the previously visited points had
+        # a higher Y coordinate, then there is always a previously recorded best
+        # chain that can be improved upon by using the current point.
         #
-        # I would be surprised if this algorithm didn't exist somewhere in the
-        # literature, but I found it without consciously recalling any
-        # references, so you'll have to make do with the explanation below.
-        # Sorry.
-        #
-        # The underlying graph is bipartite:
-        #  - nodes on the LHS represent lines in the original check
-        #  - nodes on the RHS represent lines in the new (updated) check
-        #
-        # Nodes are implicitly sorted by the corresponding line number.
-        # Edges (unique_matches) are sorted by the line number on the LHS.
-        #
-        # Here's the geometric intuition for the algorithm.
-        #
-        #  * Plot the edges as points in the plane, with the original line
-        #    number on the X axis and the updated line number on the Y axis.
-        #  * The goal is to find a longest "chain" of points where each point
-        #    is strictly above and to the right of the previous point.
-        #  * The algorithm proceeds by sweeping a vertical line from left to
-        #    right.
-        #  * The algorithm maintains a table where `table[N]` answers the
-        #    question "What is currently the 'best' way to build a chain of N+1
-        #    points to the left of the vertical line". Here, 'best' means
-        #    that the last point of the chain is a as low as possible (minimal
-        #    Y coordinate).
-        #   * `table[N]` is `(y, point_idx)` where `point_idx` is the index of
-        #     the last point in the chain and `y` is its Y coordinate
-        #   * A key invariant is that the Y values in the table are
-        #     monotonically increasing
-        #  * Thanks to these properties, the table can be used to answer the
-        #    question "What is the longest chain that can be built to the left
-        #    of the vertical line using only points below a certain Y value",
-        #    using a binary search over the table.
-        #  * The algorithm also builds a backlink structure in which every point
-        #    links back to the previous point on a best (longest) chain ending
-        #    at that point
-        #
-        # The core loop of the algorithm sweeps the line and updates the table
-        # and backlink structure for every point that we cross during the sweep.
-        # Therefore, the algorithm is trivially O(M log M) in the number of
-        # points. Since we only consider lines that are unique, it is log-linear
-        # in the problem size.
-        candidates.sort(key=lambda candidate: (candidate[0], -candidate[1]))
+        # There is only one case where there is some ambiguity. If the
+        # pre-existing entry table[ti] has the same Y coordinate / rhs_idx as
+        # the current point (this can only happen if the same line appeared
+        # multiple times on the LHS), then we could choose to keep the
+        # previously recorded best chain instead. That would bias the algorithm
+        # differently but should have no systematic impact on the quality of the
+        # result.
+        if ti < len(table):
+            table[ti] = (rhs_idx, candidate_idx)
+        else:
+            table.append((rhs_idx, candidate_idx))
+        if ti > 0:
+            backlinks.append(table[ti - 1][1])
+        else:
+            backlinks.append(None)
 
-        backlinks = []
-        table = []
-        for _, rhs_idx in candidates:
-            candidate_idx = len(backlinks)
-            ti = bisect.bisect_left(table, rhs_idx, key=lambda entry: entry[0])
-            if ti < len(table):
-                table[ti] = (rhs_idx, candidate_idx)
-            else:
-                table.append((rhs_idx, candidate_idx))
-            if ti > 0:
-                backlinks.append(table[ti - 1][1])
-            else:
-                backlinks.append(None)
-
-        # Commit to names in the matching by walking the backlinks. Recursively
-        # attempt to fill in more matches in-betweem.
-        previous = (lhs_end, rhs_end)
-        match_idx = table[-1][1]
-        while match_idx is not None:
-            current = candidates[match_idx]
-            recurse(current[0] + 1, previous[0], current[1] + 1, previous[1])
-            matches.append(current)
-            previous = current
-            match_idx = backlinks[match_idx]
-        recurse(lhs_start, previous[0], rhs_start, previous[1])
-
-    recurse(0, len(lhs), 0, len(rhs))
+    # Commit to names in the matching by walking the backlinks. Recursively
+    # attempt to fill in more matches in-betweem.
+    match_idx = table[-1][1]
+    while match_idx is not None:
+        current = candidates[match_idx]
+        matches.append(current)
+        match_idx = backlinks[match_idx]
 
     matches.reverse()
     return matches
@@ -1431,8 +1436,8 @@ def remap_metavar_names(
             values = []
             for value in line.values:
                 mapped = mapper(value.var)
-                values.append(mapped if mapped in committed_names else '?')
-            return line.line.strip() + ' @@@ ' + ' @ '.join(values)
+                values.append(mapped if mapped in committed_names else "?")
+            return line.line.strip() + " @@@ " + " @ ".join(values)
 
         lhs_lines = [
             diffify_line(line, lambda x: x)
@@ -1446,7 +1451,7 @@ def remap_metavar_names(
         candidate_matches = find_diff_matching(lhs_lines, rhs_lines)
 
         # Apply commits greedily on a match-by-match basis
-        matches = [(-1,-1)]
+        matches = [(-1, -1)]
         committed_anything = False
         for lhs_idx, rhs_idx in candidate_matches:
             lhs_line = old_line_infos[lhs_idx]
@@ -1458,7 +1463,7 @@ def remap_metavar_names(
                 if new_mapping[rhs_value.var] in committed_names:
                     # The new value has already been committed. If it was mapped
                     # to the same name as the original value, we can consider
-                    # # committing other values from this line. Otherwise, we
+                    # committing other values from this line. Otherwise, we
                     # should ignore this line.
                     if new_mapping[rhs_value.var] == lhs_value.var:
                         continue
@@ -1498,7 +1503,7 @@ def remap_metavar_names(
 
         # Recursively handle sequences between matches
         if committed_anything:
-            for ((lhs_prev, rhs_prev), (lhs_next, rhs_next)) in zip(matches, matches[1:]):
+            for (lhs_prev, rhs_prev), (lhs_next, rhs_next) in zip(matches, matches[1:]):
                 recurse(lhs_prev + 1, lhs_next, rhs_prev + 1, rhs_next)
 
     recurse(0, len(old_line_infos), 0, len(new_line_infos))
@@ -1528,6 +1533,7 @@ def remap_metavar_names(
             suffix += 1
 
     return new_mapping
+
 
 def generalize_check_lines_common(
     lines,
