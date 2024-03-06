@@ -57,7 +57,7 @@ public:
     return numRefCountedObjects.load(std::memory_order_relaxed);
   }
 
-  llvm::ThreadPool &getThreadPool() { return threadPool; }
+  llvm::ThreadPoolInterface &getThreadPool() { return threadPool; }
 
 private:
   friend class RefCounted;
