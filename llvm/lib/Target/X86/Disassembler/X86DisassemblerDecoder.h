@@ -107,7 +107,6 @@ namespace X86Disassembler {
 #define v2FromEVEX4of4(evex) invertedBitFromOffset3(evex)
 #define aaaFromEVEX4of4(evex) threeBitsFromOffset0(evex)
 #define nfFromEVEX4of4(evex) bitFromOffset2(evex)
-#define oszcFromEVEX3of4(evex) fourBitsFromOffset3(evex)
 #define scFromEVEX4of4(evex) fourBitsFromOffset0(evex)
 
 // These enums represent Intel registers for use by the decoder.
