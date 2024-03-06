@@ -1926,6 +1926,11 @@ static const fltSemantics *getFltSemantics(MVT VT) {
 
 static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   switch (OperandType) {
+  // When floating-point immediate is used as operand of type i16, the 32-bit
+  // representation of the constant truncated to the 16 LSBs should be used.
+  case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_IMM_INT32:
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -1949,13 +1954,10 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return &APFloat::IEEEdouble();
-  case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
-  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -2045,9 +2047,26 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
       return false;
 
     if (type.getScalarSizeInBits() == 16) {
+      bool Lost;
+      switch (type.getScalarType().SimpleTy) {
+      default:
+        llvm_unreachable("unknown 16-bit type");
+      case MVT::bf16:
+        FPLiteral.convert(APFloatBase::BFloat(), APFloat::rmNearestTiesToEven,
+                          &Lost);
+        break;
+      case MVT::f16:
+        FPLiteral.convert(APFloatBase::IEEEhalf(), APFloat::rmNearestTiesToEven,
+                          &Lost);
+        break;
+      case MVT::i16:
+        FPLiteral.convert(APFloatBase::IEEEsingle(),
+                          APFloat::rmNearestTiesToEven, &Lost);
+        break;
+      }
       return isInlineableLiteralOp16(
-        static_cast<int16_t>(FPLiteral.bitcastToAPInt().getZExtValue()),
-        type, AsmParser->hasInv2PiInlineImm());
+          static_cast<uint16_t>(FPLiteral.bitcastToAPInt().getZExtValue()), type,
+          AsmParser->hasInv2PiInlineImm());
     }
 
     // Check if single precision literal is inlinable
@@ -2315,6 +2334,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       // checked earlier in isLiteralImm()
 
       uint64_t ImmVal = FPLiteral.bitcastToAPInt().getZExtValue();
+      if (OpTy == AMDGPU::OPERAND_REG_IMM_INT16 ||
+          OpTy == AMDGPU::OPERAND_REG_INLINE_C_INT16 ||
+          OpTy == AMDGPU::OPERAND_REG_INLINE_AC_INT16)
+        ImmVal = ImmVal & 0xffff;
       Inst.addOperand(MCOperand::createImm(ImmVal));
       if (OpTy == AMDGPU::OPERAND_KIMM32 || OpTy == AMDGPU::OPERAND_KIMM16) {
         setImmKindMandatoryLiteral();
