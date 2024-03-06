@@ -85,8 +85,6 @@ static const uint64_t kDynamicShadowSentinel =
 
 static const unsigned kShadowBaseAlignment = 32;
 
-static constexpr unsigned MaxRandomRate = 1000;
-
 static cl::opt<std::string>
     ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
                                  cl::desc("Prefix for memory access callbacks"),
@@ -192,8 +190,8 @@ static cl::opt<bool>
 static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                         cl::init(0));
 
-static cl::opt<float> SkipInstRandomRate(
-    "hwasan-skip-inst-random-rate", cl::init(0.0),
+static cl::opt<float> RandomSkipRate(
+    "hwasan-random-skip-rate", cl::init(0),
     cl::desc("Probability to skip instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
@@ -1540,10 +1538,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
       std::bernoulli_distribution D(RandomSkipRate);
       if (D(*Rng)) return;
     } else {
-      if ((F.getGUID() % MaxRandomRate) < SkipInstRandomRate) {
-      return;
-    }
-    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+      auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
       ProfileSummaryInfo *PSI =
           MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
       if (PSI && PSI->hasProfileSummary()) {
