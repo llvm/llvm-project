@@ -539,8 +539,9 @@ static bool areValuesCompatibleWithFullReplicationShardings(
   if (std::size(values) != std::size(shardings)) {
     return false;
   }
-  return llvm::all_of(llvm::zip(std::forward<ValueRange>(values),
-                                std::forward<MeshShardingAttrRage>(shardings)),
+  return llvm::all_of(llvm::zip_equal(
+                          std::forward<ValueRange>(values),
+                          std::forward<MeshShardingAttrRage>(shardings)),
                       [](auto valueAndSharding) {
                         return isValueCompatibleWithFullReplicationSharding(
                             std::get<0>(valueAndSharding),
@@ -588,11 +589,9 @@ ShardingArray mesh::getMeshAxisAssignmentForLoopIterators(
   SmallVector<MeshShardingAttr> operatorAndResultShardings;
   operatorAndResultShardings.reserve(operandShardings.size() +
                                      resultShardings.size());
-  operatorAndResultShardings.insert(operatorAndResultShardings.end(),
-                                    operandShardings.begin(),
-                                    operandShardings.end());
+  llvm::append_range(operatorAndResultShardings, operandShardings);
   for (auto [sharding, affineMap] :
-       llvm::zip(operatorAndResultShardings, indexingMaps)) {
+       llvm::zip_equal(operatorAndResultShardings, indexingMaps)) {
     if (!sharding) {
       continue;
     }
@@ -601,6 +600,12 @@ ShardingArray mesh::getMeshAxisAssignmentForLoopIterators(
       updateMeshAxisAssignmentForLoopIterators(
           meshAxesAssignmentForTensorAxis.asArrayRef(), indexingExpr,
           meshAxisAssignmentForLoopIterators);
+    }
+    // Missing trailing split axes means replication on those tensor dimensions.
+    for (unsigned i = sharding.getSplitAxes().size();
+         i < affineMap.getNumResults(); ++i) {
+      updateMeshAxisAssignmentForLoopIterators(
+          {}, affineMap.getResults()[i], meshAxisAssignmentForLoopIterators);
     }
   }
 
@@ -619,7 +624,7 @@ bool mesh::isAtLeastOneReductionIteratorSharded(
     ArrayRef<utils::IteratorType> loopIteratorTypes,
     ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators) {
   for (auto [loopIteratorType, meshAxisAssignment] :
-       llvm::zip(loopIteratorTypes, meshAxisAssignmentForLoopIterators)) {
+       llvm::zip_equal(loopIteratorTypes, meshAxisAssignmentForLoopIterators)) {
     if (loopIteratorType == utils::IteratorType::reduction &&
         !meshAxisAssignment.empty()) {
       return true;
@@ -633,10 +638,9 @@ SmallVector<MeshAxis> mesh::getReductionMeshAxes(
     ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators) {
   SmallVector<MeshAxis> meshAxes;
   for (auto [loopIteratorType, meshAxisAssignment] :
-       llvm::zip(loopIteratorTypes, meshAxisAssignmentForLoopIterators)) {
+       llvm::zip_equal(loopIteratorTypes, meshAxisAssignmentForLoopIterators)) {
     if (loopIteratorType == utils::IteratorType::reduction) {
-      meshAxes.insert(meshAxes.end(), meshAxisAssignment.begin(),
-                      meshAxisAssignment.end());
+      llvm::append_range(meshAxes, meshAxisAssignment);
     }
   }
   return meshAxes;
@@ -651,7 +655,7 @@ void mesh::spmdizeTriviallyShardableOperation(
   Operation *newOp = builder.clone(op, spmdizationMap);
   // Set the result types to the sharded counterparts.
   for (auto [oldResult, newResult, sharding] :
-       llvm::zip(op.getResults(), newOp->getResults(), resultShardings)) {
+       llvm::zip_equal(op.getResults(), newOp->getResults(), resultShardings)) {
     newResult.setType(shardType(newResult.getType(),
                                 getMesh(&op, sharding.getMesh(), symbolTable),
                                 sharding));

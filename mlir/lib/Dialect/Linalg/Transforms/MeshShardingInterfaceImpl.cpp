@@ -59,6 +59,15 @@ static ReductionKind getReductionKind(Operation *op) {
       .Case([](arith::OrIOp op) { return ReductionKind::BitwiseOr; })
       .Case([](arith::XOrIOp op) { return ReductionKind::BitwiseXor; })
       .Case([](arith::AndIOp op) { return ReductionKind::Sum; })
+      // TODO: handle signless, signed and unsigned types properly.
+      // It is assumed that the element type of the collective operands and
+      // result drive the meaning of the reduction kind, whether it is signed
+      // or unsigned.
+      // The reduction op inside the linalg op may have different result type
+      // from the element type of the linalg op's result.
+      // Also signed and unsigned Arith dialect ops may accept signed, unsigned
+      // or signless operands.
+      // Maybe expand the reduction kinds.
       .Case([](arith::MaxUIOp op) { return ReductionKind::Max; })
       .Case([](arith::MinUIOp op) { return ReductionKind::Min; })
       .Case([](arith::MaxSIOp op) { return ReductionKind::Max; })
@@ -67,7 +76,7 @@ static ReductionKind getReductionKind(Operation *op) {
       .Default([](Operation *op) { return ReductionKind::Generic; });
 }
 
-static std::optional<Operation *> getReductionOp(LinalgOp op) {
+static std::optional<Operation *> getCombinerOp(LinalgOp op) {
   SmallVector<Operation *> combinerOps;
   Value reducedValue = matchReduction(op.getRegionOutputArgs(), 0, combinerOps);
   if (!reducedValue || combinerOps.size() != 1) {
@@ -78,10 +87,16 @@ static std::optional<Operation *> getReductionOp(LinalgOp op) {
 }
 
 static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
-  std::optional<Operation *> reductionOp = getReductionOp(op);
+  std::optional<Operation *> reductionOp = getCombinerOp(op);
   if (!reductionOp) {
     return ReductionKind::Generic;
   }
+  Type resultElementType =
+      llvm::cast<RankedTensorType>(op->getResult(0).getType()).getElementType();
+  // TODO: handle case when result type of the reduction op does not match the
+  // element type of the result tensor.
+  // Would it makes sense at all?
+  assert(resultElementType == reductionOp.value()->getResult(0).getType());
   return getReductionKind(reductionOp.value());
 }
 
@@ -276,9 +291,8 @@ struct StructuredOpShardingInterface
         });
     if (!allIndexingMapsAreProjectedPermutation) {
       // TODO: handle non-projected permutations.
-      op->emitOpError()
-          << "Only projected permutation indexing maps are supported.";
-      return failure();
+      return op->emitOpError()
+             << "supports indexing maps that are only projected permutation.";
     }
 
     SmallVector<utils::IteratorType> loopIteratorTypes =

@@ -216,6 +216,9 @@ public:
         {TypeID::get<ConcreteT>(), InterfaceT::getInterfaceID()});
   }
 
+  // Declare the same interface for multiple types.
+  // Example:
+  // declarePromisedInterfaces<FunctionOpInterface, MyFuncType1, MyFuncType2>()
   template <typename InterfaceT, typename... ConcreteT>
   void declarePromisedInterfaces() {
     (declarePromisedInterface<ConcreteT, InterfaceT>(), ...);
