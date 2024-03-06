@@ -1696,7 +1696,7 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
 ; HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
 ; HSA: attributes #[[ATTR1:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
@@ -1708,13 +1708,13 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; MESA: attributes #[[ATTR2:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
 ; MESA: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; HSA: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 500}
+; HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; HSA: [[META1]] = !{}
 ; HSA: [[META2]] = !{i64 42}
 ; HSA: [[META3:![0-9]+]] = !{i64 128}
 ; HSA: [[META4]] = !{i64 1024}
 ;.
-; MESA: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 500}
+; MESA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; MESA: [[META1]] = !{}
 ; MESA: [[META2]] = !{i64 42}
 ; MESA: [[META3:![0-9]+]] = !{i64 128}

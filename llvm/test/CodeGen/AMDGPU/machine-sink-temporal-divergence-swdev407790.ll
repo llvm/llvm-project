@@ -1087,7 +1087,7 @@ attributes #5 = { convergent nounwind }
 !opencl.ocl.version = !{!3}
 !llvm.ident = !{!4}
 
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 8, !"PIC Level", i32 2}
 !3 = !{i32 1, i32 2}

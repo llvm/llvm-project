@@ -530,7 +530,7 @@ attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-s
 attributes #1 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
 
 !llvm.module.flags = !{!99}
-!99 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!99 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 ; HSAOPT: !1 = !{}
 ; HSAOPT: !2 = !{i32 0, i32 257}

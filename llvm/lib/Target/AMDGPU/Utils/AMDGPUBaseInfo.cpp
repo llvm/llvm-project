@@ -164,7 +164,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
   if (auto Ver = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("amdgpu_code_object_version"))) {
+          M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
 
