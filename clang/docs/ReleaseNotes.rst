@@ -179,6 +179,9 @@ Improvements to Clang's diagnostics
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes #GH69444.
 
+- Clang now uses thousand separators when printing large numbers in integer overflow diagnostics.
+  Fixes #GH80939.
+
 - Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
 - Added diagnostics for C11 keywords being incompatible with language standards
@@ -304,6 +307,8 @@ Bug Fixes to C++ Support
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 - Fix evaluation of some immediate calls in default arguments.
   Fixes (#GH80630)
+- Fix a crash when an explicit template argument list is used with a name for which lookup
+  finds a non-template function and a dependent using declarator.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
