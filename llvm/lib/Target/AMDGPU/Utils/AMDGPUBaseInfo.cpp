@@ -1158,14 +1158,23 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
-                          std::optional<bool> EnableWavefrontSize32) {
-  NumVGPRs = alignTo(std::max(1u, NumVGPRs),
-                     getVGPREncodingGranule(STI, EnableWavefrontSize32));
-  // VGPRBlocks is actual number of VGPR blocks minus 1.
-  return NumVGPRs / getVGPREncodingGranule(STI, EnableWavefrontSize32) - 1;
+static unsigned getNumBlocks(unsigned NumVGPRs, unsigned Granule) {
+  return divideCeil(std::max(1u, NumVGPRs), Granule);
 }
 
+unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
+                                 std::optional<bool> EnableWavefrontSize32) {
+  return getNumBlocks(NumVGPRs,
+                      getVGPREncodingGranule(STI, EnableWavefrontSize32)) -
+         1;
+}
+
+unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
+                                   unsigned NumVGPRs,
+                                   std::optional<bool> EnableWavefrontSize32) {
+  return getNumBlocks(NumVGPRs,
+                      getVGPRAllocGranule(STI, EnableWavefrontSize32));
+}
 } // end namespace IsaInfo
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
