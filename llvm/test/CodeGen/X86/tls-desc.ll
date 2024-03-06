@@ -160,13 +160,11 @@ define i32 @f4() nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:  .Ltmp3:
 ; X86-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp3-.L3$pb), %ebx
-; X86-NEXT:    leal y@tlsdesc(%ebx), %eax
-; X86-NEXT:    calll *y@tlscall(%eax)
 ; X86-NEXT:    movl %gs:0, %edx
-; X86-NEXT:    movl (%eax,%edx), %ecx
-; X86-NEXT:    leal z@tlsdesc(%ebx), %eax
-; X86-NEXT:    calll *z@tlscall(%eax)
-; X86-NEXT:    addl (%eax,%edx), %ecx
+; X86-NEXT:    leal _TLS_MODULE_BASE_@tlsdesc(%ebx), %eax
+; X86-NEXT:    calll *_TLS_MODULE_BASE_@tlscall(%eax)
+; X86-NEXT:    movl y@DTPOFF(%eax,%edx), %ecx
+; X86-NEXT:    addl z@DTPOFF(%eax,%edx), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
@@ -174,13 +172,11 @@ define i32 @f4() nounwind {
 ; X32-LABEL: f4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushq %rax
-; X32-NEXT:    leal y@tlsdesc(%rip), %eax
-; X32-NEXT:    callq *y@tlscall(%eax)
 ; X32-NEXT:    movl %fs:0, %edx
-; X32-NEXT:    movl (%eax,%edx), %ecx
-; X32-NEXT:    leal z@tlsdesc(%rip), %eax
-; X32-NEXT:    callq *z@tlscall(%eax)
-; X32-NEXT:    addl (%eax,%edx), %ecx
+; X32-NEXT:    leal _TLS_MODULE_BASE_@tlsdesc(%rip), %eax
+; X32-NEXT:    callq *_TLS_MODULE_BASE_@tlscall(%eax)
+; X32-NEXT:    movl y@DTPOFF(%eax,%edx), %ecx
+; X32-NEXT:    addl z@DTPOFF(%eax,%edx), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    popq %rcx
 ; X32-NEXT:    retq
@@ -188,14 +184,11 @@ define i32 @f4() nounwind {
 ; X64-LABEL: f4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    leaq y@tlsdesc(%rip), %rax
-; X64-NEXT:    callq *y@tlscall(%rax)
-; X64-NEXT:    # kill: def $rax killed $rax killed $eax
 ; X64-NEXT:    movq %fs:0, %rdx
-; X64-NEXT:    movl (%rax,%rdx), %ecx
-; X64-NEXT:    leaq z@tlsdesc(%rip), %rax
-; X64-NEXT:    callq *z@tlscall(%rax)
-; X64-NEXT:    addl (%rax,%rdx), %ecx
+; X64-NEXT:    leaq _TLS_MODULE_BASE_@tlsdesc(%rip), %rax
+; X64-NEXT:    callq *_TLS_MODULE_BASE_@tlscall(%rax)
+; X64-NEXT:    movl y@DTPOFF(%rax,%rdx), %ecx
+; X64-NEXT:    addl z@DTPOFF(%rax,%rdx), %ecx
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
