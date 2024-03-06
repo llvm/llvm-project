@@ -227,12 +227,13 @@ bb:
   ret void
 }
 
-; This should promote
+; This should not promote
 define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr %arg, ptr readonly %arg1) #3 {
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; CHECK-SAME: (ptr [[ARG:%.*]], <8 x i64> [[ARG1_0_VAL:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr readonly [[ARG1:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store <8 x i64> [[ARG1_0_VAL]], ptr [[ARG]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1]], align 64
+; CHECK-NEXT:    store <8 x i64> [[TMP]], ptr [[ARG]], align 64
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -243,13 +244,12 @@ bb:
 
 define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr %arg) #4 {
 ; CHECK-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 32 [[TMP]], i8 0, i64 32, i1 false)
-; CHECK-NEXT:    [[TMP_VAL:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CHECK-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr [[TMP2]], <8 x i64> [[TMP_VAL]])
+; CHECK-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr [[TMP2]], ptr [[TMP]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 32
 ; CHECK-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CHECK-NEXT:    ret void
@@ -264,12 +264,13 @@ bb:
   ret void
 }
 
-; This should promote
+; This should not promote
 define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr %arg, ptr readonly %arg1) #4 {
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; CHECK-SAME: (ptr [[ARG:%.*]], <8 x i64> [[ARG1_0_VAL:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr readonly [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store <8 x i64> [[ARG1_0_VAL]], ptr [[ARG]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1]], align 64
+; CHECK-NEXT:    store <8 x i64> [[TMP]], ptr [[ARG]], align 64
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -285,8 +286,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr %arg) #3 {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 32 [[TMP]], i8 0, i64 32, i1 false)
-; CHECK-NEXT:    [[TMP_VAL:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CHECK-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr [[TMP2]], <8 x i64> [[TMP_VAL]])
+; CHECK-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr [[TMP2]], ptr [[TMP]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 32
 ; CHECK-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CHECK-NEXT:    ret void
