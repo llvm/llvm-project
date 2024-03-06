@@ -13652,16 +13652,6 @@ struct NodeExtensionHelper {
       if (!VT.isVector())
         break;
 
-      SDValue NarrowElt = OrigOperand.getOperand(0);
-      MVT NarrowVT = NarrowElt.getSimpleValueType();
-
-      unsigned ScalarBits = VT.getScalarSizeInBits();
-      unsigned NarrowScalarBits = NarrowVT.getScalarSizeInBits();
-
-      // Ensure the extension's semantic is equivalent to rvv vzext or vsext.
-      if (ScalarBits != NarrowScalarBits * 2)
-        break;
-
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
       SupportsSExt = Opc == ISD::SIGN_EXTEND;
 
@@ -14112,7 +14102,9 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
-  if (DCI.isBeforeLegalize())
+  // Don't perform this until types are legalized and any legal i1 types are
+  // custom lowered to avoid introducing unselectable V{S,Z}EXT_VLs.
+  if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
   if (!NodeExtensionHelper::isSupportedRoot(N))
