@@ -15290,7 +15290,7 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
 // concat_vector (concat_vector op1, op2), (concat_vector op3, op4)
 //
 // This reduces the length of the chain of vslideups and allows us to perform
-// the vslideups at a smaller LMUL.
+// the vslideups at a smaller LMUL, limited to MF2.
 //
 // We do this as a DAG combine rather than during lowering so that any undef
 // operands can get combined away.
@@ -15305,6 +15305,13 @@ performCONCAT_VECTORSSplitCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(N->getValueType(0)))
     return SDValue();
   MVT VT = N->getSimpleValueType(0);
+
+  // Don't split any further than MF2.
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, TLI.getSubtarget());
+  if (ContainerVT.bitsLT(getLMUL1VT(ContainerVT)))
+    return SDValue();
 
   MVT HalfVT = VT.getHalfNumVectorElementsVT();
   assert(isPowerOf2_32(N->getNumOperands()));
