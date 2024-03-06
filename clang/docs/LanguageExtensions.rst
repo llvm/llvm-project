@@ -2817,13 +2817,13 @@ Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 
 **Description**:
 
-The ``__builtin_cpu_supports`` function detects at runtime if target CPU
-supports features specified in string argument. It returns positive integer
-if all features are supported and 0 otherwise. Names of features and format is
+The ``__builtin_cpu_supports`` function detects at runtime if the target CPU
+supports features specified in string argument. It returns a positive integer
+if all features are supported and 0 otherwise. Names of features and format are
 target specific. For example on AArch64 features are combined using ``+`` like
 this ``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
-If feature name is not supported or format is wrong, compiler will issue a
-warning and replace builtin by constant 0.
+If a feature name is not supported or the format is wrong, the compiler will issue a
+warning and replace builtin by the constant 0.
 
 Query for this feature with ``__has_builtin(__builtin_cpu_supports)``.
 
