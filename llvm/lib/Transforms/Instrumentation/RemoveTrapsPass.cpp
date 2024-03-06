@@ -27,9 +27,10 @@ static cl::opt<int> HotPercentileCutoff(
     cl::desc("Alternative hot percentile cuttoff. By default "
              "`-profile-summary-cutoff-hot` is used."));
 
-static cl::opt<float> RandomRate(
-    "remove-traps-random-rate", cl::init(0.0),
-    cl::desc("Probability of unconditional pseudorandom checks removal."));
+static cl::opt<float>
+    RandomRate("remove-traps-random-rate", cl::init(0.0),
+               cl::desc("Probability value in the range [0.0, 1.0] of "
+                        "unconditional pseudorandom checks removal."));
 
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
