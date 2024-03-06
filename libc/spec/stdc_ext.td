@@ -47,14 +47,6 @@ def StdcExt : StandardSpec<"stdc_ext"> {
           GuardedFunctionSpec<"rounduhk", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"rounduk", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
           GuardedFunctionSpec<"roundulk", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UnsignedLongAccumType>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-
-          GuardedFunctionSpec<"sqrtuhr", RetValSpec<UnsignedShortFractType>, [ArgSpec<UnsignedShortFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtur", RetValSpec<UnsignedFractType>, [ArgSpec<UnsignedFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtulr", RetValSpec<UnsignedLongFractType>, [ArgSpec<UnsignedLongFractType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-
-          GuardedFunctionSpec<"sqrtuhk", RetValSpec<UnsignedShortAccumType>, [ArgSpec<UnsignedShortAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtuk", RetValSpec<UnsignedAccumType>, [ArgSpec<UnsignedAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
-          GuardedFunctionSpec<"sqrtulk", RetValSpec<UnsignedLongAccumType>, [ArgSpec<UnsignedLongAccumType>], "LIBC_COMPILER_HAS_FIXED_POINT">,
       ]
   >;
 
