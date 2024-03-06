@@ -11,7 +11,6 @@ if(POLICY CMP0116)
   cmake_policy(SET CMP0116 OLD)
 endif()
 
-+# Enable debug info compatible with SCCache
 # MSVC debug information format flags are selected via
 # CMAKE_MSVC_DEBUG_INFORMATION_FORMAT, instead of
 # embedding flags in e.g. CMAKE_CXX_FLAGS_RELEASE.
