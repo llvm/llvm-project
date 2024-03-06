@@ -7200,6 +7200,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
 
   MVT VT = BVOp->getSimpleValueType(0);
   unsigned NumElts = VT.getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Unsupported vector type for broadcast.");
 
@@ -7265,7 +7266,6 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       if (isFoldableUseOfShuffle(BVOp))
         return SDValue();
       // replace BUILD_VECTOR with broadcast of the repeated constants.
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       LLVMContext *Ctx = DAG.getContext();
       MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
       if (SplatBitSize == 32 || SplatBitSize == 64 ||
@@ -7363,7 +7363,6 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
 
       assert(C && "Invalid constant type");
 
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       SDValue CP =
           DAG.getConstantPool(C, TLI.getPointerTy(DAG.getDataLayout()));
       Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
@@ -38219,6 +38218,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   unsigned NumMaskElts = Mask.size();
   unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Determine the effective mask value type.
   FloatDomain &= (32 <= MaskEltSizeInBits);
@@ -38227,7 +38227,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   MaskVT = MVT::getVectorVT(MaskVT, NumMaskElts);
 
   // Only allow legal mask types.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(MaskVT))
+  if (!TLI.isTypeLegal(MaskVT))
     return SDValue();
 
   // Attempt to match the mask against known shuffle patterns.
@@ -38533,7 +38533,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // which is much simpler than any shuffle.
   if (UnaryShuffle && MaskContainsZeros && AllowVariablePerLaneMask &&
       isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0) &&
-      DAG.getTargetLoweringInfo().isTypeLegal(MaskVT)) {
+      TLI.isTypeLegal(MaskVT)) {
     APInt Zero = APInt::getZero(MaskEltSizeInBits);
     APInt AllOnes = APInt::getAllOnes(MaskEltSizeInBits);
     APInt UndefElts(NumMaskElts, 0);
@@ -40073,6 +40073,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (SDValue R = combineCommutableSHUFP(N, VT, DL, DAG))
     return R;
@@ -40124,7 +40125,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     // 32-bit targets have to bitcast i64 to f64, so better to bitcast upward.
     if (Src.getOpcode() == ISD::BITCAST &&
         SrcVT.getScalarSizeInBits() == BCVT.getScalarSizeInBits() &&
-        DAG.getTargetLoweringInfo().isTypeLegal(BCVT) &&
+        TLI.isTypeLegal(BCVT) &&
         FixedVectorType::isValidElementType(
             BCVT.getScalarType().getTypeForEVT(*DAG.getContext()))) {
       EVT NewVT = EVT::getVectorVT(*DAG.getContext(), BCVT.getScalarType(),
@@ -40162,8 +40163,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         isNullConstant(Src.getOperand(1)) &&
         Src.getValueType() ==
             Src.getOperand(0).getValueType().getScalarType() &&
-        DAG.getTargetLoweringInfo().isTypeLegal(
-            Src.getOperand(0).getValueType()))
+        TLI.isTypeLegal(Src.getOperand(0).getValueType()))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
     // Share broadcast with the longest vector and extract low subvector (free).
@@ -40377,7 +40377,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         ConstantVec[0] = const_cast<ConstantInt *>(C->getConstantIntValue());
 
         // Load the vector constant from constant pool.
-        MVT PVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+        MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
         SDValue CP = DAG.getConstantPool(ConstantVector::get(ConstantVec), PVT);
         MachinePointerInfo MPI =
             MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
@@ -44555,7 +44555,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (LoadVec && CIdx && ISD::isNormalLoad(LoadVec) && VT.isInteger() &&
       SrcVT.getVectorElementType() == VT && DCI.isAfterLegalizeDAG() &&
       !LikelyUsedAsVector && LoadVec->isSimple()) {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     SDValue NewPtr =
         TLI.getVectorElementPointer(DAG, LoadVec->getBasePtr(), SrcVT, EltIdx);
     unsigned PtrOff = VT.getSizeInBits() * CIdx->getZExtValue() / 8;
@@ -45957,6 +45956,7 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
   SDValue Op0 = EFLAGS.getOperand(0);
   SDValue Op1 = EFLAGS.getOperand(1);
   MVT OpVT = Op0.getSimpleValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // TEST*(~X,Y) == TEST*(X,Y)
   if (SDValue NotOp0 = IsNOT(Op0, DAG)) {
@@ -46040,12 +46040,11 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
       // TODO: Handle TESTC with comparison inversion.
       // TODO: Can we remove SimplifyMultipleUseDemandedBits and rely on
       // TESTP/MOVMSK combines to make sure its never worse than PTEST?
-      if (BCVT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(BCVT)) {
+      if (BCVT.isVector() && TLI.isTypeLegal(BCVT)) {
         unsigned EltBits = BCVT.getScalarSizeInBits();
         if (DAG.ComputeNumSignBits(BC) == EltBits) {
           assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
           APInt SignMask = APInt::getSignMask(EltBits);
-          const TargetLowering &TLI = DAG.getTargetLoweringInfo();
           if (SDValue Res =
                   TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
             // For vXi16 cases we need to use pmovmksb and extract every other
@@ -53605,6 +53604,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Index = GorS->getIndex();
   SDValue Base = GorS->getBasePtr();
   SDValue Scale = GorS->getScale();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (DCI.isBeforeLegalize()) {
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
@@ -53639,7 +53639,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
   // Try to move splat constant adders from the index operand to the base
   // pointer operand. Taking care to multiply by the scale. We can only do
@@ -53696,7 +53695,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   // With vector masks we only demand the upper bit of the mask.
   SDValue Mask = GorS->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
       if (N->getOpcode() != ISD::DELETED_NODE)
