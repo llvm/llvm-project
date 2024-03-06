@@ -224,22 +224,18 @@ public:
   /// - concat_vector(undef, undef) => undef
   /// - concat_vector(build_vector(A, B), build_vector(C, D)) =>
   ///   build_vector(A, B, C, D)
-  ///
-  /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool tryCombineConcatVectors(MachineInstr &MI);
+  /// ==========================================================
   /// Check if the G_CONCAT_VECTORS \p MI is undef or if it
   /// can be flattened into a build_vector.
-  /// In the first case \p IsUndef will be true.
-  /// In the second case \p Ops will contain the operands needed
-  /// to produce the flattened build_vector.
+  /// In the first case \p Ops will be empty
+  /// In the second case \p Ops will contain the operands
+  /// needed to produce the flattened build_vector.
   ///
   /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                 SmallVectorImpl<Register> &Ops);
-  /// Replace \p MI with a flattened build_vector with \p Ops or an
-  /// implicit_def if IsUndef is true.
-  void applyCombineConcatVectors(MachineInstr &MI, bool IsUndef,
-                                 const ArrayRef<Register> Ops);
+  bool matchCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
@@ -814,6 +810,12 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Combine ands,
+  bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine ors,
+  bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -919,6 +921,15 @@ private:
                              bool AllowUndefs);
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
+
+  /// Fold (icmp Pred1 V1, C1) && (icmp Pred2 V2, C2)
+  /// or   (icmp Pred1 V1, C1) || (icmp Pred2 V2, C2)
+  /// into a single comparison using range-based reasoning.
+  bool tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
+                                      BuildFnTy &MatchInfo);
+
+  // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
+  bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

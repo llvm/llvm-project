@@ -678,6 +678,16 @@ void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
 
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV6
+//===----------------------------------------------------------------------===//
+
+void MetadataStreamerMsgPackV6::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
+  getRootMetadata("amdhsa.version") = Version;
+}
 
 } // end namespace HSAMD
 } // end namespace AMDGPU

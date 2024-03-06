@@ -34,32 +34,32 @@
   }
   
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @unsafeLDXR3R0(i64* nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
+  define i64 @unsafeLDXR3R0(ptr nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
   entry:
-    %0 = bitcast i64* %ptr to i8*
-    %add.ptr = getelementptr inbounds i8, i8* %0, i64 %off
-    %1 = bitcast i8* %add.ptr to i64*
-    %2 = load i64, i64* %1, align 8, !tbaa !3
+    %0 = bitcast ptr %ptr to ptr
+    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %off
+    %1 = bitcast ptr %add.ptr to ptr
+    %2 = load i64, ptr %1, align 8, !tbaa !3
     ret i64 %2
   }
   
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @safeLDXZeroR3(i64* nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
+  define i64 @safeLDXZeroR3(ptr nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
   entry:
-    %0 = bitcast i64* %ptr to i8*
-    %add.ptr = getelementptr inbounds i8, i8* %0, i64 %off
-    %1 = bitcast i8* %add.ptr to i64*
-    %2 = load i64, i64* %1, align 8, !tbaa !3
+    %0 = bitcast ptr %ptr to ptr
+    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %off
+    %1 = bitcast ptr %add.ptr to ptr
+    %2 = load i64, ptr %1, align 8, !tbaa !3
     ret i64 %2
   }
   
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @safeLDXR3R0(i64* nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
+  define i64 @safeLDXR3R0(ptr nocapture readonly %ptr, i64 %off) local_unnamed_addr #1 {
   entry:
-    %0 = bitcast i64* %ptr to i8*
-    %add.ptr = getelementptr inbounds i8, i8* %0, i64 %off
-    %1 = bitcast i8* %add.ptr to i64*
-    %2 = load i64, i64* %1, align 8, !tbaa !3
+    %0 = bitcast ptr %ptr to ptr
+    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %off
+    %1 = bitcast ptr %add.ptr to ptr
+    %2 = load i64, ptr %1, align 8, !tbaa !3
     ret i64 %2
   }
   

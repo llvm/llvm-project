@@ -86,15 +86,15 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
   llvm_unreachable("All cases covered in switch");
 }
 
-/// Attempts to merge distinct values `Val1` and `Val2` in `Env1` and `Env2`,
-/// respectively, of the same type `Type`. Merging generally produces a single
+/// Attempts to join distinct values `Val1` and `Val2` in `Env1` and `Env2`,
+/// respectively, of the same type `Type`. Joining generally produces a single
 /// value that (soundly) approximates the two inputs, although the actual
 /// meaning depends on `Model`.
-static Value *mergeDistinctValues(QualType Type, Value &Val1,
-                                  const Environment &Env1, Value &Val2,
-                                  const Environment &Env2,
-                                  Environment &MergedEnv,
-                                  Environment::ValueModel &Model) {
+static Value *joinDistinctValues(QualType Type, Value &Val1,
+                                 const Environment &Env1, Value &Val2,
+                                 const Environment &Env2,
+                                 Environment &JoinedEnv,
+                                 Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
   if (isa<BoolValue>(&Val1) && isa<BoolValue>(&Val2)) {
@@ -113,17 +113,17 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
     // ```
     auto &Expr1 = cast<BoolValue>(Val1).formula();
     auto &Expr2 = cast<BoolValue>(Val2).formula();
-    auto &A = MergedEnv.arena();
-    auto &MergedVal = A.makeAtomRef(A.makeAtom());
-    MergedEnv.assume(
+    auto &A = JoinedEnv.arena();
+    auto &JoinedVal = A.makeAtomRef(A.makeAtom());
+    JoinedEnv.assume(
         A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
-                           A.makeEquals(MergedVal, Expr1)),
+                           A.makeEquals(JoinedVal, Expr1)),
                  A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
-                           A.makeEquals(MergedVal, Expr2))));
-    return &A.makeBoolValue(MergedVal);
+                           A.makeEquals(JoinedVal, Expr2))));
+    return &A.makeBoolValue(JoinedVal);
   }
 
-  Value *MergedVal = nullptr;
+  Value *JoinedVal = nullptr;
   if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
     auto *RecordVal2 = cast<RecordValue>(&Val2);
 
@@ -131,24 +131,21 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
       // `RecordVal1` and `RecordVal2` may have different properties associated
       // with them. Create a new `RecordValue` with the same location but
       // without any properties so that we soundly approximate both values. If a
-      // particular analysis needs to merge properties, it should do so in
-      // `DataflowAnalysis::merge()`.
-      MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+      // particular analysis needs to join properties, it should do so in
+      // `DataflowAnalysis::join()`.
+      JoinedVal = &JoinedEnv.create<RecordValue>(RecordVal1->getLoc());
     else
       // If the locations for the two records are different, need to create a
       // completely new value.
-      MergedVal = MergedEnv.createValue(Type);
+      JoinedVal = JoinedEnv.createValue(Type);
   } else {
-    MergedVal = MergedEnv.createValue(Type);
+    JoinedVal = JoinedEnv.createValue(Type);
   }
 
-  // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
-  // returns false to avoid storing unneeded values in `DACtx`.
-  if (MergedVal)
-    if (Model.merge(Type, Val1, Env1, Val2, Env2, *MergedVal, MergedEnv))
-      return MergedVal;
+  if (JoinedVal)
+    Model.join(Type, Val1, Env1, Val2, Env2, *JoinedVal, JoinedEnv);
 
-  return nullptr;
+  return JoinedVal;
 }
 
 // When widening does not change `Current`, return value will equal `&Prev`.
@@ -240,9 +237,9 @@ joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
       continue;
     }
 
-    if (Value *MergedVal = mergeDistinctValues(
+    if (Value *JoinedVal = joinDistinctValues(
             Loc->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
-      Result.insert({Loc, MergedVal});
+      Result.insert({Loc, JoinedVal});
     }
   }
 
@@ -364,8 +361,8 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
   } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
-    if (RecordDecl *RD = InitList->getType()->getAsRecordDecl())
-      for (const auto *FD : getFieldsForInitListExpr(RD))
+    if (InitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(InitList))
         Fields.insert(FD);
   }
 }
@@ -657,10 +654,10 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
     // cast.
     auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
     assert(Func != nullptr);
-    if (Value *MergedVal =
-            mergeDistinctValues(Func->getReturnType(), *EnvA.ReturnVal, EnvA,
-                                *EnvB.ReturnVal, EnvB, JoinedEnv, Model))
-      JoinedEnv.ReturnVal = MergedVal;
+    if (Value *JoinedVal =
+            joinDistinctValues(Func->getReturnType(), *EnvA.ReturnVal, EnvA,
+                               *EnvB.ReturnVal, EnvB, JoinedEnv, Model))
+      JoinedEnv.ReturnVal = JoinedVal;
   }
 
   if (EnvA.ReturnLoc == EnvB.ReturnLoc)
@@ -890,34 +887,10 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isRecordType()) {
     CreatedValuesCount++;
-    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
-      assert(Field != nullptr);
+    auto &Loc = cast<RecordStorageLocation>(createStorageLocation(Type));
+    initializeFieldsWithValues(Loc, Visited, Depth, CreatedValuesCount);
 
-      QualType FieldType = Field->getType();
-
-      FieldLocs.insert(
-          {Field, &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
-                                          CreatedValuesCount)});
-    }
-
-    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
-    for (const auto &Entry : DACtx->getSyntheticFields(Type)) {
-      SyntheticFieldLocs.insert(
-          {Entry.getKey(),
-           &createLocAndMaybeValue(Entry.getValue(), Visited, Depth + 1,
-                                   CreatedValuesCount)});
-    }
-
-    RecordStorageLocation &Loc = DACtx->createRecordStorageLocation(
-        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
-    RecordValue &RecordVal = create<RecordValue>(Loc);
-
-    // As we already have a storage location for the `RecordValue`, we can and
-    // should associate them in the environment.
-    setValue(Loc, RecordVal);
-
-    return &RecordVal;
+    return &refreshRecordValue(Loc, *this);
   }
 
   return nullptr;
@@ -946,6 +919,50 @@ Environment::createLocAndMaybeValue(QualType Ty,
   return Loc;
 }
 
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
+                                             llvm::DenseSet<QualType> &Visited,
+                                             int Depth,
+                                             int &CreatedValuesCount) {
+  auto initField = [&](QualType FieldType, StorageLocation &FieldLoc) {
+    if (FieldType->isRecordType()) {
+      auto &FieldRecordLoc = cast<RecordStorageLocation>(FieldLoc);
+      setValue(FieldRecordLoc, create<RecordValue>(FieldRecordLoc));
+      initializeFieldsWithValues(FieldRecordLoc, Visited, Depth + 1,
+                                 CreatedValuesCount);
+    } else {
+      if (!Visited.insert(FieldType.getCanonicalType()).second)
+        return;
+      if (Value *Val = createValueUnlessSelfReferential(
+              FieldType, Visited, Depth + 1, CreatedValuesCount))
+        setValue(FieldLoc, *Val);
+      Visited.erase(FieldType.getCanonicalType());
+    }
+  };
+
+  for (const auto &[Field, FieldLoc] : Loc.children()) {
+    assert(Field != nullptr);
+    QualType FieldType = Field->getType();
+
+    if (FieldType->isReferenceType()) {
+      Loc.setChild(*Field,
+                   &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
+                                           CreatedValuesCount));
+    } else {
+      assert(FieldLoc != nullptr);
+      initField(FieldType, *FieldLoc);
+    }
+  }
+  for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
+    assert(FieldLoc != nullptr);
+    QualType FieldType = FieldLoc->getType();
+
+    // Synthetic fields cannot have reference type, so we don't need to deal
+    // with this case.
+    assert(!FieldType->isReferenceType());
+    initField(FieldType, Loc.getSyntheticField(FieldName));
+  }
+}
+
 StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
                                                    QualType Ty,
                                                    const Expr *InitExpr) {
@@ -966,7 +983,7 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   }
 
   Value *Val = nullptr;
-  if (InitExpr)
+  if (InitExpr) {
     // In the (few) cases where an expression is intentionally
     // "uninterpreted", `InitExpr` is not associated with a value.  There are
     // two ways to handle this situation: propagate the status, so that
@@ -981,6 +998,11 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     // default value (assuming we don't update the environment API to return
     // references).
     Val = getValue(*InitExpr);
+
+    if (!Val && isa<ImplicitValueInitExpr>(InitExpr) &&
+        InitExpr->getType()->isPointerType())
+      Val = &getOrCreateNullPointerValue(InitExpr->getType()->getPointeeType());
+  }
   if (!Val)
     Val = createValue(Ty);
 
@@ -1009,12 +1031,15 @@ bool Environment::allows(const Formula &F) const {
 }
 
 void Environment::dump(raw_ostream &OS) const {
-  // FIXME: add printing for remaining fields and allow caller to decide what
-  // fields are printed.
-  OS << "DeclToLoc:\n";
-  for (auto [D, L] : DeclToLoc)
-    OS << "  [" << D->getNameAsString() << ", " << L << "]\n";
+  llvm::DenseMap<const StorageLocation *, std::string> LocToName;
+  if (ThisPointeeLoc != nullptr)
+    LocToName[ThisPointeeLoc] = "this";
 
+  OS << "DeclToLoc:\n";
+  for (auto [D, L] : DeclToLoc) {
+    auto Iter = LocToName.insert({L, D->getNameAsString()}).first;
+    OS << "  [" << Iter->second << ", " << L << "]\n";
+  }
   OS << "ExprToLoc:\n";
   for (auto [E, L] : ExprToLoc)
     OS << "  [" << E << ", " << L << "]\n";
@@ -1025,7 +1050,28 @@ void Environment::dump(raw_ostream &OS) const {
 
   OS << "LocToVal:\n";
   for (auto [L, V] : LocToVal) {
-    OS << "  [" << L << ", " << V << ": " << *V << "]\n";
+    OS << "  [" << L;
+    if (auto Iter = LocToName.find(L); Iter != LocToName.end())
+      OS << " (" << Iter->second << ")";
+    OS << ", " << V << ": " << *V << "]\n";
+  }
+
+  if (const FunctionDecl *Func = getCurrentFunc()) {
+    if (Func->getReturnType()->isReferenceType()) {
+      OS << "ReturnLoc: " << ReturnLoc;
+      if (auto Iter = LocToName.find(ReturnLoc); Iter != LocToName.end())
+        OS << " (" << Iter->second << ")";
+      OS << "\n";
+    } else if (!Func->getReturnType()->isVoidType()) {
+      if (ReturnVal == nullptr)
+        OS << "ReturnVal: nullptr\n";
+      else
+        OS << "ReturnVal: " << *ReturnVal << "\n";
+    }
+
+    if (isa<CXXMethodDecl>(Func)) {
+      OS << "ThisPointeeLoc: " << ThisPointeeLoc << "\n";
+    }
   }
 
   OS << "\n";
@@ -1063,12 +1109,22 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   return Env.get<RecordStorageLocation>(*Base);
 }
 
-std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList) {
+  const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields;
+
+  if (InitList->getType()->isUnionType()) {
+    Fields.push_back(InitList->getInitializedFieldInUnion());
+    return Fields;
+  }
+
   // Unnamed bitfields are only used for padding and do not appear in
   // `InitListExpr`'s inits. However, those fields do appear in `RecordDecl`'s
   // field list, and we thus need to remove them before mapping inits to
   // fields to avoid mapping inits to the wrongs fields.
-  std::vector<FieldDecl *> Fields;
   llvm::copy_if(
       RD->fields(), std::back_inserter(Fields),
       [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });

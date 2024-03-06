@@ -60,6 +60,7 @@ class Foo {
     // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     auto *baz2 = this->provide_ref_ctnbl();
     // expected-warning@-1{{Local variable 'baz2' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    [[clang::suppress]] auto *baz_suppressed = provide_ref_ctnbl(); // no-warning
   }
 };
 } // namespace auto_keyword

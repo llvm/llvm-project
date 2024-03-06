@@ -89,31 +89,31 @@ entry:
 define i16 @sub16ri8(i16 noundef %a) {
 ; CHECK-LABEL: sub16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $-123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0x85,0xff,0xff,0xff]
+; CHECK-NEXT:    subl $-128, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xef,0x80]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-    %sub = sub i16 %a, 123
+    %sub = sub i16 %a, -128
     ret i16 %sub
 }
 
 define i32 @sub32ri8(i32 noundef %a) {
 ; CHECK-LABEL: sub32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $-123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0x85,0xff,0xff,0xff]
+; CHECK-NEXT:    subl $-128, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xef,0x80]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-    %sub = sub i32 %a, 123
+    %sub = sub i32 %a, -128
     ret i32 %sub
 }
 
 define i64 @sub64ri8(i64 noundef %a) {
 ; CHECK-LABEL: sub64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $-123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xc7,0x85,0xff,0xff,0xff]
+; CHECK-NEXT:    subq $-128, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xef,0x80]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-    %sub = sub i64 %a, 123
+    %sub = sub i64 %a, -128
     ret i64 %sub
 }
 
@@ -153,11 +153,11 @@ entry:
 define i64 @sub64ri(i64 noundef %a) {
 ; CHECK-LABEL: sub64ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $-123456, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xc7,0xc0,0x1d,0xfe,0xff]
-; CHECK-NEXT:    # imm = 0xFFFE1DC0
+; CHECK-NEXT:    subq $-2147483648, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xef,0x00,0x00,0x00,0x80]
+; CHECK-NEXT:    # imm = 0x80000000
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-    %sub = sub i64 %a, 123456
+    %sub = sub i64 %a, -2147483648
     ret i64 %sub
 }
 
@@ -211,34 +211,34 @@ define i16 @sub16mi8(ptr %a) {
 ; CHECK-LABEL: sub16mi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
+; CHECK-NEXT:    subl $-128, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xe8,0x80]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
-  %sub = sub nsw i16 %t, 123
+  %sub = sub nsw i16 %t, -128
   ret i16 %sub
 }
 
 define i32 @sub32mi8(ptr %a) {
 ; CHECK-LABEL: sub32mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $-123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0x07,0x85,0xff,0xff,0xff]
+; CHECK-NEXT:    subl $-128, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x2f,0x80]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
-  %sub = sub nsw i32 %t, 123
+  %sub = sub nsw i32 %t, -128
   ret i32 %sub
 }
 
 define i64 @sub64mi8(ptr %a) {
 ; CHECK-LABEL: sub64mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $-123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x07,0x85,0xff,0xff,0xff]
+; CHECK-NEXT:    subq $-128, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x2f,0x80]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
-  %sub = sub nsw i64 %t, 123
+  %sub = sub nsw i64 %t, -128
   ret i64 %sub
 }
 
@@ -282,12 +282,12 @@ entry:
 define i64 @sub64mi(ptr %a) {
 ; CHECK-LABEL: sub64mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $-123456, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x07,0xc0,0x1d,0xfe,0xff]
-; CHECK-NEXT:    # imm = 0xFFFE1DC0
+; CHECK-NEXT:    subq $-2147483648, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x2f,0x00,0x00,0x00,0x80]
+; CHECK-NEXT:    # imm = 0x80000000
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
-  %sub = sub nsw i64 %t, 123456
+  %sub = sub nsw i64 %t, -2147483648
   ret i64 %sub
 }
 
@@ -406,7 +406,7 @@ define i16 @subflag16ri8(i16 noundef %a) {
 ; CHECK-LABEL: subflag16ri8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
-; CHECK-NEXT:    subw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xef,0x7b,0x00]
+; CHECK-NEXT:    subw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xef,0x7b]
 ; CHECK-NEXT:    cmovbl %ecx, %eax # encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -419,7 +419,7 @@ define i32 @subflag32ri8(i32 noundef %a) {
 ; CHECK-LABEL: subflag32ri8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
-; CHECK-NEXT:    subl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xef,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    subl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xef,0x7b]
 ; CHECK-NEXT:    cmovbl %ecx, %eax # encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -431,7 +431,7 @@ define i64 @subflag64ri8(i64 noundef %a) {
 ; CHECK-LABEL: subflag64ri8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xef,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    subq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xef,0x7b]
 ; CHECK-NEXT:    cmovaeq %rcx, %rax # encoding: [0x48,0x0f,0x43,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:

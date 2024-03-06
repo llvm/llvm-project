@@ -239,6 +239,7 @@ static bool isRegisterVectorType(LLT Ty) {
          EltSize == 128 || EltSize == 256;
 }
 
+// TODO: replace all uses of isRegisterType with isRegisterClassType
 static bool isRegisterType(LLT Ty) {
   if (!isRegisterSize(Ty.getSizeInBits()))
     return false;
@@ -258,6 +259,8 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
 }
 
 // RegisterType that doesn't have a corresponding RegClass.
+// TODO: Once `isRegisterType` is replaced with `isRegisterClassType` this
+// should be removed.
 static LegalityPredicate isIllegalRegisterType(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     LLT Ty = Query.Types[TypeIdx];
@@ -273,6 +276,82 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
       return false;
     const LLT EltTy = QueryTy.getElementType();
     return EltTy == LLT::scalar(16) || EltTy.getSizeInBits() >= 32;
+  };
+}
+
+static const LLT S1 = LLT::scalar(1);
+static const LLT S8 = LLT::scalar(8);
+static const LLT S16 = LLT::scalar(16);
+static const LLT S32 = LLT::scalar(32);
+static const LLT S64 = LLT::scalar(64);
+static const LLT S96 = LLT::scalar(96);
+static const LLT S128 = LLT::scalar(128);
+static const LLT S160 = LLT::scalar(160);
+static const LLT S224 = LLT::scalar(224);
+static const LLT S256 = LLT::scalar(256);
+static const LLT S512 = LLT::scalar(512);
+static const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
+
+static const LLT V2S8 = LLT::fixed_vector(2, 8);
+static const LLT V2S16 = LLT::fixed_vector(2, 16);
+static const LLT V4S16 = LLT::fixed_vector(4, 16);
+static const LLT V6S16 = LLT::fixed_vector(6, 16);
+static const LLT V8S16 = LLT::fixed_vector(8, 16);
+static const LLT V10S16 = LLT::fixed_vector(10, 16);
+static const LLT V12S16 = LLT::fixed_vector(12, 16);
+static const LLT V16S16 = LLT::fixed_vector(16, 16);
+
+static const LLT V2S32 = LLT::fixed_vector(2, 32);
+static const LLT V3S32 = LLT::fixed_vector(3, 32);
+static const LLT V4S32 = LLT::fixed_vector(4, 32);
+static const LLT V5S32 = LLT::fixed_vector(5, 32);
+static const LLT V6S32 = LLT::fixed_vector(6, 32);
+static const LLT V7S32 = LLT::fixed_vector(7, 32);
+static const LLT V8S32 = LLT::fixed_vector(8, 32);
+static const LLT V9S32 = LLT::fixed_vector(9, 32);
+static const LLT V10S32 = LLT::fixed_vector(10, 32);
+static const LLT V11S32 = LLT::fixed_vector(11, 32);
+static const LLT V12S32 = LLT::fixed_vector(12, 32);
+static const LLT V16S32 = LLT::fixed_vector(16, 32);
+static const LLT V32S32 = LLT::fixed_vector(32, 32);
+
+static const LLT V2S64 = LLT::fixed_vector(2, 64);
+static const LLT V3S64 = LLT::fixed_vector(3, 64);
+static const LLT V4S64 = LLT::fixed_vector(4, 64);
+static const LLT V5S64 = LLT::fixed_vector(5, 64);
+static const LLT V6S64 = LLT::fixed_vector(6, 64);
+static const LLT V7S64 = LLT::fixed_vector(7, 64);
+static const LLT V8S64 = LLT::fixed_vector(8, 64);
+static const LLT V16S64 = LLT::fixed_vector(16, 64);
+
+static const LLT V2S128 = LLT::fixed_vector(2, 128);
+static const LLT V4S128 = LLT::fixed_vector(4, 128);
+
+static std::initializer_list<LLT> AllScalarTypes = {S32,  S64,  S96,  S128,
+                                                    S160, S224, S256, S512};
+
+static std::initializer_list<LLT> AllS16Vectors{
+    V2S16, V4S16, V6S16, V8S16, V10S16, V12S16, V16S16, V2S128, V4S128};
+
+static std::initializer_list<LLT> AllS32Vectors = {
+    V2S32, V3S32,  V4S32,  V5S32,  V6S32,  V7S32, V8S32,
+    V9S32, V10S32, V11S32, V12S32, V16S32, V32S32};
+
+static std::initializer_list<LLT> AllS64Vectors = {V2S64, V3S64, V4S64, V5S64,
+                                                   V6S64, V7S64, V8S64, V16S64};
+
+// Checks whether a type is in the list of legal register types.
+static bool isRegisterClassType(LLT Ty) {
+  if (Ty.isPointerOrPointerVector())
+    Ty = Ty.changeElementType(LLT::scalar(Ty.getScalarSizeInBits()));
+
+  return is_contained(AllS32Vectors, Ty) || is_contained(AllS64Vectors, Ty) ||
+         is_contained(AllScalarTypes, Ty) || is_contained(AllS16Vectors, Ty);
+}
+
+static LegalityPredicate isRegisterClassType(unsigned TypeIdx) {
+  return [TypeIdx](const LegalityQuery &Query) {
+    return isRegisterClassType(Query.Types[TypeIdx]);
   };
 }
 
@@ -416,11 +495,10 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
   if (!Ty.isVector())
     return true;
 
-  LLT EltTy = Ty.getElementType();
-  if (EltTy.isPointer())
+  if (Ty.isPointerVector())
     return true;
 
-  unsigned EltSize = EltTy.getSizeInBits();
+  unsigned EltSize = Ty.getScalarSizeInBits();
   return EltSize != 32 && EltSize != 64;
 }
 
@@ -577,52 +655,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto GetAddrSpacePtr = [&TM](unsigned AS) {
     return LLT::pointer(AS, TM.getPointerSizeInBits(AS));
   };
-
-  const LLT S1 = LLT::scalar(1);
-  const LLT S8 = LLT::scalar(8);
-  const LLT S16 = LLT::scalar(16);
-  const LLT S32 = LLT::scalar(32);
-  const LLT S64 = LLT::scalar(64);
-  const LLT S128 = LLT::scalar(128);
-  const LLT S256 = LLT::scalar(256);
-  const LLT S512 = LLT::scalar(512);
-  const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
-
-  const LLT V2S8 = LLT::fixed_vector(2, 8);
-  const LLT V2S16 = LLT::fixed_vector(2, 16);
-  const LLT V4S16 = LLT::fixed_vector(4, 16);
-
-  const LLT V2S32 = LLT::fixed_vector(2, 32);
-  const LLT V3S32 = LLT::fixed_vector(3, 32);
-  const LLT V4S32 = LLT::fixed_vector(4, 32);
-  const LLT V5S32 = LLT::fixed_vector(5, 32);
-  const LLT V6S32 = LLT::fixed_vector(6, 32);
-  const LLT V7S32 = LLT::fixed_vector(7, 32);
-  const LLT V8S32 = LLT::fixed_vector(8, 32);
-  const LLT V9S32 = LLT::fixed_vector(9, 32);
-  const LLT V10S32 = LLT::fixed_vector(10, 32);
-  const LLT V11S32 = LLT::fixed_vector(11, 32);
-  const LLT V12S32 = LLT::fixed_vector(12, 32);
-  const LLT V13S32 = LLT::fixed_vector(13, 32);
-  const LLT V14S32 = LLT::fixed_vector(14, 32);
-  const LLT V15S32 = LLT::fixed_vector(15, 32);
-  const LLT V16S32 = LLT::fixed_vector(16, 32);
-  const LLT V32S32 = LLT::fixed_vector(32, 32);
-
-  const LLT V2S64 = LLT::fixed_vector(2, 64);
-  const LLT V3S64 = LLT::fixed_vector(3, 64);
-  const LLT V4S64 = LLT::fixed_vector(4, 64);
-  const LLT V5S64 = LLT::fixed_vector(5, 64);
-  const LLT V6S64 = LLT::fixed_vector(6, 64);
-  const LLT V7S64 = LLT::fixed_vector(7, 64);
-  const LLT V8S64 = LLT::fixed_vector(8, 64);
-  const LLT V16S64 = LLT::fixed_vector(16, 64);
-
-  std::initializer_list<LLT> AllS32Vectors =
-    {V2S32, V3S32, V4S32, V5S32, V6S32, V7S32, V8S32,
-     V9S32, V10S32, V11S32, V12S32, V13S32, V14S32, V15S32, V16S32, V32S32};
-  std::initializer_list<LLT> AllS64Vectors =
-    {V2S64, V3S64, V4S64, V5S64, V6S64, V7S64, V8S64, V16S64};
 
   const LLT GlobalPtr = GetAddrSpacePtr(AMDGPUAS::GLOBAL_ADDRESS);
   const LLT ConstantPtr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS);
@@ -836,10 +868,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
   getActionDefinitionsBuilder(G_BITCAST)
-    // Don't worry about the size constraint.
-    .legalIf(all(isRegisterType(0), isRegisterType(1)))
-    .lower();
-
+      // Don't worry about the size constraint.
+      .legalIf(all(isRegisterClassType(0), isRegisterClassType(1)))
+      .lower();
 
   getActionDefinitionsBuilder(G_CONSTANT)
     .legalFor({S1, S32, S64, S16, GlobalPtr,
@@ -1593,7 +1624,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAdd()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
-    if (ST.hasGFX90AInsts())
+    if (ST.hasLdsAtomicAddF64())
       Atomic.legalFor({{S64, LocalPtr}});
     if (ST.hasAtomicDsPkAdd16Insts())
       Atomic.legalFor({{V2S16, LocalPtr}});
@@ -1957,6 +1988,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
 
+  getActionDefinitionsBuilder(G_READSTEADYCOUNTER).legalFor({S64});
+
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
 
@@ -2214,10 +2247,16 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
 
+  // MI can either be a G_ADDRSPACE_CAST or a
+  // G_INTRINSIC @llvm.amdgcn.addrspacecast.nonnull
+  assert(MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
+         (isa<GIntrinsic>(MI) && cast<GIntrinsic>(MI).getIntrinsicID() ==
+                                     Intrinsic::amdgcn_addrspacecast_nonnull));
+
   const LLT S32 = LLT::scalar(32);
   Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
+  Register Src = isa<GIntrinsic>(MI) ? MI.getOperand(2).getReg()
+                                     : MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
   unsigned DestAS = DstTy.getAddressSpace();
@@ -2238,7 +2277,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
-    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
+    // G_ADDRSPACE_CAST we need to guess.
+    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       // Extract low 32-bits of the pointer.
       B.buildExtract(Dst, Src, 0);
       MI.eraseFromParent();
@@ -2275,7 +2316,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     // avoid the ptrtoint?
     auto BuildPtr = B.buildMergeLikeInstr(DstTy, {SrcAsInt, ApertureReg});
 
-    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
+    // G_ADDRSPACE_CAST we need to guess.
+    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       B.buildCopy(Dst, BuildPtr);
       MI.eraseFromParent();
       return true;
@@ -4791,9 +4834,8 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   return true;
 }
 
-static const unsigned SPDenormModeBitField =
-    AMDGPU::Hwreg::ID_MODE | (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-    (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+static constexpr unsigned SPDenormModeBitField =
+    AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 4, 2);
 
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.
@@ -6988,6 +7030,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return false;
   }
+  case Intrinsic::amdgcn_addrspacecast_nonnull:
+    return legalizeAddrSpaceCast(MI, MRI, B);
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:

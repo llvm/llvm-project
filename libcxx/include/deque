@@ -188,7 +188,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__format/enable_insertable.h>
@@ -581,7 +581,7 @@ public:
 #endif
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
-  template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v, const allocator_type& __a)
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a) {
     __annotate_new(0);
@@ -1487,6 +1487,7 @@ void deque<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
 
 template <class _Tp, class _Allocator>
 inline typename deque<_Tp, _Allocator>::reference deque<_Tp, _Allocator>::operator[](size_type __i) _NOEXCEPT {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < size(), "deque::operator[] index out of bounds");
   size_type __p = __start_ + __i;
   return *(*(__map_.begin() + __p / __block_size) + __p % __block_size);
 }
@@ -1494,6 +1495,7 @@ inline typename deque<_Tp, _Allocator>::reference deque<_Tp, _Allocator>::operat
 template <class _Tp, class _Allocator>
 inline typename deque<_Tp, _Allocator>::const_reference
 deque<_Tp, _Allocator>::operator[](size_type __i) const _NOEXCEPT {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < size(), "deque::operator[] index out of bounds");
   size_type __p = __start_ + __i;
   return *(*(__map_.begin() + __p / __block_size) + __p % __block_size);
 }
@@ -1516,22 +1518,26 @@ inline typename deque<_Tp, _Allocator>::const_reference deque<_Tp, _Allocator>::
 
 template <class _Tp, class _Allocator>
 inline typename deque<_Tp, _Allocator>::reference deque<_Tp, _Allocator>::front() _NOEXCEPT {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "deque::front called on an empty deque");
   return *(*(__map_.begin() + __start_ / __block_size) + __start_ % __block_size);
 }
 
 template <class _Tp, class _Allocator>
 inline typename deque<_Tp, _Allocator>::const_reference deque<_Tp, _Allocator>::front() const _NOEXCEPT {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "deque::front called on an empty deque");
   return *(*(__map_.begin() + __start_ / __block_size) + __start_ % __block_size);
 }
 
 template <class _Tp, class _Allocator>
 inline typename deque<_Tp, _Allocator>::reference deque<_Tp, _Allocator>::back() _NOEXCEPT {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "deque::back called on an empty deque");
   size_type __p = size() + __start_ - 1;
   return *(*(__map_.begin() + __p / __block_size) + __p % __block_size);
 }
 
 template <class _Tp, class _Allocator>
 inline typename deque<_Tp, _Allocator>::const_reference deque<_Tp, _Allocator>::back() const _NOEXCEPT {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "deque::back called on an empty deque");
   size_type __p = size() + __start_ - 1;
   return *(*(__map_.begin() + __p / __block_size) + __p % __block_size);
 }
@@ -2255,6 +2261,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
 
 template <class _Tp, class _Allocator>
 void deque<_Tp, _Allocator>::pop_front() {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "deque::pop_front called on an empty deque");
   size_type __old_sz    = size();
   size_type __old_start = __start_;
   allocator_type& __a   = __alloc();
@@ -2395,6 +2402,8 @@ void deque<_Tp, _Allocator>::__move_construct_backward_and_check(
 
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_iterator __f) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __f != end(), "deque::erase(iterator) called with a non-dereferenceable iterator");
   size_type __old_sz    = size();
   size_type __old_start = __start_;
   iterator __b          = begin();
@@ -2420,6 +2429,7 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_it
 
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_iterator __f, const_iterator __l) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__f <= __l, "deque::erase(first, last) called with an invalid range");
   size_type __old_sz    = size();
   size_type __old_start = __start_;
   difference_type __n   = __l - __f;

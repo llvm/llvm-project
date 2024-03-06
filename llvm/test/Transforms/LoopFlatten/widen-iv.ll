@@ -36,7 +36,7 @@ define void @foo(ptr %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    tail call void @f(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us:
-; CHECK-NEXT:    [[INDVAR_NEXT3]] = add i64 [[INDVAR2]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT3]] = add nuw nsw i64 [[INDVAR2]], 1
 ; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVAR_NEXT3]], [[FLATTEN_TRIPCOUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
@@ -119,7 +119,7 @@ for.cond.cleanup:
 ; It is very similar to test case @foo above, but the CFG is slightly
 ; different, making the analysis slightly different.
 ;
-define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
+define void @foo2_sext(ptr nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: @foo2_sext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -143,7 +143,7 @@ define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    tail call void @g(i32 [[TMP2]])
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us:
-; CHECK-NEXT:    [[INDVAR_NEXT3]] = add i64 [[INDVAR2]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT3]] = add nuw nsw i64 [[INDVAR2]], 1
 ; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVAR_NEXT3]], [[FLATTEN_TRIPCOUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond1.preheader:
@@ -257,7 +257,7 @@ for.cond.cleanup:
 ;       for (unsigned j = 0; j < M; ++j)
 ;         f(A[i*M+j]);
 ;
-define void @foo2_zext(i32* nocapture readonly %A, i32 %N, i32 %M) {
+define void @foo2_zext(ptr nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: @foo2_zext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1005,7 +1005,7 @@ define void @foo_M_sext(ptr %A, i32 %N, i16 %M) {
 ; CHECK-NEXT:    tail call void @f(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us:
-; CHECK-NEXT:    [[INDVAR_NEXT3]] = add i64 [[INDVAR2]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT3]] = add nuw nsw i64 [[INDVAR2]], 1
 ; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVAR_NEXT3]], [[FLATTEN_TRIPCOUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:

@@ -505,11 +505,17 @@ public:
     return TypePromoteInteger;
   }
 
-  // Return true if the half type should be passed around as i16, but promoted
-  // to float around arithmetic. The default behavior is to pass around as
-  // float and convert around loads/stores/bitcasts and other places where
-  // the size matters.
+  // Return true if the half type should be promoted using soft promotion rules
+  // where each operation is promoted to f32 individually, then converted to
+  // fp16. The default behavior is to promote chains of operations, keeping
+  // intermediate results in f32 precision and range.
   virtual bool softPromoteHalfType() const { return false; }
+
+  // Return true if, for soft-promoted half, the half type should be passed
+  // passed to and returned from functions as f32. The default behavior is to
+  // pass as i16. If soft-promoted half is not used, this function is ignored
+  // and values are always passed and returned as f32.
+  virtual bool useFPRegsForHalfType() const { return false; }
 
   // There are two general methods for expanding a BUILD_VECTOR node:
   //  1. Use SCALAR_TO_VECTOR on the defined scalar values and then shuffle
@@ -589,6 +595,42 @@ public:
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.
   bool isJumpExpensive() const { return JumpIsExpensive; }
+
+  // Costs parameters used by
+  // SelectionDAGBuilder::shouldKeepJumpConditionsTogether.
+  // shouldKeepJumpConditionsTogether will use these parameter value to
+  // determine if two conditions in the form `br (and/or cond1, cond2)` should
+  // be split into two branches or left as one.
+  //
+  // BaseCost is the cost threshold (in latency). If the estimated latency of
+  // computing both `cond1` and `cond2` is below the cost of just computing
+  // `cond1` + BaseCost, the two conditions will be kept together. Otherwise
+  // they will be split.
+  //
+  // LikelyBias increases BaseCost if branch probability info indicates that it
+  // is likely that both `cond1` and `cond2` will be computed.
+  //
+  // UnlikelyBias decreases BaseCost if branch probability info indicates that
+  // it is likely that both `cond1` and `cond2` will be computed.
+  //
+  // Set any field to -1 to make it ignored (setting BaseCost to -1 results in
+  // `shouldKeepJumpConditionsTogether` always returning false).
+  struct CondMergingParams {
+    int BaseCost;
+    int LikelyBias;
+    int UnlikelyBias;
+  };
+  // Return params for deciding if we should keep two branch conditions merged
+  // or split them into two separate branches.
+  // Arg0: The binary op joining the two conditions (and/or).
+  // Arg1: The first condition (cond1)
+  // Arg2: The second condition (cond2)
+  virtual CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps, const Value *,
+                                const Value *) const {
+    // -1 will always result in splitting.
+    return {-1, -1, -1};
+  }
 
   /// Return true if selects are only cheaper than branches if the branch is
   /// unlikely to be predicted right.
@@ -1567,13 +1609,14 @@ public:
     assert((VT.isInteger() || VT.isFloatingPoint()) &&
            "Cannot autopromote this type, add it with AddPromotedToType.");
 
+    uint64_t VTBits = VT.getScalarSizeInBits();
     MVT NVT = VT;
     do {
       NVT = (MVT::SimpleValueType)(NVT.SimpleTy+1);
       assert(NVT.isInteger() == VT.isInteger() && NVT != MVT::isVoid &&
              "Didn't find type to promote to!");
-    } while (!isTypeLegal(NVT) ||
-              getOperationAction(Op, NVT) == Promote);
+    } while (VTBits >= NVT.getScalarSizeInBits() || !isTypeLegal(NVT) ||
+             getOperationAction(Op, NVT) == Promote);
     return NVT;
   }
 
@@ -4395,6 +4438,7 @@ public:
     SmallVector<ISD::InputArg, 32> Ins;
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
+    SDValue ConvergenceControlToken;
 
     CallLoweringInfo(SelectionDAG &DAG)
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
@@ -4525,6 +4569,11 @@ public:
 
     CallLoweringInfo &setCFIType(const ConstantInt *Type) {
       CFIType = Type;
+      return *this;
+    }
+
+    CallLoweringInfo &setConvergenceControlToken(SDValue Token) {
+      ConvergenceControlToken = Token;
       return *this;
     }
 
@@ -5118,6 +5167,19 @@ public:
   /// \returns The expansion result
   SDValue expandFP_TO_INT_SAT(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Truncate Op to ResultVT. If the result is exact, leave it alone. If it is
+  /// not exact, force the result to be odd.
+  /// \param ResultVT The type of result.
+  /// \param Op The value to round.
+  /// \returns The expansion result
+  SDValue expandRoundInexactToOdd(EVT ResultVT, SDValue Op, const SDLoc &DL,
+                                  SelectionDAG &DAG) const;
+
+  /// Expand round(fp) to fp conversion
+  /// \param N Node to expand
+  /// \returns The expansion result
+  SDValue expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand check for floating point class.
   /// \param ResultVT The type of intrinsic call result.
   /// \param Op The tested value.
@@ -5286,6 +5348,24 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  /// forceExpandWideMUL - Unconditionally expand a MUL into either a libcall or
+  /// brute force via a wide multiplication. The expansion works by
+  /// attempting to do a multiplication on a wider type twice the size of the
+  /// original operands. LL and LH represent the lower and upper halves of the
+  /// first operand. RL and RH represent the lower and upper halves of the
+  /// second operand. The upper and lower halves of the result are stored in Lo
+  /// and Hi.
+  void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
+                          EVT WideVT, const SDValue LL, const SDValue LH,
+                          const SDValue RL, const SDValue RH, SDValue &Lo,
+                          SDValue &Hi) const;
+
+  /// Same as above, but creates the upper halves of each operand by
+  /// sign/zero-extending the operands.
+  void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
+                          const SDValue LHS, const SDValue RHS, SDValue &Lo,
+                          SDValue &Hi) const;
 
   /// Expand a VECREDUCE_* into an explicit calculation. If Count is specified,
   /// only the first Count elements of the vector are used.

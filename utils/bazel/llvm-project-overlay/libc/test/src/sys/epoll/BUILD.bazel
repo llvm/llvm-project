@@ -1,0 +1,37 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc string.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "epoll_wait_test",
+    srcs = ["linux/epoll_wait_test.cpp"],
+    libc_function_deps = [
+        "//libc:epoll_wait",
+    ],
+)
+
+libc_test(
+    name = "epoll_pwait_test",
+    srcs = ["linux/epoll_pwait_test.cpp"],
+    libc_function_deps = [
+        "//libc:epoll_pwait",
+    ],
+)
+
+#TODO: Enable once epoll_pwait2 availablilty can be checked first.
+# https://github.com/llvm/llvm-project/issues/80060
+# libc_test(
+#     name = "epoll_pwait2_test",
+#     srcs = ["linux/epoll_pwait2_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:epoll_pwait2",
+#     ],
+# )

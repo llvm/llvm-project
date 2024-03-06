@@ -5,7 +5,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <optional>
 
 namespace clang::dataflow::test {
 namespace {
@@ -90,7 +89,7 @@ private:
 AnalysisInputs<TestAnalysis> makeInputs() {
   const char *Code = R"cpp(
 int target(bool b, int p, int q) {
-  return b ? p : q;    
+  return b ? p : q;
 }
 )cpp";
   static const std::vector<std::string> Args = {
@@ -125,17 +124,17 @@ transfer()
 recordState(Elements=2, Branches=0, Joins=0)
 recordState(Elements=2, Branches=0, Joins=0)
 
-enterBlock(3, false)
-transferBranch(0)
-recordState(Elements=2, Branches=1, Joins=0)
-enterElement(q)
-transfer()
-recordState(Elements=3, Branches=1, Joins=0)
-
 enterBlock(2, false)
 transferBranch(1)
 recordState(Elements=2, Branches=1, Joins=0)
 enterElement(p)
+transfer()
+recordState(Elements=3, Branches=1, Joins=0)
+
+enterBlock(3, false)
+transferBranch(0)
+recordState(Elements=2, Branches=1, Joins=0)
+enterElement(q)
 transfer()
 recordState(Elements=3, Branches=1, Joins=0)
 

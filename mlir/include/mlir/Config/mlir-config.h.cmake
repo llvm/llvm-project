@@ -29,4 +29,12 @@
 /* If set, enables PDL usage. */
 #cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
+/* If set, enables CUDA-related features in CUDA-related transforms, pipelines,
+   and targets. */
+#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS
+
+/* If set, enables ROCm-related features in ROCM-related transforms, pipelines,
+   and targets. */
+#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS
+
 #endif

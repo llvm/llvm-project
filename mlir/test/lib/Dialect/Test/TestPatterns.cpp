@@ -198,6 +198,93 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
   }
 };
 
+/// This pattern moves "test.move_before_parent_op" before the parent op.
+struct MoveBeforeParentOp : public RewritePattern {
+  MoveBeforeParentOp(MLIRContext *context)
+      : RewritePattern("test.move_before_parent_op", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Do not hoist past functions.
+    if (isa<FunctionOpInterface>(op->getParentOp()))
+      return failure();
+    rewriter.moveOpBefore(op, op->getParentOp());
+    return success();
+  }
+};
+
+/// This pattern inlines blocks that are nested in
+/// "test.inline_blocks_into_parent" into the parent block.
+struct InlineBlocksIntoParent : public RewritePattern {
+  InlineBlocksIntoParent(MLIRContext *context)
+      : RewritePattern("test.inline_blocks_into_parent", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (Region &r : op->getRegions()) {
+      while (!r.empty()) {
+        rewriter.inlineBlockBefore(&r.front(), op);
+        changed = true;
+      }
+    }
+    return success(changed);
+  }
+};
+
+/// This pattern splits blocks at "test.split_block_here" and replaces the op
+/// with a new op (to prevent an infinite loop of block splitting).
+struct SplitBlockHere : public RewritePattern {
+  SplitBlockHere(MLIRContext *context)
+      : RewritePattern("test.split_block_here", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.splitBlock(op->getBlock(), op->getIterator());
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.new_op", op->getContext()).getIdentifier(),
+        op->getOperands(), op->getResultTypes());
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
+/// This pattern clones "test.clone_me" ops.
+struct CloneOp : public RewritePattern {
+  CloneOp(MLIRContext *context)
+      : RewritePattern("test.clone_me", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Do not clone already cloned ops to avoid going into an infinite loop.
+    if (op->hasAttr("was_cloned"))
+      return failure();
+    Operation *cloned = rewriter.clone(*op);
+    cloned->setAttr("was_cloned", rewriter.getUnitAttr());
+    return success();
+  }
+};
+
+/// This pattern clones regions of "test.clone_region_before" ops before the
+/// parent block.
+struct CloneRegionBeforeOp : public RewritePattern {
+  CloneRegionBeforeOp(MLIRContext *context)
+      : RewritePattern("test.clone_region_before", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Do not clone already cloned ops to avoid going into an infinite loop.
+    if (op->hasAttr("was_cloned"))
+      return failure();
+    for (Region &r : op->getRegions())
+      rewriter.cloneRegionBefore(r, op->getBlock());
+    op->setAttr("was_cloned", rewriter.getUnitAttr());
+    return success();
+  }
+};
+
 struct TestPatternDriver
     : public PassWrapper<TestPatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
@@ -238,8 +325,32 @@ struct TestPatternDriver
 };
 
 struct DumpNotifications : public RewriterBase::Listener {
-  void notifyOperationRemoved(Operation *op) override {
-    llvm::outs() << "notifyOperationRemoved: " << op->getName() << "\n";
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    llvm::outs() << "notifyBlockInserted into "
+                 << block->getParentOp()->getName() << ": ";
+    if (previous == nullptr) {
+      llvm::outs() << "was unlinked\n";
+    } else {
+      llvm::outs() << "was linked\n";
+    }
+  }
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    llvm::outs() << "notifyOperationInserted: " << op->getName();
+    if (!previous.isSet()) {
+      llvm::outs() << ", was unlinked\n";
+    } else {
+      if (previous.getPoint() == previous.getBlock()->end()) {
+        llvm::outs() << ", was last in block\n";
+      } else {
+        llvm::outs() << ", previous = " << previous.getPoint()->getName()
+                     << "\n";
+      }
+    }
+  }
+  void notifyOperationErased(Operation *op) override {
+    llvm::outs() << "notifyOperationErased: " << op->getName() << "\n";
   }
 };
 
@@ -249,7 +360,8 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestStrictPatternDriver)
 
   TestStrictPatternDriver() = default;
-  TestStrictPatternDriver(const TestStrictPatternDriver &other) {
+  TestStrictPatternDriver(const TestStrictPatternDriver &other)
+      : PassWrapper(other) {
     strictMode = other.strictMode;
   }
 
@@ -263,18 +375,27 @@ public:
     mlir::RewritePatternSet patterns(ctx);
     patterns.add<
         // clang-format off
-        InsertSameOp,
-        ReplaceWithNewOp,
-        EraseOp,
         ChangeBlockOp,
-        ImplicitChangeOp
+        CloneOp,
+        CloneRegionBeforeOp,
+        EraseOp,
+        ImplicitChangeOp,
+        InlineBlocksIntoParent,
+        InsertSameOp,
+        MoveBeforeParentOp,
+        ReplaceWithNewOp,
+        SplitBlockHere
         // clang-format on
         >(ctx);
     SmallVector<Operation *> ops;
     getOperation()->walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
       if (opName == "test.insert_same_op" || opName == "test.change_block_op" ||
-          opName == "test.replace_with_new_op" || opName == "test.erase_op") {
+          opName == "test.replace_with_new_op" || opName == "test.erase_op" ||
+          opName == "test.move_before_parent_op" ||
+          opName == "test.inline_blocks_into_parent" ||
+          opName == "test.split_block_here" || opName == "test.clone_me" ||
+          opName == "test.clone_region_before") {
         ops.push_back(op);
       }
     });
@@ -653,6 +774,22 @@ struct TestUndoBlockArgReplace : public ConversionPattern {
   }
 };
 
+/// This pattern hoists ops out of a "test.hoist_me" and then fails conversion.
+/// This is to test the rollback logic.
+struct TestUndoMoveOpBefore : public ConversionPattern {
+  TestUndoMoveOpBefore(MLIRContext *ctx)
+      : ConversionPattern("test.hoist_me", /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.moveOpBefore(op, op->getParentOp());
+    // Replace with an illegal op to ensure the conversion fails.
+    rewriter.replaceOpWithNewOp<ILLegalOpF>(op, rewriter.getF32Type());
+    return success();
+  }
+};
+
 /// A rewrite pattern that tests the undo mechanism when erasing a block.
 struct TestUndoBlockErase : public ConversionPattern {
   TestUndoBlockErase(MLIRContext *ctx)
@@ -666,6 +803,21 @@ struct TestUndoBlockErase : public ConversionPattern {
     rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
     rewriter.eraseBlock(secondBlock);
     rewriter.modifyOpInPlace(op, [] {});
+    return success();
+  }
+};
+
+/// A pattern that modifies a property in-place, but keeps the op illegal.
+struct TestUndoPropertiesModification : public ConversionPattern {
+  TestUndoPropertiesModification(MLIRContext *ctx)
+      : ConversionPattern("test.with_properties", /*benefit=*/1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (!op->hasAttr("modify_inplace"))
+      return failure();
+    rewriter.modifyOpInPlace(
+        op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
     return success();
   }
 };
@@ -949,7 +1101,8 @@ struct TestLegalizePatternDriver
              TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
              TestNonRootReplacement, TestBoundedRecursiveRewrite,
              TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
-             TestCreateUnregisteredOp>(&getContext());
+             TestCreateUnregisteredOp, TestUndoMoveOpBefore,
+             TestUndoPropertiesModification>(&getContext());
     patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -959,7 +1112,7 @@ struct TestLegalizePatternDriver
     ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
-                      TerminatorOp>();
+                      TerminatorOp, OneRegionOp>();
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
     target.addDynamicallyLegalOp<TestReturnOp>([](TestReturnOp op) {
@@ -999,8 +1152,10 @@ struct TestLegalizePatternDriver
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      if (failed(applyPartialConversion(
-              getOperation(), target, std::move(patterns), &unlegalizedOps))) {
+      ConversionConfig config;
+      config.unlegalizedOps = &unlegalizedOps;
+      if (failed(applyPartialConversion(getOperation(), target,
+                                        std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
       }
       // Emit remarks for each legalizable operation.
@@ -1028,8 +1183,10 @@ struct TestLegalizePatternDriver
 
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
+    ConversionConfig config;
+    config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
-                                       std::move(patterns), legalizedOps)))
+                                       std::move(patterns), config)))
       return signalPassFailure();
 
     // Emit remarks for each legalizable operation.
@@ -1611,7 +1768,6 @@ struct TestMergeSingleBlockOps
     rewriter.inlineBlockBefore(&innerBlock, op);
     rewriter.eraseOp(innerTerminator);
     rewriter.eraseOp(op);
-    rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
 };
@@ -1653,8 +1809,10 @@ struct TestMergeBlocksPatternDriver
         });
 
     DenseSet<Operation *> unlegalizedOps;
+    ConversionConfig config;
+    config.unlegalizedOps = &unlegalizedOps;
     (void)applyPartialConversion(getOperation(), target, std::move(patterns),
-                                 &unlegalizedOps);
+                                 config);
     for (auto *op : unlegalizedOps)
       op->emitRemark() << "op '" << op->getName() << "' is not legalizable";
   }

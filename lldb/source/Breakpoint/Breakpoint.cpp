@@ -44,17 +44,14 @@ const char *Breakpoint::g_option_names[static_cast<uint32_t>(
 Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        BreakpointResolverSP &resolver_sp, bool hardware,
                        bool resolve_indirect_symbols)
-    : m_being_created(true), m_hardware(hardware), m_target(target),
-      m_filter_sp(filter_sp), m_resolver_sp(resolver_sp), m_options(true),
-      m_locations(*this), m_resolve_indirect_symbols(resolve_indirect_symbols),
-      m_hit_counter() {
-  m_being_created = false;
-}
+    : m_hardware(hardware), m_target(target), m_filter_sp(filter_sp),
+      m_resolver_sp(resolver_sp), m_options(true), m_locations(*this),
+      m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_counter() {}
 
 Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
-    : m_being_created(true), m_hardware(source_bp.m_hardware),
-      m_target(new_target), m_name_list(source_bp.m_name_list),
-      m_options(source_bp.m_options), m_locations(*this),
+    : m_hardware(source_bp.m_hardware), m_target(new_target),
+      m_name_list(source_bp.m_name_list), m_options(source_bp.m_options),
+      m_locations(*this),
       m_resolve_indirect_symbols(source_bp.m_resolve_indirect_symbols),
       m_hit_counter() {}
 
@@ -979,9 +976,8 @@ bool Breakpoint::EvaluatePrecondition(StoppointCallbackContext &context) {
 
 void Breakpoint::SendBreakpointChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!m_being_created && !IsInternal() &&
-      GetTarget().EventTypeHasListeners(
-          Target::eBroadcastBitBreakpointChanged)) {
+  if (!IsInternal() && GetTarget().EventTypeHasListeners(
+                           Target::eBroadcastBitBreakpointChanged)) {
     std::shared_ptr<BreakpointEventData> data =
         std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
 
@@ -994,7 +990,7 @@ void Breakpoint::SendBreakpointChangedEvent(
   if (!breakpoint_data_sp)
     return;
 
-  if (!m_being_created && !IsInternal() &&
+  if (!IsInternal() &&
       GetTarget().EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
                                breakpoint_data_sp);

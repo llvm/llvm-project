@@ -588,8 +588,15 @@ public:
     StringRef Content = *ContentOrErr;
 
     // Copy fat object contents to the output when extracting host bundle.
-    if (Content.size() == 1u && Content.front() == 0)
-      Content = StringRef(Input.getBufferStart(), Input.getBufferSize());
+    std::string ModifiedContent;
+    if (Content.size() == 1u && Content.front() == 0) {
+      auto HostBundleOrErr = getHostBundle();
+      if (!HostBundleOrErr)
+        return HostBundleOrErr.takeError();
+
+      ModifiedContent = std::move(*HostBundleOrErr);
+      Content = ModifiedContent;
+    }
 
     OS.write(Content.data(), Content.size());
     return Error::success();
@@ -691,6 +698,35 @@ private:
                                  "'llvm-objcopy' tool failed");
     }
     return Error::success();
+  }
+
+  Expected<std::string> getHostBundle() {
+    TempFileHandlerRAII TempFiles;
+
+    auto ModifiedObjPathOrErr = TempFiles.Create(std::nullopt);
+    if (!ModifiedObjPathOrErr)
+      return ModifiedObjPathOrErr.takeError();
+    StringRef ModifiedObjPath = *ModifiedObjPathOrErr;
+
+    BumpPtrAllocator Alloc;
+    StringSaver SS{Alloc};
+    SmallVector<StringRef, 16> ObjcopyArgs{"llvm-objcopy"};
+
+    ObjcopyArgs.push_back("--regex");
+    ObjcopyArgs.push_back("--remove-section=__CLANG_OFFLOAD_BUNDLE__.*");
+    ObjcopyArgs.push_back("--");
+    ObjcopyArgs.push_back(BundlerConfig.InputFileNames.front());
+    ObjcopyArgs.push_back(ModifiedObjPath);
+
+    if (Error Err = executeObjcopy(BundlerConfig.ObjcopyPath, ObjcopyArgs))
+      return std::move(Err);
+
+    auto BufOrErr = MemoryBuffer::getFile(ModifiedObjPath);
+    if (!BufOrErr)
+      return createStringError(BufOrErr.getError(),
+                               "Failed to read back the modified object file");
+
+    return BufOrErr->get()->getBuffer().str();
   }
 };
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memtag.h"
+#include "stack_depot.h"
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
@@ -229,7 +230,21 @@ struct TestConditionVariableConfig {
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
   template <class TypeParam>                                                   \
   struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
+    using BaseT = FIXTURE<TypeParam>;                                          \
     void Run();                                                                \
+  };                                                                           \
+  SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
+  template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
+
+// Accessing `TSD->getCache()` requires `TSD::Mutex` which isn't easy to test
+// using thread-safety analysis. Alternatively, we verify the thread safety
+// through a runtime check in ScopedTSD and mark the test body with
+// NO_THREAD_SAFETY_ANALYSIS.
+#define SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(FIXTURE, NAME)                     \
+  template <class TypeParam>                                                   \
+  struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
+    using BaseT = FIXTURE<TypeParam>;                                          \
+    void Run() NO_THREAD_SAFETY_ANALYSIS;                                      \
   };                                                                           \
   SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
   template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
@@ -547,7 +562,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, Stats) {
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
+SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, CacheDrain) {
+  using AllocatorT = typename BaseT::AllocatorT;
   auto *Allocator = this->Allocator.get();
 
   std::vector<void *> V;
@@ -559,17 +575,15 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
   for (auto P : V)
     Allocator->deallocate(P, Origin);
 
-  bool UnlockRequired;
-  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
-  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
   EXPECT_TRUE(!TSD->getCache().isEmpty());
   TSD->getCache().drain();
   EXPECT_TRUE(TSD->getCache().isEmpty());
-  if (UnlockRequired)
-    TSD->unlock();
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
+SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, ForceCacheDrain) {
+  using AllocatorT = typename BaseT::AllocatorT;
   auto *Allocator = this->Allocator.get();
 
   std::vector<void *> V;
@@ -584,14 +598,11 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
   // `ForceAll` will also drain the caches.
   Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll);
 
-  bool UnlockRequired;
-  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
-  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
   EXPECT_TRUE(TSD->getCache().isEmpty());
   EXPECT_EQ(TSD->getQuarantineCache().getSize(), 0U);
   EXPECT_TRUE(Allocator->getQuarantine()->isEmpty());
-  if (UnlockRequired)
-    TSD->unlock();
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
@@ -860,8 +871,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
   auto *Allocator = this->Allocator.get();
   auto Size = Allocator->getRingBufferSize();
-  if (Size > 0)
-    EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+  ASSERT_GT(Size, 0u);
+  EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
@@ -869,6 +880,39 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
   auto *Addr = Allocator->getRingBufferAddress();
   EXPECT_NE(Addr, nullptr);
   EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
+  auto *Allocator = this->Allocator.get();
+  auto Size = Allocator->getStackDepotSize();
+  ASSERT_GT(Size, 0u);
+  EXPECT_EQ(Allocator->getStackDepotAddress()[Size - 1], '\0');
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
+  auto *Allocator = this->Allocator.get();
+  auto *Addr = Allocator->getStackDepotAddress();
+  EXPECT_NE(Addr, nullptr);
+  EXPECT_EQ(Addr, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+  ASSERT_TRUE(Depot->isValid(sizeof(Buf)));
+  ASSERT_FALSE(Depot->isValid(sizeof(Buf) - 1));
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Elem = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::uptr RingPosPtr = 0;
+  scudo::uptr SizePtr = 0;
+  ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
+  ASSERT_EQ(SizePtr, 3u);
+  EXPECT_EQ(Depot->at(RingPosPtr), 1u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
 #if SCUDO_CAN_USE_PRIMARY64
@@ -892,8 +936,8 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
   }
 
   bool UnlockRequired;
-  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
-  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
   TSD->getCache().drain();
 
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);

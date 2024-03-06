@@ -30,6 +30,12 @@ describes the typical workflow of creating a Pull Request and getting it reviewe
 and accepted. This is meant as an overview of the GitHub workflow, for complete
 documentation refer to `GitHub's documentation <https://docs.github.com/pull-requests>`_.
 
+.. note::
+   If you are using a Pull Request for purposes other than review
+   (eg: precommit CI results, convenient web-based reverts, etc)
+   `skip-precommit-approval<https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`
+   label to the PR.
+
 GitHub Tools
 ------------
 You can interact with GitHub in several ways: via git command line tools,
@@ -168,6 +174,17 @@ was initially authored vs. when you intended to merge it). Since you're pushing
 to a branch in your fork, this is ok and expected. Github's UI for the pull
 request will understand that you're rebasing just your patches, and display
 this result correctly with a note that a force push did occur.
+
+
+Problems After Landing Your Change
+==================================
+
+Even though your PR passed the pre-commit checks and is approved by reviewers, it
+may cause problems for some configurations after it lands. You will be notified
+if this happens and the community is ready to help you fix the problems.
+
+This process is described in detail
+:ref:`here <MyFirstTypoFix Issues After Landing Your PR>`.
 
 
 Checking out another PR locally

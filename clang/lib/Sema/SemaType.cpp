@@ -137,7 +137,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_IntelOclBicc:                                            \
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
-  case ParsedAttr::AT_M68kRTD
+  case ParsedAttr::AT_M68kRTD:                                                 \
+  case ParsedAttr::AT_PreserveNone
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -5907,6 +5908,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //  - the type-id in the default argument of a type-parameter, or
     //  - the type-id of a template-argument for a type-parameter
     //
+    // C++23 [dcl.fct]p6 (P0847R7)
+    // ... A member-declarator with an explicit-object-parameter-declaration
+    // shall not include a ref-qualifier or a cv-qualifier-seq and shall not be
+    // declared static or virtual ...
+    //
     // FIXME: Checking this here is insufficient. We accept-invalid on:
     //
     //   template<typename T> struct S { void f(T); };
@@ -5914,8 +5920,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //
     // ... for instance.
     if (IsQualifiedFunction &&
-        !(Kind == Member && !D.isExplicitObjectMemberFunction() &&
-          D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static) &&
+        // Check for non-static member function and not and
+        // explicit-object-parameter-declaration
+        (Kind != Member || D.isExplicitObjectMemberFunction() ||
+         D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+         (D.getContext() == clang::DeclaratorContext::Member &&
+          D.isStaticMember())) &&
         !IsTypedefName && D.getContext() != DeclaratorContext::TemplateArg &&
         D.getContext() != DeclaratorContext::TemplateTypeArg) {
       SourceLocation Loc = D.getBeginLoc();
@@ -7910,6 +7920,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveAllAttr>(Ctx, Attr);
   case ParsedAttr::AT_M68kRTD:
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
+  case ParsedAttr::AT_PreserveNone:
+    return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }

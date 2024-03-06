@@ -1269,3 +1269,27 @@ while.end.i:
   %bool = icmp eq i32 %orval, 0
   ret i1 %bool
 }
+
+define i1 @check_get_vector_length(i32 %x, i32 %y) {
+; CHECK-LABEL: @check_get_vector_length(
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[NE]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[X]], i32 1, i1 true)
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ugt i32 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP0]]
+; CHECK:       false:
+; CHECK-NEXT:    ret i1 [[NE]]
+;
+  %ne = icmp ne i32 %x, 0
+  br i1 %ne, label %true, label %false
+true:
+  %z = call i32 @llvm.experimental.get.vector.length.i32(i32 %x, i32 1, i1 true)
+  %cmp0 = icmp ugt i32 %z, %y
+  %cmp1 = icmp eq i32 %y, 0
+  %r = or i1 %cmp0, %cmp1
+  ret i1 %r
+false:
+  ret i1 %ne
+}
+declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)

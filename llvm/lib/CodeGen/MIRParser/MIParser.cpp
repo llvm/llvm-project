@@ -2181,10 +2181,10 @@ static bool parseGlobalValue(const MIToken &Token,
     unsigned GVIdx;
     if (getUnsigned(Token, GVIdx, ErrCB))
       return true;
-    if (GVIdx >= PFS.IRSlots.GlobalValues.size())
+    GV = PFS.IRSlots.GlobalValues.get(GVIdx);
+    if (!GV)
       return ErrCB(Token.location(), Twine("use of undefined global value '@") +
                                          Twine(GVIdx) + "'");
-    GV = PFS.IRSlots.GlobalValues[GVIdx];
     break;
   }
   default:

@@ -492,12 +492,19 @@ bool TargetTransformInfo::forceScalarizeMaskedScatter(VectorType *DataType,
   return TTIImpl->forceScalarizeMaskedScatter(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType) const {
-  return TTIImpl->isLegalMaskedCompressStore(DataType);
+bool TargetTransformInfo::isLegalMaskedCompressStore(Type *DataType,
+                                                     Align Alignment) const {
+  return TTIImpl->isLegalMaskedCompressStore(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType) const {
-  return TTIImpl->isLegalMaskedExpandLoad(DataType);
+bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
+                                                  Align Alignment) const {
+  return TTIImpl->isLegalMaskedExpandLoad(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
+                                                  Align Alignment) const {
+  return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
 bool TargetTransformInfo::enableOrderedReductions() const {
@@ -1036,6 +1043,16 @@ InstructionCost TargetTransformInfo::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   InstructionCost Cost = TTIImpl->getGatherScatterOpCost(
+      Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
+  assert((!Cost.isValid() || Cost >= 0) &&
+         "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getStridedMemoryOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+  InstructionCost Cost = TTIImpl->getStridedMemoryOpCost(
       Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;

@@ -441,7 +441,13 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
         return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
     }
 
-    return ABIArgInfo::getDirect();
+    ABIArgInfo Info = ABIArgInfo::getDirect();
+
+    // If it is tuple type, it can't be flattened.
+    if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty)))
+      Info.setCanBeFlattened(!STy->containsHomogeneousScalableVectorTypes());
+
+    return Info;
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>())

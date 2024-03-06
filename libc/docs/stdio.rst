@@ -61,7 +61,7 @@ funlockfile    |check|
 Operations on system files
 ==========================
 
-These functions operate on files on the host's system, without using the 
+These functions operate on files on the host's system, without using the
 ``FILE`` object type. They only take the name of the file being operated on.
 
 =============  =========

@@ -1312,6 +1312,8 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
     }
 
+    // If the requested display style produced no output, try falling back to
+    // alternative presentations.
     if (str.empty()) {
       if (val_obj_display == eValueObjectRepresentationStyleValue)
         str = GetSummaryAsCString();
@@ -2525,7 +2527,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
-  ValueObjectPrinter printer(this, &s, options);
+  ValueObjectPrinter printer(*this, &s, options);
   printer.PrintValueObject();
 }
 

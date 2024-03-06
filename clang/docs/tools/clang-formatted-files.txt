@@ -985,8 +985,6 @@ clang-tools-extra/clang-tidy/cert/MutatingCopyCheck.cpp
 clang-tools-extra/clang-tidy/cert/MutatingCopyCheck.h
 clang-tools-extra/clang-tidy/cert/NonTrivialTypesLibcMemoryCallsCheck.cpp
 clang-tools-extra/clang-tidy/cert/NonTrivialTypesLibcMemoryCallsCheck.h
-clang-tools-extra/clang-tidy/cert/PostfixOperatorCheck.cpp
-clang-tools-extra/clang-tidy/cert/PostfixOperatorCheck.h
 clang-tools-extra/clang-tidy/cert/ProperlySeededRandomGeneratorCheck.cpp
 clang-tools-extra/clang-tidy/cert/ProperlySeededRandomGeneratorCheck.h
 clang-tools-extra/clang-tidy/cert/SetLongJmpCheck.cpp

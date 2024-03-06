@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
-define i32 @test1(i32 %i, i32* %a) {
+define i32 @test1(i32 %i, ptr %a) {
 ; CHECK-LABEL: Printing analysis {{.*}} for function 'test1':
 ; CHECK-NEXT: block-frequency-info: test1
 ; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
@@ -12,8 +12,8 @@ entry:
 body:
   %iv = phi i32 [ 0, %entry ], [ %next, %body ]
   %base = phi i32 [ 0, %entry ], [ %sum, %body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %iv
-  %0 = load i32, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %iv
+  %0 = load i32, ptr %arrayidx
   %sum = add nsw i32 %0, %base
   %next = add i32 %iv, 1
   %exitcond = icmp eq i32 %next, %i

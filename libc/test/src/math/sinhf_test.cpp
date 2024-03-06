@@ -23,7 +23,7 @@ using LlvmLibcSinhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinhfTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinhf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -66,7 +66,7 @@ TEST_F(LlvmLibcSinhfTest, SmallValues) {
 }
 
 TEST_F(LlvmLibcSinhfTest, Overflow) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::sinhf(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);

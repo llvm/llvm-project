@@ -389,7 +389,11 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     GPUArchName = JA.getOffloadingArch();
   } else {
     GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
-    assert(!GPUArchName.empty() && "Must have an architecture passed in.");
+    if (GPUArchName.empty()) {
+      C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
+          << getToolChain().getArchName() << getShortName();
+      return;
+    }
   }
 
   // Obtain architecture from the action.
@@ -593,13 +597,21 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  assert(!GPUArch.empty() && "At least one GPU Arch required for nvlink.");
+  if (GPUArch.empty()) {
+    C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
+        << getToolChain().getArchName() << getShortName();
+    return;
+  }
 
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Args.MakeArgString(GPUArch));
 
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
+
+  // Add standard library search paths passed on the command line.
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
@@ -615,35 +627,34 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       continue;
     }
 
-    // Currently, we only pass the input files to the linker, we do not pass
-    // any libraries that may be valid only for the host.
-    if (!II.isFilename())
-      continue;
-
     // The 'nvlink' application performs RDC-mode linking when given a '.o'
     // file and device linking when given a '.cubin' file. We always want to
     // perform device linking, so just rename any '.o' files.
     // FIXME: This should hopefully be removed if NVIDIA updates their tooling.
-    auto InputFile = getToolChain().getInputFilename(II);
-    if (llvm::sys::path::extension(InputFile) != ".cubin") {
-      // If there are no actions above this one then this is direct input and we
-      // can copy it. Otherwise the input is internal so a `.cubin` file should
-      // exist.
-      if (II.getAction() && II.getAction()->getInputs().size() == 0) {
-        const char *CubinF =
-            Args.MakeArgString(getToolChain().getDriver().GetTemporaryPath(
-                llvm::sys::path::stem(InputFile), "cubin"));
-        if (llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
-          continue;
+    if (II.isFilename()) {
+      auto InputFile = getToolChain().getInputFilename(II);
+      if (llvm::sys::path::extension(InputFile) != ".cubin") {
+        // If there are no actions above this one then this is direct input and
+        // we can copy it. Otherwise the input is internal so a `.cubin` file
+        // should exist.
+        if (II.getAction() && II.getAction()->getInputs().size() == 0) {
+          const char *CubinF =
+              Args.MakeArgString(getToolChain().getDriver().GetTemporaryPath(
+                  llvm::sys::path::stem(InputFile), "cubin"));
+          if (llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
+            continue;
 
-        CmdArgs.push_back(CubinF);
+          CmdArgs.push_back(CubinF);
+        } else {
+          SmallString<256> Filename(InputFile);
+          llvm::sys::path::replace_extension(Filename, "cubin");
+          CmdArgs.push_back(Args.MakeArgString(Filename));
+        }
       } else {
-        SmallString<256> Filename(InputFile);
-        llvm::sys::path::replace_extension(Filename, "cubin");
-        CmdArgs.push_back(Args.MakeArgString(Filename));
+        CmdArgs.push_back(Args.MakeArgString(InputFile));
       }
-    } else {
-      CmdArgs.push_back(Args.MakeArgString(InputFile));
+    } else if (!II.isNothing()) {
+      II.getInputArg().renderAsInput(Args, CmdArgs);
     }
   }
 
@@ -726,9 +737,8 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                               StringRef BoundArch,
-                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      ToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+                              Action::OffloadKind OffloadKind) const {
+  DerivedArgList *DAL = ToolChain::TranslateArgs(Args, BoundArch, OffloadKind);
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
@@ -738,7 +748,8 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  if (!DAL->hasArg(options::OPT_march_EQ)) {
+  // TODO: We should accept 'generic' as a valid architecture.
+  if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
@@ -892,7 +903,7 @@ void CudaToolChain::addClangTargetOptions(
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
-                       getTriple());
+                       getTriple(), HostTC);
   }
 }
 

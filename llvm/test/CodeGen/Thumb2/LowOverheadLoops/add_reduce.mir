@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 --- |
-  define hidden i32 @max_min_add_reduce(i8* %input_1_vect, i8* %input_2_vect, i32 %input_1_offset, i32 %input_2_offset, i32* %output, i32 %out_offset, i32 %out_mult, i32 %out_shift, i32 %out_activation_min, i32 %out_activation_max, i32 %block_size) local_unnamed_addr #0 {
+  define hidden i32 @max_min_add_reduce(ptr %input_1_vect, ptr %input_2_vect, i32 %input_1_offset, i32 %input_2_offset, ptr %output, i32 %out_offset, i32 %out_mult, i32 %out_shift, i32 %out_activation_min, i32 %out_activation_max, i32 %block_size) local_unnamed_addr #0 {
   entry:
     %add = add i32 %block_size, 3
     %div = lshr i32 %add, 2
@@ -14,7 +14,7 @@
     %.splat.i42 = shufflevector <4 x i32> %.splatinsert.i41, <4 x i32> undef, <4 x i32> zeroinitializer
     %.splatinsert.i = insertelement <4 x i32> undef, i32 %out_activation_max, i32 0
     %.splat.i = shufflevector <4 x i32> %.splatinsert.i, <4 x i32> undef, <4 x i32> zeroinitializer
-    %scevgep = getelementptr i32, i32* %output, i32 -1
+    %scevgep = getelementptr i32, ptr %output, i32 -1
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -22,21 +22,21 @@
 
   for.body:                                         ; preds = %for.body, %for.body.lr.ph
     %lsr.iv3 = phi i32 [ %lsr.iv.next, %for.body ], [ %div, %for.body.lr.ph ]
-    %lsr.iv = phi i32* [ %scevgep1, %for.body ], [ %scevgep, %for.body.lr.ph ]
-    %input_1_vect.addr.052 = phi i8* [ %input_1_vect, %for.body.lr.ph ], [ %add.ptr, %for.body ]
-    %input_2_vect.addr.051 = phi i8* [ %input_2_vect, %for.body.lr.ph ], [ %add.ptr14, %for.body ]
+    %lsr.iv = phi ptr [ %scevgep1, %for.body ], [ %scevgep, %for.body.lr.ph ]
+    %input_1_vect.addr.052 = phi ptr [ %input_1_vect, %for.body.lr.ph ], [ %add.ptr, %for.body ]
+    %input_2_vect.addr.051 = phi ptr [ %input_2_vect, %for.body.lr.ph ], [ %add.ptr14, %for.body ]
     %num_elements.049 = phi i32 [ %block_size, %for.body.lr.ph ], [ %sub, %for.body ]
-    %input_2_cast = bitcast i8* %input_2_vect.addr.051 to <4 x i32>*
-    %input_1_cast = bitcast i8* %input_1_vect.addr.052 to <4 x i32>*
-    %scevgep2 = getelementptr i32, i32* %lsr.iv, i32 1
+    %input_2_cast = bitcast ptr %input_2_vect.addr.051 to ptr
+    %input_1_cast = bitcast ptr %input_1_vect.addr.052 to ptr
+    %scevgep2 = getelementptr i32, ptr %lsr.iv, i32 1
     %pred = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %num_elements.049)
-    %load.1 = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %input_1_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %load.1 = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %input_1_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
     %insert.input_1_offset = insertelement <4 x i32> undef, i32 %input_1_offset, i32 0
     %splat.input_1_offset = shufflevector <4 x i32> %insert.input_1_offset, <4 x i32> undef, <4 x i32> zeroinitializer
     %insert.input_2_offset = insertelement <4 x i32> undef, i32 %input_2_offset, i32 0
     %splat.input_2_offset = shufflevector <4 x i32> %insert.input_2_offset, <4 x i32> undef, <4 x i32> zeroinitializer
     %add.1 = add <4 x i32> %load.1, %splat.input_1_offset
-    %load.2 = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %input_2_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %load.2 = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %input_2_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
     %add.2 = add <4 x i32> %load.2, %splat.input_2_offset
     %mul = mul <4 x i32> %add.1, %add.2
     %insert.output = insertelement <4 x i32> undef, i32 %out_offset, i32 0
@@ -45,19 +45,19 @@
     %max = tail call <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32> %add7, <4 x i32> %.splat.i42, i32 1, <4 x i1> %pred, <4 x i32> undef)
     %min = tail call <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32> %max, <4 x i32> %.splat.i, i32 1, <4 x i1> %pred, <4 x i32> undef)
     %reduce = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %min)
-    store i32 %reduce, i32* %scevgep2
-    %add.ptr = getelementptr inbounds i8, i8* %input_1_vect.addr.052, i32 4
-    %add.ptr14 = getelementptr inbounds i8, i8* %input_2_vect.addr.051, i32 4
+    store i32 %reduce, ptr %scevgep2
+    %add.ptr = getelementptr inbounds i8, ptr %input_1_vect.addr.052, i32 4
+    %add.ptr14 = getelementptr inbounds i8, ptr %input_2_vect.addr.051, i32 4
     %sub = add i32 %num_elements.049, -4
     %iv.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv3, i32 1)
     %cmp = icmp ne i32 %iv.next, 0
-    %scevgep1 = getelementptr i32, i32* %lsr.iv, i32 1
+    %scevgep1 = getelementptr i32, ptr %lsr.iv, i32 1
     %lsr.iv.next = add i32 %lsr.iv3, -1
     br i1 %cmp, label %for.body, label %for.cond.cleanup
   }
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #1
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #2
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #3
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>) #2
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>) #3
   declare <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>, <4 x i32>) #1
   declare <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>, <4 x i32>) #1
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #4

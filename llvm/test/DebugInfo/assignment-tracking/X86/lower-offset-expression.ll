@@ -24,9 +24,9 @@ entry:
   call void @llvm.dbg.assign(metadata i32 undef, metadata !16, metadata !DIExpression(), metadata !24, metadata ptr %a, metadata !DIExpression()), !dbg !34
   ;; unlink and undef a dbg.assign to avoid using sidetable for var loc.
   call void @llvm.dbg.assign(metadata i32 undef, metadata !16, metadata !DIExpression(), metadata !26, metadata ptr undef, metadata !DIExpression()), !dbg !34
-  %idx2 = getelementptr inbounds i32, i32* %a, i32 2
-  store i32 100, i32* %idx2, !DIAssignID !25
-  call void @llvm.dbg.assign(metadata i32 100, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !25, metadata i32* %a, metadata !DIExpression(DW_OP_plus_uconst, 8)), !dbg !34
+  %idx2 = getelementptr inbounds i32, ptr %a, i32 2
+  store i32 100, ptr %idx2, !DIAssignID !25
+  call void @llvm.dbg.assign(metadata i32 100, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !25, metadata ptr %a, metadata !DIExpression(DW_OP_plus_uconst, 8)), !dbg !34
   ret void
 }
 

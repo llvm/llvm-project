@@ -540,14 +540,6 @@ runTypeErasedDataflowAnalysis(
   Worklist.enqueueSuccessors(&Entry);
 
   AnalysisContext AC(CFCtx, Analysis, StartingEnv, BlockStates);
-
-  // FIXME: remove relative cap. There isn't really any good setting for
-  // `MaxAverageVisitsPerBlock`, so it has no clear value over using
-  // `MaxBlockVisits` directly.
-  static constexpr std::int32_t MaxAverageVisitsPerBlock = 4;
-  const std::int32_t RelativeMaxBlockVisits =
-      MaxAverageVisitsPerBlock * BlockStates.size();
-  MaxBlockVisits = std::min(RelativeMaxBlockVisits, MaxBlockVisits);
   std::int32_t BlockVisits = 0;
   while (const CFGBlock *Block = Worklist.dequeue()) {
     LLVM_DEBUG(llvm::dbgs()
