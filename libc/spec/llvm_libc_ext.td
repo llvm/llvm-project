@@ -73,7 +73,7 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
   let Headers = [
     Assert,
     Sched,
-    Stdfix,
+    StdFix,
     Strings,
   ];
 }
