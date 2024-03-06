@@ -45,7 +45,8 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateArithToEmitCPatterns(RewritePatternSet &patterns) {
+void mlir::populateArithToEmitCPatterns(TypeConverter typeConverter,
+                                        RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
   // clang-format off

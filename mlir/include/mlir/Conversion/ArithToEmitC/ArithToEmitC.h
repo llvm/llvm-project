@@ -11,8 +11,10 @@
 
 namespace mlir {
 class RewritePatternSet;
+class TypeConverter;
 
-void populateArithToEmitCPatterns(RewritePatternSet &patterns);
+void populateArithToEmitCPatterns(TypeConverter typeConverter,
+                                  RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_ARITHTOEMITC_ARITHTOEMITC_H

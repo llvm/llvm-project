@@ -39,7 +39,9 @@ void ConvertArithToEmitC::runOnOperation() {
   target.addLegalDialect<emitc::EmitCDialect>();
 
   RewritePatternSet patterns(&getContext());
-  populateArithToEmitCPatterns(patterns);
+  TypeConverter typeConverter;
+
+  populateArithToEmitCPatterns(typeConverter, patterns);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
