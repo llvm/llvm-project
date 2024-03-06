@@ -23,10 +23,6 @@ public:
   /// On Linux and FreeBSD, running "LD_SHOW_AUXV=1 ./executable" will spew AUX
   /// information. Added AUXV prefix to avoid potential conflicts with system-
   /// defined macros. For FreeBSD, the numbers can be found in sys/elf_common.h.
-  ///
-  /// Linux and FreeBSD values diverge, so the FreeBSD classes will convert
-  /// some entries to the Linux AT_ value so that LLDB only has to use
-  /// the constants listed here when asking the AuxVector for a value.
   enum EntryType {
     AUXV_AT_NULL = 0,      ///< End of auxv.
     AUXV_AT_IGNORE = 1,    ///< Ignore entry.
