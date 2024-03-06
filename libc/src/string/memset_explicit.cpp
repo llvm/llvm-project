@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE {
   inline_memset<true>(dst, static_cast<uint8_t>(value), count);
   // avoid dead store elimination
   // The asm itself should also be sufficient to behave as a compiler barrier.
-  asm volatile("" : : "r"(dst) : "memory");
+  asm("" : : "r"(dst) : "memory");
   return dst;
 }
 

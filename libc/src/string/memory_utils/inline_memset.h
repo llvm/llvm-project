@@ -36,16 +36,8 @@
 
 namespace LIBC_NAMESPACE {
 
-template <bool OPAQUE_VALUE = false>
 LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
-#if LIBC_TARGET_ARCH_IS_AARCH64
-  // The AArch64 implementation has an additional template parameter. It
-  // may uses dc zva to zero memory.
-  LIBC_SRC_STRING_MEMORY_UTILS_MEMSET<OPAQUE_VALUE>(reinterpret_cast<Ptr>(dst),
-                                                    value, count);
-#else
   LIBC_SRC_STRING_MEMORY_UTILS_MEMSET(reinterpret_cast<Ptr>(dst), value, count);
-#endif
 }
 
 } // namespace LIBC_NAMESPACE
