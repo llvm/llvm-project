@@ -107,7 +107,7 @@ struct __atomic_ref_base {
 #  if __has_builtin(__builtin_clear_padding)
         has_unique_object_representations_v<_Tp> || same_as<_Tp, float> || same_as<_Tp, double>;
 #  else
-        true
+        true // NOLINT(readability-simplify-boolean-expr)
 #  endif
     ) {
       return __atomic_compare_exchange(__ptr, __expected, __desired, __is_weak, __success, __failure);
