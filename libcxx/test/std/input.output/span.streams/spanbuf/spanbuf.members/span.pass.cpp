@@ -31,19 +31,17 @@ void test() {
   using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   CharT arr[4];
+
   std::span<CharT> sp{arr};
-
-  // TODO:
-
-  // Mode: default
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
+  
   {
-    SpBuf rhsSpBuf{sp};
-    SpBuf spBuf(std::span<CharT>{});
-    spBuf.swap(rhsSpBuf);
-    // assert(spBuf.span().data() == arr);
-    // assert(!spBuf.span().empty());
-    // assert(spBuf.span().size() == 4);
-  }
+  SpBuf spBuf(sp);
+  assert(spBuf.span().data() == arr);
+  assert(!spBuf.span().empty());
+  assert(spBuf.span().size() == 4);
 }
 
 int main(int, char**) {
