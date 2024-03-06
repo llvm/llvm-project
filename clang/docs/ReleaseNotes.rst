@@ -92,7 +92,7 @@ C++20 Feature Support
   Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
 
 - Initial support for class template argument deduciton (CTAD) for type alias
-  templates.
+  templates (`P1814R0 <https://wg21.link/p1814r0>`_).
   (`#54051 https://github.com/llvm/llvm-project/issues/54051`_).
 
 C++23 Feature Support

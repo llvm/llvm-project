@@ -1475,7 +1475,7 @@ namespace {
       std::vector<TemplateArgument> TArgs;
       switch (Arg.getKind()) {
       case TemplateArgument::Pack:
-        // Iterially rewrite the template argument pack, instead of unpacking
+        // Literally rewrite the template argument pack, instead of unpacking
         // it.
         assert(
             SemaRef.CodeSynthesisContexts.back().Kind ==

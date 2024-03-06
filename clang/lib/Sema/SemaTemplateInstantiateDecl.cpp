@@ -6287,8 +6287,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
 
           if (!SubstRecord) {
-            // The T can be a dependent TemplateSpecializationType when
-            // performing a substitution for building a deduction guide,
+            // T can be a dependent TemplateSpecializationType when performing a
+            // substitution for building a deduction guide.
             assert(CodeSynthesisContexts.back().Kind ==
                    CodeSynthesisContext::BuildingDeductionGuides);
             // Return a nullptr as a sentinel value, we handle it properly in

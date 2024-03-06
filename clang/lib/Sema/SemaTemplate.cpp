@@ -2682,12 +2682,12 @@ private:
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<NamedDecl *> TemplateParams,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct FindAppearedTemplateParams
-      : public RecursiveASTVisitor<FindAppearedTemplateParams> {
+  struct ReferenceFinder
+      : public RecursiveASTVisitor<ReferenceFinder> {
     llvm::DenseSet<NamedDecl *> TemplateParams;
-    llvm::DenseSet<const NamedDecl *> AppearedTemplateParams;
+    llvm::DenseSet<const NamedDecl *> ReferencedTemplateParams;
 
-    FindAppearedTemplateParams(ArrayRef<NamedDecl *> TemplateParams)
+    ReferenceFinder(ArrayRef<NamedDecl *> TemplateParams)
         : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
@@ -2702,15 +2702,15 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
 
     void MarkAppeared(NamedDecl *ND) {
       if (TemplateParams.contains(ND))
-        AppearedTemplateParams.insert(ND);
+        ReferencedTemplateParams.insert(ND);
     }
   };
-  FindAppearedTemplateParams MarkAppeared(TemplateParams);
-  MarkAppeared.TraverseTemplateArguments(DeducedArgs);
+  ReferenceFinder Finder(TemplateParams);
+  Finder.TraverseTemplateArguments(DeducedArgs);
 
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParams.size(); ++Index) {
-    if (MarkAppeared.AppearedTemplateParams.contains(
+    if (Finder.ReferencedTemplateParams.contains(
             TemplateParams[Index]))
       Results.push_back(Index);
   }
@@ -2911,7 +2911,12 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Context.getCanonicalTemplateArgument(
               Context.getInjectedTemplateArg(NewParam));
     }
-    // FIXME: support require clause.
+    // FIXME: implement the associated constraint per C++
+    // [over.match.class.deduct]p3.3:
+    //    The associated constraints ([temp.constr.decl]) are the
+    //    conjunction of the associated constraints of g and a
+    //    constraint that is satisfied if and only if the arguments
+    //    of A are deducible (see below) from the return type.
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
         Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
         AliasTemplate->getTemplateParameters()->getLAngleLoc(),
@@ -2963,12 +2968,6 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
             F, TemplateArgListForBuildingFPrime, AliasTemplate->getLocation(),
             Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
       auto *GG = dyn_cast<CXXDeductionGuideDecl>(FPrime);
-      // FIXME: implement the associated constraint per C++
-      // [over.match.class.deduct]p3.3:
-      //    The associated constraints ([temp.constr.decl]) are the
-      //    conjunction of the associated constraints of g and a
-      //    constraint that is satisfied if and only if the arguments
-      //    of A are deducible (see below) from the return type.
       buildDeductionGuide(SemaRef, AliasTemplate, FPrimeTemplateParamList,
                           GG->getCorrespondingConstructor(),
                           GG->getExplicitSpecifier(), GG->getTypeSourceInfo(),
