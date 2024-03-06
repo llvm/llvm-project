@@ -3070,7 +3070,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
@@ -3286,9 +3286,9 @@ unsigned HexagonInstrInfo::getAddrMode(const MachineInstr &MI) const {
 // returned in Offset and the access size is returned in AccessSize.
 // If the base operand has a subregister or the offset field does not contain
 // an immediate value, return nullptr.
-MachineOperand *HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
-                                                   int64_t &Offset,
-                                                   unsigned &AccessSize) const {
+MachineOperand *
+HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
+                                   LocationSize &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
       getAddrMode(MI) != HexagonII::BaseLongOffset &&

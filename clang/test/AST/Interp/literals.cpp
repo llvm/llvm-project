@@ -839,6 +839,18 @@ namespace IncDec {
     return a[1];
   }
   static_assert(f() == 3, "");
+
+  int nonconst(int a) { // both-note 4{{declared here}}
+    static_assert(a++, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(a--, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(++a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(--a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
 };
 #endif
 
@@ -1168,3 +1180,10 @@ namespace incdecbool {
 
 
 }
+
+#if __cplusplus >= 201402L
+constexpr int externvar1() { // both-error {{never produces a constant expression}}
+  extern char arr[]; // both-note {{declared here}}
+  return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
+}
+#endif

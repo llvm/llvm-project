@@ -9,11 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @PR1101(i32 %N) {
 ; CHECK-LABEL: 'PR1101'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR1101
-; CHECK-NEXT:  Loop %bb3: backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is 10000
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %bb3: backedge-taken count is i32 10000
+; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is i32 10000
+; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is i32 10000
 ; CHECK-NEXT:  Loop %bb3: Trip multiple is 10001
 ;
 entry:
@@ -40,11 +38,9 @@ return:         ; preds = %bb5
 define i32 @PR22795() {
 ; CHECK-LABEL: 'PR22795'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR22795
-; CHECK-NEXT:  Loop %preheader: backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: constant max backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: symbolic max backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: Predicated backedge-taken count is 7
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %preheader: backedge-taken count is i64 7
+; CHECK-NEXT:  Loop %preheader: constant max backedge-taken count is i64 7
+; CHECK-NEXT:  Loop %preheader: symbolic max backedge-taken count is i64 7
 ; CHECK-NEXT:  Loop %preheader: Trip multiple is 8
 ;
 entry:
@@ -103,11 +99,9 @@ declare void @may_exit() nounwind
 define void @pr28012(i32 %n) {
 ; CHECK-LABEL: 'pr28012'
 ; CHECK-NEXT:  Determining loop execution counts for: @pr28012
-; CHECK-NEXT:  Loop %loop: backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is -1431655751
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 -1431655751
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1431655751
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 -1431655751
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2863311546
 ;
 entry:
@@ -128,10 +122,8 @@ define void @non_zero_from_loop_guard(i16 %n) {
 ; CHECK-LABEL: 'non_zero_from_loop_guard'
 ; CHECK-NEXT:  Determining loop execution counts for: @non_zero_from_loop_guard
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (%n /u 2))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32766
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 32766
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (%n /u 2))<nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (%n /u 2))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

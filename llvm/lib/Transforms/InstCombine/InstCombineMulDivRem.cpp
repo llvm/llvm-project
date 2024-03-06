@@ -769,6 +769,9 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (Instruction *R = foldFPSignBitOps(I))
     return R;
 
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
+    return R;
+
   // X * -1.0 --> -X
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (match(Op1, m_SpecificFP(-1.0)))

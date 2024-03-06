@@ -132,7 +132,8 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 } // anonymous namespace
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
+IncrementalCompilerBuilder::create(std::string TT,
+                                   std::vector<const char *> &ClangArgv) {
 
   // If we don't know ClangArgv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
@@ -162,8 +163,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
-  driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
-                        llvm::sys::getProcessTriple(), Diags);
+  driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
   llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
@@ -185,7 +185,8 @@ IncrementalCompilerBuilder::CreateCpp() {
   Argv.push_back("-xc++");
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
-  return IncrementalCompilerBuilder::create(Argv);
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+  return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -213,7 +214,8 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
-  return IncrementalCompilerBuilder::create(Argv);
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+  return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>

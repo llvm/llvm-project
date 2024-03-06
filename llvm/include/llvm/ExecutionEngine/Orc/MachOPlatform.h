@@ -58,9 +58,24 @@ public:
       uint32_t CompatibilityVersion;
     };
 
+    struct BuildVersionOpts {
+
+      // Derive platform from triple.
+      static BuildVersionOpts fromTriple(const Triple &TT, uint32_t MinOS,
+                                         uint32_t SDK);
+
+      uint32_t Platform; // Platform.
+      uint32_t MinOS;    // X.Y.Z is encoded in nibbles xxxx.yy.zz
+      uint32_t SDK;      // X.Y.Z is encoded in nibbles xxxx.yy.zz
+    };
+
     /// Override for LC_IC_DYLIB. If this is nullopt, {JD.getName(), 0, 0, 0}
     /// will be used.
     std::optional<Dylib> IDDylib;
+
+    /// Override for LC_BUILD_VERSION. If this is nullopt then
+    std::optional<BuildVersionOpts> BuildVersion;
+
     /// List of LC_LOAD_DYLIBs.
     std::vector<Dylib> LoadDylibs;
     /// List of LC_RPATHs.
