@@ -98,7 +98,7 @@ ValueProfNode *EndVNode = &VNodesEnd;
 #define BUILD_ID_LEN 16
 COMPILER_RT_WEAK uint8_t __buildid[BUILD_ID_LEN] = {0};
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
-  uint8_t zeros[BUILD_ID_LEN] = {0};
+  static const uint8_t zeros[BUILD_ID_LEN] = {0};
   if (memcmp(__buildid, zeros, BUILD_ID_LEN) != 0) {
     if (Writer &&
         lprofWriteOneBinaryId(Writer, BUILD_ID_LEN, __buildid, 0) == -1)
