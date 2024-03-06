@@ -19093,17 +19093,16 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   RHSExpr = RHSExpr->IgnoreParenImpCasts();
 
-  // Check for a call expression
-  const CallExpr *CE = dyn_cast<CallExpr>(RHSExpr);
-  if (!CE || CE->getNumArgs() != 1)
+  // Check for a call to std::move or for a static_cast<T&&>(..) to an xvalue
+  // which we can treat as an inlined std::move
+  if (const auto *CE = dyn_cast<CallExpr>(RHSExpr);
+      CE && CE->getNumArgs() == 1 && CE->isCallToStdMove())
+    RHSExpr = CE->getArg(0);
+  else if (const auto *CXXSCE = dyn_cast<CXXStaticCastExpr>(RHSExpr);
+           CXXSCE && CXXSCE->isXValue())
+    RHSExpr = CXXSCE->getSubExpr();
+  else
     return;
-
-  // Check for a call to std::move
-  if (!CE->isCallToStdMove())
-    return;
-
-  // Get argument from std::move
-  RHSExpr = CE->getArg(0);
 
   const DeclRefExpr *LHSDeclRef = dyn_cast<DeclRefExpr>(LHSExpr);
   const DeclRefExpr *RHSDeclRef = dyn_cast<DeclRefExpr>(RHSExpr);
