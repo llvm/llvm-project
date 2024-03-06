@@ -36,6 +36,8 @@ struct ICFGPathFinder {
     }
 
     void dfs(int u) {
+        if (results.size() > 40)
+            return;
         if (u == target) {
             llvm::errs() << "found:";
             for (int v : path) {
