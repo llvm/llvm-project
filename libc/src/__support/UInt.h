@@ -1000,7 +1000,7 @@ countl_zero(const T &value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
 countl_one(T value) {
-  // TODO : Implement a faster version.
+  // TODO : Implement a faster version not involving operator~.
   return cpp::countl_zero<T>(~value);
 }
 
@@ -1008,7 +1008,7 @@ countl_one(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
 countr_one(T value) {
-  // TODO : Implement a faster version.
+  // TODO : Implement a faster version not involving operator~.
   return cpp::countr_zero<T>(~value);
 }
 
@@ -1028,7 +1028,6 @@ rotr(T value, int rotate);
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
 rotl(T value, int rotate) {
-  // TODO : Implement a faster version.
   constexpr unsigned N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
@@ -1042,7 +1041,6 @@ rotl(T value, int rotate) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
 rotr(T value, int rotate) {
-  // TODO : Implement a faster version.
   constexpr unsigned N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
@@ -1063,6 +1061,7 @@ first_leading_zero(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
 first_leading_one(T value) {
+  // TODO : Implement a faster version not involving operator~.
   return first_leading_zero(static_cast<T>(~value));
 }
 
@@ -1070,6 +1069,7 @@ first_leading_one(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
 first_trailing_zero(T value) {
+  // TODO : Implement a faster version not involving operator~.
   return value == cpp::numeric_limits<T>::max()
              ? 0
              : countr_zero(static_cast<T>(~value)) + 1;
@@ -1086,11 +1086,9 @@ first_trailing_one(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
 count_ones(T value) {
-  // TODO : Implement a faster version.
   int count = 0;
-  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    if ((value >> i) & 0x1)
-      ++count;
+  for (auto word : value.val)
+    count += count_ones(word);
   return count;
 }
 
@@ -1098,7 +1096,10 @@ count_ones(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
 count_zeros(T value) {
-  return count_ones<T>(static_cast<T>(~value));
+  int count = 0;
+  for (auto word : value.val)
+    count += count_zeros(word);
+  return count;
 }
 
 } // namespace LIBC_NAMESPACE::cpp
