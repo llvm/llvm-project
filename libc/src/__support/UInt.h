@@ -1050,58 +1050,6 @@ rotr(T value, int rotate) {
   return (value >> rotate) | (value << (N - rotate));
 }
 
-// Specialization of cpp::first_leading_zero ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-first_leading_zero(T value) {
-  return value == cpp::numeric_limits<T>::max() ? 0 : countl_one(value) + 1;
-}
-
-// Specialization of cpp::first_leading_one ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-first_leading_one(T value) {
-  // TODO : Implement a faster version not involving operator~.
-  return first_leading_zero(static_cast<T>(~value));
-}
-
-// Specialization of cpp::first_trailing_zero ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-first_trailing_zero(T value) {
-  // TODO : Implement a faster version not involving operator~.
-  return value == cpp::numeric_limits<T>::max()
-             ? 0
-             : countr_zero(static_cast<T>(~value)) + 1;
-}
-
-// Specialization of cpp::first_trailing_one ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-first_trailing_one(T value) {
-  return value == cpp::numeric_limits<T>::max() ? 0 : countr_zero(value) + 1;
-}
-
-// Specialization of cpp::count_ones ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-count_ones(T value) {
-  int count = 0;
-  for (auto word : value.val)
-    count += count_ones(word);
-  return count;
-}
-
-// Specialization of cpp::count_zeros ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-count_zeros(T value) {
-  int count = 0;
-  for (auto word : value.val)
-    count += count_zeros(word);
-  return count;
-}
-
 } // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

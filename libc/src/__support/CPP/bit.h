@@ -239,18 +239,21 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   }
 }
 
+// TODO: remove from 'bit.h' as it is not a standard function.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 first_leading_zero(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0 : countl_one(value) + 1;
 }
 
+// TODO: remove from 'bit.h' as it is not a standard function.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 first_leading_one(T value) {
   return first_leading_zero(static_cast<T>(~value));
 }
 
+// TODO: remove from 'bit.h' as it is not a standard function.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 first_trailing_zero(T value) {
@@ -259,6 +262,7 @@ first_trailing_zero(T value) {
              : countr_zero(static_cast<T>(~value)) + 1;
 }
 
+// TODO: remove from 'bit.h' as it is not a standard function.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 first_trailing_one(T value) {
@@ -268,6 +272,8 @@ first_trailing_one(T value) {
 /// Count number of 1's aka population count or hamming weight.
 ///
 /// Only unsigned integral types are allowed.
+// TODO: rename as 'popcount' to follow the standard
+// https://en.cppreference.com/w/cpp/numeric/popcount
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 count_ones(T value) {
@@ -290,6 +296,7 @@ ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
 // TODO: 128b specializations?
 #undef ADD_SPECIALIZATION
 
+// TODO: remove from 'bit.h' as it is not a standard function.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 count_zeros(T value) {

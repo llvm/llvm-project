@@ -16,13 +16,19 @@
 
 namespace LIBC_NAMESPACE::cpp {
 
-using UnsignedTypes =
-    testing::TypeList<unsigned char, unsigned short, unsigned int,
-                      unsigned long, unsigned long long,
+using UnsignedTypesNoBigInt = testing::TypeList<
 #if defined(__SIZEOF_INT128__)
-                      __uint128_t,
+    __uint128_t,
 #endif
-                      cpp::UInt<128>>;
+    unsigned char, unsigned short, unsigned int, unsigned long,
+    unsigned long long>;
+
+using UnsignedTypes = testing::TypeList<
+#if defined(__SIZEOF_INT128__)
+    __uint128_t,
+#endif
+    unsigned char, unsigned short, unsigned int, unsigned long,
+    unsigned long long, cpp::UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto ZERO = T(0);
@@ -223,39 +229,39 @@ TEST(LlvmLibcBitTest, Rotr) {
             rotr<uint64_t>(0x12345678deadbeefULL, -19));
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_leading_zero<T>(cpp::numeric_limits<T>::max()), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(first_leading_zero<T>(~(T(1) << i)),
               cpp::numeric_limits<T>::digits - i);
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_leading_one<T>(static_cast<T>(0)), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(first_leading_one<T>(T(1) << i),
               cpp::numeric_limits<T>::digits - i);
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_trailing_zero<T>(cpp::numeric_limits<T>::max()), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(first_trailing_zero<T>(~(T(1) << i)), i + 1);
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
   EXPECT_EQ(count_zeros(T(0)), cpp::numeric_limits<T>::digits);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> i), i);
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
+TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypesNoBigInt) {
   EXPECT_EQ(count_ones(T(0)), 0);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(count_ones<T>(cpp::numeric_limits<T>::max() >> i),
