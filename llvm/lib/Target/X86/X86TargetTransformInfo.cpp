@@ -5938,7 +5938,7 @@ bool X86TTIImpl::isLegalBroadcastLoad(Type *ElementTy,
          ElementTy == Type::getDoubleTy(ElementTy->getContext());
 }
 
-bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
+bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
   if (!isa<VectorType>(DataTy))
     return false;
 
@@ -5962,8 +5962,8 @@ bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasVBMI2());
 }
 
-bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
-  return isLegalMaskedExpandLoad(DataTy);
+bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
+  return isLegalMaskedExpandLoad(DataTy, Alignment);
 }
 
 bool X86TTIImpl::supportsGather() const {

@@ -156,7 +156,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions.
+  giving false positives for deleted functions and fix false negative when some
+  parameters are forwarded, but other aren't.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
