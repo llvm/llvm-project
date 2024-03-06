@@ -209,7 +209,7 @@ static void createAllReduceForResultsWithoutPartialShardings(
     ImplicitLocOpBuilder &builder) {
   ReductionKind reductionKind = getReductionKindOfLinalgOp(unshardedOp);
   for (auto [unshardedLinalgOpResult, resultSharding] :
-       llvm::zip(unshardedOp->getResults(), resultShardings)) {
+       llvm::zip_equal(unshardedOp->getResults(), resultShardings)) {
     createAllReduceForResultWithoutPartialSharding(
         unshardedLinalgOpResult, opReductionMeshAxes, resultSharding,
         reductionKind, spmdizationMap, builder);
@@ -236,7 +236,7 @@ static void spmdizeLinalgOpWithShardedReduction(
   // others.
   IRMapping internalSpmdizationMap;
   for (auto [unshardedOperand, spmdizedOperand] :
-       llvm::zip(op->getOperands(), spmdizedLinalgOpOperands)) {
+       llvm::zip_equal(op->getOperands(), spmdizedLinalgOpOperands)) {
     internalSpmdizationMap.map(unshardedOperand, spmdizedOperand);
   }
   spmdizeTriviallyShardableOperation(
