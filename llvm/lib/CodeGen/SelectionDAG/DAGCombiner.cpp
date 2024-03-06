@@ -1145,8 +1145,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   return false;
 }
 
-// Helper for DAGCombiner::reassociateOps. Try to reassociate an expression
-// such as (Opc N0, N1), if \p N0 is the same kind of operation as \p Opc.
+/// Helper for DAGCombiner::reassociateOps. Try to reassociate (Opc N0, N1) if
+/// \p N0 is the same kind of operation as \p Opc.
 SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
                                                SDValue N0, SDValue N1,
                                                SDNodeFlags Flags) {
@@ -1244,7 +1244,8 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   return SDValue();
 }
 
-// Try to reassociate commutative binops.
+/// Try to reassociate commutative (Opc N0, N1) if either \p N0 or \p N1 is the
+/// same kind of operation as \p Opc.
 SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                                     SDValue N1, SDNodeFlags Flags) {
   assert(TLI.isCommutativeBinOp(Opc) && "Operation not commutative.");
