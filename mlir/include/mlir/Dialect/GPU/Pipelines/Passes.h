@@ -54,15 +54,11 @@ struct GPUToNVVMPipelineOptions
           "this should be false until the GPU layering is fixed)"),
       llvm::cl::init(false)};
   PassOptions::Option<bool> ftz{
-      *this, "ftz",
-      llvm::cl::desc(
-          "Enable flush to zero for denormals"),
+      *this, "ftz", llvm::cl::desc("Enable flush to zero for denormals"),
       llvm::cl::init(false)};
-  PassOptions::Option<bool> fast{
-      *this, "fast",
-      llvm::cl::desc(
-          "Enable fast math mode."),
-      llvm::cl::init(false)};
+  PassOptions::Option<bool> fast{*this, "fast",
+                                 llvm::cl::desc("Enable fast math mode."),
+                                 llvm::cl::init(false)};
 };
 
 //===----------------------------------------------------------------------===//
