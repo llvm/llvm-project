@@ -40,13 +40,10 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   std::unique_ptr<RandomNumberGenerator> Rng;
 
   auto ShouldRemove = [&](bool IsHot) {
-    if (IsHot && !RandomRate.getNumOccurrences())
-      return true;
-    if (!Rng) {
-      if (!RandomRate.getNumOccurrences())
-        return false;
+    if (!RandomRate.getNumOccurrences())
+      return IsHot;
+    if (!Rng)
       Rng = F.getParent()->createRNG(F.getName());
-    }
     std::bernoulli_distribution D(RandomRate);
     return D(*Rng);
   };
