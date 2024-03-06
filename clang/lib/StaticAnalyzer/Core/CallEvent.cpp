@@ -1409,7 +1409,7 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
-      if (MD->isInstance())
+      if (MD->isImplicitObjectMemberFunction())
         return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
