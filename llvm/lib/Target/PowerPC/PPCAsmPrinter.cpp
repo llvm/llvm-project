@@ -2957,10 +2957,10 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       Name += cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName();
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
       TCEntry = cast<MCSectionXCOFF>(
-          getObjFileLowering().getSectionForTOCEntry(S, TM));
+          getObjFileLowering().getSectionForTOCEntry(S, TM, I.first.second));
     } else {
-      TCEntry = cast<MCSectionXCOFF>(
-          getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
+      TCEntry = cast<MCSectionXCOFF>(getObjFileLowering().getSectionForTOCEntry(
+          I.first.first, TM, I.first.second));
     }
     OutStreamer->switchSection(TCEntry);
 

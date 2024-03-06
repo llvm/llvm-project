@@ -785,7 +785,8 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
     StringRef Section, SectionKind Kind,
     std::optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
     const char *BeginSymName,
-    std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
+    std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags,
+    StringRef RenamePrefix) {
   bool IsDwarfSec = DwarfSectionSubtypeFlags.has_value();
   assert((IsDwarfSec != CsectProp.has_value()) && "Invalid XCOFF section!");
 
@@ -811,7 +812,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
     QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(CachedName));
   else
     QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
-        CachedName + "[" +
+        RenamePrefix + CachedName + "[" +
         XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
 
   MCSymbol *Begin = nullptr;

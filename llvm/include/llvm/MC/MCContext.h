@@ -691,7 +691,8 @@ public:
       std::optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
       bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
       std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
-          std::nullopt);
+          std::nullopt,
+      StringRef RenamePrefix = StringRef());
 
   // Create and save a copy of STI and return a reference to the copy.
   MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
