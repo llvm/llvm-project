@@ -196,7 +196,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       ThreadSafetyDeclCache(nullptr), LateTemplateParser(nullptr),
       LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr),
       CurContext(nullptr), ExternalSource(nullptr), CurScope(nullptr),
-      Ident_super(nullptr), OpenACCPtr(new SemaOpenACC{*this}),
+      Ident_super(nullptr), OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
       OpenACC(*OpenACCPtr),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),

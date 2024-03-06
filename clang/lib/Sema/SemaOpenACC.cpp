@@ -39,8 +39,10 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
 }
 } // namespace
 
-bool SemaOpenACC::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
-                                     SourceLocation StartLoc) {
+SemaOpenACC::SemaOpenACC(class Sema &S) : Sema(S) {}
+
+bool SemaOpenACC::ActOnClause(OpenACCClauseKind ClauseKind,
+                              SourceLocation StartLoc) {
   if (ClauseKind == OpenACCClauseKind::Invalid)
     return false;
   // For now just diagnose that it is unsupported and leave the parsing to do
@@ -49,8 +51,8 @@ bool SemaOpenACC::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
   // success.
   return Sema.Diag(StartLoc, diag::warn_acc_clause_unimplemented) << ClauseKind;
 }
-void SemaOpenACC::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
-                                        SourceLocation StartLoc) {
+void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
+                                 SourceLocation StartLoc) {
   switch (K) {
   case OpenACCDirectiveKind::Invalid:
     // Nothing to do here, an invalid kind has nothing we can check here.  We
@@ -70,15 +72,15 @@ void SemaOpenACC::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
   }
 }
 
-bool SemaOpenACC::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                                 SourceLocation StartLoc) {
+bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
+                                          SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
-StmtResult SemaOpenACC::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                                     SourceLocation StartLoc,
-                                                     SourceLocation EndLoc,
-                                                     StmtResult AssocStmt) {
+StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
+                                              SourceLocation StartLoc,
+                                              SourceLocation EndLoc,
+                                              StmtResult AssocStmt) {
   switch (K) {
   default:
     return StmtEmpty();
@@ -94,8 +96,8 @@ StmtResult SemaOpenACC::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
-StmtResult SemaOpenACC::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
-                                                   StmtResult AssocStmt) {
+StmtResult SemaOpenACC::ActOnAssociatedStmt(OpenACCDirectiveKind K,
+                                            StmtResult AssocStmt) {
   switch (K) {
   default:
     llvm_unreachable("Unimplemented associated statement application");
@@ -116,11 +118,9 @@ StmtResult SemaOpenACC::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
   llvm_unreachable("Invalid associated statement application");
 }
 
-bool SemaOpenACC::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
-                                                 SourceLocation StartLoc) {
+bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
+                                          SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
-DeclGroupRef SemaOpenACC::ActOnEndOpenACCDeclDirective() {
-  return DeclGroupRef{};
-}
+DeclGroupRef SemaOpenACC::ActOnEndDeclDirective() { return DeclGroupRef{}; }
