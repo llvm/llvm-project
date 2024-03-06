@@ -1,5 +1,8 @@
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
 RUN: printf '\377lprofr\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\11' >> %t
+RUN: printf '\0\0\0\0\0\0\0\12' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
@@ -12,6 +15,8 @@ RUN: printf '\0\0\0\1\0\4\0\0' >> %t
 RUN: printf '\0\0\0\3\0\4\0\0' >> %t
 RUN: printf '\0\0\0\2\0\4\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\134\370\302\114\333\030\275\254' >> %t
 RUN: printf '\0\0\0\0\0\0\0\1' >> %t
@@ -20,9 +25,8 @@ RUN: printf '\0\0\0\3\0\4\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
-RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\3' >> %t
-RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\02' >> %t
@@ -31,9 +35,8 @@ RUN: printf '\0\0\0\3\0\3\xff\xc3' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\02' >> %t
-RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
-RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t

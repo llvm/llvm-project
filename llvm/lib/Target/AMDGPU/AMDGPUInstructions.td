@@ -76,31 +76,9 @@ class ILFormat<dag outs, dag ins, string asmstr, list<dag> pattern>
      let isCodeGenOnly = 1;
 }
 
-def TruePredicate : Predicate<"">;
-
-// FIXME: Tablegen should specially supports this
-def FalsePredicate : Predicate<"false">;
-
-// Add a predicate to the list if does not already exist to deduplicate it.
-class PredConcat<list<Predicate> lst, Predicate pred> {
-  list<Predicate> ret = !listconcat(lst, !listremove([pred], lst));
-}
-
 // Get the union of two Register lists
 class RegListUnion<list<Register> lstA, list<Register> lstB> {
   list<Register> ret = !listconcat(lstA, !listremove(lstB, lstA));
-}
-
-class PredicateControl {
-  Predicate SubtargetPredicate = TruePredicate;
-  Predicate AssemblerPredicate = TruePredicate;
-  Predicate WaveSizePredicate = TruePredicate;
-  list<Predicate> OtherPredicates = [];
-  list<Predicate> Predicates = PredConcat<
-                                 PredConcat<PredConcat<OtherPredicates,
-                                                       SubtargetPredicate>.ret,
-                                            AssemblerPredicate>.ret,
-                                 WaveSizePredicate>.ret;
 }
 
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,

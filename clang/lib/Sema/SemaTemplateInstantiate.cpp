@@ -3693,9 +3693,9 @@ bool Sema::usesPartialOrExplicitSpecialization(
                    ->getPartialSpecializations(PartialSpecs);
   for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
     TemplateDeductionInfo Info(Loc);
-    if (!DeduceTemplateArguments(PartialSpecs[I],
-                                 ClassTemplateSpec->getTemplateArgs().asArray(),
-                                 Info))
+    if (DeduceTemplateArguments(PartialSpecs[I],
+                                ClassTemplateSpec->getTemplateArgs().asArray(),
+                                Info) == TemplateDeductionResult::Success)
       return true;
   }
 
@@ -3739,8 +3739,9 @@ getPatternForClassTemplateSpecialization(
     for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
       ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
-      if (Sema::TemplateDeductionResult Result = S.DeduceTemplateArguments(
-              Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info)) {
+      if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
+              Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info);
+          Result != TemplateDeductionResult::Success) {
         // Store the failed-deduction information for use in diagnostics, later.
         // TODO: Actually use the failed-deduction info?
         FailedCandidates.addCandidate().set(

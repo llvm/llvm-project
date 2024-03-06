@@ -3423,6 +3423,18 @@ unsigned X86::getSwappedVCMPImm(unsigned Imm) {
   return Imm;
 }
 
+unsigned X86::getVectorRegisterWidth(const MCOperandInfo &Info) {
+  if (Info.RegClass == X86::VR128RegClassID ||
+      Info.RegClass == X86::VR128XRegClassID)
+    return 128;
+  if (Info.RegClass == X86::VR256RegClassID ||
+      Info.RegClass == X86::VR256XRegClassID)
+    return 256;
+  if (Info.RegClass == X86::VR512RegClassID)
+    return 512;
+  llvm_unreachable("Unknown register class!");
+}
+
 /// Return true if the Reg is X87 register.
 static bool isX87Reg(unsigned Reg) {
   return (Reg == X86::FPCW || Reg == X86::FPSW ||
@@ -3431,6 +3443,11 @@ static bool isX87Reg(unsigned Reg) {
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
+  // Call defs X87 register, so we special case it here because
+  // otherwise calls are incorrectly flagged as x87 instructions
+  // as a result.
+  if (MI.isCall())
+    return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
@@ -4502,7 +4519,7 @@ bool X86InstrInfo::preservesZeroValueInReg(
 
 bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);

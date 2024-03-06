@@ -1264,13 +1264,24 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
 
   // If we have a COPY with other uses in the loop, hoist to allow the users to
   // also be hoisted.
+  Register DefReg;
   if (MI.isCopy() && MI.getOperand(0).isReg() &&
-      MI.getOperand(0).getReg().isVirtual() && MI.getOperand(1).isReg() &&
-      MI.getOperand(1).getReg().isVirtual() &&
+      (DefReg = MI.getOperand(0).getReg()).isVirtual() &&
+      MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isVirtual() &&
       IsLoopInvariantInst(MI, CurLoop) &&
       any_of(MRI->use_nodbg_instructions(MI.getOperand(0).getReg()),
-             [&CurLoop](MachineInstr &UseMI) {
-               return CurLoop->contains(&UseMI);
+             [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               if (!CurLoop->contains(&UseMI))
+                 return false;
+
+               // COPY is a cheap instruction, but if moving it won't cause high
+               // RP we're fine to hoist it even if the user can't be hoisted
+               // later Otherwise we want to check the user if it's hoistable
+               if (CanCauseHighRegPressure(Cost, false) &&
+                   !CurLoop->isLoopInvariant(UseMI, DefReg))
+                 return false;
+
+               return true;
              }))
     return true;
 

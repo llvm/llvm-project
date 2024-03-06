@@ -254,6 +254,21 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
+static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
+  const uint8_t Invalid = 0xff;
+  uint8_t type = StringSwitch<uint8_t>(VisType)
+                     .Case("default", ELF::STV_DEFAULT)
+                     .Case("hidden", ELF::STV_HIDDEN)
+                     .Case("internal", ELF::STV_INTERNAL)
+                     .Case("protected", ELF::STV_PROTECTED)
+                     .Default(Invalid);
+  if (type == Invalid)
+    return createStringError(errc::invalid_argument,
+                             "'%s' is not a valid symbol visibility",
+                             VisType.str().c_str());
+  return type;
+}
+
 namespace {
 struct TargetInfo {
   FileFormat Format;
@@ -299,6 +314,8 @@ static const StringMap<MachineInfo> TargetMap{
     // LoongArch
     {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
+    // SystemZ
+    {"elf64-s390", {ELF::EM_S390, true, false}},
 };
 
 static Expected<TargetInfo>
@@ -687,6 +704,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
+                            .Case("srec", FileFormat::SREC)
                             .Default(FileFormat::Unspecified);
   if (Config.OutputFormat == FileFormat::Unspecified) {
     if (OutputFormat.empty()) {
@@ -731,7 +749,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+  Config.SymbolsPrefixRemove =
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
+
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
@@ -961,6 +983,33 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return SymInfo.takeError();
 
     Config.SymbolsToAdd.push_back(*SymInfo);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbol_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbol-visibility");
+    auto [Sym, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E = ELFConfig.SymbolsToSetVisibility.back().first.addMatcher(
+            NameOrPattern::create(Sym, SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbols_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbols-visibility");
+    auto [File, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E =
+            addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility.back().first,
+                               DC.Alloc, File, SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   }
 
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);

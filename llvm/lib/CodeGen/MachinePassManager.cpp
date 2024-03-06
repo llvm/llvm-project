@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/PassManagerImpl.h"
@@ -19,99 +18,121 @@
 using namespace llvm;
 
 namespace llvm {
-template class AllAnalysesOn<MachineFunction>;
+
+AnalysisKey FunctionAnalysisManagerMachineFunctionProxy::Key;
+
 template class AnalysisManager<MachineFunction>;
 template class PassManager<MachineFunction>;
+template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
+                                         Module>;
+template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+                                         MachineFunction>;
 
-Error MachineFunctionPassManager::run(Module &M,
-                                      MachineFunctionAnalysisManager &MFAM) {
-  // MachineModuleAnalysis is a module analysis pass that is never invalidated
-  // because we don't run any module pass in codegen pipeline. This is very
-  // important because the codegen state is stored in MMI which is the analysis
-  // result of MachineModuleAnalysis. MMI should not be recomputed.
-  auto &MMI = MFAM.getResult<MachineModuleAnalysis>(M);
+bool FunctionAnalysisManagerMachineFunctionProxy::Result::invalidate(
+    MachineFunction &IR, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &Inv) {
+  // MachineFunction passes should not invalidate Function analyses.
+  // TODO: verify that PA doesn't invalidate Function analyses.
+  return false;
+}
 
-  (void)RequireCodeGenSCCOrder;
-  assert(!RequireCodeGenSCCOrder && "not implemented");
+template <>
+bool MachineFunctionAnalysisManagerModuleProxy::Result::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &Inv) {
+  // If literally everything is preserved, we're done.
+  if (PA.areAllPreserved())
+    return false; // This is still a valid proxy.
 
-  // M is unused here
-  PassInstrumentation PI = MFAM.getResult<PassInstrumentationAnalysis>(M);
-
-  // Add a PIC to verify machine functions.
-  if (VerifyMachineFunction) {
-    // No need to pop this callback later since MIR pipeline is flat which means
-    // current pipeline is the top-level pipeline. Callbacks are not used after
-    // current pipeline.
-    PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
-      assert(llvm::any_cast<const MachineFunction *>(&IR));
-      const MachineFunction *MF = llvm::any_cast<const MachineFunction *>(IR);
-      assert(MF && "Machine function should be valid for printing");
-      std::string Banner = std::string("After ") + std::string(PassID);
-      verifyMachineFunction(&MFAM, Banner, *MF);
-    });
+  // If this proxy isn't marked as preserved, then even if the result remains
+  // valid, the key itself may no longer be valid, so we clear everything.
+  //
+  // Note that in order to preserve this proxy, a module pass must ensure that
+  // the MFAM has been completely updated to handle the deletion of functions.
+  // Specifically, any MFAM-cached results for those functions need to have been
+  // forcibly cleared. When preserved, this proxy will only invalidate results
+  // cached on functions *still in the module* at the end of the module pass.
+  auto PAC = PA.getChecker<MachineFunctionAnalysisManagerModuleProxy>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Module>>()) {
+    InnerAM->clear();
+    return true;
   }
 
-  for (auto &F : InitializationFuncs) {
-    if (auto Err = F(M, MFAM))
-      return Err;
+  // FIXME: be more precise, see
+  // FunctionAnalysisManagerModuleProxy::Result::invalidate.
+  if (!PA.allAnalysesInSetPreserved<AllAnalysesOn<MachineFunction>>()) {
+    InnerAM->clear();
+    return true;
   }
 
-  unsigned Idx = 0;
-  size_t Size = Passes.size();
-  do {
-    // Run machine module passes
-    for (; MachineModulePasses.count(Idx) && Idx != Size; ++Idx) {
-      if (!PI.runBeforePass<Module>(*Passes[Idx], M))
-        continue;
-      if (auto Err = MachineModulePasses.at(Idx)(M, MFAM))
-        return Err;
-      PI.runAfterPass(*Passes[Idx], M, PreservedAnalyses::all());
+  // Return false to indicate that this result is still a valid proxy.
+  return false;
+}
+
+PreservedAnalyses
+ModuleToMachineFunctionPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &MMI = AM.getResult<MachineModuleAnalysis>(M).getMMI();
+  MachineFunctionAnalysisManager &MFAM =
+      AM.getResult<MachineFunctionAnalysisManagerModuleProxy>(M).getManager();
+  PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(M);
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  for (Function &F : M) {
+    // Do not codegen any 'available_externally' functions at all, they have
+    // definitions outside the translation unit.
+    if (F.hasAvailableExternallyLinkage())
+      continue;
+
+    MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
+
+    if (!PI.runBeforePass<MachineFunction>(*Pass, MF))
+      continue;
+    PreservedAnalyses PassPA = Pass->run(MF, MFAM);
+    if (MMI.getMachineFunction(F)) {
+      MFAM.invalidate(MF, PassPA);
+      PI.runAfterPass(*Pass, MF, PassPA);
+    } else {
+      MFAM.clear(MF, F.getName());
+      PI.runAfterPassInvalidated<MachineFunction>(*Pass, PassPA);
     }
-
-    // Finish running all passes.
-    if (Idx == Size)
-      break;
-
-    // Run machine function passes
-
-    // Get index range of machine function passes.
-    unsigned Begin = Idx;
-    for (; !MachineModulePasses.count(Idx) && Idx != Size; ++Idx)
-      ;
-
-    for (Function &F : M) {
-      // Do not codegen any 'available_externally' functions at all, they have
-      // definitions outside the translation unit.
-      if (F.hasAvailableExternallyLinkage())
-        continue;
-
-      MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
-
-      for (unsigned I = Begin, E = Idx; I != E; ++I) {
-        auto *P = Passes[I].get();
-
-        if (!PI.runBeforePass<MachineFunction>(*P, MF))
-          continue;
-
-        // TODO: EmitSizeRemarks
-        PreservedAnalyses PassPA = P->run(MF, MFAM);
-
-        // MF is dangling after FreeMachineFunctionPass
-        if (P->name() != FreeMachineFunctionPass::name()) {
-          MFAM.invalidate(MF, PassPA);
-
-          PI.runAfterPass(*P, MF, PassPA);
-        }
-      }
-    }
-  } while (true);
-
-  for (auto &F : FinalizationFuncs) {
-    if (auto Err = F(M, MFAM))
-      return Err;
+    PA.intersect(std::move(PassPA));
   }
 
-  return Error::success();
+  return PA;
+}
+
+void ModuleToMachineFunctionPassAdaptor::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  OS << "machine-function(";
+  Pass->printPipeline(OS, MapClassName2PassName);
+  OS << ')';
+}
+
+template <>
+PreservedAnalyses
+PassManager<MachineFunction>::run(MachineFunction &MF,
+                                  AnalysisManager<MachineFunction> &MFAM) {
+  PassInstrumentation PI = MFAM.getResult<PassInstrumentationAnalysis>(MF);
+  Function &F = MF.getFunction();
+  MachineModuleInfo &MMI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MachineModuleAnalysis>(*F.getParent())
+          ->getMMI();
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  for (auto &Pass : Passes) {
+    if (!PI.runBeforePass<MachineFunction>(*Pass, MF))
+      continue;
+
+    PreservedAnalyses PassPA = Pass->run(MF, MFAM);
+    if (MMI.getMachineFunction(F)) {
+      MFAM.invalidate(MF, PassPA);
+      PI.runAfterPass(*Pass, MF, PassPA);
+    } else {
+      MFAM.clear(MF, F.getName());
+      PI.runAfterPassInvalidated<MachineFunction>(*Pass, PassPA);
+    }
+    PA.intersect(std::move(PassPA));
+  }
+  return PA;
 }
 
 } // namespace llvm

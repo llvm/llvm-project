@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H
+#define LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H
+
 #include "src/__support/CPP/bit.h" // has_single_bit
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
@@ -52,9 +55,11 @@ public:
 
   LIBC_INLINE SafeMemSize operator+(const SafeMemSize &other) {
     type result;
-    if (LIBC_UNLIKELY((value | other.value) < 0))
+    if (LIBC_UNLIKELY((value | other.value) < 0)) {
       result = -1;
-    result = value + other.value;
+    } else {
+      result = value + other.value;
+    }
     return SafeMemSize{result};
   }
 
@@ -81,3 +86,5 @@ public:
 };
 } // namespace internal
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MEMORY_SIZE_H

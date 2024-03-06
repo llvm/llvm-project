@@ -216,6 +216,8 @@ namespace PointerComparison {
 }
 
 namespace SizeOf {
+  static_assert(alignof(char&) == 1, "");
+
   constexpr int soint = sizeof(int);
   constexpr int souint = sizeof(unsigned int);
   static_assert(soint == souint, "");
@@ -837,6 +839,18 @@ namespace IncDec {
     return a[1];
   }
   static_assert(f() == 3, "");
+
+  int nonconst(int a) { // both-note 4{{declared here}}
+    static_assert(a++, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(a--, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(++a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(--a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
 };
 #endif
 
@@ -913,6 +927,13 @@ static_assert(ignoredDecls() == 12, "");
 namespace DiscardExprs {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
+  typedef struct _GUID {
+    __UINT32_TYPE__ Data1;
+    __UINT16_TYPE__ Data2;
+    __UINT16_TYPE__ Data3;
+    __UINT8_TYPE__ Data4[8];
+  } GUID;
+  class __declspec(uuid("000000A0-0000-0000-C000-000000000049")) GuidType;
 
   struct A{ int a; };
   constexpr int ignoredExprs() {
@@ -949,6 +970,8 @@ namespace DiscardExprs {
     (float)1;
     (double)1.0f;
     (signed)4u;
+    __uuidof(GuidType);
+    __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
     return 0;
   }
@@ -1103,3 +1126,64 @@ namespace NonConstReads {
   static_assert(z == 0, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{read of non-const variable 'z'}}
 }
+
+/// This test passes a MaterializedTemporaryExpr to evaluateAsRValue.
+/// That needs to return a null pointer after the lvalue-to-rvalue conversion.
+/// We used to fail to do that.
+namespace rdar8769025 {
+  __attribute__((nonnull)) void f1(int * const &p);
+  void test_f1() {
+    f1(0); // both-warning{{null passed to a callee that requires a non-null argument}}
+  }
+}
+
+namespace nullptrsub {
+  void a() {
+    char *f = (char *)0;
+    f = (char *)((char *)0 - (char *)0);
+  }
+}
+
+namespace incdecbool {
+#if __cplusplus >= 201402L
+  constexpr bool incb(bool c) {
+    if (!c)
+      ++c;
+    else {++c; c++; }
+#if __cplusplus >= 202002L
+    // both-error@-3 {{ISO C++17 does not allow incrementing expression of type bool}}
+    // both-error@-3 2{{ISO C++17 does not allow incrementing expression of type bool}}
+#else
+    // both-warning@-6 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
+#endif
+    return c;
+  }
+  static_assert(incb(false), "");
+  static_assert(incb(true), "");
+  static_assert(incb(true) == 1, "");
+#endif
+
+
+#if __cplusplus == 201103L
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    bool b = true; // both-warning {{variable declaration in a constexpr function is a C++14 extension}}
+    b++; // both-warning {{incrementing expression of type bool is deprecated and incompatible with C++17}} \
+         // both-warning {{use of this statement in a constexpr function is a C++14 extension}} \
+         // both-note 2{{subexpression not valid in a constant expression}}
+
+    return b;
+  }
+  static_assert(foo() == 1, ""); // both-error {{not an integral constant expression}} \
+                                 // both-note {{in call to}}
+#endif
+
+
+
+}
+
+#if __cplusplus >= 201402L
+constexpr int externvar1() { // both-error {{never produces a constant expression}}
+  extern char arr[]; // both-note {{declared here}}
+  return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
+}
+#endif

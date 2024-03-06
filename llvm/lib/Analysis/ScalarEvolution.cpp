@@ -509,6 +509,13 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
+const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
+  const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
+  if (EC.isScalable())
+    Res = getMulExpr(Res, getVScale(Ty));
+  return Res;
+}
+
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
     : SCEV(ID, SCEVTy, computeExpressionSize(op)), Op(op), Ty(ty) {}
@@ -13477,8 +13484,9 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   if (ExitingBlocks.size() != 1)
     OS << "<multiple exits> ";
 
-  if (SE->hasLoopInvariantBackedgeTakenCount(L))
-    OS << "backedge-taken count is " << *SE->getBackedgeTakenCount(L) << "\n";
+  auto *BTC = SE->getBackedgeTakenCount(L);
+  if (!isa<SCEVCouldNotCompute>(BTC))
+    OS << "backedge-taken count is " << *BTC << "\n";
   else
     OS << "Unpredictable backedge-taken count.\n";
 
@@ -13494,7 +13502,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *ConstantBTC = SE->getConstantMaxBackedgeTakenCount(L);
   if (!isa<SCEVCouldNotCompute>(ConstantBTC)) {
-    OS << "constant max backedge-taken count is " << *ConstantBTC;
+    OS << "constant max backedge-taken count is "
+       << *ConstantBTC->getType() << " " << *ConstantBTC;
     if (SE->isBackedgeTakenCountMaxOrZero(L))
       OS << ", actual taken count either this or zero.";
   } else {
@@ -13523,19 +13532,19 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
          << "\n";
     }
 
-  OS << "Loop ";
-  L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
-  OS << ": ";
-
   SmallVector<const SCEVPredicate *, 4> Preds;
-  auto PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
-  if (!isa<SCEVCouldNotCompute>(PBT)) {
-    OS << "Predicated backedge-taken count is " << *PBT << "\n";
+  auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
+  if (PBT != BTC || !Preds.empty()) {
+    OS << "Loop ";
+    L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+    OS << ": ";
+    if (!isa<SCEVCouldNotCompute>(PBT))
+      OS << "Predicated backedge-taken count is " << *PBT << "\n";
+    else
+      OS << "Unpredictable predicated backedge-taken count.\n";
     OS << " Predicates:\n";
     for (const auto *P : Preds)
       P->print(OS, 4);
-  } else {
-    OS << "Unpredictable predicated backedge-taken count.\n";
   }
 
   if (SE->hasLoopInvariantBackedgeTakenCount(L)) {

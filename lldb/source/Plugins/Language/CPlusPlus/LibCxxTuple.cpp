@@ -25,7 +25,7 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
   size_t CalculateNumChildren() override { return m_elements.size(); }
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -40,7 +40,7 @@ private:
 };
 }
 
-bool TupleFrontEnd::Update() {
+lldb::ChildCacheState TupleFrontEnd::Update() {
   m_elements.clear();
   m_base = nullptr;
 
@@ -51,11 +51,11 @@ bool TupleFrontEnd::Update() {
     base_sp = m_backend.GetChildMemberWithName("base_");
   }
   if (!base_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_base = base_sp.get();
   m_elements.assign(base_sp->GetCompilerType().GetNumDirectBaseClasses(),
                     nullptr);
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {

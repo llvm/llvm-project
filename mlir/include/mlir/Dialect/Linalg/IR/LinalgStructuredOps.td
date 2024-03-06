@@ -245,7 +245,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
           }
     ```
 
-    Shortened print form is available. Applies to simple maps with one 
+    Shortened print form is available. Applies to simple maps with one
     non-yield operation inside the body.
 
     The example above will be printed as:
@@ -599,6 +599,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
                              ::mlir::OperationState & odsState);
   }];
 
+  let hasFolder = 1;
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -672,6 +673,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

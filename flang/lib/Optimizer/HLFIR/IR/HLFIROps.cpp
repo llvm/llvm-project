@@ -123,14 +123,15 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
                              mlir::ValueRange typeparams,
-                             fir::FortranVariableFlagsAttr fortran_attrs) {
+                             fir::FortranVariableFlagsAttr fortran_attrs,
+                             fir::CUDADataAttributeAttr cuda_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
-        typeparams, nameAttr, fortran_attrs);
+        typeparams, nameAttr, fortran_attrs, cuda_attr);
 }
 
 mlir::LogicalResult hlfir::DeclareOp::verify() {

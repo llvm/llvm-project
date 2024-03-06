@@ -1365,7 +1365,7 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  unsigned Width;
+  LocationSize Width = 0;
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
                                      Width, TRI) ||
       BaseOps.size() != 1)

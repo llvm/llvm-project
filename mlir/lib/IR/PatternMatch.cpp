@@ -209,7 +209,7 @@ void RewriterBase::eraseOp(Operation *op) {
       assert(mayBeGraphRegion(*op->getParentRegion()) &&
              "expected that op has no uses");
 #endif // NDEBUG
-    rewriteListener->notifyOperationRemoved(op);
+    rewriteListener->notifyOperationErased(op);
 
     // Explicitly drop all uses in case the op is in a graph region.
     op->dropAllUses();
@@ -229,7 +229,10 @@ void RewriterBase::eraseOp(Operation *op) {
       // until the region is empty. (The block graph could be disconnected.)
       while (!r.empty()) {
         SmallVector<Block *> erasedBlocks;
-        for (Block *b : llvm::post_order(&r.front())) {
+        // Some blocks may have invalid successor, use a set including nullptr
+        // to avoid null pointer.
+        llvm::SmallPtrSet<Block *, 4> visited{nullptr};
+        for (Block *b : llvm::post_order_ext(&r.front(), visited)) {
           // Visit ops in reverse order.
           for (Operation &op :
                llvm::make_early_inc_range(ReverseIterator::makeIterable(*b)))
@@ -265,7 +268,7 @@ void RewriterBase::eraseBlock(Block *block) {
 
   // Notify the listener that the block is about to be removed.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyBlockRemoved(block);
+    rewriteListener->notifyBlockErased(block);
 
   block->erase();
 }

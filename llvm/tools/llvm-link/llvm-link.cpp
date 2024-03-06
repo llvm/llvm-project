@@ -393,8 +393,16 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File);
+
+    // When we encounter a missing file, make sure we expose its name.
+    if (auto EC = BufferOrErr.getError())
+      if (EC == std::errc::no_such_file_or_directory)
+        ExitOnErr(createStringError(EC, "No such file or directory: '%s'",
+                                    File.c_str()));
+
     std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(File)));
+        ExitOnErr(errorOrToExpected(std::move(BufferOrErr)));
 
     std::unique_ptr<Module> M =
         identify_magic(Buffer->getBuffer()) == file_magic::archive
@@ -473,15 +481,11 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format, if it's built in.
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  // new debug-info format.
   if (TryUseNewDbgInfoFormat) {
-    // If LLVM was built with support for this, turn the new debug-info format
-    // on.
+    // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
   }
-#endif
-  (void)TryUseNewDbgInfoFormat;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),

@@ -196,9 +196,9 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
 /// working with those options when given an input command line.
 static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
-  const std::vector<Record*> &Groups =
-    Records.getAllDerivedDefinitions("OptionGroup");
-  std::vector<Record*> Opts = Records.getAllDerivedDefinitions("Option");
+  const std::vector<Record *> &Groups =
+      Records.getAllDerivedDefinitions("OptionGroup");
+  std::vector<Record *> Opts = Records.getAllDerivedDefinitions("Option");
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
@@ -207,14 +207,14 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, std::string> PrefixesT;
   PrefixesT Prefixes;
-  Prefixes.insert(std::make_pair(PrefixKeyT(), "prefix_0"));
+  Prefixes.insert(std::pair(PrefixKeyT(), "prefix_0"));
   unsigned CurPrefix = 0;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
     unsigned NewPrefix = CurPrefix + 1;
     std::string Prefix = (Twine("prefix_") + Twine(NewPrefix)).str();
-    if (Prefixes.insert(std::make_pair(PrefixKey, Prefix)).second)
+    if (Prefixes.insert(std::pair(PrefixKey, Prefix)).second)
       CurPrefix = NewPrefix;
   }
 
@@ -423,8 +423,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("Values"));
     else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
       OS << getOptionName(R) << "_Values";
-    }
-    else
+    } else
       OS << "nullptr";
   };
 

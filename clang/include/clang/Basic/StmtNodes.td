@@ -296,3 +296,9 @@ def OMPTargetTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPErrorDirective : StmtNode<OMPExecutableDirective>;
+
+// OpenACC Constructs.
+def OpenACCConstructStmt : StmtNode<Stmt, /*abstract=*/1>;
+def OpenACCAssociatedStmtConstruct
+    : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
+def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;

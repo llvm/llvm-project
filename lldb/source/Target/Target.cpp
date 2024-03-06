@@ -1568,14 +1568,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
 
       if (m_arch.GetSpec().IsCompatibleMatch(other)) {
         compatible_local_arch = true;
-        bool arch_changed, vendor_changed, os_changed, os_ver_changed,
-            env_changed;
 
-        m_arch.GetSpec().PiecewiseTripleCompare(other, arch_changed,
-                                                vendor_changed, os_changed,
-                                                os_ver_changed, env_changed);
-
-        if (!arch_changed && !vendor_changed && !os_changed && !env_changed)
+        if (m_arch.GetSpec().GetTriple() == other.GetTriple())
           replace_local_arch = false;
       }
     }
@@ -4962,4 +4956,7 @@ std::recursive_mutex &Target::GetAPIMutex() {
 }
 
 /// Get metrics associated with this target in JSON format.
-llvm::json::Value Target::ReportStatistics() { return m_stats.ToJSON(*this); }
+llvm::json::Value
+Target::ReportStatistics(const lldb_private::StatisticsOptions &options) {
+  return m_stats.ToJSON(*this, options);
+}

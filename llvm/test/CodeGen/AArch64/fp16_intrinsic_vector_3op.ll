@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+v8.2a,+fullfp16  | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=+v8.2a,+fullfp16  | FileCheck %s
 
 declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>)
 declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)

@@ -915,6 +915,11 @@ feature_test_macros = [
             "headers": ["ranges"],
         },
         {
+            "name": "__cpp_lib_ranges_contains",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
@@ -941,7 +946,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_starts_ends_with",
             "values": {"c++23": 202106},
             "headers": ["algorithm"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_to_container",
@@ -1114,7 +1118,6 @@ feature_test_macros = [
                 "c++26": 202306  # P2495R3 Interfacing stringstreams with string_view
             },
             "headers": ["sstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_stacktrace",
@@ -1228,7 +1231,7 @@ feature_test_macros = [
             "name": "__cpp_lib_tuple_like",
             "values": {
                 "c++23": 202207,  # P2165R4 Compatibility between tuple, pair and tuple-like objects
-                "c++26": 202311,  # P2819R2 Add tuple protocol to complex
+                "c++26": 202311,  # P2819R2 Add tuple protocol to complex (implemented)
             },
             "headers": ["map", "tuple", "unordered_map", "utility"],
             "unimplemented": True,
@@ -1514,7 +1517,6 @@ def produce_version_header():
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 
@@ -1769,7 +1771,7 @@ def pad_cell(s, length, left_align=True):
 def get_status_table():
     table = [["Macro Name", "Value"]]
     for std in get_std_dialects():
-        table += [["**" + std.replace("c++", "C++ ") + "**", ""]]
+        table += [["**" + std.replace("c++", "C++") + "**", ""]]
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue

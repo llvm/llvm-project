@@ -27,13 +27,15 @@ func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
   %zero = arith.constant 0.0 : f32
   // CHECK: omp.parallel
   // CHECK: omp.wsloop
-  // CHECK-SAME: reduction(@[[$REDF]] -> %[[BUF]]
+  // CHECK-SAME: reduction(@[[$REDF]] %[[BUF]] -> %[[PVT_BUF:[a-z0-9]+]]
   // CHECK: memref.alloca_scope
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                             step (%arg4, %step) init (%zero) -> (f32) {
     // CHECK: %[[CST_INNER:.*]] = arith.constant 1.0
     %one = arith.constant 1.0 : f32
-    // CHECK: omp.reduction %[[CST_INNER]], %[[BUF]]
+    // CHECK: %[[PVT_VAL:.*]] = llvm.load %[[PVT_BUF]] : !llvm.ptr -> f32
+    // CHECK: %[[ADD_RESULT:.*]] = arith.addf %[[PVT_VAL]], %[[CST_INNER]] : f32
+    // CHECK: llvm.store %[[ADD_RESULT]], %[[PVT_BUF]] : f32, !llvm.ptr
     scf.reduce(%one : f32) {
     ^bb0(%lhs : f32, %rhs: f32):
       %res = arith.addf %lhs, %rhs : f32
@@ -103,10 +105,15 @@ func.func @reduction_muli(%arg0 : index, %arg1 : index, %arg2 : index,
                  %arg3 : index, %arg4 : index) {
   %step = arith.constant 1 : index
   %one = arith.constant 1 : i32
+  // CHECK: %[[RED_VAR:.*]] = llvm.alloca %{{.*}} x i32 : (i64) -> !llvm.ptr
+  // CHECK: omp.wsloop reduction(@[[$REDI]] %[[RED_VAR]] -> %[[RED_PVT_VAR:.*]] : !llvm.ptr)
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                             step (%arg4, %step) init (%one) -> (i32) {
-    // CHECK: omp.reduction
+    // CHECK: %[[C2:.*]] = arith.constant 2 : i32
     %pow2 = arith.constant 2 : i32
+    // CHECK: %[[RED_PVT_VAL:.*]] = llvm.load %[[RED_PVT_VAR]] : !llvm.ptr -> i32
+    // CHECK: %[[MUL_RESULT:.*]] = arith.muli %[[RED_PVT_VAL]], %[[C2]] : i32
+    // CHECK: llvm.store %[[MUL_RESULT]], %[[RED_PVT_VAR]] : i32, !llvm.ptr
     scf.reduce(%pow2 : i32) {
     ^bb0(%lhs : i32, %rhs: i32):
       %res = arith.muli %lhs, %rhs : i32
@@ -199,16 +206,23 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
 
   // CHECK: omp.parallel
   // CHECK: omp.wsloop
-  // CHECK-SAME: reduction(@[[$REDF1]] -> %[[BUF1]]
-  // CHECK-SAME:           @[[$REDF2]] -> %[[BUF2]]
+  // CHECK-SAME: reduction(@[[$REDF1]] %[[BUF1]] -> %[[PVT_BUF1:[a-z0-9]+]]
+  // CHECK-SAME:           @[[$REDF2]] %[[BUF2]] -> %[[PVT_BUF2:[a-z0-9]+]]
   // CHECK: memref.alloca_scope
   %res:2 = scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                         step (%arg4, %step) init (%zero, %ione) -> (f32, i64) {
+    // CHECK: %[[CST_ONE:.*]] = arith.constant 1.0{{.*}} : f32
     %one = arith.constant 1.0 : f32
-    // CHECK: arith.fptosi
+    // CHECK: %[[CST_INT_ONE:.*]] = arith.fptosi
     %1 = arith.fptosi %one : f32 to i64
-    // CHECK: omp.reduction %{{.*}}, %[[BUF1]]
-    // CHECK: omp.reduction %{{.*}}, %[[BUF2]]
+    // CHECK: %[[PVT_VAL1:.*]] = llvm.load %[[PVT_BUF1]] : !llvm.ptr -> f32
+    // CHECK: %[[TEMP1:.*]] = arith.cmpf oge, %[[PVT_VAL1]], %[[CST_ONE]] : f32
+    // CHECK: %[[CMP_VAL1:.*]] = arith.select %[[TEMP1]], %[[PVT_VAL1]], %[[CST_ONE]] : f32
+    // CHECK: llvm.store %[[CMP_VAL1]], %[[PVT_BUF1]] : f32, !llvm.ptr
+    // CHECK: %[[PVT_VAL2:.*]] = llvm.load %[[PVT_BUF2]] : !llvm.ptr -> i64
+    // CHECK: %[[TEMP2:.*]] = arith.cmpi slt, %[[PVT_VAL2]], %[[CST_INT_ONE]] : i64
+    // CHECK: %[[CMP_VAL2:.*]] = arith.select %[[TEMP2]], %[[CST_INT_ONE]], %[[PVT_VAL2]] : i64
+    // CHECK: llvm.store %[[CMP_VAL2]], %[[PVT_BUF2]] : i64, !llvm.ptr
     scf.reduce(%one, %1 : f32, i64) {
     ^bb0(%lhs : f32, %rhs: f32):
       %cmp = arith.cmpf oge, %lhs, %rhs : f32

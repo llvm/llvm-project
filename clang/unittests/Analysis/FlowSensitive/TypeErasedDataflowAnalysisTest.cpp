@@ -77,15 +77,31 @@ protected:
     return runDataflowAnalysis(*CFCtx, Analysis, Env);
   }
 
+  /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
+  const CFGBlock *blockForStmt(const Stmt &S) {
+    const CFGBlock *Block = CFCtx->getStmtToBlock().lookup(&S);
+    assert(Block != nullptr);
+    return Block;
+  }
+
   template <typename StateT>
   const StateT &
   blockStateForStmt(const std::vector<std::optional<StateT>> &BlockStates,
-                    const Stmt *S) {
-    const CFGBlock *Block = CFCtx->getStmtToBlock().lookup(S);
-    assert(Block != nullptr);
-    const std::optional<StateT> &MaybeState = BlockStates[Block->getBlockID()];
+                    const Stmt &S) {
+    const std::optional<StateT> &MaybeState =
+        BlockStates[blockForStmt(S)->getBlockID()];
     assert(MaybeState.has_value());
     return *MaybeState;
+  }
+
+  /// Returns the first node that matches `Matcher` (and asserts that the match
+  /// was successful, i.e. the returned node is not null).
+  template <typename NodeT, typename MatcherT>
+  const NodeT &matchNode(MatcherT Matcher) {
+    const auto *Node = selectFirst<NodeT>(
+        "node", match(Matcher.bind("node"), AST->getASTContext()));
+    assert(Node != nullptr);
+    return *Node;
   }
 
   std::unique_ptr<ASTUnit> AST;
@@ -130,6 +146,79 @@ TEST_F(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
                                    " (Lifetime ends)\n")));
 }
 
+// Tests for the statement-to-block map.
+using StmtToBlockTest = DataflowAnalysisTest;
+
+TEST_F(StmtToBlockTest, ConditionalOperator) {
+  std::string Code = R"(
+    void target(bool b) {
+      int i = b ? 1 : 0;
+    }
+  )";
+  ASSERT_THAT_ERROR(runAnalysis<NoopAnalysis>(
+                        Code, [](ASTContext &C) { return NoopAnalysis(C); })
+                        .takeError(),
+                    llvm::Succeeded());
+
+  const auto &IDecl = matchNode<DeclStmt>(declStmt(has(varDecl(hasName("i")))));
+  const auto &ConditionalOp =
+      matchNode<ConditionalOperator>(conditionalOperator());
+
+  // The conditional operator should be associated with the same block as the
+  // `DeclStmt` for `i`. (Specifically, the conditional operator should not be
+  // associated with the block for which it is the terminator.)
+  EXPECT_EQ(blockForStmt(IDecl), blockForStmt(ConditionalOp));
+}
+
+TEST_F(StmtToBlockTest, LogicalAnd) {
+  std::string Code = R"(
+    void target(bool b1, bool b2) {
+      bool b = b1 && b2;
+    }
+  )";
+  ASSERT_THAT_ERROR(runAnalysis<NoopAnalysis>(
+                        Code, [](ASTContext &C) { return NoopAnalysis(C); })
+                        .takeError(),
+                    llvm::Succeeded());
+
+  const auto &BDecl = matchNode<DeclStmt>(declStmt(has(varDecl(hasName("b")))));
+  const auto &AndOp =
+      matchNode<BinaryOperator>(binaryOperator(hasOperatorName("&&")));
+
+  // The `&&` operator should be associated with the same block as the
+  // `DeclStmt` for `b`. (Specifically, the `&&` operator should not be
+  // associated with the block for which it is the terminator.)
+  EXPECT_EQ(blockForStmt(BDecl), blockForStmt(AndOp));
+}
+
+TEST_F(StmtToBlockTest, IfStatementWithLogicalAnd) {
+  std::string Code = R"(
+    void target(bool b1, bool b2) {
+      if (b1 && b2)
+        ;
+    }
+  )";
+  ASSERT_THAT_ERROR(runAnalysis<NoopAnalysis>(
+                        Code, [](ASTContext &C) { return NoopAnalysis(C); })
+                        .takeError(),
+                    llvm::Succeeded());
+
+  const auto &If = matchNode<IfStmt>(ifStmt());
+  const auto &B2 =
+      matchNode<DeclRefExpr>(declRefExpr(to(varDecl(hasName("b2")))));
+  const auto &AndOp =
+      matchNode<BinaryOperator>(binaryOperator(hasOperatorName("&&")));
+
+  // The if statement is the terminator for the block that contains both `b2`
+  // and the `&&` operator (which appears only as a terminator condition, not
+  // as a regular `CFGElement`).
+  const CFGBlock *IfBlock = blockForStmt(If);
+  const CFGBlock *B2Block = blockForStmt(B2);
+  const CFGBlock *AndOpBlock = blockForStmt(AndOp);
+  EXPECT_EQ(IfBlock, B2Block);
+  EXPECT_EQ(IfBlock, AndOpBlock);
+}
+
 // Tests that check we discard state for expressions correctly.
 using DiscardExprStateTest = DataflowAnalysisTest;
 
@@ -144,25 +233,20 @@ TEST_F(DiscardExprStateTest, WhileStatement) {
   auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
       Code, [](ASTContext &C) { return NoopAnalysis(C); }));
 
-  auto *NotEqOp = selectFirst<BinaryOperator>(
-      "op", match(binaryOperator(hasOperatorName("!=")).bind("op"),
-                  AST->getASTContext()));
-  ASSERT_NE(NotEqOp, nullptr);
-
-  auto *CallFoo = selectFirst<CallExpr>(
-      "call", match(callExpr(callee(functionDecl(hasName("foo")))).bind("call"),
-                    AST->getASTContext()));
-  ASSERT_NE(CallFoo, nullptr);
+  const auto &NotEqOp =
+      matchNode<BinaryOperator>(binaryOperator(hasOperatorName("!=")));
+  const auto &CallFoo =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("foo")))));
 
   // In the block that evaluates the expression `p != nullptr`, this expression
   // is associated with a value.
   const auto &NotEqOpState = blockStateForStmt(BlockStates, NotEqOp);
-  EXPECT_NE(NotEqOpState.Env.getValue(*NotEqOp), nullptr);
+  EXPECT_NE(NotEqOpState.Env.getValue(NotEqOp), nullptr);
 
   // In the block that calls `foo(p)`, the value for `p != nullptr` is discarded
   // because it is not consumed by this block.
   const auto &CallFooState = blockStateForStmt(BlockStates, CallFoo);
-  EXPECT_EQ(CallFooState.Env.getValue(*NotEqOp), nullptr);
+  EXPECT_EQ(CallFooState.Env.getValue(NotEqOp), nullptr);
 }
 
 TEST_F(DiscardExprStateTest, BooleanOperator) {
@@ -174,29 +258,24 @@ TEST_F(DiscardExprStateTest, BooleanOperator) {
   auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
       Code, [](ASTContext &C) { return NoopAnalysis(C); }));
 
-  auto *AndOp = selectFirst<BinaryOperator>(
-      "op", match(binaryOperator(hasOperatorName("&&")).bind("op"),
-                  AST->getASTContext()));
-  ASSERT_NE(AndOp, nullptr);
-
-  auto *Return = selectFirst<ReturnStmt>(
-      "return", match(returnStmt().bind("return"), AST->getASTContext()));
-  ASSERT_NE(Return, nullptr);
+  const auto &AndOp =
+      matchNode<BinaryOperator>(binaryOperator(hasOperatorName("&&")));
+  const auto &Return = matchNode<ReturnStmt>(returnStmt());
 
   // In the block that evaluates the LHS of the `&&` operator, the LHS is
   // associated with a value, while the right-hand side is not (unsurprisingly,
   // as it hasn't been evaluated yet).
-  const auto &LHSState = blockStateForStmt(BlockStates, AndOp->getLHS());
-  auto *LHSValue = cast<BoolValue>(LHSState.Env.getValue(*AndOp->getLHS()));
+  const auto &LHSState = blockStateForStmt(BlockStates, *AndOp.getLHS());
+  auto *LHSValue = cast<BoolValue>(LHSState.Env.getValue(*AndOp.getLHS()));
   ASSERT_NE(LHSValue, nullptr);
-  EXPECT_EQ(LHSState.Env.getValue(*AndOp->getRHS()), nullptr);
+  EXPECT_EQ(LHSState.Env.getValue(*AndOp.getRHS()), nullptr);
 
   // In the block that evaluates the RHS, the RHS is associated with a
   // value. The value for the LHS has been discarded as it is not consumed by
   // this block.
-  const auto &RHSState = blockStateForStmt(BlockStates, AndOp->getRHS());
-  EXPECT_EQ(RHSState.Env.getValue(*AndOp->getLHS()), nullptr);
-  auto *RHSValue = cast<BoolValue>(RHSState.Env.getValue(*AndOp->getRHS()));
+  const auto &RHSState = blockStateForStmt(BlockStates, *AndOp.getRHS());
+  EXPECT_EQ(RHSState.Env.getValue(*AndOp.getLHS()), nullptr);
+  auto *RHSValue = cast<BoolValue>(RHSState.Env.getValue(*AndOp.getRHS()));
   ASSERT_NE(RHSValue, nullptr);
 
   // In the block that evaluates the return statement, the expression `b1 && b2`
@@ -217,9 +296,9 @@ TEST_F(DiscardExprStateTest, BooleanOperator) {
   // operands, rather than from the environment for the block that contains the
   // `&&`.
   const auto &ReturnState = blockStateForStmt(BlockStates, Return);
-  EXPECT_EQ(ReturnState.Env.getValue(*AndOp->getLHS()), nullptr);
-  EXPECT_EQ(ReturnState.Env.getValue(*AndOp->getRHS()), nullptr);
-  EXPECT_EQ(ReturnState.Env.getValue(*AndOp),
+  EXPECT_EQ(ReturnState.Env.getValue(*AndOp.getLHS()), nullptr);
+  EXPECT_EQ(ReturnState.Env.getValue(*AndOp.getRHS()), nullptr);
+  EXPECT_EQ(ReturnState.Env.getValue(AndOp),
             &ReturnState.Env.makeAnd(*LHSValue, *RHSValue));
 }
 
@@ -672,26 +751,23 @@ public:
                                                : ComparisonResult::Different;
   }
 
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override {
-    // Nothing to say about a value that is not a pointer.
+  void join(QualType Type, const Value &Val1, const Environment &Env1,
+            const Value &Val2, const Environment &Env2, Value &JoinedVal,
+            Environment &JoinedEnv) override {
+    // Nothing to say about a value that is not a pointer...
     if (!Type->isPointerType())
-      return false;
+      return;
 
+    // ... or, a pointer without the `is_null` property.
     auto *IsNull1 = cast_or_null<BoolValue>(Val1.getProperty("is_null"));
-    if (IsNull1 == nullptr)
-      return false;
-
     auto *IsNull2 = cast_or_null<BoolValue>(Val2.getProperty("is_null"));
-    if (IsNull2 == nullptr)
-      return false;
+    if (IsNull1 == nullptr || IsNull2 == nullptr)
+      return;
 
     if (IsNull1 == IsNull2)
-      MergedVal.setProperty("is_null", *IsNull1);
+      JoinedVal.setProperty("is_null", *IsNull1);
     else
-      MergedVal.setProperty("is_null", MergedEnv.makeTopBoolValue());
-    return true;
+      JoinedVal.setProperty("is_null", JoinedEnv.makeTopBoolValue());
   }
 };
 
@@ -1176,7 +1252,7 @@ TEST_F(FlowConditionTest, Join) {
 // Note: currently, arbitrary function calls are uninterpreted, so the test
 // exercises this case. If and when we change that, this test will not add to
 // coverage (although it may still test a valuable case).
-TEST_F(FlowConditionTest, OpaqueFlowConditionMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFlowConditionJoinsToOpaqueBool) {
   std::string Code = R"(
     bool foo();
 
@@ -1211,7 +1287,7 @@ TEST_F(FlowConditionTest, OpaqueFlowConditionMergesToOpaqueBool) {
 // the first instance), so the test exercises this case. If and when we change
 // that, this test will not add to coverage (although it may still test a
 // valuable case).
-TEST_F(FlowConditionTest, OpaqueFieldFlowConditionMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFieldFlowConditionJoinsToOpaqueBool) {
   std::string Code = R"(
     struct Rec {
       Rec* Next;
@@ -1249,7 +1325,7 @@ TEST_F(FlowConditionTest, OpaqueFieldFlowConditionMergesToOpaqueBool) {
 // condition is not meaningfully interpreted. Adds to above by nesting the
 // interestnig case inside a normal branch. This protects against degenerate
 // solutions which only test for empty flow conditions, for example.
-TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchJoinsToOpaqueBool) {
   std::string Code = R"(
     bool foo();
 
