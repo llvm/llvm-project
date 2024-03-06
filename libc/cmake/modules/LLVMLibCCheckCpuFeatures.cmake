@@ -6,8 +6,7 @@
 set(ALL_CPU_FEATURES "")
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(ALL_CPU_FEATURES SSE2 SSE4_2 AVX AVX2 AVX512F AVX512BW FMA CLFLUSHOPT)
-  set(CPU_FEATURES_DETECT_REQUIRES_RUN "CLFLUSHOPT")
+  set(ALL_CPU_FEATURES SSE2 SSE4_2 AVX AVX2 AVX512F AVX512BW FMA)
   set(LIBC_COMPILE_OPTIONS_NATIVE -march=native)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   set(CPU_FEATURES_DETECT_REQUIRES_RUN "")
@@ -55,27 +54,12 @@ else()
   # Try compile a C file to check if flag is supported.
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
   foreach(feature IN LISTS ALL_CPU_FEATURES)
-    if (${feature} IN_LIST CPU_FEATURES_DETECT_REQUIRES_RUN)
-      try_run(
-        return_code
-        can_compile
-        ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
-        ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
-        COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
-      )
-      if (can_compile AND return_code EQUAL 0)
-        set(has_feature TRUE)
-      else()
-        set(has_feature FALSE)
-      endif()
-    else()
-      try_compile(
-        has_feature
-        ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
-        SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
-        COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
-      )
-    endif()
+    try_compile(
+      has_feature
+      ${CMAKE_CURRENT_BINARY_DIR}/cpu_features
+      SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_${feature}.cpp
+      COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${LIBC_COMPILE_OPTIONS_NATIVE}
+    )
     if(has_feature)
       list(APPEND AVAILABLE_CPU_FEATURES ${feature})
     endif()

@@ -450,7 +450,6 @@ add_entrypoint_object(
   DEPENDS
     .string_utils
     .memory_utils.inline_memset
-    .memory_utils.flush_cache
 )
 
 # Helper to define a function with multiple implementations
