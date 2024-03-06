@@ -318,16 +318,28 @@ private:
       {{{"fgets"}, 3},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, false), 2}},
+      {{{"getc"}, 1},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
+        std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, true), 0}},
       {{{"fputc"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
       {{{"fputs"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, false), 1}},
+      {{{"putc"}, 2},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
       {{{"fprintf"}},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
+      {{{"vfprintf"}, 3},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
       {{{"fscanf"}},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
+        std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
+      {{{"vfscanf"}, 3},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
       {{{"ungetc"}, 2},
@@ -389,6 +401,8 @@ private:
   mutable int SeekCurVal = 1;
   /// Expanded value of SEEK_END, 2 if not found.
   mutable int SeekEndVal = 2;
+  /// The built-in va_list type is platform-specific
+  mutable QualType VaListType;
 
   void evalFopen(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C) const;
@@ -518,7 +532,8 @@ private:
       return nullptr;
     for (auto *P : Call.parameters()) {
       QualType T = P->getType();
-      if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
+      if (!T->isIntegralOrEnumerationType() && !T->isPointerType() &&
+          T.getCanonicalType() != VaListType)
         return nullptr;
     }
 
@@ -555,6 +570,10 @@ private:
     if (const std::optional<int> OptInt =
             tryExpandAsInteger("SEEK_CUR", C.getPreprocessor()))
       SeekCurVal = *OptInt;
+  }
+
+  void initVaListType(CheckerContext &C) const {
+    VaListType = C.getASTContext().getBuiltinVaListType().getCanonicalType();
   }
 
   /// Searches for the ExplodedNode where the file descriptor was acquired for
@@ -705,6 +724,7 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
 void StreamChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
   initMacroValues(C);
+  initVaListType(C);
 
   const FnDescription *Desc = lookupFn(Call);
   if (!Desc || !Desc->PreFn)
@@ -1085,10 +1105,13 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     if (!StateNotFailed)
       return;
 
-    SmallVector<unsigned int> EscArgs;
-    for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
-      EscArgs.push_back(EscArg);
-    StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
+    if (auto const *Callee = Call.getCalleeIdentifier();
+        !Callee || !Callee->getName().equals("vfscanf")) {
+      SmallVector<unsigned int> EscArgs;
+      for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
+        EscArgs.push_back(EscArg);
+      StateNotFailed = escapeArgs(StateNotFailed, C, Call, EscArgs);
+    }
 
     if (StateNotFailed)
       C.addTransition(StateNotFailed);
