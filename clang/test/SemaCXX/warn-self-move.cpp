@@ -43,7 +43,9 @@ class field_test {
     x = std::move(x);  // expected-warning{{explicitly moving}}
     x = static_cast<int&&>(x);  // expected-warning{{explicitly moving}}
     x = std::move(other.x);
+    x = static_cast<int&&>(other.x);
     other.x = std::move(x);
+    other.x = static_cast<int&&>(x);
     other.x = std::move(other.x);  // expected-warning{{explicitly moving}}
     other.x = static_cast<int&&>(other.x);  // expected-warning{{explicitly moving}}
   }
