@@ -148,8 +148,10 @@ that defines the type and name of value produced.
 String constants
 ----------------
 
-Strings in LLVM programs are delimited by ``"`` characters. Within a
-string, all bytes are treated literally with the exception of ``\``
+Strings in LLVM programs are delimited by ``"`` characters.
+The former of the two ``"`` characters is prefixed with the character ``c``.
+
+Within a string, all bytes are treated literally with the exception of ``\``
 characters, which start escapes, and the first ``"`` character, which
 ends the string.
 
