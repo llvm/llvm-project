@@ -142,6 +142,7 @@ public:
 
 private:
   size_t getEffectivePTUSize() const;
+  void markUserCodeStart();
 
   bool FindRuntimeInterface();
 
