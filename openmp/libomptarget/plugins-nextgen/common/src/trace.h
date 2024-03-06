@@ -455,10 +455,6 @@ int32_t __tgt_rtl_prepopulate_page_table(int32_t DeviceId, void *ptr,
 #define __tgt_rtl_prepopulate_page_table(...)                                  \
   __tgt_rtl_prepopulate_page_table_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId,
-                                                            const void *ptr,
-                                                            int64_t size);
-
 static int32_t __tgt_rtl_use_auto_zero_copy_impl(int32_t DeviceId);
 int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
   auto t = detail::log<int32_t>(__func__, DeviceId);
@@ -468,6 +464,17 @@ int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
 }
 #define __tgt_rtl_use_auto_zero_copy(...)                                      \
   __tgt_rtl_use_auto_zero_copy_impl(__VA_ARGS__)
+
+static int32_t __tgt_rtl_enable_access_to_all_agents_impl(int32_t DeviceId,
+                                                          void *ptr);
+int32_t __tgt_rtl_enable_access_to_all_agents(int32_t DeviceId, void *ptr) {
+  auto t = detail::log<int32_t>(__func__, DeviceId, ptr);
+  int32_t r = __tgt_rtl_enable_access_to_all_agents_impl(DeviceId, ptr);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_enable_access_to_all_agents(...)                             \
+  __tgt_rtl_enable_access_to_all_agents_impl(__VA_ARGS__)
 
 static int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag_impl(
     int32_t DeviceId, bool isUnifiedSharedMemory, bool isAutoZeroCopy,
@@ -485,18 +492,6 @@ int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag(int32_t DeviceId,
 }
 #define __tgt_rtl_zero_copy_sanity_checks_and_diag(...)                        \
   __tgt_rtl_zero_copy_sanity_checks_and_diag_impl(__VA_ARGS__)
-
-// static int32_t __tgt_rtl_enable_access_to_all_agents_impl(const void *ptr,
-//                                                          int32_t device_id);
-// int32_t __tgt_rtl_enable_access_to_all_agents(const void *ptr,
-//                                              int32_t device_id) {
-//  auto t = detail::log<int32_t>(__func__, ptr, device_id);
-//  int32_t r = __tgt_rtl_enable_access_to_all_agents_impl(ptr, device_id);
-//  t.res(r);
-//  return r;
-//}
-// #define __tgt_rtl_enable_access_to_all_agents(...) \
-//   __tgt_rtl_enable_access_to_all_agents_impl(__VA_ARGS__)
 
 #ifdef __cplusplus
 }

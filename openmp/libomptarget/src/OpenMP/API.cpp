@@ -135,10 +135,9 @@ EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
   // accessed by any device and host under xnack+ mode
   void *ptr =
       targetAllocExplicit(size, DeviceNums[0], TARGET_ALLOC_DEFAULT, __func__);
-#if 0 // FIXME related to plugin optional
-  if (Device.RTL->enable_access_to_all_agents)
-    Device.RTL->enable_access_to_all_agents(ptr, DeviceNums[0]);
-#endif
+  // TODO: not implemented yet
+  // if (Device.RTL->enable_access_to_all_agents)
+  //   Device.RTL->enable_access_to_all_agents(DeviceNums[0], ptr);
   return ptr;
 }
 

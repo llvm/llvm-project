@@ -23,10 +23,6 @@
 extern "C" {
 #endif
 
-// Return the number of available physical processors to execute teams
-// supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
-int32_t __tgt_rtl_number_of_team_procs(int32_t device_num);
-
 // First method called on the plugin
 int32_t __tgt_rtl_init_plugin();
 
@@ -231,6 +227,12 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                            bool SaveOutput,
                                            uint64_t &ReqPtrArgOffset);
 
+// Returns true if the device \p DeviceId suggests to use auto zero-copy.
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
+
+// Check if image is incompatible due to XNACK mismatch.
+void __tgt_rtl_check_invalid_image(__tgt_device_image *Image);
+
 // Return if the system is equipped with an APU
 bool __tgt_rtl_has_apu_device(int32_t DeviceId);
 
@@ -244,11 +246,12 @@ bool __tgt_rtl_supports_unified_memory(int32_t DeviceId);
 // (it only applies to MI200 GPUs).
 bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t DeviceId);
 
-// Check if image is incompatible due to XNACK mismatch.
-void __tgt_rtl_check_invalid_image(__tgt_device_image *Image);
-
 // Returns true if GPU supports managed memory (SVN in AMD GPUs).
 bool __tgt_rtl_is_system_supporting_managed_memory(int32_t);
+
+// Return the number of available physical processors to execute teams
+// supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
+int32_t __tgt_rtl_number_of_team_procs(int32_t device_num);
 
 int32_t __tgt_rtl_launch_kernel_sync(int32_t, void *, void **, ptrdiff_t *,
                                      KernelArgsTy *);
@@ -259,18 +262,7 @@ int __tgt_rtl_prepopulate_page_table(int32_t, void *, int64_t);
 
 int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t, void *, int64_t);
 
-
-int32_t __tgt_rtl_enable_access_to_all_agents(void *, int32_t);
-
-int32_t __tgt_rtl_enable_access_to_all_agents_ty(void *, int32_t);
-
-int32_t __tgt_rtl_release_async_info(int32_t, __tgt_async_info *);
-
-int32_t __tgt_rtl_activate_record_replay(int32_t, uint64_t, void *, bool,
-                                         bool, uint64_t &);
-
-// Returns true if the device \p DeviceId suggests to use auto zero-copy.
-int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
+int32_t __tgt_rtl_enable_access_to_all_agents(int32_t, void *);
 
 // Performs sanity checks on zero-copy options and prints diagnostic info.
 int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag(int32_t DeviceId,

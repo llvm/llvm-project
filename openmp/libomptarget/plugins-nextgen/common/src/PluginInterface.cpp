@@ -2259,6 +2259,11 @@ int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
   return Plugin::get().getDevice(DeviceId).useAutoZeroCopy();
 }
 
+int32_t __tgt_rtl_enable_access_to_all_agents(int32_t DeviceId, void *ptr) {
+  // Not implemented yet.
+  return OFFLOAD_FAIL;
+}
+
 int32_t __tgt_rtl_zero_copy_sanity_checks_and_diag(int32_t DeviceId,
                                                    bool isUnifiedSharedMemory,
                                                    bool isAutoZeroCopy,

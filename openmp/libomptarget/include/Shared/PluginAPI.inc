@@ -60,9 +60,5 @@ PLUGIN_API_HANDLE(launch_kernel_sync);
 PLUGIN_API_HANDLE(set_coarse_grain_mem_region);
 PLUGIN_API_HANDLE(prepopulate_page_table);
 PLUGIN_API_HANDLE(query_coarse_grain_mem_region);
-#if 0 // FIXME: these failt ro resolve
 PLUGIN_API_HANDLE(enable_access_to_all_agents);
-PLUGIN_API_HANDLE(release_async_info);
-PLUGIN_API_HANDLE(activate_record_replay);
-#endif
 PLUGIN_API_HANDLE(zero_copy_sanity_checks_and_diag);
