@@ -752,9 +752,10 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   if (ClRemoveTraps) {
-    // We can optimize after inliner, and PGO profile matching, which are part
-    // of `buildModuleSimplificationPipeline`. The hook below is called after
-    // that, from `buildModuleOptimizationPipeline`.
+    // We can optimize after inliner, and PGO profile matching. The hook below
+    // is called from `buildModuleOptimizationPipeline` just after profile use,
+    // and inliner is a part of `buildModuleSimplificationPipeline`, which is
+    // before `buildModuleOptimizationPipeline`.
     PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
                                             OptimizationLevel Level) {
       FunctionPassManager FPM;
