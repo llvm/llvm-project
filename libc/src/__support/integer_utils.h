@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include "math_extras.h"
 #include "number_pair.h"
@@ -52,7 +53,7 @@ LIBC_INLINE constexpr NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a,
   return result;
 }
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template <>
 LIBC_INLINE constexpr NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a,
                                                               uint64_t b) {
@@ -62,7 +63,7 @@ LIBC_INLINE constexpr NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a,
   result.hi = uint64_t(prod >> 64);
   return result;
 }
-#endif // __SIZEOF_INT128__
+#endif // LIBC_TYPES_HAS_INT128
 
 } // namespace LIBC_NAMESPACE
 

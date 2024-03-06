@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
@@ -17,7 +18,7 @@ namespace LIBC_NAMESPACE::cpp {
 using UnsignedTypes =
     testing::TypeList<unsigned char, unsigned short, unsigned int,
                       unsigned long, unsigned long long,
-#if defined(__SIZEOF_INT128__)
+#ifdef LIBC_TYPES_HAS_INT128
                       __uint128_t,
 #endif
                       cpp::UInt<128>>;

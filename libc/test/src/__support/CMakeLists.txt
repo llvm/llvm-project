@@ -91,8 +91,9 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     SRCS
       uint_test.cpp
     DEPENDS
-      libc.src.__support.uint
       libc.src.__support.CPP.optional
+      libc.src.__support.macros.properties.types
+      libc.src.__support.uint
   )
 endif()
 
@@ -103,8 +104,9 @@ add_libc_test(
   SRCS
     integer_literals_test.cpp
   DEPENDS
-    libc.src.__support.integer_literals
     libc.src.__support.CPP.optional
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.properties.types
 )
 
 add_libc_test(

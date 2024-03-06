@@ -15,9 +15,10 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/integer_utils.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
-#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/math_extras.h"         // SumCarry, DiffBorrow
+#include "src/__support/macros/attributes.h"       // LIBC_INLINE
+#include "src/__support/macros/optimization.h"     // LIBC_UNLIKELY
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/math_extras.h"             // SumCarry, DiffBorrow
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
@@ -31,9 +32,9 @@ template <typename T> struct half_width;
 template <> struct half_width<uint64_t> : type_identity<uint32_t> {};
 template <> struct half_width<uint32_t> : type_identity<uint16_t> {};
 template <> struct half_width<uint16_t> : type_identity<uint8_t> {};
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template <> struct half_width<__uint128_t> : type_identity<uint64_t> {};
-#endif // __SIZEOF_INT128__
+#endif // LIBC_TYPES_HAS_INT128
 
 template <typename T> using half_width_t = typename half_width<T>::type;
 } // namespace internal
@@ -615,7 +616,7 @@ struct BigInt {
       val[1] = uint32_t(tmp >> 32);
       return;
     }
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
     if constexpr ((Bits == 128) && (WORD_SIZE == 64)) {
       // Use builtin 128 bits if available;
       if (s >= 128) {
@@ -629,7 +630,7 @@ struct BigInt {
       val[1] = uint64_t(tmp >> 64);
       return;
     }
-#endif // __SIZEOF_INT128__
+#endif // LIBC_TYPES_HAS_INT128
     if (LIBC_UNLIKELY(s == 0))
       return;
 
@@ -686,7 +687,7 @@ struct BigInt {
       val[1] = uint32_t(tmp >> 32);
       return;
     }
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
     if constexpr ((Bits == 128) && (WORD_SIZE == 64)) {
       // Use builtin 128 bits if available;
       if (s >= 128) {
@@ -704,7 +705,7 @@ struct BigInt {
       val[1] = uint64_t(tmp >> 64);
       return;
     }
-#endif // __SIZEOF_INT128__
+#endif // LIBC_TYPES_HAS_INT128
 
     if (LIBC_UNLIKELY(s == 0))
       return;

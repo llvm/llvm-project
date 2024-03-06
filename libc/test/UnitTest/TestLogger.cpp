@@ -3,6 +3,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h" // write_to_stderr
 #include "src/__support/UInt128.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include <stdint.h>
 
@@ -68,11 +69,11 @@ template TestLogger &TestLogger::operator<< <unsigned short>(unsigned short);
 template TestLogger &TestLogger::operator<< <unsigned int>(unsigned int);
 template TestLogger &TestLogger::operator<< <unsigned long>(unsigned long);
 template TestLogger &
-TestLogger::operator<< <unsigned long long>(unsigned long long);
+    TestLogger::operator<< <unsigned long long>(unsigned long long);
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <__uint128_t>(__uint128_t);
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <cpp::UInt<128>>(cpp::UInt<128>);
 template TestLogger &TestLogger::operator<< <cpp::UInt<192>>(cpp::UInt<192>);
 template TestLogger &TestLogger::operator<< <cpp::UInt<256>>(cpp::UInt<256>);
