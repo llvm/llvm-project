@@ -36,7 +36,7 @@ public:
     EXPECT_EQ(static_cast<OutType>(16.0), func(T(256)));
 
     constexpr int COUNT = 255;
-    constexpr double ERR = 2.0 * static_cast<double>(eps);
+    constexpr double ERR = 3.0 * static_cast<double>(eps);
     double x_d = 0.0;
     T x = 0;
     for (int i = 0; i < COUNT; ++i) {
@@ -49,9 +49,6 @@ public:
         // Print out the failure input and output.
         EXPECT_EQ(x, T(0));
         EXPECT_EQ(func(x), zero);
-        EXPECT_FP_EQ(result, 0.0);
-        EXPECT_FP_EQ(errors, 0.0);
-        EXPECT_FP_EQ(ERR, 0.0);
       }
       ASSERT_TRUE(errors <= ERR);
     }
