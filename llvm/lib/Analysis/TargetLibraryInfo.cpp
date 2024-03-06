@@ -557,8 +557,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     }
     break;
   case Triple::Linux:
-    // As this version is so old, we don't really need to worry about using
-    // exp10
+    // exp10, exp10f, exp10l is available on Linux (GLIBC) but are extremely
+    // buggy prior to glibc version 2.18. As this version is so old, we
+    // don't really need to worry about using exp10 on Linux.
     TLI.setAvailableWithName(LibFunc_exp10, "__exp10");
     TLI.setAvailableWithName(LibFunc_exp10f, "__exp10f");
     TLI.setAvailableWithName(LibFunc_exp10l, "__exp10l");
