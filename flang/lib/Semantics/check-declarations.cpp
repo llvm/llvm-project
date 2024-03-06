@@ -1195,9 +1195,7 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
-  const Symbol *interface {
-    details.procInterface() ? &details.procInterface()->GetUltimate() : nullptr
-  };
+  const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
         (symbol.attrs().test(Attr::INTENT_IN) ||
@@ -1481,7 +1479,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
           if (auto globalChars{Characterize(*global)}) {
             if (chars->HasExplicitInterface()) {
               std::string whyNot;
-              if (!chars->IsCompatibleWith(*globalChars, &whyNot)) {
+              if (!chars->IsCompatibleWith(*globalChars,
+                      /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
                 msg = WarnIfNotInModuleFile(
                     "The global subprogram '%s' is not compatible with its local procedure declaration (%s)"_warn_en_US,
                     global->name(), whyNot);
@@ -1507,7 +1506,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
       if (auto chars{Characterize(symbol)}) {
         if (auto previousChars{Characterize(previous)}) {
           std::string whyNot;
-          if (!chars->IsCompatibleWith(*previousChars, &whyNot)) {
+          if (!chars->IsCompatibleWith(*previousChars,
+                  /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
             if (auto *msg{WarnIfNotInModuleFile(
                     "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
                     symbol.name(), whyNot)}) {
@@ -3234,6 +3234,8 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   const Symbol *result{FindFunctionResult(symbol)};
   const Symbol &relevant{result ? *result : symbol};
   if (IsAllocatable(relevant)) { // always ok
+  } else if (IsProcedurePointer(symbol) && result && IsPointer(*result)) {
+    // procedure pointer returning allocatable or pointer: ok
   } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
     // object pointers are always ok
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {

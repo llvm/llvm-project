@@ -73,6 +73,90 @@ static std::string stringFromPath(ModuleIdPath Path) {
   return Name;
 }
 
+/// Helper function for makeTransitiveImportsVisible to decide whether
+/// the \param Imported module unit is in the same module with the \param
+/// CurrentModule.
+/// \param FoundPrimaryModuleInterface is a helper parameter to record the
+/// primary module interface unit corresponding to the module \param
+/// CurrentModule. Since currently it is expensive to decide whether two module
+/// units come from the same module by comparing the module name.
+static bool
+isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
+                                    Module *&FoundPrimaryModuleInterface) {
+  if (!Imported->isNamedModule())
+    return false;
+
+  // The a partition unit we're importing must be in the same module of the
+  // current module.
+  if (Imported->isModulePartition())
+    return true;
+
+  // If we found the primary module interface during the search process, we can
+  // return quickly to avoid expensive string comparison.
+  if (FoundPrimaryModuleInterface)
+    return Imported == FoundPrimaryModuleInterface;
+
+  if (!CurrentModule)
+    return false;
+
+  // Then the imported module must be a primary module interface unit.  It
+  // is only allowed to import the primary module interface unit from the same
+  // module in the implementation unit and the implementation partition unit.
+
+  // Since we'll handle implementation unit above. We can only care
+  // about the implementation partition unit here.
+  if (!CurrentModule->isModulePartitionImplementation())
+    return false;
+
+  if (Imported->getPrimaryModuleInterfaceName() ==
+      CurrentModule->getPrimaryModuleInterfaceName()) {
+    assert(!FoundPrimaryModuleInterface ||
+           FoundPrimaryModuleInterface == Imported);
+    FoundPrimaryModuleInterface = Imported;
+    return true;
+  }
+
+  return false;
+}
+
+/// [module.import]p7:
+///   Additionally, when a module-import-declaration in a module unit of some
+///   module M imports another module unit U of M, it also imports all
+///   translation units imported by non-exported module-import-declarations in
+///   the module unit purview of U. These rules can in turn lead to the
+///   importation of yet more translation units.
+static void
+makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
+                             Module *CurrentModule, SourceLocation ImportLoc,
+                             bool IsImportingPrimaryModuleInterface = false) {
+  assert(Imported->isNamedModule() &&
+         "'makeTransitiveImportsVisible()' is intended for standard C++ named "
+         "modules only.");
+
+  llvm::SmallVector<Module *, 4> Worklist;
+  Worklist.push_back(Imported);
+
+  Module *FoundPrimaryModuleInterface =
+      IsImportingPrimaryModuleInterface ? Imported : nullptr;
+
+  while (!Worklist.empty()) {
+    Module *Importing = Worklist.pop_back_val();
+
+    if (VisibleModules.isVisible(Importing))
+      continue;
+
+    // FIXME: The ImportLoc here is not meaningful. It may be problematic if we
+    // use the sourcelocation loaded from the visible modules.
+    VisibleModules.setVisible(Importing, ImportLoc);
+
+    if (isImportingModuleUnitFromSameModule(Importing, CurrentModule,
+                                            FoundPrimaryModuleInterface))
+      for (Module *TransImported : Importing->Imports)
+        if (!VisibleModules.isVisible(TransImported))
+          Worklist.push_back(TransImported);
+  }
+}
+
 Sema::DeclGroupPtrTy
 Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   // We start in the global module;
@@ -396,8 +480,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // and return the import decl to be added to the current TU.
   if (Interface) {
 
-    VisibleModules.setVisible(Interface, ModuleLoc);
-    VisibleModules.makeTransitiveImportsVisible(Interface, ModuleLoc);
+    makeTransitiveImportsVisible(VisibleModules, Interface, Mod, ModuleLoc,
+                                 /*IsImportingPrimaryModuleInterface=*/true);
 
     // Make the import decl for the interface in the impl module.
     ImportDecl *Import = ImportDecl::Create(Context, CurContext, ModuleLoc,
@@ -554,7 +638,11 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (Mod->isHeaderUnit())
     Diag(ImportLoc, diag::warn_experimental_header_unit);
 
-  VisibleModules.setVisible(Mod, ImportLoc);
+  if (Mod->isNamedModule())
+    makeTransitiveImportsVisible(VisibleModules, Mod, getCurrentModule(),
+                                 ImportLoc);
+  else
+    VisibleModules.setVisible(Mod, ImportLoc);
 
   checkModuleImportContext(*this, Mod, ImportLoc, CurContext);
 

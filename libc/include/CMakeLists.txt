@@ -85,6 +85,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  stdint
+  DEF_FILE stdint.h.def
+  GEN_HDR stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
+)
+
+add_gen_header(
   limits
   DEF_FILE limits.h.def
   GEN_HDR limits.h

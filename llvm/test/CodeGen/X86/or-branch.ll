@@ -5,12 +5,13 @@
 define void @foo(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; JUMP2-LABEL: foo:
 ; JUMP2:       # %bb.0: # %entry
-; JUMP2-NEXT:    cmpl $5, {{[0-9]+}}(%esp)
-; JUMP2-NEXT:    jl bar@PLT # TAILCALL
-; JUMP2-NEXT:  # %bb.1: # %entry
 ; JUMP2-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; JUMP2-NEXT:    setne %al
+; JUMP2-NEXT:    cmpl $5, {{[0-9]+}}(%esp)
+; JUMP2-NEXT:    setge %cl
+; JUMP2-NEXT:    testb %al, %cl
 ; JUMP2-NEXT:    je bar@PLT # TAILCALL
-; JUMP2-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; JUMP2-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; JUMP2-NEXT:    retl
 ;
 ; JUMP1-LABEL: foo:

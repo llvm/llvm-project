@@ -172,6 +172,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
     // CHECK-NEXT: pos[0] : ( 0, 3
     // CHECK-NEXT: crd[0] : ( 0, 2, 3
     // CHECK-NEXT: pos[1] : ( 0, 2, 3, 5
@@ -192,6 +194,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
     // CHECK-NEXT: pos[1] : ( 0, 2, 2, 3, 5
     // CHECK-NEXT: crd[1] : ( 1, 2, 2, 2, 3
     // CHECK-NEXT: values : ( 30.5, 4.2, 4.6, 7, 8
@@ -204,6 +208,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
     // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3
     // CHECK-NEXT: crd[1] : ( 0, 0, 0
     // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
@@ -220,6 +226,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
     // CHECK-NEXT: pos[0] : ( 0, 3
     // CHECK-NEXT: crd[0] : ( 0, 0, 1, 0, 3, 0
     // CHECK-NEXT: values : ( 2.3, 6.9, 12.6
@@ -236,6 +244,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
     // CHECK-NEXT: pos[1] : ( 0, 1, 2, 2, 3
     // CHECK-NEXT: crd[1] : ( 0, 0, 0
     // CHECK-NEXT: values : ( 2.3, 6.9, 12.6

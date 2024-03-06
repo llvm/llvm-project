@@ -1874,6 +1874,12 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasExpOrExportInsts : Predicate<"Subtarget->hasExpOrExportInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
