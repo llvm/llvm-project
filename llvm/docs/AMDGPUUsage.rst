@@ -1543,15 +1543,16 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target specific
   .. table:: AMDGPU MCExpr types:
      :name: amdgpu-mcexpr-table
 
-     =================== ======================================================================
-     AMDGPU MCExpr       Description
-     =================== ======================================================================
-     ``max(arg, ...)``   Variadic operation that returns maximum value of all its arguments.
+     =================== ================= ========================================================
+     MCExpr              Operands          Return value
+     =================== ================= ========================================================
+     ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
+                                           value of all its arguments.
 
-     ``or(arg, ...)``    Variadic operation that returns the bitwise-or result of all its
-                         arguments.
+     ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
+                                           result of all its arguments.
 
-     =================== ======================================================================
+     =================== ================= ========================================================
 
 .. _amdgpu-elf-code-object:
 
