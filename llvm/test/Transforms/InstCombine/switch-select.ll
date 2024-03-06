@@ -4,12 +4,9 @@
 define void @test_ult_rhsc(i8 %x) {
 ; CHECK-LABEL: define void @test_ult_rhsc(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = add nsw i8 [[X]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[VAL]], 11
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[VAL]], i8 6
-; CHECK-NEXT:    switch i8 [[COND]], label [[BB1:%.*]] [
-; CHECK-NEXT:      i8 0, label [[BB2:%.*]]
-; CHECK-NEXT:      i8 10, label [[BB3:%.*]]
+; CHECK-NEXT:    switch i8 [[X]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 12, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @func1()
@@ -43,9 +40,7 @@ bb3:
 define void @test_eq_lhsc(i8 %x) {
 ; CHECK-LABEL: define void @test_eq_lhsc(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 4
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 6, i8 [[X]]
-; CHECK-NEXT:    switch i8 [[COND]], label [[BB1:%.*]] [
+; CHECK-NEXT:    switch i8 [[X]], label [[BB1:%.*]] [
 ; CHECK-NEXT:      i8 0, label [[BB2:%.*]]
 ; CHECK-NEXT:      i8 10, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
