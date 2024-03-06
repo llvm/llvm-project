@@ -295,11 +295,13 @@ class HWAddressSanitizer {
 public:
   HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
                      const StackSafetyGlobalInfo *SSI)
-      : M(M), SSI(SSI), Rng(M.createRNG("hwasan")) {
+      : M(M), SSI(SSI) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
                               ? ClEnableKhwasan
                               : CompileKernel;
+    this->Rng =
+        RandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
 
     initializeModule();
   }
