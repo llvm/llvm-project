@@ -2890,9 +2890,9 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
   //     }
   //   }
   // it will say that the "arg >= 0" check is _assuming_ something new because
-  // the constraint that ($arg >= 0) is 1 was added to the list of known
-  // constraints. However, the unsigned value is always >= so semantically this
-  // is not a real assumption.
+  // the constraint that "$arg >= 0" is 1 was added to the list of known
+  // constraints. However, the unsigned value is always >= 0 so semantically
+  // this is not a "real" assumption.
   bool IsAssuming =
       !BRC.getStateManager().haveEqualConstraints(CurrentState, PrevState) ||
       CurrentState->getSVal(Cond, LCtx).isUnknownOrUndef();
