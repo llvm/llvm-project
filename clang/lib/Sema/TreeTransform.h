@@ -39,6 +39,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -4000,16 +4001,16 @@ public:
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
                                             StmtResult StrBlock) {
-    getSema().ActOnOpenACCConstruct(K, BeginLoc);
+    getSema().OpenACC.ActOnOpenACCConstruct(K, BeginLoc);
 
     // TODO OpenACC: Include clauses.
-    if (getSema().ActOnStartOpenACCStmtDirective(K, BeginLoc))
+    if (getSema().OpenACC.ActOnStartOpenACCStmtDirective(K, BeginLoc))
       return StmtError();
 
-    StrBlock = getSema().ActOnOpenACCAssociatedStmt(K, StrBlock);
+    StrBlock = getSema().OpenACC.ActOnOpenACCAssociatedStmt(K, StrBlock);
 
-    return getSema().ActOnEndOpenACCStmtDirective(K, BeginLoc, EndLoc,
-                                                  StrBlock);
+    return getSema().OpenACC.ActOnEndOpenACCStmtDirective(K, BeginLoc, EndLoc,
+                                                          StrBlock);
   }
 
 private:

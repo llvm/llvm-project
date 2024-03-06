@@ -14,6 +14,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -777,7 +778,7 @@ bool Parser::ParseOpenACCClause(OpenACCDirectiveKind DirKind) {
   SourceLocation ClauseLoc = ConsumeToken();
 
   bool Result = ParseOpenACCClauseParams(DirKind, Kind);
-  getActions().ActOnOpenACCClause(Kind, ClauseLoc);
+  getActions().OpenACC.ActOnOpenACCClause(Kind, ClauseLoc);
   return Result;
 }
 
@@ -1151,7 +1152,7 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
   SourceLocation StartLoc = getCurToken().getLocation();
   OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
 
-  getActions().ActOnOpenACCConstruct(DirKind, StartLoc);
+  getActions().OpenACC.ActOnOpenACCConstruct(DirKind, StartLoc);
 
   // Once we've parsed the construct/directive name, some have additional
   // specifiers that need to be taken care of. Atomic has an 'atomic-clause'
@@ -1223,12 +1224,13 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
 
-  if (getActions().ActOnStartOpenACCDeclDirective(DirInfo.DirKind,
-                                                  DirInfo.StartLoc))
+  if (getActions().OpenACC.ActOnStartOpenACCDeclDirective(DirInfo.DirKind,
+                                                          DirInfo.StartLoc))
     return nullptr;
 
   // TODO OpenACC: Do whatever decl parsing is required here.
-  return DeclGroupPtrTy::make(getActions().ActOnEndOpenACCDeclDirective());
+  return DeclGroupPtrTy::make(
+      getActions().OpenACC.ActOnEndOpenACCDeclDirective());
 }
 
 // Parse OpenACC Directive on a Statement.
@@ -1239,8 +1241,8 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   ConsumeAnnotationToken();
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
-  if (getActions().ActOnStartOpenACCStmtDirective(DirInfo.DirKind,
-                                                  DirInfo.StartLoc))
+  if (getActions().OpenACC.ActOnStartOpenACCStmtDirective(DirInfo.DirKind,
+                                                          DirInfo.StartLoc))
     return StmtError();
 
   StmtResult AssocStmt;
@@ -1249,10 +1251,10 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 
-    AssocStmt = getActions().ActOnOpenACCAssociatedStmt(DirInfo.DirKind,
-                                                        ParseStatement());
+    AssocStmt = getActions().OpenACC.ActOnOpenACCAssociatedStmt(
+        DirInfo.DirKind, ParseStatement());
   }
 
-  return getActions().ActOnEndOpenACCStmtDirective(
+  return getActions().OpenACC.ActOnEndOpenACCStmtDirective(
       DirInfo.DirKind, DirInfo.StartLoc, DirInfo.EndLoc, AssocStmt);
 }

@@ -183,6 +183,7 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaOpenACC;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -466,9 +467,8 @@ class Sema final {
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
   // 38. CUDA (SemaCUDA.cpp)
   // 39. HLSL Constructs (SemaHLSL.cpp)
-  // 40. OpenACC Constructs (SemaOpenACC.cpp)
-  // 41. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 42. SYCL Constructs (SemaSYCL.cpp)
+  // 40. OpenMP Directives and Clauses (SemaOpenMP.cpp)
+  // 41. SYCL Constructs (SemaSYCL.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -1191,6 +1191,27 @@ private:
   Scope *CurScope;
 
   mutable IdentifierInfo *Ident_super;
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Sema Components
+  /// Parts of Sema
+  ///@{
+
+  // Just in this section, private members are followed by public, because
+  // C++ requires us to create (private) objects before (public) references.
+
+private:
+  std::unique_ptr<SemaOpenACC> OpenACCPtr;
+
+public:
+  SemaOpenACC &OpenACC;
 
   ///@}
 
@@ -13300,56 +13321,6 @@ public:
 
   bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
   bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name OpenACC Constructs
-  /// Implementations are in SemaOpenACC.cpp
-  ///@{
-
-public:
-  /// Called after parsing an OpenACC Clause so that it can be checked.
-  bool ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
-                          SourceLocation StartLoc);
-
-  /// Called after the construct has been parsed, but clauses haven't been
-  /// parsed.  This allows us to diagnose not-implemented, as well as set up any
-  /// state required for parsing the clauses.
-  void ActOnOpenACCConstruct(OpenACCDirectiveKind K, SourceLocation StartLoc);
-
-  /// Called after the directive, including its clauses, have been parsed and
-  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
-  /// happen before any associated declarations or statements have been parsed.
-  /// This function is only called when we are parsing a 'statement' context.
-  bool ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                      SourceLocation StartLoc);
-
-  /// Called after the directive, including its clauses, have been parsed and
-  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
-  /// happen before any associated declarations or statements have been parsed.
-  /// This function is only called when we are parsing a 'Decl' context.
-  bool ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
-                                      SourceLocation StartLoc);
-  /// Called when we encounter an associated statement for our construct, this
-  /// should check legality of the statement as it appertains to this Construct.
-  StmtResult ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
-                                        StmtResult AssocStmt);
-
-  /// Called after the directive has been completely parsed, including the
-  /// declaration group or associated statement.
-  StmtResult ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                          SourceLocation StartLoc,
-                                          SourceLocation EndLoc,
-                                          StmtResult AssocStmt);
-  /// Called after the directive has been completely parsed, including the
-  /// declaration group or associated statement.
-  DeclGroupRef ActOnEndOpenACCDeclDirective();
 
   ///@}
 
