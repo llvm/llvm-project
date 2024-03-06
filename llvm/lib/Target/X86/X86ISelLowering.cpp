@@ -18515,15 +18515,15 @@ X86TargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false);
 }
 
-static SDValue getTLSADDR(SelectionDAG &DAG, SDValue Chain,
-                          GlobalAddressSDNode *GA, SDValue *InGlue,
-                          const EVT PtrVT, unsigned ReturnReg,
-                          unsigned char OperandFlags, bool UseTLSDESC = false,
-                          bool LocalDynamic = false) {
+static SDValue
+GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
+           SDValue *InGlue, const EVT PtrVT, unsigned ReturnReg,
+           unsigned char OperandFlags, bool LocalDynamic = false) {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA;
+  bool UseTLSDESC = DAG.getTarget().useTLSDESC();
   if (LocalDynamic && UseTLSDESC) {
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
     auto UI = TGA->use_begin();
@@ -18568,10 +18568,9 @@ static SDValue getTLSADDR(SelectionDAG &DAG, SDValue Chain,
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 32 bit
-static SDValue LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA,
-                                               SelectionDAG &DAG,
-                                               const EVT PtrVT,
-                                               bool UseTLSDESC) {
+static SDValue
+LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
+                                const EVT PtrVT) {
   SDValue InGlue;
   SDLoc dl(GA);  // ? function entry point might be better
   SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
@@ -18579,32 +18578,28 @@ static SDValue LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA,
                                                SDLoc(), PtrVT), InGlue);
   InGlue = Chain.getValue(1);
 
-  return getTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX, X86II::MO_TLSGD,
-                    UseTLSDESC);
+  return GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX, X86II::MO_TLSGD);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit LP64
-static SDValue LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA,
-                                               SelectionDAG &DAG,
-                                               const EVT PtrVT,
-                                               bool UseTLSDESC) {
-  return getTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, X86::RAX,
-                    X86II::MO_TLSGD, UseTLSDESC);
+static SDValue
+LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA, SelectionDAG &DAG,
+                                const EVT PtrVT) {
+  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
+                    X86::RAX, X86II::MO_TLSGD);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit ILP32
-static SDValue LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA,
-                                                SelectionDAG &DAG,
-                                                const EVT PtrVT,
-                                                bool UseTLSDESC) {
-  return getTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, X86::EAX,
-                    X86II::MO_TLSGD, UseTLSDESC);
+static SDValue
+LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
+                                 const EVT PtrVT) {
+  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
+                    X86::EAX, X86II::MO_TLSGD);
 }
 
 static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
                                            SelectionDAG &DAG, const EVT PtrVT,
-                                           bool Is64Bit, bool Is64BitLP64,
-                                           bool UseTLSDESC) {
+                                           bool Is64Bit, bool Is64BitLP64) {
   SDLoc dl(GA);
 
   // Get the start address of the TLS block for this module.
@@ -18615,15 +18610,15 @@ static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
   SDValue Base;
   if (Is64Bit) {
     unsigned ReturnReg = Is64BitLP64 ? X86::RAX : X86::EAX;
-    Base = getTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, ReturnReg,
-                      X86II::MO_TLSLD, UseTLSDESC, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, ReturnReg,
+                      X86II::MO_TLSLD, /*LocalDynamic=*/true);
   } else {
     SDValue InGlue;
     SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
         DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT), InGlue);
     InGlue = Chain.getValue(1);
-    Base = getTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX,
-                      X86II::MO_TLSLDM, UseTLSDESC, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX,
+                      X86II::MO_TLSLDM, /*LocalDynamic=*/true);
   }
 
   // Note: the CleanupLocalDynamicTLSPass will remove redundant computations
@@ -18710,23 +18705,21 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget.isTargetELF()) {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
-    bool UseTLSDESC = DAG.getTarget().useTLSDESC();
     switch (model) {
-    case TLSModel::LocalDynamic:
-      return LowerToTLSLocalDynamicModel(GA, DAG, PtrVT, Subtarget.is64Bit(),
-                                         Subtarget.isTarget64BitLP64(),
-                                         UseTLSDESC);
-    case TLSModel::GeneralDynamic:
-      if (Subtarget.is64Bit()) {
-        if (Subtarget.isTarget64BitLP64())
-          return LowerToTLSGeneralDynamicModel64(GA, DAG, PtrVT, UseTLSDESC);
-        return LowerToTLSGeneralDynamicModelX32(GA, DAG, PtrVT, UseTLSDESC);
-      }
-      return LowerToTLSGeneralDynamicModel32(GA, DAG, PtrVT, UseTLSDESC);
-    case TLSModel::InitialExec:
-    case TLSModel::LocalExec:
-      return LowerToTLSExecModel(GA, DAG, PtrVT, model, Subtarget.is64Bit(),
-                                 PositionIndependent);
+      case TLSModel::GeneralDynamic:
+        if (Subtarget.is64Bit()) {
+          if (Subtarget.isTarget64BitLP64())
+            return LowerToTLSGeneralDynamicModel64(GA, DAG, PtrVT);
+          return LowerToTLSGeneralDynamicModelX32(GA, DAG, PtrVT);
+        }
+        return LowerToTLSGeneralDynamicModel32(GA, DAG, PtrVT);
+      case TLSModel::LocalDynamic:
+        return LowerToTLSLocalDynamicModel(GA, DAG, PtrVT, Subtarget.is64Bit(),
+                                           Subtarget.isTarget64BitLP64());
+      case TLSModel::InitialExec:
+      case TLSModel::LocalExec:
+        return LowerToTLSExecModel(GA, DAG, PtrVT, model, Subtarget.is64Bit(),
+                                   PositionIndependent);
     }
     llvm_unreachable("Unknown TLS model.");
   }
