@@ -360,7 +360,7 @@ bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
 /// If a terminator in an unreachable basic block has an operand of type
 /// Instruction, transform it into poison. Return true if any operands
 /// are changed to poison. Original Values prior to being changed to poison
-/// are returned to PoisonedValues.
+/// are returned in \p PoisonedValues.
 bool handleUnreachableTerminator(Instruction *I,
                                  SmallVectorImpl<Value *> &PoisonedValues);
 
