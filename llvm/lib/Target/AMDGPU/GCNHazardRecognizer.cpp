@@ -2538,23 +2538,24 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
         break;
       case 8:
         NeedWaitStates =
-          ST.hasGFX940Insts()
-            ? isXDL(ST, *MFMA)
-              ? GFX940_XDL8PassWriteVgprVALUMemExpReadWaitStates
-              : GFX940_SMFMA8PassWriteVgprVALUMemExpReadWaitStates
-            : SMFMA16x16WriteVgprVALUMemExpReadWaitStates;
+            isDGEMM(MFMA->getOpcode())
+                ? IsMemOrExport ? DMFMA16x16WriteVgprMemExpReadWaitStates
+                                : DMFMA16x16WriteVgprVALUReadWaitStates
+            : ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA)
+                      ? GFX940_XDL8PassWriteVgprVALUMemExpReadWaitStates
+                      : GFX940_SMFMA8PassWriteVgprVALUMemExpReadWaitStates
+                : SMFMA16x16WriteVgprVALUMemExpReadWaitStates;
         break;
       case 16: [[fallthrough]];
       default:
+        assert(!isDGEMM(MFMA->getOpcode()));
         NeedWaitStates =
-          isDGEMM(MFMA->getOpcode())
-            ? IsMemOrExport ? DMFMA16x16WriteVgprMemExpReadWaitStates
-                            : DMFMA16x16WriteVgprVALUReadWaitStates
-            : ST.hasGFX940Insts()
-              ? isXDL(ST, *MFMA)
-                ? GFX940_XDL16PassWriteVgprVALUMemExpReadWaitStates
-                : GFX940_SMFMA16PassWriteVgprVALUMemExpReadWaitStates
-              : SMFMA32x32WriteVgprVALUMemExpReadWaitStates;
+            ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA)
+                      ? GFX940_XDL16PassWriteVgprVALUMemExpReadWaitStates
+                      : GFX940_SMFMA16PassWriteVgprVALUMemExpReadWaitStates
+                : SMFMA32x32WriteVgprVALUMemExpReadWaitStates;
         break;
       }
 
@@ -2633,21 +2634,24 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
               : GFX940_SMFMA4PassWriteVgprVALUWawWaitStates;
         break;
       case 8:
-        NeedWaitStates = ST.hasGFX940Insts()
-          ? isXDL(ST, *MFMA)
-            ? GFX940_XDL8PassWriteVgprVALUWawWaitStates
-            : GFX940_SMFMA8PassWriteVgprVALUWawWaitStates
-          : SMFMA16x16WriteVgprVALUWawWaitStates;
+        NeedWaitStates =
+            isDGEMM(MFMA->getOpcode()) ? DMFMA16x16WriteVgprVALUWriteWaitStates
+            :
+
+            ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA) ? GFX940_XDL8PassWriteVgprVALUWawWaitStates
+                                   : GFX940_SMFMA8PassWriteVgprVALUWawWaitStates
+                : SMFMA16x16WriteVgprVALUWawWaitStates;
         break;
       case 16: [[fallthrough]];
       default:
-        NeedWaitStates = isDGEMM(MFMA->getOpcode())
-                   ? DMFMA16x16WriteVgprVALUWriteWaitStates
-                   : ST.hasGFX940Insts()
-                     ? isXDL(ST, *MFMA)
-                       ? GFX940_XDL16PassWriteVgprVALUWawWaitStates
-                       : GFX940_SMFMA16PassWriteVgprVALUWawWaitStates
-                   : SMFMA32x32WriteVgprVALUWawWaitStates;
+        assert(!isDGEMM(MFMA->getOpcode()));
+        NeedWaitStates =
+            ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA)
+                      ? GFX940_XDL16PassWriteVgprVALUWawWaitStates
+                      : GFX940_SMFMA16PassWriteVgprVALUWawWaitStates
+                : SMFMA32x32WriteVgprVALUWawWaitStates;
         break;
       }
 
