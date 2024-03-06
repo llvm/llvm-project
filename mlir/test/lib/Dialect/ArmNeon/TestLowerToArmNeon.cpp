@@ -20,7 +20,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#define PASS_NAME "test-lower-vector-to-arm-neon"
+#define PASS_NAME "test-lower-to-arm-neon"
 
 using namespace mlir;
 using namespace mlir::arm_neon;
@@ -31,9 +31,7 @@ struct TestLowerToArmNeon
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLowerToArmNeon)
 
   StringRef getArgument() const final { return PASS_NAME; }
-  StringRef getDescription() const final {
-    return "Tests lower vector to arm Neon.";
-  }
+  StringRef getDescription() const final { return "Tests lower to arm Neon."; }
   TestLowerToArmNeon() = default;
   TestLowerToArmNeon(const TestLowerToArmNeon &pass) = default;
 
@@ -49,7 +47,7 @@ struct TestLowerToArmNeon
 void TestLowerToArmNeon::runOnOperation() {
   MLIRContext *context = &getContext();
   RewritePatternSet patterns(context);
-  populateLowerVectorToArmNeonPatterns(patterns);
+  populateLowerContractionToSMMLAPatternPatterns(patterns);
   if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
 }

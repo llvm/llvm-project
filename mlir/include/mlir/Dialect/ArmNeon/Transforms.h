@@ -1,5 +1,4 @@
-//===- Transforms.h - ArmNeon Dialect Transformation Entrypoints -*- C++
-//-*-===//
+//===- Transforms.h - ArmNeon Transformation Entrypoints --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +12,8 @@
 namespace mlir {
 
 namespace arm_neon {
-void populateLowerVectorToArmNeonPatterns(RewritePatternSet &patterns);
+void populateLowerContractionToSMMLAPatternPatterns(
+    RewritePatternSet &patterns);
 } // namespace arm_neon
 
 } // namespace mlir

@@ -1,5 +1,4 @@
-//===- LowerVectorToArmNeon.cpp - Lower 'arm_neon.intr.smmla' ops
-//-----------===//
+//===- LowerContractionToSMMLAPattern.cpp - Contract to SMMLA ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,24 +21,24 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#define DEBUG_TYPE "arm-neon-lower-vector"
+#define DEBUG_TYPE "lower-contract-to-arm-neon"
 
 using namespace mlir;
 using namespace mlir::arm_neon;
 
 namespace {
 
-// Return the shaped type with new element type.
+/// Return the shaped type with new element type.
 static Type matchContainerType(Type element, Type container) {
-  if (auto shapedTy = dyn_cast<ShapedType>(container))
+  if (auto shapedTy = dyn_cast<ShapedType>(container)) {
     return shapedTy.clone(element);
-
+  }
   return element;
 }
 
-// Lowering from vector::contractOp directly to the arm neon
-// intrinsic.
-class LowerVectorToArmNeonPattern
+/// Lowering from vector::contractOp directly to the arm neon
+/// intrinsic.
+class LowerContractionToSMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -82,12 +81,11 @@ public:
     }
 
     // Check two extsi inputs Rhs Lhs
-    arith::ExtSIOp origLhsExtOp;
-    arith::ExtSIOp origRhsExtOp;
-    if (!(origLhsExtOp =
-              dyn_cast_or_null<arith::ExtSIOp>(lhs.getDefiningOp())) ||
-        !(origRhsExtOp =
-              dyn_cast_or_null<arith::ExtSIOp>(rhs.getDefiningOp()))) {
+    arith::ExtSIOp origLhsExtOp =
+        dyn_cast_or_null<arith::ExtSIOp>(lhs.getDefiningOp());
+    arith::ExtSIOp origRhsExtOp =
+        dyn_cast_or_null<arith::ExtSIOp>(rhs.getDefiningOp());
+    if (!origLhsExtOp || !origRhsExtOp) {
       return failure();
     }
 
@@ -146,8 +144,8 @@ public:
 
 } // namespace
 
-void mlir::arm_neon::populateLowerVectorToArmNeonPatterns(
+void mlir::arm_neon::populateLowerContractionToSMMLAPatternPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
-  patterns.add<LowerVectorToArmNeonPattern>(context, /*benefit=*/1);
+  patterns.add<LowerContractionToSMMLAPattern>(context, /*benefit=*/1);
 }
