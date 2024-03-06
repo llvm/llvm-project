@@ -36,6 +36,10 @@ static cl::opt<bool>
     DumpORC("dump-orc", cl::desc("dump raw ORC unwind information (sorted)"),
             cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool> DumpParavirtualPatchSites(
+    "dump-para-sites", cl::desc("dump Linux kernel paravitual patch sites"),
+    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool> DumpStaticCalls("dump-static-calls",
                                      cl::desc("dump Linux kernel static calls"),
                                      cl::init(false), cl::Hidden,
@@ -147,6 +151,12 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Functions with exception handling code.
   DenseSet<BinaryFunction *> FunctionsWithExceptions;
 
+  /// Section with paravirtual patch sites.
+  ErrorOr<BinarySection &> ParavirtualPatchSection = std::errc::bad_address;
+
+  /// Alignment of paravirtual patch structures.
+  static constexpr size_t PARA_PATCH_ALIGN = 8;
+
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
   void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
@@ -187,6 +197,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error readExceptionTable();
   Error rewriteExceptionTable();
 
+  /// Paravirtual instruction patch sites.
+  Error readParaInstructions();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -206,6 +219,9 @@ public:
       return E;
 
     if (Error E = readExceptionTable())
+      return E;
+
+    if (Error E = readParaInstructions())
       return E;
 
     return Error::success();
@@ -1009,6 +1025,74 @@ Error LinuxKernelRewriter::rewriteExceptionTable() {
   // added.
   for (BinaryFunction *BF : FunctionsWithExceptions)
     BF->setSimple(false);
+
+  return Error::success();
+}
+
+/// .parainsrtuctions section contains information for patching parvirtual call
+/// instructions during runtime. The entries in the section are in the form:
+///
+///    struct paravirt_patch_site {
+///      u8 *instr;    /* original instructions */
+///      u8 type;      /* type of this instruction */
+///      u8 len;       /* length of original instruction */
+///    };
+///
+/// Note that the structures are aligned at 8-byte boundary.
+Error LinuxKernelRewriter::readParaInstructions() {
+  ParavirtualPatchSection = BC.getUniqueSectionByName(".parainstructions");
+  if (!ParavirtualPatchSection)
+    return Error::success();
+
+  DataExtractor DE = DataExtractor(ParavirtualPatchSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  uint32_t EntryID = 0;
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && !DE.eof(Cursor)) {
+    const uint64_t NextOffset = alignTo(Cursor.tell(), Align(PARA_PATCH_ALIGN));
+    if (!DE.isValidOffset(NextOffset))
+      break;
+
+    Cursor.seek(NextOffset);
+
+    const uint64_t InstrLocation = DE.getU64(Cursor);
+    const uint8_t Type = DE.getU8(Cursor);
+    const uint8_t Len = DE.getU8(Cursor);
+
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading .parainstructions");
+
+    ++EntryID;
+
+    if (opts::DumpParavirtualPatchSites) {
+      BC.outs() << "Paravirtual patch site: " << EntryID << '\n';
+      BC.outs() << "\tInstr: 0x" << Twine::utohexstr(InstrLocation)
+                << "\n\tType:  0x" << Twine::utohexstr(Type) << "\n\tLen:   0x"
+                << Twine::utohexstr(Len) << '\n';
+    }
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(InstrLocation);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(InstrLocation)
+                << " referenced by paravirutal patch site\n";
+    }
+
+    if (BF && BC.shouldEmit(*BF)) {
+      MCInst *Inst =
+          BF->getInstructionAtOffset(InstrLocation - BF->getAddress());
+      if (!Inst)
+        return createStringError(errc::executable_format_error,
+                                 "no instruction at address 0x%" PRIx64
+                                 " in paravirtual call site %d",
+                                 InstrLocation, EntryID);
+      BC.MIB->addAnnotation(*Inst, "ParaSite", EntryID);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID << " paravirtual patch sites\n";
 
   return Error::success();
 }
