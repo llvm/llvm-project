@@ -861,7 +861,8 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   // If we are using a hard-float ABI, but do not have floating point
   // registers, then report an error for any function arguments or returns
   // which would be passed in floating-pint registers.
-  auto CheckType = [&CGM, &TI, &ABIInfo](const QualType &Ty, const NamedDecl *D) {
+  auto CheckType = [&CGM, &TI, &ABIInfo](const QualType &Ty,
+                                         const NamedDecl *D) {
     const Type *HABase = nullptr;
     uint64_t HAMembers = 0;
     if (Ty->isFloatingType() || Ty->isVectorType() ||
