@@ -191,7 +191,7 @@ void StoringDiagnosticConsumer::EndSourceFile() {
 
 bool StoringDiagnosticConsumer::HandleModuleRemark(
     const clang::Diagnostic &info) {
-  Log *log = GetLog(LLDBLog::Expressions);
+  Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
   switch (info.getID()) {
   case clang::diag::remark_module_build: {
     const auto &module_name = info.getArgStdStr(0);
