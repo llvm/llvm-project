@@ -228,6 +228,8 @@ template <class _Tp>
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
+  using difference_type = __base::value_type;
+
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
                                           "atomic_ref ctor: referenced object must be aligned to required_alignment");
@@ -238,8 +240,6 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
-
-  using difference_type = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_add(this->__ptr_, __arg, std::__to_gcc_order(__order));
@@ -273,6 +273,8 @@ template <class _Tp>
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
+  using difference_type = __base::value_type;
+
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
                                           "atomic_ref ctor: referenced object must be aligned to required_alignment");
@@ -283,8 +285,6 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
-
-  using difference_type = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     _Tp __old = this->load(memory_order_relaxed);
@@ -311,13 +311,13 @@ template <class _Tp>
 struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   using __base = __atomic_ref_base<_Tp*>;
 
+  using difference_type = ptrdiff_t;
+
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
 
   atomic_ref& operator=(const atomic_ref&) = delete;
-
-  using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_add(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_add(this->__ptr_, __arg * sizeof(_Tp), std::__to_gcc_order(__order));
