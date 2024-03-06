@@ -956,6 +956,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           },
           changeTo(1, 0))
       .moreElementsToNextPow2(0)
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsIf(
@@ -1006,6 +1009,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     ABSActions
         .legalFor({s32, s64});
   ABSActions.legalFor(PackedVectorAllTypeList)
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0] == v4s8; },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, v4s16); })
+      .widenScalarIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0] == v2s16; },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, v2s32); })
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -1336,6 +1345,9 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // By splitting this here, we can optimize accesses in the small code model by
   // folding in the G_ADD_LOW into the load/store offset.
   auto &GlobalOp = MI.getOperand(1);
+  // Don't modify an intrinsic call.
+  if (GlobalOp.isSymbol())
+    return true;
   const auto* GV = GlobalOp.getGlobal();
   if (GV->isThreadLocal())
     return true; // Don't want to modify TLS vars.

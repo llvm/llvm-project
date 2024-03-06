@@ -3196,4 +3196,11 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
+
+/// Emit an addrspacecast without null pointer checking.
+/// Should only be inserted by a pass based on analysis of an addrspacecast's src.
+def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
+  [llvm_anyptr_ty], [llvm_anyptr_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
 }

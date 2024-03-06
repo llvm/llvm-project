@@ -28,3 +28,5 @@ struct S {
 };
 constexpr S s = { 5 };
 constexpr const int *p = &s.m + 1;
+
+constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok

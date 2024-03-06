@@ -722,14 +722,6 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
   VisitModule({M, nullptr});
 }
 
-void VisibleModuleSet::makeTransitiveImportsVisible(Module *M,
-                                                    SourceLocation Loc,
-                                                    VisibleCallback Vis,
-                                                    ConflictCallback Cb) {
-  for (auto *I : M->Imports)
-    setVisible(I, Loc, Vis, Cb);
-}
-
 ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
     : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)
