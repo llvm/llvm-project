@@ -37,7 +37,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(67), GIMT_Encode2(71), /*)*//*default:*//*Label 2*/ GIMT_Encode4(88),
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(71), GIMT_Encode2(75), /*)*//*default:*//*Label 2*/ GIMT_Encode4(88),
 // CHECK-NEXT:     /*TargetOpcode::G_UNMERGE_VALUES*//*Label 0*/ GIMT_Encode4(26), GIMT_Encode4(0), GIMT_Encode4(0),
 // CHECK-NEXT:     /*TargetOpcode::G_BUILD_VECTOR*//*Label 1*/ GIMT_Encode4(57),
 // CHECK-NEXT:     // Label 0: @26
@@ -98,6 +98,6 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 2: @88
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     };
+// CHECK-NEXT:     }; // Size: 89 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }
