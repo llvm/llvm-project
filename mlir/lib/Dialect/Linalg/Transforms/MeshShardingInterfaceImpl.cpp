@@ -52,6 +52,7 @@ static ReductionKind getReductionKind(Operation *op) {
       // Floating-point operations.
       .Case([](arith::AddFOp op) { return ReductionKind::Sum; })
       .Case([](arith::MulFOp op) { return ReductionKind::Product; })
+      // TODO: handle maxnumf and minnumf.
       .Case([](arith::MaximumFOp op) { return ReductionKind::Max; })
       .Case([](arith::MinimumFOp op) { return ReductionKind::Min; })
       // Integer operations.
