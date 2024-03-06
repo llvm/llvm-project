@@ -2677,19 +2677,18 @@ private:
   }
 };
 
-// Find all template parameters of the AliasTemplate that appear in the
-// given DeducedArgs.
-SmallVector<unsigned>
-FindAppearedTemplateParamsInAlias(ArrayRef<TemplateArgument> DeducedArgs,
-                                  TypeAliasTemplateDecl *AliasTemplate) {
+// Find all template parameters that appear in the given DeducedArgs.
+// Return the indices of the template parameters in the TemplateParams.
+SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
+    ArrayRef<NamedDecl *> TemplateParams,
+    ArrayRef<TemplateArgument> DeducedArgs) {
   struct FindAppearedTemplateParams
       : public RecursiveASTVisitor<FindAppearedTemplateParams> {
-    llvm::DenseSet<NamedDecl *> TemplateParamsInAlias;
+    llvm::DenseSet<NamedDecl *> TemplateParams;
     llvm::DenseSet<const NamedDecl *> AppearedTemplateParams;
 
-    FindAppearedTemplateParams(ArrayRef<NamedDecl *> TemplateParamsInAlias)
-        : TemplateParamsInAlias(TemplateParamsInAlias.begin(),
-                                TemplateParamsInAlias.end()) {}
+    FindAppearedTemplateParams(ArrayRef<NamedDecl *> TemplateParams)
+        : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
       TTP->getIndex();
@@ -2702,19 +2701,17 @@ FindAppearedTemplateParamsInAlias(ArrayRef<TemplateArgument> DeducedArgs,
     }
 
     void MarkAppeared(NamedDecl *ND) {
-      if (TemplateParamsInAlias.contains(ND))
+      if (TemplateParams.contains(ND))
         AppearedTemplateParams.insert(ND);
     }
   };
-  ArrayRef<NamedDecl *> TemplateParamsInAlias =
-      AliasTemplate->getTemplateParameters()->asArray();
-  FindAppearedTemplateParams MarkAppeared(TemplateParamsInAlias);
+  FindAppearedTemplateParams MarkAppeared(TemplateParams);
   MarkAppeared.TraverseTemplateArguments(DeducedArgs);
 
   SmallVector<unsigned> Results;
-  for (unsigned Index = 0; Index < TemplateParamsInAlias.size(); ++Index) {
+  for (unsigned Index = 0; Index < TemplateParams.size(); ++Index) {
     if (MarkAppeared.AppearedTemplateParams.contains(
-            TemplateParamsInAlias[Index]))
+            TemplateParams[Index]))
       Results.push_back(Index);
   }
   return Results;
@@ -2837,7 +2834,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         NonDeducedTemplateParamsInFIndex.push_back(Index);
     }
     auto DeducedAliasTemplateParams =
-        FindAppearedTemplateParamsInAlias(DeducedArgs, AliasTemplate);
+        TemplateParamsReferencedInTemplateArgumentList(
+            AliasTemplate->getTemplateParameters()->asArray(), DeducedArgs);
     // All template arguments null by default.
     SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
         F->getTemplateParameters()->size());
@@ -2930,8 +2928,9 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     //
     // The template argument list is formed from the `DeducedArgs`, two parts:
     //  1) appeared template parameters of alias: transfrom the deduced
-    //  template argument 2) non-deduced template parameters of f: rebuild a
-    //  template argument
+    //  template argument;
+    //  2) non-deduced template parameters of f: rebuild a
+    //  template argument;
     //
     // 2) has been built already (when rebuilding the new template
     // parameters), we now perform 1).
