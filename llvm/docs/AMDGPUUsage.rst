@@ -1151,6 +1151,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
+  :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
+                                                   This stores information related to the current rounding mode,
+                                                   denormalization mode, enabled traps, and floating point exceptions.
+                                                   The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
+
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand

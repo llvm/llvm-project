@@ -5321,6 +5321,9 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_get_fpenv:
+  case AMDGPU::BI__builtin_amdgcn_set_fpenv:
+    return false;
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
