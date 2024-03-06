@@ -952,7 +952,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
-      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined);
+      UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -1012,9 +1012,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
   }];
 
   let assemblyFormat = [{
+    ( `combined` `(` `loop` `)` $combined^)?
     oilist(
-        `combined` `(` custom<CombinedConstructs>($combined) `)`
-      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
@@ -1089,7 +1089,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
-      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined);
+      UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -1130,9 +1130,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
   }];
 
   let assemblyFormat = [{
+    ( `combined` `(` `loop` `)` $combined^)?
     oilist(
-        `combined` `(` custom<CombinedConstructs>($combined) `)`
-      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
@@ -1205,7 +1205,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       UnitAttr:$selfAttr,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
-      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined);
+      UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -1265,9 +1265,9 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
   }];
 
   let assemblyFormat = [{
+    ( `combined` `(` `loop` `)` $combined^)?
     oilist(
-      `combined` `(` custom<CombinedConstructs>($combined) `)`
-      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
@@ -1691,7 +1691,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
     oilist(
-        `combined` `(` custom<CombinedConstructs>($combined) `)`
+        `combined` `(` custom<CombinedConstructsLoop>($combined) `)`
       | `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,
             $gangOperandsSegments, $gang)

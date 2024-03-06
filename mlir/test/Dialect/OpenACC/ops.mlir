@@ -1862,22 +1862,22 @@ func.func @acc_num_gangs() {
 
 // CHECK-LABEL: func.func @acc_combined
 func.func @acc_combined() {
-  acc.parallel combined(parallel loop) {
-    acc.loop combined(parallel loop) {
+  acc.parallel combined(loop) {
+    acc.loop combined(parallel) {
       acc.yield
     }
     acc.terminator
   }
 
-  acc.kernels combined(kernels loop) {
-    acc.loop combined(kernels loop) {
+  acc.kernels combined(loop) {
+    acc.loop combined(kernels) {
       acc.yield
     }
     acc.terminator
   }
 
-  acc.serial combined(serial loop) {
-    acc.loop combined(serial loop) {
+  acc.serial combined(loop) {
+    acc.loop combined(serial) {
       acc.yield
     }
     acc.terminator
@@ -1886,9 +1886,9 @@ func.func @acc_combined() {
   return
 }
 
-// CHECK: acc.parallel combined(parallel loop)
-// CHECK: acc.loop combined(parallel loop)
-// CHECK: acc.kernels combined(kernels loop)
-// CHECK: acc.loop combined(kernels loop)
-// CHECK: acc.serial combined(serial loop)
-// CHECK: acc.loop combined(serial loop)
+// CHECK: acc.parallel combined(loop)
+// CHECK: acc.loop combined(parallel)
+// CHECK: acc.kernels combined(loop)
+// CHECK: acc.loop combined(kernels)
+// CHECK: acc.serial combined(loop)
+// CHECK: acc.loop combined(serial)
