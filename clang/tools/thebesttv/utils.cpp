@@ -4,8 +4,7 @@ GlobalStat Global;
 
 void requireTrue(bool condition, std::string message) {
     if (!condition) {
-        llvm::errs() << "requireTrue failed: " << message << "\n";
-        exit(1);
+        throw std::runtime_error("requireTrue failed: " + message);
     }
 }
 
