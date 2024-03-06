@@ -2598,7 +2598,7 @@ private:
       // placeholder to indicate there is a default argument.
       QualType ParamTy = NewDI->getType();
       NewDefArg = new (SemaRef.Context)
-          OpaqueValueExpr(OldParam->getDefaultArg()->getBeginLoc(),
+          OpaqueValueExpr(OldParam->getDefaultArgRange().getBegin(),
                           ParamTy.getNonLValueExprType(SemaRef.Context),
                           ParamTy->isLValueReferenceType()   ? VK_LValue
                           : ParamTy->isRValueReferenceType() ? VK_XValue
