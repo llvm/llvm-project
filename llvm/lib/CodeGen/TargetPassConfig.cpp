@@ -254,6 +254,11 @@ static cl::opt<bool>
     GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
                   cl::desc("Enable garbage-collecting empty basic blocks"));
 
+/// Enable calculating machine function's cfg hash.
+static cl::opt<bool> UseMachineFunctionCFGHash(
+    "mf-cfg-hash", cl::init(false), cl::Hidden,
+    cl::desc("Enable calculating machine function's cfg hash."));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -1247,6 +1252,9 @@ void TargetPassConfig::addMachinePasses() {
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
   if (NeedsBBSections || TM->Options.BBAddrMap) {
+    if (UseMachineFunctionCFGHash) {
+      addPass(llvm::createMachineFunctionHashBuilderPass());
+    }
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));

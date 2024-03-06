@@ -605,6 +605,11 @@ namespace llvm {
 
   /// Lowers KCFI operand bundles for indirect calls.
   FunctionPass *createKCFIPass();
+
+  /// Calculate machine function hash.
+  extern char &MachineFunctionHashBuilderID;
+
+  MachineFunctionPass *createMachineFunctionHashBuilderPass();
 } // End llvm namespace
 
 #endif

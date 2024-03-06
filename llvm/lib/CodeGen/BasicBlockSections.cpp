@@ -73,6 +73,7 @@
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionHashBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -133,6 +134,7 @@ INITIALIZE_PASS_BEGIN(
     "into clusters of basic blocks.",
     false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineFunctionHashBuilder)
 INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "Prepares for basic block sections, by splitting functions "
                     "into clusters of basic blocks.",
@@ -296,15 +298,24 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   if (BBSectionsType == BasicBlockSection::None)
     return false;
 
-  // Check for source drift. If the source has changed since the profiles
-  // were obtained, optimizing basic blocks might be sub-optimal.
-  // This only applies to BasicBlockSection::List as it creates
-  // clusters of basic blocks using basic block ids. Source drift can
-  // invalidate these groupings leading to sub-optimal code generation with
-  // regards to performance.
-  if (BBSectionsType == BasicBlockSection::List &&
-      hasInstrProfHashMismatch(MF))
-    return false;
+  if (BBSectionsType == BasicBlockSection::List) {
+    //  Check for source drift. If the source has changed since the profiles
+    //  were obtained, optimizing basic blocks might be sub-optimal.
+    //  This only applies to BasicBlockSection::List as it creates
+    //  clusters of basic blocks using basic block ids. Source drift can
+    //  invalidate these groupings leading to sub-optimal code generation with
+    //  regards to performance.
+    if (hasInstrProfHashMismatch(MF))
+      return false;
+    // Check for cfg drift.
+    if (auto *MFHB = getAnalysisIfAvailable<MachineFunctionHashBuilder>()) {
+      auto &BBSPRWP = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>();
+      if (MFHB->getCFGHash(MF.getName()) !=
+          BBSPRWP.getCFGHashForFunction(MF.getName())) {
+        return false;
+      }
+    }
+  }
   // Renumber blocks before sorting them. This is useful for accessing the
   // original layout positions and finding the original fallthroughs.
   MF.RenumberBlocks();
@@ -399,6 +410,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  AU.addUsedIfAvailable<MachineFunctionHashBuilder>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
