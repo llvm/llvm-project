@@ -7881,8 +7881,8 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
           Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr)
               << CSM << MD->isConsteval();
         }
-      HadError = true;
-      // FIXME: Explain why the special member can't be constexpr.
+        HadError = true;
+        // FIXME: Explain why the special member can't be constexpr.
   }
 
   if (First) {
