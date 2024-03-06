@@ -2674,6 +2674,11 @@ void Verifier::visitFunction(const Function &F) {
   Check(verifyAttributeCount(Attrs, FT->getNumParams()),
         "Attribute after last parameter!", &F);
 
+  Check(F.IsNewDbgInfoFormat == F.getParent()->IsNewDbgInfoFormat,
+        "Fn debug format should match parent", &F,
+        F.IsNewDbgInfoFormat, F.getParent(),
+        F.getParent()->IsNewDbgInfoFormat);
+
   bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
@@ -3018,15 +3023,9 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 
   Check(BB.IsNewDbgInfoFormat == BB.getParent()->IsNewDbgInfoFormat,
-        "BB debug format (new=" + std::to_string(BB.IsNewDbgInfoFormat) +
-            ") should match parent " + BB.getName() + " in " +
-            BB.getParent()->getName());
-  Check(BB.getParent()->IsNewDbgInfoFormat ==
-            BB.getParent()->getParent()->IsNewDbgInfoFormat,
-        "Fn debug format (new=" +
-            std::to_string(BB.getParent()->IsNewDbgInfoFormat) +
-            ") should match parent " + BB.getParent()->getName() + " in " +
-            BB.getParent()->getParent()->getName());
+        "BB debug format should match parent", &BB,
+        BB.IsNewDbgInfoFormat, BB.getParent(),
+        BB.getParent()->IsNewDbgInfoFormat);
 
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat)
