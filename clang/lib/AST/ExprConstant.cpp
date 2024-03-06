@@ -4133,6 +4133,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
 
     bool IsConstant = BaseType.isConstant(Info.Ctx);
+    bool ConstexprVar = false;
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(
+            Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
+      ConstexprVar = VD->isConstexpr();
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
@@ -4152,6 +4156,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
+      } else if (Info.getLangOpts().C23 && ConstexprVar) {
+        Info.FFDiag(E);
+        return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
         if (!IsConstant) {
           if (!IsAccess)
@@ -15826,7 +15833,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   EStatus.Diag = &Notes;
 
   EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+                (IsConstantInitialization &&
+                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
                     : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);

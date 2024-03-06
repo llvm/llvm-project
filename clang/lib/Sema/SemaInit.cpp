@@ -190,12 +190,34 @@ static void updateGNUCompoundLiteralRValue(Expr *E) {
   }
 }
 
+static bool initializingConstexprVariable(const InitializedEntity &Entity) {
+  Decl *D = Entity.getDecl();
+  const InitializedEntity *Parent = &Entity;
+
+  while (Parent) {
+    D = Parent->getDecl();
+    Parent = Parent->getParent();
+  }
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(D); VD && VD->isConstexpr())
+    return true;
+
+  return false;
+}
+
+static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
+                                               Sema &SemaRef, QualType &TT);
+
 static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
-                            Sema &S) {
+                            Sema &S, bool CheckC23ConstexprInit = false) {
   // Get the length of the string as parsed.
   auto *ConstantArrayTy =
       cast<ConstantArrayType>(Str->getType()->getAsArrayTypeUnsafe());
   uint64_t StrLength = ConstantArrayTy->getSize().getZExtValue();
+
+  if (CheckC23ConstexprInit)
+    if (const StringLiteral *SL = dyn_cast<StringLiteral>(Str->IgnoreParens()))
+      CheckC23ConstexprInitStringLiteral(SL, S, DeclT);
 
   if (const IncompleteArrayType *IAT = dyn_cast<IncompleteArrayType>(AT)) {
     // C99 6.7.8p14. We have an array of character type with unknown size
@@ -1476,7 +1498,9 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     if (IsStringInit(expr, arrayType, SemaRef.Context) == SIF_None) {
       // FIXME: Should we do this checking in verify-only mode?
       if (!VerifyOnly)
-        CheckStringInit(expr, ElemType, arrayType, SemaRef);
+        CheckStringInit(expr, ElemType, arrayType, SemaRef,
+                        SemaRef.getLangOpts().C23 &&
+                            initializingConstexprVariable(Entity));
       if (StructuredList)
         UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
       ++Index;
@@ -1941,7 +1965,9 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       // constant for each string.
       // FIXME: Should we do these checks in verify-only mode too?
       if (!VerifyOnly)
-        CheckStringInit(IList->getInit(Index), DeclType, arrayType, SemaRef);
+        CheckStringInit(IList->getInit(Index), DeclType, arrayType, SemaRef,
+                        SemaRef.getLangOpts().C23 &&
+                            initializingConstexprVariable(Entity));
       if (StructuredList) {
         UpdateStructuredListElement(StructuredList, StructuredIndex,
                                     IList->getInit(Index));
@@ -8377,6 +8403,9 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                                         QualType EntityType,
                                         const Expr *PostInit);
 
+static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
+                                            QualType ToType, Expr *Init);
+
 /// Provide warnings when std::move is used on construction.
 static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
                                     bool IsReturnStmt) {
@@ -9203,6 +9232,23 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
+      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+        CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
+                                        CurInit.get());
+
+        // C23 6.7.1p6: If an object or subobject declared with storage-class
+        // specifier constexpr has pointer, integer, or arithmetic type, any
+        // explicit initializer value for it shall be null, an integer
+        // constant expression, or an arithmetic constant expression,
+        // respectively.
+        Expr::EvalResult ER;
+        if (Entity.getType()->getAs<PointerType>() &&
+            CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
+            !ER.Val.isNullPointer()) {
+          S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
+        }
+      }
+
       bool Complained;
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
                                      Step->Type, SourceType,
@@ -9220,7 +9266,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
       QualType Ty = Step->Type;
       bool UpdateType = ResultType && Entity.getType()->isIncompleteArrayType();
       CheckStringInit(CurInit.get(), UpdateType ? *ResultType : Ty,
-                      S.Context.getAsArrayType(Ty), S);
+                      S.Context.getAsArrayType(Ty), S,
+                      S.getLangOpts().C23 &&
+                          initializingConstexprVariable(Entity));
       break;
     }
 
@@ -10507,6 +10555,69 @@ static void DiagnoseNarrowingInInitList(Sema &S,
       << FixItHint::CreateInsertion(PostInit->getBeginLoc(), OS.str())
       << FixItHint::CreateInsertion(
              S.getLocForEndOfToken(PostInit->getEndLoc()), ")");
+}
+
+static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
+                                            QualType ToType, Expr *Init) {
+  assert(S.getLangOpts().C23);
+  ImplicitConversionSequence ICS = S.TryImplicitConversion(
+      Init->IgnoreParenImpCasts(), ToType, /*SuppressUserConversions*/ false,
+      Sema::AllowedExplicit::None,
+      /*InOverloadResolution*/ false,
+      /*CStyle*/ false,
+      /*AllowObjCWritebackConversion=*/false);
+
+  if (!ICS.isStandard())
+    return;
+
+  APValue Value;
+  QualType PreNarrowingType;
+  // Reuse C++ narrowing check.
+  switch (ICS.Standard.getNarrowingKind(
+      S.Context, Init, Value, PreNarrowingType,
+      /*IgnoreFloatToIntegralConversion*/ false)) {
+  // The value doesn't fit.
+  case NK_Constant_Narrowing:
+    S.Diag(Init->getBeginLoc(), diag::err_c23_constexpr_init_not_representable)
+        << Value.getAsString(S.Context, PreNarrowingType) << ToType;
+    return;
+
+  // Conversion to a narrower type.
+  case NK_Type_Narrowing:
+    S.Diag(Init->getBeginLoc(), diag::err_c23_constexpr_init_type_mismatch)
+        << ToType << FromType;
+    return;
+
+  // Since we only reuse narrowing check for C23 constexpr variables here, we're
+  // not really interested in these cases.
+  case NK_Dependent_Narrowing:
+  case NK_Variable_Narrowing:
+  case NK_Not_Narrowing:
+    return;
+  }
+  llvm_unreachable("unhandled case in switch");
+}
+
+static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
+                                               Sema &SemaRef, QualType &TT) {
+  assert(SemaRef.getLangOpts().C23);
+  // character that string literal contains fits into TT - target type.
+  const ArrayType *AT = SemaRef.Context.getAsArrayType(TT);
+  QualType CharType = AT->getElementType();
+  uint32_t BitWidth = SemaRef.Context.getTypeSize(CharType);
+  bool isUnsigned = CharType->isUnsignedIntegerType();
+  llvm::APSInt Value(BitWidth, isUnsigned);
+  for (unsigned I = 0, N = SE->getLength(); I != N; ++I) {
+    int64_t C = SE->getCodeUnitS(I, SemaRef.Context.getCharWidth());
+    Value = C;
+    if (Value != C) {
+      SemaRef.Diag(SemaRef.getLocationOfStringLiteralByte(SE, I),
+                   diag::err_c23_constexpr_init_not_representable)
+          << C << CharType;
+      return;
+    }
+  }
+  return;
 }
 
 //===----------------------------------------------------------------------===//
