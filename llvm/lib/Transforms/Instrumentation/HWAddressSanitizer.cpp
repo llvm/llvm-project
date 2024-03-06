@@ -188,11 +188,14 @@ static cl::opt<bool>
                               cl::Hidden, cl::init(false));
 
 static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                        cl::init(0));
+                                        cl::init(0),
+                                        cl::desc("Alternative hot percentile cuttoff."
+                                        "By default `-profile-summary-cutoff-hot` is used."));
 
-static cl::opt<float> RandomSkipRate(
-    "hwasan-random-skip-rate", cl::init(0),
-    cl::desc("Probability to skip instrumentation of a function."));
+static cl::opt<float>
+    RandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+                   cl::desc("Probability value in the range [0.0, 1.0] "
+                            "to skip instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
