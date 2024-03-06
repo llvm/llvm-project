@@ -698,9 +698,9 @@ namespace dr437 { // dr437: sup 1308
   };
 }
 
-// dr438 FIXME write a codegen test
-// dr439 FIXME write a codegen test
-// dr441 FIXME write a codegen test
+// dr438 is in dr438.cpp
+// dr439 is in dr439.cpp
+// dr441 is in dr441.cpp
 // dr442: sup 348
 // dr443: na
 
@@ -943,7 +943,7 @@ namespace dr460 { // dr460: yes
 }
 
 // dr461: na
-// dr462 FIXME write a codegen test
+// dr462 is in dr462.cpp
 // dr463: na
 // dr464: na
 // dr465: na
@@ -1089,7 +1089,7 @@ namespace dr474 { // dr474: 3.4
   }
 }
 
-// dr475 FIXME write a codegen test
+// dr475 FIXME write a libc++abi test
 
 namespace dr477 { // dr477: 3.5
   struct A {
@@ -1437,7 +1437,7 @@ namespace dr491 { // dr491: dup 413
   // expected-error@-1 {{excess elements in array initializer}}
 }
 
-// dr492 FIXME write a codegen test
+// dr492 is in dr492.cpp
 
 namespace dr493 { // dr493: dup 976
   struct X {
