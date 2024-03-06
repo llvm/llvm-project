@@ -286,17 +286,7 @@ void InOrderIssueStage::updateIssuedInst() {
     InstRef &IR = *I;
     Instruction &IS = *IR.getInstruction();
 
-    // Do not call cycleEvent if this instruction issue is carried over to the
-    // next cycle since the extra issue cycles are not modeled inside
-    // Instruction
-    if (!CarriedOver) {
-      IS.cycleEvent();
-    } else {
-      LLVM_DEBUG(dbgs() << "[N] Instruction #" << IR << " is still issuing\n");
-      ++I;
-      continue;
-    }
-
+    IS.cycleEvent();
     if (!IS.isExecuted()) {
       LLVM_DEBUG(dbgs() << "[N] Instruction #" << IR
                         << " is still executing\n");
@@ -304,12 +294,18 @@ void InOrderIssueStage::updateIssuedInst() {
       continue;
     }
 
-    PRF.onInstructionExecuted(&IS);
-    LSU.onInstructionExecuted(IR);
-    notifyInstructionExecuted(IR);
-    ++NumExecuted;
+    // If the instruction takes multiple cycles to issue, defer these calls
+    // to updateCarriedOver. We still remove from IssuedInst even if there is
+    // carry over to avoid an extra call to cycleEvent in the next cycle.
+    if (!CarriedOver) {
+      PRF.onInstructionExecuted(&IS);
+      LSU.onInstructionExecuted(IR);
+      notifyInstructionExecuted(IR);
 
-    retireInstruction(*I);
+      retireInstruction(*I);
+    }
+
+    ++NumExecuted;
 
     std::iter_swap(I, E - NumExecuted);
   }
@@ -339,15 +335,14 @@ void InOrderIssueStage::updateCarriedOver() {
   else
     Bandwidth -= CarryOver;
 
-  // updateIssuedInst did not handle executed if issue had carry over.
+  // updateIssuedInst defered these calls to updateCarriedOver when there was
+  // a carry over.
   if (CarriedOver.getInstruction()->isExecuted()) {
     PRF.onInstructionExecuted(CarriedOver.getInstruction());
     LSU.onInstructionExecuted(CarriedOver);
     notifyInstructionExecuted(CarriedOver);
 
     retireInstruction(CarriedOver);
-
-    IssuedInst.erase(llvm::find(IssuedInst, CarriedOver));
   }
 
   CarriedOver = InstRef();

@@ -65,8 +65,8 @@ v_sub_u32 v5, v1, v2
 # CHECK:      [0,0]     DE   .   .   v_pk_mov_b32 v[0:1], v[2:3], v[4:5]
 # CHECK-NEXT: [0,1]     .DE  .   .   v_pk_add_f32 v[0:1], v[0:1], v[0:1]
 # CHECK-NEXT: [0,2]     . DE .   .   v_pk_mul_f32 v[0:1], v[0:1], v[0:1]
-# CHECK-NEXT: [0,3]     .  DeeeE .   v_add_co_u32_e64 v5, s[0:1], v1, v2
-# CHECK-NEXT: [0,4]     .   DeeE .   v_sub_co_u32_e64 v5, s[0:1], v1, v2
+# CHECK-NEXT: [0,3]     .  DE.   .   v_add_co_u32_e64 v5, s[0:1], v1, v2
+# CHECK-NEXT: [0,4]     .   DeE  .   v_sub_co_u32_e64 v5, s[0:1], v1, v2
 # CHECK-NEXT: [0,5]     .    . DE.   v_add_u32_e32 v5, v1, v2
 # CHECK-NEXT: [0,6]     .    .  DE   v_sub_u32_e32 v5, v1, v2
 
