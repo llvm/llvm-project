@@ -7274,7 +7274,6 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     const APInt &FalseVal = FalseV->getAsAPIntVal();
     if (~TrueVal == FalseVal) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      FalseV = DAG.getFreeze(FalseV);
       return DAG.getNode(ISD::XOR, DL, VT, Neg, FalseV);
     }
   }
@@ -7290,14 +7289,14 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select x, x, y) -> x | y
     // (select !x, x, y) -> x & y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, TrueV)) {
-      return DAG.getNode(*MatchResult ? ISD::OR : ISD::AND, DL, VT,
-                         DAG.getFreeze(TrueV), DAG.getFreeze(FalseV));
+      return DAG.getNode(*MatchResult ? ISD::OR : ISD::AND, DL, VT, TrueV,
+                         FalseV);
     }
     // (select x, y, x) -> x & y
     // (select !x, y, x) -> x | y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, FalseV)) {
-      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT,
-                         DAG.getFreeze(TrueV), DAG.getFreeze(FalseV));
+      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT, TrueV,
+                         FalseV);
     }
   }
 
