@@ -184,7 +184,7 @@ static cl::opt<bool> ClWithTls(
 
 static cl::opt<bool>
     CSelectiveInstrumentation("hwasan-selective-instrumentation",
-                              cl::desc("IUse selective instrumentation"),
+                              cl::desc("Use selective instrumentation"),
                               cl::Hidden, cl::init(false));
 
 static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
@@ -292,7 +292,7 @@ class HWAddressSanitizer {
 public:
   HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
                      const StackSafetyGlobalInfo *SSI)
-      : M(M), SSI(SSI) {
+      : M(M), SSI(SSI), Rng(M.createRNG("hwasan")) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
                               ? ClEnableKhwasan
@@ -378,6 +378,7 @@ private:
   Module &M;
   const StackSafetyGlobalInfo *SSI;
   Triple TargetTriple;
+  std::unique_ptr<RandomNumberGenerator> Rng;
 
   /// This struct defines the shadow mapping using the rule:
   ///   shadow = (mem >> Scale) + Offset.
@@ -1534,8 +1535,6 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   NumTotalFuncs++;
   if (CSelectiveInstrumentation) {
     if (RandomSkipRate.getNumOccurrences()) {
-      std::unique_ptr<RandomNumberGenerator> Rng =
-          F.getParent()->createRNG(F.getName());
       std::bernoulli_distribution D(RandomSkipRate);
       if (D(*Rng))
         return;
