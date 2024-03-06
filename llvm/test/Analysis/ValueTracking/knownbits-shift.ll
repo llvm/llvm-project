@@ -3,9 +3,7 @@
 
 define i8 @simplify_lshr_with_exact(i8 %x) {
 ; CHECK-LABEL: @simplify_lshr_with_exact(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i8 6, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[SHR]], 2
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 2
 ;
   %shr = lshr exact i8 6, %x
   %r = and i8 %shr, 2
@@ -14,9 +12,7 @@ define i8 @simplify_lshr_with_exact(i8 %x) {
 
 define i8 @simplify_ashr_with_exact(i8 %x) {
 ; CHECK-LABEL: @simplify_ashr_with_exact(
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i8 -122, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[SHR]], 2
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 2
 ;
   %shr = ashr exact i8 -122, %x
   %r = and i8 %shr, 2

@@ -518,10 +518,36 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       checkOptimalityBinary, /* RefinePoisonToZero */ true);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::lshr(Known1, Known2, /*ShAmtNonZero=*/false,
+                               /*Exact=*/true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        if (!N1.extractBits(N2.getZExtValue(), 0).isZero())
+          return std::nullopt;
+        return N1.lshr(N2);
+      },
+      checkOptimalityBinary, /* RefinePoisonToZero */ true);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::ashr(Known1, Known2);
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.ashr(N2);
+      },
+      checkOptimalityBinary, /* RefinePoisonToZero */ true);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::ashr(Known1, Known2, /*ShAmtNonZero=*/false,
+                               /*Exact=*/true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        if (!N1.extractBits(N2.getZExtValue(), 0).isZero())
           return std::nullopt;
         return N1.ashr(N2);
       },
