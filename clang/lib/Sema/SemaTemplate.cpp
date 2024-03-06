@@ -2682,12 +2682,12 @@ private:
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<NamedDecl *> TemplateParams,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct ReferenceFinder
-      : public RecursiveASTVisitor<ReferenceFinder> {
+  struct TemplateParamsReferencedFinder
+      : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
     llvm::DenseSet<NamedDecl *> TemplateParams;
     llvm::DenseSet<const NamedDecl *> ReferencedTemplateParams;
 
-    ReferenceFinder(ArrayRef<NamedDecl *> TemplateParams)
+    TemplateParamsReferencedFinder(ArrayRef<NamedDecl *> TemplateParams)
         : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
@@ -2705,7 +2705,7 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         ReferencedTemplateParams.insert(ND);
     }
   };
-  ReferenceFinder Finder(TemplateParams);
+  TemplateParamsReferencedFinder Finder(TemplateParams);
   Finder.TraverseTemplateArguments(DeducedArgs);
 
   SmallVector<unsigned> Results;
