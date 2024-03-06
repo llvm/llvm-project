@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include <optional>
 
 namespace clang {
@@ -180,6 +181,14 @@ OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
   default:
     llvm_unreachable("unexpected operator kind");
   }
+}
+
+std::optional<DefinedSVal> getPointeeDefVal(SVal PtrSVal,
+                                            ProgramStateRef State) {
+  if (const auto *Ptr = PtrSVal.getAsRegion()) {
+    return State->getSVal(Ptr).getAs<DefinedSVal>();
+  }
+  return std::nullopt;
 }
 
 } // namespace ento
