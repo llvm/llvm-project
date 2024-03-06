@@ -1151,6 +1151,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
+  :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
+                                                   This stores information related to the current rounding mode,
+                                                   denormalization mode, enabled traps, and floating point exceptions.
+                                                   The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
+
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand
@@ -1298,6 +1305,21 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+LLVM IR Metadata
+------------------
+
+The AMDGPU backend implements the following LLVM IR metadata.
+
+.. table:: AMDGPU LLVM IR Metadata
+  :name: amdgpu-llvm-ir-metadata-table
+
+  ==============================================   ==========================================================
+  LLVM IR Metadata                                   Description
+  ==============================================   ==========================================================
+  !amdgpu.last.use                                 Sets TH_LOAD_LU temporal hint on load instructions that support it.
+                                                   Takes priority over nontemporal hint (TH_LOAD_NT).
+  ==============================================   ==========================================================
 
 LLVM IR Attributes
 ------------------
@@ -1512,6 +1534,25 @@ The AMDGPU backend supports the following calling conventions:
 
      =============================== ==========================================================
 
+AMDGPU MCExpr
+-------------
+
+As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+``MCExpr``\s.
+
+  .. table:: AMDGPU MCExpr types:
+     :name: amdgpu-mcexpr-table
+
+     =================== ================= ========================================================
+     MCExpr              Operands          Return value
+     =================== ================= ========================================================
+     ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
+                                           value of all its arguments.
+
+     ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
+                                           result of all its arguments.
+
+     =================== ================= ========================================================
 
 .. _amdgpu-elf-code-object:
 
