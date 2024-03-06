@@ -388,7 +388,6 @@ builtinTransferInitializer(const CFGInitializer &Elt,
     }
   }
   assert(Member != nullptr);
-  assert(MemberLoc != nullptr);
 
   // FIXME: Instead of these case distinctions, we would ideally want to be able
   // to simply use `Environment::createObject()` here, the same way that we do
@@ -404,6 +403,7 @@ builtinTransferInitializer(const CFGInitializer &Elt,
 
     ParentLoc->setChild(*Member, InitExprLoc);
   } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
+    assert(MemberLoc != nullptr);
     if (Member->getType()->isRecordType()) {
       auto *InitValStruct = cast<RecordValue>(InitExprVal);
       // FIXME: Rather than performing a copy here, we should really be
