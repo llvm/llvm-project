@@ -1293,8 +1293,8 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
 namespace {
 
 class FrameEmitterImpl {
-  int CFAOffset = 0;
-  int InitialCFAOffset = 0;
+  long CFAOffset = 0;
+  long InitialCFAOffset = 0;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1408,7 +1408,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    long Offset = Instr.getOffset();
     if (IsRelative)
       Offset -= CFAOffset;
     Offset = Offset / dataAlignmentFactor;
