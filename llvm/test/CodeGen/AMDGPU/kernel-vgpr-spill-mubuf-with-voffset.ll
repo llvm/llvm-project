@@ -116,4 +116,4 @@ declare void @device_func(ptr addrspace(5))
 attributes #0 = { nounwind "frame-pointer"="all" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
