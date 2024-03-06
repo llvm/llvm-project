@@ -86,6 +86,11 @@ C++20 Feature Support
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
+- Clang now implements [module.import]p7 fully. Clang now will import module
+  units transitively for the module units coming from the same module of the
+  current module units.
+  Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
