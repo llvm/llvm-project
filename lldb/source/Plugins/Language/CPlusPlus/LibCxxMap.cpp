@@ -181,7 +181,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -213,30 +213,20 @@ size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
+
   if (m_tree == nullptr)
     return 0;
-  ValueObjectSP m_item(m_tree->GetChildMemberWithName("__pair3_"));
-  if (!m_item)
+
+  ValueObjectSP size_node(m_tree->GetChildMemberWithName("__pair3_"));
+  if (!size_node)
     return 0;
 
-  switch (m_item->GetCompilerType().GetNumDirectBaseClasses()) {
-  case 1:
-    // Assume a pre llvm r300140 __compressed_pair implementation:
-    m_item = m_item->GetChildMemberWithName("__first_");
-    break;
-  case 2: {
-    // Assume a post llvm r300140 __compressed_pair implementation:
-    ValueObjectSP first_elem_parent = m_item->GetChildAtIndex(0);
-    m_item = first_elem_parent->GetChildMemberWithName("__value_");
-    break;
-  }
-  default:
-    return false;
-  }
+  size_node = GetFirstValueOfLibCXXCompressedPair(*size_node);
 
-  if (!m_item)
+  if (!size_node)
     return 0;
-  m_count = m_item->GetValueAsUnsigned(0);
+
+  m_count = size_node->GetValueAsUnsigned(0);
   return m_count;
 }
 
@@ -415,15 +405,16 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   return potential_child_sp;
 }
 
-bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_count = UINT32_MAX;
   m_tree = m_root_node = nullptr;
   m_iterators.clear();
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::

@@ -14,7 +14,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i64 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i64 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for.cond
 
@@ -42,13 +42,13 @@ for.body13:
   %add = add nuw nsw i64 %i.0, %j.0
   %add14 = add nuw nsw i64 %add, %k.0
   %add15 = add nuw nsw i64 %add14, %l.0
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %add15
-  store double 2.100000e+01, double* %arrayidx, align 8, !llvm.access.group !5
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %add15
+  store double 2.100000e+01, ptr %arrayidx, align 8, !llvm.access.group !5
   %add16 = add nuw nsw i64 %i.0, %j.0
   %add17 = add nuw nsw i64 %add16, %k.0
   %add18 = add nuw nsw i64 %add17, %l.0
-  %arrayidx19 = getelementptr inbounds double, double* %B, i64 %add18
-  store double 4.200000e+01, double* %arrayidx19, align 8, !llvm.access.group !6
+  %arrayidx19 = getelementptr inbounds double, ptr %B, i64 %add18
+  store double 4.200000e+01, ptr %arrayidx19, align 8, !llvm.access.group !6
   %add20 = add nuw nsw i64 %l.0, 1
   br label %for.cond10, !llvm.loop !11
 

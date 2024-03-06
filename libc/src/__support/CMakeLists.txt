@@ -147,6 +147,15 @@ add_header_library(
 )
 
 add_header_library(
+  integer_literals
+  HDRS
+    integer_literals.h
+  DEPENDS
+    .uint128
+    libc.src.__support.CPP.limits
+)
+
+add_header_library(
   integer_operations
   HDRS
     integer_operations.h
@@ -250,6 +259,14 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  intrusive_list
+  HDRS
+    intrusive_list.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+)
+
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
@@ -263,3 +280,5 @@ add_subdirectory(threads)
 add_subdirectory(File)
 
 add_subdirectory(HashTable)
+
+add_subdirectory(fixed_point)

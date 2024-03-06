@@ -81,7 +81,7 @@ public:
   static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
                                        MLIRContext *context);
 
-  /// Returns an identity affine map witn `numDims` input dimensions and
+  /// Returns an identity affine map with `numDims` input dimensions and
   /// filtered results using `keepDimFilter`. If `keepDimFilter` returns true
   /// for a dimension, the dimension is kept in the affine map results.
   /// Otherwise, the dimension is dropped from the results.
@@ -122,9 +122,11 @@ public:
   /// `exprs.size()`, as many dims as the largest dim in `exprs` and as many
   /// symbols as the largest symbol in `exprs`.
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList);
+  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                    MLIRContext *context);
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList);
+  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                    MLIRContext *context);
 
   MLIRContext *getContext() const;
 

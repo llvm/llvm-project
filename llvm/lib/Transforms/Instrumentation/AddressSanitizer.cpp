@@ -1879,7 +1879,7 @@ void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit,
   // Add calls to unpoison all globals before each return instruction.
   for (auto &BB : GlobalInit)
     if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
-      CallInst::Create(AsanUnpoisonGlobals, "", RI);
+      CallInst::Create(AsanUnpoisonGlobals, "", RI->getIterator());
 }
 
 void ModuleAddressSanitizer::createInitializerPoisonCalls(
@@ -1956,6 +1956,10 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   } else {
     // On COFF, don't instrument non-ODR linkages.
     if (G->isInterposable())
+      return false;
+    // If the global has AvailableExternally linkage, then it is not in this
+    // module, which means it does not need to be instrumented.
+    if (G->hasAvailableExternallyLinkage())
       return false;
   }
 

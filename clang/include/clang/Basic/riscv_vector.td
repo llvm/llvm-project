@@ -680,11 +680,12 @@ let HasBuiltinAlias = false,
 
       const TargetInfo &TI = getContext().getTargetInfo();
       auto VScale = TI.getVScaleRange(getContext().getLangOpts());
-      uint64_t SEW = 1 << (cast<ConstantInt>(Ops[1])->getZExtValue() + 3);
-      uint64_t LMUL = cast<ConstantInt>(Ops[2])->getZExtValue();
-      bool Fractional = LMUL > 4;
-      uint64_t VLMAX = Fractional ? VScale->first * 64 / (1 << (8 - LMUL)) / SEW
-                                  : VScale->first * 64 * (1 << LMUL) / SEW;
+      uint64_t SEW = llvm::RISCVVType::decodeVSEW(
+          cast<ConstantInt>(Ops[1])->getZExtValue());
+      llvm::RISCVII::VLMUL VLMUL = static_cast<llvm::RISCVII::VLMUL>(
+          cast<ConstantInt>(Ops[2])->getZExtValue());
+      uint64_t MaxVLEN = VScale->first * llvm::RISCV::RVVBitsPerBlock;
+      uint64_t VLMAX = MaxVLEN / llvm::RISCVVType::getSEWLMULRatio(SEW, VLMUL);
 
       if (VScale->first && VScale->first == VScale->second) {
         // Assumptions:
@@ -749,11 +750,12 @@ let HasBuiltinAlias = false,
 
       const TargetInfo &TI = getContext().getTargetInfo();
       auto VScale = TI.getVScaleRange(getContext().getLangOpts());
-      uint64_t SEW = 1 << (cast<ConstantInt>(Ops[0])->getZExtValue() + 3);
-      uint64_t LMUL = cast<ConstantInt>(Ops[1])->getZExtValue();
-      bool Fractional = LMUL > 4;
-      uint64_t VLMAX = Fractional ? VScale->first * 64 / (1 << (8 - LMUL)) / SEW
-                                  : VScale->first * 64 * (1 << LMUL) / SEW;
+      uint64_t SEW = llvm::RISCVVType::decodeVSEW(
+          cast<ConstantInt>(Ops[0])->getZExtValue());
+      llvm::RISCVII::VLMUL VLMUL = static_cast<llvm::RISCVII::VLMUL>(
+          cast<ConstantInt>(Ops[1])->getZExtValue());
+      uint64_t MaxVLEN = VScale->first * llvm::RISCV::RVVBitsPerBlock;
+      uint64_t VLMAX = MaxVLEN / llvm::RISCVVType::getSEWLMULRatio(SEW, VLMUL);
 
       Value *Assumption;
       if (VScale->first && VScale->first == VScale->second)
@@ -1834,12 +1836,28 @@ let ManualCodegen = [{
     defm vfwnmacc : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwmsac  : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwnmsac : RVVFloatingWidenTerBuiltinSetRoundingMode;
+
+    // Vector BF16 widening multiply-accumulate
+    let Log2LMUL = [-2, -1, 0, 1, 2],
+        RequiredFeatures = ["Zvfbfwma"],
+        HasMaskedOffOperand = false in
+    defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
+                                              [["vv", "Fw", "FwFwvvu"],
+                                               ["vf", "Fw", "FwFwevu"]]>;
   }
   // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
   defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
   defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
   defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
   defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+
+  // Vector BF16 widening multiply-accumulate
+  let Log2LMUL = [-2, -1, 0, 1, 2],
+      RequiredFeatures = ["Zvfbfwma"],
+      HasMaskedOffOperand = false in
+  defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
+                                            [["vv", "Fw", "FwFwvv"],
+                                             ["vf", "Fw", "FwFwev"]]>;
 }
 
 }
@@ -1987,6 +2005,11 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
 }
+
+// Zvfbfmin - Vector convert BF16 to FP32
+let Log2LMUL = [-2, -1, 0, 1, 2] in
+def vfwcvtbf16_f_f_v : RVVConvBuiltin<"Fw", "Fwv", "y", "vfwcvtbf16_f">;
+
 let ManualCodegen = [{
   {
     // LLVM intrinsic
@@ -2074,6 +2097,11 @@ let ManualCodegen = [{
         defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "x", [["v", "vwu"]]>;
       }
     }
+
+    // Zvfbfmin - Vector convert FP32 to BF16
+    let Log2LMUL = [-2, -1, 0, 1, 2],
+        OverloadedName = "vfncvtbf16_f" in
+    defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFwu"]]>;
   }
 
   // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
@@ -2119,6 +2147,11 @@ let ManualCodegen = [{
       defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "x", [["v", "vw"]]>;
     }
   }
+
+  // Zvfbfmin - Vector convert FP32 to BF16
+  let Log2LMUL = [-2, -1, 0, 1, 2],
+      OverloadedName = "vfncvtbf16_f" in
+  defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFw"]]>;
 }
 }
 

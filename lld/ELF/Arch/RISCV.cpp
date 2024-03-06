@@ -45,6 +45,7 @@ public:
                 uint64_t val) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
+  void finalizeRelax(int passes) const override;
 };
 
 } // end anonymous namespace
@@ -56,6 +57,7 @@ public:
 
 const uint64_t dtpOffset = 0x800;
 
+namespace {
 enum Op {
   ADDI = 0x13,
   AUIPC = 0x17,
@@ -77,6 +79,7 @@ enum Reg {
   X_A0 = 10,
   X_T3 = 28,
 };
+} // namespace
 
 static uint32_t hi20(uint32_t val) { return (val + 0x800) >> 12; }
 static uint32_t lo12(uint32_t val) { return val & 4095; }
@@ -103,26 +106,6 @@ static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
   return (insn & 0x1fff07f) | (extractBits(imm, 11, 5) << 25) |
          (extractBits(imm, 4, 0) << 7);
 }
-
-namespace {
-struct SymbolAnchor {
-  uint64_t offset;
-  Defined *d;
-  bool end; // true for the anchor of st_value+st_size
-};
-} // namespace
-
-struct elf::RISCVRelaxAux {
-  // This records symbol start and end offsets which will be adjusted according
-  // to the nearest relocDeltas element.
-  SmallVector<SymbolAnchor, 0> anchors;
-  // For relocations[i], the actual offset is
-  //   r_offset - (i ? relocDeltas[i-1] : 0).
-  std::unique_ptr<uint32_t[]> relocDeltas;
-  // For relocations[i], the actual type is relocTypes[i].
-  std::unique_ptr<RelType[]> relocTypes;
-  SmallVector<uint32_t, 0> writes;
-};
 
 RISCV::RISCV() {
   copyRel = R_RISCV_COPY;
@@ -695,13 +678,13 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-static void initSymbolAnchors() {
+void elf::initSymbolAnchors() {
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
-      sec->relaxAux = make<RISCVRelaxAux>();
+      sec->relaxAux = make<RelaxAux>();
       if (sec->relocs().size()) {
         sec->relaxAux->relocDeltas =
             std::make_unique<uint32_t[]>(sec->relocs().size());
@@ -948,7 +931,7 @@ bool RISCV::relaxOnce(int pass) const {
   return changed;
 }
 
-void elf::riscvFinalizeRelax(int passes) {
+void RISCV::finalizeRelax(int passes) const {
   llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
   log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
@@ -956,7 +939,7 @@ void elf::riscvFinalizeRelax(int passes) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
-      RISCVRelaxAux &aux = *sec->relaxAux;
+      RelaxAux &aux = *sec->relaxAux;
       if (!aux.relocDeltas)
         continue;
 

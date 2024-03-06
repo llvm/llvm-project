@@ -10,11 +10,11 @@
 
 ; CHECK-LABEL: foo
 ; CHECK: ret
-define void @foo(%AtomicI16* %self) {
+define void @foo(ptr %self) {
 start:
-  %a = getelementptr inbounds %AtomicI16, %AtomicI16* %self, i16 0, i32 0, i32 0
-  load atomic i16, i16* %a seq_cst, align 1
-  store atomic i16 5, i16* %a seq_cst, align 1
+  %a = getelementptr inbounds %AtomicI16, ptr %self, i16 0, i32 0, i32 0
+  load atomic i16, ptr %a seq_cst, align 1
+  store atomic i16 5, ptr %a seq_cst, align 1
   ret void
 }
 

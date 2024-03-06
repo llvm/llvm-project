@@ -1047,7 +1047,7 @@ bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
   }
 }
 
-unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   if (llvm::is_contained(getLoadOpcodesForSpillArray(), MI.getOpcode())) {
     // Check for the operands added by addFrameReference (the immediate is the
@@ -1102,7 +1102,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
-unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (llvm::is_contained(getStoreOpcodesForSpillArray(), MI.getOpcode())) {
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
@@ -2965,6 +2965,7 @@ PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"},
       {MO_TLSGD_FLAG, "ppc-tlsgd"},
       {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_TLSLDM_FLAG, "ppc-tlsldm"},
       {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TLSGDM_FLAG, "ppc-tlsgdm"},
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},

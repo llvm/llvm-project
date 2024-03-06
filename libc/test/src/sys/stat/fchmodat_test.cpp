@@ -30,7 +30,7 @@ TEST(LlvmLibcFchmodatTest, ChangeAndOpen) {
   constexpr const char *TEST_FILE_BASENAME = "fchmodat.test";
   const char WRITE_DATA[] = "fchmodat test";
   constexpr ssize_t WRITE_SIZE = ssize_t(sizeof(WRITE_DATA));
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
@@ -49,7 +49,7 @@ TEST(LlvmLibcFchmodatTest, ChangeAndOpen) {
   // Opening for writing should fail.
   EXPECT_EQ(LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_WRONLY), -1);
   ASSERT_ERRNO_FAILURE();
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   // But opening for reading should succeed.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_RDONLY);
   EXPECT_GT(fd, 0);
@@ -63,10 +63,10 @@ TEST(LlvmLibcFchmodatTest, ChangeAndOpen) {
 }
 
 TEST(LlvmLibcFchmodatTest, NonExistentFile) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   ASSERT_THAT(
       LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR, 0),
       Fails(ENOENT));
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

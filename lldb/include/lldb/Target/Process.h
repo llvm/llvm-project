@@ -1503,6 +1503,13 @@ public:
 
   virtual bool IsLiveDebugSession() const { return true; };
 
+  /// Provide a way to retrieve the core dump file that is loaded for debugging.
+  /// Only available if IsLiveDebugSession() returns true.
+  ///
+  /// \return
+  ///     File path to the core file.
+  virtual FileSpec GetCoreFile() const { return {}; }
+
   /// Before lldb detaches from a process, it warns the user that they are
   /// about to lose their debug session. In some cases, this warning doesn't
   /// need to be emitted -- for instance, with core file debugging where the

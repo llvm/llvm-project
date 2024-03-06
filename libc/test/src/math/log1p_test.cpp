@@ -102,7 +102,7 @@ TEST_F(LlvmLibcLog1pTest, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log1p(x);
       ++cc;
       if (isnan(result) || isinf(result))

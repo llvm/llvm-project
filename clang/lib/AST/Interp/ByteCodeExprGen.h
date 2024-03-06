@@ -30,7 +30,6 @@ namespace interp {
 
 template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
-template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
@@ -61,6 +60,7 @@ public:
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
+  bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
@@ -108,6 +108,16 @@ public:
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
   bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
+  bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
+  bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
+  bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
+  bool VisitRequiresExpr(const RequiresExpr *E);
+  bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
+  bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -128,15 +138,8 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    if (E->isGLValue()) {
-      if (E->getType()->isFunctionType())
-        return PT_FnPtr;
-      return PT_Ptr;
-    }
-
-    return classify(E->getType());
+    return Ctx.classify(E);
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
@@ -180,6 +183,9 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
+    if (!this->emitFinishInit(Init))
+      return false;
+
     return this->emitPopPtr(Init);
   }
 
@@ -189,6 +195,9 @@ protected:
       return false;
 
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitFinishInit(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -202,7 +211,7 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitPopPtr(I);
+    return this->emitFinishInitPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
@@ -219,7 +228,6 @@ private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
-  friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
@@ -228,29 +236,6 @@ private:
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
-
-  enum class DerefKind {
-    /// Value is read and pushed to stack.
-    Read,
-    /// Direct method generates a value which is written. Returns pointer.
-    Write,
-    /// Direct method receives the value, pushes mutated value. Returns pointer.
-    ReadWrite,
-  };
-
-  /// Method to directly load a value. If the value can be fetched directly,
-  /// the direct handler is called. Otherwise, a pointer is left on the stack
-  /// and the indirect handler is expected to operate on that.
-  bool dereference(const Expr *LV, DerefKind AK,
-                   llvm::function_ref<bool(PrimType)> Direct,
-                   llvm::function_ref<bool(PrimType)> Indirect);
-  bool dereferenceParam(const Expr *LV, PrimType T, const ParmVarDecl *PD,
-                        DerefKind AK,
-                        llvm::function_ref<bool(PrimType)> Direct,
-                        llvm::function_ref<bool(PrimType)> Indirect);
-  bool dereferenceVar(const Expr *LV, PrimType T, const VarDecl *PD,
-                      DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
-                      llvm::function_ref<bool(PrimType)> Indirect);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
@@ -282,8 +267,10 @@ private:
   }
 
   bool emitComplexReal(const Expr *SubExpr);
+  bool emitComplexBoolCast(const Expr *E);
 
-  bool emitRecordDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R);
+  bool emitDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);
 
@@ -345,7 +332,7 @@ public:
   }
 
   virtual void emitDestruction() {}
-  virtual void emitDestructors() {}
+  virtual bool emitDestructors() { return true; }
   VariableScope *getParent() const { return Parent; }
 
 protected:
@@ -369,13 +356,18 @@ public:
   }
 
   /// Overriden to support explicit destruction.
-  void emitDestruction() override {
+  void emitDestruction() override { destroyLocals(); }
+
+  /// Explicit destruction of local variables.
+  bool destroyLocals() {
     if (!Idx)
-      return;
-    this->emitDestructors();
+      return true;
+
+    bool Success = this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
     this->Idx = std::nullopt;
+    return Success;
   }
 
   void addLocal(const Scope::Local &Local) override {
@@ -387,18 +379,25 @@ public:
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
-  void emitDestructors() override {
+  bool emitDestructors() override {
     if (!Idx)
-      return;
+      return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
-        this->Ctx->emitRecordDestruction(Local.Desc);
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{}))
+          return false;
+
+        if (!this->Ctx->emitDestruction(Local.Desc))
+          return false;
+
+        if (!this->Ctx->emitPopPtr(SourceInfo{}))
+          return false;
         removeIfStoredOpaqueValue(Local);
       }
     }
+    return true;
   }
 
   void removeStoredOpaqueValues() {

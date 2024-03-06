@@ -324,6 +324,7 @@ public:
 class ObjCStubsSection final : public SyntheticSection {
 public:
   ObjCStubsSection();
+  void initialize();
   void addEntry(Symbol *sym);
   uint64_t getSize() const override;
   bool isNeeded() const override { return !symbols.empty(); }
@@ -337,7 +338,7 @@ public:
 
 private:
   std::vector<Defined *> symbols;
-  std::vector<uint32_t> offsets;
+  llvm::DenseMap<llvm::CachedHashStringRef, InputSection *> methnameToSelref;
   Symbol *objcMsgSend = nullptr;
 };
 
@@ -794,7 +795,6 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   ObjCStubsSection *objcStubs = nullptr;
-  ConcatInputSection *objcSelrefs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;

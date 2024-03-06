@@ -776,7 +776,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
       !isGuaranteedNotToBeUndefOrPoison(TripCount, AC, PreHeaderBR, DT)) {
     TripCount = B.CreateFreeze(TripCount);
     BECount =
-        B.CreateAdd(TripCount, ConstantInt::get(TripCount->getType(), -1));
+        B.CreateAdd(TripCount, Constant::getAllOnesValue(TripCount->getType()));
   } else {
     // If we don't need to freeze, use SCEVExpander for BECount as well, to
     // allow slightly better value reuse.

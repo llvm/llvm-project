@@ -12,10 +12,10 @@ sym_a:
 .set sym_b, sym_a + 4
 
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK-NEXT: 00000000 l     O DATA foo
-# CHECK-NEXT: 00000004 l     O DATA sym_a
-# CHECK-NEXT: 00000008 l     O DATA sym_b
-# CHECK-NEXT: 00000001 l     F CODE main
+# CHECK-NEXT: 00000000 l     O DATA 00000004 foo
+# CHECK-NEXT: 00000004 l     O DATA 00000008 sym_a
+# CHECK-NEXT: 00000008 l     O DATA 00000004 sym_b
+# CHECK-NEXT: 00000001 l     F CODE 00000012 main
 
   .text
   .section    .text,"",@

@@ -1048,9 +1048,6 @@ struct GenericPluginTy {
   /// we could not move this function into GenericDeviceTy.
   virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
 
-  /// Indicate whether the plugin supports empty images.
-  virtual bool supportsEmptyImages() const { return false; }
-
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {

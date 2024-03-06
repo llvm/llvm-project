@@ -25,10 +25,10 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_index_key(<8 x half> %A, <16
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.v8f32.i16(<8 x half> %A, <16 x half> %B, <8 x float> %C, i16 %Index0)
+  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.i16(<8 x half> %A, <16 x half> %B, <8 x float> %C, i16 %Index0)
   store <8 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.v8f32.i16(<8 x half> %A, <16 x half> %B, <8 x float> %C, i16 %Index1)
+  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.i16(<8 x half> %A, <16 x half> %B, <8 x float> %C, i16 %Index1)
   store <8 x float> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -57,10 +57,10 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<8 x i16> %A, <16
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v8f32.v8i16.v16i16.v8f32.i16(<8 x i16> %A, <16 x i16> %B, <8 x float> %C, i16 %Index0)
+  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v8f32.v8i16.v16i16.i16(<8 x i16> %A, <16 x i16> %B, <8 x float> %C, i16 %Index0)
   store <8 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v8f32.v8i16.v16i16.v8f32.i16(<8 x i16> %A, <16 x i16> %B, <8 x float> %C, i16 %Index1)
+  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v8f32.v8i16.v16i16.i16(<8 x i16> %A, <16 x i16> %B, <8 x float> %C, i16 %Index1)
   store <8 x float> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -83,10 +83,10 @@ define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_index_key(<8 x half> %A, <16
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.v8f16.i16(<8 x half> %A, <16 x half> %B, <8 x half> %C, i16 %Index0)
+  %res0 = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.i16(<8 x half> %A, <16 x half> %B, <8 x half> %C, i16 %Index0)
   store <8 x half> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.v8f16.i16(<8 x half> %A, <16 x half> %B, <8 x half> %C, i16 %Index1)
+  %res1 = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.i16(<8 x half> %A, <16 x half> %B, <8 x half> %C, i16 %Index1)
   store <8 x half> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -109,10 +109,10 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16_index_key(<8 x i16> %A, <1
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v8i16.v8i16.v16i16.v8i16.i16(<8 x i16> %A, <16 x i16> %B, <8 x i16> %C, i16 %Index0)
+  %res0 = call <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v8i16.v8i16.v16i16.i16(<8 x i16> %A, <16 x i16> %B, <8 x i16> %C, i16 %Index0)
   store <8 x i16> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v8i16.v8i16.v16i16.v8i16.i16(<8 x i16> %A, <16 x i16> %B, <8 x i16> %C, i16 %Index1)
+  %res1 = call <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v8i16.v8i16.v16i16.i16(<8 x i16> %A, <16 x i16> %B, <8 x i16> %C, i16 %Index1)
   store <8 x i16> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -141,10 +141,10 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_index_key(<2 x i32> %A, <4 x
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v8i32.v2i32.v4i32.v8i32.i16(i1 0, <2 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i16 %Index0, i1 0)
+  %res0 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v8i32.v2i32.v4i32.i16(i1 0, <2 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i16 %Index0, i1 0)
   store <8 x i32> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v8i32.v2i32.v4i32.v8i32.i16(i1 0, <2 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i16 %Index1, i1 0)
+  %res1 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v8i32.v2i32.v4i32.i16(i1 0, <2 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i16 %Index1, i1 0)
   store <8 x i32> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -173,10 +173,10 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_index_key(i32 %A, <2 x i32> 
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v8i32.i32.v2i32.v8i32.i16(i1 0, i32 %A, i1 0, <2 x i32> %B, <8 x i32> %C, i16 %Index0, i1 0)
+  %res0 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v8i32.i32.v2i32.i16(i1 0, i32 %A, i1 0, <2 x i32> %B, <8 x i32> %C, i16 %Index0, i1 0)
   store <8 x i32> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v8i32.i32.v2i32.v8i32.i16(i1 0, i32 %A, i1 0, <2 x i32> %B, <8 x i32> %C, i16 %Index1, i1 0)
+  %res1 = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v8i32.i32.v2i32.i16(i1 0, i32 %A, i1 0, <2 x i32> %B, <8 x i32> %C, i16 %Index1, i1 0)
   store <8 x i32> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -205,10 +205,10 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_fp8_index_key(<2 x i32> %A, 
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
+  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
   store <8 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
+  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
   store <8 x float> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -237,10 +237,10 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_bf8_index_key(<2 x i32> %A, 
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
+  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
   store <8 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
+  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
   store <8 x float> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -269,10 +269,10 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_fp8_index_key(<2 x i32> %A, 
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
+  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
   store <8 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
+  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
   store <8 x float> %res1, ptr addrspace(1) %out1
   ret void
 }
@@ -301,21 +301,21 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_bf8_index_key(<2 x i32> %A, 
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <2 x i16> %IndexVec, i32 0
-  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
+  %res0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index0)
   store <8 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <2 x i16> %IndexVec, i32 1
-  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
+  %res1 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v8f32.v2i32.v4i32.i16(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index1)
   store <8 x float> %res1, ptr addrspace(1) %out1
   ret void
 }
 
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.v8f32.i16(<8 x half>, <16 x half>, <8 x float>, i16)
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v8f32.v8i16.v16i16.v8f32.i16(<8 x i16>, <16 x i16>, <8 x float>, i16)
-declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.v8f16.i16(<8 x half>, <16 x half>, <8 x half>, i16)
-declare <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v8i16.v8i16.v16i16.v8i16.i16(<8 x i16>, <16 x i16>, <8 x i16>, i16)
-declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v8i32.v2i32.v4i32.v8i32.i16(i1 immarg, <2 x i32>, i1 immarg, <4 x i32>, <8 x i32>, i16 %Index, i1 immarg)
-declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v8i32.i32.v2i32.v8i32.i16(i1 immarg, i32, i1 immarg, <2 x i32>, <8 x i32>, i16 %Index, i1 immarg)
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
-declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v8f32.v2i32.v4i32.v8f32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
+declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v8f32.v8f16.v16f16.i16(<8 x half>, <16 x half>, <8 x float>, i16)
+declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v8f32.v8i16.v16i16.i16(<8 x i16>, <16 x i16>, <8 x float>, i16)
+declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v8f16.v8f16.v16f16.i16(<8 x half>, <16 x half>, <8 x half>, i16)
+declare <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v8i16.v8i16.v16i16.i16(<8 x i16>, <16 x i16>, <8 x i16>, i16)
+declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v8i32.v2i32.v4i32.i16(i1 immarg, <2 x i32>, i1 immarg, <4 x i32>, <8 x i32>, i16 %Index, i1 immarg)
+declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v8i32.i32.v2i32.i16(i1 immarg, i32, i1 immarg, <2 x i32>, <8 x i32>, i16 %Index, i1 immarg)
+declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.v8f32.v2i32.v4i32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
+declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.bf8.v8f32.v2i32.v4i32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
+declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.fp8.v8f32.v2i32.v4i32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)
+declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8.v8f32.v2i32.v4i32.i16(<2 x i32>, <4 x i32>, <8 x float>, i16)

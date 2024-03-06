@@ -7,7 +7,7 @@
 
 @global_x = global i32 0, align 4
 
-define signext i32 @ctz_dereferencing_pointer(i64* %b) nounwind {
+define signext i32 @ctz_dereferencing_pointer(ptr %b) nounwind {
 ; RV64ZBB-LABEL: ctz_dereferencing_pointer:
 ; RV64ZBB:       # %bb.0: # %entry
 ; RV64ZBB-NEXT:    ld a0, 0(a0)
@@ -110,7 +110,7 @@ define signext i32 @ctz_dereferencing_pointer(i64* %b) nounwind {
 
 
 entry:
-  %0 = load i64, i64* %b, align 8
+  %0 = load i64, ptr %b, align 8
   %1 = tail call i64 @llvm.cttz.i64(i64 %0, i1 true)
   %2 = icmp eq i64 %0, 0
   %3 = trunc i64 %1 to i32
@@ -118,7 +118,7 @@ entry:
   ret i32 %4
 }
 
-define i64 @ctz_dereferencing_pointer_zext(i32* %b) nounwind {
+define i64 @ctz_dereferencing_pointer_zext(ptr %b) nounwind {
 ; RV64ZBB-LABEL: ctz_dereferencing_pointer_zext:
 ; RV64ZBB:       # %bb.0: # %entry
 ; RV64ZBB-NEXT:    lw a0, 0(a0)
@@ -189,7 +189,7 @@ define i64 @ctz_dereferencing_pointer_zext(i32* %b) nounwind {
 
 
 entry:
-  %0 = load i32, i32* %b, align 8
+  %0 = load i32, ptr %b, align 8
   %1 = tail call i32 @llvm.cttz.i32(i32 %0, i1 true)
   %2 = icmp eq i32 %0, 0
   %3 = zext i32 %1 to i64
@@ -968,7 +968,7 @@ define signext i32 @globalVar() nounwind {
 
 
 entry:
-  %0 = load i32, i32* @global_x, align 4
+  %0 = load i32, ptr @global_x, align 4
   %1 = tail call i32 @llvm.cttz.i32(i32 %0, i1 true)
   %2 = icmp eq i32 %0, 0
   %conv = select i1 %2, i32 0, i32 %1

@@ -82,7 +82,7 @@ struct SubobjectAdjustment {
 
   union {
     struct DTB DerivedToBase;
-    FieldDecl *Field;
+    const FieldDecl *Field;
     struct P Ptr;
   };
 
@@ -93,8 +93,7 @@ struct SubobjectAdjustment {
     DerivedToBase.DerivedClass = DerivedClass;
   }
 
-  SubobjectAdjustment(FieldDecl *Field)
-    : Kind(FieldAdjustment) {
+  SubobjectAdjustment(const FieldDecl *Field) : Kind(FieldAdjustment) {
     this->Field = Field;
   }
 
@@ -153,6 +152,12 @@ public:
 
     TR = t;
   }
+
+  /// If this expression is an enumeration constant, return the
+  /// enumeration type under which said constant was declared.
+  /// Otherwise return the expression's type.
+  /// Note this effectively circumvents the weak typing of C's enum constants
+  QualType getEnumCoercedType(const ASTContext &Ctx) const;
 
   ExprDependence getDependence() const {
     return static_cast<ExprDependence>(ExprBits.Dependent);
@@ -471,6 +476,13 @@ public:
   /// return a non-null pointer even for r-values loaded from
   /// bit-fields, but it will return null for a conditional bit-field.
   FieldDecl *getSourceBitField();
+
+  /// If this expression refers to an enum constant, retrieve its declaration
+  EnumConstantDecl *getEnumConstantDecl();
+
+  const EnumConstantDecl *getEnumConstantDecl() const {
+    return const_cast<Expr *>(this)->getEnumConstantDecl();
+  }
 
   const FieldDecl *getSourceBitField() const {
     return const_cast<Expr*>(this)->getSourceBitField();

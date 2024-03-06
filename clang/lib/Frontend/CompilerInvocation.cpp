@@ -191,6 +191,17 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
   return *this;
 }
 
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
+  return *this;
+}
+
 namespace {
 template <typename T>
 T &ensureOwned(std::shared_ptr<T> &Storage) {
@@ -1973,14 +1984,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       F.Internalize = true;
     }
     Opts.LinkBitcodeFiles.push_back(F);
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
-    if (T.isOSAIX()) {
-      StringRef Name = A->getValue();
-      if (Name == "local-dynamic")
-        Diags.Report(diag::err_aix_unsupported_tls_model) << Name;
-    }
   }
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
@@ -4763,6 +4766,7 @@ std::string CompilerInvocation::getModuleHash() const {
   if (hsOpts.ModulesStrictContextHash) {
     HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
     HBuilder.addRange(hsOpts.UserEntries);
+    HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();
 #define DIAGOPT(Name, Bits, Default) HBuilder.add(diagOpts.Name);

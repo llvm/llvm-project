@@ -17,7 +17,7 @@ add_libc_test(
 
 # stdbit_test only tests our generated stdbit.h, which is not generated in
 # overlay mode.
-if (LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS)
   add_libc_test(
     stdbit_test
     SUITE
@@ -33,3 +33,13 @@ if (LLVM_LIBC_FULL_BUILD)
       # to.
   )
 endif()
+
+add_libc_test(
+  stdckdint_test
+  SUITE
+    libc_include_tests
+  SRCS
+    stdckdint_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.stdckdint_macros
+)

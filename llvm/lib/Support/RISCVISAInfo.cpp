@@ -55,9 +55,27 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", {2, 1}},
     {"m", {2, 0}},
 
+    {"shcounterenw", {1, 0}},
+    {"shgatpa", {1, 0}},
+    {"shtvala", {1, 0}},
+    {"shvsatpa", {1, 0}},
+    {"shvstvala", {1, 0}},
+    {"shvstvecd", {1, 0}},
     {"smaia", {1, 0}},
     {"smepmp", {1, 0}},
     {"ssaia", {1, 0}},
+    {"ssccptr", {1, 0}},
+    {"sscofpmf", {1, 0}},
+    {"sscounterenw", {1, 0}},
+    {"ssstateen", {1, 0}},
+    {"ssstrict", {1, 0}},
+    {"sstc", {1, 0}},
+    {"sstvala", {1, 0}},
+    {"sstvecd", {1, 0}},
+    {"ssu64xl", {1, 0}},
+    {"svade", {1, 0}},
+    {"svadu", {1, 0}},
+    {"svbare", {1, 0}},
     {"svinval", {1, 0}},
     {"svnapot", {1, 0}},
     {"svpbmt", {1, 0}},
@@ -92,6 +110,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"za128rs", {1, 0}},
     {"za64rs", {1, 0}},
+    {"zacas", {1, 0}},
     {"zawrs", {1, 0}},
 
     {"zba", {1, 0}},
@@ -194,8 +213,16 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 // NOTE: This table should be sorted alphabetically by extension name.
 // clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+    {"smmpm", {0, 8}},
+    {"smnpm", {0, 8}},
+    {"ssnpm", {0, 8}},
+    {"sspm", {0, 8}},
+    {"ssqosid", {1, 0}},
+    {"supm", {0, 8}},
+
     {"zaamo", {0, 2}},
-    {"zacas", {1, 0}},
+    {"zabha", {1, 0}},
+    {"zalasr", {0, 1}},
     {"zalrsc", {0, 2}},
 
     {"zcmop", {0, 2}},
@@ -504,6 +531,17 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
   return Features;
 }
 
+static Error getStringErrorForInvalidExt(std::string_view ExtName) {
+  if (ExtName.size() == 1) {
+    return createStringError(errc::invalid_argument,
+                             "unsupported standard user-level extension '" +
+                                 ExtName + "'");
+  }
+  return createStringError(errc::invalid_argument,
+                           "unsupported " + getExtensionTypeDesc(ExtName) +
+                               " '" + ExtName + "'");
+}
+
 // Extensions may have a version number, and may be separated by
 // an underscore '_' e.g.: rv32i2_m2.
 // Version number is divided into major and minor version numbers,
@@ -601,6 +639,9 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
 
   if (RISCVISAInfo::isSupportedExtension(Ext, Major, Minor))
     return Error::success();
+
+  if (!RISCVISAInfo::isSupportedExtension(Ext))
+    return getStringErrorForInvalidExt(Ext);
 
   std::string Error = "unsupported version number " + std::string(MajorStr);
   if (!MinorStr.empty())
@@ -743,8 +784,7 @@ static Error processMultiLetterExtension(
 
   if (!IgnoreUnknown && Name.size() == Type.size())
     return createStringError(errc::invalid_argument,
-                             "%s name missing after '%s'", Desc.str().c_str(),
-                             Type.str().c_str());
+                             Desc + " name missing after '" + Type + "'");
 
   unsigned Major, Minor, ConsumeLength;
   if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
@@ -759,8 +799,8 @@ static Error processMultiLetterExtension(
 
   // Check if duplicated extension.
   if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
-    return createStringError(errc::invalid_argument, "duplicated %s '%s'",
-                             Desc.str().c_str(), Name.str().c_str());
+    return createStringError(errc::invalid_argument,
+                             "duplicated " + Desc + " '" + Name + "'");
 
   if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
     return Error::success();
@@ -794,8 +834,8 @@ static Error processSingleLetterExtension(
   // Check if duplicated extension.
   if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
     return createStringError(errc::invalid_argument,
-                             "duplicated standard user-level extension '%s'",
-                             Name.str().c_str());
+                             "duplicated standard user-level extension '" +
+                                 Name + "'");
 
   if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
     return Error::success();
@@ -907,7 +947,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         if (auto E = processSingleLetterExtension(
                 CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
-          return E;
+          return std::move(E);
       } else if (CurrExt.front() == 'z' || CurrExt.front() == 's' ||
                  CurrExt.front() == 'x') {
         // Handle other types of extensions other than the standard
@@ -921,15 +961,15 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         if (auto E = processMultiLetterExtension(
                 CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
-          return E;
+          return std::move(E);
         // Multi-letter extension must be seperate following extension with
         // underscore
         break;
       } else {
         // FIXME: Could it be ignored by IgnoreUnknown?
         return createStringError(errc::invalid_argument,
-                                 "invalid standard user-level extension '%c'",
-                                 CurrExt.front());
+                                 "invalid standard user-level extension '" +
+                                     Twine(CurrExt.front()) + "'");
       }
     }
   }
@@ -939,16 +979,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     const std::string &ExtName = SeenExtAndVers.first;
     RISCVISAInfo::ExtensionVersion ExtVers = SeenExtAndVers.second;
 
-    if (!RISCVISAInfo::isSupportedExtension(ExtName)) {
-      if (ExtName.size() == 1) {
-        return createStringError(
-            errc::invalid_argument,
-            "unsupported standard user-level extension '%s'", ExtName.c_str());
-      }
-      return createStringError(errc::invalid_argument, "unsupported %s '%s'",
-                               getExtensionTypeDesc(ExtName).str().c_str(),
-                               ExtName.c_str());
-    }
+    if (!RISCVISAInfo::isSupportedExtension(ExtName))
+      return getStringErrorForInvalidExt(ExtName);
     ISAInfo->addExtension(ExtName, ExtVers);
   }
 
@@ -1018,6 +1050,7 @@ static const char *ImpliedExtsXSfvfnrclipxfqf[] = {"zve32f"};
 static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zvfbfmin"};
 static const char *ImpliedExtsXSfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXSfvqmaccqoq[] = {"zve32x"};
+static const char *ImpliedExtsZabha[] = {"a"};
 static const char *ImpliedExtsZacas[] = {"a"};
 static const char *ImpliedExtsZcb[] = {"zca"};
 static const char *ImpliedExtsZcd[] = {"d", "zca"};
@@ -1092,6 +1125,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"xsfvqmaccdod"}, {ImpliedExtsXSfvqmaccdod}},
     {{"xsfvqmaccqoq"}, {ImpliedExtsXSfvqmaccqoq}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
+    {{"zabha"}, {ImpliedExtsZabha}},
     {{"zacas"}, {ImpliedExtsZacas}},
     {{"zcb"}, {ImpliedExtsZcb}},
     {{"zcd"}, {ImpliedExtsZcd}},

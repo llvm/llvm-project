@@ -36,7 +36,7 @@ cc_library(
         exclude = WIN32_ONLY_FILES,
     ) + select({
         "@platforms//os:windows": WIN32_ONLY_FILES,
-        "//conditions:default": []
+        "//conditions:default": [],
     }),
     hdrs = glob([
         "include/profile/*.h",
@@ -45,8 +45,8 @@ cc_library(
     includes = [
         "include",
     ],
+    linkstatic = True,
     deps = [
         ":config",
     ],
-    linkstatic = True,
 )

@@ -4121,10 +4121,29 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
                                         ST.hasInv2PiInlineImm());
   case 16:
     return ST.has16BitInsts() &&
-           AMDGPU::isInlinableLiteral16(Imm.getSExtValue(),
-                                        ST.hasInv2PiInlineImm());
+           AMDGPU::isInlinableLiteralI16(Imm.getSExtValue(),
+                                         ST.hasInv2PiInlineImm());
   default:
     llvm_unreachable("invalid bitwidth");
+  }
+}
+
+bool SIInstrInfo::isInlineConstant(const APFloat &Imm) const {
+  APInt IntImm = Imm.bitcastToAPInt();
+  int64_t IntImmVal = IntImm.getSExtValue();
+  bool HasInv2Pi = ST.hasInv2PiInlineImm();
+  switch (APFloat::SemanticsToEnum(Imm.getSemantics())) {
+  default:
+    llvm_unreachable("invalid fltSemantics");
+  case APFloatBase::S_IEEEsingle:
+  case APFloatBase::S_IEEEdouble:
+    return isInlineConstant(IntImm);
+  case APFloatBase::S_BFloat:
+    return ST.has16BitInsts() &&
+           AMDGPU::isInlinableLiteralBF16(IntImmVal, HasInv2Pi);
+  case APFloatBase::S_IEEEhalf:
+    return ST.has16BitInsts() &&
+           AMDGPU::isInlinableLiteralFP16(IntImmVal, HasInv2Pi);
   }
 }
 
@@ -4185,6 +4204,10 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     return AMDGPU::isInlinableLiteralV2F16(Imm);
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
+    return AMDGPU::isInlinableLiteralV2BF16(Imm);
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -4196,9 +4219,20 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
       // constants in these cases
       int16_t Trunc = static_cast<int16_t>(Imm);
       return ST.has16BitInsts() &&
-             AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
+             AMDGPU::isInlinableLiteralFP16(Trunc, ST.hasInv2PiInlineImm());
     }
 
+    return false;
+  }
+  case AMDGPU::OPERAND_REG_IMM_BF16:
+  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
+  case AMDGPU::OPERAND_REG_INLINE_C_BF16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_BF16: {
+    if (isInt<16>(Imm) || isUInt<16>(Imm)) {
+      int16_t Trunc = static_cast<int16_t>(Imm);
+      return ST.has16BitInsts() &&
+             AMDGPU::isInlinableLiteralBF16(Trunc, ST.hasInv2PiInlineImm());
+    }
     return false;
   }
   case AMDGPU::OPERAND_KIMM32:
@@ -4918,7 +4952,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     } else {
       uint64_t Imm = Op->getImm();
-      if (sopkIsZext(MI)) {
+      if (sopkIsZext(Opcode)) {
         if (!isUInt<16>(Imm)) {
           ErrInfo = "invalid immediate for SOPK instruction";
           return false;
@@ -5424,7 +5458,7 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           bool IsAllocatable) {
   if ((IsAllocatable || !ST.hasGFX90AInsts() || !MRI.reservedRegsFrozen()) &&
       (((TID.mayLoad() || TID.mayStore()) &&
-        !(TID.TSFlags & SIInstrFlags::VGPRSpill)) ||
+        !(TID.TSFlags & SIInstrFlags::Spill)) ||
        (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::MIMG)))) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
@@ -8526,7 +8560,7 @@ unsigned SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI,
   return getNamedOperand(MI, AMDGPU::OpName::data)->getReg();
 }
 
-unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (!MI.mayLoad())
     return Register();
@@ -8540,7 +8574,7 @@ unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return Register();
 }
 
-unsigned SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
   if (!MI.mayStore())
     return Register();
@@ -8809,12 +8843,12 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
     IsNullOrVectorRegister = !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
   }
 
-  uint16_t Opc = MI.getOpcode();
+  uint16_t Opcode = MI.getOpcode();
   // FIXME: Copies inserted in the block prolog for live-range split should also
   // be included.
   return IsNullOrVectorRegister &&
-         (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
-                                 MI.modifiesRegister(AMDGPU::EXEC, &RI)));
+         (isSpill(Opcode) || (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
+                              MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
 MachineInstrBuilder

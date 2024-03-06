@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -aarch64-neon-syntax=apple -aarch64-enable-stp-suppress=false -verify-machineinstrs -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -aarch64-neon-syntax=apple -aarch64-enable-stp-suppress=false -verify-machineinstrs -asm-verbose=false | FileCheck %s
 
 ; CHECK-LABEL: test_strd_sturd:
 ; CHECK-NEXT: stp d0, d1, [x0, #-8]

@@ -2227,8 +2227,6 @@ void InitListChecker::CheckStructUnionTypes(
   size_t NumRecordDecls = llvm::count_if(RD->decls(), [&](const Decl *D) {
     return isa<FieldDecl>(D) || isa<RecordDecl>(D);
   });
-  bool CheckForMissingFields =
-    !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
   bool HasDesignatedInit = false;
 
   llvm::SmallPtrSet<FieldDecl *, 4> InitializedFields;
@@ -2269,11 +2267,6 @@ void InitListChecker::CheckStructUnionTypes(
       }
 
       InitializedSomething = true;
-
-      // Disable check for missing fields when designators are used.
-      // This matches gcc behaviour.
-      if (!SemaRef.getLangOpts().CPlusPlus)
-        CheckForMissingFields = false;
       continue;
     }
 
@@ -2285,7 +2278,7 @@ void InitListChecker::CheckStructUnionTypes(
     // These are okay for randomized structures. [C99 6.7.8p19]
     //
     // Also, if there is only one element in the structure, we allow something
-    // like this, because it's really not randomized in the tranditional sense.
+    // like this, because it's really not randomized in the traditional sense.
     //
     //   struct foo h = {bar};
     auto IsZeroInitializer = [&](const Expr *I) {
@@ -2363,8 +2356,13 @@ void InitListChecker::CheckStructUnionTypes(
   }
 
   // Emit warnings for missing struct field initializers.
-  if (!VerifyOnly && InitializedSomething && CheckForMissingFields &&
-      !RD->isUnion()) {
+  // This check is disabled for designated initializers in C.
+  // This matches gcc behaviour.
+  bool IsCDesignatedInitializer =
+      HasDesignatedInit && !SemaRef.getLangOpts().CPlusPlus;
+  if (!VerifyOnly && InitializedSomething && !RD->isUnion() &&
+      !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
+      !IsCDesignatedInitializer) {
     // It is possible we have one or more unnamed bitfields remaining.
     // Find first (if any) named field and emit warning.
     for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
@@ -2376,9 +2374,10 @@ void InitListChecker::CheckStructUnionTypes(
 
       if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
           !it->getType()->isIncompleteArrayType()) {
-        SemaRef.Diag(IList->getSourceRange().getEnd(),
-                     diag::warn_missing_field_initializers)
-            << *it;
+        auto Diag = HasDesignatedInit
+                        ? diag::warn_missing_designated_field_initializers
+                        : diag::warn_missing_field_initializers;
+        SemaRef.Diag(IList->getSourceRange().getEnd(), Diag) << *it;
         break;
       }
     }
@@ -6432,7 +6431,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
   // For HLSL ext vector types we allow list initialization behavior for C++
   // constructor syntax. This is accomplished by converting initialization
   // arguments an InitListExpr late.
-  if (S.getLangOpts().HLSL && DestType->isExtVectorType() &&
+  if (S.getLangOpts().HLSL && Args.size() > 1 && DestType->isExtVectorType() &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
 
@@ -7734,6 +7733,14 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     break;
   }
 
+  case Stmt::CompoundLiteralExprClass: {
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+      if (!CLE->isFileScope())
+        Visit(Path, Local(CLE), RK);
+    }
+    break;
+  }
+
   // FIXME: Visit the left-hand side of an -> or ->*.
 
   default:
@@ -8289,6 +8296,10 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         if (LK == LK_StmtExprResult)
           return false;
         Diag(DiagLoc, diag::warn_ret_addr_label) << DiagRange;
+      } else if (auto *CLE = dyn_cast<CompoundLiteralExpr>(L)) {
+        Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
+            << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
+            << DiagRange;
       } else {
         Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
          << Entity.getType()->isReferenceType() << DiagRange;

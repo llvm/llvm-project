@@ -10,7 +10,7 @@
 --- |
 
   declare <4 x i32> @llvm.mips.addvi.w(<4 x i32>, i32 immarg)
-  define void @add_v4i32_builtin_imm(<4 x i32>* %a, <4 x i32>* %c) { entry: ret void }
+  define void @add_v4i32_builtin_imm(ptr %a, ptr %c) { entry: ret void }
 
 ...
 ---

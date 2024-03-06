@@ -22,6 +22,17 @@ func.func private @sparse_csr(tensor<?x?xf32, #CSR>)
 
 // -----
 
+#BCSR = #sparse_tensor.encoding<{
+  map = (d0, d1, d2) -> (d0 : batch, d1: dense, d2 : compressed),
+}>
+
+// CHECK: #[[$BCSR:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : batch, d1 : dense, d2 : compressed) }>
+// CHECK-LABEL: func private @sparse_bcsr(
+// CHECK-SAME: tensor<?x?x?xf32, #[[$BCSR]]>)
+func.func private @sparse_bcsr(tensor<?x?x?xf32, #BCSR>)
+
+// -----
+
 #CSR_explicit = #sparse_tensor.encoding<{
   map = {l0, l1} (d0 = l0, d1 = l1) -> (l0 = d0 : dense, l1 = d1 : compressed)
 }>
@@ -91,6 +102,17 @@ func.func private @sparse_bcoo(tensor<?x?x?xf32, #BCOO>)
 // CHECK-LABEL: func private @sparse_sorted_coo(
 // CHECK-SAME: tensor<10x10xf64, #[[$SortedCOO]]>)
 func.func private @sparse_sorted_coo(tensor<10x10xf64, #SortedCOO>)
+
+// -----
+
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
+}>
+
+// CHECK-DAG: #[[$COO_SoA:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa)) }>
+// CHECK-LABEL: func private @sparse_coo(
+// CHECK-SAME: tensor<?x?xf32, #[[$COO_SoA]]>)
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
 
 // -----
 
@@ -207,12 +229,12 @@ func.func private @BSR_explicit(%arg0: tensor<?x?xf64, #BSR_explicit>) {
   map = ( i, j ) ->
   ( i            : dense,
     j floordiv 4 : dense,
-    j mod 4      : block2_4
+    j mod 4      : structured[2, 4]
   ),
   crdWidth = 8  // we would even like just 2-bits
 }>
 
-// CHECK-DAG: #[[$NV_24:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense, d1 mod 4 : block2_4), crdWidth = 8 }>
+// CHECK-DAG: #[[$NV_24:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense, d1 mod 4 : structured[2, 4]), crdWidth = 8 }>
 // CHECK-LABEL: func private @NV_24(
 // CHECK-SAME: tensor<?x?xf64, #[[$NV_24]]>
 func.func private @NV_24(%arg0: tensor<?x?xf64, #NV_24>) {
@@ -226,11 +248,11 @@ func.func private @NV_24(%arg0: tensor<?x?xf64, #NV_24>) {
   ( i            : dense,
     j            : dense,
     k floordiv 4 : dense,
-    k mod 4      : block2_4
+    k mod 4      : structured[2, 4]
   )
 }>
 
-// CHECK-DAG: #[[$NV_24:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 floordiv 4 : dense, d2 mod 4 : block2_4) }>
+// CHECK-DAG: #[[$NV_24:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 floordiv 4 : dense, d2 mod 4 : structured[2, 4]) }>
 // CHECK-LABEL: func private @NV_24(
 // CHECK-SAME: tensor<?x?x?xf64, #[[$NV_24]]>
 func.func private @NV_24(%arg0: tensor<?x?x?xf64, #NV_24>) {
@@ -244,13 +266,31 @@ func.func private @NV_24(%arg0: tensor<?x?x?xf64, #NV_24>) {
   ( i            : dense,
     k floordiv 4 : dense,
     j            : dense,
-    k mod 4      : block2_4
+    k mod 4      : structured[2, 4]
   )
 }>
 
-// CHECK-DAG: #[[$NV_24:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d2 floordiv 4 : dense, d1 : dense, d2 mod 4 : block2_4) }>
+// CHECK-DAG: #[[$NV_24:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d2 floordiv 4 : dense, d1 : dense, d2 mod 4 : structured[2, 4]) }>
 // CHECK-LABEL: func private @NV_24(
 // CHECK-SAME: tensor<?x?x?xf64, #[[$NV_24]]>
 func.func private @NV_24(%arg0: tensor<?x?x?xf64, #NV_24>) {
+  return
+}
+
+// -----
+
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 8 : dense,
+    j            : dense,
+    k mod 8      : structured[5, 8]
+  )
+}>
+
+// CHECK-DAG: #[[$NOutOfM:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d2 floordiv 8 : dense, d1 : dense, d2 mod 8 : structured[5, 8]) }>
+// CHECK-LABEL: func private @NOutOfM(
+// CHECK-SAME: tensor<?x?x?xf64, #[[$NOutOfM]]>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
   return
 }

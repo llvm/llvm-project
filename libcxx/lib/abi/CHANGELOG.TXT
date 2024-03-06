@@ -13,8 +13,81 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 19.0
+------------
+
+* [libc++] Always keep libc++abi re-exports up-to-date
+
+  This patch makes sure that the set of libc++abi symbols re-exported from libc++
+  is up-to-date with the symbols that libc++abi re-exports. As such, it adds several
+  symbols that were left out of the libc++ re-exports list. Exporting new symbols
+  is not an ABI break.
+
+  <arch>-apple-darwin
+  -------------------
+  Symbol reexported: ___cxa_current_primary_exception
+  Symbol reexported: ___cxa_decrement_exception_refcount
+  Symbol reexported: ___cxa_increment_exception_refcount
+  Symbol reexported: ___cxa_new_handler
+  Symbol reexported: ___cxa_rethrow_primary_exception
+  Symbol reexported: ___cxa_terminate_handler
+  Symbol reexported: ___cxa_uncaught_exception
+  Symbol reexported: ___cxa_unexpected_handler
+  Symbol reexported: __ZTIDh
+  Symbol reexported: __ZTIDu
+  Symbol reexported: __ZTIg
+  Symbol reexported: __ZTIn
+  Symbol reexported: __ZTIN10__cxxabiv116__enum_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv116__shim_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv117__array_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv117__class_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv117__pbase_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv119__pointer_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv120__function_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv120__si_class_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv121__vmi_class_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv123__fundamental_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv129__pointer_to_member_type_infoE
+  Symbol reexported: __ZTIo
+  Symbol reexported: __ZTIPDh
+  Symbol reexported: __ZTIPDu
+  Symbol reexported: __ZTIPg
+  Symbol reexported: __ZTIPKDh
+  Symbol reexported: __ZTIPKDu
+  Symbol reexported: __ZTIPKg
+  Symbol reexported: __ZTIPKn
+  Symbol reexported: __ZTIPKo
+  Symbol reexported: __ZTIPn
+  Symbol reexported: __ZTIPo
+  Symbol reexported: __ZTSDh
+  Symbol reexported: __ZTSDu
+  Symbol reexported: __ZTSg
+  Symbol reexported: __ZTSn
+  Symbol reexported: __ZTSN10__cxxabiv116__shim_type_infoE
+  Symbol reexported: __ZTSo
+  Symbol reexported: __ZTSPDh
+  Symbol reexported: __ZTSPDu
+  Symbol reexported: __ZTSPg
+  Symbol reexported: __ZTSPKDh
+  Symbol reexported: __ZTSPKDu
+  Symbol reexported: __ZTSPKg
+  Symbol reexported: __ZTSPKn
+  Symbol reexported: __ZTSPKo
+  Symbol reexported: __ZTSPn
+  Symbol reexported: __ZTSPo
+  Symbol reexported: __ZTVN10__cxxabiv116__shim_type_infoE
+
+------------
 Version 18.0
 ------------
+
+* [libc++] Moves is_terminal to the dylib
+
+  The patch moves the POSIX implementation of is_terminal to the dylib. This is
+  needed to avoid using <unistd.h> in public headers.
+
+  All platforms
+  Symbol added: _ZNSt6__ndk119__is_posix_terminalEP7__sFILE
 
 * [libc++abi] Implement __cxa_init_primary_exception and use it to optimize std::make_exception_ptr (#65534)
 

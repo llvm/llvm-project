@@ -110,10 +110,6 @@
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
-// Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @.omp_offloading.requires_reg, ptr null }]
-
-
 template<typename tx, typename ty>
 struct TT{
   tx X;
