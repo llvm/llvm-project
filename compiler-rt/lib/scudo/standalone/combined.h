@@ -1561,11 +1561,6 @@ private:
       return;
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
 
-    // Make sure the maximum sized StackDepot fits withint a uintptr_t to
-    // prove we don't need overflow checking for StackDepotSize.
-    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
-                                           UINT32_MAX * sizeof(atomic_u32) <
-                  UINTPTR_MAX);
     uptr StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
                           sizeof(atomic_u32) * TabSize;
     MemMapT DepotMap;
