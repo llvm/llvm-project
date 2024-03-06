@@ -812,13 +812,13 @@ template <class X, class Y>
 
 namespace detail {
 template <typename... Types> struct IsaCheckPredicate {
-  template <typename T> bool operator()(const T &Val) const {
+  template <typename T> [[nodiscard]] bool operator()(const T &Val) const {
     return isa<Types...>(Val);
   }
 };
 
 template <typename... Types> struct IsaAndPresentCheckPredicate {
-  template <typename T> bool operator()(const T &Val) const {
+  template <typename T> [[nodiscard]] bool operator()(const T &Val) const {
     return isa_and_present<Types...>(Val);
   }
 };
