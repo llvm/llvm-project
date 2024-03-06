@@ -11,9 +11,9 @@ declare { i16, i1 } @llvm.umul.with.overflow.i16(i16, i16) nounwind readnone
 define void @uadd_exhaustive() {
 ; CHECK-LABEL: 'uadd_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @uadd_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 35
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i16 35
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 35
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 35
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i16 35
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 36
 ;
 entry:
@@ -36,9 +36,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @sadd_exhaustive() {
 ; CHECK-LABEL: 'sadd_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @sadd_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 67
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i16 67
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 67
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 67
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i16 67
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 68
 ;
 entry:
@@ -61,9 +61,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @usub_exhaustive() {
 ; CHECK-LABEL: 'usub_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @usub_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 50
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i16 50
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 50
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 50
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i16 50
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 51
 ;
 entry:
@@ -86,9 +86,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ssub_exhaustive() {
 ; CHECK-LABEL: 'ssub_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @ssub_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 68
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i16 68
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 68
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 68
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i16 68
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 69
 ;
 entry:
@@ -111,9 +111,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @smul_exhaustive() {
 ; CHECK-LABEL: 'smul_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @smul_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 14
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 14
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 14
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 14
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 14
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 15
 ;
 entry:
@@ -136,9 +136,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @umul_exhaustive() {
 ; CHECK-LABEL: 'umul_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @umul_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 15
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 15
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 15
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 15
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 15
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 16
 ;
 entry:

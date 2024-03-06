@@ -11,9 +11,9 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define void @_Z3foov() nounwind {
 ; CHECK-LABEL: '_Z3foov'
 ; CHECK-NEXT:  Determining loop execution counts for: @_Z3foov
-; CHECK-NEXT:  Loop %bb1.i: backedge-taken count is 2
+; CHECK-NEXT:  Loop %bb1.i: backedge-taken count is i64 2
 ; CHECK-NEXT:  Loop %bb1.i: constant max backedge-taken count is i64 2
-; CHECK-NEXT:  Loop %bb1.i: symbolic max backedge-taken count is 2
+; CHECK-NEXT:  Loop %bb1.i: symbolic max backedge-taken count is i64 2
 ; CHECK-NEXT:  Loop %bb1.i: Trip multiple is 3
 ;
 entry:

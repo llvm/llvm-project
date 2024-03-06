@@ -12,9 +12,9 @@ define void @hoge1() {
 ; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
 ; CHECK-NEXT:  Loop %bb13: Trip multiple is 1
-; CHECK-NEXT:  Loop %bb4: backedge-taken count is 20
+; CHECK-NEXT:  Loop %bb4: backedge-taken count is i64 20
 ; CHECK-NEXT:  Loop %bb4: constant max backedge-taken count is i64 20
-; CHECK-NEXT:  Loop %bb4: symbolic max backedge-taken count is 20
+; CHECK-NEXT:  Loop %bb4: symbolic max backedge-taken count is i64 20
 ; CHECK-NEXT:  Loop %bb4: Trip multiple is 21
 ; CHECK-NEXT:  Loop %bb2: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb2: Unpredictable constant max backedge-taken count.

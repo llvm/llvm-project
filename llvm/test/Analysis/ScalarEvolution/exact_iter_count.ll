@@ -5,13 +5,13 @@
 define void @test_01() {
 ; CHECK-LABEL: 'test_01'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
-; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is 50
-; CHECK-NEXT:    exit count for loop: 50
-; CHECK-NEXT:    exit count for backedge: 100
+; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is i32 50
+; CHECK-NEXT:    exit count for loop: i32 50
+; CHECK-NEXT:    exit count for backedge: i32 100
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 50
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 50
-; CHECK-NEXT:    symbolic max exit count for loop: 50
-; CHECK-NEXT:    symbolic max exit count for backedge: 100
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 50
+; CHECK-NEXT:    symbolic max exit count for loop: i32 50
+; CHECK-NEXT:    symbolic max exit count for backedge: i32 100
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -37,13 +37,13 @@ side.exit:
 define void @test_02(i1 %c) {
 ; CHECK-LABEL: 'test_02'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_02
-; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is 50
-; CHECK-NEXT:    exit count for merge: 50
-; CHECK-NEXT:    exit count for backedge: 100
+; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is i32 50
+; CHECK-NEXT:    exit count for merge: i32 50
+; CHECK-NEXT:    exit count for backedge: i32 100
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 50
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 50
-; CHECK-NEXT:    symbolic max exit count for merge: 50
-; CHECK-NEXT:    symbolic max exit count for backedge: 100
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 50
+; CHECK-NEXT:    symbolic max exit count for merge: i32 50
+; CHECK-NEXT:    symbolic max exit count for backedge: i32 100
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

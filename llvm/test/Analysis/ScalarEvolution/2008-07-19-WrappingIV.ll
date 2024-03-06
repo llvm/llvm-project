@@ -6,9 +6,9 @@
 define void @fun() {
 ; CHECK-LABEL: 'fun'
 ; CHECK-NEXT:  Determining loop execution counts for: @fun
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 113
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i8 113
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 113
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 113
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i8 113
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 114
 ;
 entry:

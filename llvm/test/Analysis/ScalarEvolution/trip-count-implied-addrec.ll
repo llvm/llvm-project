@@ -104,7 +104,7 @@ define void @actually_infinite() {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 257
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is i16 257
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nusw>
 ;

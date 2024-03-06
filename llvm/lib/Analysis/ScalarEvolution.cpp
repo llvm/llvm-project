@@ -13469,6 +13469,14 @@ bool ScalarEvolution::hasLoopInvariantBackedgeTakenCount(const Loop *L) {
   return !isa<SCEVCouldNotCompute>(getBackedgeTakenCount(L));
 }
 
+/// When printing a top-level SCEV for trip counts, it's helpful to include
+/// a type for constants which are otherwise hard to disambiguate.
+static void PrintSCEVWithTypeHint(raw_ostream &OS, const SCEV* S) {
+  if (isa<SCEVConstant>(S))
+    OS << *S->getType() << " ";
+  OS << *S;
+}
+
 static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
                           const Loop *L) {
   // Print all inner loops first
@@ -13485,15 +13493,18 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     OS << "<multiple exits> ";
 
   auto *BTC = SE->getBackedgeTakenCount(L);
-  if (!isa<SCEVCouldNotCompute>(BTC))
-    OS << "backedge-taken count is " << *BTC << "\n";
-  else
-    OS << "Unpredictable backedge-taken count.\n";
+  if (!isa<SCEVCouldNotCompute>(BTC)) {
+    OS << "backedge-taken count is ";
+    PrintSCEVWithTypeHint(OS, BTC);
+  } else
+    OS << "Unpredictable backedge-taken count.";
+  OS << "\n";
 
   if (ExitingBlocks.size() > 1)
     for (BasicBlock *ExitingBlock : ExitingBlocks) {
-      OS << "  exit count for " << ExitingBlock->getName() << ": "
-         << *SE->getExitCount(L, ExitingBlock) << "\n";
+      OS << "  exit count for " << ExitingBlock->getName() << ": ";
+      PrintSCEVWithTypeHint(OS, SE->getExitCount(L, ExitingBlock));
+      OS << "\n";
     }
 
   OS << "Loop ";
@@ -13502,8 +13513,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *ConstantBTC = SE->getConstantMaxBackedgeTakenCount(L);
   if (!isa<SCEVCouldNotCompute>(ConstantBTC)) {
-    OS << "constant max backedge-taken count is "
-       << *ConstantBTC->getType() << " " << *ConstantBTC;
+    OS << "constant max backedge-taken count is ";
+    PrintSCEVWithTypeHint(OS, ConstantBTC);
     if (SE->isBackedgeTakenCountMaxOrZero(L))
       OS << ", actual taken count either this or zero.";
   } else {
@@ -13517,19 +13528,22 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *SymbolicBTC = SE->getSymbolicMaxBackedgeTakenCount(L);
   if (!isa<SCEVCouldNotCompute>(SymbolicBTC)) {
-    OS << "symbolic max backedge-taken count is " << *SymbolicBTC;
+    OS << "symbolic max backedge-taken count is ";
+    PrintSCEVWithTypeHint(OS, SymbolicBTC);
     if (SE->isBackedgeTakenCountMaxOrZero(L))
       OS << ", actual taken count either this or zero.";
   } else {
     OS << "Unpredictable symbolic max backedge-taken count. ";
   }
-
   OS << "\n";
+
   if (ExitingBlocks.size() > 1)
     for (BasicBlock *ExitingBlock : ExitingBlocks) {
-      OS << "  symbolic max exit count for " << ExitingBlock->getName() << ": "
-         << *SE->getExitCount(L, ExitingBlock, ScalarEvolution::SymbolicMaximum)
-         << "\n";
+      OS << "  symbolic max exit count for " << ExitingBlock->getName() << ": ";
+      auto *ExitBTC = SE->getExitCount(L, ExitingBlock,
+                                       ScalarEvolution::SymbolicMaximum);
+      PrintSCEVWithTypeHint(OS, ExitBTC);
+      OS << "\n";
     }
 
   SmallVector<const SCEVPredicate *, 4> Preds;
@@ -13538,10 +13552,12 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
-    if (!isa<SCEVCouldNotCompute>(PBT))
-      OS << "Predicated backedge-taken count is " << *PBT << "\n";
-    else
-      OS << "Unpredictable predicated backedge-taken count.\n";
+    if (!isa<SCEVCouldNotCompute>(PBT)) {
+      OS << "Predicated backedge-taken count is ";
+      PrintSCEVWithTypeHint(OS, PBT);
+    } else
+      OS << "Unpredictable predicated backedge-taken count.";
+    OS << "\n";
     OS << " Predicates:\n";
     for (const auto *P : Preds)
       P->print(OS, 4);

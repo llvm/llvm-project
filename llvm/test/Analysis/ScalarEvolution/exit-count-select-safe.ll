@@ -451,9 +451,9 @@ define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.cond: symbolic max backedge-taken count is (-1 * %d.0)
 ; CHECK-NEXT:  Loop %for.cond: Trip multiple is 1
-; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %for.cond4: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %for.cond4: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond4: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %for.cond4: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %while.cond: Unpredictable constant max backedge-taken count.
@@ -1249,9 +1249,9 @@ define i32 @logical_and_zero_arg1(i32 %n) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -1277,9 +1277,9 @@ define i32 @logical_and_zero_arg2(i32 %n) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

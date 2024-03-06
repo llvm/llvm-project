@@ -6,9 +6,9 @@
 define i32 @func_6() nounwind  {
 ; CHECK-LABEL: 'func_6'
 ; CHECK-NEXT:  Determining loop execution counts for: @func_6
-; CHECK-NEXT:  Loop %bb5: backedge-taken count is 61
+; CHECK-NEXT:  Loop %bb5: backedge-taken count is i8 61
 ; CHECK-NEXT:  Loop %bb5: constant max backedge-taken count is i8 61
-; CHECK-NEXT:  Loop %bb5: symbolic max backedge-taken count is 61
+; CHECK-NEXT:  Loop %bb5: symbolic max backedge-taken count is i8 61
 ; CHECK-NEXT:  Loop %bb5: Trip multiple is 62
 ;
 entry:

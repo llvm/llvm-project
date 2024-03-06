@@ -26,9 +26,9 @@ define void @test1(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 63
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 63
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 64
 ;
 entry:
@@ -73,9 +73,9 @@ define void @test1a(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test1a
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 63
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 63
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 64
 ;
 entry:
@@ -116,9 +116,9 @@ define void @test_range_ref1a(i32 %x) {
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %i.01.0, -1
 ; CHECK-NEXT:    --> {99,+,-1}<nsw><%bb> U: [-1,100) S: [-1,100) Exits: -1 LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_range_ref1a
-; CHECK-NEXT:  Loop %bb: backedge-taken count is 100
+; CHECK-NEXT:  Loop %bb: backedge-taken count is i32 100
 ; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 100
-; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is 100
+; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is i32 100
 ; CHECK-NEXT:  Loop %bb: Trip multiple is 101
 ;
 entry:
@@ -158,9 +158,9 @@ define i32 @test_loop_idiom_recogize(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwin
 ; CHECK-NEXT:    %3 = add i32 %z.0.reg2mem.0, %tmp10
 ; CHECK-NEXT:    --> ((256 * %x) + %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_loop_idiom_recogize
-; CHECK-NEXT:  Loop %bb1: backedge-taken count is 255
+; CHECK-NEXT:  Loop %bb1: backedge-taken count is i32 255
 ; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is i32 255
-; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is 255
+; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is i32 255
 ; CHECK-NEXT:  Loop %bb1: Trip multiple is 256
 ;
 bb1.thread:
