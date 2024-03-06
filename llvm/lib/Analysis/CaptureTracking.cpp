@@ -275,6 +275,13 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::Call:
   case Instruction::Invoke: {
     auto *Call = cast<CallBase>(I);
+    // Not captured if the callee is readonly, doesn't return a copy through
+    // its return value and doesn't unwind (a readonly function can leak bits
+    // by throwing an exception or not depending on the input value).
+    if (Call->onlyReadsMemory() && Call->doesNotThrow() &&
+        (Call->getType()->isVoidTy() || !Call->willReturn()))
+      return UseCaptureKind::NO_CAPTURE;
+
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
     // marked with nocapture do not capture. This means that places like
