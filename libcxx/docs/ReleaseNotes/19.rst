@@ -49,6 +49,9 @@ Improvements and New Features
 -----------------------------
 
 - The performance of growing ``std::vector`` has been improved for trivially relocatable types.
+- ``std::array`` and ``std::string_view`` are no longer pointers in the unstable ABI by default, and
+  can be reverted to raw pointers by defining the macros ``_LIBCPP_ABI_NO_USE_WRAP_ITER_IN_STD_ARRAY``
+  and ``_LIBCPP_ABI_NO_USE_WRAP_ITER_IN_STD_STRING_VIEW``.
 
 Deprecations and Removals
 -------------------------
