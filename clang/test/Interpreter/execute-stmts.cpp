@@ -9,9 +9,6 @@
 //CODEGEN-CHECK-COUNT-2: define internal void @__stmts__
 //CODEGEN-CHECK-NOT: define internal void @__stmts__
 
-// New tests fail right now
-// XFAIL: *
-
 extern "C" int printf(const char*,...);
 
 template <typename T> T call() { printf("called\n"); return T(); }
