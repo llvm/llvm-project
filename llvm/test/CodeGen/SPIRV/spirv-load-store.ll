@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ;; Translate SPIR-V friendly OpLoad and OpStore calls
 
 ; CHECK-DAG: %[[#TYLONG:]] = OpTypeInt 32 0
