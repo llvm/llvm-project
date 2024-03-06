@@ -71,11 +71,10 @@ module {
     %crd02 = arith.constant dense<
        [ 0, 1, 0, 1, 0, 0, 1, 0  ]> : tensor<8xi32>
 
-    %s0 = sparse_tensor.assemble %data0, %pos00, %crd00, %pos01, %crd01, %pos02, %crd02 :
-       tensor<8xf32>,
-       tensor<2xi64>, tensor<3xi32>,
-       tensor<4xi64>, tensor<5xi32>,
-       tensor<6xi64>, tensor<8xi32> to tensor<4x3x2xf32, #CCC>
+    %s0 = sparse_tensor.assemble (%pos00, %crd00, %pos01, %crd01, %pos02, %crd02), %data0 :
+       (tensor<2xi64>, tensor<3xi32>,
+        tensor<4xi64>, tensor<5xi32>,
+        tensor<6xi64>, tensor<8xi32>), tensor<8xf32> to tensor<4x3x2xf32, #CCC>
 
     //
     // Setup BatchedCSR.
@@ -89,7 +88,7 @@ module {
     %crd1 = arith.constant dense<
        [ 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1]> : tensor<16xi32>
 
-    %s1 = sparse_tensor.assemble %data1, %pos1, %crd1 : tensor<16xf32>, tensor<13xi64>, tensor<16xi32> to tensor<4x3x2xf32, #BatchedCSR>
+    %s1 = sparse_tensor.assemble (%pos1, %crd1), %data1 : (tensor<13xi64>, tensor<16xi32>), tensor<16xf32> to tensor<4x3x2xf32, #BatchedCSR>
 
     //
     // Setup CSRDense.
@@ -103,7 +102,7 @@ module {
     %crd2 = arith.constant dense<
       [ 0, 1, 2, 0, 2, 0, 1, 2, 0, 1, 2 ]> : tensor<11xi32>
 
-    %s2 = sparse_tensor.assemble %data2, %pos2, %crd2 : tensor<22xf32>, tensor<5xi64>, tensor<11xi32> to tensor<4x3x2xf32, #CSRDense>
+    %s2 = sparse_tensor.assemble (%pos2, %crd2), %data2  : (tensor<5xi64>, tensor<11xi32>), tensor<22xf32> to tensor<4x3x2xf32, #CSRDense>
 
     //
     // Verify.
