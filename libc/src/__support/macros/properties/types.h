@@ -10,13 +10,14 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "include/llvm-libc-macros/float-macros.h"  // LDBL_MANT_DIG
-#include "include/llvm-libc-macros/stdint-macros.h" // UINT64_MAX
-#include "include/llvm-libc-types/float128.h"       // float128
+#include "include/llvm-libc-macros/float-macros.h" // LDBL_MANT_DIG
+#include "include/llvm-libc-types/float128.h"      // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
+
+#include <stdint.h> // UINT64_MAX
 
 // 'long double' properties.
 #if (LDBL_MANT_DIG == 53)
