@@ -9,6 +9,8 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: s390x-ibm-linux-gnu
+// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
 // REQUIRES: unified_shared_memory
 
