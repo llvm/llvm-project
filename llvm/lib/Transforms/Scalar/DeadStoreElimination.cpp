@@ -1909,6 +1909,12 @@ struct DSEState {
     if (!Calloc)
       return false;
 
+    MemorySSAUpdater Updater(&MSSA);
+    auto *NewAccess =
+      Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
+                                      MallocDef);
+    auto *NewAccessMD = cast<MemoryDef>(NewAccess);
+    Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
     Malloc->replaceAllUsesWith(Calloc);
     deleteDeadInstruction(Malloc);
     return true;
