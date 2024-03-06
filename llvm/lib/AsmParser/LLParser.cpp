@@ -1585,9 +1585,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
 
     return true;
   }
-  case Attribute::Range: {
+  case Attribute::Range:
     return parseRangeAttr(B);
-  }
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -3010,36 +3009,32 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   Type *Ty = nullptr;
   LocTy TyLoc;
 
-  auto ParseAPSInt = [&](llvm::TypeSize BitWidth, APInt &Val) {
+  auto ParseAPSInt = [&](unsigned BitWidth, APInt &Val) {
     if (Lex.getKind() != lltok::APSInt)
       return tokError("expected integer");
     if (Lex.getAPSIntVal().getBitWidth() > BitWidth)
-      return tokError("integer is to large for the BitWidth");
+      return tokError(
+          "integer is too large for the bit width of specified type");
     Val = Lex.getAPSIntVal().extend(BitWidth);
     Lex.Lex();
     return false;
   };
 
-  if (!EatIfPresent(lltok::lparen))
-    return tokError("expected '('");
-  if (parseType(Ty, TyLoc))
+  if (parseToken(lltok::lparen, "expected '('") || parseType(Ty, TyLoc))
     return true;
   if (!Ty->isIntegerTy())
-    return error(TyLoc, "The range must have integer type!");
+    return error(TyLoc, "the range must have integer type!");
 
-  auto BitWidth = Ty->getPrimitiveSizeInBits();
+  unsigned BitWidth = Ty->getPrimitiveSizeInBits();
 
-  if (ParseAPSInt(BitWidth, Lower))
-    return true;
-  if (!EatIfPresent(lltok::comma))
-    return tokError("expected ','");
-  if (ParseAPSInt(BitWidth, Upper))
+  if (ParseAPSInt(BitWidth, Lower) ||
+      parseToken(lltok::comma, "expected ','") || ParseAPSInt(BitWidth, Upper))
     return true;
   if (Lower == Upper)
-    return tokError("The range should not represent the full or empty set!");
+    return tokError("the range should not represent the full or empty set!");
 
-  if (!EatIfPresent(lltok::rparen))
-    return tokError("expected ')'");
+  if (parseToken(lltok::rparen, "expected ')'"))
+    return true;
 
   B.addRangeAttr(ConstantRange(Lower, Upper));
   return false;

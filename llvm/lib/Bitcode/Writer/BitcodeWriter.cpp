@@ -876,6 +876,21 @@ static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
     emitSignedInt64(Vals, RawData[i]);
 }
 
+static void emitConstantRange(SmallVectorImpl<uint64_t> &Record,
+                              const ConstantRange &CR) {
+  unsigned BitWidth = CR.getBitWidth();
+  Record.push_back(BitWidth);
+  if (BitWidth > 64) {
+    Record.push_back(CR.getLower().getActiveWords() |
+                     (uint64_t(CR.getUpper().getActiveWords()) << 32));
+    emitWideAPInt(Record, CR.getLower());
+    emitWideAPInt(Record, CR.getUpper());
+  } else {
+    emitSignedInt64(Record, CR.getLower().getSExtValue());
+    emitSignedInt64(Record, CR.getUpper().getSExtValue());
+  }
+}
+
 void ModuleBitcodeWriter::writeAttributeGroupTable() {
   const std::vector<ValueEnumerator::IndexAndAttrSet> &AttrGrps =
       VE.getAttributeGroups();
@@ -917,22 +932,9 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
       } else {
         assert(Attr.isConstantRangeAttribute());
-        ConstantRange Range = Attr.getValueAsConstantRange();
-        bool WideAPInt = Range.getBitWidth() > 64;
-        Record.push_back(WideAPInt ? 8 : 7);
+        Record.push_back(7);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        Record.push_back(Range.getBitWidth());
-        if (WideAPInt) {
-          const APInt &Lower = Range.getLower();
-          Record.push_back(Lower.getActiveWords());
-          emitWideAPInt(Record, Lower);
-          const APInt &Upper = Range.getUpper();
-          Record.push_back(Upper.getActiveWords());
-          emitWideAPInt(Record, Upper);
-        } else {
-          emitSignedInt64(Record, *Range.getLower().getRawData());
-          emitSignedInt64(Record, *Range.getUpper().getRawData());
-        }
+        emitConstantRange(Record, Attr.getValueAsConstantRange());
       }
     }
 

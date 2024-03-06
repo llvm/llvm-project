@@ -355,7 +355,7 @@ public:
     AddInteger(unsigned(I));
     AddInteger(unsigned(I >> 32));
   }
-  void AddInteger(APInt Int) {
+  void AddInteger(const APInt &Int) {
     const auto *Parts = Int.getRawData();
     for (int i = 0, N = Int.getNumWords(); i < N; ++i) {
       AddInteger(Parts[i]);

@@ -221,7 +221,7 @@ def OptimizeNone : EnumAttr<"optnone", [FnAttr]>;
 /// Similar to byval but without a copy.
 def Preallocated : TypeAttr<"preallocated", [FnAttr, ParamAttr]>;
 
-/// Function does not access memory.
+/// Parameter or return value is within the specified range.
 def Range : ConstantRangeAttr<"range", [ParamAttr, RetAttr]>;
 
 /// Function does not access memory.

@@ -815,6 +815,30 @@ private:
     return getFnValueByID(ValNo, Ty, TyID, ConstExprInsertBB);
   }
 
+  Expected<ConstantRange> readConstantRange(ArrayRef<uint64_t> Record,
+                                            unsigned &OpNum) {
+    if (Record.size() - OpNum < 3)
+      return error("Too few records for range");
+    unsigned BitWidth = Record[OpNum++];
+    if (BitWidth > 64) {
+      unsigned LowerActiveWords = Record[OpNum];
+      unsigned UpperActiveWords = Record[OpNum++] >> 32;
+      if (Record.size() - OpNum < LowerActiveWords + UpperActiveWords)
+        return error("Too few records for range");
+      APInt Lower =
+          readWideAPInt(ArrayRef(&Record[OpNum], LowerActiveWords), BitWidth);
+      OpNum += LowerActiveWords;
+      APInt Upper =
+          readWideAPInt(ArrayRef(&Record[OpNum], UpperActiveWords), BitWidth);
+      OpNum += UpperActiveWords;
+      return ConstantRange(Lower, Upper);
+    } else {
+      int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
+      int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
+      return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
+    }
+  }
+
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
   /// corresponding argument's pointee type. Also upgrades intrinsics that now
   /// require an elementtype attribute.
@@ -2274,34 +2298,21 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Not a type attribute");
 
           B.addTypeAttr(Kind, HasType ? getTypeByID(Record[++i]) : nullptr);
-        } else if (Record[i] == 7 || Record[i] == 8) {
-          bool WideAPInt = Record[i++] == 8;
+        } else if (Record[i] == 7) {
           Attribute::AttrKind Kind;
+
+          i++;
           if (Error Err = parseAttrKind(Record[i++], &Kind))
             return Err;
           if (!Attribute::isConstantRangeAttrKind(Kind))
             return error("Not a ConstantRange attribute");
 
-          unsigned ValueBitWidth = Record[i++];
-          unsigned ActiveWords = 1;
-          if (WideAPInt)
-            ActiveWords = Record[i++];
-          APInt Lower =
-              readWideAPInt(ArrayRef(&Record[i], ActiveWords), ValueBitWidth);
-          i += ActiveWords;
-          ActiveWords = 1;
-          if (WideAPInt)
-            ActiveWords = Record[i++];
-          APInt Upper =
-              readWideAPInt(ArrayRef(&Record[i], ActiveWords), ValueBitWidth);
-          i += ActiveWords - 1;
+          Expected<ConstantRange> MaybeCR = readConstantRange(Record, i);
+          if (!MaybeCR)
+            return MaybeCR.takeError();
+          i--;
 
-          if (Lower == Upper)
-            return error(
-                "The range should not represent the full or empty set!");
-
-          ConstantRange Range(Lower, Upper);
-          B.addConstantRangeAttr(Kind, Range);
+          B.addConstantRangeAttr(Kind, MaybeCR.get());
         } else {
           return error("Invalid attribute group entry");
         }

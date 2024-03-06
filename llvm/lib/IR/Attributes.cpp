@@ -609,7 +609,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     ConstantRange CR = getValueAsConstantRange();
     OS << "range(";
     OS << "i" << CR.getBitWidth() << " ";
-    OS << CR.getLower() << "," << CR.getUpper();
+    OS << CR.getLower() << ", " << CR.getUpper();
     OS << ")";
     OS.flush();
     return Result;

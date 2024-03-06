@@ -1639,12 +1639,11 @@ Currently, only the following parameter attributes are defined:
     the parameter is in the specified range or is poison.
     The arguments passed to ``range`` has the following properties:
 
--  The type must match the scalar type of the parameter.
--  The pair ``a,b`` represents the range ``[a,b)``.
--  Both ``a`` and ``b`` are constants.
--  The range is allowed to wrap.
--  The range should not represent the full or empty set. That is,
-   ``a!=b``.
+    -  The type must match the scalar type of the parameter.
+    -  The pair ``a,b`` represents the range ``[a,b)``.
+    -  Both ``a`` and ``b`` are constants.
+    -  The range is allowed to wrap.
+    -  The range should not represent the full or empty set. That is, ``a!=b``.
     
     This attribute may only be applied to parameters with integer or vector of 
     integer types.
