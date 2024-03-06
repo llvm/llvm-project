@@ -1652,7 +1652,7 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
   case CK_LValueToRValue:
-    assert(0 && "NYI");
+    return buildLValue(E->getSubExpr());
 
   case CK_NoOp: {
     // CK_NoOp can model a qualification conversion, which can remove an array
@@ -2249,7 +2249,6 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildMemberExpr(cast<MemberExpr>(E));
   case Expr::PredefinedExprClass:
     return buildPredefinedLValue(cast<PredefinedExpr>(E));
-  case Expr::CStyleCastExprClass:
   case Expr::CXXFunctionalCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
@@ -2258,6 +2257,7 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     emitError(getLoc(E->getExprLoc()), "l-value not implemented for '")
         << E->getStmtClassName() << "'";
     assert(0 && "Use buildCastLValue below, remove me when adding testcase");
+  case Expr::CStyleCastExprClass:
   case Expr::CXXStaticCastExprClass:
   case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
