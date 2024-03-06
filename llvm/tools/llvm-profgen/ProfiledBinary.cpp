@@ -212,13 +212,11 @@ void ProfiledBinary::load() {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
 
-  auto *ELFObj = dyn_cast<ELFObjectFileBase>(&ExeBinary);
   IsCOFF = isa<COFFObjectFile>(&ExeBinary);
-  if (!ELFObj && !IsCOFF)
-    exitWithError("not a valid Elf/COFF image", Path);
+  if (!isa<ELFObjectFileBase>(&ExeBinary) && !IsCOFF)
+    exitWithError("not a valid ELF/COFF image", Path);
 
   auto *Obj = cast<ObjectFile>(&ExeBinary);
-
   TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
@@ -240,7 +238,7 @@ void ProfiledBinary::load() {
   DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
                                 DisassembleFunctions.end());
 
-  if (ELFObj) {
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
     checkPseudoProbe(ELFObj);
     if (UsePseudoProbes)
       populateElfSymbolAddressList(ELFObj);
@@ -740,13 +738,11 @@ void ProfiledBinary::disassemble(const ObjectFile *Obj) {
   }
 
   // Dissassemble rodata section to check if FS discriminator symbol exists.
-  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj))
-    checkUseFSDiscriminator(ELFObj, AllSymbols);
+  checkUseFSDiscriminator(Obj, AllSymbols);
 }
 
 void ProfiledBinary::checkUseFSDiscriminator(
-    const ELFObjectFileBase *Obj,
-    std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+    const ObjectFile *Obj, std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
   const char *FSDiscriminatorVar = "__llvm_fs_discriminator__";
   for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
        SI != SE; ++SI) {

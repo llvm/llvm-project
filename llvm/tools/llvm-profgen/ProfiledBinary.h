@@ -312,7 +312,7 @@ class ProfiledBinary {
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
   void
-  checkUseFSDiscriminator(const ELFObjectFileBase *Obj,
+  checkUseFSDiscriminator(const ObjectFile *Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols);
 
   // Set up disassembler and related components.
