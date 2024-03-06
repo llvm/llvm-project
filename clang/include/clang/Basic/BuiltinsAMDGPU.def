@@ -325,6 +325,9 @@ BUILTIN(__builtin_amdgcn_read_exec_hi, "Ui", "nc")
 
 BUILTIN(__builtin_amdgcn_endpgm, "v", "nr")
 
+BUILTIN(__builtin_amdgcn_get_fpenv, "WUi", "n")
+BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
+
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.
 //===----------------------------------------------------------------------===//
