@@ -25,3 +25,4 @@ uint32_t mopr_88_32(uint32_t a) {
 uint32_t moprr_16_32(uint32_t a, uint32_t b) {
   return __builtin_riscv_moprr_32(a, b, 16); // expected-error {{argument value 16 is outside the valid range [0, 7]}}
 }
+
