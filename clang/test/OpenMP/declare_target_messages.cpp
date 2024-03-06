@@ -195,7 +195,7 @@ int main (int argc, char **argv) {
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
   foo(v);
 #pragma omp declare target to(foo3) link(w) // omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
-#pragma omp declare target to(a) //omp45-error {{local variable 'a' ignored in 'declare target' directive}} omp5-error {{local variable 'a' ignored in 'declare target' directive}} omp51-error {{local variable 'a' ignored in 'declare target' directive}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
+#pragma omp declare target to(a) //omp45-error {{local variable 'a' should not be used in 'declare target' directive}} omp5-error {{local variable 'a' should not be used in 'declare target' directive}} omp51-error {{local variable 'a' should not be used in 'declare target' directive}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
   return (0);
 }
 
