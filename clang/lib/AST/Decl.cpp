@@ -5551,13 +5551,13 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
 
 void TopLevelStmtDecl::anchor() {}
 
-TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
+TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, DeclContext *DC,
+                                           Stmt *Statement) {
   assert(Statement);
   assert(C.getLangOpts().IncrementalExtensions &&
          "Must be used only in incremental mode");
 
   SourceLocation BeginLoc = Statement->getBeginLoc();
-  DeclContext *DC = C.getTranslationUnitDecl();
 
   return new (C, DC) TopLevelStmtDecl(DC, BeginLoc, Statement);
 }

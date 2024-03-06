@@ -374,7 +374,17 @@ std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
 void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
   TranslationUnitDecl *MostRecentTU = PTU.TUPart;
   TranslationUnitDecl *FirstTU = MostRecentTU->getFirstDecl();
-  if (StoredDeclsMap *Map = FirstTU->getPrimaryContext()->getLookupPtr()) {
+  if (!FirstTU) {
+    return;
+  }
+
+  SmallVector<DeclContext *> contexts;
+  FirstTU->collectAllContexts(contexts);
+  if (contexts.empty()) {
+    return;
+  }
+
+  if (StoredDeclsMap *Map = contexts.back()->getLookupPtr()) {
     for (auto I = Map->begin(); I != Map->end(); ++I) {
       StoredDeclsList &List = I->second;
       DeclContextLookupResult R = List.getLookupResult();
