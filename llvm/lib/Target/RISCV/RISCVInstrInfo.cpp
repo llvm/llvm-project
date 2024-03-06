@@ -473,122 +473,48 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RISCV::FPR32RegClass.contains(DstReg) &&
-      RISCV::GPRRegClass.contains(SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
+#define COPY_FROM_TO(FROM, TO, OPC)                                            \
+  do {                                                                         \
+    if (FROM.contains(SrcReg) && TO.contains(DstReg)) {                        \
+      BuildMI(MBB, MBBI, DL, get(OPC), DstReg)                                 \
+          .addReg(SrcReg, getKillRegState(KillSrc));                           \
+      return;                                                                  \
+    }                                                                          \
+  } while (0)
 
-  if (RISCV::GPRRegClass.contains(DstReg) &&
-      RISCV::FPR32RegClass.contains(SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
+  COPY_FROM_TO(RISCV::GPRRegClass, RISCV::FPR32RegClass, RISCV::FMV_W_X);
+  COPY_FROM_TO(RISCV::FPR32RegClass, RISCV::GPRRegClass, RISCV::FMV_X_W);
+  COPY_FROM_TO(RISCV::GPRRegClass, RISCV::FPR64RegClass, RISCV::FMV_D_X);
+  COPY_FROM_TO(RISCV::FPR64RegClass, RISCV::GPRRegClass, RISCV::FMV_X_D);
 
-  if (RISCV::FPR64RegClass.contains(DstReg) &&
-      RISCV::GPRRegClass.contains(SrcReg)) {
-    assert(STI.getXLen() == 64 && "Unexpected GPR size");
-    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
-
-  if (RISCV::GPRRegClass.contains(DstReg) &&
-      RISCV::FPR64RegClass.contains(SrcReg)) {
-    assert(STI.getXLen() == 64 && "Unexpected GPR size");
-    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
+#define RVV_COPY_IMPL(REG_CLASS, LMUL, NF)                                     \
+  do {                                                                         \
+    if (RISCV::REG_CLASS.contains(DstReg, SrcReg)) {                           \
+      copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc,                \
+                        RISCV::VMV##LMUL##R_V, NF);                            \
+      return;                                                                  \
+    }                                                                          \
+  } while (0)
+#define RVV_COPY(LMUL) RVV_COPY_IMPL(VRM##LMUL##RegClass, LMUL, 1)
+#define RVV_COPY_SEGMENT(LMUL, NF)                                             \
+  RVV_COPY_IMPL(VRN##NF##M##LMUL##RegClass, LMUL, NF)
 
   // VR->VR copies.
-  if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V);
-    return;
-  }
-
-  if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V);
-    return;
-  }
-
-  if (RISCV::VRM4RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V);
-    return;
-  }
-
-  if (RISCV::VRM8RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV8R_V);
-    return;
-  }
-
-  if (RISCV::VRN2M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/2);
-    return;
-  }
-
-  if (RISCV::VRN2M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
-                      /*NF=*/2);
-    return;
-  }
-
-  if (RISCV::VRN2M4RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V,
-                      /*NF=*/2);
-    return;
-  }
-
-  if (RISCV::VRN3M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/3);
-    return;
-  }
-
-  if (RISCV::VRN3M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
-                      /*NF=*/3);
-    return;
-  }
-
-  if (RISCV::VRN4M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/4);
-    return;
-  }
-
-  if (RISCV::VRN4M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
-                      /*NF=*/4);
-    return;
-  }
-
-  if (RISCV::VRN5M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/5);
-    return;
-  }
-
-  if (RISCV::VRN6M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/6);
-    return;
-  }
-
-  if (RISCV::VRN7M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/7);
-    return;
-  }
-
-  if (RISCV::VRN8M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
-                      /*NF=*/8);
-    return;
-  }
+  RVV_COPY_IMPL(VRRegClass, 1, 1);
+  RVV_COPY(2);
+  RVV_COPY(4);
+  RVV_COPY(8);
+  RVV_COPY_SEGMENT(1, 2);
+  RVV_COPY_SEGMENT(2, 2);
+  RVV_COPY_SEGMENT(4, 2);
+  RVV_COPY_SEGMENT(1, 3);
+  RVV_COPY_SEGMENT(2, 3);
+  RVV_COPY_SEGMENT(1, 4);
+  RVV_COPY_SEGMENT(2, 4);
+  RVV_COPY_SEGMENT(1, 5);
+  RVV_COPY_SEGMENT(1, 6);
+  RVV_COPY_SEGMENT(1, 7);
+  RVV_COPY_SEGMENT(1, 8);
 
   llvm_unreachable("Impossible reg-to-reg copy");
 }
