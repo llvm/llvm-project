@@ -114,9 +114,8 @@ define i32 @utest_f64i32(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunsdfdi
+; RV32IF-NEXT:    seqz a1, a1
 ; RV32IF-NEXT:    sltiu a2, a0, -1
-; RV32IF-NEXT:    snez a1, a1
-; RV32IF-NEXT:    addi a1, a1, -1
 ; RV32IF-NEXT:    and a1, a1, a2
 ; RV32IF-NEXT:    addi a1, a1, -1
 ; RV32IF-NEXT:    or a0, a1, a0
@@ -430,9 +429,8 @@ define i32 @utesth_f16i32(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    call __fixunssfdi
+; RV32-NEXT:    seqz a1, a1
 ; RV32-NEXT:    sltiu a2, a0, -1
-; RV32-NEXT:    snez a1, a1
-; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    or a0, a1, a0
@@ -1229,10 +1227,8 @@ define i64 @utest_f64i64(double %x) {
 ; RV32IF-NEXT:    lw a1, 20(sp)
 ; RV32IF-NEXT:    lw a2, 12(sp)
 ; RV32IF-NEXT:    lw a3, 8(sp)
-; RV32IF-NEXT:    seqz a4, a0
-; RV32IF-NEXT:    snez a5, a1
-; RV32IF-NEXT:    addi a5, a5, -1
-; RV32IF-NEXT:    and a4, a5, a4
+; RV32IF-NEXT:    or a4, a1, a0
+; RV32IF-NEXT:    seqz a4, a4
 ; RV32IF-NEXT:    xori a0, a0, 1
 ; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    seqz a0, a0
@@ -1271,10 +1267,8 @@ define i64 @utest_f64i64(double %x) {
 ; RV32IFD-NEXT:    lw a1, 20(sp)
 ; RV32IFD-NEXT:    lw a2, 12(sp)
 ; RV32IFD-NEXT:    lw a3, 8(sp)
-; RV32IFD-NEXT:    seqz a4, a0
-; RV32IFD-NEXT:    snez a5, a1
-; RV32IFD-NEXT:    addi a5, a5, -1
-; RV32IFD-NEXT:    and a4, a5, a4
+; RV32IFD-NEXT:    or a4, a1, a0
+; RV32IFD-NEXT:    seqz a4, a4
 ; RV32IFD-NEXT:    xori a0, a0, 1
 ; RV32IFD-NEXT:    or a0, a0, a1
 ; RV32IFD-NEXT:    seqz a0, a0
@@ -1531,10 +1525,8 @@ define i64 @utest_f32i64(float %x) {
 ; RV32-NEXT:    lw a1, 20(sp)
 ; RV32-NEXT:    lw a2, 12(sp)
 ; RV32-NEXT:    lw a3, 8(sp)
-; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    snez a5, a1
-; RV32-NEXT:    addi a5, a5, -1
-; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    or a4, a1, a0
+; RV32-NEXT:    seqz a4, a4
 ; RV32-NEXT:    xori a0, a0, 1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    seqz a0, a0
@@ -1783,10 +1775,8 @@ define i64 @utesth_f16i64(half %x) {
 ; RV32-NEXT:    lw a1, 20(sp)
 ; RV32-NEXT:    lw a2, 12(sp)
 ; RV32-NEXT:    lw a3, 8(sp)
-; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    snez a5, a1
-; RV32-NEXT:    addi a5, a5, -1
-; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    or a4, a1, a0
+; RV32-NEXT:    seqz a4, a4
 ; RV32-NEXT:    xori a0, a0, 1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    seqz a0, a0
@@ -3087,10 +3077,8 @@ define i64 @utest_f64i64_mm(double %x) {
 ; RV32IF-NEXT:    lw a1, 20(sp)
 ; RV32IF-NEXT:    lw a2, 12(sp)
 ; RV32IF-NEXT:    lw a3, 8(sp)
-; RV32IF-NEXT:    seqz a4, a0
-; RV32IF-NEXT:    snez a5, a1
-; RV32IF-NEXT:    addi a5, a5, -1
-; RV32IF-NEXT:    and a4, a5, a4
+; RV32IF-NEXT:    or a4, a1, a0
+; RV32IF-NEXT:    seqz a4, a4
 ; RV32IF-NEXT:    xori a0, a0, 1
 ; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    seqz a0, a0
@@ -3129,10 +3117,8 @@ define i64 @utest_f64i64_mm(double %x) {
 ; RV32IFD-NEXT:    lw a1, 20(sp)
 ; RV32IFD-NEXT:    lw a2, 12(sp)
 ; RV32IFD-NEXT:    lw a3, 8(sp)
-; RV32IFD-NEXT:    seqz a4, a0
-; RV32IFD-NEXT:    snez a5, a1
-; RV32IFD-NEXT:    addi a5, a5, -1
-; RV32IFD-NEXT:    and a4, a5, a4
+; RV32IFD-NEXT:    or a4, a1, a0
+; RV32IFD-NEXT:    seqz a4, a4
 ; RV32IFD-NEXT:    xori a0, a0, 1
 ; RV32IFD-NEXT:    or a0, a0, a1
 ; RV32IFD-NEXT:    seqz a0, a0
@@ -3345,10 +3331,8 @@ define i64 @utest_f32i64_mm(float %x) {
 ; RV32-NEXT:    lw a1, 20(sp)
 ; RV32-NEXT:    lw a2, 12(sp)
 ; RV32-NEXT:    lw a3, 8(sp)
-; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    snez a5, a1
-; RV32-NEXT:    addi a5, a5, -1
-; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    or a4, a1, a0
+; RV32-NEXT:    seqz a4, a4
 ; RV32-NEXT:    xori a0, a0, 1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    seqz a0, a0
@@ -3570,10 +3554,8 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; RV32-NEXT:    lw a1, 20(sp)
 ; RV32-NEXT:    lw a2, 12(sp)
 ; RV32-NEXT:    lw a3, 8(sp)
-; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    snez a5, a1
-; RV32-NEXT:    addi a5, a5, -1
-; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    or a4, a1, a0
+; RV32-NEXT:    seqz a4, a4
 ; RV32-NEXT:    xori a0, a0, 1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    seqz a0, a0
