@@ -3059,11 +3059,11 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
          "Reserve the stack by the multiple of one vector size.");
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  assert(isInt<32>(Amount / 8) &&
+         "Expect the number of vector registers within 32-bits.");
   uint32_t NumOfVReg = Amount / 8;
 
   BuildMI(MBB, II, DL, get(RISCV::PseudoReadVLENB), DestReg).setMIFlag(Flag);
-  assert(isInt<32>(NumOfVReg) &&
-         "Expect the number of vector registers within 32-bits.");
   if (llvm::has_single_bit<uint32_t>(NumOfVReg)) {
     uint32_t ShiftAmount = Log2_32(NumOfVReg);
     if (ShiftAmount == 0)
