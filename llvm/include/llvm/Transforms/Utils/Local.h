@@ -357,6 +357,13 @@ Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
                            DominatorTree &DT);
 
+/// If a terminator in an unreachable basic block has an operand of type
+/// Instruction, transform it into poison. Return true if any operands
+/// are changed to poison. Original Values prior to being changed to poison
+/// are returned in \p PoisonedValues.
+bool handleUnreachableTerminator(Instruction *I,
+                                 SmallVectorImpl<Value *> &PoisonedValues);
+
 /// Remove all instructions from a basic block other than its terminator
 /// and any present EH pad instructions. Returns a pair where the first element
 /// is the number of instructions (excluding debug info intrinsics) that have
