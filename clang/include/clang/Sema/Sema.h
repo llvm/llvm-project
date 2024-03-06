@@ -9002,6 +9002,10 @@ public:
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
                              SmallVectorImpl<const Attr *> &OutAttrs);
 
+  ExprResult ActOnAssumeAttr(Stmt *St, const ParsedAttr &A, SourceRange Range);
+  ExprResult BuildAssumeExpr(Expr *Assumption, const IdentifierInfo *AttrName,
+                             SourceRange Range);
+
   ///@}
 
   //
