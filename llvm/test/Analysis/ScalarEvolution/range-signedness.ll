@@ -40,7 +40,7 @@ define void @y(ptr %addr) {
 ; CHECK-NEXT:    --> {-4,+,1}<nsw><%loop> U: [-4,7) S: [-4,7) Exits: 6 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @y
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 10
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 10
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 10
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 10
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 10
 ; CHECK-NEXT:   Predicates:

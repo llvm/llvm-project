@@ -708,6 +708,25 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   }
 }
 
+static void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
+                                         KnownBits &Known,
+                                         const SimplifyQuery &SQ, bool Invert) {
+  ICmpInst::Predicate Pred =
+      Invert ? Cmp->getInversePredicate() : Cmp->getPredicate();
+  Value *LHS = Cmp->getOperand(0);
+  Value *RHS = Cmp->getOperand(1);
+
+  // Handle icmp pred (trunc V), C
+  if (match(LHS, m_Trunc(m_Specific(V)))) {
+    KnownBits DstKnown(LHS->getType()->getScalarSizeInBits());
+    computeKnownBitsFromCmp(LHS, Pred, LHS, RHS, DstKnown, SQ);
+    Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
+    return;
+  }
+
+  computeKnownBitsFromCmp(V, Pred, LHS, RHS, Known, SQ);
+}
+
 static void computeKnownBitsFromCond(const Value *V, Value *Cond,
                                      KnownBits &Known, unsigned Depth,
                                      const SimplifyQuery &SQ, bool Invert) {
@@ -727,9 +746,7 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
   }
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
-    computeKnownBitsFromCmp(
-        V, Invert ? Cmp->getInversePredicate() : Cmp->getPredicate(),
-        Cmp->getOperand(0), Cmp->getOperand(1), Known, SQ);
+    computeKnownBitsFromICmpCond(V, Cmp, Known, SQ, Invert);
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -815,8 +832,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
       continue;
 
-    computeKnownBitsFromCmp(V, Cmp->getPredicate(), Cmp->getOperand(0),
-                            Cmp->getOperand(1), Known, Q);
+    computeKnownBitsFromICmpCond(V, Cmp, Known, Q, /*Invert=*/false);
   }
 
   // Conflicting assumption: Undefined behavior will occur on this execution
@@ -9133,7 +9149,7 @@ addValueAffectedByCondition(Value *V,
 
     // Peek through unary operators to find the source of the condition.
     Value *Op;
-    if (match(I, m_PtrToInt(m_Value(Op)))) {
+    if (match(I, m_CombineOr(m_PtrToInt(m_Value(Op)), m_Trunc(m_Value(Op))))) {
       if (isa<Instruction>(Op) || isa<Argument>(Op))
         InsertAffected(Op);
     }

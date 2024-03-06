@@ -7,7 +7,7 @@ define zeroext i16 @test(ptr nocapture %p, i32 %len) nounwind readonly {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-2 + %len) /u 2)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 1073741823
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-2 + %len) /u 2)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-2 + %len) /u 2)
 ; CHECK-NEXT:   Predicates:
