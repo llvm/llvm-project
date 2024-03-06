@@ -6206,8 +6206,23 @@ entry:
 define bfloat @stofp_i64_bf16(i64 %a) {
 ; CHECK-LABEL: stofp_i64_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf s0, x0
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    and x11, x0, #0x8000000000000000
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    cneg x9, x0, mi
+; CHECK-NEXT:    lsr x10, x9, #53
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    and x10, x9, #0xfffffffffffff000
+; CHECK-NEXT:    csel x10, x10, x9, ne
+; CHECK-NEXT:    scvtf d0, x10
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    tst x9, #0xfff
+; CHECK-NEXT:    csel w10, wzr, w10, eq
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    orr x9, x9, x11
+; CHECK-NEXT:    orr x9, x9, x10
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    fcvtxn s0, d0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
@@ -6224,8 +6239,19 @@ entry:
 define bfloat @utofp_i64_bf16(i64 %a) {
 ; CHECK-LABEL: utofp_i64_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf s0, x0
+; CHECK-NEXT:    lsr x9, x0, #53
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    cmp x9, #0
+; CHECK-NEXT:    and x9, x0, #0xfffffffffffff000
+; CHECK-NEXT:    csel x9, x9, x0, ne
+; CHECK-NEXT:    ucvtf d0, x9
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    tst x0, #0xfff
+; CHECK-NEXT:    csel w9, wzr, w9, eq
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    orr x9, x10, x9
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    fcvtxn s0, d0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
@@ -6242,8 +6268,9 @@ entry:
 define bfloat @stofp_i32_bf16(i32 %a) {
 ; CHECK-LABEL: stofp_i32_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf s0, w0
+; CHECK-NEXT:    scvtf d0, w0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    fcvtxn s0, d0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
@@ -6260,8 +6287,9 @@ entry:
 define bfloat @utofp_i32_bf16(i32 %a) {
 ; CHECK-LABEL: utofp_i32_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf s0, w0
+; CHECK-NEXT:    ucvtf d0, w0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NEXT:    fcvtxn s0, d0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
@@ -6355,22 +6383,52 @@ define <2 x bfloat> @stofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-LABEL: stofp_v2i64_v2bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    scvtf s1, x10
-; CHECK-NEXT:    scvtf s0, x9
-; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    cmp x9, #0
+; CHECK-NEXT:    cneg x10, x9, mi
+; CHECK-NEXT:    and x9, x9, #0x8000000000000000
+; CHECK-NEXT:    lsr x11, x10, #53
+; CHECK-NEXT:    and x12, x10, #0xfffffffffffff000
+; CHECK-NEXT:    cmp x11, #0
+; CHECK-NEXT:    csel x11, x12, x10, ne
+; CHECK-NEXT:    cset w12, ne
+; CHECK-NEXT:    tst x10, #0xfff
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    csel w12, wzr, w12, eq
+; CHECK-NEXT:    scvtf d0, x11
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cneg x13, x10, mi
+; CHECK-NEXT:    and x10, x10, #0x8000000000000000
+; CHECK-NEXT:    lsr x14, x13, #53
+; CHECK-NEXT:    cmp x14, #0
+; CHECK-NEXT:    and x14, x13, #0xfffffffffffff000
+; CHECK-NEXT:    csel x11, x14, x13, ne
+; CHECK-NEXT:    cset w14, ne
+; CHECK-NEXT:    tst x13, #0xfff
+; CHECK-NEXT:    scvtf d1, x11
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    orr x9, x11, x9
+; CHECK-NEXT:    csel w11, wzr, w14, eq
+; CHECK-NEXT:    fmov x13, d1
+; CHECK-NEXT:    orr x9, x9, x12
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    orr x10, x13, x10
+; CHECK-NEXT:    orr x10, x10, x11
+; CHECK-NEXT:    fcvtxn s0, d0
+; CHECK-NEXT:    fmov d1, x10
+; CHECK-NEXT:    fcvtxn s1, d1
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    ubfx w12, w10, #16, #1
 ; CHECK-NEXT:    ubfx w11, w9, #16, #1
 ; CHECK-NEXT:    add w9, w9, w8
-; CHECK-NEXT:    add w8, w10, w8
-; CHECK-NEXT:    add w8, w12, w8
+; CHECK-NEXT:    fmov w10, s1
 ; CHECK-NEXT:    add w9, w11, w9
-; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ubfx w12, w10, #16, #1
+; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    add w8, w12, w8
+; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
@@ -6383,22 +6441,44 @@ define <2 x bfloat> @utofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-LABEL: utofp_v2i64_v2bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    ucvtf s1, x10
-; CHECK-NEXT:    ucvtf s0, x9
-; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    lsr x10, x9, #53
+; CHECK-NEXT:    and x12, x9, #0xfffffffffffff000
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    lsr x10, x11, #53
+; CHECK-NEXT:    csel x12, x12, x9, ne
+; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    tst x9, #0xfff
+; CHECK-NEXT:    csel w9, wzr, w13, eq
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    and x10, x11, #0xfffffffffffff000
+; CHECK-NEXT:    csel x10, x10, x11, ne
+; CHECK-NEXT:    ucvtf d0, x12
+; CHECK-NEXT:    ucvtf d1, x10
+; CHECK-NEXT:    cset w10, ne
+; CHECK-NEXT:    tst x11, #0xfff
+; CHECK-NEXT:    csel w10, wzr, w10, eq
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    fmov x12, d1
+; CHECK-NEXT:    orr x9, x11, x9
+; CHECK-NEXT:    orr x10, x12, x10
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    fmov d1, x10
+; CHECK-NEXT:    fcvtxn s0, d0
+; CHECK-NEXT:    fcvtxn s1, d1
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    ubfx w12, w10, #16, #1
+; CHECK-NEXT:    fmov w10, s1
 ; CHECK-NEXT:    ubfx w11, w9, #16, #1
 ; CHECK-NEXT:    add w9, w9, w8
+; CHECK-NEXT:    ubfx w12, w10, #16, #1
 ; CHECK-NEXT:    add w8, w10, w8
-; CHECK-NEXT:    add w8, w12, w8
 ; CHECK-NEXT:    add w9, w11, w9
-; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    add w8, w12, w8
 ; CHECK-NEXT:    lsr w9, w9, #16
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
