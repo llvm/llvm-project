@@ -476,7 +476,7 @@ public:
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
-  size_t GetNumChildren(uint32_t max = UINT32_MAX);
+  uint32_t GetNumChildren(uint32_t max = UINT32_MAX);
 
   const Value &GetValue() const { return m_value; }
 
@@ -960,7 +960,7 @@ protected:
   /// Should only be called by ValueObject::GetNumChildren().
   virtual uint32_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
 
-  void SetNumChildren(size_t num_children);
+  void SetNumChildren(uint32_t num_children);
 
   void SetValueDidChange(bool value_changed) {
     m_flags.m_value_did_change = value_changed;
