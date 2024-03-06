@@ -212,6 +212,9 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
   Fixes #GH82512.
 
+- Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
+  Fixes #GH83658.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
