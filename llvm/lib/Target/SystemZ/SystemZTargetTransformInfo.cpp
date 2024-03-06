@@ -1293,18 +1293,18 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
     return getNumVectorRegs(RetTy); // VPERM
 
   if (ID == Intrinsic::vector_reduce_add) {
-    // Retrieve number and size of elements for the vector op
+    // Retrieve number and size of elements for the vector op.
     auto *VTy = cast<FixedVectorType>(ParamTys.front());
     unsigned NumElements = VTy->getNumElements();
     unsigned ScalarSize = VTy->getScalarSizeInBits();
-    // For scalar sizes >128 bits, we fall back to the generic cost estimate
+    // For scalar sizes >128 bits, we fall back to the generic cost estimate.
     if (ScalarSize > SystemZ::VectorBits)
       return -1;
-    // How many elements can a single vector register hold
+    // A single vector register can hold this many elements.
     unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
-    // How many vector regs are needed to represent the input elements (V)
+    // This many vector regs are needed to represent the input elements (V).
     unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
-    // How many instructions are needed for the final sum of vector elems (S)
+    // This many instructions are needed for the final sum of vector elems (S).
     unsigned LastVectorHandling =
         2 * Log2_32_Ceil(std::min(NumElements, MaxElemsPerVector));
     // We use vector adds to create a sum vector, which takes
@@ -1321,8 +1321,8 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
 InstructionCost
 SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
-  InstructionCost Cost =
-      getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType(), ICA.getArgTypes());
+  InstructionCost Cost = getVectorIntrinsicInstrCost(
+      ICA.getID(), ICA.getReturnType(), ICA.getArgTypes());
   if (Cost != -1)
     return Cost;
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
