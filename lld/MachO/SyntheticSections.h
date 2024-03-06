@@ -326,7 +326,7 @@ public:
   bool isNeeded() const override { return false; }
   void writeTo(uint8_t *buf) const override {}
 
-  ConcatInputSection *getSelRefForMethName(StringRef methName);
+  ConcatInputSection *getSelRef(StringRef methName);
   ConcatInputSection *makeSelRef(StringRef methName);
 
 private:
