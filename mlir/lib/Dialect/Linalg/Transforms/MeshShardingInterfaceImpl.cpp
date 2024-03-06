@@ -47,6 +47,7 @@ using MeshShardingAttr = mesh::MeshShardingAttr;
 using ShardingArray = mesh::ShardingArray;
 using MeshOp = mesh::MeshOp;
 
+// Returns the corresponding mesh reduction kind for the given arith op.
 static ReductionKind getReductionKind(Operation *op) {
   return llvm::TypeSwitch<Operation *, ReductionKind>(op)
       // Floating-point operations.
