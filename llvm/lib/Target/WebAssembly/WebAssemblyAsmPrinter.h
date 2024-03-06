@@ -81,7 +81,7 @@ public:
   MVT getRegType(unsigned RegNo) const;
   std::string regToString(const MachineOperand &MO);
   WebAssemblyTargetStreamer *getTargetStreamer();
-  MCSymbolWasm *getMCSymbolForFunction(const Function *F, bool EnableEmEH,
+  MCSymbolWasm *getMCSymbolForFunction(const Function *F, bool EnableEmEHSjLj,
                                        wasm::WasmSignature *Sig,
                                        bool &InvokeDetected);
   MCSymbol *getOrCreateWasmSymbol(StringRef Name);

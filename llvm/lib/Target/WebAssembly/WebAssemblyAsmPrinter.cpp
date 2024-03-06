@@ -151,19 +151,14 @@ static std::string getEmscriptenInvokeSymbolName(wasm::WasmSignature *Sig) {
 //===----------------------------------------------------------------------===//
 
 MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
-    const Function *F, bool EnableEmEH, wasm::WasmSignature *Sig,
+    const Function *F, bool EnableEmEHSjLj, wasm::WasmSignature *Sig,
     bool &InvokeDetected) {
   MCSymbolWasm *WasmSym = nullptr;
-  if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
+  if (EnableEmEHSjLj && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);
     InvokeDetected = true;
-    if (Sig->Returns.size() > 1) {
-      std::string Msg =
-          "Emscripten EH/SjLj does not support multivalue returns: " +
-          std::string(F->getName()) + ": " +
-          WebAssembly::signatureToString(Sig);
-      report_fatal_error(Twine(Msg));
-    }
+    // When Emscripten EH/SjLj is enabled, we don't enable multivalue returns
+    assert(Sig->Returns.size() <= 1);
     WasmSym = cast<MCSymbolWasm>(
         GetExternalSymbolSymbol(getEmscriptenInvokeSymbolName(Sig)));
   } else {
