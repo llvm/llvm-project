@@ -1715,7 +1715,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv) {
-  if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv.getOperation())) {
+  if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
     LDBG("Not a depth-wise 1D conv, dynamic shapes are not supported\n");
     return failure();
   }
@@ -3597,6 +3597,9 @@ static FailureOr<Operation *> vectorizeConvolution(
   if (succeeded(res))
     return res;
 
+  // Only depthwise 1D NWC convs are left - these can be vectorized using masks
+  // and scalable vectors. Note that ATM the only dim that can be dynamic (i.e.
+  // masked/scalable) is the channel dim (i.e. the trailing dim).
   uint64_t vecChDimSize = ShapedType::kDynamic;
   bool vecChDimScalableFlag = false;
   if (!inputVecSizes.empty()) {
