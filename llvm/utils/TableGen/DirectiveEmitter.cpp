@@ -505,9 +505,8 @@ static void GenerateGetLeafConstructs(const DirectiveLanguage &DirLang,
     ListNames.insert(std::make_pair(R, std::move(ListName)));
   }
 
-  OS << "  static llvm::ArrayRef<" << DirectiveTypeName << "> nothing {};\n";
-
-  OS << '\n';
+  if (!ListNames.empty())
+    OS << '\n';
   OS << "  switch (Dir) {\n";
   for (Record *R : DirLang.getDirectives()) {
     auto F = ListNames.find(R);
@@ -519,7 +518,7 @@ static void GenerateGetLeafConstructs(const DirectiveLanguage &DirLang,
     OS << "    return " << F->second << ";\n";
   }
   OS << "  default:\n";
-  OS << "    return nothing;\n";
+  OS << "    return ArrayRef<" << DirectiveTypeName << ">{};\n";
   OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }

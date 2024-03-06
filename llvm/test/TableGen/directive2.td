@@ -291,11 +291,9 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  llvm::ArrayRef<llvm::tdl::Directive> llvm::tdl::getLeafConstructs(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    static llvm::ArrayRef<llvm::tdl::Directive> nothing {};
-// IMPL-EMPTY:
 // IMPL-NEXT:    switch (Dir) {
 // IMPL-NEXT:    default:
-// IMPL-NEXT:      return nothing;
+// IMPL-NEXT:      return ArrayRef<llvm::tdl::Directive>{};
 // IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
