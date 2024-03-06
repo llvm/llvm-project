@@ -1030,13 +1030,14 @@ static bool __kmp_track_children_task(kmp_taskdata_t *taskdata) {
 // gtid: global thread ID for calling thread
 // task: task to be finished
 // resumed_task: task to be resumed.  (may be NULL if task is serialized)
+// discard: true if 'task' had been discarded
 //
 // template<ompt>: effectively ompt_enabled.enabled!=0
 // the version with ompt=false is inlined, allowing to optimize away all ompt
 // code in this case
 template <bool ompt>
 static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
-                              kmp_taskdata_t *resumed_task) {
+                              kmp_taskdata_t *resumed_task, int discard) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_task_team_t *task_team =
@@ -1170,7 +1171,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
 
 #if OMPT_SUPPORT
     // This is not a detached task, we are done here
-    if (ompt)
+    if (ompt && !discard)
       __ompt_task_finish(task, resumed_task, ompt_task_complete);
 #endif
     // TODO: What would be the balance between the conditions in the function
@@ -1254,7 +1255,7 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
                 gtid, loc_ref, KMP_TASK_TO_TASKDATA(task)));
   KMP_DEBUG_ASSERT(gtid >= 0);
   // this routine will provide task to resume
-  __kmp_task_finish<ompt>(gtid, task, NULL);
+  __kmp_task_finish<ompt>(gtid, task, NULL, 0);
 
   KA_TRACE(10, ("__kmpc_omp_task_complete_if0(exit): T#%d loc=%p task=%p\n",
                 gtid, loc_ref, KMP_TASK_TO_TASKDATA(task)));
@@ -1305,7 +1306,7 @@ void __kmpc_omp_task_complete(ident_t *loc_ref, kmp_int32 gtid,
                 loc_ref, KMP_TASK_TO_TASKDATA(task)));
 
   __kmp_task_finish<false>(gtid, task,
-                           NULL); // Not sure how to find task to resume
+                           NULL, 0); // Not sure how to find task to resume
 
   KA_TRACE(10, ("__kmpc_omp_task_complete(exit): T#%d loc=%p task=%p\n", gtid,
                 loc_ref, KMP_TASK_TO_TASKDATA(task)));
@@ -1923,7 +1924,7 @@ __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
     KMP_FSYNC_CANCEL(taskdata); // destroy self (just executed)
     KMP_FSYNC_RELEASING(taskdata->td_parent); // releasing parent
 #endif
-  }
+  } /* !discard */
 
 #if OMPD_SUPPORT
   if (ompd_state & OMPD_ENABLE_BP)
@@ -1938,10 +1939,10 @@ __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       if (taskdata->td_flags.tiedness == TASK_TIED) {
         taskdata->ompt_task_info.frame.exit_frame = ompt_data_none;
       }
-      __kmp_task_finish<true>(gtid, task, current_task);
+      __kmp_task_finish<true>(gtid, task, current_task, discard);
     } else
 #endif
-      __kmp_task_finish<false>(gtid, task, current_task);
+      __kmp_task_finish<false>(gtid, task, current_task, discard);
   }
 
   KA_TRACE(
@@ -4969,7 +4970,7 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
   // free the pattern task and exit
   __kmp_task_start(gtid, task, current_task); // make internal bookkeeping
   // do not execute the pattern task, just do internal bookkeeping
-  __kmp_task_finish<false>(gtid, task, current_task);
+  __kmp_task_finish<false>(gtid, task, current_task, 0);
 }
 
 // Structure to keep taskloop parameters for auxiliary task
@@ -5247,7 +5248,7 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
     // free the pattern task and exit
     __kmp_task_start(gtid, task, current_task);
     // do not execute anything for zero-trip loop
-    __kmp_task_finish<false>(gtid, task, current_task);
+    __kmp_task_finish<false>(gtid, task, current_task, 0);
     return;
   }
 
