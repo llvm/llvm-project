@@ -33,15 +33,15 @@ const int b = 3;
 _Static_assert(b == 3, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                             // pedantic-expected-warning {{not an integer constant expression}}
 
-/// FIXME: The new interpreter is missing the "initializer of 'c' unknown" diagnostics.
-const int c; // ref-note {{declared here}} \
-             // pedantic-ref-note {{declared here}}
+const int c; // all-note {{declared here}}
 _Static_assert(c == 0, ""); // ref-error {{not an integral constant expression}} \
                             // ref-note {{initializer of 'c' is unknown}} \
                             // pedantic-ref-error {{not an integral constant expression}} \
                             // pedantic-ref-note {{initializer of 'c' is unknown}} \
                             // expected-error {{not an integral constant expression}} \
-                            // pedantic-expected-error {{not an integral constant expression}}
+                            // expected-note {{initializer of 'c' is unknown}} \
+                            // pedantic-expected-error {{not an integral constant expression}} \
+                            // pedantic-expected-note {{initializer of 'c' is unknown}}
 
 _Static_assert(&c != 0, ""); // ref-warning {{always true}} \
                              // pedantic-ref-warning {{always true}} \
@@ -95,7 +95,7 @@ int chooseexpr[__builtin_choose_expr(1, 1, expr)];
 
 int somefunc(int i) {
   return (i, 65537) * 65537; // all-warning {{left operand of comma operator has no effect}} \
-                             // all-warning {{overflow in expression; result is 131073}}
+                             // all-warning {{overflow in expression; result is 131'073 with type 'int'}}
 }
 
 /// FIXME: The following test is incorrect in the new interpreter.

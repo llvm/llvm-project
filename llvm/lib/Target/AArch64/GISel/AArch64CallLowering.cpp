@@ -535,7 +535,8 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   }
 
   SMEAttrs Attrs(F);
-  if (Attrs.hasZAState() || Attrs.hasStreamingInterfaceOrBody() ||
+  if (Attrs.hasZAState() || Attrs.hasZT0State() ||
+      Attrs.hasStreamingInterfaceOrBody() ||
       Attrs.hasStreamingCompatibleInterface())
     return true;
 
@@ -1300,8 +1301,17 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
            !Subtarget.noBTIAtReturnTwice() &&
            MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     Opc = AArch64::BLR_BTI;
-  else
+  else {
+    // For an intrinsic call (e.g. memset), use GOT if "RtLibUseGOT" (-fno-plt)
+    // is set.
+    if (Info.Callee.isSymbol() && F.getParent()->getRtLibUseGOT()) {
+      auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE);
+      DstOp(getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
+      MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
+      Info.Callee = MachineOperand::CreateReg(MIB.getReg(0), false);
+    }
     Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
+  }
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   unsigned CalleeOpNo = 0;

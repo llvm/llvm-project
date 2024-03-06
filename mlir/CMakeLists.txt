@@ -111,8 +111,6 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
 else()
   set(MLIR_ENABLE_CUDA_CONVERSIONS 0)
 endif()
-# TODO: we should use a config.h file like LLVM does
-add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_ENABLE_CUDA_CONVERSIONS})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
@@ -121,7 +119,6 @@ if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
 else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
-add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ENABLE_ROCM_CONVERSIONS})
 
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")

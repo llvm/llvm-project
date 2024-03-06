@@ -3221,12 +3221,11 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
       llvm::StructType *STy =
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
-      llvm::TypeSize StructSize;
-      llvm::TypeSize PtrElementSize;
       if (ArgI.isDirect() && !ArgI.getCanBeFlattened() && STy &&
           STy->getNumElements() > 1) {
-        StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
-        PtrElementSize =
+        [[maybe_unused]] llvm::TypeSize StructSize =
+            CGM.getDataLayout().getTypeAllocSize(STy);
+        [[maybe_unused]] llvm::TypeSize PtrElementSize =
             CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(Ty));
         if (STy->containsHomogeneousScalableVectorTypes()) {
           assert(StructSize == PtrElementSize &&
@@ -5310,12 +5309,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       llvm::StructType *STy =
           dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
-      llvm::Type *SrcTy = ConvertTypeForMem(I->Ty);
-      llvm::TypeSize SrcTypeSize;
-      llvm::TypeSize DstTypeSize;
       if (STy && ArgInfo.isDirect() && !ArgInfo.getCanBeFlattened()) {
-        SrcTypeSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
-        DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        llvm::Type *SrcTy = ConvertTypeForMem(I->Ty);
+        [[maybe_unused]] llvm::TypeSize SrcTypeSize =
+            CGM.getDataLayout().getTypeAllocSize(SrcTy);
+        [[maybe_unused]] llvm::TypeSize DstTypeSize =
+            CGM.getDataLayout().getTypeAllocSize(STy);
         if (STy->containsHomogeneousScalableVectorTypes()) {
           assert(SrcTypeSize == DstTypeSize &&
                  "Only allow non-fractional movement of structure with "

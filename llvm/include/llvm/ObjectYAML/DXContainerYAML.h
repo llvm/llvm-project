@@ -56,10 +56,10 @@ struct DXILProgram {
   std::optional<std::vector<llvm::yaml::Hex8>> DXIL;
 };
 
-#define SHADER_FLAG(Num, Val, Str) bool Val = false;
-struct ShaderFlags {
-  ShaderFlags() = default;
-  ShaderFlags(uint64_t FlagData);
+#define SHADER_FEATURE_FLAG(Num, Val, Str) bool Val = false;
+struct ShaderFeatureFlags {
+  ShaderFeatureFlags() = default;
+  ShaderFeatureFlags(uint64_t FlagData);
   uint64_t getEncodedFlags();
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
@@ -151,7 +151,7 @@ struct Part {
   std::string Name;
   uint32_t Size;
   std::optional<DXILProgram> Program;
-  std::optional<ShaderFlags> Flags;
+  std::optional<ShaderFeatureFlags> Flags;
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
@@ -195,8 +195,8 @@ template <> struct MappingTraits<DXContainerYAML::DXILProgram> {
   static void mapping(IO &IO, DXContainerYAML::DXILProgram &Program);
 };
 
-template <> struct MappingTraits<DXContainerYAML::ShaderFlags> {
-  static void mapping(IO &IO, DXContainerYAML::ShaderFlags &Flags);
+template <> struct MappingTraits<DXContainerYAML::ShaderFeatureFlags> {
+  static void mapping(IO &IO, DXContainerYAML::ShaderFeatureFlags &Flags);
 };
 
 template <> struct MappingTraits<DXContainerYAML::ShaderHash> {

@@ -365,8 +365,8 @@ void CodeEmitterGen::emitInstructionBaseValues(
   if (HwMode == -1)
     o << "  static const uint64_t InstBits[] = {\n";
   else
-    o << "  static const uint64_t InstBits_" << HWM.getMode(HwMode).Name
-      << "[] = {\n";
+    o << "  static const uint64_t InstBits_"
+      << HWM.getModeName(HwMode, /*IncludeDefault=*/true) << "[] = {\n";
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     Record *R = CGI->TheDef;
@@ -495,8 +495,8 @@ void CodeEmitterGen::run(raw_ostream &o) {
       o << "  switch (HwMode) {\n";
       o << "  default: llvm_unreachable(\"Unknown hardware mode!\"); break;\n";
       for (unsigned I : HwModes) {
-        o << "  case " << I << ": InstBits = InstBits_" << HWM.getMode(I).Name
-          << "; break;\n";
+        o << "  case " << I << ": InstBits = InstBits_"
+          << HWM.getModeName(I, /*IncludeDefault=*/true) << "; break;\n";
       }
       o << "  };\n";
     }
