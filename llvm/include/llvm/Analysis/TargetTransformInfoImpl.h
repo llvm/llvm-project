@@ -295,14 +295,18 @@ public:
     return false;
   }
 
-  bool isLegalMaskedCompressStore(Type *DataType) const { return false; }
+  bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
 
   bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
                        const SmallBitVector &OpcodeMask) const {
     return false;
   }
 
-  bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) const {
+    return false;
+  }
 
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
     return false;

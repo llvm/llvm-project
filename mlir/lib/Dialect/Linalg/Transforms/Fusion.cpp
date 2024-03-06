@@ -149,7 +149,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
   int64_t firstInitOperandIdx =
-      static_cast<OperandRange>(producerDpsInits).getBeginOperandIndex();
+      producerDpsInits.getAsOperandRange().getBeginOperandIndex();
   for (int64_t i = 0, e = producer->getNumResults(); i < e; ++i) {
     resultTypes.push_back(clonedShapes[firstInitOperandIdx + i].getType());
   }
