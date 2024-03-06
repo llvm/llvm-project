@@ -195,7 +195,17 @@ public:
   mlir::Value VisitGNUNullExpr(const GNUNullExpr *E) {
     llvm_unreachable("NYI");
   }
-  mlir::Value VisitOffsetOfExpr(OffsetOfExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitOffsetOfExpr(OffsetOfExpr *E) {
+    // Try folding the offsetof to a constant.
+    Expr::EvalResult EVResult;
+    if (E->EvaluateAsInt(EVResult, CGF.getContext())) {
+      llvm::APSInt Value = EVResult.Val.getInt();
+      return Builder.getConstInt(CGF.getLoc(E->getExprLoc()), Value);
+    }
+
+    llvm_unreachable("NYI");
+  }
+
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *E) {
     llvm_unreachable("NYI");
