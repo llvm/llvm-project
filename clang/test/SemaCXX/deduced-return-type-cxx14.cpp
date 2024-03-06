@@ -300,7 +300,7 @@ namespace Constexpr {
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
   // cxx20-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
-  constexpr auto f2(int n) { return nl; } // cxx14_20-error {{with non-literal return type 'struct NonLiteral' is a C++23 extension}}
+  constexpr auto f2(int n) { return nl; } // cxx14_20-error {{constexpr function's return type 'struct NonLiteral' is not a literal type}}
 }
 
 // It's not really clear whether these are valid, but this matches g++.

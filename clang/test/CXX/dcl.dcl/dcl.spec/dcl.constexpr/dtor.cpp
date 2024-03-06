@@ -59,11 +59,11 @@ namespace subobject {
     ~A();
   };
   struct B : A { // cxx2a-note {{here}}
-    constexpr ~B() {} // cxx2a-error {{destructor cannot be declared constexpr before C++23 because base class 'A' does not have a constexpr destructor}}
+    constexpr ~B() {} // cxx2a-error {{destructor cannot be declared constexpr because base class 'A' does not have a constexpr destructor}}
   };
   struct C {
     A a; // cxx2a-note {{here}}
-    constexpr ~C() {} // cxx2a-error {{destructor cannot be declared constexpr before C++23 because data member 'a' does not have a constexpr destructor}}
+    constexpr ~C() {} // cxx2a-error {{destructor cannot be declared constexpr because data member 'a' does not have a constexpr destructor}}
   };
   struct D : A {
     A a;

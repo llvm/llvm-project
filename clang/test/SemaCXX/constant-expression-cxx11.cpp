@@ -1273,7 +1273,7 @@ namespace PR11595 {
   struct B { B(); A& x; };
   static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
 
-  constexpr bool f(int k) { // cxx11_20-error {{constexpr function that never produces a constant expression}}
+  constexpr bool f(int k) { // cxx11_20-error {{constexpr function never produces a constant expression}}
     return B().x == k; // cxx11_20-note {{non-literal type 'B' cannot be used in a constant expression}}
   }
 }
@@ -1767,7 +1767,7 @@ namespace TLS {
 }
 
 namespace Void {
-  constexpr void f() { return; } // cxx11-error{{constexpr function with non-literal return type 'void' is a C++23 extension}}
+  constexpr void f() { return; } // cxx11-error{{constexpr function's return type 'void' is not a literal type}}
 
   void assert_failed(const char *msg, const char *file, int line); // expected-note {{declared here}}
 #define ASSERT(expr) ((expr) ? static_cast<void>(0) : assert_failed(#expr, __FILE__, __LINE__))

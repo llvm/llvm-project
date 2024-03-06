@@ -350,7 +350,7 @@ namespace dr1684 { // dr1684: 3.6
   };
   constexpr int f(NonLiteral &) { return 0; }
   constexpr int f(NonLiteral) { return 0; }
-  // cxx11-20-error@-1 {{constexpr function with 1st non-literal parameter type 'NonLiteral' is a C++23 extension}}
+  // cxx11-20-error@-1 {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
   //   cxx11-20-note@#dr1684-struct {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
 #endif
 }

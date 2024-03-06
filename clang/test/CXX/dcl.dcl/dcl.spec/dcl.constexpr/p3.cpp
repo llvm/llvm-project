@@ -41,17 +41,18 @@ struct T : SS, NonLiteral {
   virtual constexpr int OutOfLineVirtual() const; // beforecxx20-error {{virtual function cannot be constexpr}}
 
   //  - its return type shall be a literal type;
-  // With support for P2448R2 constexpr functions are allowed to return non-literal types in C++23.
-  constexpr NonLiteral NonLiteralReturn() const { return {}; } // beforecxx23-error {{constexpr function with non-literal return type 'NonLiteral' is a C++23 extension}}
-  constexpr void VoidReturn() const { return; }                // beforecxx14-error {{constexpr function with non-literal return type 'void' is a C++23 extension}}
+  // Once we support P2448R2 constexpr functions will be allowd to return non-literal types
+  // The destructor will also be allowed
+  constexpr NonLiteral NonLiteralReturn() const { return {}; } // beforecxx23-error {{constexpr function's return type 'NonLiteral' is not a literal type}}
+  constexpr void VoidReturn() const { return; }                // beforecxx14-error {{constexpr function's return type 'void' is not a literal type}}
   constexpr ~T();                                              // beforecxx20-error {{destructor cannot be declared constexpr}}
 
   typedef NonLiteral F() const;
   constexpr F NonLiteralReturn2; // ok until definition
 
   //  - each of its parameter types shall be a literal type;
-  // With support for P2448R2 constexpr functions are allowed to have parameters of non-literal types in C++23.
-  constexpr int NonLiteralParam(NonLiteral) const { return 0; } // beforecxx23-error {{constexpr function with 1st non-literal parameter type 'NonLiteral' is a C++23 extension}}
+  // Once we support P2448R2 constexpr functions will be allowd to have parameters of non-literal types
+  constexpr int NonLiteralParam(NonLiteral) const { return 0; } // beforecxx23-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
   typedef int G(NonLiteral) const;
   constexpr G NonLiteralParam2; // ok until definition
 
@@ -65,7 +66,7 @@ struct T : SS, NonLiteral {
   // constexpr since they can't be const.
   constexpr T &operator=(const T &) = default; // beforecxx14-error {{an explicitly-defaulted copy assignment operator may not have 'const', 'constexpr' or 'volatile' qualifiers}} \
                                                // beforecxx14-warning {{C++14}} \
-                                               // cxx14_20-error{{defaulted definition of copy assignment operator that marked constexpr but never produces a constant expression}}
+                                               // cxx14_20-error{{defaulted definition of copy assignment operator cannot be marked constexpr}}
 };
 
 constexpr int T::OutOfLineVirtual() const { return 0; }
@@ -229,7 +230,7 @@ namespace DR1364 {
               // parameter is not allowed in a constant expression.
   }
   int kGlobal; // beforecxx23-note {{here}}
-  constexpr int f() { // beforecxx23-error {{constexpr function that never produces a constant expression is a C++23 extension}}
+  constexpr int f() { // beforecxx23-error {{constexpr function never produces a constant expression}}
     return kGlobal;   // beforecxx23-note {{read of non-const}}
   }
 }
@@ -271,7 +272,7 @@ namespace std_example {
     int a; // beforecxx20-warning {{uninitialized}}
     return a;
   }
-  constexpr int prev(int x) { // beforecxx14-error {{constexpr function that never produces a constant expression is a C++23 extension}}
+  constexpr int prev(int x) { // beforecxx14-error {{never produces a constant expression}}
     return --x;               // beforecxx14-note {{subexpression}}
   }
 

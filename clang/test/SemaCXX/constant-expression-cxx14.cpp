@@ -44,12 +44,12 @@ constexpr int g(int k) {
   return 3 * k3 + 5 * k2 + n * k - 20;
 }
 static_assert(g(2) == 42, "");
-constexpr int h(int n) {  // cxx14_20-error {{constexpr function that never produces a constant expression}}
+constexpr int h(int n) {  // cxx14_20-error {{constexpr function never produces a constant expression}}
   static const int m = n; // cxx14_20-note {{control flows through the definition of a static variable}} \
                           // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++23 extension}}
   return m;
 }
-constexpr int i(int n) {        // cxx14_20-error {{constexpr function that never produces a constant expression}}
+constexpr int i(int n) {        // cxx14_20-error {{constexpr function never produces a constant expression}}
   thread_local const int m = n; // cxx14_20-note {{control flows through the definition of a thread_local variable}} \
                                 // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
   return m;
@@ -184,7 +184,7 @@ namespace string_assign {
   static_assert(!test1(100), "");
   static_assert(!test1(101), ""); // expected-error {{constant expression}} expected-note {{in call to 'test1(101)'}}
 
-  constexpr void f() { // cxx14_20-error{{constexpr function that never produces a constant expression}} cxx14_20-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+  constexpr void f() { // cxx14_20-error{{constexpr function never produces a constant expression}} cxx14_20-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
     char foo[10] = { "z" }; // expected-note {{here}}
     foo[10] = 'x'; // expected-warning {{past the end}}
   }

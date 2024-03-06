@@ -485,10 +485,10 @@ namespace dr1358 { // dr1358: 3.1
   struct B : Virt {
     int member;
     constexpr B(NonLit u) : member(u) {}
-    // cxx11-20-error@-1 {{constexpr constructor with 1st non-literal parameter type 'NonLit' is a C++23 extension}}
+    // cxx11-20-error@-1 {{constexpr constructor's 1st parameter type 'NonLit' is not a literal type}}
     //   cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
     constexpr NonLit f(NonLit u) const { return NonLit(); }
-    // cxx11-20-error@-1 {{constexpr function with non-literal return type 'NonLit' is a C++23 extension}}
+    // cxx11-20-error@-1 {{constexpr function's return type 'NonLit' is not a literal type}}
     //   cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   };
 #endif
@@ -498,19 +498,28 @@ namespace dr1359 { // dr1359: 3.5
 #if __cplusplus >= 201103L
   union A { constexpr A() = default; };
   union B { constexpr B() = default; int a; }; // #dr1359-B
-  // cxx11-17-error@-1 {{defaulted definition of default constructor that marked constexpr but never produces a constant expression is a C++23 extension}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   union C { constexpr C() = default; int a, b; }; // #dr1359-C
-  // cxx11-17-error@-1 {{defaulted definition of default constructor that marked constexpr}} 
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}} 
   struct X { constexpr X() = default; union {}; };
   // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // #dr1359-Y
-  // cxx11-17-error@-1 {{defaulted definition of default constructor that marked constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
 
   constexpr A a = A();
   constexpr B b = B();
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'B'}}
+  //   cxx11-17-note@#dr1359-B {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1359-B {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   constexpr C c = C();
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'C'}}
+  //   cxx11-17-note@#dr1359-C {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1359-C {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   constexpr X x = X();
   constexpr Y y = Y();
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'Y'}}
+  //   cxx11-17-note@#dr1359-Y {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1359-Y {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 #endif
 }
 
