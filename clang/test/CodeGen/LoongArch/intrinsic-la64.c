@@ -431,11 +431,11 @@ void loongarch_movgr2fcsr(int a) {
 // CHECK-LABEL: @iocsrrd_h_result(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A:%.*]])
+// CHECK-NEXT:    [[CONV_I:%.*]] = trunc i32 [[TMP0]] to i16
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A]])
-// CHECK-NEXT:    [[CONV2:%.*]] = and i32 [[TMP0]], 255
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[CONV2]]
-// CHECK-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK-NEXT:    ret i16 [[CONV4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+// CHECK-NEXT:    [[CONV3:%.*]] = add i16 [[TMP2]], [[CONV_I]]
+// CHECK-NEXT:    ret i16 [[CONV3]]
 //
 unsigned short iocsrrd_h_result(unsigned int a) {
   unsigned short b = __iocsrrd_h(a);
