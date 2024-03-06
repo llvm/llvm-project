@@ -77,11 +77,24 @@ public:
       return;
     }
 
-    // Auto zero-copy is only valid when no other requirement has been set
-    // and it is computed at device initialization time, after the requirement
-    // flag has already been set to OMP_REQ_NONE.
-    if (SetFlags == OMP_REQ_NONE && NewFlags == OMPX_REQ_AUTO_ZERO_COPY) {
-      SetFlags = NewFlags;
+    // Eager maps can happen on top of previous requirements:
+    if (NewFlags == OMPX_REQ_EAGER_ZERO_COPY_MAPS) {
+      if (SetFlags == OMP_REQ_NONE)
+        SetFlags = NewFlags;
+      else
+        SetFlags |= OMPX_REQ_EAGER_ZERO_COPY_MAPS;
+      return;
+    }
+
+    // Auto zero-copy is only valid when either no other requirement has been
+    // set or eager maps mode has been enabled. It is computed at device
+    // initialization time, after the requirement flag has already been set to
+    // OMP_REQ_NONE.
+    if (NewFlags == OMPX_REQ_AUTO_ZERO_COPY) {
+      if (SetFlags == OMP_REQ_NONE)
+        SetFlags = NewFlags;
+      else if (SetFlags == OMPX_REQ_EAGER_ZERO_COPY_MAPS)
+        SetFlags |= OMPX_REQ_AUTO_ZERO_COPY;
       return;
     }
 
