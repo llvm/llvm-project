@@ -99,7 +99,7 @@ Higher math functions
 =====================
 
 The following math functions are modeled after C99/C23 math functions for
-floating point types.
+floating point types, but are not part of the ISO/IEC TR 18037:2008 spec.
 
 +---------------+------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------+
 | Function Name | _Fract (r)                                                                               | _Accum (k)                                                                               |
