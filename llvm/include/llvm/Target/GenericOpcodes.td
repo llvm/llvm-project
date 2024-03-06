@@ -1289,6 +1289,15 @@ def G_MERGE_VALUES : GenericInstruction {
   let variadicOpsType = type1;
 }
 
+// Generic vscale.
+// Puts the value of the runtime vscale multiplied by the value in the source
+// operand into the destination register.
+def G_VSCALE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins untyped_imm_0:$src);
+  let hasSideEffects = false;
+}
+
 /// Create a vector from multiple scalar registers. No implicit
 /// conversion is performed (i.e. the result element type must be the
 /// same as all source operands)

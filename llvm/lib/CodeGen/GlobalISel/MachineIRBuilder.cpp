@@ -793,6 +793,11 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
 }
 
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  unsigned MinElts) {
+  return buildInstr(TargetOpcode::G_VSCALE, {Res}, {uint64_t(MinElts)});
+}
+
 static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
   if (HasSideEffects && IsConvergent)
     return TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS;
