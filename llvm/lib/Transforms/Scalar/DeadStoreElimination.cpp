@@ -1916,6 +1916,7 @@ struct DSEState {
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
     Updater.removeMemoryAccess(Malloc);
     Malloc->replaceAllUsesWith(Calloc);
+    EI.removeInstruction(Malloc);
     Malloc->eraseFromParent();
     return true;
   }
