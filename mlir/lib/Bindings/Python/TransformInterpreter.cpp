@@ -23,7 +23,7 @@ namespace py = pybind11;
 namespace {
 struct PyMlirTransformOptions {
   PyMlirTransformOptions() { options = mlirTransformOptionsCreate(); };
-  PyMlirTransformOptions(PyMlirTransformOptions &&other) noexcept {
+  PyMlirTransformOptions(PyMlirTransformOptions &&other) {
     options = other.options;
     other.options.ptr = nullptr;
   }

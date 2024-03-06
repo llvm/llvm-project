@@ -35,7 +35,7 @@ struct ElementsAttrIndexer {
 public:
   ElementsAttrIndexer()
       : ElementsAttrIndexer(/*isContiguous=*/true, /*isSplat=*/true) {}
-  ElementsAttrIndexer(ElementsAttrIndexer &&rhs) noexcept
+  ElementsAttrIndexer(ElementsAttrIndexer &&rhs)
       : isContiguous(rhs.isContiguous), isSplat(rhs.isSplat) {
     if (isContiguous)
       conState = rhs.conState;
