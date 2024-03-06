@@ -5583,22 +5583,24 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
 
-    for (auto *Attr : AS->getAttrs()) {
-      auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
-      if (!AA)
-        continue;
+    if (!Info.getCtx().getLangOpts().MSVCCompat) {
+      for (auto *Attr : AS->getAttrs()) {
+        auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
+        if (!AA)
+          continue;
 
-      auto *Assumption = AA->getAssumption();
-      if (Assumption->isValueDependent())
-        return ESR_Failed;
+        auto *Assumption = AA->getAssumption();
+        if (Assumption->isValueDependent())
+          return ESR_Failed;
 
-      bool Value;
-      if (!EvaluateAsBooleanCondition(Assumption, Value, Info))
-        return ESR_Failed;
-      if (!Value) {
-        Info.CCEDiag(Assumption->getExprLoc(),
-                     diag::note_constexpr_assumption_failed);
-        return ESR_Failed;
+        bool Value;
+        if (!EvaluateAsBooleanCondition(Assumption, Value, Info))
+          return ESR_Failed;
+        if (!Value) {
+          Info.CCEDiag(Assumption->getExprLoc(),
+                       diag::note_constexpr_assumption_failed);
+          return ESR_Failed;
+        }
       }
     }
 
