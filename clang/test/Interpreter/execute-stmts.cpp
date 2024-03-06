@@ -41,8 +41,8 @@ for (; i > 4; --i) { printf("i = %d\n", i); };
 int j = i; printf("j = %d\n", j);
 // CHECK-NEXT: j = 4
 
-{++i; printf("i = %d (global scope)\n", i);}
-// CHECK-NEXT: i = 5
+{i = 0; printf("i = %d (global scope)\n", i);}
+// CHECK-NEXT: i = 0
 
 while (int i = 1) { printf("i = %d (while condition)\n", i--); break; }
 // CHECK-NEXT: i = 1
@@ -55,6 +55,9 @@ switch (int i = 3) { default: printf("i = %d (switch condition)\n", i); }
 
 for (int i = 4; i > 3; --i) printf("i = %d (for-init)\n", i);
 // CHECK-NEXT: i = 4
+
+for (const auto &i : "5") printf("i = %c (range-based for-init)\n", i);
+// CHECK-NEXT: i = 5
 
 int *aa=nullptr;
 if (auto *b=aa) *b += 1;
