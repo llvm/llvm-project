@@ -5584,7 +5584,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                isa<ReturnStmt>(SS));
 
     for (auto *Attr : AS->getAttrs()) {
-      auto *AA = dyn_cast<AssumeAttr>(Attr);
+      auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
       if (!AA)
         continue;
 

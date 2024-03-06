@@ -2957,10 +2957,10 @@ private:
                                CachedTokens &OpenMPTokens);
 
   /// Parse a C++23 assume() attribute. Returns true on error.
-  bool ParseAssumeAttributeArg(ParsedAttributes &Attrs,
-                               IdentifierInfo *AttrName,
-                               SourceLocation AttrNameLoc,
-                               SourceLocation *EndLoc);
+  bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
+                                  IdentifierInfo *AttrName,
+                                  SourceLocation AttrNameLoc,
+                                  SourceLocation *EndLoc);
 
   IdentifierInfo *TryParseCXX11AttributeIdentifier(
       SourceLocation &Loc,

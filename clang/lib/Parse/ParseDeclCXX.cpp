@@ -4529,10 +4529,10 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
 }
 
 /// Parse the argument to C++23's [[assume()]] attribute.
-bool Parser::ParseAssumeAttributeArg(ParsedAttributes &Attrs,
-                                     IdentifierInfo *AttrName,
-                                     SourceLocation AttrNameLoc,
-                                     SourceLocation *EndLoc) {
+bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
+                                        IdentifierInfo *AttrName,
+                                        SourceLocation AttrNameLoc,
+                                        SourceLocation *EndLoc) {
   assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -4646,7 +4646,7 @@ bool Parser::ParseCXX11AttributeArgs(
                                       ScopeName, ScopeLoc, Form);
   // So does C++23's assume() attribute.
   else if (!ScopeName && AttrName->isStr("assume")) {
-    if (ParseAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc))
+    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc))
       return true;
     NumArgs = 1;
   } else

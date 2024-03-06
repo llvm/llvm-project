@@ -733,8 +733,8 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       const ReturnStmt *R = cast<ReturnStmt>(Sub);
       musttail = cast<CallExpr>(R->getRetValue()->IgnoreParens());
     } break;
-    case attr::Assume: {
-      const Expr *Assumption = cast<AssumeAttr>(A)->getAssumption();
+    case attr::CXXAssume: {
+      const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
       if (!Assumption->HasSideEffects(getContext())) {
         llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
         Builder.CreateAssumption(AssumptionVal);

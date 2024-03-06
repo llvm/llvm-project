@@ -1410,7 +1410,7 @@ namespace {
                           NamedDecl *FirstQualifierInScope = nullptr,
                           bool AllowInjectedClassName = false);
 
-    const AssumeAttr *TransformAssumeAttr(const AssumeAttr *AA);
+    const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
     const NoInlineAttr *TransformStmtNoInlineAttr(const Stmt *OrigS,
                                                   const Stmt *InstS,
@@ -1927,18 +1927,19 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
                                          Arg, PackIndex);
 }
 
-const AssumeAttr *
-TemplateInstantiator::TransformAssumeAttr(const AssumeAttr *AA) {
+const CXXAssumeAttr *
+TemplateInstantiator::TransformCXXAssumeAttr(const CXXAssumeAttr *AA) {
   ExprResult Res = getDerived().TransformExpr(AA->getAssumption());
-  if (Res.isInvalid())
+  if (!Res.isUsable())
     return AA;
 
-  Res = getSema().BuildAssumeExpr(Res.get(), AA->getAttrName(), AA->getRange());
-  if (Res.isInvalid())
+  Res = getSema().BuildCXXAssumeExpr(Res.get(), AA->getAttrName(),
+                                     AA->getRange());
+  if (!Res.isUsable())
     return AA;
 
-  return AssumeAttr::CreateImplicit(getSema().Context, Res.get(),
-                                    AA->getRange());
+  return CXXAssumeAttr::CreateImplicit(getSema().Context, Res.get(),
+                                       AA->getRange());
 }
 
 const LoopHintAttr *
