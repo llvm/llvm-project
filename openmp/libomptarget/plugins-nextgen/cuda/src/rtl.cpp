@@ -1160,7 +1160,7 @@ private:
     // automatically so we must create it ourselves. The backend will emit
     // several globals that contain function pointers we can call. These are
     // prefixed with a known name due to Nvidia's lack of section support.
-    auto ELFObjOrErr = ELF64LEObjectFile::create(Image.getMemoryBuffer());
+    auto ELFObjOrErr = Handler.getELFObjectFile(Image);
     if (!ELFObjOrErr)
       return ELFObjOrErr.takeError();
 
