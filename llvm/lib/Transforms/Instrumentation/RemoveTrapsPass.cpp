@@ -30,7 +30,7 @@ static cl::opt<int> HotPercentileCutoff(
 static cl::opt<float>
     RandomRate("remove-traps-random-rate", cl::init(0.0),
                cl::desc("Probability value in the range [0.0, 1.0] of "
-                        "unconditional pseudorandom checks removal."));
+                        "unconditional pseudo-random checks removal."));
 
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
