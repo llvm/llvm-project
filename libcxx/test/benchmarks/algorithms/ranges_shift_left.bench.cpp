@@ -22,8 +22,8 @@ static void bm_shift_left_random_access_range_with_sized_sentinel(benchmark::Sta
     auto begin = random_access_iterator(a.data());
     auto end   = random_access_iterator(a.data() + a.size());
 
-    static_assert(std::sized_sentinel_for<decltype(end), decltype(begin)>);
     static_assert(std::random_access_iterator<decltype(begin)>);
+    static_assert(std::sized_sentinel_for<decltype(end), decltype(begin)>);
 
     benchmark::DoNotOptimize(std::ranges::shift_left(begin, end, a.size() / 2));
   }
@@ -39,8 +39,8 @@ static void bm_shift_left_forward_range_with_sized_sentinel(benchmark::State& st
     auto begin = forward_iterator(a.data());
     auto end   = sized_sentinel(forward_iterator(a.data() + a.size()));
 
-    static_assert(std::sized_sentinel_for<decltype(end), decltype(begin)>);
     static_assert(!std::random_access_iterator<decltype(begin)>);
+    static_assert(std::sized_sentinel_for<decltype(end), decltype(begin)>);
 
     benchmark::DoNotOptimize(std::ranges::shift_left(begin, end, a.size() / 2));
   }
@@ -56,8 +56,8 @@ static void bm_shift_left_forward_range(benchmark::State& state) {
     auto begin = forward_iterator(a.data());
     auto end   = forward_iterator(a.data() + a.size());
 
-    static_assert(!std::sized_sentinel_for<decltype(end), decltype(begin)>);
     static_assert(!std::random_access_iterator<decltype(begin)>);
+    static_assert(!std::sized_sentinel_for<decltype(end), decltype(begin)>);
 
     benchmark::DoNotOptimize(std::ranges::shift_left(begin, end, a.size() / 2));
   }
