@@ -301,9 +301,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    switch (Dir) {
 // IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
 // IMPL-NEXT:      return llvm::tdl::Association::Block;
-// IMPL-NEXT:    default:
-// IMPL-NEXT:      llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:    } // switch(Dir)
+// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_DIRECTIVES_IMPL
