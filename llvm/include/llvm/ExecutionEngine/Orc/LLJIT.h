@@ -254,7 +254,7 @@ protected:
 
   DataLayout DL;
   Triple TT;
-  std::unique_ptr<ThreadPool> CompileThreads;
+  std::unique_ptr<DefaultThreadPool> CompileThreads;
 
   std::unique_ptr<ObjectLayer> ObjLinkingLayer;
   std::unique_ptr<ObjectTransformLayer> ObjTransformLayer;

@@ -777,9 +777,9 @@ public:
   bool forceScalarizeMaskedScatter(VectorType *Type, Align Alignment) const;
 
   /// Return true if the target supports masked compress store.
-  bool isLegalMaskedCompressStore(Type *DataType) const;
+  bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked expand load.
-  bool isLegalMaskedExpandLoad(Type *DataType) const;
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports strided load.
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
@@ -1863,8 +1863,8 @@ public:
                                           Align Alignment) = 0;
   virtual bool forceScalarizeMaskedScatter(VectorType *DataType,
                                            Align Alignment) = 0;
-  virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
-  virtual bool isLegalMaskedExpandLoad(Type *DataType) = 0;
+  virtual bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
@@ -2358,11 +2358,11 @@ public:
                                    Align Alignment) override {
     return Impl.forceScalarizeMaskedScatter(DataType, Alignment);
   }
-  bool isLegalMaskedCompressStore(Type *DataType) override {
-    return Impl.isLegalMaskedCompressStore(DataType);
+  bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) override {
+    return Impl.isLegalMaskedCompressStore(DataType, Alignment);
   }
-  bool isLegalMaskedExpandLoad(Type *DataType) override {
-    return Impl.isLegalMaskedExpandLoad(DataType);
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) override {
+    return Impl.isLegalMaskedExpandLoad(DataType, Alignment);
   }
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalStridedLoadStore(DataType, Alignment);
