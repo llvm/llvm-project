@@ -1729,11 +1729,11 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     SUnit *SU;
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
-    unsigned Width;
+    LocationSize Width;
     bool OffsetIsScalable;
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
-              int64_t Offset, bool OffsetIsScalable, unsigned Width)
+              int64_t Offset, bool OffsetIsScalable, LocationSize Width)
         : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
           Width(Width), OffsetIsScalable(OffsetIsScalable) {}
 
@@ -1866,11 +1866,12 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     auto MemOpb = MemOpRecords[NextIdx];
     unsigned ClusterLength = 2;
-    unsigned CurrentClusterBytes = MemOpa.Width + MemOpb.Width;
+    unsigned CurrentClusterBytes = MemOpa.Width.getValue().getKnownMinValue() +
+                                   MemOpb.Width.getValue().getKnownMinValue();
     if (SUnit2ClusterInfo.count(MemOpa.SU->NodeNum)) {
       ClusterLength = SUnit2ClusterInfo[MemOpa.SU->NodeNum].first + 1;
-      CurrentClusterBytes =
-          SUnit2ClusterInfo[MemOpa.SU->NodeNum].second + MemOpb.Width;
+      CurrentClusterBytes = SUnit2ClusterInfo[MemOpa.SU->NodeNum].second +
+                            MemOpb.Width.getValue().getKnownMinValue();
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
@@ -1940,7 +1941,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     bool OffsetIsScalable;
-    unsigned Width;
+    LocationSize Width = 0;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
       MemOpRecords.push_back(
