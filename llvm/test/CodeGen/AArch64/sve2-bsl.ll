@@ -19,3 +19,23 @@ define void @bsl(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
   store <vscale x 4 x i32> %5, ptr %ptr3, align 4
   ret void
 }
+
+define void @nobsl(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
+; CHECK-LABEL: nobsl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
+; CHECK-NEXT:    and z1.s, z1.s, #0x7ffffffe
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
+; CHECK-NEXT:    ret
+  %1 = load <vscale x 4 x i32>, ptr %ptr1, align 4
+  %2 = load <vscale x 4 x i32>, ptr %ptr2, align 4
+  %3 = and <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2147483647, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %4 = and <vscale x 4 x i32> %2, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2147483646, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %5 = or disjoint <vscale x 4 x i32> %3, %4
+  store <vscale x 4 x i32> %5, ptr %ptr3, align 4
+  ret void
+}
