@@ -1478,11 +1478,17 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
     Block *block, Region *previous, Region::iterator previousIt) {
   assert(!wasOpReplaced(block->getParentOp()) &&
          "attempting to insert into a region within a replaced/erased op");
-  LLVM_DEBUG({
-    logger.startLine() << "** Insert Block into : '"
-                       << block->getParentOp()->getName() << "'("
-                       << block->getParentOp() << ")\n";
-  });
+  LLVM_DEBUG(
+      {
+        Operation *parent = block->getParentOp();
+        if (parent) {
+          logger.startLine() << "** Insert Block into : '" << parent->getName()
+                             << "'(" << parent << ")\n";
+        } else {
+          logger.startLine()
+              << "** Insert Block into detached Region (nullptr parent op)'";
+        }
+      });
 
   if (!previous) {
     // This is a newly created block.

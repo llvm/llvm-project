@@ -2392,6 +2392,11 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
 
   bool Changed = false;
 
+  if (IsNonTemporal) {
+    // Set non-temporal hint for all cache levels.
+    Changed |= setTH(MI, AMDGPU::CPol::TH_NT);
+  }
+
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
@@ -2405,11 +2410,6 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     // address space operations.
     Changed |= insertWait(MI, SIAtomicScope::SYSTEM, AddrSpace, Op, false,
                           Position::AFTER);
-  }
-
-  if (IsNonTemporal) {
-    // Set non-temporal hint for all cache levels.
-    Changed |= setTH(MI, AMDGPU::CPol::TH_NT);
   }
 
   return Changed;

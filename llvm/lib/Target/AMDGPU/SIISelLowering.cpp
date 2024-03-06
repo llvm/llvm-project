@@ -98,7 +98,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   addRegisterClass(MVT::f64, V64RegClass);
   addRegisterClass(MVT::v2f32, V64RegClass);
-  addRegisterClass(MVT::Untyped, V64RegClass);
 
   addRegisterClass(MVT::v3i32, &AMDGPU::SGPR_96RegClass);
   addRegisterClass(MVT::v3f32, TRI->getVGPRClassForBitWidth(96));
@@ -3599,7 +3598,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool &IsTailCall = CLI.IsTailCall;
   bool IsVarArg = CLI.IsVarArg;
   bool IsSibCall = false;
-  bool IsThisReturn = false;
   MachineFunction &MF = DAG.getMachineFunction();
 
   if (Callee.isUndef() || isNullConstant(Callee)) {
@@ -3830,9 +3828,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
   }
 
-  if (!IsTailCall)
-    Ops.push_back(CLI.ConvergenceControlToken);
-
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
@@ -3892,8 +3887,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Handle result values, copying them out of physregs into vregs that we
   // return.
   return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG,
-                         InVals, IsThisReturn,
-                         IsThisReturn ? OutVals[0] : SDValue());
+                         InVals, /*IsThisReturn=*/false, SDValue());
 }
 
 // This is identical to the default implementation in ExpandDYNAMIC_STACKALLOC,
@@ -5158,24 +5152,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstrBuilder MIB;
     MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
 
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MI.getOperand(I);
-      if (I != 2) {
-        MIB.add(MO);
-        continue;
-      }
-    }
-
-    MachineOperand &MO = MI.getOperand(2);
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    // The token operand is always a register, whose definition is IMPLICIT_DEF
-    // iff there was no token on the call.
-    if (MachineInstr *Def = MRI.getVRegDef(MO.getReg())) {
-      if (Def->getOpcode() != TargetOpcode::IMPLICIT_DEF) {
-        MO.setImplicit();
-        MIB.add(MO);
-      }
-    }
+    for (const MachineOperand &MO : MI.operands())
+      MIB.add(MO);
 
     MIB.cloneMemRefs(MI);
     MI.eraseFromParent();
@@ -15425,16 +15403,32 @@ bool SITargetLowering::checkAsmConstraintVal(SDValue Op, StringRef Constraint,
   llvm_unreachable("Invalid asm constraint");
 }
 
-bool SITargetLowering::checkAsmConstraintValA(SDValue Op,
-                                              uint64_t Val,
+bool SITargetLowering::checkAsmConstraintValA(SDValue Op, uint64_t Val,
                                               unsigned MaxSize) const {
   unsigned Size = std::min<unsigned>(Op.getScalarValueSizeInBits(), MaxSize);
   bool HasInv2Pi = Subtarget->hasInv2PiInlineImm();
-  if ((Size == 16 && AMDGPU::isInlinableLiteral16(Val, HasInv2Pi)) ||
-      (Size == 32 && AMDGPU::isInlinableLiteral32(Val, HasInv2Pi)) ||
-      (Size == 64 && AMDGPU::isInlinableLiteral64(Val, HasInv2Pi))) {
-    return true;
+  if (Size == 16) {
+    MVT VT = Op.getSimpleValueType();
+    switch (VT.SimpleTy) {
+    default:
+      return false;
+    case MVT::i16:
+      return AMDGPU::isInlinableLiteralI16(Val, HasInv2Pi);
+    case MVT::f16:
+      return AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
+    case MVT::bf16:
+      return AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
+    case MVT::v2i16:
+      return AMDGPU::getInlineEncodingV2I16(Val).has_value();
+    case MVT::v2f16:
+      return AMDGPU::getInlineEncodingV2F16(Val).has_value();
+    case MVT::v2bf16:
+      return AMDGPU::getInlineEncodingV2BF16(Val).has_value();
+    }
   }
+  if ((Size == 32 && AMDGPU::isInlinableLiteral32(Val, HasInv2Pi)) ||
+      (Size == 64 && AMDGPU::isInlinableLiteral64(Val, HasInv2Pi)))
+    return true;
   return false;
 }
 
