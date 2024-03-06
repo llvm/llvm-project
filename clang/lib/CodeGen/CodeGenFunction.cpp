@@ -2614,7 +2614,7 @@ void CGBuilderInserter::InsertHelper(
 // called function.
 void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
                                           const FunctionDecl *TargetDecl) {
-  // SemaCheking cannot handle below x86 builtins because they have different
+  // SemaChecking cannot handle below x86 builtins because they have different
   // parameter ranges with different TargetAttribute of caller.
   if (CGM.getContext().getTargetInfo().getTriple().isX86()) {
     unsigned BuiltinID = TargetDecl->getBuiltinID();
