@@ -14,7 +14,6 @@ define void @x(ptr %cond) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
   entry:
   br label %loop
@@ -42,8 +41,6 @@ define void @y(ptr %addr) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 10
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 10
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 10
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 10
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 11
 ;
   entry:
