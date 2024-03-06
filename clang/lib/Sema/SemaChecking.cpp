@@ -11527,7 +11527,7 @@ void CheckFormatHandler::EmitFormatDiagnostic(
   }
 }
 
-//===--- CHECK: Printf format string checking ------------------------------===//
+//===--- CHECK: Printf format string checking -----------------------------===//
 
 namespace {
 
