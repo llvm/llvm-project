@@ -971,10 +971,15 @@ bit_cast(const UInt<Bits> &from) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, bool>
 has_single_bit(T value) {
-  for (auto word : value.val)
-    if (cpp::has_single_bit(word))
-      return true;
-  return false;
+  int bits = 0;
+  for (auto word : value.val) {
+    if (word == 0)
+      continue;
+    bits += count_ones(word);
+    if (bits > 1)
+      return false;
+  }
+  return bits == 1;
 }
 
 // Specialization of cpp::countr_zero ('bit.h') for BigInt.

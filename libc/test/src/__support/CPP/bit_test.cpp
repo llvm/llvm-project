@@ -12,6 +12,8 @@
 
 #include <stdint.h>
 
+#include <iostream>
+
 namespace LIBC_NAMESPACE::cpp {
 
 using UnsignedTypes =
@@ -23,10 +25,25 @@ using UnsignedTypes =
                       cpp::UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
-  EXPECT_FALSE(has_single_bit<T>(T(0)));
-  EXPECT_FALSE(has_single_bit<T>(~T(0)));
+  constexpr auto ZERO = T(0);
+  constexpr auto ALL_ONES = T(~ZERO);
+  EXPECT_FALSE(has_single_bit<T>(ZERO));
+  EXPECT_FALSE(has_single_bit<T>(ALL_ONES));
+
   for (T value = 1; value; value <<= 1)
     EXPECT_TRUE(has_single_bit<T>(value));
+
+  // We test that if two bits are set has_single_bit returns false.
+  // We do this by setting the highest or lowest bit depending or where the
+  // current bit is. This is a bit convoluted but it helps catch a bug on BigInt
+  // where we have to work on an element-by-element basis.
+  constexpr auto MIDPOINT = T(ALL_ONES / 2);
+  constexpr auto LSB = T(1);
+  constexpr auto MSB = T(~(ALL_ONES >> 1));
+  for (T value = 1; value; value <<= 1) {
+    auto two_bits_value = value | ((value <= MIDPOINT) ? MSB : LSB);
+    EXPECT_FALSE(has_single_bit<T>(two_bits_value));
+  }
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountLZero, UnsignedTypes) {
