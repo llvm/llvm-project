@@ -2,7 +2,6 @@
 Make sure that the concurrent vfork() from multiple threads works correctly.
 """
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
@@ -11,9 +10,6 @@ from lldbsuite.test.decorators import *
 
 class TestConcurrentVFork(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-
-    def get_pid_from_variable(self, target):
-        return target.FindFirstGlobalVariable("g_pid").GetValueAsUnsigned()
 
     def build_run_to_breakpoint(self, use_fork, call_exec):
         self.build()
@@ -35,7 +31,7 @@ class TestConcurrentVFork(TestBase):
             use_fork, call_exec
         )
 
-        parent_pid = self.get_pid_from_variable(target)
+        parent_pid = target.FindFirstGlobalVariable("g_pid").GetValueAsUnsigned()
         self.runCmd("settings set target.process.follow-fork-mode parent")
         self.runCmd("settings set target.process.stop-on-exec False", check=False)
         self.expect(
