@@ -60,7 +60,7 @@ def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
     /// Returns if this type is ranked (always true).
     bool hasRank() const { return true; }
 
-    /// Clone this vector type with the given shape and element type. If the
+    /// Clone this array type with the given shape and element type. If the
     /// provided shape is `std::nullopt`, the current shape of the type is used.
     ArrayType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                         Type elementType) const;

@@ -68,7 +68,7 @@ func.func @tensor_of_array(%arg0 : tensor<4x!emitc.array<4xf32>>) {
 // -----
 
 // expected-error@+1 {{cannot emit pointer to array type}}
-func.func @tensor_of_array(%arg0 : !emitc.ptr<!emitc.array<4xf32>>) {
+func.func @pointer_to_array(%arg0 : !emitc.ptr<!emitc.array<4xf32>>) {
   return
 }
 
