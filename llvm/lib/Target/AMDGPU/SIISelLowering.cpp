@@ -16013,7 +16013,8 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
 
-    if (AMDGPU::isFlatGlobalAddrSpace(AS) &&
+    if ((AMDGPU::isFlatGlobalAddrSpace(AS) ||
+         AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
         Subtarget->hasAtomicFaddNoRtnInsts()) {
       if (Subtarget->hasGFX940Insts())
         return AtomicExpansionKind::None;
@@ -16025,11 +16026,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
 
-      if (AS == AMDGPUAS::GLOBAL_ADDRESS && Ty->isFloatTy()) {
-        // global atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
+      if ((AS == AMDGPUAS::GLOBAL_ADDRESS ||
+           AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
+          Ty->isFloatTy()) {
+        // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
         if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
-        // global atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+        // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
         if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
@@ -16084,7 +16087,8 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::Max:
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::UMax: {
-    if (AMDGPU::isFlatGlobalAddrSpace(AS)) {
+    if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
+        AS == AMDGPUAS::BUFFER_FAT_POINTER) {
       if (RMW->getType()->isFloatTy() &&
           unsafeFPAtomicsDisabled(RMW->getFunction()))
         return AtomicExpansionKind::CmpXChg;
