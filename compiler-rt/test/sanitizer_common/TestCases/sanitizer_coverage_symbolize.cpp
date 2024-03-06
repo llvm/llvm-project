@@ -2,6 +2,8 @@
 //
 // REQUIRES: x86_64-linux
 // XFAIL: tsan
+// https://github.com/llvm/llvm-project/issues/82883
+// XFAIL: glibc-2.39 && ubsan
 //
 // RUN: DIR=%t_workdir
 // RUN: rm -rf $DIR

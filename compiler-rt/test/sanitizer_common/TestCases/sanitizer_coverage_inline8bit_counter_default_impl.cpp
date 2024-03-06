@@ -2,6 +2,8 @@
 // -fsanitize-coverage=inline-8bit-counters,pc-table
 
 // REQUIRES: has_sancovcc,stable-runtime,linux,x86_64-target-arch
+// https://github.com/llvm/llvm-project/issues/82883
+// XFAIL: glibc-2.39 && ubsan
 
 // RUN: %clangxx -O0 %s -fsanitize-coverage=inline-8bit-counters,pc-table -o %t
 // RUN: rm -f %t-counters %t-pcs
