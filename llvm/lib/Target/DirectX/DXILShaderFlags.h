@@ -28,31 +28,34 @@ class GlobalVariable;
 namespace dxil {
 
 struct ComputedShaderFlags {
-#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str)                 \
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)                 \
   bool FlagName : 1;
-#define DXIL_MODULE_FLAG(Bit, FlagName, Str) bool FlagName : 1;
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str) bool FlagName : 1;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 
-#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str) FlagName = false;
-#define DXIL_MODULE_FLAG(Bit, FlagName, Str) FlagName = false;
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
+  FlagName = false;
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str) FlagName = false;
   ComputedShaderFlags() {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   }
 
+  constexpr uint64_t getMask(int Bit) const {
+    return Bit != -1 ? 1ull << Bit : 0;
+  }
   operator uint64_t() const {
     uint64_t FlagValue = 0;
-#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str)                 \
-  FlagValue |= FlagName ? (uint64_t)1 << DxilModuleBit : 0ull;
-#define DXIL_MODULE_FLAG(Bit, FlagName, Str)                                   \
-  FlagValue |= FlagName ? (uint64_t)1 << Bit : 0ull;
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)                 \
+  FlagValue |= FlagName ? getMask(DxilModuleBit) : 0ull;
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                                   \
+  FlagValue |= FlagName ? getMask(DxilModuleBit) : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return FlagValue;
   }
-
   uint64_t getFeatureFlags() const {
     uint64_t FeatureFlags = 0;
-#define SHADER_FEATURE_FLAG(Bit, DxilModuleBit, FlagName, Str)                 \
-  FeatureFlags |= FlagName ? (uint64_t)1 << Bit : 0ull;
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)                 \
+  FeatureFlags |= FlagName ? getMask(FeatureBit) : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return FeatureFlags;
   }

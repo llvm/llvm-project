@@ -9,17 +9,17 @@ CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
 
 #undef CONTAINER_PART
-#endif 
+#endif
 
 #ifdef SHADER_FEATURE_FLAG
 
-// SHADER_FEATURE_FLAG(bit offset for the flag, bit offset for DXIL module flag, name, description.
+// SHADER_FEATURE_FLAG(bit offset for the shader info flag, bit offset for DXIL module flag, name, description.
 
 SHADER_FEATURE_FLAG(0,   2, Doubles, "Double-precision floating point")
-SHADER_FEATURE_FLAG(1,   4, ComputeShadersPlusRawAndStructuredBuffers, "Raw and Structured buffers")
+SHADER_FEATURE_FLAG(1,  17, ComputeShadersPlusRawAndStructuredBuffers, "Raw and Structured buffers")
 SHADER_FEATURE_FLAG(2,  16, UAVsAtEveryStage, "UAVs at every shader stage")
 SHADER_FEATURE_FLAG(3,  15, Max64UAVs, "64 UAV slots")
-SHADER_FEATURE_FLAG(4,   5, MinimumPrecision, "Minimum-precision data types")
+SHADER_FEATURE_FLAG(4,  -1, MinimumPrecision, "Minimum-precision data types")
 SHADER_FEATURE_FLAG(5,   6, DX11_1_DoubleExtensions, "Double-precision extensions for 11.1")
 SHADER_FEATURE_FLAG(6,   7, DX11_1_ShaderExtensions, "Shader extensions for 11.1")
 SHADER_FEATURE_FLAG(7,  14, LEVEL9ComparisonFiltering, "Comparison filtering for feature level 9")
@@ -33,7 +33,7 @@ SHADER_FEATURE_FLAG(14, 19, WaveOps, "Wave level operations")
 SHADER_FEATURE_FLAG(15, 20, Int64Ops, "64-Bit integer")
 SHADER_FEATURE_FLAG(16, 21, ViewID, "View Instancing")
 SHADER_FEATURE_FLAG(17, 22, Barycentrics, "Barycentrics")
-SHADER_FEATURE_FLAG(18, 23, NativeLowPrecision, "Use native low precision")
+SHADER_FEATURE_FLAG(18, -1, NativeLowPrecision, "Use native low precision")
 SHADER_FEATURE_FLAG(19, 24, ShadingRate, "Shading Rate")
 SHADER_FEATURE_FLAG(20, 25, Raytracing_Tier_1_1, "Raytracing tier 1.1 features")
 SHADER_FEATURE_FLAG(21, 26, SamplerFeedback, "Sampler feedback")
@@ -58,8 +58,10 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION")
 DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED")
 DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL")
+DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS")
+DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION")
 DXIL_MODULE_FLAG( 8,  AllResourcesBound, "D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND")
-DXIL_MODULE_FLAG(17,  CSRawAndStructuredViaShader4X, "SHADER_FEATURE_COMPUTE_SHADERS_PLUS_RAW_AND_STRUCTURED_BUFFERS_VIA_SHADER_4_X")
+DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")
 DXIL_MODULE_FLAG(33,  ResMayNotAlias, "Any UAV may not alias any other UAV")
 
 #undef DXIL_MODULE_FLAG
