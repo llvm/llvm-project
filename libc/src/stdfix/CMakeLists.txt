@@ -11,7 +11,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
       abs${suffix}.cpp
     COMPILE_OPTIONS
       -O3
-      -ffixed-point
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
@@ -26,7 +25,6 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
       sqrt${suffix}.cpp
     COMPILE_OPTIONS
       -O3
-      -ffixed-point
     DEPENDS
       libc.src.__support.fixed_point.sqrt
   )
@@ -41,7 +39,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       round${suffix}.cpp
     COMPILE_OPTIONS
       -O3
-      -ffixed-point
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
@@ -55,7 +52,6 @@ add_entrypoint_object(
     uhksqrtus.cpp
   COMPILE_OPTIONS
     -O3
-    -ffixed-point
   DEPENDS
     libc.src.__support.fixed_point.sqrt
 )
@@ -68,7 +64,6 @@ add_entrypoint_object(
     uksqrtui.cpp
   COMPILE_OPTIONS
     -O3
-    -ffixed-point
   DEPENDS
     libc.src.__support.fixed_point.sqrt
 )

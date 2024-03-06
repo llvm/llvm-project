@@ -15,7 +15,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
       abs${suffix}_test.cpp
     COMPILE_OPTIONS
       -O3
-      -ffixed-point
     DEPENDS
       libc.src.stdfix.abs${suffix}
       libc.src.__support.fixed_point.fx_bits
@@ -33,7 +32,6 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
       sqrt${suffix}_test.cpp
     COMPILE_OPTIONS
       -O3
-      -ffixed-point
     DEPENDS
       libc.src.stdfix.sqrt${suffix}
       libc.src.__support.CPP.bit
@@ -55,7 +53,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       round${suffix}_test.cpp
     COMPILE_OPTIONS
       -O3
-      -ffixed-point
     DEPENDS
       libc.src.stdfix.round${suffix}
       libc.src.__support.fixed_point.fx_bits
@@ -72,7 +69,6 @@ add_libc_test(
     uhksqrtus_test.cpp
   COMPILE_OPTIONS
     -O3
-    -ffixed-point
   DEPENDS
     libc.src.stdfix.uhksqrtus
     libc.src.__support.CPP.bit
@@ -92,7 +88,6 @@ add_libc_test(
     uksqrtui_test.cpp
   COMPILE_OPTIONS
     -O3
-    -ffixed-point
   DEPENDS
     libc.src.stdfix.uksqrtui
     libc.src.__support.CPP.bit
