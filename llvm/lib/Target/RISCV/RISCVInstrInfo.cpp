@@ -3130,11 +3130,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(N, RegState::Kill)
         .setMIFlag(Flag);
   } else {
-    Register Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, II, DL, get(RISCV::ADDI), Acc)
-        .addReg(RISCV::X0)
-        .addImm(0)
-        .setMIFlag(Flag);
+    Register Acc;
     uint32_t PrevShiftAmount = 0;
     for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
       if (NumOfVReg & (1U << ShiftAmount)) {
@@ -3143,17 +3139,27 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
               .addReg(DestReg, RegState::Kill)
               .addImm(ShiftAmount - PrevShiftAmount)
               .setMIFlag(Flag);
-        if (NumOfVReg >> (ShiftAmount + 1))
-          BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
-              .addReg(Acc, RegState::Kill)
-              .addReg(DestReg)
-              .setMIFlag(Flag);
+        if (NumOfVReg >> (ShiftAmount + 1)) {
+          // If we don't have an accmulator yet, create it and copy DestReg.
+          if (!Acc) {
+            Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+            BuildMI(MBB, II, DL, get(TargetOpcode::COPY), Acc)
+                .addReg(DestReg)
+                .setMIFlag(Flag);
+          } else {
+            BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
+                .addReg(Acc, RegState::Kill)
+                .addReg(DestReg)
+                .setMIFlag(Flag);
+          }
+        }
         PrevShiftAmount = ShiftAmount;
       }
     }
+    assert(Acc && "Expected valid accumulator");
     BuildMI(MBB, II, DL, get(RISCV::ADD), DestReg)
         .addReg(DestReg, RegState::Kill)
-        .addReg(Acc)
+        .addReg(Acc, RegState::Kill)
         .setMIFlag(Flag);
   }
 }
