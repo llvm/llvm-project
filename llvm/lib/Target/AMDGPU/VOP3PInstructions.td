@@ -736,8 +736,9 @@ class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
          VSrc_b32:$scale_src1,
          op_sel0:$scale_src0_opsel,
          op_sel_hi0:$scale_src1_opsel));
-  let AsmOperands = BaseInst.Pfl.Asm64 #
-      ", $scale_src0, $scale_src1$scale_src0_opsel$scale_src1_opsel";
+  let AsmOperands =
+    "$vdst, $src0, $src1, $src2, $scale_src0, $scale_src1"
+    "$scale_src0_opsel$scale_src1_opsel$cbsz$abid$blgp";
 
   let FixedSize = 1;
   let Size = 16;
