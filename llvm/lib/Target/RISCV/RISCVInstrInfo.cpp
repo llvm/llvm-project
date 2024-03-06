@@ -3059,7 +3059,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
          "Reserve the stack by the multiple of one vector size.");
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  int64_t NumOfVReg = Amount / 8;
+  uint32_t NumOfVReg = Amount / 8;
 
   BuildMI(MBB, II, DL, get(RISCV::PseudoReadVLENB), DestReg).setMIFlag(Flag);
   assert(isInt<32>(NumOfVReg) &&
@@ -3137,7 +3137,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .setMIFlag(Flag);
     uint32_t PrevShiftAmount = 0;
     for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
-      if (NumOfVReg & (1LL << ShiftAmount)) {
+      if (NumOfVReg & (1U << ShiftAmount)) {
         if (ShiftAmount)
           BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
               .addReg(DestReg, RegState::Kill)
