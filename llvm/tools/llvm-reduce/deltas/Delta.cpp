@@ -222,7 +222,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
   std::unique_ptr<ThreadPoolInterface> ChunkThreadPoolPtr;
   if (NumJobs > 1)
     ChunkThreadPoolPtr =
-        std::make_unique<ThreadPool>(hardware_concurrency(NumJobs));
+        std::make_unique<DefaultThreadPool>(hardware_concurrency(NumJobs));
 
   bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {

@@ -49,7 +49,7 @@ namespace ParallelUtilities {
 
 namespace {
 /// A single thread pool that is used to run parallel tasks
-std::unique_ptr<ThreadPool> ThreadPoolPtr;
+std::unique_ptr<DefaultThreadPool> ThreadPoolPtr;
 
 unsigned computeCostFor(const BinaryFunction &BF,
                         const PredicateTy &SkipPredicate,
@@ -106,7 +106,7 @@ ThreadPoolInterface &getThreadPool() {
   if (ThreadPoolPtr.get())
     return *ThreadPoolPtr;
 
-  ThreadPoolPtr = std::make_unique<ThreadPool>(
+  ThreadPoolPtr = std::make_unique<DefaultThreadPool>(
       llvm::hardware_concurrency(opts::ThreadCount));
   return *ThreadPoolPtr;
 }

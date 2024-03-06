@@ -1409,7 +1409,7 @@ public:
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
-  ThreadPool BackendThreadPool;
+  DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
   std::set<GlobalValue::GUID> CfiFunctionDefs;
