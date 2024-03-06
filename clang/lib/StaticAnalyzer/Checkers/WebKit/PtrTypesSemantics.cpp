@@ -253,9 +253,11 @@ class TrivialFunctionAnalysisVisitor
     return true;
   }
 
-  template <typename StmtType, typename CheckFunction>
-  bool WithCachedResult(const StmtType *S, CheckFunction Function) {
-    // Insert false to the cache first to avoid infinite recursion.
+  template <typename CheckFunction>
+  bool WithCachedResult(const Stmt *S, CheckFunction Function) {
+    // If the statement isn't in the cache, conservatively assume that
+    // it's not trivial until analysis completes. Insert false to the cache
+    // first to avoid infinite recursion.
     auto [It, IsNew] = Cache.insert(std::make_pair(S, false));
     if (!IsNew)
       return It->second;
@@ -479,7 +481,7 @@ public:
   }
 
 private:
-  CacheTy Cache;
+  CacheTy &Cache;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
@@ -511,14 +513,9 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   // we don't insert an entry into the cache until Visit returns
   // since Visit* functions themselves make use of the cache.
 
-  auto It = Cache.find(S);
-  if (It != Cache.end())
-    return It->second;
-
   TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(S);
-  Cache[S] = Result;
-
+  assert(Cache.contains(S) && "Top-level statement not properly cached!");
   return Result;
 }
 
