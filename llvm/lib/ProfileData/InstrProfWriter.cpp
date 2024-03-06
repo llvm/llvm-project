@@ -610,7 +610,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t VTableNamesSectionStart = OS.tell();
 
   std::vector<std::string> VTableNameStrs;
-  for (const auto &VTableName : VTableNames.keys())
+  for (StringRef VTableName : VTableNames.keys())
     VTableNameStrs.push_back(VTableName.str());
 
   std::string CompressedVTableNames;

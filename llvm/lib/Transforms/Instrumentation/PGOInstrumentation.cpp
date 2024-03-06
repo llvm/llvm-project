@@ -327,8 +327,6 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
-extern cl::opt<bool> DebugInfoCorrelate;
-
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;

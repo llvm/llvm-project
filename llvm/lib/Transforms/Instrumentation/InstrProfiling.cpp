@@ -1293,6 +1293,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
     return;
 
+  // Skip llvm internal global variable or __prof variables.
   if (GV->getName().starts_with("llvm.") ||
       GV->getName().starts_with("__llvm") ||
       GV->getName().starts_with("__prof"))
@@ -1317,6 +1318,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   Type *DataTypes[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) LLVMType,
 #include "llvm/ProfileData/InstrProfData.inc"
+#undef INSTR_PROF_VTABLE_DATA
   };
 
   auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
@@ -1332,12 +1334,13 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   Constant *DataVals[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
+#undef INSTR_PROF_VTABLE_DATA
   };
 
-  std::string VarName = getInstrProfVTableVarPrefix().str() + PGOVTableName;
   auto *Data =
-      new GlobalVariable(M, DataTy, false /* constant */, Linkage,
-                         ConstantStruct::get(DataTy, DataVals), VarName);
+      new GlobalVariable(M, DataTy, /*constant=*/false, Linkage,
+                         ConstantStruct::get(DataTy, DataVals),
+                         getInstrProfVTableVarPrefix() + PGOVTableName);
 
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_vtab, TT.getObjectFormat()));

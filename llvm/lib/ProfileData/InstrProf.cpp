@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,6 +57,8 @@
 #include <vector>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "instrprof"
 
 static cl::opt<bool> StaticFuncFullModulePrefix(
     "static-func-full-module-prefix", cl::init(true), cl::Hidden,
@@ -388,7 +391,7 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO) {
   // PGONameMetadata should be set by compiler at profile use time
   // and read by symtab creation to look up symbols corresponding to
   // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
+  return getIRPGOObjectName(V, InLTO, /*PGONameMetadata=*/nullptr);
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -473,14 +476,17 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       return E;
   }
 
-  SmallVector<MDNode *, 2> Types;
+  // Iterates vtables with type metadata in the module.
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName())
       continue;
-    Types.clear();
-    G.getMetadata(LLVMContext::MD_type, Types);
-    if (!Types.empty())
-      MD5VTableMap.emplace_back(G.getGUID(), &G);
+    if (G.hasMetadata(LLVMContext::MD_type)) {
+      auto [It, Inserted] = MD5VTableMap.try_emplace(G.getGUID(), &G);
+      if (!Inserted)
+        LLVM_DEBUG(
+            dbgs() << "Duplicated GUID found. This indicates MD5 conflict for "
+                      "vtables in one module, which should be really rare.");
+    }
   }
   Sorted = false;
   finalizeSymtab();
@@ -604,19 +610,19 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
   finalizeSymtab();
-  auto It = lower_bound(
-      VTableAddrRangeToMD5Map, Address,
-      [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
-         uint64_t Addr) {
-        // Find the first address range of which end address is larger than
-        // `Addr`. Smaller-than-or-equal-to is used because the profiled address
-        // within a vtable should be [start-address, end-address).
-        return VTableRangeAddr.first.second <= Addr;
-      });
 
+  // Find the first address range of which end address is larger than `Addr`.
+  auto It =
+      lower_bound(VTableProfDataArray, Address,
+                  [](const VTableProfData &VTableRangeAddr, uint64_t Addr) {
+                    // The profiled address within a vtable should be
+                    // [start-address, end-address), so if Entry.EndAddr <=
+                    // Addr, Entry is not the range for Addr.
+                    return VTableRangeAddr.EndAddr <= Addr;
+                  });
   // Returns the MD5 hash if Address is within the address range of an entry.
-  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address)
-    return It->second;
+  if (It != VTableProfDataArray.end() && It->StartAddr <= Address)
+    return It->MD5Hash;
 
   // The virtual table address collected from value profiler could be defined
   // in another module that is not instrumented. Force the value to be 0 in
