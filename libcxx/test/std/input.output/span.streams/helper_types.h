@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-// #include <print>
+// ROS types
 
 template <typename CharT, std::size_t N = 0>
 class ReadOnlySpan {
@@ -25,19 +25,10 @@ public:
 
   operator std::span<CharT>() = delete;
 
-  operator std::span<const CharT>() {
-    // std::println(stderr, "----> ROspan");
-    return std::span<const CharT, N>{arr_};
-  }
+  operator std::span<const CharT>() { return std::span<const CharT, N>{arr_}; }
 
-  const CharT* begin() {
-    // std::println(stderr, "----> ROspan begin");
-    return arr_;
-  }
-  const CharT* end() {
-    // std::println(stderr, "----> ROspan end");
-    return arr_ + N;
-  }
+  const CharT* begin() { return arr_; }
+  const CharT* end() { return arr_ + N; }
 
 private:
   CharT* arr_;
@@ -45,6 +36,8 @@ private:
 
 template <typename CharT, std::size_t N>
 inline constexpr bool std::ranges::enable_borrowed_range<ReadOnlySpan<CharT, N>> = true;
+
+// Constraints: Constructors [ispanstream.cons]
 
 static_assert(std::ranges::borrowed_range<ReadOnlySpan<char>>);
 
@@ -96,6 +89,8 @@ private:
 template <typename CharT, std::size_t N>
 inline constexpr bool std::ranges::enable_borrowed_range<NonReadOnlySpan<CharT, N>> = true;
 
+// Constraints: Constructors [ispanstream.cons]
+
 static_assert(std::ranges::borrowed_range<NonReadOnlySpan<char>>);
 
 static_assert(std::constructible_from<std::span<char>, NonReadOnlySpan<char>>);
@@ -126,7 +121,7 @@ static_assert(!std::constructible_from<std::span<const wchar_t>, const NonReadOn
 static_assert(!std::convertible_to<const NonReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
 #endif
 
-struct SomeObject {};
+// Mode types
 
 struct NonMode {};
 
