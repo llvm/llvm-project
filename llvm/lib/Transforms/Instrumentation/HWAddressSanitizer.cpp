@@ -52,6 +52,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -60,7 +61,6 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include "llvm/Support/RandomNumberGenerator.h"
 #include <optional>
 #include <random>
 
@@ -1534,18 +1534,21 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   NumTotalFuncs++;
   if (CSelectiveInstrumentation) {
     if (RandomSkipRate.getNumOccurrences()) {
-      std::unique_ptr<RandomNumberGenerator> Rng = F.getParent()->createRNG(F.getName());
+      std::unique_ptr<RandomNumberGenerator> Rng =
+          F.getParent()->createRNG(F.getName());
       std::bernoulli_distribution D(RandomSkipRate);
-      if (D(*Rng)) return;
+      if (D(*Rng))
+        return;
     } else {
       auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
       ProfileSummaryInfo *PSI =
           MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
       if (PSI && PSI->hasProfileSummary()) {
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-        if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
-                ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
-                                                            &F, BFI)
+        if ((HotPercentileCutoff.getNumOccurrences() &&
+             HotPercentileCutoff >= 0)
+                ? PSI->isFunctionHotInCallGraphNthPercentile(
+                      HotPercentileCutoff, &F, BFI)
                 : PSI->isFunctionHotInCallGraph(&F, BFI))
           return;
       } else {
