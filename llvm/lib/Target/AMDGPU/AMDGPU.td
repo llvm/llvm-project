@@ -1881,7 +1881,7 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
-def HasExpOrExportInsts : Predicate<"Subtarget->hasExpOrExportInsts()">,
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
 
 def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
