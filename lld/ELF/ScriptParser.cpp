@@ -721,8 +721,8 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
       StringRef s = peek();
       if (s == ")" || s == "EXCLUDE_FILE")
         break;
-      // Detect common mistakes when certain non-wildcard meta characters used
-      // without a closing ')'.
+      // Detect common mistakes when certain non-wildcard meta characters are
+      // used without a closing ')'.
       if (!s.empty() && strchr("(){}", s[0])) {
         skip();
         setError("section pattern is expected");

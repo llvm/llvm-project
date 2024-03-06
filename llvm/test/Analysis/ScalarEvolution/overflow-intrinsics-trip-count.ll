@@ -12,7 +12,7 @@ define void @uadd_exhaustive() {
 ; CHECK-LABEL: 'uadd_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @uadd_exhaustive
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 35
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 35
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 35
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 35
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 35
 ; CHECK-NEXT:   Predicates:
@@ -39,7 +39,7 @@ define void @sadd_exhaustive() {
 ; CHECK-LABEL: 'sadd_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @sadd_exhaustive
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 67
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 67
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 67
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 67
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 67
 ; CHECK-NEXT:   Predicates:
@@ -66,7 +66,7 @@ define void @usub_exhaustive() {
 ; CHECK-LABEL: 'usub_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @usub_exhaustive
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 50
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 50
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 50
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 50
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 50
 ; CHECK-NEXT:   Predicates:
@@ -93,7 +93,7 @@ define void @ssub_exhaustive() {
 ; CHECK-LABEL: 'ssub_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @ssub_exhaustive
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 68
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 68
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 68
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 68
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 68
 ; CHECK-NEXT:   Predicates:
@@ -120,7 +120,7 @@ define void @smul_exhaustive() {
 ; CHECK-LABEL: 'smul_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @smul_exhaustive
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 14
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 14
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 14
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 14
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 14
 ; CHECK-NEXT:   Predicates:
@@ -147,7 +147,7 @@ define void @umul_exhaustive() {
 ; CHECK-LABEL: 'umul_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @umul_exhaustive
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 15
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 15
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 15
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 15
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 15
 ; CHECK-NEXT:   Predicates:
@@ -174,7 +174,7 @@ define void @uadd_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'uadd_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @uadd_symbolic_start
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %start))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %start))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %start))
 ; CHECK-NEXT:   Predicates:
@@ -201,7 +201,7 @@ define void @sadd_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'sadd_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_start
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (32767 + (-1 * %start))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (32767 + (-1 * %start))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (32767 + (-1 * %start))
 ; CHECK-NEXT:   Predicates:
@@ -279,7 +279,7 @@ define void @usub_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'usub_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @usub_symbolic_start
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is %start
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %start
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %start
 ; CHECK-NEXT:   Predicates:
@@ -306,7 +306,7 @@ define void @ssub_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'ssub_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @ssub_symbolic_start
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-32768 + %start)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-32768 + %start)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-32768 + %start)
 ; CHECK-NEXT:   Predicates:
@@ -385,7 +385,7 @@ define void @sadd_symbolic_non_latch(i16 %start) {
 ; CHECK-NEXT:  Loop %for.body: <multiple exits> backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
 ; CHECK-NEXT:    exit count for for.body: (32767 + (-1 * %start))
 ; CHECK-NEXT:    exit count for for.latch: (230 + (-1 * %start))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
 ; CHECK-NEXT:    symbolic max exit count for for.body: (32767 + (-1 * %start))
 ; CHECK-NEXT:    symbolic max exit count for for.latch: (230 + (-1 * %start))
