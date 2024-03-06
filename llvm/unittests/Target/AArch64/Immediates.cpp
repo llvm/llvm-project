@@ -20,19 +20,19 @@ struct TestCase {
 const std::initializer_list<TestCase> Tests = {
     // ScalableImm, Result
     // No change, easily 'supported'
-    {0, false},
+    {0, true},
 
     // addvl increments by whole registers, range [-32,31]
     // +(16 * vscale), one register's worth
-    {16, false},
+    {16, true},
     // +(8 * vscale), half a register's worth
     {8, false},
     // -(32 * 16 * vscale)
-    {-512, false},
+    {-512, true},
     // -(33 * 16 * vscale)
     {-528, false},
     // +(31 * 16 * vscale)
-    {496, false},
+    {496, true},
     // +(32 * 16 * vscale)
     {512, false},
 };
