@@ -556,8 +556,9 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
     // Create empty phi nodes. This avoids cyclic dependencies when creating
     // the remaining instructions.
     if (auto *PHI = dyn_cast<PHINode>(Val))
-      NewInsts[PHI] = PHINode::Create(IndexType, PHI->getNumIncomingValues(),
-                                      PHI->getName() + ".idx", PHI);
+      NewInsts[PHI] =
+          PHINode::Create(IndexType, PHI->getNumIncomingValues(),
+                          PHI->getName() + ".idx", PHI->getIterator());
   }
   IRBuilder<> Builder(Base->getContext());
 
@@ -6544,6 +6545,13 @@ InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
       if (!SafeReplacementConstant)
         SafeReplacementConstant = CI;
     }
+  } else if (isa<VectorType>(C->getType())) {
+    // Handle scalable splat
+    Value *SplatC = C->getSplatValue();
+    auto *CI = dyn_cast_or_null<ConstantInt>(SplatC);
+    // Bail out if the constant can't be safely incremented/decremented.
+    if (!CI || !ConstantIsOk(CI))
+      return std::nullopt;
   } else {
     // ConstantExpr?
     return std::nullopt;

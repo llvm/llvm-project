@@ -12074,6 +12074,17 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
     return DAG.getSelect(DL, VT, F, N2, N1);
 
+  // select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
+  if (N1.getOpcode() == ISD::ADD && N1.getOperand(0) == N2 && N1->hasOneUse() &&
+      DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) &&
+      N0.getScalarValueSizeInBits() == N1.getScalarValueSizeInBits() &&
+      TLI.getBooleanContents(N0.getValueType()) ==
+          TargetLowering::ZeroOrNegativeOneBooleanContent) {
+    return DAG.getNode(
+        ISD::ADD, DL, N1.getValueType(), N2,
+        DAG.getNode(ISD::AND, DL, N0.getValueType(), N1.getOperand(1), N0));
+  }
+
   // Canonicalize integer abs.
   // vselect (setg[te] X,  0),  X, -X ->
   // vselect (setgt    X, -1),  X, -X ->
