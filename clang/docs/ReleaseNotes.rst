@@ -86,6 +86,11 @@ C++20 Feature Support
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
+- Clang now implements [module.import]p7 fully. Clang now will import module
+  units transitively for the module units coming from the same module of the
+  current module units.
+  Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -137,6 +142,9 @@ C23 Feature Support
   ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
   macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
   (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
+
+- Clang now supports `N3018 The constexpr specifier for object definitions`
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
