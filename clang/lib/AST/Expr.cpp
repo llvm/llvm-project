@@ -723,20 +723,20 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
     const auto &LO = Context.getLangOpts();
-    bool isFuncOrFunctionInNonMSVCCompatEnv =
+    bool IsFuncOrFunctionInNonMSVCCompatEnv =
         ((IK == PredefinedIdentKind::Func ||
           IK == PredefinedIdentKind ::Function) &&
          !LO.MSVCCompat);
-    bool isLFunctionInMSVCCommpatEnv =
+    bool IsLFunctionInMSVCCommpatEnv =
         IK == PredefinedIdentKind::LFunction && LO.MSVCCompat;
-    bool isFuncOrFunctionOrLFunctionOrFuncDName =
+    bool IsFuncOrFunctionOrLFunctionOrFuncDName =
         IK != PredefinedIdentKind::PrettyFunction &&
         IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
         IK != PredefinedIdentKind::FuncSig &&
         IK != PredefinedIdentKind::LFuncSig;
     if ((ForceElaboratedPrinting &&
-         (isFuncOrFunctionInNonMSVCCompatEnv || isLFunctionInMSVCCommpatEnv)) ||
-        !ForceElaboratedPrinting && isFuncOrFunctionOrLFunctionOrFuncDName)
+         (IsFuncOrFunctionInNonMSVCCompatEnv || IsLFunctionInMSVCCommpatEnv)) ||
+        (!ForceElaboratedPrinting && IsFuncOrFunctionOrLFunctionOrFuncDName))
       return FD->getNameAsString();
 
     SmallString<256> Name;
