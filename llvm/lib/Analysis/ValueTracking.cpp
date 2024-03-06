@@ -73,6 +73,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1586,12 +1587,29 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known.Zero.setBitsFrom(32);
         break;
       case Intrinsic::riscv_vsetvli:
-      case Intrinsic::riscv_vsetvlimax:
-        // Assume that VL output is <= 65536.
-        // TODO: Take SEW and LMUL into account.
-        if (BitWidth > 17)
-          Known.Zero.setBitsFrom(17);
+      case Intrinsic::riscv_vsetvlimax: {
+        bool HasAVL = II->getIntrinsicID() == Intrinsic::riscv_vsetvli;
+        const ConstantRange Range = getVScaleRange(II->getFunction(), BitWidth);
+        uint64_t SEW = RISCVVType::decodeVSEW(
+            cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
+        RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
+            cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
+        // The Range is [Lower, Upper), so we need to subtract 1 here to get the
+        // real upper value.
+        uint64_t MaxVLEN =
+            (Range.getUpper().getZExtValue() - 1) * RISCV::RVVBitsPerBlock;
+        uint64_t MaxVL = MaxVLEN / RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+
+        // Result of vsetvli must be not larger than AVL.
+        if (HasAVL)
+          if (auto *CI = dyn_cast<ConstantInt>(II->getArgOperand(0)))
+            MaxVL = std::min(MaxVL, CI->getZExtValue());
+
+        unsigned KnownZeroFirstBit = Log2_32(MaxVL) + 1;
+        if (BitWidth > KnownZeroFirstBit)
+          Known.Zero.setBitsFrom(KnownZeroFirstBit);
         break;
+      }
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction())
           break;
