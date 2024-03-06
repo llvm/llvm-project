@@ -786,3 +786,34 @@ void test_get_cluster_group_id(int d, global int *out)
   default: *out = 0;
   }
 }
+
+// CHECK-LABEL: @test_permlane16_swap(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr addrspace(5) [[OLD_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[OLD_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.permlane16.swap(i32 [[TMP0]], i32 [[TMP1]], i1 false, i1 false)
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[OLD_ADDR]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.permlane16.swap(i32 [[TMP4]], i32 [[TMP5]], i1 true, i1 false)
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[OLD_ADDR]], align 4
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.permlane16.swap(i32 [[TMP8]], i32 [[TMP9]], i1 false, i1 true)
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP10]], ptr addrspace(1) [[TMP11]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane16_swap(global uint* out, uint old, uint src) {
+  *out = __builtin_amdgcn_permlane16_swap(old, src, false, false);
+  *out = __builtin_amdgcn_permlane16_swap(old, src, true, false);
+  *out = __builtin_amdgcn_permlane16_swap(old, src, false, true);
+}

@@ -1685,6 +1685,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
    FeaturePrngInst,
+   FeaturePermlane16Swap,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63
 ]>;

@@ -306,10 +306,19 @@ class VOP3OpSel_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
 
 // Special case for v_permlane16_swap_b32/v_permlane32_swap_b32
 // op_sel[0]/op_sel[1] are treated as bound_ctrl and fi dpp operands.
-class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
+class VOP3OpSelIsDPP_base  {
   bits<1> fi;
   bits<1> bound_ctrl;
+}
 
+class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP3e_vi <op, P> {
+  // OPSEL[0] specifies FI
+  let Inst{11} = fi;
+  // OPSEL[1] specifies BOUND_CTRL
+  let Inst{12} = bound_ctrl;
+}
+
+class VOP3OpSelIsDPP_gfx12 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP3e_gfx11_gfx12 <op, P> {
   // OPSEL[0] specifies FI
   let Inst{11} = fi;
   // OPSEL[1] specifies BOUND_CTRL

@@ -335,6 +335,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["bf16-cvt-insts"] = true;
       Features["bf16-pk-insts"] = true;
       Features["fp8-conversion-insts"] = true;
+      Features["permlane16-swap"] = true;
       break;
     case GK_GFX1201:
     case GK_GFX1200:
