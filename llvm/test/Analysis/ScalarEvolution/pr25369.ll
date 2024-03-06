@@ -9,13 +9,13 @@ define void @hoge1() {
 ; CHECK-LABEL: 'hoge1'
 ; CHECK-NEXT:  Determining loop execution counts for: @hoge1
 ; CHECK-NEXT:  Loop %bb13: backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
-; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
 ; CHECK-NEXT:  Loop %bb13: Predicated backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb13: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb4: backedge-taken count is 20
-; CHECK-NEXT:  Loop %bb4: constant max backedge-taken count is 20
+; CHECK-NEXT:  Loop %bb4: constant max backedge-taken count is i64 20
 ; CHECK-NEXT:  Loop %bb4: symbolic max backedge-taken count is 20
 ; CHECK-NEXT:  Loop %bb4: Predicated backedge-taken count is 20
 ; CHECK-NEXT:   Predicates:
@@ -63,7 +63,7 @@ define void @hoge2() {
 ; CHECK-LABEL: 'hoge2'
 ; CHECK-NEXT:  Determining loop execution counts for: @hoge2
 ; CHECK-NEXT:  Loop %bb13: backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
-; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
 ; CHECK-NEXT:  Loop %bb13: Predicated backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
 ; CHECK-NEXT:   Predicates:

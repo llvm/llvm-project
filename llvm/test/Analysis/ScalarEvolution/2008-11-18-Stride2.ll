@@ -9,7 +9,7 @@ define i32 @f(i32 %x) nounwind readnone {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %bb: backedge-taken count is (((-3 + (-1 * (1 umin (-3 + (-1 * %x) + (1000 umax (3 + %x)))))<nuw><nsw> + (-1 * %x) + (1000 umax (3 + %x))) /u 3) + (1 umin (-3 + (-1 * %x) + (1000 umax (3 + %x)))))
-; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is 334
+; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 334
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is (((-3 + (-1 * (1 umin (-3 + (-1 * %x) + (1000 umax (3 + %x)))))<nuw><nsw> + (-1 * %x) + (1000 umax (3 + %x))) /u 3) + (1 umin (-3 + (-1 * %x) + (1000 umax (3 + %x)))))
 ; CHECK-NEXT:  Loop %bb: Predicated backedge-taken count is (((-3 + (-1 * (1 umin (-3 + (-1 * %x) + (1000 umax (3 + %x)))))<nuw><nsw> + (-1 * %x) + (1000 umax (3 + %x))) /u 3) + (1 umin (-3 + (-1 * %x) + (1000 umax (3 + %x)))))
 ; CHECK-NEXT:   Predicates:

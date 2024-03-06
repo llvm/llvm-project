@@ -8,7 +8,7 @@ define void @le(i64 %n, ptr nocapture %p) nounwind {
 ; CHECK-LABEL: 'le'
 ; CHECK-NEXT:  Determining loop execution counts for: @le
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is %n
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 9223372036854775807
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 9223372036854775807
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %n
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
 ; CHECK-NEXT:   Predicates:

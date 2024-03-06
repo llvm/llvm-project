@@ -30,7 +30,7 @@ define void @test-add-nsw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -69,7 +69,7 @@ define void @test-add-nuw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -109,7 +109,7 @@ define void @test-add-scope-invariant(ptr %input, i32 %needle) {
 ; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 %needle to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-invariant
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %offset) + %needle)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %offset) + %needle)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %offset) + %needle)
 ; CHECK-NEXT:   Predicates:
@@ -392,7 +392,7 @@ define void @test-add-nuw-from-icmp(ptr %input, i32 %offset,
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-nuw-from-icmp
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -432,7 +432,7 @@ define void @test-add-no-load(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-no-load
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -470,7 +470,7 @@ define void @test-add-not-header(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-not-header
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -509,7 +509,7 @@ define void @test-add-not-header2(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-not-header2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -552,7 +552,7 @@ define void @test-add-not-header3(ptr %input, i32 %offset, i32 %numIterations,
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop2: (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop2: (-1 + %numIterations)
@@ -593,7 +593,7 @@ define void @test-add-not-header4(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-not-header4
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -670,7 +670,7 @@ define void @test-add-not-header6(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {((4 * (sext i32 (1 + %offset) to i64))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + %numIterations) to i64))<nuw><nsw> + (4 * (sext i32 (1 + %offset) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-not-header6
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -709,7 +709,7 @@ define void @test-add-not-header7(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {((4 * (sext i32 (1 + %offset) to i64))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + %numIterations) to i64))<nuw><nsw> + (4 * (sext i32 (1 + %offset) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-not-header7
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -750,7 +750,7 @@ define void @test-add-not-header8(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset),+,1}<nw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 (%offset + %numIterations) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-not-header8
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -791,7 +791,7 @@ define void @test-add-call(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-call
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -829,7 +829,7 @@ define void @test-add-call2(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-call2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -866,7 +866,7 @@ define void @test-gep-propagates-poison(ptr %input, i32 %offset, i32 %numIterati
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-gep-propagates-poison
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -905,7 +905,7 @@ define void @test-add-mul-propagates(ptr %input, i32 %offset, i32 %numIterations
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-mul-propagates
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -944,7 +944,7 @@ define void @test-mul-propagates-poison(ptr %input, i32 %offset, i32 %numIterati
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-mul-propagates-poison
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -982,7 +982,7 @@ define void @test-mul-propagates-poison-2(ptr %input, i32 %offset, i32 %numItera
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-mul-propagates-poison-2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1019,7 +1019,7 @@ define void @test-add-div(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-div
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1054,7 +1054,7 @@ define void @test-add-div2(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-div2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1089,7 +1089,7 @@ define void @test-add-store(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-store
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1132,7 +1132,7 @@ define void @test-add-twice(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-twice
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1176,7 +1176,7 @@ define void @test-mul-nsw(ptr %input, i32 %stride, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-mul-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1214,7 +1214,7 @@ define void @test-mul-nuw(ptr %input, i32 %stride, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-mul-nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1254,7 +1254,7 @@ define void @test-shl-nsw(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1294,7 +1294,7 @@ define void @test-shl-nuw-edgecase(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nuw-edgecase
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1334,7 +1334,7 @@ define void @test-shl-nuw-nsw(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nuw-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1374,7 +1374,7 @@ define void @test-shl-no-nsw(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-no-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1414,7 +1414,7 @@ define void @test-shl-nsw-edgecase(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nsw-edgecase
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1452,7 +1452,7 @@ define void @test-shl-nuw(ptr %input, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1493,7 +1493,7 @@ define void @test-sub-no-nsw(ptr %input, i32 %start, i32 %sub, i32 %numIteration
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-sub-no-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1535,7 +1535,7 @@ define void @test-sub-nsw(ptr %input, i32 %start, i32 %sub, i32 %numIterations) 
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-sub-nsw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %start) + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1576,7 +1576,7 @@ define void @test-sub-nsw-lhs-non-negative(ptr %input, i32 %sub, i32 %numIterati
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-sub-nsw-lhs-non-negative
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:
@@ -1621,7 +1621,7 @@ define void @test-sext-sub(ptr %input, i32 %sub, i32 %numIterations) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for cont: (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for cont: (-1 + %numIterations)
@@ -1674,7 +1674,7 @@ define void @test-sub-with-add(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-sub-with-add
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:   Predicates:

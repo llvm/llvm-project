@@ -7,7 +7,7 @@ define void @PR1101(i32 %N) {
 ; CHECK-LABEL: 'PR1101'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR1101
 ; CHECK-NEXT:  Loop %bb3: backedge-taken count is 4
-; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is 4
+; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is i32 4
 ; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:

@@ -6,7 +6,7 @@ define void @test0(i32 %init) {
 ; CHECK-LABEL: 'test0'
 ; CHECK-NEXT:  Determining loop execution counts for: @test0
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
@@ -28,7 +28,7 @@ define void @test1(i32 %init) {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
@@ -74,7 +74,7 @@ define void @test3(ptr %init.ptr) {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
@@ -97,7 +97,7 @@ define void @test4(ptr %init.ptr) {
 ; CHECK-LABEL: 'test4'
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
@@ -167,7 +167,7 @@ define void @test7(i32 %init) {
 ; CHECK-LABEL: 'test7'
 ; CHECK-NEXT:  Determining loop execution counts for: @test7
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;

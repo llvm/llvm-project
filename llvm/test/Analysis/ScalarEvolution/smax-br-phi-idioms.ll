@@ -157,7 +157,7 @@ define i32 @f5(ptr %val) {
 ; CHECK-NEXT:  Loop %for.end: <multiple exits> backedge-taken count is false
 ; CHECK-NEXT:    exit count for for.end: false
 ; CHECK-NEXT:    exit count for for.condt: false
-; CHECK-NEXT:  Loop %for.end: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %for.end: constant max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %for.end: symbolic max backedge-taken count is false
 ; CHECK-NEXT:    symbolic max exit count for for.end: false
 ; CHECK-NEXT:    symbolic max exit count for for.condt: false

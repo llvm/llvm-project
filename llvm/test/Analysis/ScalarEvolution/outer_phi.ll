@@ -20,7 +20,7 @@ define i32 @test_01(i32 %a, i32 %b) {
 ; CHECK-NEXT:  Loop %inner: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for inner: %b
 ; CHECK-NEXT:    exit count for inner.backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is %b
 ; CHECK-NEXT:    symbolic max exit count for inner: %b
 ; CHECK-NEXT:    symbolic max exit count for inner.backedge: ***COULDNOTCOMPUTE***
@@ -84,7 +84,7 @@ define i32 @test_02(i32 %a, i32 %b) {
 ; CHECK-NEXT:  Loop %inner: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for inner: ((-1 * %outer.iv) + (%b smax %outer.iv))
 ; CHECK-NEXT:    exit count for inner.backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ((-1 * %outer.iv) + (%b smax %outer.iv))
 ; CHECK-NEXT:    symbolic max exit count for inner: ((-1 * %outer.iv) + (%b smax %outer.iv))
 ; CHECK-NEXT:    symbolic max exit count for inner.backedge: ***COULDNOTCOMPUTE***

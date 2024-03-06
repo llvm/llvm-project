@@ -28,7 +28,7 @@ define void @b(i64 %n) nounwind {
 ; CHECK-LABEL: 'b'
 ; CHECK-NEXT:  Determining loop execution counts for: @b
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is false
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
@@ -51,7 +51,7 @@ define void @c(i64 %n) nounwind {
 ; CHECK-LABEL: 'c'
 ; CHECK-NEXT:  Determining loop execution counts for: @c
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is false
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
@@ -132,7 +132,7 @@ define void @constant_phi_operands() nounwind {
 ; CHECK-LABEL: 'constant_phi_operands'
 ; CHECK-NEXT:  Determining loop execution counts for: @constant_phi_operands
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
@@ -158,7 +158,7 @@ define void @exit_orcond_nsw(ptr %a) nounwind {
 ; CHECK-LABEL: 'exit_orcond_nsw'
 ; CHECK-NEXT:  Determining loop execution counts for: @exit_orcond_nsw
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body.i: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body.i: constant max backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %for.body.i: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable predicated backedge-taken count.
 ;

@@ -6,7 +6,7 @@ define i32 @slt_trip_count_with_range(ptr %ptr0, ptr %ptr1) {
 ; CHECK-LABEL: 'slt_trip_count_with_range'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_trip_count_with_range
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %limit)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 98
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 98
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:   Predicates:
@@ -31,7 +31,7 @@ define i32 @ult_trip_count_with_range(ptr %ptr0, ptr %ptr1) {
 ; CHECK-LABEL: 'ult_trip_count_with_range'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_trip_count_with_range
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %limit)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 98
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 98
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:   Predicates:

@@ -15,7 +15,7 @@ define void @foo1(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ; CHECK-LABEL: 'foo1'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo1
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 ; CHECK-NEXT:   Predicates:
@@ -50,7 +50,7 @@ define void @foo2(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ; CHECK-LABEL: 'foo2'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo2
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
 ; CHECK-NEXT:   Predicates:
@@ -109,7 +109,7 @@ define void @foo4(ptr nocapture %A, i32 %n, i32 %s) {
 ; CHECK-LABEL: 'foo4'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo4
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
 ; CHECK-NEXT:   Predicates:
@@ -142,7 +142,7 @@ define void @foo5(ptr nocapture %A, i32 %n, i32 %s, i32 %start) mustprogress {
 ; CHECK-LABEL: 'foo5'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo5
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((((-1 * (1 umin ((-1 * %start) + (%n smax %start))))<nuw><nsw> + (-1 * %start) + (%n smax %start)) /u (1 umax %s)) + (1 umin ((-1 * %start) + (%n smax %start))))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %start) + (%n smax %start))))<nuw><nsw> + (-1 * %start) + (%n smax %start)) /u (1 umax %s)) + (1 umin ((-1 * %start) + (%n smax %start))))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((((-1 * (1 umin ((-1 * %start) + (%n smax %start))))<nuw><nsw> + (-1 * %start) + (%n smax %start)) /u (1 umax %s)) + (1 umin ((-1 * %start) + (%n smax %start))))
 ; CHECK-NEXT:   Predicates:
@@ -229,7 +229,7 @@ define void @zero_stride_symbolic(ptr nocapture %A, i32 %n, i32 %zero) {
 ; CHECK-LABEL: 'zero_stride_symbolic'
 ; CHECK-NEXT:  Determining loop execution counts for: @zero_stride_symbolic
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((((-1 * (1 umin ((-1 * %zero) + (%n smax %zero))))<nuw><nsw> + (-1 * %zero) + (%n smax %zero)) /u (1 umax %zero)) + (1 umin ((-1 * %zero) + (%n smax %zero))))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %zero) + (%n smax %zero))))<nuw><nsw> + (-1 * %zero) + (%n smax %zero)) /u (1 umax %zero)) + (1 umin ((-1 * %zero) + (%n smax %zero))))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((((-1 * (1 umin ((-1 * %zero) + (%n smax %zero))))<nuw><nsw> + (-1 * %zero) + (%n smax %zero)) /u (1 umax %zero)) + (1 umin ((-1 * %zero) + (%n smax %zero))))
 ; CHECK-NEXT:   Predicates:
