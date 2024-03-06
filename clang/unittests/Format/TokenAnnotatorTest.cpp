@@ -626,15 +626,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 
-  Tokens = annotate("#define FOO(bar) foo((time_t) & bar)");
+  Tokens = annotate("#define FOO(bar) foo((Foo) & bar)");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_BinaryOperator);
 
   auto Style = getLLVMStyle();
-  Style.TypeNames.push_back("time_t");
-  Tokens = annotate("#define FOO(bar) foo((time_t)&bar)", Style);
+  Style.TypeNames.push_back("Foo");
+  Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::identifier, TT_TypeName);
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 }
@@ -1768,9 +1769,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
 
+  Tokens = annotate("int iso_time(time_t);");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+
   auto Style = getLLVMStyle();
-  Style.TypeNames.push_back("time_t");
-  Tokens = annotate("int iso_time(time_t);", Style);
+  Style.TypeNames.push_back("MyType");
+  Tokens = annotate("int iso_time(MyType);", Style);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
