@@ -671,7 +671,7 @@ public:
     return !hasGFX12_10Insts();
   }
 
-  bool hasExpOrExportInsts() const {
+  bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX12_10Insts();
   }
 

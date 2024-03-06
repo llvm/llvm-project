@@ -2048,7 +2048,7 @@ def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
 def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX12_10Insts))>;
 
-def HasExpOrExportInsts : Predicate<"Subtarget->hasExpOrExportInsts()">,
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts), (not FeatureGFX12_10Insts))>;
 
 def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
