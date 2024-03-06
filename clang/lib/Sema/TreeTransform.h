@@ -4001,16 +4001,16 @@ public:
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
                                             StmtResult StrBlock) {
-    getSema().OpenACC.ActOnConstruct(K, BeginLoc);
+    getSema().OpenACC().ActOnConstruct(K, BeginLoc);
 
     // TODO OpenACC: Include clauses.
-    if (getSema().OpenACC.ActOnStartStmtDirective(K, BeginLoc))
+    if (getSema().OpenACC().ActOnStartStmtDirective(K, BeginLoc))
       return StmtError();
 
-    StrBlock = getSema().OpenACC.ActOnAssociatedStmt(K, StrBlock);
+    StrBlock = getSema().OpenACC().ActOnAssociatedStmt(K, StrBlock);
 
-    return getSema().OpenACC.ActOnEndStmtDirective(K, BeginLoc, EndLoc,
-                                                   StrBlock);
+    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
+                                                     StrBlock);
   }
 
 private:

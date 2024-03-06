@@ -1162,6 +1162,11 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaOpenACC &OpenACC() {
+    assert(OpenACCPtr);
+    return *OpenACCPtr;
+  }
+
 protected:
   friend class Parser;
   friend class InitializationSequence;
@@ -1192,26 +1197,7 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name Sema Components
-  /// Parts of Sema
-  ///@{
-
-  // Just in this section, private members are followed by public, because
-  // C++ requires us to create (private) objects before (public) references.
-
-private:
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
-
-public:
-  SemaOpenACC &OpenACC;
 
   ///@}
 

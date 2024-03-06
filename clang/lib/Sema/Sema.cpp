@@ -197,7 +197,6 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr),
       CurContext(nullptr), ExternalSource(nullptr), CurScope(nullptr),
       Ident_super(nullptr), OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
-      OpenACC(*OpenACCPtr),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
       MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
