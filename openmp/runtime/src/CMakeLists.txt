@@ -314,7 +314,21 @@ endif()
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
 configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
 configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
-if(${LIBOMP_FORTRAN_MODULES})
+
+if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
+  # If libomp is built as an LLVM runtime and the flang compiler is available,
+  # compile the Fortran module files.
+  message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
+  set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
+  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
+  add_custom_command(
+    OUTPUT omp_lib.mod omp_lib_kinds.mod
+    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE}
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
+      ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
+  )
+elseif(${LIBOMP_FORTRAN_MODULES})
+  # The following requests explicit building of the Fortran module files
   # Workaround for gfortran to build modules with the
   # omp_sched_monotonic integer parameter
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
