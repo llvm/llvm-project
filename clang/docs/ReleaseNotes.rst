@@ -224,8 +224,8 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
-- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes
-  (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_).
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (GH#66114).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

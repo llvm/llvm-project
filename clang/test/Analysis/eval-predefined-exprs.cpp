@@ -52,11 +52,7 @@ void foo() {
 
 struct A {
   A() {
-#ifdef ANALYZER_MS
     clang_analyzer_dump(__func__);     // expected-warning {{&Element{"A",0 S64b,char}}}
-#else
-        clang_analyzer_dump(__func__); // expected-warning {{&Element{"A",0 S64b,char}}}
-#endif
 #ifdef ANALYZER_MS
     clang_analyzer_dump(__FUNCTION__); // expected-warning {{&Element{"A::A",0 S64b,char}}}
 #else
@@ -76,11 +72,7 @@ struct A {
 #endif
   }
   ~A() {
-#ifdef ANALYZER_MS
     clang_analyzer_dump(__func__);          // expected-warning {{&Element{"~A",0 S64b,char}}}
-#else
-    clang_analyzer_dump(__func__);          // expected-warning {{&Element{"~A",0 S64b,char}}}
-#endif
 #ifdef ANALYZER_MS
     clang_analyzer_dump(__FUNCTION__);      // expected-warning {{&Element{"A::~A",0 S64b,char}}}
 #else
