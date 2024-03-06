@@ -339,8 +339,13 @@ public:
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
 
-  virtual bool IsInterestingCtxForLineBreakpoint(const SymbolContext &) const {
-    return true;
+  // Returns true if this SymbolContext should be used when setting breakpoints
+  // by line (number or regex). This is useful for languages that create
+  // artificial functions without any meaningful user code associated with them
+  // (e.g. code that gets expanded in late compilation stages, like by
+  // CoroSplitter).
+  virtual bool IsArtificialCtxForLineBreakpoint(const SymbolContext &) const {
+    return false;
   }
 
 protected:

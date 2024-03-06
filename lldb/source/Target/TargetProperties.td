@@ -104,6 +104,9 @@ let Definition = "target" in {
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
     Desc<"Consult the platform module avoid list when setting non-module specific breakpoints.">;
+  def IgnoreBreakpointsFromLanguageArtificialLocations: Property<"ignore-breakpoints-from-language-artificial-locations", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, locations that are considered artificial by the source Language plugin will be ignored when setting breakpoints by line number or regex.">;
   def Arg0: Property<"arg0", "String">,
     DefaultStringValue<"">,
     Desc<"The first argument passed to the program in the argument array which can be different from the executable itself.">;
