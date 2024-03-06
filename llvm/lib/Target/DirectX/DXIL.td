@@ -218,6 +218,9 @@ class DXILOpMapping<int opCode, DXILOpClass opClass, Intrinsic intrinsic, string
 // Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.">;
+def Exp2 : DXILOpMapping<21, unary, int_exp2,
+                         "Returns the base 2 exponential, or 2**x, of the specified value."
+                         "exp2(x) = 2**x.">;
 def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
                          "decimal part of the input.">;
@@ -226,6 +229,12 @@ def Round : DXILOpMapping<26, unary, int_round,
                          "within a floating-point type.">;
 def UMax : DXILOpMapping<39, binary, int_umax,
                          "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
+def FMad : DXILOpMapping<46, tertiary, int_fmuladd,
+                         "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m * a + b.">;
+def IMad : DXILOpMapping<48, tertiary, int_dx_imad,
+                         "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m * a + b.">;
+def UMad : DXILOpMapping<49, tertiary, int_dx_umad,
+                         "Unsigned integer arithmetic multiply/add operation. umad(m,a,b) = m * a + b.">;
 def ThreadId : DXILOpMapping<93, threadId, int_dx_thread_id,
                              "Reads the thread ID">;
 def GroupId  : DXILOpMapping<94, groupId, int_dx_group_id,

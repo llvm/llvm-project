@@ -385,6 +385,11 @@ public:
     N = NewN;
   }
 
+  bool shouldKeepJumpConditionsTogether(
+      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
+      TargetLoweringBase::CondMergingParams Params) const;
+
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
