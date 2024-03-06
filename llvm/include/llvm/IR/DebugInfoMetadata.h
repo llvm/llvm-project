@@ -975,6 +975,12 @@ class DIDerivedType : public DIType {
 public:
   /// Pointer authentication (__ptrauth) metadata.
   struct PtrAuthData {
+    // RawData layout:
+    // - Bits 0..3:  Key
+    // - Bit  4:     IsAddressDiscriminated
+    // - Bits 5..20: ExtraDiscriminator
+    // - Bit  21:    IsaPointer
+    // - Bit  22:    AuthenticatesNullValues
     unsigned RawData;
 
     PtrAuthData(unsigned FromRawData) : RawData(FromRawData) {}
@@ -985,12 +991,6 @@ public:
       RawData = (Key << 0) | (IsDiscr ? (1 << 4) : 0) | (Discriminator << 5) |
                 (IsaPointer ? (1 << 21) : 0) |
                 (AuthenticatesNullValues ? (1 << 22) : 0);
-    }
-    bool operator==(struct PtrAuthData Other) const {
-      return RawData == Other.RawData;
-    }
-    bool operator!=(struct PtrAuthData Other) const {
-      return !(*this == Other);
     }
 
     unsigned Key() { return (RawData >> 0) & 0b1111; }
@@ -1090,37 +1090,6 @@ public:
 
   std::optional<PtrAuthData> getPtrAuthData() const;
 
-  /// \returns The PointerAuth key.
-  std::optional<unsigned> getPtrAuthKey() const {
-    if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->Key();
-    return std::nullopt;
-  }
-  /// \returns The PointerAuth address discrimination bit.
-  std::optional<bool> isPtrAuthAddressDiscriminated() const {
-    if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->IsAddressDiscriminated();
-    return std::nullopt;
-  }
-  /// \returns The PointerAuth extra discriminator.
-  std::optional<unsigned> getPtrAuthExtraDiscriminator() const {
-    if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->ExtraDiscriminator();
-    return std::nullopt;
-  }
-  /// \returns The PointerAuth IsaPointer bit.
-  std::optional<bool> isPtrAuthIsaPointer() const {
-    if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->IsaPointer();
-    return std::nullopt;
-  }
-  /// \returns The PointerAuth authenticates null values bit.
-  std::optional<bool> getPtrAuthAuthenticatesNullValues() const {
-    if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->AuthenticatesNullValues();
-    return std::nullopt;
-  }
-
   /// Get extra data associated with this derived type.
   ///
   /// Class type for pointer-to-members, objective-c property node for ivars,
@@ -1159,6 +1128,16 @@ public:
     return MD->getMetadataID() == DIDerivedTypeKind;
   }
 };
+
+inline bool operator==(DIDerivedType::PtrAuthData Lhs,
+                       DIDerivedType::PtrAuthData Rhs) {
+  return Lhs.RawData == Rhs.RawData;
+}
+
+inline bool operator!=(DIDerivedType::PtrAuthData Lhs,
+                       DIDerivedType::PtrAuthData Rhs) {
+  return !(Lhs == Rhs);
+}
 
 /// Composite types.
 ///
