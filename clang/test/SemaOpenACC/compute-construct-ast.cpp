@@ -1,5 +1,12 @@
 // RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck %s
 
+// Test this with PCH.
+// RUN: %clang_cc1 %s -fopenacc -emit-pch -o %t %s
+// RUN: %clang_cc1 %s -fopenacc -include-pch %t -ast-dump-all | FileCheck %s
+
+#ifndef PCH_HELPER
+#define PCH_HELPER
+
 void NormalFunc() {
   // FIXME: Add a test once we have clauses for this.
   // CHECK-LABEL: NormalFunc
@@ -104,3 +111,5 @@ struct S {
 void use() {
   TemplFunc<S>();
 }
+#endif
+
