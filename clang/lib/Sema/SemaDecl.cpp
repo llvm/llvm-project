@@ -11479,6 +11479,16 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
                                              bool &Redeclaration,
                                              NamedDecl *&OldDecl,
                                              LookupResult &Previous) {
+  assert(!OldFD->isMultiVersion() && "Unexpected MultiVersion");
+
+  // The definitions should be allowed in any order. If we have discovered
+  // a new target version and the preceeding was the default, then add the
+  // corresponding attribute to it.
+  if (OldFD->getMultiVersionKind() == MultiVersionKind::None &&
+      NewFD->getMultiVersionKind() == MultiVersionKind::TargetVersion)
+    OldFD->addAttr(TargetVersionAttr::CreateImplicit(S.Context, "default",
+                                                     OldFD->getSourceRange()));
+
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
@@ -11505,9 +11515,8 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   }
 
   // If this is 'default', permit the forward declaration.
-  if (!OldFD->isMultiVersion() &&
-      ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
-       (NewTVA && NewTVA->isDefaultVersion() && !OldTVA))) {
+  if ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
+      (NewTVA && NewTVA->isDefaultVersion() && !OldTVA)) {
     Redeclaration = true;
     OldDecl = OldFD;
     OldFD->setIsMultiVersion();
