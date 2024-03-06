@@ -7408,11 +7408,13 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterface",
         ":MemorySlotInterfaces",
+        ":Pass",
         ":Rewrite",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
