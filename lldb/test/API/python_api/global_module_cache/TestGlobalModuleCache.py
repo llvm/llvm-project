@@ -56,16 +56,36 @@ class GlobalModuleCacheTestCase(TestBase):
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
+    @expectedFailureAll() # An external reference keeps modules alive
+    @skipIfWindows
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    def test_TwoTargetsOneDebuggerWithPin(self):
+        self.do_test(False, True, True)
+
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_TwoTargetsTwoDebuggers(self):
         self.do_test(False, False)
 
-    def do_test(self, one_target, one_debugger):
+    @expectedFailureAll() # An external reference keeps modules alive
+    #@skipIfWindows
+    #@skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    def test_TwoTargetsTwoDebuggersWithPin(self):
+        self.do_test(False, False, True)
+        
+    def do_test(self, one_target, one_debugger, use_pinning_module=False):
         # Make sure that if we have one target, and we run, then
         # change the binary and rerun, the binary (and any .o files
         # if using dwarf in .o file debugging) get removed from the
         # shared module cache.  They are no longer reachable.
+        # If use_pinning_module is true, we make another SBModule that holds
+        # a reference to the a.out, and will keep it alive.
+        # At present, those tests fail.  But they show how easy it is to
+        # strand a module so it doesn't go away.  We really should add a
+        # Finalize to Modules so when lldb removes them from the
+        # shared module cache, we delete the expensive parts of the Module
+        # and mark it no longer Valid.  The we can test that that has
+        # happened.
         debug_style = self.getDebugInfo()
 
         # Before we do anything, clear the global module cache so we don't
@@ -87,6 +107,16 @@ class GlobalModuleCacheTestCase(TestBase):
             self, "return counter;", main_filespec
         )
 
+        self.pinning_module = None
+        if use_pinning_module:
+            self.pinning_module = target.FindModule(target.executable)
+            self.assertTrue(self.pinning_module.IsValid(), "Valid pinning module")
+            def cleanupPinningModule(self):
+                if self.pinning_module:
+                    self.pinning_module.Clear()
+                    self.pinning_module = None
+            self.addTearDownHook(cleanupPinningModule)
+                
         # Make sure we ran the version we intended here:
         self.check_counter_var(thread, 1)
         process.Kill()
@@ -96,6 +126,8 @@ class GlobalModuleCacheTestCase(TestBase):
 
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
         error = lldb.SBError()
+
+        target2 = None
         if one_debugger:
             if one_target:
                 (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(
@@ -117,6 +149,8 @@ class GlobalModuleCacheTestCase(TestBase):
                         lldb.SBDebugger.Destroy(self.dbg)
                         self.dbg = self.old_debugger
                         self.old_debugger = None
+                        # The testsuite teardown asserts if we haven't deleted all
+                        # modules by the time we exit, so we have to clean this up.
 
                 self.addTearDownHook(cleanupDebugger)
                 (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -145,6 +179,11 @@ class GlobalModuleCacheTestCase(TestBase):
         if debug_style == "dsym":
             num_a_dot_out_entries += 1
             num_main_dot_o_entries -= 1
+
+        # We shouldn't need the process anymore, that target holds onto the old
+        # image list, so get rid of it now:
+        if target2 and target2.process.IsValid():
+            target2.process.Kill()
 
         error = self.check_image_list_result(num_a_dot_out_entries, 1)
         # Even if this fails, MemoryPressureDetected should fix this.
