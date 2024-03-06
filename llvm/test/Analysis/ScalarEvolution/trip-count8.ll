@@ -10,8 +10,6 @@ define i32 @foo(i32 %ecx) nounwind {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + %ecx)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -2
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %ecx)
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %ecx)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
