@@ -7,7 +7,7 @@ define void @test0(i32 %init) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test0
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 32
 ;
  entry:
   br label %loop
@@ -28,7 +28,7 @@ define void @test1(i32 %init) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 32
 ;
  entry:
   br label %loop
@@ -72,7 +72,7 @@ define void @test3(ptr %init.ptr) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 32
 ;
  entry:
   %init = load i32, ptr %init.ptr, !range !0
@@ -94,7 +94,7 @@ define void @test4(ptr %init.ptr) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 32
 ;
  entry:
   %init = load i32, ptr %init.ptr, !range !1
@@ -161,7 +161,7 @@ define void @test7(i32 %init) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test7
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 32
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 32
 ;
  entry:
   br label %loop
