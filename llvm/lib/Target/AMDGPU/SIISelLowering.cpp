@@ -4139,11 +4139,11 @@ SDValue SITargetLowering::lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const {
   SDValue IntrinID =
       DAG.getTargetConstant(Intrinsic::amdgcn_s_setreg, SL, MVT::i32);
   SDValue SetModeReg =
-      DAG.getNode(ISD::INTRINSIC_VOID, SL, MVT::Other, Op.getOperand(0), IntrinID,
-                  ModeHwRegImm, NewModeReg);
+      DAG.getNode(ISD::INTRINSIC_VOID, SL, MVT::Other, Op.getOperand(0),
+                  IntrinID, ModeHwRegImm, NewModeReg);
   SDValue SetTrapReg =
-      DAG.getNode(ISD::INTRINSIC_VOID, SL, MVT::Other, Op.getOperand(0), IntrinID,
-                  TrapHwRegImm, NewTrapReg);
+      DAG.getNode(ISD::INTRINSIC_VOID, SL, MVT::Other, Op.getOperand(0),
+                  IntrinID, TrapHwRegImm, NewTrapReg);
   return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, SetTrapReg, SetModeReg);
 }
 

@@ -5309,10 +5309,6 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
-    // Emit a warning if the user accesses the AMDGPU floating point environment
-    // without access being set.
-    if (!CurFPFeatures.getAllowFEnvAccess())
-      Diag(TheCall->getBeginLoc(), diag::warn_fenv_access);
     return false;
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
