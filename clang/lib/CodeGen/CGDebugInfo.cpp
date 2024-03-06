@@ -5652,6 +5652,15 @@ void CGDebugInfo::EmitPseudoVariable(llvm::AllocaInst *Alloca, QualType Ty,
                          Alloca->getParent());
 }
 
+llvm::MDNode *CGDebugInfo::GetPseudoVariableAnnotation() {
+  if (!PseudoVariableAnnotation)
+    PseudoVariableAnnotation =
+        llvm::MDNode::get(CGM.getLLVMContext(),
+                          llvm::MDString::get(CGM.getLLVMContext(),
+                                              "fdebug-info-for-pointer-type"));
+  return PseudoVariableAnnotation;
+}
+
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
                                   const GlobalDecl GD) {
 
