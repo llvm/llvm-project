@@ -3264,7 +3264,7 @@ public:
                               SourceLocation RParenLoc);
 
   TopLevelStmtDecl *ActOnStartTopLevelStmtDecl(Scope *S);
-  void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl* D, Stmt *Statement);
+  void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement);
 
   void ActOnPopScope(SourceLocation Loc, Scope *S);
 

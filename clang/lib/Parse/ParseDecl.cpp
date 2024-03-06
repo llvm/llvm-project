@@ -5679,7 +5679,7 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   Parser::StmtVector Stmts;
   ParsedStmtContext SubStmtCtx = ParsedStmtContext();
   ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
-                     Scope::CompoundStmtScope);
+                               Scope::CompoundStmtScope);
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   if (!R.isUsable())

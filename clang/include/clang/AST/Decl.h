@@ -4427,7 +4427,7 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
   bool IsSemiMissing = false;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
-    : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
+      : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
 
   virtual void anchor();
 
@@ -4446,10 +4446,10 @@ public:
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
 
   static DeclContext *castToDeclContext(const TopLevelStmtDecl *D) {
-    return static_cast<DeclContext *>(const_cast<TopLevelStmtDecl*>(D));
+    return static_cast<DeclContext *>(const_cast<TopLevelStmtDecl *>(D));
   }
   static TopLevelStmtDecl *castFromDeclContext(const DeclContext *DC) {
-    return static_cast<TopLevelStmtDecl *>(const_cast<DeclContext*>(DC));
+    return static_cast<TopLevelStmtDecl *>(const_cast<DeclContext *>(DC));
   }
 };
 
