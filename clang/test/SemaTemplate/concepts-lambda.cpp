@@ -117,7 +117,13 @@ namespace GH82849 {
 
 template <class T>
 concept C = requires(T t) {
-  [](T) {}(t);
+  requires requires (T u) {
+    []<class V>(V) {
+      return requires(V v) {
+        [](V w) {}(v);
+      };
+    }(t);
+  };
 };
 
 template <class From>

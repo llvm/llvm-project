@@ -13662,12 +13662,12 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // template <C F>
   // struct Widget<F> {};
   //
-  // While we are here in substitution for Widget<F>, the parent of DC would be
+  // While we are substituting Widget<F>, the parent of DC would be
   // the template specialization itself. Thus, the lambda expression
-  // will be deemed as dependent even if we have non-dependent template
+  // will be deemed as dependent even if there are no dependent template
   // arguments.
   // (A ClassTemplateSpecializationDecl is always a dependent context.)
-  if (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
+  while (DC->getDeclKind() == Decl::Kind::RequiresExprBody)
     DC = DC->getParent();
   if ((getSema().isUnevaluatedContext() ||
        getSema().isConstantEvaluatedContext()) &&
