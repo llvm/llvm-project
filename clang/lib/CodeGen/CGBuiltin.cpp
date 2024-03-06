@@ -16570,7 +16570,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
 #include "llvm/TargetParser/PPCTargetParser.def"
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
-                                     unsigned Mask, unsigned CompOp,
+                                     unsigned Mask, CmpInst::Predicate CompOp,
                                      unsigned OpValue) -> Value * {
     if (SupportMethod == AIX_BUILTIN_PPC_FALSE)
       return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
@@ -16608,25 +16608,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     if (Mask)
       FieldValue = Builder.CreateAnd(FieldValue, Mask);
 
-    CmpInst::Predicate PreOp;
-    switch (CompOp) {
-    case COMP_EQ:
-      PreOp = ICmpInst::ICMP_EQ;
-      break;
-    case COMP_GT:
-      PreOp = ICmpInst::ICMP_UGT;
-      break;
-    case COMP_GE:
-      PreOp = ICmpInst::ICMP_UGE;
-      break;
-    case COMP_NE:
-      PreOp = ICmpInst::ICMP_NE;
-      break;
-    default:
-      llvm_unreachable(
-          "Compare type does not match types defined in PPCTargetParser.def!");
-    }
-
     llvm::Type *ValueType = FieldValue->getType();
     bool IsValueType64Bit = ValueType->isIntegerTy(64);
     assert(
@@ -16634,7 +16615,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         "Only 32/64-bit integers are supported in GenAIXPPCBuiltinCpuExpr().");
 
     return Builder.CreateICmp(
-        PreOp, FieldValue,
+        CompOp, FieldValue,
         ConstantInt::get(IsValueType64Bit ? Int64Ty : Int32Ty, OpValue));
   };
 
@@ -16647,14 +16628,17 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     llvm::Triple Triple = getTarget().getTriple();
 
     if (Triple.isOSAIX()) {
-      unsigned SupportMethod, FieldIdx, CompareOp, CpuIdValue;
-      typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUType;
+      unsigned SupportMethod, FieldIdx, CpuIdValue;
+      CmpInst::Predicate CompareOp;
+      typedef std::tuple<unsigned, unsigned, CmpInst::Predicate, unsigned>
+          CPUType;
       std::tie(SupportMethod, FieldIdx, CompareOp, CpuIdValue) =
           static_cast<CPUType>(StringSwitch<CPUType>(CPUStr)
 #define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE)            \
   .Case(NAME, {SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-                                   .Default({AIX_BUILTIN_PPC_FALSE, 0, 0, 0}));
+                                   .Default({AIX_BUILTIN_PPC_FALSE, 0,
+                                             CmpInst::Predicate(), 0}));
       return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, 0, CompareOp,
                                      CpuIdValue);
     }
@@ -16677,17 +16661,19 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     if (Triple.isOSAIX()) {
-      unsigned SupportMethod, FieldIdx, Mask, CompOp, Value;
-      typedef std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>
+      unsigned SupportMethod, FieldIdx, Mask, Value;
+      CmpInst::Predicate CompOp;
+      typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
+                         unsigned>
           CPUSupportType;
       std::tie(SupportMethod, FieldIdx, Mask, CompOp, Value) =
-          static_cast<CPUSupportType>(
-              StringSwitch<CPUSupportType>(CPUStr)
+          static_cast<CPUSupportType>(StringSwitch<CPUSupportType>(CPUStr)
 #define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
                         VALUE)                                                 \
   .Case(NAME, {SUPPORT_METHOD, INDEX, MASK, COMP_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-                  .Default({AIX_BUILTIN_PPC_FALSE, 0, 0, 0, 0}));
+                                          .Default({AIX_BUILTIN_PPC_FALSE, 0, 0,
+                                                    CmpInst::Predicate(), 0}));
       return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, Mask, CompOp,
                                      Value);
     }
