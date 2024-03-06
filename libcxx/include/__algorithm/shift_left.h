@@ -11,6 +11,7 @@
 
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/move.h>
+#include <__assert>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/pair.h>
