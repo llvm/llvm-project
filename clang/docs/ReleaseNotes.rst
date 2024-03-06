@@ -319,6 +319,12 @@ Bug Fixes to C++ Support
   Fixes (#GH80630)
 - Fix a crash when an explicit template argument list is used with a name for which lookup
   finds a non-template function and a dependent using declarator.
+- Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
+  a member-function against a non member function or a member-function with an
+  explicit object parameter against a member function with no explicit object parameter
+  when one of the function had more specialized templates.
+  Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
+  and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
