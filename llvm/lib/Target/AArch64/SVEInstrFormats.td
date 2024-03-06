@@ -7881,7 +7881,7 @@ multiclass sve_mem_p_fill<string asm> {
   def NAME : sve_mem_p_fill<asm>;
 
   def : InstAlias<asm # "\t$Pt, [$Rn]",
-                  (!cast<Instruction>(NAME) PPRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+                  (!cast<Instruction>(NAME) PPRorPNRAny:$Pt, GPR64sp:$Rn, 0), 1>;
 }
 
 class sve2_mem_gldnt_vs_base<bits<5> opc, dag iops, string asm,

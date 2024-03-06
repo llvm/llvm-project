@@ -276,6 +276,8 @@ private:
   ParseStatus tryParseSVEDataVector(OperandVector &Operands);
   template <RegKind RK>
   ParseStatus tryParseSVEPredicateVector(OperandVector &Operands);
+  ParseStatus
+  tryParseSVEPredicateOrPredicateAsCounterVector(OperandVector &Operands);
   template <RegKind VectorKind>
   ParseStatus tryParseVectorList(OperandVector &Operands,
                                  bool ExpectMatch = false);
@@ -1241,6 +1243,7 @@ public:
     case AArch64::PPR_p8to15RegClassID:
     case AArch64::PNRRegClassID:
     case AArch64::PNR_p8to15RegClassID:
+    case AArch64::PPRorPNRRegClassID:
       RK = RegKind::SVEPredicateAsCounter;
       break;
     default:
@@ -1264,6 +1267,7 @@ public:
     case AArch64::PPR_p8to15RegClassID:
     case AArch64::PNRRegClassID:
     case AArch64::PNR_p8to15RegClassID:
+    case AArch64::PPRorPNRRegClassID:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
@@ -1285,6 +1289,20 @@ public:
       return DiagnosticPredicateTy::NoMatch;
 
     if (isSVEVectorReg<Class>() && (Reg.ElementWidth == ElementWidth))
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
+  }
+
+  template <int ElementWidth, unsigned Class>
+  DiagnosticPredicate isSVEPredicateOrPredicateAsCounterRegOfWidth() const {
+    if (Kind != k_Register || (Reg.Kind != RegKind::SVEPredicateAsCounter &&
+                               Reg.Kind != RegKind::SVEPredicateVector))
+      return DiagnosticPredicateTy::NoMatch;
+
+    if ((isSVEPredicateAsCounterReg<Class>() ||
+         isSVEPredicateVectorRegOfWidth<ElementWidth, Class>()) &&
+        (Reg.ElementWidth == ElementWidth))
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
@@ -1768,6 +1786,15 @@ public:
       llvm_unreachable("Unsupported width");
     }
     Inst.addOperand(MCOperand::createReg(AArch64::Z0 + getReg() - Base));
+  }
+
+  void addPPRorPNRRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    unsigned Reg = getReg();
+    // Normalise to PPR
+    if (Reg >= AArch64::PN0)
+      Reg = Reg - AArch64::PN0 + AArch64::P0;
+    Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addPNRasPPRRegOperands(MCInst &Inst, unsigned N) const {
@@ -4165,6 +4192,15 @@ ParseStatus AArch64AsmParser::tryParseVectorRegister(MCRegister &Reg,
   }
 
   return ParseStatus::NoMatch;
+}
+
+ParseStatus AArch64AsmParser::tryParseSVEPredicateOrPredicateAsCounterVector(
+    OperandVector &Operands) {
+  ParseStatus Status =
+      tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>(Operands);
+  if (!Status.isSuccess())
+    Status = tryParseSVEPredicateVector<RegKind::SVEPredicateVector>(Operands);
+  return Status;
 }
 
 /// tryParseSVEPredicateVector - Parse a SVE predicate register operand.

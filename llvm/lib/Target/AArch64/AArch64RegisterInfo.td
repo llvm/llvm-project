@@ -1010,8 +1010,20 @@ class PPRorPNRClass : RegisterClass<
                                   (add PPR, PNR)> {
   let Size = 16;
 }
+
 def PPRorPNR         : PPRorPNRClass;
-def PPRorPNRAsmOpAny : PPRAsmOperand<"PPRorPNRAny",   "PPRorPNR",     0>;
+
+class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
+  let PredicateMethod = "isSVEPredicateOrPredicateAsCounterRegOfWidth<"
+                            # Width # ", " # "AArch64::"
+                            # RegClass # "RegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addPPRorPNRRegOperands";
+  let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
+}
+
+def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny",   "PPRorPNR",     0>;
 def PPRorPNRAny      : PPRRegOp<"",  PPRorPNRAsmOpAny,   ElementSizeNone, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
