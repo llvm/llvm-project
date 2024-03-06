@@ -157,7 +157,6 @@ def iflags_op : Operand<i32> {
 // register whose default is 0 (no register).
 def CondCodeOperand : AsmOperandClass {
   let Name = "CondCode";
-  let PredicateMethod = "isCondCode";
   let DefaultMethod = "defaultCondCodeOp";
   let IsOptional = true;
 }

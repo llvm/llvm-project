@@ -6175,11 +6175,7 @@ ParseStatus ARMAsmParser::parseFPImm(OperandVector &Operands) {
   if (!(isVmovf || isFconst))
     return ParseStatus::NoMatch;
 
-  if (Parser.getTok().getKind() == llvm::AsmToken::Hash ||
-      Parser.getTok().getKind() == llvm::AsmToken::Dollar)
-    Parser.Lex(); // Eat '#' or '$'.
-  else
-    return ParseStatus::NoMatch;
+  Parser.Lex(); // Eat '#' or '$'.
 
   // Handle negation, as that still comes through as a separate token.
   bool isNegative = false;
@@ -7103,7 +7099,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // Add the carry setting operand, if necessary.
-  if (CanAcceptCarrySet && CarrySetting != 0) {
+  if (CanAcceptCarrySet && CarrySetting) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size());
     Operands.push_back(ARMOperand::CreateCCOut(CarrySetting ? ARM::CPSR : 0,
                                                Loc));
@@ -7119,7 +7115,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Add the VPT predication code operand, if necessary.
   // Dont add in certain cases of VCVT as this needs to be disambiguated
-  // after operand parsing
+  // after operand parsing.
   if (CanAcceptVPTPredicationCode && VPTPredicationCode != llvm::ARMVCC::None &&
       !(Mnemonic.starts_with("vcvt") && Mnemonic != "vcvta" &&
         Mnemonic != "vcvtn" && Mnemonic != "vcvtp" && Mnemonic != "vcvtm")) {
@@ -7166,7 +7162,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     }
   }
 
-  // This marks the end of the LHS Mnemonic operators
+  // This marks the end of the LHS Mnemonic operators.
   // This is used for indexing into the non-menmonic operators as some of the
   // mnemonic operators are optional and therfore indexes can differ.
   unsigned MnemonicOpsEndInd = Operands.size();
@@ -11048,7 +11044,7 @@ ARMAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
   unsigned Opc = Inst.getOpcode();
   switch (Opc) {
   // Prevent the mov r8 r8 encoding for nop being selected when the v6/thumb 2
-  // encoding is available
+  // encoding is available.
   case ARM::tMOVr: {
     if (Operands[0]->isToken() &&
         static_cast<ARMOperand &>(*Operands[0]).getToken() == "nop" &&
@@ -11313,7 +11309,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MatchResult = MatchInstruction(Operands, Inst, NearMisses, MatchingInlineAsm,
                                  PendConditionalInstruction, Out);
 
-  // Find the number of operators that are part of the Mnumonic (LHS)
+  // Find the number of operators that are part of the Mnumonic (LHS).
   unsigned MnemonicOpsEndInd = getMnemonicOpsEndInd(Operands);
 
   switch (MatchResult) {
@@ -12988,7 +12984,7 @@ unsigned ARMAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     if (hasV8Ops() && Op.isReg() && Op.getReg() == ARM::SP)
       return Match_Success;
     return Match_rGPR;
-  // If trying to match a VecListDPair with a Q register, convert Q to list
+  // If trying to match a VecListDPair with a Q register, convert Q to list.
   case MCK_VecListDPair:
     if (Op.isQReg() && !hasMVE()) {
       auto DPair = getDRegFromQReg(Op.getReg());
@@ -12999,7 +12995,7 @@ unsigned ARMAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     }
     return Match_InvalidOperand;
   // If trying to match a VecListDPair with a D register, convert D singleton
-  // list
+  // list.
   case MCK_VecListOneD:
     if (Op.isDReg() && !hasMVE()) {
       Op.setVecListOneD(Op.getReg());

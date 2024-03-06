@@ -5096,10 +5096,10 @@ def : InstAlias<"isb${p}.w\t$opt", (t2ISB instsyncb_opt:$opt, pred:$p), 0>, Requ
 def : InstAlias<"isb${p}", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}.w", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 
-// Non-predicable aliases of a predicable DSB: the predicate is (14, 0) where
-// 14 = AL (always execute) and 0 = "instruction doesn't read the CPSR".
-def : InstAlias<"ssbb", (t2DSB 0x0, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
-def : InstAlias<"pssbb", (t2DSB 0x4, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
+// Non-predicable aliases of a predicable DSB: the predicate is (14, zero_reg) where
+// 14 = AL (always execute) and zero_reg = "instruction doesn't read the CPSR".
+def : InstAlias<"ssbb", (t2DSB 0x0, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"pssbb", (t2DSB 0x4, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
 
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
