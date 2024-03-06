@@ -60,6 +60,8 @@ void buildCommonPassPipeline(
   nvvmTargetOptions.chip = options.cubinChip;
   nvvmTargetOptions.features = options.cubinFeatures;
   nvvmTargetOptions.optLevel = options.optLevel;
+  nvvmTargetOptions.ftzFlag = options.ftz;
+  nvvmTargetOptions.fastFlag = options.fast;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
   pm.addPass(createLowerAffinePass());
   pm.addPass(createArithToLLVMConversionPass());
