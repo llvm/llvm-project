@@ -12,8 +12,7 @@ from lldbsuite.test.decorators import *
 class TestConcurrentVFork(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def get_pid_from_variable(self):
-        target = self.dbg.GetTargetAtIndex(0)
+    def get_pid_from_variable(self, target):
         return target.FindFirstGlobalVariable("g_pid").GetValueAsUnsigned()
 
     def build_run_to_breakpoint(self, use_fork, call_exec):
@@ -27,14 +26,16 @@ class TestConcurrentVFork(TestBase):
         launch_info = lldb.SBLaunchInfo(args)
         launch_info.SetWorkingDirectory(self.getBuildDir())
 
-        lldbutil.run_to_source_breakpoint(
+        return lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
     def follow_parent_helper(self, use_fork, call_exec):
-        self.build_run_to_breakpoint(use_fork, call_exec)
+        (target, process, thread, bkpt) = self.build_run_to_breakpoint(
+            use_fork, call_exec
+        )
 
-        parent_pid = self.get_pid_from_variable()
+        parent_pid = self.get_pid_from_variable(target)
         self.runCmd("settings set target.process.follow-fork-mode parent")
         self.runCmd("settings set target.process.stop-on-exec False", check=False)
         self.expect(
