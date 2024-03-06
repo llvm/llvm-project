@@ -230,7 +230,8 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 /// on the IR.
 fir::ExtendedValue
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         fir::FortranVariableOpInterface fortranVariable);
+                         fir::FortranVariableOpInterface fortranVariable,
+                         bool forceHlfirBase = false);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
 fir::FortranVariableOpInterface
