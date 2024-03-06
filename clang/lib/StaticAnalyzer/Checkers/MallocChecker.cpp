@@ -1445,6 +1445,10 @@ void MallocChecker::preGetdelim(const CallEvent &Call,
   if (!LinePtr)
     return;
 
+  // FreeMemAux takes IsKnownToBeAllocated as an output parameter, and it will
+  // be true after the call if the symbol was registered by this checker.
+  // We do not need this value here, as FreeMemAux will take care
+  // of reporting any violation of the preconditions.
   bool IsKnownToBeAllocated = false;
   State = FreeMemAux(C, Call.getArgExpr(0), Call, State, false,
                      IsKnownToBeAllocated, AF_Malloc, false, LinePtr);
