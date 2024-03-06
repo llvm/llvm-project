@@ -2153,3 +2153,19 @@ define <vscale x 32 x i8> @mgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8>
   %v = call <vscale x 32 x i8> @llvm.masked.gather.nxv32i8.nxv32p0(<vscale x 32 x ptr> %ptrs, i32 2, <vscale x 32 x i1> %m, <vscale x 32 x i8> %passthru)
   ret <vscale x 32 x i8> %v
 }
+
+define <vscale x 1 x i8> @mgather_baseidx_zext_nxv1i1_nxv1i8(ptr %base, <vscale x 1 x i1> %idxs, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru) {
+; CHECK-LABEL: mgather_baseidx_zext_nxv1i1_nxv1i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vluxei8.v v9, (a0), v10, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %eidxs = zext <vscale x 1 x i1> %idxs to <vscale x 1 x i8>
+  %ptrs = getelementptr inbounds i8, ptr %base, <vscale x 1 x i8> %eidxs
+  %v = call <vscale x 1 x i8> @llvm.masked.gather.nxv1i8.nxv1p0(<vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru)
+  ret <vscale x 1 x i8> %v
+}
