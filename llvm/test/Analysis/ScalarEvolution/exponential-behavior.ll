@@ -12,7 +12,6 @@ define void @f(i32 %n, ptr %ptr) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:    symbolic max exit count for loop: 0
 ; CHECK-NEXT:    symbolic max exit count for be: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop

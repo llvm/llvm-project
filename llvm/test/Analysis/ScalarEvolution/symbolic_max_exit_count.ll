@@ -24,7 +24,6 @@ define i32 @test_simple_case(i32 %start, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: %start
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -83,7 +82,6 @@ define i32 @test_litter_conditions(i32 %start, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: %start
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -146,7 +144,6 @@ define i32 @test_litter_conditions_bad_context(i32 %start, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: %start
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -201,7 +198,6 @@ define i32 @test_and_conditions(i32 %start, i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %start
 ; CHECK-NEXT:    symbolic max exit count for loop: %start
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -245,7 +241,6 @@ define i32 @test_mixup_constant_symbolic(i32 %end, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: %end
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: 1000
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -293,7 +288,6 @@ define i32 @test_mixup_constant_symbolic_merged(i32 %end, i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1000 umin %end)
 ; CHECK-NEXT:    symbolic max exit count for loop: (1000 umin %end)
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -352,7 +346,6 @@ define i32 @test_two_phis(i32 %start_1, i32 %start_2, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for zero_check_block: %start_2
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -411,8 +404,6 @@ define i32 @test_two_phis_simple(i32 %start_1, i32 %start_2, i32 %len) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%start_1 umin_seq %start_2)
 ; CHECK-NEXT:    symbolic max exit count for loop: %start_1
 ; CHECK-NEXT:    symbolic max exit count for backedge: %start_2
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%start_1 umin_seq %start_2)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -469,7 +460,6 @@ define i32 @test_two_phis_arithmetic_and(i32 %start_1, i32 %start_2, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: (%start_1 umin %start_2)
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -543,7 +533,6 @@ define i32 @test_two_phis_logical_or(i32 %start_1, i32 %start_2, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -616,7 +605,6 @@ define i32 @test_two_phis_logical_and(i32 %start_1, i32 %start_2, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for loop: (%start_1 umin_seq %start_2)
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
