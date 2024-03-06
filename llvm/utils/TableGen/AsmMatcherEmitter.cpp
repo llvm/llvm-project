@@ -375,6 +375,10 @@ public:
   int AsmVariantNo;
 };
 
+bool getPreferSmallerInstructions(CodeGenTarget const &Target) {
+  return Target.getAsmParser()->getValueAsBit("PreferSmallerInstructions");
+}
+
 /// MatchableInfo - Helper class for storing the necessary information for an
 /// instruction or alias which is capable of being matched.
 struct MatchableInfo {
@@ -620,9 +624,9 @@ struct MatchableInfo {
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
 
-    // Sort by the resultant instuctions size, eg. for ARM instructions
-    // we must choose the smallest matching instruction.
-    if (Target.getPreferSmallerInstructions() && ResInstSize != RHS.ResInstSize)
+    // (Optionally) Order by the resultant instuctions size.
+    // eg. for ARM thumb instructions smaller encodings should be preferred.
+    if (getPreferSmallerInstructions(Target) && ResInstSize != RHS.ResInstSize)
       return ResInstSize < RHS.ResInstSize;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
@@ -673,8 +677,7 @@ struct MatchableInfo {
     if (AsmVariantID != RHS.AsmVariantID)
       return false;
 
-    // Sort by the resultant instuctions size, eg. for ARM instructions
-    // we must choose the smallest matching instruction.
+    // The size of instruction is unambiguous.
     if (Target.getPreferSmallerInstructions() && ResInstSize != RHS.ResInstSize)
       return false;
 
@@ -3252,7 +3255,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
        ++I) {
     for (auto J = I; J != E; ++J) {
-      assert(!((*J)->shouldBeMatchedBefore(**I, Target)));
+      assert(!(*J)->shouldBeMatchedBefore(**I, Target));
     }
   }
 #endif

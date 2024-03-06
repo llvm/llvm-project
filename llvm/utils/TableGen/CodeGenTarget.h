@@ -100,11 +100,6 @@ public:
   ///
   bool getAllowRegisterRenaming() const;
 
-  /// getPreferSmallerInstructions  - Return the PreferSmallerInstructions
-  /// flag value for this target.
-  ///
-  bool getPreferSmallerInstructions() const;
-
   /// getAsmParser - Return the AssemblyParser definition for this target.
   ///
   Record *getAsmParser() const;
