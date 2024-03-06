@@ -5,9 +5,9 @@
 define i32 @foo(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwind {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo
-; CHECK-NEXT:  Loop %bb1: backedge-taken count is 255
+; CHECK-NEXT:  Loop %bb1: backedge-taken count is i32 255
 ; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is i32 255
-; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is 255
+; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is i32 255
 ; CHECK-NEXT:  Loop %bb1: Trip multiple is 256
 ;
 bb1.thread:
