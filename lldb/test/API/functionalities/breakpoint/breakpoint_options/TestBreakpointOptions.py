@@ -82,7 +82,7 @@ class BreakpointOptionsTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint with 1 locations.
-        lldbutil.run_break_set_by_symbol(
+        bp_id = lldbutil.run_break_set_by_symbol(
             self,
             "ns::func",
             sym_exact=False,
@@ -90,12 +90,14 @@ class BreakpointOptionsTestCase(TestBase):
             num_expected_locations=1,
         )
 
+        location = self.target().FindBreakpointByID(bp_id).GetLocationAtIndex(0)
+        function = location.GetAddress().GetFunction()
         self.expect(
             "breakpoint list -v",
             "Verbose breakpoint list contains mangled names",
             substrs=[
-                "function = ns::func"
-                "mangled function ="
+                "function = ns::func",
+                f"mangled function = {function.GetMangledName()}",
             ],
         )
 
