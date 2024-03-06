@@ -5338,13 +5338,14 @@ static QualType GetImplicitObjectParameterType(ASTContext &Context,
                                                QualType RawType,
                                                bool IsOtherRvr) {
   // C++20 [temp.func.order]p3.1, p3.2:
-  //- The type X(M ) is “rvalue reference to cv A” if the optional ref-qualifier
-  //  of M is && or if M has no ref-qualifier and the positionally-corresponding
-  //  parameter of the other transformed template has rvalue reference type;
-  //  if this determination depends recursively upon whether X(M ) is an rvalue
-  //  reference type, it is not considered to have rvalue reference type.
-  //- Otherwise, X(M ) is “lvalue reference to cv A”.
-
+  //  - The type X(M) is "rvalue reference to cv A" if the optional
+  //    ref-qualifier of M is && or if M has no ref-qualifier and the
+  //    positionally-corresponding parameter of the other transformed template
+  //    has rvalue reference type; if this determination depends recursively
+  //    upon whether X(M) is an rvalue reference type, it is not considered to
+  //    have rvalue reference type.
+  //
+  //  - Otherwise, X(M) is "lvalue reference to cv A".
   assert(Method && !Method->isExplicitObjectMemberFunction() &&
          "expected a member function with no explicit object parameter");
 
@@ -5498,8 +5499,8 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   SmallVector<QualType> Args2;
   const FunctionDecl *FD1 = FT1->getTemplatedDecl();
   const FunctionDecl *FD2 = FT2->getTemplatedDecl();
-  bool shouldConvert1 = false;
-  bool shouldConvert2 = false;
+  bool ShouldConvert1 = false;
+  bool ShouldConvert2 = false;
   QualType Obj1Ty;
   QualType Obj2Ty;
   if (TPOC == TPOC_Call) {
@@ -5521,29 +5522,29 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
     // "that is a member function with no expicit object argument".
     // Otherwise the ordering rules for methods with expicit objet arguments
     // against anything else make no sense.
-    shouldConvert1 = Method1 && !Method1->isExplicitObjectMemberFunction();
-    shouldConvert2 = Method2 && !Method2->isExplicitObjectMemberFunction();
-    if (shouldConvert1) {
-      bool isRValRef2 =
-          shouldConvert2
+    ShouldConvert1 = Method1 && !Method1->isExplicitObjectMemberFunction();
+    ShouldConvert2 = Method2 && !Method2->isExplicitObjectMemberFunction();
+    if (ShouldConvert1) {
+      bool IsRValRef2 =
+          ShouldConvert2
               ? Method2->getRefQualifier() == RQ_RValue
               : Proto2->param_type_begin()[0]->isRValueReferenceType();
       // Compare 'this' from Method1 against first parameter from Method2.
       Obj1Ty = GetImplicitObjectParameterType(this->Context, Method1, RawObj1Ty,
-                                              isRValRef2);
+                                              IsRValRef2);
       Args1.push_back(Obj1Ty);
     }
-    if (shouldConvert2) {
-      bool isRValRef1 =
-          shouldConvert1
+    if (ShouldConvert2) {
+      bool IsRValRef1 =
+          ShouldConvert1
               ? Method1->getRefQualifier() == RQ_RValue
               : Proto1->param_type_begin()[0]->isRValueReferenceType();
       // Compare 'this' from Method2 against first parameter from Method1.
       Obj2Ty = GetImplicitObjectParameterType(this->Context, Method2, RawObj2Ty,
-                                              isRValRef1);
+                                              IsRValRef1);
       Args2.push_back(Obj2Ty);
     }
-    size_t NumComparedArguments = NumCallArguments1 + shouldConvert1;
+    size_t NumComparedArguments = NumCallArguments1 + ShouldConvert1;
 
     Args1.insert(Args1.end(), Proto1->param_type_begin(),
                  Proto1->param_type_end());
@@ -5577,22 +5578,22 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   //   have a corresponding parameter, and if F does not have a trailing
   //   function parameter pack, then F is more specialized than G.
 
-  SmallVector<QualType> param1;
-  param1.reserve(FD1->param_size() + shouldConvert1);
-  if (shouldConvert1)
-    param1.push_back(Obj1Ty);
-  for (const auto &x : FD1->parameters())
-    param1.push_back(x->getType());
+  SmallVector<QualType> Param1;
+  Param1.reserve(FD1->param_size() + ShouldConvert1);
+  if (ShouldConvert1)
+    Param1.push_back(Obj1Ty);
+  for (const auto &P : FD1->parameters())
+    Param1.push_back(P->getType());
 
-  SmallVector<QualType> param2;
-  param2.reserve(FD2->param_size() + shouldConvert2);
-  if (shouldConvert2)
-    param2.push_back(Obj2Ty);
-  for (const auto &x : FD2->parameters())
-    param2.push_back(x->getType());
+  SmallVector<QualType> Param2;
+  Param2.reserve(FD2->param_size() + ShouldConvert2);
+  if (ShouldConvert2)
+    Param2.push_back(Obj2Ty);
+  for (const auto &P : FD2->parameters())
+    Param2.push_back(P->getType());
 
-  unsigned NumParams1 = param1.size();
-  unsigned NumParams2 = param2.size();
+  unsigned NumParams1 = Param1.size();
+  unsigned NumParams2 = Param2.size();
 
   bool Variadic1 =
       FD1->param_size() && FD1->parameters().back()->isParameterPack();
@@ -5608,8 +5609,8 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
   // there is no wording or even resolution for this issue.
   for (int i = 0, e = std::min(NumParams1, NumParams2); i < e; ++i) {
-    QualType T1 = param1[i].getCanonicalType();
-    QualType T2 = param2[i].getCanonicalType();
+    QualType T1 = Param1[i].getCanonicalType();
+    QualType T2 = Param2[i].getCanonicalType();
     auto *TST1 = dyn_cast<TemplateSpecializationType>(T1);
     auto *TST2 = dyn_cast<TemplateSpecializationType>(T2);
     if (!TST1 || !TST2)
@@ -5668,7 +5669,7 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   // Any top-level cv-qualifiers modifying a parameter type are deleted when
   // forming the function type.
   for (unsigned i = 0; i < NumParams1; ++i)
-    if (!Context.hasSameUnqualifiedType(param1[i], param2[i]))
+    if (!Context.hasSameUnqualifiedType(Param1[i], Param2[i]))
       return nullptr;
 
   // C++20 [temp.func.order]p6.3:
