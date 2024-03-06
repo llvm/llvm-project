@@ -620,6 +620,17 @@ void LinkerScript::processSectionCommands() {
       return false;
     }
 
+    // The output section name `/PASSTHRU/' is special.
+    // Any input section assigned to it is not considered for further
+    // assignment, and also does not result in orphan handling diagnostics.
+    if (osec->name == "/PASSTHRU/") {
+      for (InputSectionBase *s : v)
+        s->parent = &InputSection::passthru;
+      osec->commands.clear();
+      return false;
+    }
+
+
     // This is for ONLY_IF_RO and ONLY_IF_RW. An output section directive
     // ".foo : ONLY_IF_R[OW] { ... }" is handled only if all member input
     // sections satisfy a given constraint. If not, a directive is handled
@@ -832,8 +843,10 @@ void LinkerScript::addOrphanSections() {
   SmallVector<OutputDesc *, 0> v;
 
   auto add = [&](InputSectionBase *s) {
-    if (s->isLive() && !s->parent) {
-      orphanSections.push_back(s);
+    bool isPassthru = s->parent == &InputSection::passthru;
+    if (s->isLive() && (!s->parent || isPassthru)) {
+      if (!isPassthru)
+        orphanSections.push_back(s);
 
       StringRef name = getOutputSectionName(s);
       if (config->unique) {
