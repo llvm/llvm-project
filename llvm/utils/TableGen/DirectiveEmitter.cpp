@@ -655,8 +655,9 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
          << "::" << getAssocName(F->second) << ";\n";
     }
   }
+  OS << "  default:\n";
+  OS << "    llvm_unreachable(\"Unexpected directive\");\n";
   OS << "  } // switch(Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "}\n";
 }
 
