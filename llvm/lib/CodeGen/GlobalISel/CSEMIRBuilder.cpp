@@ -309,7 +309,7 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
   if (Ty.isVector())
-    return buildSplatVector(Res, buildConstant(Ty.getElementType(), Val));
+    return buildSplatBuildVector(Res, buildConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
@@ -336,7 +336,7 @@ MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
   if (Ty.isVector())
-    return buildSplatVector(Res, buildFConstant(Ty.getElementType(), Val));
+    return buildSplatBuildVector(Res, buildFConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
