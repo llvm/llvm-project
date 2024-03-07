@@ -738,22 +738,6 @@ if config.lto_supported:
 if config.have_rpc_xdr_h:
     config.available_features.add("sunrpc")
 
-# Ask llvm-config about assertion mode.
-try:
-    llvm_config_cmd = subprocess.Popen(
-        [os.path.join(config.llvm_tools_dir, "llvm-config"), "--assertion-mode"],
-        stdout=subprocess.PIPE,
-        env=config.environment,
-    )
-except OSError as e:
-    print("Could not launch llvm-config in " + config.llvm_tools_dir)
-    print("    Failed with error #{0}: {1}".format(e.errno, e.strerror))
-    exit(42)
-
-if re.search(r"ON", llvm_config_cmd.stdout.read().decode("ascii")):
-    config.available_features.add("asserts")
-llvm_config_cmd.wait()
-
 # Sanitizer tests tend to be flaky on Windows due to PR24554, so add some
 # retries. We don't do this on otther platforms because it's slower.
 if platform.system() == "Windows":
