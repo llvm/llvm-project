@@ -47,11 +47,14 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
+// EmitC OpTrait
+def CExpression : NativeOpTrait<"emitc::CExpression">;
+
 // Types only used in binary arithmetic operations.
 def IntegerIndexOrOpaqueType : AnyTypeOf<[AnyInteger, Index, EmitC_OpaqueType]>;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[AnyFloat, IntegerIndexOrOpaqueType]>;
 
-def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
+def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
   let summary = "Addition operation";
   let description = [{
     With the `add` operation the arithmetic operator + (addition) can
@@ -74,7 +77,7 @@ def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_ApplyOp : EmitC_Op<"apply", []> {
+def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
   let summary = "Apply operation";
   let description = [{
     With the `apply` operation the operators & (address of) and * (contents of)
@@ -211,7 +214,7 @@ def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", []> {
   }];
 }
 
-def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
+def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
   let summary = "Opaque call operation";
   let description = [{
     The `call_opaque` operation represents a C++ function call. The callee
@@ -257,10 +260,10 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_CastOp : EmitC_Op<"cast", [
-    DeclareOpInterfaceMethods<CastOpInterface>,
-    SameOperandsAndResultShape
-  ]> {
+def EmitC_CastOp : EmitC_Op<"cast",
+    [CExpression,
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     SameOperandsAndResultShape]> {
   let summary = "Cast operation";
   let description = [{
     The `cast` operation performs an explicit type conversion and is emitted
@@ -284,7 +287,7 @@ def EmitC_CastOp : EmitC_Op<"cast", [
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
-def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
+def EmitC_CmpOp : EmitC_BinaryOp<"cmp", [CExpression]> {
   let summary = "Comparison operation";
   let description = [{
     With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
@@ -355,7 +358,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let hasVerifier = 1;
 }
 
-def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
+def EmitC_DivOp : EmitC_BinaryOp<"div", [CExpression]> {
   let summary = "Division operation";
   let description = [{
     With the `div` operation the arithmetic operator / (division) can
@@ -409,9 +412,8 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
     int32_t v7 = foo(v1 + v2) * (v3 + v4);
     ```
 
-    The operations allowed within expression body are `emitc.add`,
-    `emitc.apply`, `emitc.call_opaque`, `emitc.cast`, `emitc.cmp`, `emitc.div`,
-    `emitc.mul`, `emitc.rem`, and `emitc.sub`.
+    The operations allowed within expression body are EmitC operations with the
+    CExpression trait.
 
     When specified, the optional `do_not_inline` indicates that the expression is
     to be emitted as seen above, i.e. as the rhs of an EmitC SSA value
@@ -427,14 +429,9 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
   let assemblyFormat = "attr-dict (`noinline` $do_not_inline^)? `:` type($result) $region";
 
   let extraClassDeclaration = [{
-    static bool isCExpression(Operation &op) {
-      return isa<emitc::AddOp, emitc::ApplyOp, emitc::CallOpaqueOp,
-                 emitc::CastOp, emitc::CmpOp, emitc::DivOp, emitc::MulOp,
-                 emitc::RemOp, emitc::SubOp>(op);
-    }
     bool hasSideEffects() {
       auto predicate = [](Operation &op) {
-        assert(isCExpression(op) && "Expected a C expression");
+        assert(op.hasTrait<OpTrait::emitc::CExpression>() && "Expected a C expression");
         // Conservatively assume calls to read and write memory.
         if (isa<emitc::CallOpaqueOp>(op))
           return true;
@@ -837,7 +834,7 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", []> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {
+def EmitC_MulOp : EmitC_BinaryOp<"mul", [CExpression]> {
   let summary = "Multiplication operation";
   let description = [{
     With the `mul` operation the arithmetic operator * (multiplication) can
@@ -861,7 +858,7 @@ def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
-def EmitC_RemOp : EmitC_BinaryOp<"rem", []> {
+def EmitC_RemOp : EmitC_BinaryOp<"rem", [CExpression]> {
   let summary = "Remainder operation";
   let description = [{
     With the `rem` operation the arithmetic operator % (remainder) can
@@ -883,7 +880,7 @@ def EmitC_RemOp : EmitC_BinaryOp<"rem", []> {
   let results = (outs IntegerIndexOrOpaqueType);
 }
 
-def EmitC_SubOp : EmitC_BinaryOp<"sub", []> {
+def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   let summary = "Subtraction operation";
   let description = [{
     With the `sub` operation the arithmetic operator - (subtraction) can
