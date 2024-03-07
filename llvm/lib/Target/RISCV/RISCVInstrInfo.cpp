@@ -473,48 +473,60 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-#define COPY_FROM_TO(FROM, TO, OPC)                                            \
+  if (RISCV::FPR32RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR32RegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR64RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    assert(STI.getXLen() == 64 && "Unexpected GPR size");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR64RegClass.contains(SrcReg)) {
+    assert(STI.getXLen() == 64 && "Unexpected GPR size");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+#define RVV_COPY(REG_CLASS, OPC, NF)                                           \
   do {                                                                         \
-    if (FROM.contains(SrcReg) && TO.contains(DstReg)) {                        \
-      BuildMI(MBB, MBBI, DL, get(OPC), DstReg)                                 \
-          .addReg(SrcReg, getKillRegState(KillSrc));                           \
+    if (REG_CLASS.contains(DstReg, SrcReg)) {                                  \
+      copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, OPC, NF);      \
       return;                                                                  \
     }                                                                          \
   } while (0)
-
-  COPY_FROM_TO(RISCV::GPRRegClass, RISCV::FPR32RegClass, RISCV::FMV_W_X);
-  COPY_FROM_TO(RISCV::FPR32RegClass, RISCV::GPRRegClass, RISCV::FMV_X_W);
-  COPY_FROM_TO(RISCV::GPRRegClass, RISCV::FPR64RegClass, RISCV::FMV_D_X);
-  COPY_FROM_TO(RISCV::FPR64RegClass, RISCV::GPRRegClass, RISCV::FMV_X_D);
-
-#define RVV_COPY_IMPL(REG_CLASS, LMUL, NF)                                     \
-  do {                                                                         \
-    if (RISCV::REG_CLASS.contains(DstReg, SrcReg)) {                           \
-      copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc,                \
-                        RISCV::VMV##LMUL##R_V, NF);                            \
-      return;                                                                  \
-    }                                                                          \
-  } while (0)
-#define RVV_COPY(LMUL) RVV_COPY_IMPL(VRM##LMUL##RegClass, LMUL, 1)
-#define RVV_COPY_SEGMENT(LMUL, NF)                                             \
-  RVV_COPY_IMPL(VRN##NF##M##LMUL##RegClass, LMUL, NF)
 
   // VR->VR copies.
-  RVV_COPY_IMPL(VRRegClass, 1, 1);
-  RVV_COPY(2);
-  RVV_COPY(4);
-  RVV_COPY(8);
-  RVV_COPY_SEGMENT(1, 2);
-  RVV_COPY_SEGMENT(2, 2);
-  RVV_COPY_SEGMENT(4, 2);
-  RVV_COPY_SEGMENT(1, 3);
-  RVV_COPY_SEGMENT(2, 3);
-  RVV_COPY_SEGMENT(1, 4);
-  RVV_COPY_SEGMENT(2, 4);
-  RVV_COPY_SEGMENT(1, 5);
-  RVV_COPY_SEGMENT(1, 6);
-  RVV_COPY_SEGMENT(1, 7);
-  RVV_COPY_SEGMENT(1, 8);
+  RVV_COPY(RISCV::VRRegClass, RISCV::VMV1R_V, 1);
+  RVV_COPY(RISCV::VRM2RegClass, RISCV::VMV2R_V, 1);
+  RVV_COPY(RISCV::VRM4RegClass, RISCV::VMV4R_V, 1);
+  RVV_COPY(RISCV::VRM8RegClass, RISCV::VMV8R_V, 1);
+  RVV_COPY(RISCV::VRN2M1RegClass, RISCV::VMV1R_V, 2);
+  RVV_COPY(RISCV::VRN2M2RegClass, RISCV::VMV2R_V, 2);
+  RVV_COPY(RISCV::VRN2M4RegClass, RISCV::VMV4R_V, 2);
+  RVV_COPY(RISCV::VRN3M1RegClass, RISCV::VMV1R_V, 3);
+  RVV_COPY(RISCV::VRN3M2RegClass, RISCV::VMV2R_V, 3);
+  RVV_COPY(RISCV::VRN4M1RegClass, RISCV::VMV1R_V, 4);
+  RVV_COPY(RISCV::VRN4M2RegClass, RISCV::VMV2R_V, 4);
+  RVV_COPY(RISCV::VRN5M1RegClass, RISCV::VMV1R_V, 5);
+  RVV_COPY(RISCV::VRN6M1RegClass, RISCV::VMV1R_V, 6);
+  RVV_COPY(RISCV::VRN7M1RegClass, RISCV::VMV1R_V, 7);
+  RVV_COPY(RISCV::VRN8M1RegClass, RISCV::VMV1R_V, 8);
 
   llvm_unreachable("Impossible reg-to-reg copy");
 }
