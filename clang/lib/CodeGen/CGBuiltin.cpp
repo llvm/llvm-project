@@ -18631,6 +18631,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
+    Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
+                                   {llvm::Type::getInt64Ty(getLLVMContext())});
+    return Builder.CreateCall(F);
+  }
+  case AMDGPU::BI__builtin_amdgcn_set_fpenv: {
+    Function *F = CGM.getIntrinsic(Intrinsic::set_fpenv,
+                                   {llvm::Type::getInt64Ty(getLLVMContext())});
+    llvm::Value *Env = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(F, {Env});
+  }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);
   case AMDGPU::BI__builtin_amdgcn_read_exec_lo:

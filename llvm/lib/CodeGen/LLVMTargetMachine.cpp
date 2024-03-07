@@ -77,10 +77,6 @@ void LLVMTargetMachine::initAsmInfo() {
 
   TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
 
-  TmpAsmInfo->setCompressDebugSections(Options.CompressDebugSections);
-
-  TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
-
   TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
 
   if (Options.ExceptionModel != ExceptionHandling::None)
