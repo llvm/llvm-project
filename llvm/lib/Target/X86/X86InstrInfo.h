@@ -72,6 +72,9 @@ CondCode GetOppositeBranchCondition(CondCode CC);
 /// Get the VPCMP immediate for the given condition.
 unsigned getVPCMPImmForCond(ISD::CondCode CC);
 
+/// Get the CondCode from a CMPP immediate.
+ISD::CondCode getCondForCMPPImm(unsigned Imm);
+
 /// Get the VPCMP immediate if the opcodes are swapped.
 unsigned getSwappedVPCMPImm(unsigned Imm);
 

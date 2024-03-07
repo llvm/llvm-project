@@ -3360,6 +3360,46 @@ unsigned X86::getVPCMPImmForCond(ISD::CondCode CC) {
   }
 }
 
+ISD::CondCode X86::getCondForCMPPImm(unsigned Imm) {
+  assert(Imm <= 0x1f && "Invalid CMPP Imm");
+  switch (Imm & 0xf) {
+  default:
+    llvm_unreachable("Invalid CMPP Imm");
+  case 0:
+    return ISD::SETOEQ;
+  case 1:
+    return ISD::SETOLT;
+  case 2:
+    return ISD::SETOLE;
+  case 3:
+    return ISD::SETUO;
+  case 4:
+    return ISD::SETUNE;
+  case 5:
+    return ISD::SETUGE;
+  case 6:
+    return ISD::SETUGT;
+  case 7:
+    return ISD::SETO;
+  case 8:
+    return ISD::SETUEQ;
+  case 9:
+    return ISD::SETULT;
+  case 10:
+    return ISD::SETULE;
+  case 11:
+    return ISD::SETFALSE;
+  case 12:
+    return ISD::SETONE;
+  case 13:
+    return ISD::SETOGE;
+  case 14:
+    return ISD::SETOGT;
+  case 15:
+    return ISD::SETTRUE;
+  }
+}
+
 /// Get the VPCMP immediate if the operands are swapped.
 unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
   switch (Imm) {

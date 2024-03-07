@@ -175,8 +175,6 @@ define i32 @testpsnzc_256_signbit(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vcmpltps %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vtestps %ymm1, %ymm0
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    vzeroupper

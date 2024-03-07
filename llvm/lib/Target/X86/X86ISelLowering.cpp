@@ -41346,6 +41346,156 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Simplify a decomposed (sext (setcc)). Assumes prior check that
+// bitwidth(sext)==bitwidth(setcc operands).
+static SDValue simplifySExtOfDecomposedSetCCImpl(
+    SelectionDAG &DAG, const SDLoc &DL, ISD::CondCode CC, SDValue Op0,
+    SDValue Op1, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, bool AllowNOT, unsigned Depth) {
+  // Possible TODO: We could handle any power of two demanded bit + unsigned
+  // comparison. There are no x86 specific comparisons that are unsigned so its
+  // unneeded.
+  if (!OriginalDemandedBits.isSignMask())
+    return SDValue();
+
+  EVT OpVT = Op0.getValueType();
+  // We need need nofpclass(nan inf nzero) to handle floats.
+  auto hasOkayFPFlags = [](SDValue Op) {
+    return Op.getOpcode() == ISD::SINT_TO_FP ||
+           Op.getOpcode() == ISD::UINT_TO_FP ||
+           (Op->getFlags().hasNoNaNs() && Op->getFlags().hasNoInfs() &&
+            Op->getFlags().hasNoSignedZeros());
+  };
+
+  if (OpVT.isFloatingPoint() && !hasOkayFPFlags(Op0))
+    return SDValue();
+
+  auto ValsEq = [OpVT](const APInt &V0, APInt V1) -> bool {
+    if (OpVT.isFloatingPoint()) {
+      const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(OpVT);
+      return V0.eq(APFloat(Sem, V1).bitcastToAPInt());
+    }
+    return V0.eq(V1);
+  };
+
+  // Assume we canonicalized constants to Op1. That isn't always true but we
+  // call this function twice with inverted CC/Operands so its fine either way.
+  APInt Op1C;
+  unsigned ValWidth = OriginalDemandedBits.getBitWidth();
+  if (ISD::isConstantSplatVectorAllZeros(Op1.getNode())) {
+    Op1C = APInt::getZero(ValWidth);
+  } else if (ISD::isConstantSplatVectorAllOnes(Op1.getNode())) {
+    Op1C = APInt::getAllOnes(ValWidth);
+  } else if (auto *C = dyn_cast<ConstantFPSDNode>(Op1)) {
+    Op1C = C->getValueAPF().bitcastToAPInt();
+  } else if (auto *C = dyn_cast<ConstantSDNode>(Op1)) {
+    Op1C = C->getAPIntValue();
+  } else if (ISD::isConstantSplatVector(Op1.getNode(), Op1C)) {
+    // isConstantSplatVector sets `Op1C`.
+  } else {
+    return SDValue();
+  }
+
+  bool Not = false;
+  bool Okay = false;
+  assert(OriginalDemandedBits.getBitWidth() == Op1C.getBitWidth() &&
+         "Invalid constant operand");
+
+  switch (CC) {
+  case ISD::SETGE:
+  case ISD::SETOGE:
+    Not = true;
+    [[fallthrough]];
+  case ISD::SETLT:
+  case ISD::SETOLT:
+    // signbit(sext(x s< 0)) == signbit(x)
+    // signbit(sext(x s>= 0)) == signbit(~x)
+    Okay = ValsEq(Op1C, APInt::getZero(ValWidth));
+    // For float ops we need to ensure Op0 is de-norm. Otherwise DAZ can break
+    // this fold.
+    // NB: We only need de-norm check here, for the rest of the constants any
+    // relationship with a de-norm value and zero will be identical.
+    if (Okay && OpVT.isFloatingPoint()) {
+      // Values from integers are always normal.
+      if (Op0.getOpcode() == ISD::SINT_TO_FP ||
+          Op0.getOpcode() == ISD::UINT_TO_FP)
+        break;
+
+      // See if we can prove normal with known bits.
+      KnownBits Op0Known =
+          DAG.computeKnownBits(Op0, OriginalDemandedElts, Depth);
+      // Negative/positive doesn't matter.
+      Op0Known.One.clearSignBit();
+      Op0Known.Zero.clearSignBit();
+
+      // Get min normal value.
+      const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(OpVT);
+      KnownBits MinNormal = KnownBits::makeConstant(
+          APFloat::getSmallestNormalized(Sem).bitcastToAPInt());
+      // Are we above de-norm range?
+      std::optional<bool> Op0Normal = KnownBits::uge(Op0Known, MinNormal);
+      Okay = Op0Normal.value_or(false);
+    }
+    break;
+  case ISD::SETGT:
+  case ISD::SETOGT:
+    Not = true;
+    [[fallthrough]];
+  case ISD::SETLE:
+  case ISD::SETOLE:
+    // signbit(sext(x s<= -1)) == signbit(x)
+    // signbit(sext(x s> -1)) == signbit(~x)
+    Okay = ValsEq(Op1C, APInt::getAllOnes(ValWidth));
+    break;
+  case ISD::SETULT:
+    Not = true;
+    [[fallthrough]];
+  case ISD::SETUGE:
+    // signbit(sext(x u>= SIGNED_MIN)) == signbit(x)
+    // signbit(sext(x u< SIGNED_MIN)) == signbit(~x)
+    Okay = !OpVT.isFloatingPoint() && ValsEq(Op1C, OriginalDemandedBits);
+    break;
+  case ISD::SETULE:
+    Not = true;
+    [[fallthrough]];
+  case ISD::SETUGT:
+    // signbit(sext(x u> SIGNED_MAX)) == signbit(x)
+    // signbit(sext(x u<= SIGNED_MAX)) == signbit(~x)
+    Okay = !OpVT.isFloatingPoint() && ValsEq(Op1C, OriginalDemandedBits - 1);
+    break;
+  default:
+    break;
+  }
+
+  Okay &= Not ? AllowNOT : true;
+  if (!Okay)
+    return SDValue();
+
+  if (!Not)
+    return Op0;
+
+  if (!OpVT.isFloatingPoint())
+    return DAG.getNOT(DL, Op0, OpVT);
+
+  // Possible TODO: We could use `fneg` to do not.
+  return SDValue();
+}
+
+static SDValue simplifySExtOfDecomposedSetCC(SelectionDAG &DAG, const SDLoc &DL,
+                                             ISD::CondCode CC, SDValue Op0,
+                                             SDValue Op1,
+                                             const APInt &OriginalDemandedBits,
+                                             const APInt &OriginalDemandedElts,
+                                             bool AllowNOT, unsigned Depth) {
+  if (SDValue R = simplifySExtOfDecomposedSetCCImpl(
+          DAG, DL, CC, Op0, Op1, OriginalDemandedBits, OriginalDemandedElts,
+          AllowNOT, Depth))
+    return R;
+  return simplifySExtOfDecomposedSetCCImpl(
+      DAG, DL, ISD::getSetCCSwappedOperands(CC), Op1, Op0, OriginalDemandedBits,
+      OriginalDemandedElts, AllowNOT, Depth);
+}
+
 // Simplify variable target shuffle masks based on the demanded elements.
 // TODO: Handle DemandedBits in mask indices as well?
 bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
@@ -42525,13 +42675,26 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     break;
   }
-  case X86ISD::PCMPGT:
-    // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    // iff we only need the sign bit then we can use R directly.
-    if (OriginalDemandedBits.isSignMask() &&
-        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
-      return TLO.CombineTo(Op, Op.getOperand(1));
+  case X86ISD::PCMPGT: {
+    SDLoc DL(Op);
+    if (SDValue R = simplifySExtOfDecomposedSetCC(
+            TLO.DAG, DL, ISD::SETGT, Op.getOperand(0), Op.getOperand(1),
+            OriginalDemandedBits, OriginalDemandedElts,
+            /*AllowNOT*/ true, Depth))
+      return TLO.CombineTo(Op, R);
     break;
+  }
+  case X86ISD::CMPP: {
+    SDLoc DL(Op);
+    ISD::CondCode CC = X86::getCondForCMPPImm(
+        cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+    if (SDValue R = simplifySExtOfDecomposedSetCC(
+            TLO.DAG, DL, CC, Op.getOperand(0), Op.getOperand(1),
+            OriginalDemandedBits, OriginalDemandedElts,
+            !(TLO.LegalOperations() && TLO.LegalTypes()), Depth))
+      return TLO.CombineTo(Op, R);
+    break;
+  }
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
@@ -42715,13 +42878,25 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
     if (DemandedBits.isSignMask())
       return Op.getOperand(0);
     break;
-  case X86ISD::PCMPGT:
-    // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    // iff we only need the sign bit then we can use R directly.
-    if (DemandedBits.isSignMask() &&
-        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
-      return Op.getOperand(1);
+  case X86ISD::PCMPGT: {
+    SDLoc DL(Op);
+    if (SDValue R = simplifySExtOfDecomposedSetCC(
+            DAG, DL, ISD::SETGT, Op.getOperand(0), Op.getOperand(1),
+            DemandedBits, DemandedElts, /*AllowNOT*/ false, Depth))
+      return R;
     break;
+  }
+  case X86ISD::CMPP: {
+    SDLoc DL(Op);
+    ISD::CondCode CC = X86::getCondForCMPPImm(
+        cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+    if (SDValue R = simplifySExtOfDecomposedSetCC(DAG, DL, CC, Op.getOperand(0),
+                                                  Op.getOperand(1),
+                                                  DemandedBits, DemandedElts,
+                                                  /*AllowNOT*/ false, Depth))
+      return R;
+    break;
+  }
   case X86ISD::BLENDV: {
     // BLENDV: Cond (MSB) ? LHS : RHS
     SDValue Cond = Op.getOperand(0);
@@ -48397,7 +48572,7 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
 
   // We do not split for SSE at all, but we need to split vectors for AVX1 and
   // AVX2.
-  if (!Subtarget.useAVX512Regs() && VT.is512BitVector() && 
+  if (!Subtarget.useAVX512Regs() && VT.is512BitVector() &&
       TLI.isTypeLegal(VT.getHalfNumVectorElementsVT(*DAG.getContext()))) {
     SDValue LoX, HiX;
     std::tie(LoX, HiX) = splitVector(X, DAG, DL);

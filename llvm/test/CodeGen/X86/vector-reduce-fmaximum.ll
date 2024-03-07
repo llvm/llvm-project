@@ -819,8 +819,6 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX1-LABEL: test_v16f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm2
-; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vcmpltps %ymm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm3
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmaxps %ymm3, %ymm0, %ymm1
