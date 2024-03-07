@@ -1450,6 +1450,13 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic splatvector.
+def G_SPLAT_VECTOR: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$val);
+  let hasSideEffects = false;
+}
+
 //------------------------------------------------------------------------------
 // Vector reductions
 //------------------------------------------------------------------------------
