@@ -31,6 +31,7 @@
 #include <iterator>
 #include <queue>
 #include <set>
+#include <stack>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -379,9 +380,10 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
 }
 
 template <class GraphT, class GT = GraphTraits<GraphT>>
-class graph_scc_iterator : public iterator_facade_base<
-                            graph_scc_iterator<GraphT, GT>, std::forward_iterator_tag,
-                            const std::vector<typename GT::NodeRef>, ptrdiff_t> {
+class graph_scc_iterator
+    : public iterator_facade_base<
+          graph_scc_iterator<GraphT, GT>, std::forward_iterator_tag,
+          const std::vector<typename GT::NodeRef>, ptrdiff_t> {
   using NodeRef = typename GT::NodeRef;
   using NodesIter = typename GT::nodes_iterator;
   using ChildIter = typename GT::ChildIteratorType;
@@ -426,7 +428,8 @@ class graph_scc_iterator : public iterator_facade_base<
       for (; currentNode != nodeEndIter; currentNode++) {
         NodeRef v = *currentNode;
         if (nodeInfo[v].index == 0) {
-          recursionStack.emplace(StackEntry{v, GT::child_begin(v), nullptr, false});
+          recursionStack.emplace(
+              StackEntry{v, GT::child_begin(v), nullptr, false});
           currentNode++;
           break;
         }
@@ -448,7 +451,8 @@ class graph_scc_iterator : public iterator_facade_base<
         stackEntry.visited = true;
       } else {
         assert(nodeInfo.count(stackEntry.lastChild));
-        vEntry.lowlink = std::min(vEntry.lowlink, nodeInfo[stackEntry.lastChild].lowlink);
+        vEntry.lowlink =
+            std::min(vEntry.lowlink, nodeInfo[stackEntry.lastChild].lowlink);
       }
 
       bool inserted = false;
@@ -457,7 +461,8 @@ class graph_scc_iterator : public iterator_facade_base<
         NodeEntry &wEntry = nodeInfo[w];
         if (wEntry.index == 0) {
           inserted = true;
-          recursionStack.emplace(StackEntry{w, GT::child_begin(w), nullptr, false});
+          recursionStack.emplace(
+              StackEntry{w, GT::child_begin(w), nullptr, false});
           stackEntry.lastChild = w;
           child++;
           break;
