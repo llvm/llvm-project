@@ -311,7 +311,7 @@ public:
 
   using PlatformSetupFunction = unique_function<Expected<JITDylibSP>(LLJIT &J)>;
 
-  using NotifyCreatedFunction = std::function<void(LLJIT &)>;
+  using NotifyCreatedFunction = std::function<Error(LLJIT &)>;
 
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
@@ -489,7 +489,8 @@ public:
       return std::move(Err);
 
     if (impl().NotifyCreated)
-      impl().NotifyCreated(*J);
+      if (Error Err = impl().NotifyCreated(*J))
+        return Err;
 
     return std::move(J);
   }
