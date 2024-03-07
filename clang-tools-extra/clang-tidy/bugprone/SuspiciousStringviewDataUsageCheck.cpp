@@ -62,9 +62,10 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
       on(ignoringParenImpCasts(
           matchers::isStatementIdenticalToBoundNode("self"))));
 
-  auto DescendantSizeCall = expr(hasDescendant(expr(SizeCall,
-                                               hasAncestor(expr(AncestorCall).bind("ancestor-size")),
-                                               hasAncestor(expr(equalsBoundNode("parent"), equalsBoundNode("ancestor-size"))))));
+  auto DescendantSizeCall = expr(hasDescendant(
+      expr(SizeCall, hasAncestor(expr(AncestorCall).bind("ancestor-size")),
+           hasAncestor(expr(equalsBoundNode("parent"),
+                            equalsBoundNode("ancestor-size"))))));
 
   Finder->addMatcher(
       cxxMemberCallExpr(
@@ -83,8 +84,7 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
                            hasType(qualType(hasCanonicalType(hasDeclaration(
                                recordDecl(unless(matchers::matchesAnyListedName(
                                    AllowedCallees))))))),
-                           unless(DescendantSizeCall))
-                )))),
+                           unless(DescendantSizeCall)))))),
       this);
 }
 
