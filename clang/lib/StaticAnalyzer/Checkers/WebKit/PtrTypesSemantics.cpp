@@ -337,19 +337,21 @@ public:
   }
 
   bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
-    if (auto *decl = DRE->getDecl()) {
-      if (isa<ParmVarDecl>(decl))
-        return true;
-      if (isa<EnumConstantDecl>(decl))
-        return true;
-      if (auto *VD = dyn_cast<VarDecl>(decl)) {
-        if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
+    return WithCachedResult(DRE, [&]() {
+      if (auto *decl = DRE->getDecl()) {
+        if (isa<ParmVarDecl>(decl))
           return true;
-        auto *Init = VD->getInit();
-        return !Init || Visit(Init);
+        if (isa<EnumConstantDecl>(decl))
+          return true;
+        if (auto *VD = dyn_cast<VarDecl>(decl)) {
+          if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
+            return true;
+          auto *Init = VD->getInit();
+          return !Init || Visit(Init);
+        }
       }
-    }
-    return false;
+      return false;
+    });
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) { return VisitChildren(E); }

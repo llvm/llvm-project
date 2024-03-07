@@ -72,6 +72,16 @@ void foo6() {
   bar->method();
 }
 
+struct SelfReferencingStruct {
+  SelfReferencingStruct* ptr;
+  RefCountable* obj { nullptr };
+};
+
+void foo7(RefCountable* obj) {
+  SelfReferencingStruct bar = { &bar, obj };
+  bar.obj->method();
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {
