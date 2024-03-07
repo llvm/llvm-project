@@ -84,10 +84,6 @@ def linker_arg_EQ : Joined<["--"], "linker-arg=">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"An extra argument to be passed to the linker">;
 
-// Separator between the linker wrapper and host linker flags.
-def separator : Flag<["--"], "">, Flags<[WrapperOnlyOption]>,
-  HelpText<"The separator for the wrapped linker arguments">;
-
 // Arguments for the LLVM backend.
 def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<arg>">, HelpText<"Arguments passed to the LLVM invocation">;
