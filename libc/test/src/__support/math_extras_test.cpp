@@ -39,14 +39,26 @@ TEST(LlvmLibcBlockMathExtrasTest, mask_trailing_ones) {
 
   EXPECT_EQ(0_u128, (mask_trailing_ones<UInt128, 0>()));
   EXPECT_EQ(0_u128, (mask_leading_ones<UInt128, 0>()));
+
+  EXPECT_EQ(0x00000000000000007FFFFFFFFFFFFFFF_u128,
+            (mask_trailing_ones<UInt128, 63>()));
+  EXPECT_EQ(0xFFFFFFFFFFFFFFFE0000000000000000_u128,
+            (mask_leading_ones<UInt128, 63>()));
+
+  EXPECT_EQ(0x0000000000000000FFFFFFFFFFFFFFFF_u128,
+            (mask_trailing_ones<UInt128, 64>()));
+  EXPECT_EQ(0xFFFFFFFFFFFFFFFF0000000000000000_u128,
+            (mask_leading_ones<UInt128, 64>()));
+
+  EXPECT_EQ(0x0000000000000001FFFFFFFFFFFFFFFF_u128,
+            (mask_trailing_ones<UInt128, 65>()));
+  EXPECT_EQ(0xFFFFFFFFFFFFFFFF8000000000000000_u128,
+            (mask_leading_ones<UInt128, 65>()));
+
   EXPECT_EQ(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_u128,
             (mask_trailing_ones<UInt128, 128>()));
   EXPECT_EQ(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_u128,
             (mask_leading_ones<UInt128, 128>()));
-  EXPECT_EQ(0x0000FFFFFFFFFFFFFFFFFFFFFFFFFFFF_u128,
-            (mask_trailing_ones<UInt128, 112>()));
-  EXPECT_EQ(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000_u128,
-            (mask_leading_ones<UInt128, 112>()));
 }
 
 } // namespace LIBC_NAMESPACE
