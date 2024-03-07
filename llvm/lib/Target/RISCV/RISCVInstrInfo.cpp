@@ -528,6 +528,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   RVV_COPY(RISCV::VRN7M1RegClass, RISCV::VMV1R_V, 7);
   RVV_COPY(RISCV::VRN8M1RegClass, RISCV::VMV1R_V, 8);
 
+#undef RVV_COPY
+
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
