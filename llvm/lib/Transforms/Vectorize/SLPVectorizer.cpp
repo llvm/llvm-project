@@ -13942,7 +13942,7 @@ bool BoUpSLP::collectValuesToDemote(
         !collectValuesToDemote(I->getOperand(1), IsProfitableToDemoteRoot,
                                BitWidth, ToDemote, DemotedConsts, Visited,
                                Level2, IsProfitableToDemote))
-      return false;
+      return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
     MaxDepthLevel = std::max(Level1, Level2);
     break;
   }
@@ -13958,7 +13958,7 @@ bool BoUpSLP::collectValuesToDemote(
         !collectValuesToDemote(SI->getFalseValue(), IsProfitableToDemoteRoot,
                                BitWidth, ToDemote, DemotedConsts, Visited,
                                Level2, IsProfitableToDemote))
-      return false;
+      return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
     MaxDepthLevel = std::max(Level1, Level2);
     break;
   }
@@ -13971,7 +13971,7 @@ bool BoUpSLP::collectValuesToDemote(
       if (!collectValuesToDemote(IncValue, IsProfitableToDemoteRoot, BitWidth,
                                  ToDemote, DemotedConsts, Visited,
                                  MaxDepthLevel, IsProfitableToDemote))
-        return false;
+        return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
     break;
   }
 
