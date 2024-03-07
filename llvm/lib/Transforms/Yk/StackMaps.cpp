@@ -16,7 +16,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Yk/LivenessAnalysis.h"
-
+#include "llvm/Transforms/Yk/ControlPoint.h"
 #include <map>
 
 #define DEBUG_TYPE "yk-stackmaps"
@@ -60,8 +60,15 @@ public:
             // We don't need to insert stackmaps after intrinsics. But since we
             // can't tell if an indirect call is an intrinsic at compile time,
             // emit a stackmap in those cases too.
-            if (!CI.isIndirectCall() && CI.getCalledFunction()->isIntrinsic())
+            
+            if (!CI.isIndirectCall() &&
+                (CI.getCalledFunction()->isIntrinsic() ||
+                 (CI.getCalledFunction()->isDeclaration() &&
+                  (!CI.getCalledFunction()->getName().startswith(
+                       "yk_promote") &&
+                   CI.getCalledFunction()->getName() != YK_NEW_CONTROL_POINT))))
               continue;
+
             SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
           } else if ((isa<BranchInst>(I) &&
                       cast<BranchInst>(I).isConditional()) ||
