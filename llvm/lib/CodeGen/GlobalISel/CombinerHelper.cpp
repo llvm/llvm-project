@@ -6713,6 +6713,9 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   LLT CmpTy = MRI.getType(Cmp1->getReg(0));
   LLT CmpOperandTy = MRI.getType(R1);
 
+  if (CmpOperandTy.isPointer())
+    return false;
+
   // We build ands, adds, and constants of type CmpOperandTy.
   // They must be legal to build.
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, CmpOperandTy}) ||
