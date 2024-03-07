@@ -121,11 +121,6 @@ static cl::opt<unsigned>
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
 
-static cl::opt<bool>
-    StrictSummaryMatch("memprof-strict-summary-match", cl::init(false),
-                       cl::Hidden,
-                       cl::desc("Match summary and definition strictly."));
-
 namespace llvm {
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
@@ -3381,23 +3376,20 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
     auto *GVSummary =
         ImportSummary->findSummaryInModule(TheFnVI, M.getModuleIdentifier());
     if (!GVSummary) {
-      // Must have been imported, use the first summary (might be multiple if
-      // this was a linkonce_odr).
-      GVSummary = TheFnVI.getSummaryList().front().get();
-      if (StrictSummaryMatch) {
-        auto SrcModuleMD = F.getMetadata("thinlto_src_module");
-        assert(SrcModuleMD &&
-               "enable-import-metadata is needed to emit thinlto_src_module");
-        StringRef SrcModule =
-            dyn_cast<MDString>(SrcModuleMD->getOperand(0))->getString();
-        for (auto &GVS : TheFnVI.getSummaryList()) {
-          if (GVS->modulePath() == SrcModule) {
-            GVSummary = GVS.get();
-            break;
-          }
+      // Must have been imported, use the summary which matches the definition。
+      // (might be multiple if this was a linkonce_odr).
+      auto SrcModuleMD = F.getMetadata("thinlto_src_module");
+      assert(SrcModuleMD &&
+             "enable-import-metadata is needed to emit thinlto_src_module");
+      StringRef SrcModule =
+          dyn_cast<MDString>(SrcModuleMD->getOperand(0))->getString();
+      for (auto &GVS : TheFnVI.getSummaryList()) {
+        if (GVS->modulePath() == SrcModule) {
+          GVSummary = GVS.get();
+          break;
         }
-        assert(GVSummary->modulePath() == SrcModule);
       }
+      assert(GVSummary && GVSummary->modulePath() == SrcModule);
     }
 
     // If this was an imported alias skip it as we won't have the function
