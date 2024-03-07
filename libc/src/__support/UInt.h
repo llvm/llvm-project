@@ -43,9 +43,6 @@ struct BigInt {
   static_assert(is_integral_v<WordType> && is_unsigned_v<WordType>,
                 "WordType must be unsigned integer.");
 
-  using word_type = WordType;
-  LIBC_INLINE_VAR static constexpr bool SIGNED = Signed;
-  LIBC_INLINE_VAR static constexpr size_t BITS = Bits;
   LIBC_INLINE_VAR
   static constexpr size_t WORD_SIZE = sizeof(WordType) * CHAR_BIT;
 
@@ -53,10 +50,6 @@ struct BigInt {
                 "Number of bits in BigInt should be a multiple of WORD_SIZE.");
 
   LIBC_INLINE_VAR static constexpr size_t WORD_COUNT = Bits / WORD_SIZE;
-
-  using unsigned_type = BigInt<BITS, false, word_type>;
-  using signed_type = BigInt<BITS, true, word_type>;
-
   cpp::array<WordType, WORD_COUNT> val{};
 
   LIBC_INLINE constexpr BigInt() = default;
@@ -586,31 +579,17 @@ struct BigInt {
     return *this;
   }
 
-  // TODO: remove and use cpp::countl_zero below.
-  [[nodiscard]] LIBC_INLINE constexpr int clz() const {
-    constexpr int word_digits = cpp::numeric_limits<word_type>::digits;
-    int leading_zeroes = 0;
-    for (auto i = val.size(); i > 0;) {
-      --i;
-      const int zeroes = countl_zero(val[i]);
-      leading_zeroes += zeroes;
-      if (zeroes != word_digits)
+  LIBC_INLINE constexpr uint64_t clz() {
+    uint64_t leading_zeroes = 0;
+    for (size_t i = WORD_COUNT; i > 0; --i) {
+      if (val[i - 1] == 0) {
+        leading_zeroes += WORD_SIZE;
+      } else {
+        leading_zeroes += countl_zero(val[i - 1]);
         break;
+      }
     }
     return leading_zeroes;
-  }
-
-  // TODO: remove and use cpp::countr_zero below.
-  [[nodiscard]] LIBC_INLINE constexpr int ctz() const {
-    constexpr int word_digits = cpp::numeric_limits<word_type>::digits;
-    int trailing_zeroes = 0;
-    for (auto word : val) {
-      const int zeroes = countr_zero(word);
-      trailing_zeroes += zeroes;
-      if (zeroes != word_digits)
-        break;
-    }
-    return trailing_zeroes;
   }
 
   LIBC_INLINE constexpr void shift_left(size_t s) {
@@ -937,121 +916,64 @@ public:
   LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
-// type traits to determine whether a T is a cpp::BigInt.
-template <typename T> struct is_big_int : cpp::false_type {};
+// Provides is_integral of U/Int<128>, U/Int<192>, U/Int<256>.
+template <size_t Bits, bool Signed, typename T>
+struct is_integral<BigInt<Bits, Signed, T>> : cpp::true_type {};
+
+// Provides is_unsigned of UInt<128>, UInt<192>, UInt<256>.
+template <size_t Bits, bool Signed, typename T>
+struct is_unsigned<BigInt<Bits, Signed, T>> : cpp::bool_constant<!Signed> {};
 
 template <size_t Bits, bool Signed, typename T>
-struct is_big_int<BigInt<Bits, Signed, T>> : cpp::true_type {};
+struct make_unsigned<BigInt<Bits, Signed, T>>
+    : type_identity<BigInt<Bits, false, T>> {};
 
-template <class T>
-LIBC_INLINE_VAR constexpr bool is_big_int_v = is_big_int<T>::value;
+template <size_t Bits, bool Signed, typename T>
+struct make_signed<BigInt<Bits, Signed, T>>
+    : type_identity<BigInt<Bits, true, T>> {};
 
-// Specialization of cpp::bit_cast ('bit.h') from T to BigInt.
-template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    (sizeof(To) == sizeof(From)) && cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<From>::value && is_big_int<To>::value,
-    To>
-bit_cast(const From &from) {
+namespace internal {
+template <typename T> struct is_custom_uint : cpp::false_type {};
+
+template <size_t Bits, bool Signed, typename T>
+struct is_custom_uint<BigInt<Bits, Signed, T>> : cpp::true_type {};
+} // namespace internal
+
+// bit_cast to UInt
+// Note: The standard scheme for SFINAE selection is to have exactly one
+// function instanciation valid at a time. This is usually done by having a
+// predicate in one function and the negated predicate in the other one.
+// e.g.
+// template<typename = cpp::enable_if_t< is_custom_uint<To>::value == true> ...
+// template<typename = cpp::enable_if_t< is_custom_uint<To>::value == false> ...
+//
+// Unfortunately this would make the default 'cpp::bit_cast' aware of
+// 'is_custom_uint' (or any other customization). To prevent exposing all
+// customizations in the original function, we create a different function with
+// four 'typename's instead of three - otherwise it would be considered as a
+// redeclaration of the same function leading to "error: template parameter
+// redefines default argument".
+template <typename To, typename From,
+          typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
+                                      cpp::is_trivially_copyable<To>::value &&
+                                      cpp::is_trivially_copyable<From>::value>,
+          typename = cpp::enable_if_t<internal::is_custom_uint<To>::value>>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
   To out;
   using Storage = decltype(out.val);
   out.val = cpp::bit_cast<Storage>(from);
   return out;
 }
 
-// Specialization of cpp::bit_cast ('bit.h') from BigInt to T.
-template <typename To, size_t Bits>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    sizeof(To) == sizeof(UInt<Bits>) &&
-        cpp::is_trivially_constructible<To>::value &&
-        cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<UInt<Bits>>::value,
-    To>
-bit_cast(const UInt<Bits> &from) {
+// bit_cast from UInt
+template <
+    typename To, size_t Bits,
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(UInt<Bits>) &&
+                                cpp::is_trivially_constructible<To>::value &&
+                                cpp::is_trivially_copyable<To>::value &&
+                                cpp::is_trivially_copyable<UInt<Bits>>::value>>
+LIBC_INLINE constexpr To bit_cast(const UInt<Bits> &from) {
   return cpp::bit_cast<To>(from.val);
-}
-
-// Specialization of cpp::has_single_bit ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, bool>
-has_single_bit(T value) {
-  int bits = 0;
-  for (auto word : value.val) {
-    if (word == 0)
-      continue;
-    bits += count_ones(word);
-    if (bits > 1)
-      return false;
-  }
-  return bits == 1;
-}
-
-// Specialization of cpp::countr_zero ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-countr_zero(const T &value) {
-  return value.ctz();
-}
-
-// Specialization of cpp::countl_zero ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-countl_zero(const T &value) {
-  return value.clz();
-}
-
-// Specialization of cpp::countl_one ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-countl_one(T value) {
-  // TODO : Implement a faster version not involving operator~.
-  return cpp::countl_zero<T>(~value);
-}
-
-// Specialization of cpp::countr_one ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-countr_one(T value) {
-  // TODO : Implement a faster version not involving operator~.
-  return cpp::countr_zero<T>(~value);
-}
-
-// Specialization of cpp::bit_width ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
-bit_width(T value) {
-  return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
-}
-
-// Forward-declare rotr so that rotl can use it.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
-rotr(T value, int rotate);
-
-// Specialization of cpp::rotl ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
-rotl(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
-  rotate = rotate % N;
-  if (!rotate)
-    return value;
-  if (rotate < 0)
-    return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
-}
-
-// Specialization of cpp::rotr ('bit.h') for BigInt.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
-rotr(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
-  rotate = rotate % N;
-  if (!rotate)
-    return value;
-  if (rotate < 0)
-    return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
 }
 
 } // namespace LIBC_NAMESPACE::cpp
