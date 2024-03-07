@@ -14,8 +14,6 @@ define i32 @test_1_non_negative(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -53,8 +51,6 @@ define i32 @test_2_non_positive(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
