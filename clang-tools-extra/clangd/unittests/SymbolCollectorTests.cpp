@@ -536,6 +536,7 @@ TEST_F(SymbolCollectorTest, ObjCRefs) {
   @interface Person (Category)
   - (void)categoryMethod;
   - (void)multiArg:(id)a method:(id)b;
+  - (void)$setter[[setFoo]]:(id)foo;
   @end
   )");
   Annotations Main(R"(
@@ -549,6 +550,7 @@ TEST_F(SymbolCollectorTest, ObjCRefs) {
     [p $say[[say]]:0];
     [p categoryMethod];
     [p multiArg:0 method:0];
+    p.$setter[[foo]] = 0;
   }
   )");
   CollectorOpts.RefFilter = RefKind::All;
@@ -565,6 +567,9 @@ TEST_F(SymbolCollectorTest, ObjCRefs) {
                             ElementsAre(isSpelled()))));
   EXPECT_THAT(Refs,
               Contains(Pair(findSymbol(Symbols, "Person::multiArg:method:").ID,
+                            ElementsAre(isSpelled()))));
+  EXPECT_THAT(Refs,
+              Contains(Pair(findSymbol(Symbols, "Person::setFoo:").ID,
                             ElementsAre(isSpelled()))));
 }
 

@@ -169,6 +169,19 @@ std::optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
   return std::nullopt;
 }
 
+// Returns a non-empty string if valid.
+std::string setterToPropertyName(llvm::StringRef Setter) {
+  std::string Result;
+  if (!Setter.consume_front("set")) {
+    return Result;
+  }
+  Setter.consume_back(":"); // Optional.
+  Result = Setter.str();
+  if (!Result.empty())
+    Result[0] = llvm::toLower(Result[0]);
+  return Result;
+}
+
 // Check if there is an exact spelling of \p ND at \p Loc.
 bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
@@ -186,8 +199,17 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   if (clang::Lexer::getRawToken(Loc, Tok, SM, LO))
     return false;
   auto TokSpelling = clang::Lexer::getSpelling(Tok, SM, LO);
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND)) {
+    // - (void)setFoo:(id)foo can be referenced via `self.foo = <expr>`.
+    if (MD->getReturnType()->isVoidType() &&
+        MD->getSelector().getNumArgs() == 1) {
+      std::string ImplicitPropName =
+          setterToPropertyName(MD->getSelector().getNameForSlot(0));
+      if (!ImplicitPropName.empty() && TokSpelling == ImplicitPropName)
+        return true;
+    }
     return TokSpelling == MD->getSelector().getNameForSlot(0);
+  }
   return TokSpelling == Name.getAsString();
 }
 } // namespace
