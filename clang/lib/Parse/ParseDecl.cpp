@@ -5678,24 +5678,32 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   // Parse a top-level-stmt.
   Parser::StmtVector Stmts;
   ParsedStmtContext SubStmtCtx = ParsedStmtContext();
-  Actions.PushFunctionScope();
+  ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
+                               Scope::CompoundStmtScope);
+  TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
-  Actions.PopFunctionScopeInfo();
   if (!R.isUsable())
     return nullptr;
 
-  SmallVector<Decl *, 2> DeclsInGroup;
-  DeclsInGroup.push_back(Actions.ActOnTopLevelStmtDecl(R.get()));
+  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 
   if (Tok.is(tok::annot_repl_input_end) &&
       Tok.getAnnotationValue() != nullptr) {
     ConsumeAnnotationToken();
-    cast<TopLevelStmtDecl>(DeclsInGroup.back())->setSemiMissing();
+    TLSD->setSemiMissing();
   }
 
-  // Currently happens for things like  -fms-extensions and use `__if_exists`.
-  for (Stmt *S : Stmts)
-    DeclsInGroup.push_back(Actions.ActOnTopLevelStmtDecl(S));
+  SmallVector<Decl *, 2> DeclsInGroup;
+  DeclsInGroup.push_back(TLSD);
+
+  // Currently happens for things like -fms-extensions and use `__if_exists`.
+  for (Stmt *S : Stmts) {
+    // Here we should be safe as `__if_exists` and friends are not introducing
+    // new variables which need to live outside file scope.
+    TopLevelStmtDecl *D = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
+    Actions.ActOnFinishTopLevelStmtDecl(D, S);
+    DeclsInGroup.push_back(D);
+  }
 
   return Actions.BuildDeclaratorGroup(DeclsInGroup);
 }
