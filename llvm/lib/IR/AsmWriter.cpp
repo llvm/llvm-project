@@ -1147,7 +1147,7 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
     if (DPV->isDbgAssign())
       CreateMetadataSlot(cast<MDNode>(DPV->getRawAssignID()));
   } else if (const DPLabel *DPL = dyn_cast<const DPLabel>(&DR)) {
-    CreateMetadataSlot(DPL->getLabel());
+    CreateMetadataSlot(DPL->getRawLabel());
   } else {
     llvm_unreachable("unsupported DbgRecord kind");
   }
@@ -4631,16 +4631,16 @@ void AssemblyWriter::printDPValue(const DPValue &DPV) {
   Out << "(";
   WriteAsOperandInternal(Out, DPV.getRawLocation(), WriterCtx, true);
   Out << ", ";
-  WriteAsOperandInternal(Out, DPV.getVariable(), WriterCtx, true);
+  WriteAsOperandInternal(Out, DPV.getRawVariable(), WriterCtx, true);
   Out << ", ";
-  WriteAsOperandInternal(Out, DPV.getExpression(), WriterCtx, true);
+  WriteAsOperandInternal(Out, DPV.getRawExpression(), WriterCtx, true);
   Out << ", ";
   if (DPV.isDbgAssign()) {
-    WriteAsOperandInternal(Out, DPV.getAssignID(), WriterCtx, true);
+    WriteAsOperandInternal(Out, DPV.getRawAssignID(), WriterCtx, true);
     Out << ", ";
     WriteAsOperandInternal(Out, DPV.getRawAddress(), WriterCtx, true);
     Out << ", ";
-    WriteAsOperandInternal(Out, DPV.getAddressExpression(), WriterCtx, true);
+    WriteAsOperandInternal(Out, DPV.getRawAddressExpression(), WriterCtx, true);
     Out << ", ";
   }
   WriteAsOperandInternal(Out, DPV.getDebugLoc().getAsMDNode(), WriterCtx, true);
@@ -4659,7 +4659,9 @@ void AssemblyWriter::printDbgRecordLine(const DbgRecord &DR) {
 void AssemblyWriter::printDPLabel(const DPLabel &Label) {
   auto WriterCtx = getContext();
   Out << "#dbg_label(";
-  WriteAsOperandInternal(Out, Label.getLabel(), WriterCtx, true);
+  WriteAsOperandInternal(Out, Label.getRawLabel(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
   Out << ")";
 }
 

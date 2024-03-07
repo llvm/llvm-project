@@ -8,7 +8,7 @@
 
 #include "LibcTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"
@@ -38,7 +38,8 @@ TestLogger &operator<<(TestLogger &logger, Location Loc) {
 // When the value is UInt128, __uint128_t or wider, show its hexadecimal
 // digits.
 template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t)),
+cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
+                     cpp::is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
   static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
@@ -47,11 +48,10 @@ describeValue(T Value) {
 }
 
 // When the value is of a standard integral type, just display it as normal.
-template <typename ValType>
-cpp::enable_if_t<cpp::is_integral_v<ValType> &&
-                     sizeof(ValType) <= sizeof(uint64_t),
+template <typename T>
+cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) <= sizeof(uint64_t)),
                  cpp::string>
-describeValue(ValType Value) {
+describeValue(T Value) {
   return cpp::to_string(Value);
 }
 

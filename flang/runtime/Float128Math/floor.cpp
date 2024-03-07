@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(FloorF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Floor<RTNAME(FloorF128)>::invoke(x);
+  return Floor<true>::invoke(x);
 }
 #endif
 

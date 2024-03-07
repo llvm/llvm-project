@@ -1,4 +1,4 @@
-//===-- runtime/reduction-templates.h -------------------------------------===//
+//===-- runtime/reduction-templates.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,6 +21,7 @@
 #ifndef FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
 #define FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
 
+#include "numeric-templates.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/cpp-type.h"
@@ -385,7 +386,7 @@ template <int KIND>
 using Norm2AccumType =
     CppTypeFor<TypeCategory::Real, std::clamp(KIND, 8, Norm2LargestLDKind)>;
 
-template <int KIND, typename ABS, typename SQRT> class Norm2Accumulator {
+template <int KIND> class Norm2Accumulator {
 public:
   using Type = CppTypeFor<TypeCategory::Real, KIND>;
   using AccumType = Norm2AccumType<KIND>;
@@ -395,10 +396,10 @@ public:
   template <typename A>
   RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
     // m * sqrt(1 + sum((others(:)/m)**2))
-    *p = static_cast<Type>(max_ * SQRT::compute(1 + sum_));
+    *p = static_cast<Type>(max_ * SQRTTy<AccumType>::compute(1 + sum_));
   }
   RT_API_ATTRS bool Accumulate(Type x) {
-    auto absX{ABS::compute(static_cast<AccumType>(x))};
+    auto absX{ABSTy<AccumType>::compute(static_cast<AccumType>(x))};
     if (!max_) {
       max_ = absX;
     } else if (absX > max_) {
@@ -424,27 +425,12 @@ private:
   AccumType sum_{0}; // sum((others(:)/m)**2)
 };
 
-// Helper class for creating Norm2Accumulator instance
-// based on the given KIND. This helper returns and instance
-// that uses std::abs and std::sqrt for the computations.
-template <int KIND> class Norm2AccumulatorGetter {
-  using AccumType = Norm2AccumType<KIND>;
-
-public:
-  struct ABSTy {
-    static constexpr RT_API_ATTRS AccumType compute(AccumType &&x) {
-      return std::abs(std::forward<AccumType>(x));
-    }
-  };
-  struct SQRTTy {
-    static constexpr RT_API_ATTRS AccumType compute(AccumType &&x) {
-      return std::sqrt(std::forward<AccumType>(x));
-    }
-  };
-
-  using Type = Norm2Accumulator<KIND, ABSTy, SQRTTy>;
-
-  static RT_API_ATTRS Type create(const Descriptor &x) { return Type(x); }
+template <int KIND> struct Norm2Helper {
+  RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x, int dim,
+      const Descriptor *mask, Terminator &terminator) const {
+    DoMaxMinNorm2<TypeCategory::Real, KIND, Norm2Accumulator<KIND>>(
+        result, x, dim, mask, "NORM2", terminator);
+  }
 };
 
 } // namespace Fortran::runtime

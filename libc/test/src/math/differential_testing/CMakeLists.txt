@@ -47,7 +47,6 @@ function(add_diff_binary target_name)
     ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
-      ${LIBC_SOURCE_DIR}/include
   )
   if(DIFF_COMPILE_OPTIONS)
     target_compile_options(

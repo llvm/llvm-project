@@ -10,8 +10,9 @@ Options
 
 .. option:: CheckedFunctions
 
-   Semicolon-separated list of functions to check. The function is checked if
-   the name and scope matches, with any arguments.
+   Semicolon-separated list of functions to check.
+   This parameter supports regexp. The function is checked if the name
+   and scope matches, with any arguments.
    By default the following functions are checked:
    ``std::async, std::launder, std::remove, std::remove_if, std::unique,
    std::unique_ptr::release, std::basic_string::empty, std::vector::empty,

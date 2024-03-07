@@ -99,8 +99,8 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
   SmallPtrSet<DPValue *, 4> EncounteredDPValues;
 
   /// Append IntrinsicT users of MetadataAsValue(MD).
-  auto AppendUsers = [&Ctx, &EncounteredIntrinsics, &Result,
-                      DPValues](Metadata *MD) {
+  auto AppendUsers = [&Ctx, &EncounteredIntrinsics, &EncounteredDPValues,
+                      &Result, DPValues](Metadata *MD) {
     if (auto *MDV = MetadataAsValue::getIfExists(Ctx, MD)) {
       for (User *U : MDV->users())
         if (IntrinsicT *DVI = dyn_cast<IntrinsicT>(U))
@@ -113,7 +113,8 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
     if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
       for (DPValue *DPV : L->getAllDPValueUsers()) {
         if (Type == DPValue::LocationType::Any || DPV->getType() == Type)
-          DPValues->push_back(DPV);
+          if (EncounteredDPValues.insert(DPV).second)
+            DPValues->push_back(DPV);
       }
     }
   };

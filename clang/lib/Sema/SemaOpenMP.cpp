@@ -4962,7 +4962,8 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
           if (RC->getModifier() != OMPC_REDUCTION_inscan)
             continue;
           for (Expr *E : RC->copy_array_temps())
-            MarkDeclarationsReferencedInExpr(E);
+            if (E)
+              MarkDeclarationsReferencedInExpr(E);
         }
         if (auto *AC = dyn_cast<OMPAlignedClause>(C)) {
           for (Expr *E : AC->varlists())
@@ -23352,6 +23353,15 @@ void Sema::ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
           isa<FunctionTemplateDecl>(ND)) &&
          "Expected variable, function or function template.");
 
+  if (auto *VD = dyn_cast<VarDecl>(ND)) {
+    // Only global variables can be marked as declare target.
+    if (!VD->isFileVarDecl() && !VD->isStaticLocal() &&
+        !VD->isStaticDataMember()) {
+      Diag(Loc, diag::err_omp_declare_target_has_local_vars)
+          << VD->getNameAsString();
+      return;
+    }
+  }
   // Diagnose marking after use as it may lead to incorrect diagnosis and
   // codegen.
   if (LangOpts.OpenMP >= 50 &&

@@ -1626,7 +1626,8 @@ public:
   /// SmallString. If Radix > 10, UpperCase determine the case of letter
   /// digits.
   void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false, bool UpperCase = true) const;
+                bool formatAsCLiteral = false, bool UpperCase = true,
+                bool InsertSeparators = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.

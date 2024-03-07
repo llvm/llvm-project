@@ -615,7 +615,7 @@ public:
   }
 };
 
-#if !defined(LIBC_LONG_DOUBLE_IS_FLOAT64) &&                                   \
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
     !defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 
@@ -713,7 +713,7 @@ template <> class FloatToString<long double> {
       float_as_fixed.shift_left(SHIFT_AMOUNT);
 
       // If there are still digits above the decimal point, handle those.
-      if (float_as_fixed.clz() < EXTRA_INT_WIDTH) {
+      if (float_as_fixed.clz() < static_cast<int>(EXTRA_INT_WIDTH)) {
         cpp::UInt<EXTRA_INT_WIDTH> above_decimal_point =
             float_as_fixed >> FLOAT_AS_INT_WIDTH;
 
@@ -837,7 +837,7 @@ public:
   }
 };
 
-#endif // !LIBC_LONG_DOUBLE_IS_FLOAT64 &&
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 &&
        // !LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
 
 } // namespace LIBC_NAMESPACE

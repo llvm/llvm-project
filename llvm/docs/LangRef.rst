@@ -15581,7 +15581,7 @@ Semantics:
 If either operand is a NaN, returns NaN. Otherwise returns the lesser
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2018.
+IEEE 754-2019.
 
 .. _i_maximum:
 
@@ -15621,7 +15621,7 @@ Semantics:
 If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2018.
+IEEE 754-2019.
 
 .. _int_copysign:
 
@@ -24276,6 +24276,9 @@ Arguments:
 
 The first operand is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second operand, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' operand have the same vector type.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand. The pointer alignment defaults to 1.
+
 Semantics:
 """"""""""
 
@@ -24333,6 +24336,8 @@ Arguments:
 
 The first operand is the input vector, from which elements are collected and written to memory. The second operand is the base pointer for the store, it has the same underlying type as the element of the input vector operand. The third operand is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the second
+operand. The pointer alignment defaults to 1.
 
 Semantics:
 """"""""""
@@ -26000,7 +26005,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows semantics specified in the draft of IEEE 754-2018.
+This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.minimum``' Intrinsic
@@ -26032,7 +26037,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows semantics specified in the draft of IEEE 754-2018.
+This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.ceil``' Intrinsic
@@ -26427,6 +26432,7 @@ similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
 
+.. _int_get_fpenv:
 
 '``llvm.get.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26450,6 +26456,7 @@ Semantics:
 The '``llvm.get.fpenv``' intrinsic reads the current floating-point environment
 and returns it as an integer value.
 
+.. _int_set_fpenv:
 
 '``llvm.set.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

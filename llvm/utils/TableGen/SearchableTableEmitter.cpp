@@ -215,12 +215,15 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
                                               Record *Rec) {
   assert(Index.Fields.size() == 1);
 
+  // To be consistent with compareBy and primaryRepresentation elsewhere,
+  // we check for IsInstruction before Enum-- these fields are not exclusive.
+  if (Index.Fields[0].IsInstruction) {
+    Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
+    return Target->getInstrIntValue(TheDef);
+  }
   if (Index.Fields[0].Enum) {
     Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
     return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
-  } else if (Index.Fields[0].IsInstruction) {
-    Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
-    return Target->getInstrIntValue(TheDef);
   }
 
   return getInt(Rec, Index.Fields[0].Name);

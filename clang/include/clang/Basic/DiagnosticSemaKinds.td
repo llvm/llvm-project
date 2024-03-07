@@ -765,7 +765,7 @@ def err_builtin_redeclare : Error<"cannot redeclare builtin function %0">;
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_arm_invalid_coproc : Error<"coprocessor %0 must be configured as "
   "%select{GCP|CDE}1">;
-def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
+def warn_invalid_cpu_supports : Warning<"invalid cpu feature string for builtin">;
 def err_invalid_cpu_is : Error<"invalid cpu name for builtin">;
 def err_invalid_cpu_specific_dispatch_value : Error<
 "invalid option '%0' for %select{cpu_specific|cpu_dispatch}1">;
@@ -2946,6 +2946,18 @@ def warn_private_extern : Warning<
 def note_private_extern : Note<
   "use __attribute__((visibility(\"hidden\"))) attribute instead">;
 
+// C23 constexpr
+def err_c23_constexpr_not_variable : Error<
+  "'constexpr' can only be used in variable declarations">;
+def err_c23_constexpr_invalid_type : Error<
+  "constexpr variable cannot have type %0">;
+def err_c23_constexpr_init_not_representable : Error<
+  "constexpr initializer evaluates to %0 which is not exactly representable in type %1">;
+def err_c23_constexpr_init_type_mismatch : Error<
+  "constexpr initializer for type %0 is of type %1">;
+def err_c23_constexpr_pointer_not_null : Error<
+  "constexpr pointer initializer is not null">;
+
 // C++ Concepts
 def err_concept_decls_may_only_appear_in_global_namespace_scope : Error<
   "concept declarations may only appear in global or namespace scope">;
@@ -4127,8 +4139,8 @@ def ext_ms_impcast_fn_obj : ExtWarn<
   "Microsoft extension">, InGroup<MicrosoftCast>;
 
 def warn_impcast_pointer_to_bool : Warning<
-    "address of%select{| function| array}0 '%1' will always evaluate to "
-    "'true'">,
+    "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
+    "conversion operator}0 will always evaluate to 'true'">,
     InGroup<PointerBoolConversion>;
 def warn_cast_nonnull_to_bool : Warning<
     "nonnull %select{function call|parameter}0 '%1' will evaluate to "
@@ -4977,6 +4989,9 @@ def err_template_param_shadow : Error<
   "declaration of %0 shadows template parameter">;
 def ext_template_param_shadow : ExtWarn<
   err_template_param_shadow.Summary>, InGroup<MicrosoftTemplateShadow>;
+def ext_compat_template_param_shadow : ExtWarn<
+  err_template_param_shadow.Summary>, InGroup<
+  DiagGroup<"strict-primary-template-shadow">>, DefaultError;
 def note_template_param_here : Note<"template parameter is declared here">;
 def note_template_param_external : Note<
   "template parameter from hidden source: %0">;
@@ -6167,6 +6182,10 @@ def ext_initializer_string_for_char_array_too_long : ExtWarn<
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
+// The same warning, but another group is needed to disable it separately.
+def warn_missing_designated_field_initializers : Warning<
+  warn_missing_field_initializers.Summary>,
+  InGroup<MissingDesignatedFieldInitializers>, DefaultIgnore;
 def warn_braces_around_init : Warning<
   "braces around %select{scalar |}0initializer">,
   InGroup<DiagGroup<"braced-scalar-init">>;
@@ -9588,13 +9607,10 @@ def err_defaulted_copy_assign_not_ref : Error<
   "the parameter for an explicitly-defaulted copy assignment operator must be an "
   "lvalue reference type">;
 def err_incorrect_defaulted_constexpr : Error<
-  "defaulted definition of %sub{select_special_member_kind}0 "
-  "is not constexpr">;
+  "defaulted definition of %sub{select_special_member_kind}0 cannot be marked %select{constexpr|consteval}1 "
+  "before C++23">;
 def err_incorrect_defaulted_constexpr_with_vb: Error<
   "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
-def err_incorrect_defaulted_consteval : Error<
-  "defaulted declaration of %sub{select_special_member_kind}0 "
-  "cannot be consteval because implicit definition is not constexpr">;
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
   "deleted">, InGroup<DefaultedFunctionDeleted>;
@@ -9705,21 +9721,12 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
-def ext_defaulted_comparison_constexpr_mismatch : Extension<
+def err_defaulted_comparison_constexpr_mismatch : Error<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 that is "
-  "declared %select{constexpr|consteval}2 but"
-  "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is a C++23 extension">,
-  InGroup<DiagGroup<"c++23-default-comp-relaxed-constexpr">>;
-def warn_cxx23_compat_defaulted_comparison_constexpr_mismatch : Warning<
-  "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 that is "
-  "declared %select{constexpr|consteval}2 but"
-  "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is incompatible with C++ "
-  "standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
+  "three-way comparison operator}0 cannot be "
+  "declared %select{constexpr|consteval}2 because "
+  "%select{it|for which the corresponding implicit 'operator==' }0 "
+  "invokes a non-constexpr comparison function ">;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
@@ -9898,7 +9905,7 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 returned">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
@@ -10267,9 +10274,9 @@ def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
 def err_vec_builtin_non_vector : Error<
- "first two arguments to %0 must be vectors">;
+ "%select{first two|all}1 arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
-  "first two arguments to %0 must have the same type">;
+  "%select{first two|all}1 arguments to %0 must have the same type">;
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
@@ -11333,6 +11340,8 @@ def err_omp_device_type_mismatch : Error<
 def err_omp_wrong_device_function_call : Error<
   "function with 'device_type(%0)' is not available on %select{device|host}1">;
 def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def err_omp_declare_target_has_local_vars : Error<
+  "local variable '%0' should not be used in 'declare target' directive; ">;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
@@ -12212,6 +12221,10 @@ def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
 def err_acc_branch_in_out_compute_construct
-    : Error<"invalid %select{branch|return}0 %select{out of|into}1 OpenACC "
-            "Compute Construct">;
+    : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
+            "OpenACC Compute Construct">;
+def note_acc_branch_into_compute_construct
+    : Note<"invalid branch into OpenACC Compute Construct">;
+def note_acc_branch_out_of_compute_construct
+    : Note<"invalid branch out of OpenACC Compute Construct">;
 } // end of sema component.

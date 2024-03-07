@@ -104,6 +104,18 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
+
+  Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
+  can be constructed outside itself and the derived class.
+
+- New :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check.
+
+  Finds initializer lists for aggregate types that could be
+  written as designated initializers instead.
+
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
@@ -115,6 +127,10 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-assert-side-effect
+  <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
+  effect from calling a method with non-const reference parameters.
 
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
@@ -134,9 +150,18 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
   ignoring local variable with ``[maybe_unused]`` attribute.
 
+- Improved :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
+  parameter `CheckedFunctions` to support regexp.
+
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check to also handle
+  calls to ``std::forward``.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions.
+  giving false positives for deleted functions and fix false negative when some
+  parameters are forwarded, but other aren't.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
@@ -150,6 +175,10 @@ Changes in existing checks
 - Improved :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`google-explicit-constructor
+  <clang-tidy/checks/google/explicit-constructor>` check to better handle
+  ``C++-20`` `explicit(bool)`.
 
 - Improved :doc:`google-global-names-in-headers
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local

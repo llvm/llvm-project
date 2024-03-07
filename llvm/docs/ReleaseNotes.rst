@@ -70,6 +70,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -103,6 +105,7 @@ Changes to the RISC-V Backend
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
 * The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
+* Zacas is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------

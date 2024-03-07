@@ -15,6 +15,30 @@
 using namespace llvm;
 
 template <>
+auto GenericConvergenceVerifier<SSAContext>::getConvOp(const Instruction &I)
+    -> ConvOpKind {
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    return CONV_NONE;
+  switch (CB->getIntrinsicID()) {
+  default:
+    return CONV_NONE;
+  case Intrinsic::experimental_convergence_anchor:
+    return CONV_ANCHOR;
+  case Intrinsic::experimental_convergence_entry:
+    return CONV_ENTRY;
+  case Intrinsic::experimental_convergence_loop:
+    return CONV_LOOP;
+  }
+}
+
+template <>
+void GenericConvergenceVerifier<SSAContext>::checkConvergenceTokenProduced(
+    const Instruction &I) {
+  return;
+}
+
+template <>
 const Instruction *
 GenericConvergenceVerifier<SSAContext>::findAndCheckConvergenceTokenUsed(
     const Instruction &I) {
@@ -38,11 +62,10 @@ GenericConvergenceVerifier<SSAContext>::findAndCheckConvergenceTokenUsed(
   auto *Token = Bundle->Inputs[0].get();
   auto *Def = dyn_cast<Instruction>(Token);
 
-  CheckOrNull(
-      Def && isConvergenceControlIntrinsic(SSAContext::getIntrinsicID(*Def)),
-      "Convergence control tokens can only be produced by calls to the "
-      "convergence control intrinsics.",
-      {Context.print(Token), Context.print(&I)});
+  CheckOrNull(Def && getConvOp(*Def) != CONV_NONE,
+              "Convergence control tokens can only be produced by calls to the "
+              "convergence control intrinsics.",
+              {Context.print(Token), Context.print(&I)});
 
   if (Def)
     Tokens[&I] = Def;

@@ -51,6 +51,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.memset_explicit
     libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
@@ -147,6 +148,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_has_single_bit_ui
     libc.src.stdbit.stdc_has_single_bit_ul
     libc.src.stdbit.stdc_has_single_bit_ull
+    libc.src.stdbit.stdc_bit_width_uc
+    libc.src.stdbit.stdc_bit_width_us
+    libc.src.stdbit.stdc_bit_width_ui
+    libc.src.stdbit.stdc_bit_width_ul
+    libc.src.stdbit.stdc_bit_width_ull
+    libc.src.stdbit.stdc_bit_floor_uc
+    libc.src.stdbit.stdc_bit_floor_us
+    libc.src.stdbit.stdc_bit_floor_ui
+    libc.src.stdbit.stdc_bit_floor_ul
+    libc.src.stdbit.stdc_bit_floor_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
@@ -442,7 +453,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
-if(LIBC_COMPILER_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128
@@ -490,6 +501,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtur
     # libc.src.stdfix.sqrtulk
     libc.src.stdfix.sqrtulr
+    libc.src.stdfix.uhksqrtus
+    libc.src.stdfix.uksqrtui
   )
 endif()
 

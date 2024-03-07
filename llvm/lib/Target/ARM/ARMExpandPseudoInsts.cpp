@@ -1468,21 +1468,15 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
   if (passesFPReg)
     assert(STI->hasFPRegs() && "Subtarget needs fpregs");
 
-  // Lazy store all fp registers to the stack
+  // Lazy store all fp registers to the stack.
   // This executes as NOP in the absence of floating-point support.
-  MachineInstrBuilder VLSTM =
-      BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
-          .addReg(ARM::SP)
-          .add(predOps(ARMCC::AL))
-          .addImm(0); // Represents a pseoudo register list, has no effect on
-                      // the encoding.
-  // Mark non-live registers as undef
-  for (MachineOperand &MO : VLSTM->implicit_operands()) {
-    if (MO.isReg() && !MO.isDef()) {
-      Register Reg = MO.getReg();
-      MO.setIsUndef(!LiveRegs.contains(Reg));
-    }
-  }
+  MachineInstrBuilder VLSTM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
+                                  .addReg(ARM::SP)
+                                  .add(predOps(ARMCC::AL));
+  for (auto R : {ARM::VPR, ARM::FPSCR, ARM::FPSCR_NZCV, ARM::Q0, ARM::Q1,
+                 ARM::Q2, ARM::Q3, ARM::Q4, ARM::Q5, ARM::Q6, ARM::Q7})
+    VLSTM.addReg(R, RegState::Implicit |
+                        (LiveRegs.contains(R) ? 0 : RegState::Undef));
 
   // Restore all arguments
   for (const auto &Regs : ClearedFPRegs) {
@@ -1569,20 +1563,14 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
         .addImm(CMSE_FP_SAVE_SIZE >> 2)
         .add(predOps(ARMCC::AL));
 
-    // Lazy store all fp registers to the stack.
-    MachineInstrBuilder VLSTM =
-        BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
-            .addReg(ARM::SP)
-            .add(predOps(ARMCC::AL))
-            .addImm(0); // Represents a pseoudo register list, has no effect on
-                        // the encoding.
-    // Mark non-live registers as undef
-    for (MachineOperand &MO : VLSTM->implicit_operands()) {
-      if (MO.isReg() && MO.isImplicit() && !MO.isDef()) {
-        Register Reg = MO.getReg();
-        MO.setIsUndef(!LiveRegs.contains(Reg));
-      }
-    }
+    // Lazy store all FP registers to the stack
+    MachineInstrBuilder VLSTM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
+                                    .addReg(ARM::SP)
+                                    .add(predOps(ARMCC::AL));
+    for (auto R : {ARM::VPR, ARM::FPSCR, ARM::FPSCR_NZCV, ARM::Q0, ARM::Q1,
+                   ARM::Q2, ARM::Q3, ARM::Q4, ARM::Q5, ARM::Q6, ARM::Q7})
+      VLSTM.addReg(R, RegState::Implicit |
+                          (LiveRegs.contains(R) ? 0 : RegState::Undef));
   } else {
     // Push all the callee-saved registers (s16-s31).
     MachineInstrBuilder VPUSH =
@@ -1685,12 +1673,9 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
 
   // Lazy load fp regs from stack.
   // This executes as NOP in the absence of floating-point support.
-  MachineInstrBuilder VLLDM =
-      BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
-          .addReg(ARM::SP)
-          .add(predOps(ARMCC::AL))
-          .addImm(0); // Represents a pseoudo register list, has no effect on
-                      // the encoding.
+  MachineInstrBuilder VLLDM = BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
+                                  .addReg(ARM::SP)
+                                  .add(predOps(ARMCC::AL));
 
   if (STI->fixCMSE_CVE_2021_35465()) {
     auto Bundler = MIBundleBuilder(MBB, VLLDM);
@@ -1772,9 +1757,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
     // Load FP registers from stack.
     BuildMI(MBB, MBBI, DL, TII->get(ARM::VLLDM))
         .addReg(ARM::SP)
-        .add(predOps(ARMCC::AL))
-        .addImm(0); // Represents a pseoudo register list, has no effect on the
-                    // encoding.
+        .add(predOps(ARMCC::AL));
 
     // Pop the stack space
     BuildMI(MBB, MBBI, DL, TII->get(ARM::tADDspi), ARM::SP)

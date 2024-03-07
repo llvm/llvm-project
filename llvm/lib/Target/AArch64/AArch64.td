@@ -1514,7 +1514,7 @@ def ProcessorFeatures {
                                        FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
                                        FeatureRCPC, FeatureSPE, FeatureSSBS,
                                        FeaturePerfMon];
-  list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE,
+  list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE, FeatureFP16FML,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
                                        FeatureSVE2BitPerm, FeatureTRBE,
                                        FeaturePerfMon];

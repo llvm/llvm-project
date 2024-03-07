@@ -51,6 +51,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.memset_explicit
     libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
@@ -414,7 +415,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
-if(LIBC_COMPILER_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128

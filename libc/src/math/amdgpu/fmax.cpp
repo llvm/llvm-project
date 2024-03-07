@@ -15,10 +15,6 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, fmax, (double x, double y)) {
-  // FIXME: The builtin function does not correctly handle the +/-0.0 case.
-  if (LIBC_UNLIKELY(x == y))
-    return cpp::bit_cast<double>(cpp::bit_cast<uint64_t>(x) &
-                                 cpp::bit_cast<uint64_t>(y));
   return __builtin_fmax(x, y);
 }
 

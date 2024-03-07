@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "src/stdio/snprintf.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/fixed_point/fx_bits.h"
 #include "src/__support/fixed_point/fx_rep.h"
 

@@ -11,9 +11,14 @@ endif()
 
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
-  set(useful_python_modules
-    psutil # Lit uses psutil to do per-test timeouts.
-  )
+  # Lit uses psutil to do per-test timeouts.
+  set(useful_python_modules psutil)
+
+  if(NOT WIN32)
+    # We no longer vendor pexpect and it is not used on Windows.
+    list(APPEND pexpect)
+  endif()
+
   foreach(module ${useful_python_modules})
     lldb_find_python_module(${module})
     if (NOT PY_${module}_FOUND)
@@ -29,7 +34,10 @@ endif()
 # The "pexpect" package should come from the system environment, not from the
 # LLDB tree. However, we delay the deletion of it from the tree in case
 # users/buildbots don't have the package yet and need some time to install it.
-if (NOT LLDB_TEST_USE_VENDOR_PACKAGES)
+# Windows is configured to skip all pexpect tests, and guards all
+# "import pexpect" calls, so we do not need pexpect installed there.
+if (NOT LLDB_TEST_USE_VENDOR_PACKAGES AND NOT WIN32)
+  unset(PY_pexpect_FOUND CACHE)
   lldb_find_python_module(pexpect)
   if (NOT PY_pexpect_FOUND)
     message(FATAL_ERROR
