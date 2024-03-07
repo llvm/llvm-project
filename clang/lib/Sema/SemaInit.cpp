@@ -10751,9 +10751,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     }
   }
   if (!Template) {
-    // FIXME: update the diagnostic message to include C++20 alias templates
     Diag(Kind.getLocation(),
-         diag::err_deduced_non_class_template_specialization_type)
+         diag::err_deduced_non_class_or_alias_template_specialization_type)
       << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
     if (auto *TD = TemplateName.getAsTemplateDecl())
       NoteTemplateLocation(*TD);
