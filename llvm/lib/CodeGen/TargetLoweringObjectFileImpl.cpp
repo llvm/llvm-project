@@ -2690,7 +2690,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
       return XCOFF::XMC_TC;
 
     // Use large code model toc entries for ehinfo symbols as they are
-    // never refrenced directly. The runtime loads their TOC entry
+    // never referenced directly. The runtime loads their TOC entry
     // addresses from the trace-back table.
     if (XSym->isEHInfo())
       return XCOFF::XMC_TE;
