@@ -2040,77 +2040,6 @@ public:
   }
 };
 
-// Patterns to rewrite ExtractOp(ConstantMaskOp)
-//
-// When the result of ExtractOp is a subvector of input, we can rewrite it as
-// a ConstantMaskOp with subvector ranks.
-//
-// ExtractOp(ConstantMaskOp) -> ConstantMaskOp
-//
-// When the result of ExtractOp is a scalar, we can get the scalar value
-// directly.
-//
-// ExtractOp(ConstantMaskOp) -> ConstantOp
-class ExtractOpFromConstantMask final : public OpRewritePattern<ExtractOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    auto constantMaskOp =
-        extractOp.getVector().getDefiningOp<vector::ConstantMaskOp>();
-    if (!constantMaskOp)
-      return failure();
-
-    // All indices must be static.
-    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
-    unsigned dynamicPosCount =
-        llvm::count_if(extractOpPos, ShapedType::isDynamic);
-    // If there is any dynamic position in ExtractOp, we cannot determine the
-    // scalar value.
-    if (dynamicPosCount)
-      return failure();
-
-    ArrayRef<Attribute> maskDimSizes =
-        constantMaskOp.getMaskDimSizes().getValue();
-    Type resultTy = extractOp.getResult().getType();
-    if (resultTy.isa<mlir::VectorType>()) {
-      auto resultVectorTy = resultTy.cast<mlir::VectorType>();
-      int64_t resultRank = resultVectorTy.getRank();
-      int64_t n = maskDimSizes.size();
-      std::vector<int64_t> indices;
-      for (auto i = n - resultRank; i < n; ++i)
-        indices.push_back(cast<IntegerAttr>(maskDimSizes[i]).getInt());
-
-      rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
-          extractOp, resultVectorTy,
-          vector::getVectorSubscriptAttr(rewriter, indices));
-
-      return success();
-    } else if (resultTy.isa<mlir::IntegerType>()) {
-      // ConstantMaskOp creates and returns a vector mask where elements of the
-      // result vector are set to ‘0’ or ‘1’, based on whether the element
-      // indices are contained within a hyper-rectangular region.
-      // We go through ExtractOp static positions to determine the position is
-      // within the hyper-rectangular region or not.
-      Type boolType = rewriter.getI1Type();
-      IntegerAttr setAttr = IntegerAttr::get(boolType, 1);
-      for (size_t i = 0, end = extractOpPos.size(); i < end; ++i) {
-        if (cast<IntegerAttr>(maskDimSizes[i]).getInt() <= extractOpPos[i]) {
-          setAttr = IntegerAttr::get(boolType, 0);
-          break;
-        }
-      }
-
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, boolType,
-                                                     setAttr);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2137,8 +2066,7 @@ LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
-              ExtractOpFromBroadcast, ExtractOpFromCreateMask,
-              ExtractOpFromConstantMask>(context);
+              ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
 }
 
@@ -2551,11 +2479,51 @@ public:
   }
 };
 
+/// Pattern to rewrite a fixed-size interleave via vector.shuffle to
+/// vector.interleave.
+class ShuffleInterleave : public OpRewritePattern<ShuffleOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+    if (resultType.isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp can't represent a scalable interleave");
+
+    if (resultType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp can't represent an n-D interleave");
+
+    VectorType sourceType = op.getV1VectorType();
+    if (sourceType != op.getV2VectorType() ||
+        sourceType.getNumElements() * 2 != resultType.getNumElements()) {
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp types don't match an interleave");
+    }
+
+    ArrayAttr shuffleMask = op.getMask();
+    int64_t resultVectorSize = resultType.getNumElements();
+    for (int i = 0, e = resultVectorSize / 2; i < e; ++i) {
+      int64_t maskValueA = cast<IntegerAttr>(shuffleMask[i * 2]).getInt();
+      int64_t maskValueB = cast<IntegerAttr>(shuffleMask[(i * 2) + 1]).getInt();
+      if (maskValueA != i || maskValueB != (resultVectorSize / 2) + i)
+        return rewriter.notifyMatchFailure(op,
+                                           "ShuffleOp mask not interleaving");
+    }
+
+    rewriter.replaceOpWithNewOp<InterleaveOp>(op, op.getV1(), op.getV2());
+    return success();
+  }
+};
+
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, Canonicalize0DShuffleOp>(context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//

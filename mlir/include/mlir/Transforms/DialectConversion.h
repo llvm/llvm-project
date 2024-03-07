@@ -720,12 +720,6 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing an operation when the given functor
-  /// returns "true".
-  void replaceOpWithIf(
-      Operation *op, ValueRange newValues, bool *allUsesReplaced,
-      llvm::unique_function<bool(OpOperand &) const> functor) override;
-
   /// PatternRewriter hook for replacing an operation.
   void replaceOp(Operation *op, ValueRange newValues) override;
 
@@ -740,9 +734,6 @@ public:
   /// PatternRewriter hook for erase all operations in a block. This is not yet
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
-
-  /// PatternRewriter hook for splitting a block into two parts.
-  Block *splitBlock(Block *block, Block::iterator before) override;
 
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,

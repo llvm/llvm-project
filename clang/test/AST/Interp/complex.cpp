@@ -1,8 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify -Wno-unused-value %s
-// RUN: %clang_cc1 -verify=ref -Wno-unused-value %s
-
-// expected-no-diagnostics
-// ref-no-diagnostics
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected -Wno-unused-value %s
+// RUN: %clang_cc1 -verify=both,ref -Wno-unused-value %s
 
 constexpr _Complex double z1 = {1.0, 2.0};
 static_assert(__real(z1) == 1.0, "");
@@ -255,4 +252,64 @@ namespace DeclRefCopy {
     return __real(ArrayOfComplexInt[0]) + __imag(ArrayOfComplexInt[3]);
   }
   static_assert(localComplexArray() == (24 + 42), "");
+}
+
+namespace Builtin {
+  constexpr _Complex float A = __builtin_complex(10.0f, 20.0f);
+  static_assert(__real(A) == 10, "");
+  static_assert(__imag(A) == 20, "");
+
+  constexpr _Complex double B = __builtin_complex(10.0, 20.0);
+  static_assert(__real(B) == 10, "");
+  static_assert(__imag(B) == 20, "");
+
+
+  constexpr _Complex float C = __builtin_complex(10.0f, 20.0); // both-error {{arguments are of different types}}
+}
+
+namespace Cmp {
+  static_assert((0.0 + 0.0j) == (0.0 + 0.0j));
+  static_assert((0.0 + 0.0j) != (0.0 + 0.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+
+  static_assert((0.0 + 0.0j) == 0.0);
+  static_assert(0.0 == (0.0 + 0.0j));
+  static_assert(0.0 == 0.0j);
+  static_assert((0.0 + 1.0j) != 0.0);
+  static_assert(1.0 != (0.0 + 0.0j));
+  static_assert(0.0 != 1.0j);
+
+  // Walk around the complex plane stepping between angular differences and
+  // equality.
+  static_assert((1.0 + 0.0j) == (0.0 + 0.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((1.0 + 0.0j) == (1.0 + 0.0j));
+  static_assert((1.0 + 1.0j) == (1.0 + 0.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((1.0 + 1.0j) == (1.0 + 1.0j));
+  static_assert((0.0 + 1.0j) == (1.0 + 1.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((0.0 + 1.0j) == (0.0 + 1.0j));
+  static_assert((-1.0 + 1.0j) == (0.0 + 1.0j)); // both-error {{static assertion}} \
+                                                // both-note {{evaluates to}}
+  static_assert((-1.0 + 1.0j) == (-1.0 + 1.0j));
+  static_assert((-1.0 + 0.0j) == (-1.0 + 1.0j)); // both-error {{static assertion}} \
+                                                 // both-note {{evaluates to}}
+  static_assert((-1.0 + 0.0j) == (-1.0 + 0.0j));
+  static_assert((-1.0 - 1.0j) == (-1.0 + 0.0j)); // both-error {{static assertion}} \
+                                                 // both-note {{evaluates to}}
+  static_assert((-1.0 - 1.0j) == (-1.0 - 1.0j));
+  static_assert((0.0 - 1.0j) == (-1.0 - 1.0j)); // both-error {{static assertion}} \
+                                                // both-note {{evaluates to}}
+  static_assert((0.0 - 1.0j) == (0.0 - 1.0j));
+  static_assert((1.0 - 1.0j) == (0.0 - 1.0j)); // both-error {{static assertion}} \
+                                               // both-note {{evaluates to}}
+  static_assert((1.0 - 1.0j) == (1.0 - 1.0j));
+
+  /// Make sure these are rejected before reaching the constexpr interpreter.
+  static_assert((0.0 + 0.0j) & (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) | (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) < (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) > (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
+  static_assert((0.0 + 0.0j) ^ (0.0 + 0.0j)); // both-error {{invalid operands to binary expression}}
 }

@@ -1715,6 +1715,8 @@ static bool CheckLiteralType(Sema &SemaRef, Sema::CheckConstexprKind Kind,
 static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
                                                const CXXDestructorDecl *DD,
                                                Sema::CheckConstexprKind Kind) {
+  assert(!SemaRef.getLangOpts().CPlusPlus23 &&
+         "this check is obsolete for C++23");
   auto Check = [&](SourceLocation Loc, QualType T, const FieldDecl *FD) {
     const CXXRecordDecl *RD =
         T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
@@ -1746,6 +1748,8 @@ static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
 static bool CheckConstexprParameterTypes(Sema &SemaRef,
                                          const FunctionDecl *FD,
                                          Sema::CheckConstexprKind Kind) {
+  assert(!SemaRef.getLangOpts().CPlusPlus23 &&
+         "this check is obsolete for C++23");
   unsigned ArgIndex = 0;
   const auto *FT = FD->getType()->castAs<FunctionProtoType>();
   for (FunctionProtoType::param_type_iterator i = FT->param_type_begin(),
@@ -1767,6 +1771,8 @@ static bool CheckConstexprParameterTypes(Sema &SemaRef,
 /// true. If not, produce a suitable diagnostic and return false.
 static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
                                      Sema::CheckConstexprKind Kind) {
+  assert(!SemaRef.getLangOpts().CPlusPlus23 &&
+         "this check is obsolete for C++23");
   if (CheckLiteralType(SemaRef, Kind, FD->getLocation(), FD->getReturnType(),
                        diag::err_constexpr_non_literal_return,
                        FD->isConsteval()))
@@ -1856,16 +1862,18 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
       }
     }
 
-    // - its return type shall be a literal type;
-    if (!CheckConstexprReturnType(*this, NewFD, Kind))
+    // - its return type shall be a literal type; (removed in C++23)
+    if (!getLangOpts().CPlusPlus23 &&
+        !CheckConstexprReturnType(*this, NewFD, Kind))
       return false;
   }
 
   if (auto *Dtor = dyn_cast<CXXDestructorDecl>(NewFD)) {
     // A destructor can be constexpr only if the defaulted destructor could be;
     // we don't need to check the members and bases if we already know they all
-    // have constexpr destructors.
-    if (!Dtor->getParent()->defaultedDestructorIsConstexpr()) {
+    // have constexpr destructors. (removed in C++23)
+    if (!getLangOpts().CPlusPlus23 &&
+        !Dtor->getParent()->defaultedDestructorIsConstexpr()) {
       if (Kind == CheckConstexprKind::CheckValid)
         return false;
       if (!CheckConstexprDestructorSubobjects(*this, Dtor, Kind))
@@ -1873,8 +1881,9 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     }
   }
 
-  // - each of its parameter types shall be a literal type;
-  if (!CheckConstexprParameterTypes(*this, NewFD, Kind))
+  // - each of its parameter types shall be a literal type; (removed in C++23)
+  if (!getLangOpts().CPlusPlus23 &&
+      !CheckConstexprParameterTypes(*this, NewFD, Kind))
     return false;
 
   Stmt *Body = NewFD->getBody();
@@ -2457,7 +2466,8 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   // function", so is not checked in CheckValid mode.
   SmallVector<PartialDiagnosticAt, 8> Diags;
   if (Kind == Sema::CheckConstexprKind::Diagnose &&
-      !Expr::isPotentialConstantExpr(Dcl, Diags)) {
+      !Expr::isPotentialConstantExpr(Dcl, Diags) &&
+      !SemaRef.getLangOpts().CPlusPlus23) {
     SemaRef.Diag(Dcl->getLocation(),
                  diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
@@ -7294,7 +7304,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool CanPass = canPassInRegisters(*this, Record, CCK);
 
   // Do not change ArgPassingRestrictions if it has already been set to
-  // ArgPassingKind::CanNeverPassInRegs.
+  // RecordArgPassingKind::CanNeverPassInRegs.
   if (Record->getArgPassingRestrictions() !=
       RecordArgPassingKind::CanNeverPassInRegs)
     Record->setArgPassingRestrictions(
@@ -7535,21 +7545,23 @@ static bool defaultedSpecialMemberIsConstexpr(
 
   // C++1y [class.copy]p26:
   //   -- [the class] is a literal type, and
-  if (!Ctor && !ClassDecl->isLiteral())
+  if (!Ctor && !ClassDecl->isLiteral() && !S.getLangOpts().CPlusPlus23)
     return false;
 
   //   -- every constructor involved in initializing [...] base class
   //      sub-objects shall be a constexpr constructor;
   //   -- the assignment operator selected to copy/move each direct base
   //      class is a constexpr function, and
-  for (const auto &B : ClassDecl->bases()) {
-    const RecordType *BaseType = B.getType()->getAs<RecordType>();
-    if (!BaseType)
-      continue;
-    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
-    if (!specialMemberIsConstexpr(S, BaseClassDecl, CSM, 0, ConstArg,
-                                  InheritedCtor, Inherited))
-      return false;
+  if (!S.getLangOpts().CPlusPlus23) {
+    for (const auto &B : ClassDecl->bases()) {
+      const RecordType *BaseType = B.getType()->getAs<RecordType>();
+      if (!BaseType)
+        continue;
+      CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
+      if (!specialMemberIsConstexpr(S, BaseClassDecl, CSM, 0, ConstArg,
+                                    InheritedCtor, Inherited))
+        return false;
+    }
   }
 
   //   -- every constructor involved in initializing non-static data members
@@ -7559,20 +7571,22 @@ static bool defaultedSpecialMemberIsConstexpr(
   //   -- for each non-static data member of X that is of class type (or array
   //      thereof), the assignment operator selected to copy/move that member is
   //      a constexpr function
-  for (const auto *F : ClassDecl->fields()) {
-    if (F->isInvalidDecl())
-      continue;
-    if (CSM == Sema::CXXDefaultConstructor && F->hasInClassInitializer())
-      continue;
-    QualType BaseType = S.Context.getBaseElementType(F->getType());
-    if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
-      CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(RecordTy->getDecl());
-      if (!specialMemberIsConstexpr(S, FieldRecDecl, CSM,
-                                    BaseType.getCVRQualifiers(),
-                                    ConstArg && !F->isMutable()))
+  if (!S.getLangOpts().CPlusPlus23) {
+    for (const auto *F : ClassDecl->fields()) {
+      if (F->isInvalidDecl())
+        continue;
+      if (CSM == Sema::CXXDefaultConstructor && F->hasInClassInitializer())
+        continue;
+      QualType BaseType = S.Context.getBaseElementType(F->getType());
+      if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
+        CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(RecordTy->getDecl());
+        if (!specialMemberIsConstexpr(S, FieldRecDecl, CSM,
+                                      BaseType.getCVRQualifiers(),
+                                      ConstArg && !F->isMutable()))
+          return false;
+      } else if (CSM == Sema::CXXDefaultConstructor) {
         return false;
-    } else if (CSM == Sema::CXXDefaultConstructor) {
-      return false;
+      }
     }
   }
 
@@ -7858,18 +7872,17 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       MD->isConstexpr() && !Constexpr &&
       MD->getTemplatedKind() == FunctionDecl::TK_NonTemplate) {
         if (!MD->isConsteval() && RD->getNumVBases()) {
-          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr_with_vb)
+          Diag(MD->getBeginLoc(),
+               diag::err_incorrect_defaulted_constexpr_with_vb)
               << CSM;
           for (const auto &I : RD->vbases())
             Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
         } else {
-          Diag(MD->getBeginLoc(), MD->isConsteval()
-                                      ? diag::err_incorrect_defaulted_consteval
-                                      : diag::err_incorrect_defaulted_constexpr)
-              << CSM;
+          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr)
+              << CSM << MD->isConsteval();
         }
-    // FIXME: Explain why the special member can't be constexpr.
-    HadError = true;
+        HadError = true;
+        // FIXME: Explain why the special member can't be constexpr.
   }
 
   if (First) {
@@ -9101,13 +9114,11 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   //    - if the function is a constructor or destructor, its class does not
   //      have any virtual base classes.
   if (FD->isConstexpr()) {
-    if (CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
+    if (!getLangOpts().CPlusPlus23 &&
+        CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
         CheckConstexprParameterTypes(*this, FD, CheckConstexprKind::Diagnose) &&
         !Info.Constexpr) {
-      Diag(FD->getBeginLoc(),
-           getLangOpts().CPlusPlus23
-               ? diag::warn_cxx23_compat_defaulted_comparison_constexpr_mismatch
-               : diag::ext_defaulted_comparison_constexpr_mismatch)
+      Diag(FD->getBeginLoc(), diag::err_defaulted_comparison_constexpr_mismatch)
           << FD->isImplicit() << (int)DCK << FD->isConsteval();
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
                                   DefaultedComparisonAnalyzer::ExplainConstexpr)
@@ -12203,10 +12214,8 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
   assert(NamespcName && "Invalid NamespcName.");
   assert(IdentLoc.isValid() && "Invalid NamespceName location.");
 
-  // This can only happen along a recovery path.
-  while (S->isTemplateParamScope())
-    S = S->getParent();
-  assert(S->getFlags() & Scope::DeclScope && "Invalid Scope.");
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   UsingDirectiveDecl *UDir = nullptr;
   NestedNameSpecifier *Qualifier = nullptr;
@@ -13516,11 +13525,8 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   SourceLocation UsingLoc, UnqualifiedId &Name,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
-  // Skip up to the relevant declaration scope.
-  while (S->isTemplateParamScope())
-    S = S->getParent();
-  assert((S->getFlags() & Scope::DeclScope) &&
-         "got alias-declaration outside of declaration scope");
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   if (Type.isInvalid())
     return nullptr;

@@ -2,6 +2,7 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h" // write_to_stderr
+#include "src/__support/UInt.h"      // is_big_int
 #include "src/__support/UInt128.h"
 
 #include <stdint.h>
@@ -47,8 +48,9 @@ template <> TestLogger &TestLogger::operator<<(void *addr) {
 }
 
 template <typename T> TestLogger &TestLogger::operator<<(T t) {
-  if constexpr (cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
-                sizeof(T) > sizeof(uint64_t)) {
+  if constexpr (cpp::is_big_int_v<T> ||
+                (cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
+                 (sizeof(T) > sizeof(uint64_t)))) {
     static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
     const IntegerToString<T, radix::Hex::WithPrefix> buffer(t);
     return *this << buffer.view();
@@ -68,7 +70,7 @@ template TestLogger &TestLogger::operator<< <unsigned short>(unsigned short);
 template TestLogger &TestLogger::operator<< <unsigned int>(unsigned int);
 template TestLogger &TestLogger::operator<< <unsigned long>(unsigned long);
 template TestLogger &
-TestLogger::operator<< <unsigned long long>(unsigned long long);
+    TestLogger::operator<< <unsigned long long>(unsigned long long);
 
 #ifdef __SIZEOF_INT128__
 template TestLogger &TestLogger::operator<< <__uint128_t>(__uint128_t);

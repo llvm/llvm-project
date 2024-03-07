@@ -138,6 +138,8 @@ constexpr int dependent[4] = {
 static_assert(dependent[2] == dependent[0], "");
 static_assert(dependent[3] == dependent[1], "");
 
+union { char x[]; } r = {0};
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #pragma clang diagnostic ignored "-Winitializer-overrides"
@@ -564,3 +566,8 @@ namespace LocalVLA {
 #endif
   }
 }
+
+char melchizedek[2200000000];
+typedef decltype(melchizedek[1] - melchizedek[0]) ptrdiff_t;
+constexpr ptrdiff_t d1 = &melchizedek[0x7fffffff] - &melchizedek[0]; // ok
+constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[0x80000000u]; // ok

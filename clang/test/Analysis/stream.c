@@ -1,6 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple=x86_64-pc-linux-gnu -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple=armv8-none-linux-eabi -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple=aarch64-linux-gnu -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator.h"
+#include "Inputs/system-header-simulator-for-valist.h"
 
 void clang_analyzer_eval(int);
 
@@ -65,9 +69,21 @@ void check_fseek(void) {
   fclose(fp);
 }
 
+void check_fseeko(void) {
+  FILE *fp = tmpfile();
+  fseeko(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_ftell(void) {
   FILE *fp = tmpfile();
   ftell(fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_ftello(void) {
+  FILE *fp = tmpfile();
+  ftello(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
@@ -129,12 +145,33 @@ void f_dopen(int fd) {
   fclose(F);
 }
 
+void f_vfprintf(int fd, va_list args) {
+  FILE *F = fdopen(fd, "r");
+  vfprintf(F, "%d", args); // expected-warning {{Stream pointer might be NULL}}
+  fclose(F);
+}
+
+void f_vfscanf(int fd, va_list args) {
+  FILE *F = fdopen(fd, "r");
+  vfscanf(F, "%u", args); // expected-warning {{Stream pointer might be NULL}}
+  fclose(F);
+}
+
 void f_seek(void) {
   FILE *p = fopen("foo", "r");
   if (!p)
     return;
   fseek(p, 1, SEEK_SET); // no-warning
   fseek(p, 1, 3); // expected-warning {{The whence argument to fseek() should be SEEK_SET, SEEK_END, or SEEK_CUR}}
+  fclose(p);
+}
+
+void f_seeko(void) {
+  FILE *p = fopen("foo", "r");
+  if (!p)
+    return;
+  fseeko(p, 1, SEEK_SET); // no-warning
+  fseeko(p, 1, 3); // expected-warning {{The whence argument to fseek() should be SEEK_SET, SEEK_END, or SEEK_CUR}}
   fclose(p);
 }
 
