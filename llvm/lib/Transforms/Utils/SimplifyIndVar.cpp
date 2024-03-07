@@ -1435,11 +1435,12 @@ static std::optional<BinaryOp> matchBinaryOp(Instruction *Op) {
         // requires special handling. It can be preserved as long as we're not
         // left shifting by bitwidth - 1.
         bool IsNUW = Op->hasNoUnsignedWrap();
-        bool IsNSW =
-            Op->hasNoSignedWrap() && (IsNUW || SA->getValue().ult(BitWidth - 1));
+        bool IsNSW = Op->hasNoSignedWrap() &&
+                     (IsNUW || SA->getValue().ult(BitWidth - 1));
 
-        ConstantInt *X = ConstantInt::get(
-            Op->getContext(), APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
+        ConstantInt *X =
+            ConstantInt::get(Op->getContext(),
+                             APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
         return BinaryOp(Instruction::Mul, Op->getOperand(0), X, IsNSW, IsNUW);
       }
     }
@@ -1463,12 +1464,13 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
     return {nullptr, ExtendKind::Unknown};
 
   assert((Op->Opcode == Instruction::Add || Op->Opcode == Instruction::Sub ||
-          Op->Opcode == Instruction::Mul) && "Unexpected opcode");
+          Op->Opcode == Instruction::Mul) &&
+         "Unexpected opcode");
 
   // One operand (NarrowDef) has already been extended to WideDef. Now determine
   // if extending the other will lead to a recurrence.
   const unsigned ExtendOperIdx = Op->Operands[0] == DU.NarrowDef ? 1 : 0;
-  assert(Op->Operands[1-ExtendOperIdx] == DU.NarrowDef && "bad DU");
+  assert(Op->Operands[1 - ExtendOperIdx] == DU.NarrowDef && "bad DU");
 
   ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
   if (!(ExtKind == ExtendKind::Sign && Op->IsNSW) &&
