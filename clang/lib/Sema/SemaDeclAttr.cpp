@@ -8578,8 +8578,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (CheckCountExpr(S, FD, CountExpr, Decls))
     return;
 
-  QualType CAT = S.BuildCountAttributedArrayType(
-      FD->getType(), CountExpr, llvm::ArrayRef(Decls.begin(), Decls.end()));
+  QualType CAT = S.BuildCountAttributedArrayType(FD->getType(), CountExpr);
   FD->setType(CAT);
 }
 

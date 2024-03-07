@@ -13270,9 +13270,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     if (DX->isOrNull() != DY->isOrNull())
       return QualType();
-    const auto CEX = DX->getCountExpr();
-    const auto CEY = DY->getCountExpr();
-    const auto CDX = DX->getCoupledDecls();
+    Expr *CEX = DX->getCountExpr();
+    Expr *CEY = DY->getCountExpr();
+    llvm::ArrayRef<clang::TypeCoupledDeclRefInfo> CDX = DX->getCoupledDecls();
     if (Ctx.hasSameExpr(CEX, CEY))
       return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                         DX->isCountInBytes(), DX->isOrNull(),
@@ -13281,9 +13281,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     // Two declarations with the same integer constant may still differ in their
     // expression pointers, so we need to evaluate them.
-    const auto VX = CEX->getIntegerConstantExpr(Ctx);
-    const auto VY = CEY->getIntegerConstantExpr(Ctx);
-    if (*VX != *VY)
+    llvm::APSInt VX = *CEX->getIntegerConstantExpr(Ctx);
+    llvm::APSInt VY = *CEY->getIntegerConstantExpr(Ctx);
+    if (VX != VY)
       return QualType();
     return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                       DX->isCountInBytes(), DX->isOrNull(),

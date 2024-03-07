@@ -515,7 +515,7 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
-  // nothing to do
+  // Nothing to do
 }
 
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {

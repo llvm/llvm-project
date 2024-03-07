@@ -1125,13 +1125,11 @@ class BoundsAttributedTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, BoundsAttributedTypeLoc,
                              BoundsAttributedType, BoundsAttributedLocInfo> {
 public:
-  TypeLoc getInnerLoc() const { return this->getInnerTypeLoc(); }
-  QualType getInnerType() const { return this->getTypePtr()->desugar(); }
+  TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
+  QualType getInnerType() const { return getTypePtr()->desugar(); }
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     // nothing to do
   }
-  unsigned getLocalDataAlignment() const { return 1; }
-  unsigned getLocalDataSize() const { return 0; }
 };
 
 class CountAttributedTypeLoc final

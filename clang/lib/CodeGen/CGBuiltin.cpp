@@ -858,7 +858,7 @@ static unsigned CountCountedByAttrs(const RecordDecl *RD) {
 
   for (const Decl *D : RD->decls()) {
     if (const auto *FD = dyn_cast<FieldDecl>(D);
-        FD && FD->getType()->getAs<CountAttributedType>()) {
+        FD && FD->getType()->isCountAttributedType()) {
       return ++Num;
     }
 
@@ -975,7 +975,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
       FindFlexibleArrayMemberField(Ctx, OuterRD, FAMName, Offset);
   Offset = Ctx.toCharUnitsFromBits(Offset).getQuantity();
 
-  if (!FAMDecl || !FAMDecl->getType()->getAs<CountAttributedType>())
+  if (!FAMDecl || !FAMDecl->getType()->isCountAttributedType())
     // No flexible array member found or it doesn't have the "counted_by"
     // attribute.
     return nullptr;

@@ -1139,12 +1139,12 @@ const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
   if (!FD)
     return nullptr;
 
-  auto *CAT = FD->getType()->getAs<CountAttributedType>();
+  const auto *CAT = FD->getType()->getAs<CountAttributedType>();
   if (!CAT)
     return nullptr;
 
-  auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
-  auto *CountDecl = CountDRE->getDecl();
+  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  const auto *CountDecl = CountDRE->getDecl();
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
     CountDecl = IFD->getAnonField();
 
@@ -4240,7 +4240,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       if (const auto *ME = dyn_cast<MemberExpr>(Array);
           ME &&
           ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
-          ME->getMemberDecl()->getType()->getAs<CountAttributedType>()) {
+          ME->getMemberDecl()->getType()->isCountAttributedType()) {
         const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
         if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
           if (std::optional<int64_t> Diff =

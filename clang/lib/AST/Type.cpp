@@ -386,10 +386,8 @@ void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
 }
 
 bool BoundsAttributedType::referencesFieldDecls() const {
-  for (const auto &Decl : dependent_decls())
-    if (isa<FieldDecl>(Decl.getDecl()))
-      return true;
-  return false;
+  return llvm::any_of(dependent_decls(), [](const TypeCoupledDeclRefInfo &Info) {
+    return isa<FieldDecl>(Info.getDecl()); });
 }
 
 void CountAttributedType::Profile(llvm::FoldingSetNodeID &ID,
@@ -667,6 +665,10 @@ bool Type::isScopedEnumeralType() const {
   if (const auto *ET = getAs<EnumType>())
     return ET->getDecl()->isScoped();
   return false;
+}
+
+bool Type::isCountAttributedType() const {
+  return getAs<CountAttributedType>();
 }
 
 const ComplexType *Type::getAsComplexIntegerType() const {

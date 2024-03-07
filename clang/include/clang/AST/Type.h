@@ -2007,7 +2007,6 @@ protected:
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
-    /// The limit is 15.
     static constexpr unsigned NumCoupledDeclsBits = 4;
     unsigned NumCoupledDecls : NumCoupledDeclsBits;
     LLVM_PREFERRED_TYPE(bool)
@@ -2015,6 +2014,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned OrNull : 1;
   };
+  static_assert(sizeof(CountAttributedTypeBitfields) <= sizeof(unsigned));
 
   union {
     TypeBitfields TypeBits;
@@ -2279,6 +2279,7 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
+  bool isCountAttributedType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;

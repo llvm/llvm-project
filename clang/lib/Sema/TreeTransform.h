@@ -7264,8 +7264,29 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformCountAttributedType(
     TypeLocBuilder &TLB, CountAttributedTypeLoc TL) {
-  // TODO
-  llvm_unreachable("Unexpected TreeTransform for CountAttributedType");
+  const CountAttributedType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  Expr *OldCount = TL.getCountExpr();
+  Expr *NewCount = nullptr;
+  if (OldCount) {
+    ExprResult CountResult = getDerived().TransformExpr(OldCount);
+    if (CountResult.isInvalid())
+      return QualType();
+    NewCount = CountResult.get();
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
+      OldCount != NewCount) {
+    // Currently, CountAttributedType can only wrap incomplete array types.
+    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
+  }
+
+  TLB.push<CountAttributedTypeLoc>(Result);
+  return Result;
 }
 
 template <typename Derived>
