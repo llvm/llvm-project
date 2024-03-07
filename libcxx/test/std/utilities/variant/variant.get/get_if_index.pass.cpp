@@ -67,7 +67,6 @@ void test_get_if() {
     assert(*std::get_if<1>(&v) == 42);
     assert(std::get_if<0>(&v) == nullptr);
   }
-// FIXME: Remove these once reference support is reinstated
 }
 
 int main(int, char**) {
