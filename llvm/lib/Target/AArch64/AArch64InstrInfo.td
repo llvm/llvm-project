@@ -757,9 +757,12 @@ def AArch64fcmlez: SDNode<"AArch64ISD::FCMLEz", SDT_AArch64fcmpz>;
 def AArch64fcmltz: SDNode<"AArch64ISD::FCMLTz", SDT_AArch64fcmpz>;
 
 def AArch64fcvtxn_n: SDNode<"AArch64ISD::FCVTXN", SDTFPRoundOp>;
-def AArch64fcvtxn: PatFrags<(ops node:$Rn),
-                            [(f32 (int_aarch64_sisd_fcvtxn (f64 node:$Rn))),
-                             (f32 (AArch64fcvtxn_n (f64 node:$Rn)))]>;
+def AArch64fcvtxnsdr: PatFrags<(ops node:$Rn),
+                               [(f32 (int_aarch64_sisd_fcvtxn (f64 node:$Rn))),
+                                (f32 (AArch64fcvtxn_n (f64 node:$Rn)))]>;
+def AArch64fcvtxnv: PatFrags<(ops node:$Rn),
+                                 [(int_aarch64_neon_fcvtxn node:$Rn),
+                                  (AArch64fcvtxn_n node:$Rn)]>;
 
 def AArch64bici: SDNode<"AArch64ISD::BICi", SDT_AArch64vecimm>;
 def AArch64orri: SDNode<"AArch64ISD::ORRi", SDT_AArch64vecimm>;
@@ -5042,7 +5045,7 @@ def : Pat<(concat_vectors V64:$Rd, (v4f16 (any_fpround (v4f32 V128:$Rn)))),
 defm FCVTPS : SIMDTwoVectorFPToInt<0,1,0b11010, "fcvtps",int_aarch64_neon_fcvtps>;
 defm FCVTPU : SIMDTwoVectorFPToInt<1,1,0b11010, "fcvtpu",int_aarch64_neon_fcvtpu>;
 defm FCVTXN : SIMDFPInexactCvtTwoVector<1, 0, 0b10110, "fcvtxn",
-                                        int_aarch64_neon_fcvtxn>;
+                                        AArch64fcvtxnv>;
 defm FCVTZS : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
 
