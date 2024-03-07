@@ -8895,6 +8895,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   for (const char *LinkArg : LinkCommand->getArguments())
     CmdArgs.push_back(LinkArg);
 
+  if (Args.hasFlag(options::OPT_offload_compress,
+                   options::OPT_no_offload_compress, false))
+    CmdArgs.push_back("--compress");
+
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
 
