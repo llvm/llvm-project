@@ -568,9 +568,8 @@ TEST_F(SymbolCollectorTest, ObjCRefs) {
   EXPECT_THAT(Refs,
               Contains(Pair(findSymbol(Symbols, "Person::multiArg:method:").ID,
                             ElementsAre(isSpelled()))));
-  EXPECT_THAT(Refs,
-              Contains(Pair(findSymbol(Symbols, "Person::setFoo:").ID,
-                            ElementsAre(isSpelled()))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Person::setFoo:").ID,
+                                  ElementsAre(isSpelled()))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {
