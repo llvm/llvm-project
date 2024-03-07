@@ -12,8 +12,6 @@
 
 #include <stdint.h>
 
-#include <iostream>
-
 namespace LIBC_NAMESPACE::cpp {
 
 using UnsignedTypesNoBigInt = testing::TypeList<
