@@ -379,7 +379,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto *DbgAssign) {
+  auto MigrateDbgAssign = [&](auto *DbgAssign, auto *DbgInstType) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -436,12 +436,16 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     // insertDbgAssign returns a PointerUnion of {Instruction* | DbgRecord*}.
     // If DbgAssign is a DPValue* it'll return a DbgRecord*, otherwise if
     // DbgAssign is a DbgAssignIntrinsic* it'll return a Instruction*.
-    decltype(DbgAssign) NewAssign = reinterpret_cast<decltype(DbgAssign)>(
+    // The ugly code below creates a new debug marker, then gets the
+    // pointer type out of the union based on the type of DbgInstType
+    // (Instruction* or DbgRecord*), which is then cast to DbgAssignIntrinsic*
+    // or DPValue* so that the relevant member functions can be called.
+    auto *NewAssign = static_cast<decltype(DbgAssign)>(
         DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
                             Dest,
                             DIExpression::get(Expr->getContext(), std::nullopt),
                             DbgAssign->getDebugLoc())
-            .getOpaqueValue());
+            .template get<decltype(DbgInstType)>());
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -478,8 +482,12 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
   };
 
-  for_each(MarkerRange, MigrateDbgAssign);
-  for_each(DPVAssignMarkerRange, MigrateDbgAssign);
+  for_each(MarkerRange, [&](DbgAssignIntrinsic *DAI) {
+    MigrateDbgAssign(DAI, static_cast<Instruction *>(nullptr));
+  });
+  for_each(DPVAssignMarkerRange, [&](DPValue *DPV) {
+    MigrateDbgAssign(DPV, static_cast<DbgRecord *>(nullptr));
+  });
 }
 
 namespace {
