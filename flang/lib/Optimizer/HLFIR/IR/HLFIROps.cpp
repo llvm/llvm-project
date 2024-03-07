@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -1866,7 +1867,7 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
       return mlir::failure();
 
   auto insertPt = rewriter.saveInsertionPoint();
-  llvm::SmallVector<mlir::Operation*> users(indexOp->getResult(0).getUsers());
+  llvm::SmallVector<mlir::Operation *> users(indexOp->getResult(0).getUsers());
   for (mlir::Operation *user : users)
     if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(user)) {
       rewriter.setInsertionPoint(loadOp);
