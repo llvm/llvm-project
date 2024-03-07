@@ -368,6 +368,14 @@ def ArrayElemPop : Opcode {
   let HasGroup = 1;
 }
 
+def ArrayElem : Opcode {
+  let Args = [ArgUint32];
+  let Types = [AllTypeClass];
+  let HasGroup = 1;
+}
+
+
+
 //===----------------------------------------------------------------------===//
 // Direct field accessors
 //===----------------------------------------------------------------------===//
