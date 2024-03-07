@@ -148,9 +148,14 @@ public:
 
   static ProgressManager &Instance();
 
-  static void ReportProgress(const Progress::ProgressData &);
-
 private:
+  enum class EventType {
+    Begin,
+    End,
+  };
+  static void ReportProgress(const Progress::ProgressData &progress_data,
+                             EventType type);
+
   llvm::StringMap<std::pair<uint64_t, Progress::ProgressData>>
       m_progress_category_map;
   std::mutex m_progress_map_mutex;
