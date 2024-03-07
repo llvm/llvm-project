@@ -10,6 +10,13 @@
 #define MLIR_DIALECT_XEGPU_IR_XEGPU_H
 
 #include <mlir/IR/Dialect.h>
+
+namespace mlir {
+namespace xegpu {
+// placeholder
+} // namespace xegpu
+} // namespace mlir
+
 #include <mlir/Dialect/XeGPU/IR/XeGPUDialect.h.inc>
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc>
 #define GET_ATTRDEF_CLASSES
