@@ -56,9 +56,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_infinite_ub() mustprogress {
 ; CHECK-LABEL: 'ult_infinite_ub'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_infinite_ub
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 entry:
@@ -79,9 +79,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_129_not_taken() {
 ; CHECK-LABEL: 'ult_129_not_taken'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_not_taken
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 0
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -100,9 +100,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_129_unknown_start(i8 %start) mustprogress {
 ; CHECK-LABEL: 'ult_129_unknown_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_unknown_start
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 0
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -149,9 +149,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_ub1() {
 ; CHECK-LABEL: 'ult_ub1'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_ub1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 2
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 2
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 2
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 3
 ;
 entry:
@@ -172,9 +172,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_ub2() {
 ; CHECK-LABEL: 'ult_ub2'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_ub2
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 0
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -195,9 +195,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_129_preinc() {
 ; CHECK-LABEL: 'ult_129_preinc'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_preinc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 entry:
@@ -216,9 +216,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_preinc(i8 %step) {
 ; CHECK-LABEL: 'ult_preinc'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_preinc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 entry:
@@ -289,9 +289,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_wrap() {
 ; CHECK-LABEL: 'slt_wrap'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_wrap
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 63
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 63
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 63
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 63
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 64
 ;
 entry:
@@ -334,9 +334,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_infinite_ub() mustprogress {
 ; CHECK-LABEL: 'slt_infinite_ub'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_infinite_ub
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 0
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -357,9 +357,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_129_not_taken() {
 ; CHECK-LABEL: 'slt_129_not_taken'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_not_taken
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 0
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -425,9 +425,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_ub1() {
 ; CHECK-LABEL: 'slt_ub1'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_ub1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is false
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is false
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -448,9 +448,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_ub2() {
 ; CHECK-LABEL: 'slt_ub2'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_ub2
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is false
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is false
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -471,9 +471,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_129_preinc() {
 ; CHECK-LABEL: 'slt_129_preinc'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_preinc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 entry:
@@ -492,9 +492,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_preinc(i8 %step) {
 ; CHECK-LABEL: 'slt_preinc'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_preinc
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i8 1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 entry:
@@ -566,9 +566,9 @@ define void @step_is_neg_addrec_slt_8(i64 %n) {
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 8
 ; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is (7 /u {0,+,-1}<%outer.header>)
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
-; CHECK-NEXT:  Loop %outer.header: backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 0
-; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: Trip multiple is 1
 ;
 entry:
@@ -604,9 +604,9 @@ define void @step_is_neg_addrec_slt_var(i32 %n) {
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({0,+,1}<nuw><nsw><%outer.header> + ({0,+,-1}<nsw><%outer.header> smax %n))
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
-; CHECK-NEXT:  Loop %outer.header: backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 0
-; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: Trip multiple is 1
 ;
 entry:
@@ -642,9 +642,9 @@ define void @step_is_neg_addrec_unknown_start(i32 %n) {
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 -2147483640
 ; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nsw><%outer.header>))
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
-; CHECK-NEXT:  Loop %outer.header: backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 0
-; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: Trip multiple is 1
 ;
 entry:
