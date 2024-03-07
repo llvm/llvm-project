@@ -393,11 +393,15 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isLogicalOp())
     return this->VisitLogicalBinOp(BO);
 
-  if (BO->getType()->isAnyComplexType())
-    return this->VisitComplexBinOp(BO);
-
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
+
+  if (BO->getType()->isAnyComplexType())
+    return this->VisitComplexBinOp(BO);
+  if ((LHS->getType()->isAnyComplexType() ||
+       RHS->getType()->isAnyComplexType()) &&
+      BO->isComparisonOp())
+    return this->emitComplexComparison(LHS, RHS, BO);
 
   if (BO->isPtrMemOp())
     return this->visit(RHS);
@@ -3407,6 +3411,102 @@ bool ByteCodeExprGen<Emitter>::emitComplexBoolCast(const Expr *E) {
   this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
 
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitComplexComparison(const Expr *LHS,
+                                                     const Expr *RHS,
+                                                     const BinaryOperator *E) {
+  assert(E->isComparisonOp());
+  assert(!Initializing);
+  assert(!DiscardResult);
+
+  PrimType ElemT;
+  bool LHSIsComplex;
+  unsigned LHSOffset;
+  if (LHS->getType()->isAnyComplexType()) {
+    LHSIsComplex = true;
+    ElemT = classifyComplexElementType(LHS->getType());
+    LHSOffset = allocateLocalPrimitive(LHS, PT_Ptr, /*IsConst=*/true,
+                                       /*IsExtended=*/false);
+    if (!this->visit(LHS))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
+      return false;
+  } else {
+    LHSIsComplex = false;
+    PrimType LHST = classifyPrim(LHS->getType());
+    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, true, false);
+    if (!this->visit(LHS))
+      return false;
+    if (!this->emitSetLocal(LHST, LHSOffset, E))
+      return false;
+  }
+
+  bool RHSIsComplex;
+  unsigned RHSOffset;
+  if (RHS->getType()->isAnyComplexType()) {
+    RHSIsComplex = true;
+    ElemT = classifyComplexElementType(RHS->getType());
+    RHSOffset = allocateLocalPrimitive(RHS, PT_Ptr, /*IsConst=*/true,
+                                       /*IsExtended=*/false);
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
+      return false;
+  } else {
+    RHSIsComplex = false;
+    PrimType RHST = classifyPrim(RHS->getType());
+    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, true, false);
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitSetLocal(RHST, RHSOffset, E))
+      return false;
+  }
+
+  auto getElem = [&](unsigned LocalOffset, unsigned Index,
+                     bool IsComplex) -> bool {
+    if (IsComplex) {
+      if (!this->emitGetLocal(PT_Ptr, LocalOffset, E))
+        return false;
+      return this->emitArrayElemPop(ElemT, Index, E);
+    }
+    return this->emitGetLocal(ElemT, LocalOffset, E);
+  };
+
+  for (unsigned I = 0; I != 2; ++I) {
+    // Get both values.
+    if (!getElem(LHSOffset, I, LHSIsComplex))
+      return false;
+    if (!getElem(RHSOffset, I, RHSIsComplex))
+      return false;
+    // And compare them.
+    if (!this->emitEQ(ElemT, E))
+      return false;
+
+    if (!this->emitCastBoolUint8(E))
+      return false;
+  }
+
+  // We now have two bool values on the stack. Compare those.
+  if (!this->emitAddUint8(E))
+    return false;
+  if (!this->emitConstUint8(2, E))
+    return false;
+
+  if (E->getOpcode() == BO_EQ) {
+    if (!this->emitEQUint8(E))
+      return false;
+  } else if (E->getOpcode() == BO_NE) {
+    if (!this->emitNEUint8(E))
+      return false;
+  } else
+    return false;
+
+  // In C, this returns an int.
+  if (PrimType ResT = classifyPrim(E->getType()); ResT != PT_Bool)
+    return this->emitCast(PT_Bool, ResT, E);
   return true;
 }
 
