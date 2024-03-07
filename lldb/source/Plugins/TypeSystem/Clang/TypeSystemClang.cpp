@@ -2975,6 +2975,35 @@ bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
+unsigned TypeSystemClang::GetPtrAuthKey(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    if (auto pointer_auth = qual_type.getPointerAuth())
+      return pointer_auth.getKey();
+  }
+  return 0;
+}
+
+unsigned
+TypeSystemClang::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    if (auto pointer_auth = qual_type.getPointerAuth())
+      return pointer_auth.getExtraDiscriminator();
+  }
+  return 0;
+}
+
+bool TypeSystemClang::GetPtrAuthAddressDiversity(
+    lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    if (auto pointer_auth = qual_type.getPointerAuth())
+      return pointer_auth.isAddressDiscriminated();
+  }
+  return false;
+}
+
 bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
   auto isFunctionType = [&](clang::QualType qual_type) {
     return qual_type->isFunctionType();
@@ -4555,6 +4584,24 @@ TypeSystemClang::AddConstModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addConst();
+    return GetType(result);
+  }
+  return CompilerType();
+}
+
+CompilerType
+TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                    unsigned key, bool isAddressDiscriminated,
+                                    unsigned extraDiscriminator) {
+  if (type) {
+    clang::ASTContext &clang_ast = getASTContext();
+    auto pauth = PointerAuthQualifier::Create(
+        key, isAddressDiscriminated, extraDiscriminator,
+        PointerAuthenticationMode::SignAndAuth,
+        /* isIsaPointer */ false,
+        /* authenticatesNullValues */ false);
+    clang::QualType result =
+        clang_ast.getPointerAuthType(GetQualType(type), pauth);
     return GetType(result);
   }
   return CompilerType();

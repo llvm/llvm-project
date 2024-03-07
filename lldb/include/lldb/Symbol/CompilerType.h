@@ -262,6 +262,12 @@ public:
   size_t GetPointerByteSize() const;
   /// \}
 
+  unsigned GetPtrAuthKey() const;
+
+  unsigned GetPtrAuthDiscriminator() const;
+
+  bool GetPtrAuthAddressDiversity() const;
+
   /// Accessors.
   /// \{
 
@@ -369,6 +375,13 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Return a new CompilerType adds a ptrauth modifier with given parameters to
+  /// this type if this type is valid and the type system supports ptrauth
+  /// modifiers, else return an invalid type. Note that this does not check if
+  /// this type is a pointer.
+  CompilerType AddPtrAuthModifier(unsigned key, bool isAddressDiscriminated,
+                                  unsigned extraDiscriminator) const;
   /// \}
 
   /// Exploring the type.
