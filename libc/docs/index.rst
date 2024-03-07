@@ -78,6 +78,7 @@ stages there is no ABI stability in any form.
    dev/index.rst
    porting
    contributing
+   talks
 
 .. toctree::
    :hidden:
