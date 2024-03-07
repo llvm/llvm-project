@@ -640,7 +640,7 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
     int n;
   };
 
-  // Should be OK: lambda's call operator is a friend.
+  // Should be OK in C++14 and later: lambda's call operator is a friend.
   void use(X &x) { y(x); } // cxx11-error {{no matching function for call to object}}
 
   // This used to crash in return type deduction for the conversion opreator.

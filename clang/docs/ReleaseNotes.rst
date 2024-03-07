@@ -617,6 +617,8 @@ Bug Fixes in This Version
 - Fix crash during code generation of C++ coroutine initial suspend when the return
   type of await_resume is not trivially destructible.
   Fixes (`#63803 <https://github.com/llvm/llvm-project/issues/63803>`_)
+- Fixes an assertion failure on invalid code when trying to define member
+  functions in lambdas.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
