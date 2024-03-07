@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1210 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefixes=GFX12,GFX1200 %s
+// RUN: not llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1210 %s | FileCheck --check-prefix=GFX12 %s
 
 s_wait_loadcnt 0x1234
 // GFX12: encoding: [0x34,0x12,0xc0,0xbf]
@@ -14,16 +14,16 @@ s_wait_storecnt 0xc1d1
 // GFX12: encoding: [0xd1,0xc1,0xc1,0xbf]
 
 s_wait_samplecnt 0x1234
-// GFX12: encoding: [0x34,0x12,0xc2,0xbf]
+// GFX1200: encoding: [0x34,0x12,0xc2,0xbf]
 
 s_wait_samplecnt 0xc1d1
-// GFX12: encoding: [0xd1,0xc1,0xc2,0xbf]
+// GFX1200: encoding: [0xd1,0xc1,0xc2,0xbf]
 
 s_wait_bvhcnt 0x1234
-// GFX12: encoding: [0x34,0x12,0xc3,0xbf]
+// GFX1200: encoding: [0x34,0x12,0xc3,0xbf]
 
 s_wait_bvhcnt 0xc1d1
-// GFX12: encoding: [0xd1,0xc1,0xc3,0xbf]
+// GFX1200: encoding: [0xd1,0xc1,0xc3,0xbf]
 
 s_wait_expcnt 0x1234
 // GFX12: encoding: [0x34,0x12,0xc4,0xbf]
