@@ -10,11 +10,14 @@
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 
@@ -97,6 +100,17 @@ bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
 ///
 std::optional<StaticTileOffsetRange>
 createUnrollIterator(VectorType vType, int64_t targetRank = 1);
+
+/// A wrapper for getMixedSizes for vector.transfer_read and
+/// vector.transfer_write Ops (for source and destination, respectively).
+///
+/// Tensor and MemRef types implement their own, very similar version of
+/// getMixedSizes. This method will call the appropriate version (depending on
+/// `hasTensorSemantics`). It will also automatically extract the operand for
+/// which to call it on (source for "read" and destination for "write" ops).
+SmallVector<OpFoldResult> getMixedSizesXfer(bool hasTensorSemantics,
+                                            Operation *xfer,
+                                            RewriterBase &rewriter);
 
 } // namespace vector
 

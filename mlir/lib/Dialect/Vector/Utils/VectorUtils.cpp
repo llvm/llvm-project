@@ -300,3 +300,20 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
   return StaticTileOffsetRange(shapeToUnroll, /*unrollStep=*/1);
 }
+
+SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
+                                                    Operation *xfer,
+                                                    RewriterBase &rewriter) {
+  auto loc = xfer->getLoc();
+
+  Value blah = TypeSwitch<Operation *, Value>(xfer)
+                   .Case<vector::TransferReadOp>(
+                       [&](auto readOp) { return readOp.getSource(); })
+                   .Case<vector::TransferWriteOp>(
+                       [&](auto writeOp) { return writeOp.getOperand(1); });
+
+  SmallVector<OpFoldResult> mixedSourceDims =
+      hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, blah)
+                         : memref::getMixedSizes(rewriter, loc, blah);
+  return mixedSourceDims;
+}

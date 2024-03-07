@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -1721,9 +1722,8 @@ static LogicalResult vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv) {
   }
 
   // Support dynamic shapes in 1D depthwise convolution, but only in the
-  // _channel_ dimension. That's exclusively to support scalable
-  // vectorisation.
-  auto lhs = conv.getDpsInputOperand(0)->get();
+  // _channel_ dimension.
+  Value lhs = conv.getDpsInputOperand(0)->get();
   ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
   auto shapeWithoutCh = lhsShape.drop_back(1);
   if (ShapedType::isDynamicShape(shapeWithoutCh)) {
@@ -3217,29 +3217,12 @@ struct Conv1DGenerator
         return opToMask;
       auto maskType =
           VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
-      SmallVector<OpFoldResult> mixedSourceDims =
-          cast<LinalgOp>(op).hasPureTensorSemantics()
-              ? TypeSwitch<Operation *, SmallVector<OpFoldResult>>(opToMask)
-                    .Case<vector::TransferReadOp>([&](auto readOp) {
-                      return tensor::getMixedSizes(rewriter, loc,
-                                                   readOp.getSource());
-                    })
-                    .Case<vector::TransferWriteOp>([&](auto writeOp) {
-                      return tensor::getMixedSizes(rewriter, loc,
-                                                   writeOp.getOperand(1));
-                    })
-              : TypeSwitch<Operation *, SmallVector<OpFoldResult>>(opToMask)
-                    .Case<vector::TransferReadOp>([&](auto readOp) {
-                      return memref::getMixedSizes(rewriter, loc,
-                                                   readOp.getSource());
-                    })
-                    .Case<vector::TransferWriteOp>([&](auto writeOp) {
-                      return memref::getMixedSizes(rewriter, loc,
-                                                   writeOp.getOperand(1));
-                    });
+
+      SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
+          cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
 
       Value maskOp =
-          rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+          rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedDims);
 
       return mlir::vector::maskOperation(rewriter, opToMask, maskOp);
     };
