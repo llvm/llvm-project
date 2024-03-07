@@ -542,6 +542,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":LLVMDialect",
+        "//llvm:Support",
     ],
 )
 
