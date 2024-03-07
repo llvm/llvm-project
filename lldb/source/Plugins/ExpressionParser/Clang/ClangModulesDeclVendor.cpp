@@ -78,8 +78,6 @@ private:
   std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
   /// Output stream of m_diag_printer.
   std::unique_ptr<llvm::raw_string_ostream> m_os;
-  /// Diagnostics options of m_diag_printer.
-  std::unique_ptr<clang::DiagnosticOptions> m_options;
   /// Output string filled by m_os. Will be reused for different diagnostics.
   std::string m_output;
   /// A Progress with explicitly managed lifetime.
@@ -143,10 +141,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_options = std::make_unique<clang::DiagnosticOptions>();
+  auto *options = new clang::DiagnosticOptions();
   m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, m_options.get());
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
