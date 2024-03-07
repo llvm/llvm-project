@@ -4653,7 +4653,8 @@ bool CombinerHelper::matchReassocFoldConstantsInSubTree(GPtrAdd &MI,
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    auto NewCst = B.buildConstant(MRI.getType(Src2Reg), *C1 + *C2);
+    auto NewCst = B.buildConstant(MRI.getType(Src2Reg),
+                                  C1->sextOrTrunc(C2->getBitWidth()) + *C2);
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(LHSSrc1);
     MI.getOperand(2).setReg(NewCst.getReg(0));
