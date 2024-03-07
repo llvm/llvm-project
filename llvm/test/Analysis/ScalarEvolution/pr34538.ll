@@ -4,9 +4,9 @@
 define i32 @pr34538() local_unnamed_addr #0 {
 ; CHECK-LABEL: 'pr34538'
 ; CHECK-NEXT:  Determining loop execution counts for: @pr34538
-; CHECK-NEXT:  Loop %do.body: backedge-taken count is 10000
+; CHECK-NEXT:  Loop %do.body: backedge-taken count is i32 10000
 ; CHECK-NEXT:  Loop %do.body: constant max backedge-taken count is i32 10000
-; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is 10000
+; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is i32 10000
 ; CHECK-NEXT:  Loop %do.body: Trip multiple is 10001
 ;
 entry:
@@ -27,9 +27,9 @@ do.end:                                           ; preds = %do.body
 define i32 @foo() {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo
-; CHECK-NEXT:  Loop %do.body: backedge-taken count is 5000
+; CHECK-NEXT:  Loop %do.body: backedge-taken count is i32 5000
 ; CHECK-NEXT:  Loop %do.body: constant max backedge-taken count is i32 5000
-; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is 5000
+; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is i32 5000
 ; CHECK-NEXT:  Loop %do.body: Trip multiple is 5001
 ;
 entry:

@@ -8,9 +8,9 @@
 define void @test1(i32 %N) {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
-; CHECK-NEXT:  Loop %bb3: backedge-taken count is 100
+; CHECK-NEXT:  Loop %bb3: backedge-taken count is i32 100
 ; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is i32 100
-; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 100
+; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is i32 100
 ; CHECK-NEXT:  Loop %bb3: Trip multiple is 101
 ;
 entry:

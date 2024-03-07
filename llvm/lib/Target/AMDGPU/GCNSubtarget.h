@@ -153,6 +153,7 @@ protected:
   bool HasDot8Insts = false;
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
+  bool HasDot11Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
@@ -647,7 +648,7 @@ public:
   // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
   bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
 
-  bool hasExpOrExportInsts() const {
+  bool hasExportInsts() const {
     return !hasGFX940Insts();
   }
 
@@ -791,6 +792,10 @@ public:
 
   bool hasDot10Insts() const {
     return HasDot10Insts;
+  }
+
+  bool hasDot11Insts() const {
+    return HasDot11Insts;
   }
 
   bool hasMAIInsts() const {
