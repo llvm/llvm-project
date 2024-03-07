@@ -511,7 +511,7 @@ define void @fold_ext_trunc(ptr %pa, ptr %pc) nounwind {
 define bfloat @fold_ext_trunc2(bfloat %a) nounwind {
 ; X86-LABEL: fold_ext_trunc2:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; CHECK-LABEL: fold_ext_trunc2:
@@ -934,8 +934,8 @@ define <8 x bfloat> @addv(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 define <2 x bfloat> @pr62997(bfloat %a, bfloat %b) {
 ; X86-LABEL: pr62997:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    retl
 ;
@@ -2423,7 +2423,6 @@ define <16 x bfloat> @fptrunc_v16f32(<16 x float> %a) nounwind {
 ; AVXNC-LABEL: fptrunc_v16f32:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0
-; AVXNC-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %ymm1, %xmm1
 ; AVXNC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVXNC-NEXT:    retq
