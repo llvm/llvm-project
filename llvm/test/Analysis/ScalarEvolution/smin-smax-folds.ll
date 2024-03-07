@@ -36,8 +36,6 @@ define void @smin_simplify_with_guard(i32 %n) {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %n
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -73,8 +71,6 @@ define void @smin_to_smax(i32 %n) {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 * (0 smin %n)) + %n)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483647
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 * (0 smin %n)) + %n)
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * (0 smin %n)) + %n)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
@@ -109,8 +105,6 @@ define void @smax_simplify_with_guard(i32 %start, i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + %n)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) + %n)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

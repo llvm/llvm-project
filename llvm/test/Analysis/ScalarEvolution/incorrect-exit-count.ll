@@ -64,7 +64,6 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:  Loop %for.cond6: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:    symbolic max exit count for for.cond6: 0
 ; CHECK-NEXT:    symbolic max exit count for for.end: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %for.cond6: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %inner.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for inner.loop: 0
 ; CHECK-NEXT:    exit count for for.end.3: ***COULDNOTCOMPUTE***
@@ -72,7 +71,6 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:    symbolic max exit count for inner.loop: 0
 ; CHECK-NEXT:    symbolic max exit count for for.end.3: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner.loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for for.cond6: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for inner.loop: ***COULDNOTCOMPUTE***
@@ -82,7 +80,6 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    symbolic max exit count for for.cond6: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for inner.loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for for.inc13.3: 2
-; CHECK-NEXT:  Loop %outer.loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   store i32 3, ptr @a, align 4

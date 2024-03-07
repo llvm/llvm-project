@@ -11,8 +11,6 @@ define void @f_0() {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 5
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 5
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 5
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 5
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 6
 ;
 entry:
