@@ -723,6 +723,7 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 
 let SubtargetPredicate = isGFX11Plus in {
 
+let OtherPredicates = [HasImageInsts] in
 def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
                                         VGPR_32, VReg_128> ;
 
@@ -734,10 +735,12 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
 
 let SubtargetPredicate = isGFX12Plus in {
 
+let OtherPredicates = [HasImageInsts] in {
 def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
 def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
+} // End OtherPredicates = [HasImageInsts].
 
 defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
@@ -1258,14 +1261,15 @@ let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" in {
                                                      ps.Mnemonic, /*hasGDS=*/false>;
   }
 
-  multiclass DS_Real_Renamed_gfx12<bits<8> op, string name> {
+  multiclass DS_Real_Renamed_gfx12<bits<8> op, string name,
+                                   list<Predicate> AliasPredicates = [isGFX12Plus]> {
     defvar ps = !cast<DS_Pseudo>(NAME);
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
                                                      SIEncodingFamily.GFX12,
                                                      name, /*hasGDS=*/false>,
       MnemonicAlias<ps.Mnemonic, name>,
-      Requires<[isGFX12Only]>;
+      Requires<AliasPredicates>;
   }
 } // End AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12"
 
@@ -1316,7 +1320,7 @@ defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fd>;
 
 defm DS_BVH_STACK_RTN_B32             : DS_Real_Renamed_gfx12<0x0e0,
-  "ds_bvh_stack_push4_pop1_rtn_b32">;
+  "ds_bvh_stack_push4_pop1_rtn_b32", [isGFX12Plus, HasImageInsts]>;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
