@@ -1251,6 +1251,8 @@ module std_private_debug_utils_strict_weak_ordering_check [system] {
   export std_private_type_traits_is_constant_evaluated
 }
 
+module std_private_deque_fwd [system] { header "__fwd/deque.h" }
+
 module std_private_exception_exception        [system] { header "__exception/exception.h" }
 module std_private_exception_exception_ptr    [system] {
   header "__exception/exception_ptr.h"
@@ -1531,6 +1533,7 @@ module std_private_memory_concepts                        [system] {
 }
 module std_private_memory_construct_at                    [system] { header "__memory/construct_at.h" }
 module std_private_memory_destruct_n                      [system] { header "__memory/destruct_n.h" }
+module std_private_memory_fwd                             [system] { header "__fwd/memory.h" }
 module std_private_memory_pointer_traits                  [system] { header "__memory/pointer_traits.h" }
 module std_private_memory_ranges_construct_at             [system] { header "__memory/ranges_construct_at.h" }
 module std_private_memory_ranges_uninitialized_algorithms [system] {
@@ -1595,6 +1598,8 @@ module std_private_numeric_saturation_arithmetic    [system] { header "__numeric
 module std_private_numeric_transform_exclusive_scan [system] { header "__numeric/transform_exclusive_scan.h" }
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
+
+module std_private_queue_fwd [system] { header "__fwd/queue.h" }
 
 module std_private_random_bernoulli_distribution          [system] { header "__random/bernoulli_distribution.h" }
 module std_private_random_binomial_distribution           [system] { header "__random/binomial_distribution.h" }
@@ -1732,6 +1737,8 @@ module std_private_ranges_views                      [system] { header "__ranges
 module std_private_ranges_zip_view                   [system] { header "__ranges/zip_view.h" }
 
 module std_private_span_span_fwd [system] { header "__fwd/span.h" }
+
+module std_private_stack_fwd [system] { header "__fwd/stack.h" }
 
 module std_private_stop_token_atomic_unique_lock   [system] { header "__stop_token/atomic_unique_lock.h" }
 module std_private_stop_token_intrusive_list_view  [system] { header "__stop_token/intrusive_list_view.h" }
@@ -2081,3 +2088,5 @@ module std_private_utility_to_underlying          [system] { header "__utility/t
 module std_private_utility_unreachable            [system] { header "__utility/unreachable.h" }
 
 module std_private_variant_monostate [system] { header "__variant/monostate.h" }
+
+module std_private_vector_fwd [system] { header "__fwd/vector.h" }

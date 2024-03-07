@@ -192,6 +192,7 @@ filesystem string_view
 filesystem version
 format array
 format cctype
+format cerrno
 format clocale
 format cmath
 format cstddef
@@ -203,8 +204,6 @@ format initializer_list
 format limits
 format new
 format optional
-format queue
-format stack
 format stdexcept
 format string
 format string_view
@@ -682,7 +681,6 @@ vector cstdlib
 vector cstring
 vector cwchar
 vector initializer_list
-vector iosfwd
 vector limits
 vector new
 vector stdexcept

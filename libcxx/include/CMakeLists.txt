@@ -429,22 +429,27 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/complex.h
+  __fwd/deque.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
+  __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
+  __fwd/queue.h
   __fwd/span.h
   __fwd/sstream.h
+  __fwd/stack.h
   __fwd/streambuf.h
   __fwd/string.h
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/vector.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h
