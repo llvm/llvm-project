@@ -4537,6 +4537,13 @@ bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
+  // Handle the '()' case for a better diagnostic.
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok.getLocation(), diag::err_expected_expression);
+    T.consumeClose();
+    return true;
+  }
+
   // [dcl.attr.assume]: The expression is potentially evaluated.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
@@ -4544,11 +4551,18 @@ bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
   TentativeParsingAction TPA(*this);
   ExprResult Res(
       Actions.CorrectDelayedTyposInExpr(ParseConditionalExpression()));
-  if (Res.isInvalid() || !Tok.is(tok::r_paren)) {
+  if (Res.isInvalid()) {
+    TPA.Commit();
+    SkipUntil(tok::r_paren, tok::r_square, StopAtSemi | StopBeforeMatch);
+    if (Tok.is(tok::r_paren))
+      T.consumeClose();
+    return true;
+  }
+
+  if (!Tok.isOneOf(tok::r_paren, tok::r_square)) {
     // Emit a better diagnostic if this is an otherwise valid expression that
     // is not allowed here.
     TPA.Revert();
-    Sema::TentativeAnalysisScope Scope(Actions);
     Res = ParseExpression();
     if (!Res.isInvalid()) {
       auto *E = Res.get();

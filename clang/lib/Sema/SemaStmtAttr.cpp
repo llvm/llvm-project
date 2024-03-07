@@ -660,12 +660,6 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
     return ExprError();
   }
 
-  if (!isa<NullStmt>(St)) {
-    Diag(A.getLoc(), diag::err_assume_attr_wrong_target)
-        << A.getAttrName() << Range;
-    return ExprError();
-  }
-
   auto *Assumption = A.getArgAsExpr(0);
   if (Assumption->getDependence() == ExprDependence::None) {
     ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);

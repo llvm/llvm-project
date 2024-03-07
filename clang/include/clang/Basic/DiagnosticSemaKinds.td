@@ -10177,8 +10177,6 @@ def err_fallthrough_attr_invalid_placement : Error<
 
 def err_assume_attr_args : Error<
   "attribute '%0' requires a single expression argument">;
-def err_assume_attr_wrong_target : Error<
-  "'%0' attribute is only allowed on empty statements">;
 
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,
