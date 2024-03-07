@@ -1054,6 +1054,52 @@ rotr(T value, int rotate) {
   return (value >> rotate) | (value << (N - rotate));
 }
 
+// Specialization of mask_trailing_ones ('math_extras.h') for BigInt.
+template <typename T, size_t count>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+mask_trailing_ones() {
+  static_assert(!T::SIGNED);
+  if (count == 0)
+    return T();
+  constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
+  static_assert(count <= T_BITS && "Invalid bit index");
+  T out;
+  size_t lo_index = 0;
+  for (auto &word : out.val) {
+    if (count < lo_index)
+      word = 0;
+    else if (count > lo_index + T::WORD_SIZE)
+      word = -1;
+    else
+      word = mask_trailing_ones<T::word_type, count % T::WORD_SIZE>();
+    lo_index += T::WORD_SIZE;
+  }
+  return out;
+}
+
+// Specialization of mask_leading_ones ('math_extras.h') for BigInt.
+template <typename T, size_t count>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+mask_leading_ones() {
+  static_assert(!T::SIGNED);
+  if (count == 0)
+    return T();
+  constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
+  static_assert(count <= T_BITS && "Invalid bit index");
+  T out;
+  size_t lo_index = 0;
+  for (auto &word : out.val) {
+    if (count < lo_index)
+      word = -1;
+    else if (count > lo_index + T::WORD_SIZE)
+      word = 0;
+    else
+      word = mask_leading_ones<T::word_type, count % T::WORD_SIZE>();
+    lo_index += T::WORD_SIZE;
+  }
+  return out;
+}
+
 } // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
