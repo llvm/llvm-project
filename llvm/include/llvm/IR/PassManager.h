@@ -64,6 +64,8 @@ extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 
+class MachineFunction;
+
 // RemoveDIs: Provide facilities for converting debug-info from one form to
 // another, which are no-ops for everything but modules.
 template <class IRUnitT> inline bool shouldConvertDbgInfo(IRUnitT &IR) {
@@ -271,8 +273,10 @@ public:
   LLVM_ATTRIBUTE_MINSIZE
       std::enable_if_t<!std::is_same<PassT, PassManager>::value>
       addPass(PassT &&Pass) {
-    using PassModelT =
-        detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
+    using PassModelT = std::conditional_t<
+        std::is_same_v<IRUnitT, MachineFunction>,
+        detail::MachinePassModel<PassT>,
+        detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>>;
     // Do not use make_unique or emplace_back, they cause too many template
     // instantiations, causing terrible compile times.
     Passes.push_back(std::unique_ptr<PassConceptT>(
@@ -298,8 +302,9 @@ public:
   static bool isRequired() { return true; }
 
 protected:
-  using PassConceptT =
-      detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
+  using PassConceptT = std::conditional_t<
+      std::is_same_v<IRUnitT, MachineFunction>, detail::MachinePassConcept,
+      detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>>;
 
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 };

@@ -328,6 +328,9 @@ struct AnalysisPassModel
   PassT Pass;
 };
 
+struct MachinePassConcept;
+template <typename PassT> struct MachinePassModel;
+
 } // end namespace detail
 
 } // end namespace llvm
