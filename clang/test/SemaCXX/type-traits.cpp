@@ -2382,14 +2382,14 @@ void is_convertible()
 
 void is_nothrow_convertible()
 {
-  int t01[T(__is_nothrow_convertible(IntWrapper, IntWrapper))];
-  int t02[T(__is_nothrow_convertible(IntWrapper, const IntWrapper))];
-  int t03[T(__is_nothrow_convertible(IntWrapper, int))];
-  int t04[F(__is_nothrow_convertible(int, IntWrapper))];
-  int t05[F(__is_nothrow_convertible(IntWrapper, FloatWrapper))];
-  int t06[F(__is_nothrow_convertible(FloatWrapper, IntWrapper))];
-  int t07[F(__is_nothrow_convertible(FloatWrapper, float))];
-  int t08[T(__is_nothrow_convertible(float, FloatWrapper))];
+  static_assert(__is_nothrow_convertible(IntWrapper, IntWrapper));
+  static_assert(__is_nothrow_convertible(IntWrapper, const IntWrapper));
+  static_assert(__is_nothrow_convertible(IntWrapper, int));
+  static_assert(!__is_nothrow_convertible(int, IntWrapper));
+  static_assert(!__is_nothrow_convertible(IntWrapper, FloatWrapper));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, IntWrapper));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, float));
+  static_assert(__is_nothrow_convertible(float, FloatWrapper));
 }
 
 struct FromInt { FromInt(int); };
