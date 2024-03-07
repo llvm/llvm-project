@@ -113,7 +113,7 @@ uint32_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   switch (idx) {
   case 0:
     return m_resume_ptr_sp;

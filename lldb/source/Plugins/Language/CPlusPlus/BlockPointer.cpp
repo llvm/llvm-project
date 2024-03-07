@@ -79,7 +79,7 @@ public:
     return m_block_struct_type.GetNumChildren(omit_empty_base_classes, nullptr);
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (!m_block_struct_type.IsValid()) {
       return lldb::ValueObjectSP();
     }
