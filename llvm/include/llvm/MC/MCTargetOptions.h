@@ -61,6 +61,10 @@ public:
 
   bool Dwarf64 : 1;
 
+  // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
+  // ELF.
+  bool X86RelaxRelocations = true;
+
   EmitDwarfUnwindType EmitDwarfUnwind;
 
   int DwarfVersion = 0;
@@ -75,6 +79,9 @@ public:
     DefaultDwarfDirectory
   };
   DwarfDirectory MCUseDwarfDirectory;
+
+  // Whether to compress DWARF debug sections.
+  DebugCompressionType CompressDebugSections = DebugCompressionType::None;
 
   std::string ABIName;
   std::string AssemblyLanguage;
