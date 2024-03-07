@@ -62,28 +62,29 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
       on(ignoringParenImpCasts(
           matchers::isStatementIdenticalToBoundNode("self"))));
 
+  auto DescendantSizeCall = expr(hasDescendant(expr(SizeCall,
+                                               hasAncestor(expr(AncestorCall).bind("ancestor-size")),
+                                               hasAncestor(expr(equalsBoundNode("parent"), equalsBoundNode("ancestor-size"))))));
+
   Finder->addMatcher(
       cxxMemberCallExpr(
           on(ignoringParenImpCasts(expr().bind("self"))), callee(DataMethod),
           expr().bind("data-call"),
           hasParent(expr(anyOf(
               invocation(
-                  expr().bind("call"), unless(cxxOperatorCallExpr()),
+                  expr().bind("parent"), unless(cxxOperatorCallExpr()),
                   hasAnyArgument(
                       ignoringParenImpCasts(equalsBoundNode("data-call"))),
                   unless(hasAnyArgument(ignoringParenImpCasts(SizeCall))),
-                  unless(hasAnyArgument(hasDescendant(expr(
-                      SizeCall,
-                      hasAncestor(expr(AncestorCall).bind("ancestor-size")),
-                      hasAncestor(expr(equalsBoundNode("call"),
-                                       equalsBoundNode("ancestor-size"))))))),
+                  unless(hasAnyArgument(DescendantSizeCall)),
                   hasDeclaration(namedDecl(
                       unless(matchers::matchesAnyListedName(AllowedCallees))))),
-              initListExpr(expr().bind("init"),
+              initListExpr(expr().bind("parent"),
                            hasType(qualType(hasCanonicalType(hasDeclaration(
                                recordDecl(unless(matchers::matchesAnyListedName(
                                    AllowedCallees))))))),
-                           unless(has(ignoringParenImpCasts(SizeCall)))))))),
+                           unless(DescendantSizeCall))
+                )))),
       this);
 }
 

@@ -5,6 +5,11 @@ struct View {
    const char* str;
 };
 
+struct Pair {
+   const char* begin;
+   const char* end;
+};
+
 struct ViewWithSize {
    const char* str;
    std::string_view::size_type size;
@@ -43,6 +48,9 @@ void valid(std::string_view sv) {
   something(sv.data(), sv.length());
   ViewWithSize view1{sv.data(), sv.size()};
   ViewWithSize view2{sv.data(), sv.length()};
-
+  Pair view3{sv.data(), sv.data() + sv.size()};
+  Pair view4{sv.data(), sv.data() + sv.length()};
+  Pair view5{sv.data(), sv.size() + sv.data()};
+  Pair view6{sv.data(), sv.length() + sv.data()};
   const char* str{sv.data()};
 }
