@@ -414,7 +414,7 @@ class VOP3be <VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
 }
 
-class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
+class VOP3Pe_Base {
   bits<8> vdst;
   bits<4> src0_modifiers;
   bits<9> src0;
@@ -429,7 +429,9 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   bits<3> matrix_b_fmt;
   bits<3> matrix_a_scale;
   bits<3> matrix_b_scale;
+}
 
+class VOP3Pe <bits<7> op, VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
