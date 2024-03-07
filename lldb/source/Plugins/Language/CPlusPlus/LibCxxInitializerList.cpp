@@ -26,7 +26,7 @@ public:
 
   ~LibcxxInitializerListSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -59,7 +59,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
   // delete m_start;
 }
 
-size_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
+uint32_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     CalculateNumChildren() {
   m_num_elements = 0;
   ValueObjectSP size_sp(m_backend.GetChildMemberWithName("__size_"));

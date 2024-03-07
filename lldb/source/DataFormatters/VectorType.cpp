@@ -224,7 +224,7 @@ public:
 
   ~VectorTypeSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_num_children; }
+  uint32_t CalculateNumChildren() override { return m_num_children; }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     if (idx >= CalculateNumChildren())
