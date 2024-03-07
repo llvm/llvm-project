@@ -283,6 +283,9 @@ C++26 Specific Configuration Macros
   This macro is used to re-enable the function
   ``std::basic_string<...>::reserve()``.
 
+**_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
+  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``
+
 Libc++ Extensions
 =================
 

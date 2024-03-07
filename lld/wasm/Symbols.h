@@ -486,9 +486,9 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
-// LazySymbol represents a symbol that is not yet in the link, but we know where
-// to find it if needed. If the resolver finds both Undefined and Lazy for the
-// same name, it will ask the Lazy to load a file.
+// LazySymbol symbols represent symbols in object files between --start-lib and
+// --end-lib options. LLD also handles traditional archives as if all the files
+// in the archive are surrounded by --start-lib and --end-lib.
 //
 // A special complication is the handling of weak undefined symbols. They should
 // not load a file, but we have to remember we have seen both the weak undefined

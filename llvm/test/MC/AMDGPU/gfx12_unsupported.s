@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Unsupported instructions.
@@ -101,6 +101,12 @@ s_cmpk_lt_u32 s0, 0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cmpk_le_u32 s0, 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_inst_prefetch 1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_barrier
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3

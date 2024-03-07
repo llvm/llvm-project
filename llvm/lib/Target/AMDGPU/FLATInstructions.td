@@ -153,6 +153,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
+  let WaveSizePredicate    = ps.WaveSizePredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
   let TSFlags              = ps.TSFlags;
@@ -540,8 +541,7 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata$offset$cpol">,
-    GlobalSaddrTable<0, opName>,
-    AtomicNoRet <opName, 0> {
+    GlobalSaddrTable<0, opName> {
     let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
@@ -559,8 +559,7 @@ multiclass FLAT_Atomic_Pseudo_RTN<
     (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn">,
-    AtomicNoRet <opName, 1> {
+    GlobalSaddrTable<0, opName#"_rtn"> {
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
@@ -589,8 +588,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName>,
-    AtomicNoRet <opName, 0> {
+    GlobalSaddrTable<0, opName> {
     let has_saddr = 1;
     let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
@@ -600,8 +598,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
     (outs),
     (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName>,
-    AtomicNoRet <opName#"_saddr", 0> {
+    GlobalSaddrTable<1, opName> {
     let has_saddr = 1;
     let enabled_saddr = 1;
     let PseudoInstr = NAME#"_SADDR";
@@ -622,8 +619,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     (outs vdst_op:$vdst),
       (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, off$offset$cpol">,
-    GlobalSaddrTable<0, opName#"_rtn">,
-    AtomicNoRet <opName, 1> {
+    GlobalSaddrTable<0, opName#"_rtn"> {
     let has_saddr = 1;
     let FPAtomic = data_vt.isFP;
   }
@@ -632,8 +628,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
     (outs vdst_op:$vdst),
       (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
-    GlobalSaddrTable<1, opName#"_rtn">,
-    AtomicNoRet <opName#"_saddr", 1> {
+    GlobalSaddrTable<1, opName#"_rtn"> {
      let has_saddr = 1;
      let enabled_saddr = 1;
      let PseudoInstr = NAME#"_SADDR_RTN";
@@ -779,14 +774,14 @@ defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
 
 } // End SubtargetPredicate = isGFX7GFX10
 
-let SubtargetPredicate = isGFX90APlus in {
+let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
   defm FLAT_ATOMIC_ADD_F64   : FLAT_Atomic_Pseudo<"flat_atomic_add_f64", VReg_64, f64>;
   defm FLAT_ATOMIC_MIN_F64   : FLAT_Atomic_Pseudo<"flat_atomic_min_f64", VReg_64, f64>;
   defm FLAT_ATOMIC_MAX_F64   : FLAT_Atomic_Pseudo<"flat_atomic_max_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_add_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_min_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_max_f64", VReg_64, f64>;
-} // End SubtargetPredicate = isGFX90APlus
+} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
 
 let SubtargetPredicate = HasAtomicFlatPkAdd16Insts in {
   defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_f16",  VGPR_32, v2f16>;
@@ -1671,7 +1666,7 @@ defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_am
 defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_global_atomic_fadd", "global_addrspace", v2f16>;
 }
 
-let OtherPredicates = [isGFX90APlus] in {
+let OtherPredicates = [HasBufferFlatGlobalAtomicsF64] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD_F64", "atomic_load_fadd_global", f64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MIN_F64", "atomic_load_fmin_global", f64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MAX_F64", "atomic_load_fmax_global", f64>;
@@ -2751,12 +2746,12 @@ defm GLOBAL_ATOMIC_MIN_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_A
 defm GLOBAL_ATOMIC_MAX_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056>;
 
-let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
+let DecoderNamespace = "GFX12" in {
   defm GLOBAL_LOAD_TR_B128_w32     : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_tr_b128">;
   defm GLOBAL_LOAD_TR_B64_w32      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr_b64">;
 }
 
-let WaveSizePredicate = isWave64, DecoderNamespace = "GFX12W64" in {
+let DecoderNamespace = "GFX12W64" in {
   defm GLOBAL_LOAD_TR_B128_w64     : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128_w64", "global_load_tr_b128">;
   defm GLOBAL_LOAD_TR_B64_w64      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w64", "global_load_tr_b64">;
 }

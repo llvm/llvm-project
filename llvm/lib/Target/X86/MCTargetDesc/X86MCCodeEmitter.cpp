@@ -753,17 +753,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
   bool AllowDisp8 = !UseDisp32;
 
   // Determine whether a SIB byte is needed.
-  if ( // The SIB byte must be used if there is an index register or the
-       // encoding requires a SIB byte.
-      !ForceSIB && IndexReg.getReg() == 0 &&
-      // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
-      // which encode to an R/M value of 4, which indicates that a SIB byte is
-      // present.
-      BaseRegNo != N86::ESP &&
-      // If there is no base register and we're in 64-bit mode, we need a SIB
-      // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
-      (!STI.hasFeature(X86::Is64Bit) || BaseReg != 0)) {
-
+  if (!ForceSIB && !X86II::needSIB(BaseReg, IndexReg.getReg(),
+                                   STI.hasFeature(X86::Is64Bit))) {
     if (BaseReg == 0) { // [disp32]     in X86-32 mode
       emitByte(modRMByte(0, RegOpcodeField, 5), CB);
       emitImmediate(Disp, MI.getLoc(), 4, FK_Data_4, StartByte, CB, Fixups);
@@ -1933,8 +1924,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   if ((TSFlags & X86II::OpMapMask) == X86II::ThreeDNow)
     emitByte(X86II::getBaseOpcodeFor(TSFlags), CB);
 
-  assert(CB.size() - StartByte <= 15 &&
-         "The size of instruction must be no longer than 15.");
+  if (CB.size() - StartByte > 15)
+    Ctx.reportError(MI.getLoc(), "instruction length exceeds the limit of 15");
 #ifndef NDEBUG
   // FIXME: Verify.
   if (/*!Desc.isVariadic() &&*/ CurOp != NumOps) {

@@ -107,7 +107,9 @@ public:
   typedef ptrdiff_t difference_type;
   typedef _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  typedef true_type is_always_equal;
+#if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
+  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
@@ -185,7 +187,9 @@ public:
   typedef ptrdiff_t difference_type;
   typedef const _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  typedef true_type is_always_equal;
+#if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
+  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 

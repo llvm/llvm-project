@@ -243,12 +243,13 @@ static void ReExecIfNeeded() {
     reexec = true;
   }
 
+#    if SANITIZER_LINUX
+#      if SANITIZER_ANDROID && (defined(__aarch64__) || defined(__x86_64__))
   // ASLR personality check.
   int old_personality = personality(0xffffffff);
   bool aslr_on =
       (old_personality != -1) && ((old_personality & ADDR_NO_RANDOMIZE) == 0);
 
-#    if SANITIZER_ANDROID && (defined(__aarch64__) || defined(__x86_64__))
   // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
   // linux kernel, the random gap between stack and mapped area is increased
   // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
@@ -261,11 +262,19 @@ static void ReExecIfNeeded() {
     CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
     reexec = true;
   }
-#    endif
+#      endif
 
   if (reexec) {
     // Don't check the address space since we're going to re-exec anyway.
   } else if (!CheckAndProtect(false, false, false)) {
+    // ASLR personality check.
+    // N.B. 'personality' is sometimes forbidden by sandboxes, so we only call
+    // this as a last resort (when the memory mapping is incompatible and TSan
+    // would fail anyway).
+    int old_personality = personality(0xffffffff);
+    bool aslr_on =
+        (old_personality != -1) && ((old_personality & ADDR_NO_RANDOMIZE) == 0);
+
     if (aslr_on) {
       // Disable ASLR if the memory layout was incompatible.
       // Alternatively, we could just keep re-execing until we get lucky
@@ -288,6 +297,7 @@ static void ReExecIfNeeded() {
       Die();
     }
   }
+#    endif  // SANITIZER_LINUX
 
   if (reexec)
     ReExec();

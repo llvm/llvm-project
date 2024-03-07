@@ -707,7 +707,7 @@ static void ValidateCommentXML(const char *Str, const char *CommentSchemaFile) {
   Doc = xmlParseDoc((const xmlChar *) Str);
 
   if (!Doc) {
-    xmlErrorPtr Error = xmlGetLastError();
+    const xmlError *Error = xmlGetLastError();
     printf(" CommentXMLInvalid [not well-formed XML: %s]", Error->message);
     return;
   }
@@ -717,7 +717,7 @@ static void ValidateCommentXML(const char *Str, const char *CommentSchemaFile) {
   if (!status)
     printf(" CommentXMLValid");
   else if (status > 0) {
-    xmlErrorPtr Error = xmlGetLastError();
+    const xmlError *Error = xmlGetLastError();
     printf(" CommentXMLInvalid [not valid XML: %s]", Error->message);
   } else
     printf(" libXMLError");

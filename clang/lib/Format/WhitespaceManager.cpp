@@ -111,6 +111,10 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
+  if (Style.isTableGen()) {
+    alignConsecutiveTableGenCondOperatorColons();
+    alignConsecutiveTableGenDefinitions();
+  }
   alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
@@ -849,7 +853,12 @@ void WhitespaceManager::alignConsecutiveAssignments() {
 }
 
 void WhitespaceManager::alignConsecutiveBitFields() {
-  if (!Style.AlignConsecutiveBitFields.Enabled)
+  alignConsecutiveColons(Style.AlignConsecutiveBitFields, TT_BitFieldColon);
+}
+
+void WhitespaceManager::alignConsecutiveColons(
+    const FormatStyle::AlignConsecutiveStyle &AlignStyle, TokenType Type) {
+  if (!AlignStyle.Enabled)
     return;
 
   AlignTokens(
@@ -863,9 +872,9 @@ void WhitespaceManager::alignConsecutiveBitFields() {
         if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
           return false;
 
-        return C.Tok->is(TT_BitFieldColon);
+        return C.Tok->is(Type);
       },
-      Changes, /*StartAt=*/0, Style.AlignConsecutiveBitFields);
+      Changes, /*StartAt=*/0, AlignStyle);
 }
 
 void WhitespaceManager::alignConsecutiveShortCaseStatements() {
@@ -970,6 +979,16 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
 
   AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn, Matches,
                              Changes);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenCondOperatorColons,
+                         TT_TableGenCondOperatorColon);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenDefinitions() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitionColons,
+                         TT_InheritanceColon);
 }
 
 void WhitespaceManager::alignConsecutiveDeclarations() {
@@ -1366,11 +1385,12 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
-  // The first cell needs to be against the left brace.
-  if (Changes[CellIter->Index].NewlinesBefore == 0)
-    Changes[CellIter->Index].Spaces = BracePadding;
-  else
-    Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
+  // The first cell of every row needs to be against the left brace.
+  for (const auto *Next = CellIter; Next; Next = Next->NextColumnElement) {
+    auto &Change = Changes[Next->Index];
+    Change.Spaces =
+        Change.NewlinesBefore == 0 ? BracePadding : CellDescs.InitialSpaces;
+  }
   ++CellIter;
   for (auto i = 1U; i < CellDescs.CellCounts[0]; i++, ++CellIter) {
     auto MaxNetWidth = getMaximumNetWidth(
@@ -1468,7 +1488,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
         while (NextNonComment->is(tok::comma))
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
-        while (Changes[j].Tok != NextNonComment && j < End)
+        while (j < End && Changes[j].Tok != NextNonComment)
           ++j;
         if (j < End && Changes[j].NewlinesBefore == 0 &&
             Changes[j].Tok->isNot(tok::r_brace)) {

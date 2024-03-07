@@ -78,6 +78,7 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   ${LDFLAGS_UNDEFINED}
 
   NO_INSTALL_RPATH
+  BUILDTREE_ONLY
 )
 
 if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
@@ -108,7 +109,6 @@ if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
 else()
   libomptarget_say("Not generating AMDGPU tests, no supported devices detected."
                    " Use 'LIBOMPTARGET_FORCE_AMDGPU_TESTS' to override.")
-  return()
 endif()
 
 # Install plugin under the lib destination folder.

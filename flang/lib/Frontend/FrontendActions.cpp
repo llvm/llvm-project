@@ -177,7 +177,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     return;
   }
 
-  mlir::ConversionPatternRewriter builder(mlirModule.getContext());
+  mlir::IRRewriter builder(mlirModule.getContext());
   unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
   auto int32Type = builder.getI32Type();
 
@@ -285,8 +285,6 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getSemanticsContext().defaultKinds();
   fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
-  const llvm::DataLayout &dl = targetMachine.createDataLayout();
-
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
@@ -294,7 +292,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, &dl);
+      ci.getInvocation().getFrontendOpts().features, targetMachine);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
@@ -303,9 +301,6 @@ bool CodeGenAction::beginSourceFileAction() {
           Fortran::common::LanguageFeature::OpenMP)) {
     setOffloadModuleInterfaceAttributes(*mlirModule,
                                         ci.getInvocation().getLangOpts());
-    setOffloadModuleInterfaceTargetAttribute(
-        *mlirModule, targetMachine.getTargetCPU(),
-        targetMachine.getTargetFeatureString());
     setOpenMPVersionAttribute(*mlirModule,
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
@@ -787,9 +782,14 @@ void CodeGenAction::generateLLVMIR() {
 
   CompilerInstance &ci = this->getInstance();
   auto opts = ci.getInvocation().getCodeGenOpts();
+  auto mathOpts = ci.getInvocation().getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   fir::support::loadDialects(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
   fir::support::registerLLVMTranslation(*mlirCtx);
 
   // Set-up the MLIR pass manager
@@ -799,7 +799,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
-  MLIRToLLVMPassPipelineConfig config(level, opts);
+  MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
 
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;

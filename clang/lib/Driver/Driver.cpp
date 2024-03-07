@@ -186,7 +186,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
                             CLANG_VERSION_MAJOR_STRING);
   }
 
-  return std::string(P.str());
+  return std::string(P);
 }
 
 Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
@@ -209,11 +209,10 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 
   Name = std::string(llvm::sys::path::filename(ClangExecutable));
   Dir = std::string(llvm::sys::path::parent_path(ClangExecutable));
-  InstalledDir = Dir; // Provide a sensible default installed dir.
 
   if ((!SysRoot.empty()) && llvm::sys::path::is_relative(SysRoot)) {
     // Prepend InstalledDir if SysRoot is relative
-    SmallString<128> P(InstalledDir);
+    SmallString<128> P(Dir);
     llvm::sys::path::append(P, SysRoot);
     SysRoot = std::string(P);
   }
@@ -1310,10 +1309,23 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
       A->claim();
 
-      // TODO: Specify Vulkan target environment somewhere in the triple.
       if (Args.hasArg(options::OPT_spirv)) {
         llvm::Triple T(TargetTriple);
         T.setArch(llvm::Triple::spirv);
+        T.setOS(llvm::Triple::Vulkan);
+
+        // Set specific Vulkan version if applicable.
+        if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
+          const llvm::StringSet<> ValidValues = {"vulkan1.2", "vulkan1.3"};
+          if (ValidValues.contains(A->getValue())) {
+            T.setOSName(A->getValue());
+          } else {
+            Diag(diag::err_drv_invalid_value)
+                << A->getAsString(Args) << A->getValue();
+          }
+          A->claim();
+        }
+
         TargetTriple = T.str();
       }
     } else {
@@ -1324,7 +1336,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
-    Dir = InstalledDir = A->getValue();
+    Dir = Dir = A->getValue();
   for (const Arg *A : Args.filtered(options::OPT_B)) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
@@ -1430,11 +1442,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC = getToolChain(
       *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
-  if (TC.getTriple().isAndroid()) {
-    llvm::Triple Triple = TC.getTriple();
+  // Check if the environment version is valid except wasm case.
+  llvm::Triple Triple = TC.getTriple();
+  if (!Triple.isWasm()) {
     StringRef TripleVersionName = Triple.getEnvironmentVersionString();
-
-    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
+    StringRef TripleObjectFormat =
+        Triple.getObjectFormatTypeName(Triple.getObjectFormat());
+    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
+        TripleVersionName != TripleObjectFormat) {
       Diags.Report(diag::err_drv_triple_version_invalid)
           << TripleVersionName << TC.getTripleString();
       ContainsError = true;
@@ -1831,7 +1846,7 @@ void Driver::generateCompilationDiagnostics(
       ScriptOS << "\n# Additional information: " << AdditionalInformation
                << "\n";
     if (Report)
-      Report->TemporaryFiles.push_back(std::string(Script.str()));
+      Report->TemporaryFiles.push_back(std::string(Script));
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
@@ -1984,7 +1999,7 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   OS << '\n';
 
   // Print out the install directory.
-  OS << "InstalledDir: " << InstalledDir << '\n';
+  OS << "InstalledDir: " << Dir << '\n';
 
   // If configuration files were used, print their paths.
   for (auto ConfigFile : ConfigFiles)
@@ -3219,7 +3234,7 @@ class OffloadingActionBuilder final {
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
                       const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
-      DefaultCudaArch = CudaArch::SM_35;
+      DefaultCudaArch = CudaArch::CudaDefault;
     }
 
     StringRef getCanonicalOffloadArch(StringRef ArchStr) override {
@@ -4751,10 +4766,11 @@ Action *Driver::ConstructPhaseAction(
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_S))
-        Output = types::TY_LTO_IR;
-      else if (Args.hasArg(options::OPT_ffat_lto_objects))
+      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+          !Args.hasArg(options::OPT_emit_llvm))
         Output = types::TY_PP_Asm;
+      else if (Args.hasArg(options::OPT_S))
+        Output = types::TY_LTO_IR;
       else
         Output = types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -6073,17 +6089,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   SmallString<128> R(ResourceDir);
   llvm::sys::path::append(R, Name);
   if (llvm::sys::fs::exists(Twine(R)))
-    return std::string(R.str());
+    return std::string(R);
 
   SmallString<128> P(TC.getCompilerRTPath());
   llvm::sys::path::append(P, Name);
   if (llvm::sys::fs::exists(Twine(P)))
-    return std::string(P.str());
+    return std::string(P);
 
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);
   if (llvm::sys::fs::exists(Twine(D)))
-    return std::string(D.str());
+    return std::string(D);
 
   if (auto P = SearchPaths(TC.getLibraryPaths()))
     return *P;
@@ -6120,11 +6136,11 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     if (llvm::sys::fs::is_directory(PrefixDir)) {
       SmallString<128> P(PrefixDir);
       if (ScanDirForExecutable(P, Name))
-        return std::string(P.str());
+        return std::string(P);
     } else {
       SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
-        return std::string(P.str());
+        return std::string(P);
     }
   }
 
@@ -6140,7 +6156,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     for (const auto &Path : List) {
       SmallString<128> P(Path);
       if (ScanDirForExecutable(P, TargetSpecificExecutable))
-        return std::string(P.str());
+        return std::string(P);
     }
 
     // Fall back to the path
@@ -6160,7 +6176,7 @@ std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
     return "";
   }
 
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
@@ -6171,7 +6187,7 @@ std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
     return "";
   }
 
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
@@ -6193,7 +6209,7 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
       Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");
   }
-  return std::string(Output.str());
+  return std::string(Output);
 }
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,
@@ -6468,18 +6484,15 @@ bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Minor))
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Micro))
     return false;
@@ -6507,9 +6520,8 @@ bool Driver::GetReleaseVersion(StringRef Str,
     Digits[CurDigit] = Digit;
     if (Str.empty())
       return true;
-    if (Str[0] != '.')
+    if (!Str.consume_front("."))
       return false;
-    Str = Str.drop_front(1);
     CurDigit++;
   }
 

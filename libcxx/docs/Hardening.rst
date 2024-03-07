@@ -1,3 +1,5 @@
+.. _hardening-modes:
+
 ===============
 Hardening Modes
 ===============

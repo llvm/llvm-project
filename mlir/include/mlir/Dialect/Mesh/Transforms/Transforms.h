@@ -9,16 +9,33 @@
 #ifndef MLIR_DIALECT_MESH_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_MESH_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/Dialect/Mesh/IR/MeshOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
+
 namespace mlir {
 class RewritePatternSet;
 class SymbolTableCollection;
 class DialectRegistry;
+class ImplicitLocOpBuilder;
 namespace mesh {
 
-void processMultiIndexOpLoweringPopulatePatterns(
+void populateProcessMultiIndexOpLoweringPatterns(
     RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection);
+void registerProcessMultiIndexOpLoweringDialects(DialectRegistry &registry);
 
-void processMultiIndexOpLoweringRegisterDialects(DialectRegistry &registry);
+void populateAllSliceOpLoweringPatterns(
+    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection);
+void registerAllSliceOpLoweringDialects(DialectRegistry &registry);
+
+void populateAllOpLoweringPatterns(
+    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection);
+void registerAllOpLoweringDialects(DialectRegistry &registry);
+
+TypedValue<IndexType>
+createCollectiveProcessGroupSize(MeshOp mesh, ArrayRef<MeshAxis> axes,
+                                 ImplicitLocOpBuilder &builder);
 
 } // namespace mesh
 } // namespace mlir

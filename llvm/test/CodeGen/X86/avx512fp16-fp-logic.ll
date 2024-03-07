@@ -92,7 +92,7 @@ define half @f6(half %x, i16 %y) {
 define half @f7(half %x) {
 ; CHECK-LABEL: f7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [1.7881E-7,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast half %x to i16
@@ -106,7 +106,7 @@ define half @f7(half %x) {
 define half @f8(half %x) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [2.3842E-7,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast half %x to i16
@@ -171,7 +171,7 @@ define half @xor(half %x, half %y) {
 define half @f7_or(half %x) {
 ; CHECK-LABEL: f7_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [1.7881E-7,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast half %x to i16
@@ -183,7 +183,7 @@ define half @f7_or(half %x) {
 define half @f7_xor(half %x) {
 ; CHECK-LABEL: f7_xor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [1.7881E-7,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast half %x to i16
@@ -199,7 +199,7 @@ define half @f7_xor(half %x) {
 define half @movmsk(half %x) {
 ; CHECK-LABEL: movmsk:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast half %x to i16
@@ -271,7 +271,7 @@ define half @fadd_bitcast_fneg(half %x, half %y) {
 define half @fsub_bitcast_fneg(half %x, half %y) {
 ; CHECK-LABEL: fsub_bitcast_fneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vxorps %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq

@@ -563,6 +563,7 @@ We can now run CMake:
   $ cmake -G Ninja -S runtimes -B build       \
     -DLLVM_ENABLE_RUNTIMES="libcxx"           \
     -DLIBCXX_CXX_ABI=libstdc++                \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=OFF         \
     -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/usr/include/c++/4.7/;/usr/include/c++/4.7/x86_64-linux-gnu/"
   $ ninja -C build install-cxx
 
@@ -589,6 +590,8 @@ We can now run CMake like:
   $ cmake -G Ninja -S runtimes -B build                               \
           -DLLVM_ENABLE_RUNTIMES="libcxx"                             \
           -DLIBCXX_CXX_ABI=libcxxrt                                   \
+          -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=ON                   \
+          -DLIBCXXABI_USE_LLVM_UNWINDER=OFF                           \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxrt-sources/src
   $ ninja -C build install-cxx
 

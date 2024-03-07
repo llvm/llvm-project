@@ -127,6 +127,7 @@ chrono string
 chrono string_view
 chrono tuple
 chrono type_traits
+chrono vector
 chrono version
 cinttypes cstdint
 cmath limits
@@ -158,6 +159,7 @@ compare limits
 compare type_traits
 compare version
 complex cmath
+complex cstddef
 complex iosfwd
 complex sstream
 complex stdexcept
@@ -221,7 +223,9 @@ deque typeinfo
 deque version
 exception cstddef
 exception cstdlib
+exception new
 exception type_traits
+exception typeinfo
 exception version
 execution cstddef
 execution version
@@ -391,6 +395,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream concepts
 istream cstddef
 istream iosfwd
@@ -536,7 +541,6 @@ mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
-new exception
 new type_traits
 new version
 numbers concepts
@@ -643,7 +647,6 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
-ranges new
 ranges optional
 ranges span
 ranges tuple
@@ -742,6 +745,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream type_traits
 sstream version
 stack compare
@@ -833,13 +837,17 @@ system_error type_traits
 system_error version
 thread array
 thread atomic
+thread cctype
 thread cerrno
 thread chrono
+thread clocale
 thread compare
 thread cstddef
 thread cstdint
+thread cstdlib
 thread cstring
 thread ctime
+thread cwchar
 thread functional
 thread iosfwd
 thread limits
@@ -875,7 +883,6 @@ typeindex version
 typeinfo cstddef
 typeinfo cstdint
 typeinfo cstdlib
-typeinfo exception
 typeinfo type_traits
 unordered_map algorithm
 unordered_map bit
@@ -949,8 +956,10 @@ variant version
 vector algorithm
 vector array
 vector atomic
+vector cctype
 vector cerrno
 vector climits
+vector clocale
 vector compare
 vector concepts
 vector cstddef

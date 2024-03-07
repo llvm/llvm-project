@@ -170,15 +170,10 @@ HANDLE_TARGET_OPCODE(LOCAL_ESCAPE)
 /// comparisons into existing memory operations.
 HANDLE_TARGET_OPCODE(FAULTING_OP)
 
-/// Wraps a machine instruction to add patchability constraints.  An
-/// instruction wrapped in PATCHABLE_OP has to either have a minimum
+/// Precedes a machine instruction to add patchability constraints.  An
+/// instruction after PATCHABLE_OP has to either have a minimum
 /// size or be preceded with a nop of that size.  The first operand is
-/// an immediate denoting the minimum size of the instruction, the
-/// second operand is an immediate denoting the opcode of the original
-/// instruction.  The rest of the operands are the operands of the
-/// original instruction.
-/// PATCHABLE_OP can be used as second operand to only insert a nop of
-/// required size.
+/// an immediate denoting the minimum size of the following instruction.
 HANDLE_TARGET_OPCODE(PATCHABLE_OP)
 
 /// This is a marker instruction which gets translated into a nop sled, useful
@@ -229,6 +224,11 @@ HANDLE_TARGET_OPCODE(MEMBARRIER)
 // Provides information about what jump table the following indirect branch is
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
+
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ENTRY)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ANCHOR)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_LOOP)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_GLUE)
 
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
@@ -356,6 +356,9 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUNDEVEN)
 
 /// INTRINSIC readcyclecounter
 HANDLE_TARGET_OPCODE(G_READCYCLECOUNTER)
+
+/// INTRINSIC readsteadycounter
+HANDLE_TARGET_OPCODE(G_READSTEADYCOUNTER)
 
 /// Generic load (including anyext load)
 HANDLE_TARGET_OPCODE(G_LOAD)

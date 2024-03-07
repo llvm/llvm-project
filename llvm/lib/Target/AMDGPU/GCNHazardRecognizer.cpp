@@ -163,6 +163,7 @@ static bool isSendMsgTraceDataOrGDS(const SIInstrInfo &TII,
 static bool isPermlane(const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   return Opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE64_B32 ||
          Opcode == AMDGPU::V_PERMLANEX16_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANE16_VAR_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64;
@@ -176,7 +177,7 @@ static bool isLdsDma(const MachineInstr &MI) {
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
   const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
                                                      AMDGPU::OpName::simm16);
-  return RegOp->getImm() & AMDGPU::Hwreg::ID_MASK_;
+  return std::get<0>(AMDGPU::Hwreg::HwregEncoding::decode(RegOp->getImm()));
 }
 
 ScheduleHazardRecognizer::HazardType
@@ -1583,7 +1584,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
       if (DefVALUs != std::numeric_limits<int>::max()) {
         if (DefVALUs >= State.ExecPos)
           PreExecPos = std::min(PreExecPos, DefVALUs);
-        else if (DefVALUs < State.ExecPos)
+        else
           PostExecPos = std::min(PostExecPos, DefVALUs);
       }
     }
@@ -1715,18 +1716,18 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
-  if (!SIInstrInfo::isWMMA(*MI))
+  if (!SIInstrInfo::isWMMA(*MI) && !SIInstrInfo::isSWMMAC(*MI))
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  auto IsHazardFn = [MI, TII, TRI](const MachineInstr &I) {
-    if (!SIInstrInfo::isWMMA(I))
+  auto IsHazardFn = [MI, TII, TRI, this](const MachineInstr &I) {
+    if (!SIInstrInfo::isWMMA(I) && !SIInstrInfo::isSWMMAC(I))
       return false;
 
-    // Src0 or Src1 of the current wmma instruction overlaps with the dest of
-    // the previous wmma.
+    // Src0(matrix A) or Src1(matrix B) of the current wmma instruction overlaps
+    // with the dest(matrix D) of the previous wmma.
     const Register CurSrc0Reg =
         TII->getNamedOperand(*MI, AMDGPU::OpName::src0)->getReg();
     const Register CurSrc1Reg =
@@ -1740,23 +1741,16 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
       return true;
     }
 
-    // Src2 of the current wmma instruction overlaps with the dest of the
-    // previous wmma.
-    const MachineOperand *Src2 =
-        TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    const Register CurSrc2Reg = Src2->isReg() ? Src2->getReg() : Register();
-
-    if (CurSrc2Reg != AMDGPU::NoRegister &&
-        TRI->regsOverlap(PrevDstReg, CurSrc2Reg)) {
-
-      const MachineOperand *Src2Mods =
-          TII->getNamedOperand(*MI, AMDGPU::OpName::src2_modifiers);
-      const bool NoSrc2Mods =
-          (Src2Mods->getImm() & (SISrcMods::NEG | SISrcMods::NEG_HI)) == 0;
-      // Exception: there is no hazard if the wmma instructions are of the same
-      // type and there is no input modifier on src2 of the current instruction.
-      return !(NoSrc2Mods && (TII->pseudoToMCOpcode(I.getOpcode()) ==
-                              TII->pseudoToMCOpcode(MI->getOpcode())));
+    // GFX12+ allows overlap of matrix C with PrevDstReg (hardware will stall)
+    // but Index can't overlap with PrevDstReg.
+    if (AMDGPU::isGFX12Plus(ST)) {
+      if (SIInstrInfo::isSWMMAC(*MI)) {
+        const Register CurIndex =
+            TII->getNamedOperand(*MI, AMDGPU::OpName::src2)->getReg();
+        if (TRI->regsOverlap(PrevDstReg, CurIndex))
+          return true;
+      }
+      return false;
     }
 
     return false;
@@ -2544,23 +2538,24 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
         break;
       case 8:
         NeedWaitStates =
-          ST.hasGFX940Insts()
-            ? isXDL(ST, *MFMA)
-              ? GFX940_XDL8PassWriteVgprVALUMemExpReadWaitStates
-              : GFX940_SMFMA8PassWriteVgprVALUMemExpReadWaitStates
-            : SMFMA16x16WriteVgprVALUMemExpReadWaitStates;
+            isDGEMM(MFMA->getOpcode())
+                ? IsMemOrExport ? DMFMA16x16WriteVgprMemExpReadWaitStates
+                                : DMFMA16x16WriteVgprVALUReadWaitStates
+            : ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA)
+                      ? GFX940_XDL8PassWriteVgprVALUMemExpReadWaitStates
+                      : GFX940_SMFMA8PassWriteVgprVALUMemExpReadWaitStates
+                : SMFMA16x16WriteVgprVALUMemExpReadWaitStates;
         break;
       case 16: [[fallthrough]];
       default:
+        assert(!isDGEMM(MFMA->getOpcode()));
         NeedWaitStates =
-          isDGEMM(MFMA->getOpcode())
-            ? IsMemOrExport ? DMFMA16x16WriteVgprMemExpReadWaitStates
-                            : DMFMA16x16WriteVgprVALUReadWaitStates
-            : ST.hasGFX940Insts()
-              ? isXDL(ST, *MFMA)
-                ? GFX940_XDL16PassWriteVgprVALUMemExpReadWaitStates
-                : GFX940_SMFMA16PassWriteVgprVALUMemExpReadWaitStates
-              : SMFMA32x32WriteVgprVALUMemExpReadWaitStates;
+            ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA)
+                      ? GFX940_XDL16PassWriteVgprVALUMemExpReadWaitStates
+                      : GFX940_SMFMA16PassWriteVgprVALUMemExpReadWaitStates
+                : SMFMA32x32WriteVgprVALUMemExpReadWaitStates;
         break;
       }
 
@@ -2639,21 +2634,24 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
               : GFX940_SMFMA4PassWriteVgprVALUWawWaitStates;
         break;
       case 8:
-        NeedWaitStates = ST.hasGFX940Insts()
-          ? isXDL(ST, *MFMA)
-            ? GFX940_XDL8PassWriteVgprVALUWawWaitStates
-            : GFX940_SMFMA8PassWriteVgprVALUWawWaitStates
-          : SMFMA16x16WriteVgprVALUWawWaitStates;
+        NeedWaitStates =
+            isDGEMM(MFMA->getOpcode()) ? DMFMA16x16WriteVgprVALUWriteWaitStates
+            :
+
+            ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA) ? GFX940_XDL8PassWriteVgprVALUWawWaitStates
+                                   : GFX940_SMFMA8PassWriteVgprVALUWawWaitStates
+                : SMFMA16x16WriteVgprVALUWawWaitStates;
         break;
       case 16: [[fallthrough]];
       default:
-        NeedWaitStates = isDGEMM(MFMA->getOpcode())
-                   ? DMFMA16x16WriteVgprVALUWriteWaitStates
-                   : ST.hasGFX940Insts()
-                     ? isXDL(ST, *MFMA)
-                       ? GFX940_XDL16PassWriteVgprVALUWawWaitStates
-                       : GFX940_SMFMA16PassWriteVgprVALUWawWaitStates
-                   : SMFMA32x32WriteVgprVALUWawWaitStates;
+        assert(!isDGEMM(MFMA->getOpcode()));
+        NeedWaitStates =
+            ST.hasGFX940Insts()
+                ? isXDL(ST, *MFMA)
+                      ? GFX940_XDL16PassWriteVgprVALUWawWaitStates
+                      : GFX940_SMFMA16PassWriteVgprVALUWawWaitStates
+                : SMFMA32x32WriteVgprVALUWawWaitStates;
         break;
       }
 

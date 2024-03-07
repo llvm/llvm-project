@@ -694,6 +694,7 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
                              SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
+  F->IsNewDbgInfoFormat = SF->IsNewDbgInfoFormat;
   return F;
 }
 
@@ -1605,6 +1606,11 @@ Error IRLinker::run() {
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  CopyModuleAttrToFunctions(*SrcM);
+
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
     GlobalValue *GV = Worklist.back();
@@ -1774,6 +1780,8 @@ IRMover::IRMover(Module &M) : Composite(M) {
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
+  if (getModule().IsNewDbgInfoFormat)
+    Src->convertToNewDbgValues();
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);

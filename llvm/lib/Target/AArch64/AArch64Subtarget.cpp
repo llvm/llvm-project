@@ -43,10 +43,10 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseNonLazyBind("aarch64-enable-nonlazybind",
-                   cl::desc("Call nonlazybind functions via direct GOT load"),
-                   cl::init(false), cl::Hidden);
+static cl::opt<bool> MachOUseNonLazyBind(
+    "aarch64-macho-enable-nonlazybind",
+    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
+    cl::Hidden);
 
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
@@ -296,6 +296,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   case Ampere1:
   case Ampere1A:
+  case Ampere1B:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
@@ -398,8 +399,6 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
 
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
     if (GV->hasDLLImportStorageClass()) {
-      if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy())
-        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORTAUX;
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
     if (getTargetTriple().isOSWindows())
@@ -434,16 +433,24 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
+  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) &&
       !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
-    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy() &&
-        GV->hasDLLImportStorageClass()) {
-      // On Arm64EC, if we're calling a function directly, use MO_DLLIMPORT,
-      // not MO_DLLIMPORTAUX.
-      return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
+    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
+      if (GV->hasDLLImportStorageClass()) {
+        // On Arm64EC, if we're calling a symbol from the import table
+        // directly, use MO_ARM64EC_CALLMANGLE.
+        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT |
+               AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
+      if (GV->hasExternalLinkage()) {
+        // If we're calling a symbol directly, use the mangled form in the
+        // call instruction.
+        return AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
     }
 
     // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
@@ -534,4 +541,8 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+bool AArch64Subtarget::enableMachinePipeliner() const {
+  return getSchedModel().hasInstrSchedModel();
 }

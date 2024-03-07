@@ -354,17 +354,15 @@ namespace dr531 { // dr531: partial
 
     template<> void A<char>::f(char) {}
     // expected-error@-1 {{no function template matches function template specialization 'f'}}
-    // FIXME: This is ill-formed; -pedantic-errors should reject.
     template<> template<typename U> void A<char>::g(char, U) {}
-    // expected-warning@-1 {{extraneous template parameter list in template specialization}}
+    // expected-error@-1 {{extraneous template parameter list in template specialization}}
     //   expected-note@#dr531-A-char {{'template<>' header not required for explicitly-specialized class 'dr531::bad::A<char>' declared here}}
     template<> struct A<char>::B {};
     // expected-error@-1 {{extraneous 'template<>' in declaration of struct 'B'}}
     // expected-error@-2 {{specialization of member 'dr531::bad::A<char>::B' does not specialize an instantiated member}}
     //  expected-note@#dr531-B {{attempt to specialize declaration here}}
-    // FIXME: This is ill-formed; -pedantic-errors should reject.
     template<> template<typename U> struct A<char>::C {};
-    // expected-warning@-1 {{extraneous template parameter list in template specialization}}
+    // expected-error@-1 {{extraneous template parameter list in template specialization}}
     //   expected-note@#dr531-A-char {{'template<>' header not required for explicitly-specialized class 'dr531::bad::A<char>' declared here}}
     template<> char A<char>::n = 0;
     // expected-error@-1 {{extraneous 'template<>' in declaration of variable 'n'}}
@@ -808,7 +806,7 @@ namespace dr571 { // dr571 unknown
   int n;
   // FIXME: Test if this has internal linkage.
   const ir r = n;
-  // expected-warning@-1 {{'const' qualifier on reference type 'ir' (aka 'int &') has no effect}} 
+  // expected-warning@-1 {{'const' qualifier on reference type 'ir' (aka 'int &') has no effect}}
 }
 
 namespace dr572 { // dr572: yes
@@ -990,7 +988,7 @@ namespace dr580 { // dr580: partial
       // FIXME: We incorrectly accept this
       // because we think C2::Y::A<...> might
       // instantiate to C2::X::A
-      template<X::I> struct A {}; 
+      template<X::I> struct A {};
     };
   };
 

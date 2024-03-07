@@ -661,7 +661,7 @@ void use_template() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z5tmainIiET_S0_
-// CHECK-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR6:[0-9]+]] comdat {
+// CHECK-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR1]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DA:%.*]] = alloca [5 x i32], align 4
@@ -867,7 +867,7 @@ void use_template() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z5tmainIPiET_S1_
-// CHECK-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR6]] comdat {
+// CHECK-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR1]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DA:%.*]] = alloca [5 x ptr], align 8
@@ -1181,7 +1181,7 @@ void use_template() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z12use_templatev
-// CHECK-SAME: () #[[ATTR6]] {
+// CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AKERN:%.*]] = alloca [[STRUCT_SOMEKERNEL:%.*]], align 4
 // CHECK-NEXT:    call void @_ZN10SomeKernelC1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[AKERN]])
@@ -1191,7 +1191,7 @@ void use_template() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN10SomeKernel5applyILj32EEEvv
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR6]] comdat {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR1]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1320,13 +1320,6 @@ void use_template() {
 // CHECK-NEXT:    call void @_ZTH1h()
 // CHECK-NEXT:    [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @h)
 // CHECK-NEXT:    ret ptr [[TMP1]]
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-NEXT:    ret void
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@__cxx_global_var_init
@@ -1463,7 +1456,7 @@ void use_template() {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_Z5tmainIiET_S0_
-// SIMD-ONLY0-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR4:[0-9]+]] comdat {
+// SIMD-ONLY0-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR1]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // SIMD-ONLY0-NEXT:    [[DA:%.*]] = alloca [5 x i32], align 4
@@ -1505,7 +1498,7 @@ void use_template() {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_Z5tmainIPiET_S1_
-// SIMD-ONLY0-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR4]] comdat {
+// SIMD-ONLY0-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR1]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    [[DA:%.*]] = alloca [5 x ptr], align 8
@@ -1547,17 +1540,17 @@ void use_template() {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_Z12use_templatev
-// SIMD-ONLY0-SAME: () #[[ATTR4]] {
+// SIMD-ONLY0-SAME: () #[[ATTR1]] {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[AKERN:%.*]] = alloca [[STRUCT_SOMEKERNEL:%.*]], align 4
 // SIMD-ONLY0-NEXT:    call void @_ZN10SomeKernelC1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[AKERN]])
 // SIMD-ONLY0-NEXT:    call void @_ZN10SomeKernel5applyILj32EEEvv(ptr noundef nonnull align 4 dereferenceable(8) [[AKERN]])
-// SIMD-ONLY0-NEXT:    call void @_ZN10SomeKernelD1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[AKERN]]) #[[ATTR7:[0-9]+]]
+// SIMD-ONLY0-NEXT:    call void @_ZN10SomeKernelD1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[AKERN]]) #[[ATTR6:[0-9]+]]
 // SIMD-ONLY0-NEXT:    ret void
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN10SomeKernel5applyILj32EEEvv
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat {
+// SIMD-ONLY0-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR1]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4

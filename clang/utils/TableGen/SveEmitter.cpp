@@ -1558,7 +1558,7 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMEHeader(raw_ostream &OS) {
-  OS << "/*===---- arm_sme_draft_spec_subject_to_change.h - ARM SME intrinsics "
+  OS << "/*===---- arm_sme.h - ARM SME intrinsics "
         "------===\n"
         " *\n"
         " *\n"
@@ -1575,10 +1575,11 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#define __ARM_SME_H\n\n";
 
   OS << "#if !defined(__LITTLE_ENDIAN__)\n";
-  OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
+  OS << "#error \"Big endian is currently not supported for arm_sme.h\"\n";
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
+  OS << "#include <stddef.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1604,6 +1605,11 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & 1;\n";
   OS << "}\n\n";
+
+  OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memchr(void *s, int c, size_t n) __arm_streaming_compatible;\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
         "__arm_streaming_compatible __arm_out(\"za\") "
@@ -1722,12 +1728,27 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
 
   std::map<std::string, std::set<std::string>> IntrinsicsPerState;
   for (auto &Def : Defs) {
+    std::string Key;
+    auto AddToKey = [&Key](const std::string &S) -> void {
+      Key = Key.empty() ? S : (Key + " | " + S);
+    };
+
     if (Def->isFlagSet(getEnumValueForFlag("IsInZA")))
-      IntrinsicsPerState["ArmInZA"].insert(Def->getMangledName());
+      AddToKey("ArmInZA");
     else if (Def->isFlagSet(getEnumValueForFlag("IsOutZA")))
-      IntrinsicsPerState["ArmOutZA"].insert(Def->getMangledName());
+      AddToKey("ArmOutZA");
     else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZA")))
-      IntrinsicsPerState["ArmInOutZA"].insert(Def->getMangledName());
+      AddToKey("ArmInOutZA");
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZT0")))
+      AddToKey("ArmInZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZT0")))
+      AddToKey("ArmOutZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZT0")))
+      AddToKey("ArmInOutZT0");
+
+    if (!Key.empty())
+      IntrinsicsPerState[Key].insert(Def->getMangledName());
   }
 
   OS << "#ifdef GET_SME_BUILTIN_GET_STATE\n";

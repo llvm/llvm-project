@@ -24,129 +24,146 @@ and detailed debug information, -1 for solely warnings, and -2 to not produce
 any output.
 """
 
+import argparse
 import json
+import logging
 import multiprocessing
-
-from absl import app
-from absl import flags
-from absl import logging
 
 from mlgo.corpus import extract_ir_lib
 
-flags.DEFINE_string(
-    "input",
-    None,
-    "Input file or directory - either compile_commands.json, a linker parameter"
-    "list, or a path to a directory containing object files.",
-)
-flags.DEFINE_enum(
-    "input_type",
-    "json",
-    ["json", "params", "directory"],
-    "Input file type - json, params, or directory. params latter refers to lld"
-    "params.",
-)
-flags.DEFINE_string("output_dir", None, "Output directory")
-flags.DEFINE_integer(
-    "num_workers",
-    None,
-    "Number of parallel workers for objcopy. `None` for maximum available.",
-)
-flags.DEFINE_string("llvm_objcopy_path", "llvm-objcopy", "Path to llvm-objcopy")
-flags.DEFINE_string(
-    "obj_base_dir",
-    "",
-    "Base directory for object files. Defaults to current working dir.",
-)
-flags.DEFINE_string(
-    "cmd_filter",
-    None,
-    "Include only those modules with a command line matching this regexp. "
-    "Setting it to None for not filtering. Note that the regexp is applied "
-    "independently for each separate command line option. For example, ^-Oz$ "
-    "will match Oz - built binaries. Does not work with thinlto_build=lld.",
-)
-flags.DEFINE_enum(
-    "thinlto_build",
-    None,
-    ["distributed", "local"],
-    "Set if the build was performed with either 'distributed' or "
-    "'local' ThinLTO. This ensures the thinlto.bc files are also copied. "
-    "The build is assumed to have had "
-    "-mllvm -lto-embed-bitcode=post-merge-pre-opt passed in the distributed "
-    "case, or -Wl,--save-temps=import and -Wl,--thinlto-emit-index-files "
-    "passed in the local case.",
-)
-flags.DEFINE_string(
-    "cmd_section_name",
-    ".llvmcmd",
-    "The section name passed to llvm-objcopy. For ELF object files, the "
-    "default .llvmcmd is correct. For Mach-O object files, one should use "
-    "something like __LLVM,__cmdline",
-)
-flags.DEFINE_string(
-    "bitcode_section_name",
-    ".llvmbc",
-    "The section name passed to llvm-objcopy. For ELF object files, the "
-    "default .llvmbc is correct. For Mach-O object files, one should use "
-    "__LLVM,__bitcode",
-)
 
-flags.mark_flag_as_required("output_dir")
+def parse_args_and_run():
+    parser = argparse.ArgumentParser(
+        description="A tool for making a corpus from build artifacts"
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        help="Input file or directory - either compile_commands.json, a linker "
+        "parameter list, or a path to a directory containing object files.",
+    )
+    parser.add_argument(
+        "--input_type",
+        type=str,
+        help="Input file type - JSON, LLD params, or directory.",
+        choices=["json", "params", "directory"],
+        default="json",
+        nargs="?",
+    )
+    parser.add_argument("--output_dir", type=str, help="Output directory")
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        help="Number of parallel works for objcopy. `None` for maximum available.",
+        default=None,
+        nargs="?",
+    )
+    parser.add_argument(
+        "--llvm_objcopy_path",
+        type=str,
+        help="Path to llvm-objcopy",
+        default="llvm-objcopy",
+        nargs="?",
+    )
+    parser.add_argument(
+        "--obj_base_dir",
+        type=str,
+        help="Base directory for object files. Defaults to current working dir.",
+        default="",
+        nargs="?",
+    )
+    parser.add_argument(
+        "--cmd_filter",
+        type=str,
+        help="Include only those modules with a command line matching this regular "
+        "expression. Set it to None to not perform any filtering. Note that the "
+        "regular expression is applied independently for each separate command line "
+        "option. For example, ^-Oz$ will match Oz built binaries. This does not work "
+        "with thinlto_build=lld.",
+        default=None,
+        nargs="?",
+    )
+    parser.add_argument(
+        "--thinlto_build",
+        type=str,
+        help="Set if the build was performed with either 'distributed' or 'local' "
+        "ThinLTO. This ensures the thinlto.bc files are also copied. The build is "
+        "assumed to have had -mllvm -lto-embed-bitcode=post-merge-pre-opt passed in "
+        "the distributed case or -Wl,--save-temps=import and "
+        "-Wl,--thinlto-emit-index-files passed in the local case",
+        choices=["distributed", "local"],
+        default=None,
+        nargs="?",
+    )
+    parser.add_argument(
+        "--cmd_section_name",
+        type=str,
+        help="The section name passed to llvm-objcopy. For ELF object files, the "
+        "default .llvmcmd is correct. For Mach-O object files, one should use "
+        "something like __LLVM,__cmdline",
+        default=".llvmcmd",
+        nargs="?",
+    )
+    parser.add_argument(
+        "--bitcode_section_name",
+        type=str,
+        help="The section name passed to llvm-objcopy. For ELF object files, the "
+        "default .llvmbc is correct. For Mach-O object files, one should use "
+        "__LLVM,__bitcode",
+        default=".llvmbc",
+        nargs="?",
+    )
+    args = parser.parse_args()
+    main(args)
 
-FLAGS = flags.FLAGS
 
-
-def main(argv):
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
-
+def main(args):
     objs = []
-    if FLAGS.input is not None and FLAGS.thinlto_build == "local":
+    if args.input is not None and args.thinlto_build == "local":
         raise ValueError("--thinlto_build=local cannot be run with --input")
-    if FLAGS.input is None:
-        if FLAGS.thinlto_build != "local":
+    if args.input is None:
+        if args.thinlto_build != "local":
             raise ValueError("--input or --thinlto_build=local must be provided")
-        objs = extract_ir_lib.load_for_lld_thinlto(FLAGS.obj_base_dir, FLAGS.output_dir)
-    elif FLAGS.input_type == "json":
-        with open(FLAGS.input, encoding="utf-8") as f:
+        objs = extract_ir_lib.load_for_lld_thinlto(args.obj_base_dir, args.output_dir)
+    elif args.input_type == "json":
+        with open(args.input, encoding="utf-8") as f:
             objs = extract_ir_lib.load_from_compile_commands(
-                json.load(f), FLAGS.output_dir
+                json.load(f), args.output_dir
             )
-    elif FLAGS.input_type == "params":
-        if not FLAGS.obj_base_dir:
+    elif args.input_type == "params":
+        if not args.obj_base_dir:
             logging.info(
                 "-obj_base_dir is unspecified, assuming current directory."
                 "If no objects are found, use this option to specify the root"
                 "directory for the object file paths in the input file."
             )
-        with open(FLAGS.input, encoding="utf-8") as f:
+        with open(args.input, encoding="utf-8") as f:
             objs = extract_ir_lib.load_from_lld_params(
-                [l.strip() for l in f.readlines()], FLAGS.obj_base_dir, FLAGS.output_dir
+                [l.strip() for l in f.readlines()], args.obj_base_dir, args.output_dir
             )
-    elif FLAGS.input_type == "directory":
+    elif args.input_type == "directory":
         logging.warning(
             "Using the directory input is only recommended if the build system"
             "your project uses does not support any structured output that"
             "ml-compiler-opt understands. If your build system provides a"
             "structured compilation database, use that instead"
         )
-        objs = extract_ir_lib.load_from_directory(FLAGS.input, FLAGS.output_dir)
+        objs = extract_ir_lib.load_from_directory(args.input, args.output_dir)
     else:
-        logging.error("Unknown input type: %s", FLAGS.input_type)
+        logging.error("Unknown input type: %s", args.input_type)
 
     relative_output_paths = extract_ir_lib.run_extraction(
         objs,
-        FLAGS.num_workers,
-        FLAGS.llvm_objcopy_path,
-        FLAGS.cmd_filter,
-        FLAGS.thinlto_build,
-        FLAGS.cmd_section_name,
-        FLAGS.bitcode_section_name,
+        args.num_workers,
+        args.llvm_objcopy_path,
+        args.cmd_filter,
+        args.thinlto_build,
+        args.cmd_section_name,
+        args.bitcode_section_name,
     )
 
     extract_ir_lib.write_corpus_manifest(
-        FLAGS.thinlto_build, relative_output_paths, FLAGS.output_dir
+        args.thinlto_build, relative_output_paths, args.output_dir
     )
 
     logging.info(
@@ -156,10 +173,5 @@ def main(argv):
     )
 
 
-def entrypoint():
-    multiprocessing.set_start_method("fork")
-    app.run(main)
-
-
 if __name__ == "__main__":
-    entrypoint()
+    parse_args_and_run()

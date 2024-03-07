@@ -703,17 +703,19 @@ def int_aarch64_neon_tbx3 : AdvSIMD_Tbx3_Intrinsic;
 def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
-  class FPCR_Get_Intrinsic
+  class FPENV_Get_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
-  class FPCR_Set_Intrinsic
+  class FPENV_Set_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrNoMem, IntrHasSideEffects]>;
   class RNDR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
-// FPCR
-def int_aarch64_get_fpcr : FPCR_Get_Intrinsic;
-def int_aarch64_set_fpcr : FPCR_Set_Intrinsic;
+// FP environment registers.
+def int_aarch64_get_fpcr : FPENV_Get_Intrinsic;
+def int_aarch64_set_fpcr : FPENV_Set_Intrinsic;
+def int_aarch64_get_fpsr : FPENV_Get_Intrinsic;
+def int_aarch64_set_fpsr : FPENV_Set_Intrinsic;
 
 // Armv8.5-A Random number generation intrinsics
 def int_aarch64_rndr : RNDR_Intrinsic;
@@ -1367,6 +1369,27 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty,
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
+  
+  class SVE2_1VectorArg_Pred_Intrinsic
+    : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                            [llvm_anyvector_ty],
+                            [IntrNoMem]>;
+
+  class SVE2_1VectorArgIndexed_Pred_Intrinsic
+    : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                            [llvm_anyvector_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  
+  class SVE2_Pred_1VectorArgIndexed_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  class SVE2_Pred_1VectorArg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                            [IntrNoMem]>;
 
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
@@ -3095,26 +3118,14 @@ let TargetPrefix = "aarch64" in {
                             [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [IntrNoMem]>;
 
-  class SME2_CVT_ItoF_X2_Intrinsic
+  class SME2_CVT_X2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
-                            [LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
+                            [llvm_anyvector_ty, LLVMMatchType<1>],
                             [IntrNoMem]>;
 
-  class SME2_CVT_FtoI_X2_Intrinsic
-    : DefaultAttrsIntrinsic<[LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
-                            [llvm_anyvector_ty, LLVMMatchType<0>],
-                            [IntrNoMem]>;
-
-  class SME2_CVT_ItoF_X4_Intrinsic
+  class SME2_CVT_X4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-                            [LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>,
-                             LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
-                            [IntrNoMem]>;
-
-  class SME2_CVT_FtoI_X4_Intrinsic
-    : DefaultAttrsIntrinsic<[LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>,
-                             LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
-                            [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [llvm_anyvector_ty, LLVMMatchType<1>, LLVMMatchType<1>, LLVMMatchType<1>],
                             [IntrNoMem]>;
 
   class SME2_BFMLS_Intrinsic
@@ -3403,14 +3414,14 @@ let TargetPrefix = "aarch64" in {
   //
   def int_aarch64_sve_fcvt_x2  : SME2_CVT_VG2_SINGLE_Intrinsic;
   def int_aarch64_sve_bfcvt_x2 : SME2_CVT_VG2_SINGLE_BF16_Intrinsic;
-  def int_aarch64_sve_fcvts_x2 : SME2_CVT_FtoI_X2_Intrinsic;
-  def int_aarch64_sve_fcvtu_x2 : SME2_CVT_FtoI_X2_Intrinsic;
-  def int_aarch64_sve_scvtf_x2 : SME2_CVT_ItoF_X2_Intrinsic;
-  def int_aarch64_sve_ucvtf_x2 : SME2_CVT_ItoF_X2_Intrinsic;
-  def int_aarch64_sve_fcvts_x4 : SME2_CVT_FtoI_X4_Intrinsic;
-  def int_aarch64_sve_fcvtu_x4 : SME2_CVT_FtoI_X4_Intrinsic;
-  def int_aarch64_sve_scvtf_x4 : SME2_CVT_ItoF_X4_Intrinsic;
-  def int_aarch64_sve_ucvtf_x4 : SME2_CVT_ItoF_X4_Intrinsic;
+  def int_aarch64_sve_fcvtzs_x2 : SME2_CVT_X2_Intrinsic;
+  def int_aarch64_sve_fcvtzu_x2 : SME2_CVT_X2_Intrinsic;
+  def int_aarch64_sve_scvtf_x2  : SME2_CVT_X2_Intrinsic;
+  def int_aarch64_sve_ucvtf_x2  : SME2_CVT_X2_Intrinsic;
+  def int_aarch64_sve_fcvtzs_x4 : SME2_CVT_X4_Intrinsic;
+  def int_aarch64_sve_fcvtzu_x4 : SME2_CVT_X4_Intrinsic;
+  def int_aarch64_sve_scvtf_x4  : SME2_CVT_X4_Intrinsic;
+  def int_aarch64_sve_ucvtf_x4  : SME2_CVT_X4_Intrinsic;
 
   //
   // Multi-vector saturating extract narrow
@@ -3622,23 +3633,10 @@ def int_aarch64_sve_extq : AdvSIMD_2VectorArgIndexed_Intrinsic;
 //
 // SVE2.1 - Move predicate to/from vector
 //
-def int_aarch64_sve_pmov_to_pred_lane :
-    DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                          [llvm_anyvector_ty, llvm_i32_ty],
-                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_aarch64_sve_pmov_to_pred_lane : SVE2_1VectorArgIndexed_Pred_Intrinsic; 
+    
+def int_aarch64_sve_pmov_to_pred_lane_zero : SVE2_1VectorArg_Pred_Intrinsic;
 
-def int_aarch64_sve_pmov_to_pred_lane_zero :
-    DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                          [llvm_anyvector_ty],
-                          [IntrNoMem]>;
-
-def int_aarch64_sve_pmov_to_vector_lane_merging :
-    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                          [LLVMMatchType<0>,
-                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_i32_ty],
-                          [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-
-def int_aarch64_sve_pmov_to_vector_lane_zeroing :
-    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                          [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                          [IntrNoMem]>;
+def int_aarch64_sve_pmov_to_vector_lane_merging : SVE2_Pred_1VectorArgIndexed_Intrinsic;
+   
+def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;

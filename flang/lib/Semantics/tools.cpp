@@ -465,9 +465,7 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            const Symbol *interface {
-              details.procInterface()
-            };
+            const Symbol *interface{details.procInterface()};
             return interface ? FindInterface(*interface) : nullptr;
           },
           [](const ProcBindingDetails &details) {
@@ -1683,6 +1681,23 @@ std::string GetCommonBlockObjectName(const Symbol &common, bool underscoring) {
   }
   return underscoring ? common.name().ToString() + "_"s
                       : common.name().ToString();
+}
+
+bool HadUseError(
+    SemanticsContext &context, SourceName at, const Symbol *symbol) {
+  if (const auto *details{
+          symbol ? symbol->detailsIf<UseErrorDetails>() : nullptr}) {
+    auto &msg{context.Say(
+        at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
+    for (const auto &[location, module] : details->occurrences()) {
+      msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US, at,
+          module->GetName().value());
+    }
+    context.SetError(*symbol);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 } // namespace Fortran::semantics

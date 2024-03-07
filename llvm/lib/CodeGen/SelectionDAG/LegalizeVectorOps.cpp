@@ -29,11 +29,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -404,8 +404,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
-  case ISD::LRINT:
-  case ISD::LLRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
@@ -455,6 +453,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
                                               Node->getValueType(0), Scale);
     break;
   }
+  case ISD::LRINT:
+  case ISD::LLRINT:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
   case ISD::VECREDUCE_ADD:

@@ -59,6 +59,19 @@ def NVVM_Dialect : Dialect {
     /// Get the name of the attribute used to annotate max number of
     /// registers that can be allocated per thread.
     static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
+
+    /// Get the name of the attribute used to annotate kernel arguments that
+    /// are grid constants.
+    static StringRef getGridConstantAttrName() { return "nvvm.grid_constant"; }
+
+    /// Verify an attribute from this dialect on the argument at 'argIndex' for
+    /// the region at 'regionIndex' on the given operation. Returns failure if
+    /// the verification failed, success otherwise. This hook may optionally be
+    /// invoked from any operation containing a region.
+    LogicalResult verifyRegionArgAttribute(Operation *op,
+                                           unsigned regionIndex,
+                                           unsigned argIndex,
+                                           NamedAttribute argAttr) override;
   }];
 
   let useDefaultAttributePrinterParser = 1;
@@ -375,6 +388,25 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let arguments = (ins     
+    Optional<I32>:$barrierId,
+    Optional<I32>:$numberOfThreads);
+  string llvmBuilder = [{
+    if ($numberOfThreads && $barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
+    } else {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+    }
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
 }
 
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
@@ -1591,19 +1623,26 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 // NVVM TMA Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_CpAsyncBulkCommitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.commit.group">,
+def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("cp.async.bulk.commit_group;"); }
+  let description = [{
+    This Op commits all prior initiated but uncommitted cp.async.bulk
+    instructions into a cp.async.bulk-group.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-commit-group)
+  }];
+
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_cp_async_bulk_commit_group);
   }];
 }
 
-def NVVM_CpAsyncBulkWaitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.wait_group">,
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group">,
   Arguments<(ins 
     ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
-    OptionalAttr<UnitAttr>:$read)> 
-{
+    OptionalAttr<UnitAttr>:$read)> {
   let assemblyFormat = "$group attr-dict";
   let description = [{
     Op waits for completion of the most recent bulk async-groups.
@@ -1620,14 +1659,13 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.wait_group">
     (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-wait-group)
   }];
   
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { 
-      auto ptx = std::string("cp.async.bulk.wait_group");
-      if(getRead()) ptx += ".read";
-      ptx += " %0;"; return ptx; }
+  string llvmBuilder = [{
+    auto intId = op.getRead() ?
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group_read :
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group;
+    createIntrinsicCall(builder, intId, builder.getInt32($group));
   }];
 }
-
 
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
@@ -1833,11 +1871,14 @@ def WGMMATypeB1 : I32EnumAttrCase<"b1", 4>;
 def WGMMATypeBF16 : I32EnumAttrCase<"bf16", 5>;
 def WGMMATypeF8E4M3 : I32EnumAttrCase<"e4m3", 6>;
 def WGMMATypeF8E5M2 : I32EnumAttrCase<"e5m2", 7>;
+def WGMMATypeF32 : I32EnumAttrCase<"f32", 8>;
+def WGMMATypeS32 : I32EnumAttrCase<"s32", 9>;
+
 def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
   [WGMMATypeF16, WGMMATypeTF32,
     WGMMATypeU8, WGMMATypeS8,
     WGMMATypeB1, WGMMATypeBF16, WGMMATypeF8E4M3, 
-    WGMMATypeF8E5M2]> {
+    WGMMATypeF8E5M2, WGMMATypeF32, WGMMATypeS32]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -1859,6 +1900,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     NVVM_MMAShapeAttr:$shape,
     WGMMATypesAttr:$typeA,
     WGMMATypesAttr:$typeB,
+    WGMMATypesAttr:$typeD,
     WGMMAScaleOutAttr:$scaleD,
     WGMMAScaleInAttr:$scaleA,
     WGMMAScaleInAttr:$scaleB, 
@@ -1868,8 +1910,8 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   );  
   
    let assemblyFormat = [{ 
-      $descriptorA `,` $descriptorB `,` $shape `,` 
-      `D` `[` $inouts `,` $scaleD (`,` $satfinite^)? `]` `,`
+      $descriptorA `,` $descriptorB `,` $inouts `,` $shape `,`
+      `D` `[` $typeD `,` $scaleD (`,` $satfinite^)? `]` `,`
       `A` `[` $typeA `,` $scaleA `,` $layoutA `]` `,` 
       `B` `[` $typeB `,` $scaleB `,` $layoutB `]`
       attr-dict `:` 

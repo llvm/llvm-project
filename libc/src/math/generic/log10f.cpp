@@ -106,6 +106,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
 
   using FPBits = typename fputil::FPBits<float>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
@@ -160,18 +161,19 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
 
   int m = -FPBits::EXP_BIAS;
 
-  if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
+  if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval() ||
+                    x_u > FPBits::max_normal().uintval())) {
     if (xbits.is_zero()) {
       // Return -inf and raise FE_DIVBYZERO
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
+      return FPBits::inf(Sign::NEG).get_val();
     }
     if (xbits.is_neg() && !xbits.is_nan()) {
       // Return NaN and raise FE_INVALID
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::build_quiet_nan(0);
+      return FPBits::quiet_nan().get_val();
     }
     if (xbits.is_inf_or_nan()) {
       return x;
@@ -189,7 +191,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   // Set bits to 1.m
   xbits.set_biased_exponent(0x7F);
 
-  float u = static_cast<float>(xbits);
+  float u = xbits.get_val();
   double v;
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.

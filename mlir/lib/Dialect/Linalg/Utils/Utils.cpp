@@ -275,14 +275,13 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
   auto transposeOp =
       b.create<GenericOp>(loc, resultTensorType, inputTensor, outputTensor,
                           indexingMaps, iteratorTypes);
-  Region &body = transposeOp.getRegion();
-  body.push_back(new Block());
-  body.front().addArguments({elementType, elementType}, {loc, loc});
 
   // Create the body of the transpose operation.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPointToEnd(&body.front());
-  b.create<YieldOp>(loc, transposeOp.getRegion().front().getArgument(0));
+  Region &body = transposeOp.getRegion();
+  Block *bodyBlock = b.createBlock(&body, /*insertPt=*/{},
+                                   {elementType, elementType}, {loc, loc});
+  b.create<YieldOp>(loc, bodyBlock->getArgument(0));
   return transposeOp;
 }
 
@@ -670,7 +669,8 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
                               << ": make sure in bound with affine.min\n");
 
       AffineExpr dim0, dim1, dim2;
-      bindDims(builder.getContext(), dim0, dim1, dim2);
+      MLIRContext *context = builder.getContext();
+      bindDims(context, dim0, dim1, dim2);
 
       // Get the dimension size for this dimension. We need to first calculate
       // the max index and then plus one. This is important because for
@@ -678,12 +678,12 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
       // form `(d0 * s0 + d1)`, where `d0`/`d1 is an output/filter window
       // dimension and `s0` is stride. Directly use the dimension size of
       // output/filer window dimensions will cause incorrect calculation.
-      AffineMap minusOneMap =
-          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 - 1}})
-              .front();
-      AffineMap plusOneMap =
-          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 + 1}})
-              .front();
+      AffineMap minusOneMap = AffineMap::inferFromExprList(
+                                  {ArrayRef<AffineExpr>{dim0 - 1}}, context)
+                                  .front();
+      AffineMap plusOneMap = AffineMap::inferFromExprList(
+                                 {ArrayRef<AffineExpr>{dim0 + 1}}, context)
+                                 .front();
       SmallVector<OpFoldResult> maxIndices =
           llvm::to_vector(llvm::map_range(ubs, [&](OpFoldResult ub) {
             return makeComposedFoldedAffineApply(rewriter, loc, minusOneMap,
@@ -696,7 +696,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
 
       // Compute min(dim - offset, size) to avoid out-of-bounds accesses.
       AffineMap minMap = AffineMap::inferFromExprList(
-                             {ArrayRef<AffineExpr>{dim1 - dim2, dim0}})
+                             {ArrayRef<AffineExpr>{dim1 - dim2, dim0}}, context)
                              .front();
       size =
           makeComposedFoldedAffineMin(rewriter, loc, minMap, {size, d, offset});

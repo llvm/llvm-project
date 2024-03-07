@@ -38,9 +38,11 @@
 #include "OperatorsRepresentationCheck.h"
 #include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
+#include "RedundantCastingCheck.h"
 #include "RedundantControlFlowCheck.h"
 #include "RedundantDeclarationCheck.h"
 #include "RedundantFunctionPtrDereferenceCheck.h"
+#include "RedundantInlineSpecifierCheck.h"
 #include "RedundantMemberInitCheck.h"
 #include "RedundantPreprocessorCheck.h"
 #include "RedundantSmartptrGetCheck.h"
@@ -56,6 +58,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
 namespace readability {
@@ -99,6 +102,8 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
+        "readability-redundant-inline-specifier");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
     CheckFactories.registerCheck<IsolateDeclarationCheck>(
@@ -117,6 +122,8 @@ public:
         "readability-qualified-auto");
     CheckFactories.registerCheck<RedundantAccessSpecifiersCheck>(
         "readability-redundant-access-specifiers");
+    CheckFactories.registerCheck<RedundantCastingCheck>(
+        "readability-redundant-casting");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
@@ -157,6 +164,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseStdMinMaxCheck>(
+        "readability-use-std-min-max");
   }
 };
 

@@ -1593,12 +1593,20 @@ private:
   }
 
   bool isClassLayoutKnownStatically(const ObjCInterfaceDecl *ID) {
-    // NSObject is a fixed size. If we can see the @implementation of a class
-    // which inherits from NSObject then we know that all it's offsets also must
-    // be fixed. FIXME: Can we do this if see a chain of super classes with
-    // implementations leading to NSObject?
-    return ID->getImplementation() && ID->getSuperClass() &&
-           ID->getSuperClass()->getName() == "NSObject";
+    // Test a class by checking its superclasses up to
+    // its base class if it has one.
+    for (; ID; ID = ID->getSuperClass()) {
+      // The layout of base class NSObject
+      // is guaranteed to be statically known
+      if (ID->getIdentifier()->getName() == "NSObject")
+        return true;
+
+      // If we cannot see the @implementation of a class,
+      // we cannot statically know the class layout.
+      if (!ID->getImplementation())
+        return false;
+    }
+    return false;
   }
 
 public:
@@ -5038,12 +5046,10 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     return ("__DATA," + Section + "," + MachOAttributes).str();
   }
   case llvm::Triple::ELF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return Section.substr(2).str();
   case llvm::Triple::COFF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
   case llvm::Triple::Wasm:
   case llvm::Triple::GOFF:

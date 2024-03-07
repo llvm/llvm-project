@@ -103,7 +103,8 @@ class kmp_stats_list;
 #define KMP_USE_HIER_SCHED KMP_AFFINITY_SUPPORTED
 #endif
 
-#if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
+// OMPD_SKIP_HWLOC used in libompd/omp-icv.cpp to avoid OMPD depending on hwloc
+#if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED && !defined(OMPD_SKIP_HWLOC)
 #include "hwloc.h"
 #ifndef HWLOC_OBJ_NUMANODE
 #define HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
@@ -689,7 +690,7 @@ typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *,
 extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 #endif /* KMP_OS_WINDOWS */
 
-#if KMP_USE_HWLOC
+#if KMP_USE_HWLOC && !defined(OMPD_SKIP_HWLOC)
 extern hwloc_topology_t __kmp_hwloc_topology;
 extern int __kmp_hwloc_error;
 #endif
@@ -1181,7 +1182,11 @@ extern void __kmp_init_target_task();
 #define KMP_MIN_STKSIZE ((size_t)(32 * 1024))
 #endif
 
+#if KMP_OS_AIX && KMP_ARCH_PPC
+#define KMP_MAX_STKSIZE 0x10000000 /* 256Mb max size on 32-bit AIX */
+#else
 #define KMP_MAX_STKSIZE (~((size_t)1 << ((sizeof(size_t) * (1 << 3)) - 1)))
+#endif
 
 #if KMP_ARCH_X86
 #define KMP_DEFAULT_STKSIZE ((size_t)(2 * 1024 * 1024))
@@ -2494,7 +2499,8 @@ typedef struct kmp_dephash_entry kmp_dephash_entry_t;
 #define KMP_DEP_MTX 0x4
 #define KMP_DEP_SET 0x8
 #define KMP_DEP_ALL 0x80
-// Compiler sends us this info:
+// Compiler sends us this info. Note: some test cases contain an explicit copy
+// of this struct and should be in sync with any changes here.
 typedef struct kmp_depend_info {
   kmp_intptr_t base_addr;
   size_t len;

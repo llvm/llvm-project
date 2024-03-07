@@ -70,7 +70,7 @@ public:
   AllSources &allSources() { return allSources_; }
 
   void DefineStandardMacros();
-  void Define(std::string macro, std::string value);
+  void Define(const std::string &macro, const std::string &value);
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
   bool IsFunctionLikeDefinition(const CharBlock &);

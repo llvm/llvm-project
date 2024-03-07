@@ -155,7 +155,6 @@ headers_not_available = [
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
     return not file.is_dir() and not file.name in [
-        "module.modulemap.in",
         "module.modulemap",
         "CMakeLists.txt",
         "libcxx.imp",
@@ -214,4 +213,29 @@ module_headers = [
     if not header.endswith(".h")
     # These headers have been removed in C++20 so are never part of a module.
     and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+]
+
+# The C headers used in the std and std.compat modules.
+module_c_headers = [
+    "cassert",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "cinttypes",
+    "climits",
+    "clocale",
+    "cmath",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctime",
+    "cuchar",
+    "cwchar",
+    "cwctype",
 ]

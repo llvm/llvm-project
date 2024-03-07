@@ -123,8 +123,11 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+    getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
+        CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
+  }
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
@@ -152,6 +155,13 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
+
+  // TODO: We're checking this late, would be nice to check it earlier.
+  if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
+    report_fatal_error(
+        STM.getCPU() + " is only available on code object version 6 or better",
+        /*gen_crash_diag*/ false);
+  }
 
   // TODO: Which one is called first, emitStartOfAsmFile or
   // emitFunctionBodyStart?
@@ -194,7 +204,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (MFI.getNumKernargPreloadedSGPRs() > 0) {
     assert(AMDGPU::hasKernargPreload(STM));
-    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI());
+    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI(),
+                                                  STM.isAmdHsaOS());
   }
 }
 
@@ -230,8 +241,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
           IsaInfo::getNumExtraSGPRs(
               &STM, CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
               getTargetStreamer()->getTargetID()->isXnackOnOrAny()),
-      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
-      CodeObjectVersion);
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.popSection();
 }
@@ -323,7 +333,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
-  CodeObjectVersion = AMDGPU::getCodeObjectVersion(M);
+  CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
@@ -332,6 +342,9 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       break;
     case AMDGPU::AMDHSA_COV5:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
+      break;
+    case AMDGPU::AMDHSA_COV6:
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV6());
       break;
     default:
       report_fatal_error("Unexpected code object version");
@@ -631,8 +644,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   // In the beginning all features are either 'Any' or 'NotSupported',
   // depending on global target features. This will cover empty modules.
-  getTargetStreamer()->initializeTargetID(
-      *getGlobalSTI(), getGlobalSTI()->getFeatureString(), CodeObjectVersion);
+  getTargetStreamer()->initializeTargetID(*getGlobalSTI(),
+                                          getGlobalSTI()->getFeatureString());
 
   // If module is empty, we are done.
   if (M.empty())

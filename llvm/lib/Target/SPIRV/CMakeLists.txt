@@ -26,8 +26,10 @@ add_llvm_target(SPIRVCodeGen
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
+  SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
   SPIRVPreLegalizer.cpp
+  SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
@@ -44,6 +46,7 @@ add_llvm_target(SPIRVCodeGen
   Core
   Demangle
   GlobalISel
+  SPIRVAnalysis
   MC
   SPIRVDesc
   SPIRVInfo
@@ -59,3 +62,4 @@ add_llvm_target(SPIRVCodeGen
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(Analysis)

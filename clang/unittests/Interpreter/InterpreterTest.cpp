@@ -34,12 +34,6 @@ using namespace clang;
 #define CLANG_INTERPRETER_NO_SUPPORT_EXEC
 #endif
 
-#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
-#include <sanitizer/lsan_interface.h>
-#else
-extern "C" void __lsan_ignore_object(const void *p) {}
-#endif
-
 int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
 REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
@@ -257,7 +251,12 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
 static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
   std::string Name = TD->getQualifiedNameAsString();
   Value Addr;
-  cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
+  // FIXME: Consider providing an option in clang::Value to take ownership of
+  // the memory created from the interpreter.
+  // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
+
+  // The lifetime of the temporary is extended by the clang::Value.
+  cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
   return Addr;
 }
 
@@ -317,8 +316,6 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto fn =
       cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
   EXPECT_EQ(42, fn(NewA.getPtr()));
-  // FIXME: release the memory.
-  __lsan_ignore_object(NewA.getPtr());
 }
 
 #ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC

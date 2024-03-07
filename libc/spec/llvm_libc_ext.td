@@ -36,7 +36,7 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
           >,
       ]
   >;
-  
+
   HeaderSpec Sched = HeaderSpec<
       "sched.h",
       [], // Macros

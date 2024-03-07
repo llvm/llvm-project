@@ -86,13 +86,13 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__exception/exception.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cv.h>
+#include <__verbose_abort>
 #include <cstddef>
 #include <version>
 
@@ -362,7 +362,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cstdlib>
-#  include <exception>
 #  include <type_traits>
 #endif
 

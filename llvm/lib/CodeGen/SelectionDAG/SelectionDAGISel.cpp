@@ -48,7 +48,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -61,6 +60,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1461,9 +1461,8 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
     if (DI && processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
                                 DI->getVariable(), DI->getDebugLoc()))
       FuncInfo.PreprocessedDbgDeclares.insert(DI);
-
-    for (const DPValue &DPV : I.getDbgValueRange()) {
-      if (DPV.getType() == DPValue::LocationType::Declare &&
+    for (const DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      if (DPV.Type == DPValue::LocationType::Declare &&
           processDbgDeclare(FuncInfo, DPV.getVariableLocationOp(0),
                             DPV.getExpression(), DPV.getVariable(),
                             DPV.getDebugLoc()))
@@ -2371,6 +2370,21 @@ void SelectionDAGISel::Select_MEMBARRIER(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_CONVERGENCECTRL_ANCHOR(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::CONVERGENCECTRL_ANCHOR,
+                       N->getValueType(0));
+}
+
+void SelectionDAGISel::Select_CONVERGENCECTRL_ENTRY(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::CONVERGENCECTRL_ENTRY,
+                       N->getValueType(0));
+}
+
+void SelectionDAGISel::Select_CONVERGENCECTRL_LOOP(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::CONVERGENCECTRL_LOOP,
+                       N->getValueType(0), N->getOperand(0));
+}
+
 void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
                                                 SDValue OpVal, SDLoc DL) {
   SDNode *OpNode = OpVal.getNode();
@@ -3117,6 +3131,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::JUMP_TABLE_DEBUG_INFO:
     Select_JUMP_TABLE_DEBUG_INFO(NodeToMatch);
+    return;
+  case ISD::CONVERGENCECTRL_ANCHOR:
+    Select_CONVERGENCECTRL_ANCHOR(NodeToMatch);
+    return;
+  case ISD::CONVERGENCECTRL_ENTRY:
+    Select_CONVERGENCECTRL_ENTRY(NodeToMatch);
+    return;
+  case ISD::CONVERGENCECTRL_LOOP:
+    Select_CONVERGENCECTRL_LOOP(NodeToMatch);
     return;
   }
 

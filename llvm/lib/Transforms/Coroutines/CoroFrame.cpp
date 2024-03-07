@@ -963,7 +963,7 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    auto CacheIt = [&DIVarCache, V](auto Container) {
+    auto CacheIt = [&DIVarCache, V](const auto &Container) {
       auto *I = llvm::find_if(Container, [](auto *DDI) {
         return DDI->getExpression()->getNumElements() == 0;
       });
@@ -1868,7 +1868,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         // alias.
         if (F->getSubprogram()) {
           auto *CurDef = Def;
-          while (DIs.empty() && isa<LoadInst>(CurDef)) {
+          while (DIs.empty() && DPVs.empty() && isa<LoadInst>(CurDef)) {
             auto *LdInst = cast<LoadInst>(CurDef);
             // Only consider ptr to ptr same type load.
             if (LdInst->getPointerOperandType() != LdInst->getType())
@@ -1925,7 +1925,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       U->replaceUsesOfWith(Def, CurrentReload);
       // Instructions are added to Def's user list if the attached
       // debug records use Def. Update those now.
-      for (auto &DPV : U->getDbgValueRange())
+      for (DPValue &DPV : DPValue::filter(U->getDbgValueRange()))
         DPV.replaceVariableLocationOp(Def, CurrentReload, true);
     }
   }
@@ -2966,7 +2966,7 @@ void coro::salvageDebugInfo(
   Function *F = DPV.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
-  bool SkipOutermostLoad = DPV.getType() == DPValue::LocationType::Declare;
+  bool SkipOutermostLoad = DPV.isDbgDeclare();
   Value *OriginalStorage = DPV.getVariableLocationOp(0);
 
   auto SalvagedInfo = ::salvageDebugInfoImpl(
@@ -3064,7 +3064,7 @@ static void doRematerializations(
 }
 
 void coro::buildCoroutineFrame(
-    Function &F, Shape &Shape,
+    Function &F, Shape &Shape, TargetTransformInfo &TTI,
     const std::function<bool(Instruction &)> &MaterializableCallback) {
   // Don't eliminate swifterror in async functions that won't be split.
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
@@ -3100,7 +3100,7 @@ void coro::buildCoroutineFrame(
       SmallVector<Value *, 8> Args(AsyncEnd->args());
       auto Arguments = ArrayRef<Value *>(Args).drop_front(3);
       auto *Call = createMustTailCall(AsyncEnd->getDebugLoc(), MustTailCallFn,
-                                      Arguments, Builder);
+                                      TTI, Arguments, Builder);
       splitAround(Call, "MustTailCall.Before.CoroEnd");
     }
   }

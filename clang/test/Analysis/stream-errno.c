@@ -18,6 +18,16 @@ void check_fopen(void) {
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
 }
 
+void check_fdopen(int Fd) {
+  FILE *F = fdopen(Fd, "r");
+  if (!F) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
+  }
+}
+
 void check_tmpfile(void) {
   FILE *F = tmpfile();
   if (!F) {
@@ -163,6 +173,8 @@ void check_no_errno_change(void) {
   if (errno) {} // no-warning
   ferror(F);
   if (errno) {} // no-warning
+  fileno(F);
+  if (errno) {} // no-warning
   clang_analyzer_eval(errno == 1); // expected-warning{{TRUE}}
   fclose(F);
 }
@@ -238,20 +250,6 @@ void check_rewind(void) {
   // expected-warning@-1{{FALSE}}
   // expected-warning@-2{{TRUE}}
   fclose(F);
-}
-
-void check_fileno(void) {
-  FILE *F = tmpfile();
-  if (!F)
-    return;
-  int N = fileno(F);
-  if (N == -1) {
-    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {} // no-warning
-    fclose(F);
-    return;
-  }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
 }
 
 void check_fflush_opened_file(void) {

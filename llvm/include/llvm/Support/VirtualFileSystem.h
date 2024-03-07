@@ -15,12 +15,14 @@
 #define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -55,9 +57,6 @@ class Status {
   llvm::sys::fs::perms Perms;
 
 public:
-  // FIXME: remove when files support multiple names
-  bool IsVFSMapped = false;
-
   /// Whether this entity has an external path different from the virtual path,
   /// and the external path is exposed by leaking it through the abstraction.
   /// For example, a RedirectingFileSystem will set this for paths where
@@ -264,8 +263,10 @@ public:
 };
 
 /// The virtual file system interface.
-class FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem> {
+class FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
+                   public RTTIExtends<FileSystem, RTTIRoot> {
 public:
+  static const char ID;
   virtual ~FileSystem();
 
   /// Get the status of the entry at \p Path, if one exists.
@@ -324,6 +325,13 @@ public:
     printImpl(OS, Type, IndentLevel);
   }
 
+  using VisitCallbackTy = llvm::function_ref<void(FileSystem &)>;
+  virtual void visitChildFileSystems(VisitCallbackTy Callback) {}
+  void visit(VisitCallbackTy Callback) {
+    Callback(*this);
+    visitChildFileSystems(Callback);
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -363,7 +371,7 @@ std::unique_ptr<FileSystem> createPhysicalFileSystem();
 /// top-most (most recently added) directory are used.  When there is a file
 /// that exists in more than one file system, the file in the top-most file
 /// system overrides the other(s).
-class OverlayFileSystem : public FileSystem {
+class OverlayFileSystem : public RTTIExtends<OverlayFileSystem, FileSystem> {
   using FileSystemList = SmallVector<IntrusiveRefCntPtr<FileSystem>, 1>;
 
   /// The stack of file systems, implemented as a list in order of
@@ -371,6 +379,7 @@ class OverlayFileSystem : public FileSystem {
   FileSystemList FSList;
 
 public:
+  static const char ID;
   OverlayFileSystem(IntrusiveRefCntPtr<FileSystem> Base);
 
   /// Pushes a file system on top of the stack.
@@ -415,13 +424,15 @@ public:
 protected:
   void printImpl(raw_ostream &OS, PrintType Type,
                  unsigned IndentLevel) const override;
+  void visitChildFileSystems(VisitCallbackTy Callback) override;
 };
 
 /// By default, this delegates all calls to the underlying file system. This
 /// is useful when derived file systems want to override some calls and still
 /// proxy other calls.
-class ProxyFileSystem : public FileSystem {
+class ProxyFileSystem : public RTTIExtends<ProxyFileSystem, FileSystem> {
 public:
+  static const char ID;
   explicit ProxyFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
       : FS(std::move(FS)) {}
 
@@ -451,11 +462,17 @@ public:
 
 protected:
   FileSystem &getUnderlyingFS() const { return *FS; }
+  void visitChildFileSystems(VisitCallbackTy Callback) override {
+    if (FS) {
+      Callback(*FS);
+      FS->visitChildFileSystems(Callback);
+    }
+  }
 
 private:
   IntrusiveRefCntPtr<FileSystem> FS;
 
-  virtual void anchor();
+  virtual void anchor() override;
 };
 
 namespace detail {
@@ -498,11 +515,15 @@ public:
 } // namespace detail
 
 /// An in-memory file system.
-class InMemoryFileSystem : public FileSystem {
+class InMemoryFileSystem : public RTTIExtends<InMemoryFileSystem, FileSystem> {
   std::unique_ptr<detail::InMemoryDirectory> Root;
   std::string WorkingDirectory;
   bool UseNormalizedPaths = true;
 
+public:
+  static const char ID;
+
+private:
   using MakeNodeFn = llvm::function_ref<std::unique_ptr<detail::InMemoryNode>(
       detail::NewInMemoryNodeInfo)>;
 
@@ -651,7 +672,6 @@ class RedirectingFileSystemParser;
 ///            ]
 /// }
 /// \endverbatim
-///
 /// The roots may be absolute or relative. If relative they will be made
 /// absolute against either current working directory or the directory where
 /// the Overlay YAML file is located, depending on the 'root-relative'
@@ -683,7 +703,6 @@ class RedirectingFileSystemParser;
 ///   'contents': [ <file or directory entries> ]
 /// }
 /// \endverbatim
-///
 /// The default attributes for such virtual directories are:
 /// \verbatim
 /// MTime = now() when created
@@ -692,7 +711,6 @@ class RedirectingFileSystemParser;
 /// Size = 0
 /// UniqueID = unspecified unique value
 /// \endverbatim
-///
 /// When a path prefix matches such a directory, the next component in the path
 /// is matched against the entries in the 'contents' array.
 ///
@@ -705,7 +723,6 @@ class RedirectingFileSystemParser;
 ///   'external-contents': <path to external directory>
 /// }
 /// \endverbatim
-///
 /// and inherit their attributes from the external directory. When a path
 /// prefix matches such an entry, the unmatched components are appended to the
 /// 'external-contents' path, and the resulting path is looked up in the
@@ -720,7 +737,6 @@ class RedirectingFileSystemParser;
 ///   'external-contents': <path to external file>
 /// }
 /// \endverbatim
-///
 /// Their attributes and file contents are determined by looking up the file at
 /// their 'external-contents' path in the external file system.
 ///
@@ -739,8 +755,10 @@ class RedirectingFileSystemParser;
 /// FIXME: 'use-external-name' causes behaviour that's inconsistent with how
 /// "real" filesystems behave. Maybe there should be a separate channel for
 /// this information.
-class RedirectingFileSystem : public vfs::FileSystem {
+class RedirectingFileSystem
+    : public RTTIExtends<RedirectingFileSystem, vfs::FileSystem> {
 public:
+  static const char ID;
   enum EntryKind { EK_Directory, EK_DirectoryRemap, EK_File };
   enum NameKind { NK_NotSet, NK_External, NK_Virtual };
 
@@ -976,6 +994,13 @@ private:
   /// names of files.  This global value is overridable on a per-file basis.
   bool UseExternalNames = true;
 
+  /// True if this FS has redirected a lookup. This does not include
+  /// fallthrough.
+  mutable bool HasBeenUsed = false;
+
+  /// Used to enable or disable updating `HasBeenUsed`.
+  bool UsageTrackingActive = false;
+
   /// Determines the lookups to perform, as well as their order. See
   /// \c RedirectKind for details.
   RedirectKind Redirection = RedirectKind::Fallthrough;
@@ -1046,11 +1071,17 @@ public:
 
   std::vector<llvm::StringRef> getRoots() const;
 
+  bool hasBeenUsed() const { return HasBeenUsed; };
+  void clearHasBeenUsed() { HasBeenUsed = false; }
+
+  void setUsageTrackingActive(bool Active) { UsageTrackingActive = Active; }
+
   void printEntry(raw_ostream &OS, Entry *E, unsigned IndentLevel = 0) const;
 
 protected:
   void printImpl(raw_ostream &OS, PrintType Type,
                  unsigned IndentLevel) const override;
+  void visitChildFileSystems(VisitCallbackTy Callback) override;
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the

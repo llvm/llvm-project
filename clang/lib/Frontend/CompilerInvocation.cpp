@@ -191,6 +191,17 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
   return *this;
 }
 
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
+  return *this;
+}
+
 namespace {
 template <typename T>
 T &ensureOwned(std::shared_ptr<T> &Storage) {
@@ -1861,20 +1872,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_funified_lto))
       Opts.PrepareForThinLTO = true;
   }
-  if (Arg *A = Args.getLastArg(options::OPT_ffat_lto_objects,
-                               options::OPT_fno_fat_lto_objects)) {
-    if (A->getOption().matches(options::OPT_ffat_lto_objects)) {
-      if (Arg *Uni = Args.getLastArg(options::OPT_funified_lto,
-                                     options::OPT_fno_unified_lto)) {
-        if (Uni->getOption().matches(options::OPT_fno_unified_lto))
-          Diags.Report(diag::err_drv_incompatible_options)
-              << A->getAsString(Args) << "-fno-unified-lto";
-      } else
-        Diags.Report(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-funified-lto";
-    }
-  }
-
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -1987,14 +1984,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       F.Internalize = true;
     }
     Opts.LinkBitcodeFiles.push_back(F);
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
-    if (T.isOSAIX()) {
-      StringRef Name = A->getValue();
-      if (Name == "local-dynamic")
-        Diags.Report(diag::err_aix_unsupported_tls_model) << Name;
-    }
   }
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
@@ -3176,7 +3165,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       llvm::sys::fs::make_absolute(WorkingDir, P);
   }
   llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P.str());
+  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -3217,7 +3206,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       SmallString<32> Buffer;
       llvm::sys::path::append(Buffer, Opts.Sysroot,
                               llvm::StringRef(A->getValue()).substr(1));
-      Path = std::string(Buffer.str());
+      Path = std::string(Buffer);
     }
 
     Opts.AddPath(Path, Group, IsFramework,
@@ -3480,7 +3469,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 Twine(Major) + "." + Twine(Minor) + "." + Twine(Subminor));
   }
 
-  if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS()) {
+  if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17 && !Opts.C23) ||
+      T.isOSzOS()) {
     if (!Opts.Trigraphs)
       GenerateArg(Consumer, OPT_fno_trigraphs);
   } else {
@@ -3876,10 +3866,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Mimicking gcc's behavior, trigraphs are only enabled if -trigraphs
   // is specified, or -std is set to a conforming mode.
-  // Trigraphs are disabled by default in c++1z onwards.
+  // Trigraphs are disabled by default in C++17 and C23 onwards.
   // For z/OS, trigraphs are enabled by default (without regard to the above).
   Opts.Trigraphs =
-      (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS();
+      (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17 && !Opts.C23) ||
+      T.isOSzOS();
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
@@ -4775,6 +4766,7 @@ std::string CompilerInvocation::getModuleHash() const {
   if (hsOpts.ModulesStrictContextHash) {
     HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
     HBuilder.addRange(hsOpts.UserEntries);
+    HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();
 #define DIAGOPT(Name, Bits, Default) HBuilder.add(diagOpts.Name);

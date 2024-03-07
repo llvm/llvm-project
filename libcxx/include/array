@@ -116,10 +116,11 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/swap_ranges.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__config>
 #include <__fwd/array.h>
 #include <__iterator/reverse_iterator.h>
+#include <__iterator/wrap_iter.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_array.h>
@@ -159,19 +160,27 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array {
   // types:
-  using __self                 = array;
-  using value_type             = _Tp;
-  using reference              = value_type&;
-  using const_reference        = const value_type&;
-  using iterator               = value_type*;
-  using const_iterator         = const value_type*;
-  using pointer                = value_type*;
-  using const_pointer          = const value_type*;
+  using __self          = array;
+  using value_type      = _Tp;
+  using reference       = value_type&;
+  using const_reference = const value_type&;
+  using pointer         = value_type*;
+  using const_pointer   = const value_type*;
+#if defined(_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY)
+  using iterator       = __wrap_iter<pointer>;
+  using const_iterator = __wrap_iter<const_pointer>;
+#else
+  using iterator       = pointer;
+  using const_iterator = const_pointer;
+#endif
   using size_type              = size_t;
   using difference_type        = ptrdiff_t;
   using reverse_iterator       = std::reverse_iterator<iterator>;
@@ -492,6 +501,8 @@ to_array(_Tp (&&__arr)[_Size]) noexcept(is_nothrow_move_constructible_v<_Tp>) {
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>

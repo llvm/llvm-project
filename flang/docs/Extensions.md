@@ -113,6 +113,13 @@ end
   in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
   compiler properly scopes these names, violations of these restrictions
   elicit only portability warnings by default.
+* The rules for pairwise distinguishing the specific procedures of a
+  generic interface are inadequate, as admitted in note C.11.6 of F'2023.
+  Generic interfaces whose specific procedures can be easily proven by
+  hand to be pairwise distinct (i.e., no ambiguous reference is possible)
+  appear in real applications, but are still non-conforming under the
+  incomplete tests in F'2023 15.4.3.4.5.
+  These cases are compiled with optional portability warnings.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -314,8 +321,8 @@ end
   fixed form source by a '0' in column 6, can contain spaces
   between the letters of the word INCLUDE, and can have a
   numeric character literal kind prefix on the file name.
-* Intrinsic procedures TAND and ATAND. Constant folding is currently
-  not supported for these procedures but this is planned.
+* Intrinsic procedures SIND, COSD, TAND and ATAND. Constant folding
+  is currently not supported for these procedures but this is planned.
 * When a pair of quotation marks in a character literal are split
   by a line continuation in free form, the second quotation mark
   may appear at the beginning of the continuation line without an
@@ -474,6 +481,11 @@ end
 * Many compilers disallow a `VALUE` assumed-length character dummy
   argument, which has been standard since F'2008.
   We accept this usage with an optional portability warning.
+* The `ASYNCHRONOUS` attribute can be implied by usage in data
+  transfer I/O statements.  Only one other compiler supports this
+  correctly.  This compiler does, apart from objects in asynchronous
+  NAMELIST I/O, for which an actual asynchronous runtime implementation
+  seems unlikely.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -679,6 +691,35 @@ end
 * For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
   essentially ignored unless there are some unmasked array entries and
   *all* of them are NaNs.
+
+* When `INDEX` is used as an unrestricted specific intrinsic function
+  in the context of an actual procedure, as the explicit interface in
+  a `PROCEDURE` declaration statement, or as the target of a procedure
+  pointer assignment, its interface has exactly two dummy arguments
+  (`STRING=` and `SUBSTRING=`), and includes neither `BACK=` nor
+  `KIND=`.
+  This is how `INDEX` as an unrestricted specific intrinsic function was
+  documented in FORTRAN '77 and Fortran '90; later revisions of the
+  standard deleted the argument information from the section on
+  unrestricted specific intrinsic functions.
+  At least one other compiler (XLF) seems to expect that the interface for
+  `INDEX` include an optional `BACK=` argument, but it doesn't actually
+  work.
+
+* Allocatable components of array and structure constructors are deallocated
+  after use without calling final subroutines.
+  The standard does not specify when and how deallocation of array and structure
+  constructors allocatable components should happen. All compilers free the
+  memory after use, but the behavior when the allocatable component is a derived
+  type with finalization differ, especially when dealing with nested array and
+  structure constructors expressions. Some compilers call final routine for the
+  allocatable components of each constructor sub-expressions, some call it only
+  for the allocatable component of the top level constructor, and some only
+  deallocate the memory. Deallocating only the memory offers the most
+  flexibility when lowering such expressions, and it is not clear finalization
+  is desirable in such context (Fortran interop 1.6.2 in F2018 standards require
+  array and structure constructors not to be finalized, so it also makes sense
+  not to finalize their allocatable components when releasing their storage).
 
 ## De Facto Standard Features
 

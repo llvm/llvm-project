@@ -657,16 +657,18 @@ public:
 
   AccessAnalysis(Loop *TheLoop, AAResults *AA, LoopInfo *LI,
                  MemoryDepChecker::DepCandidates &DA,
-                 PredicatedScalarEvolution &PSE)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DepCands(DA), PSE(PSE) {
+                 PredicatedScalarEvolution &PSE,
+                 SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
+      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DepCands(DA), PSE(PSE),
+        LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
 
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly) {
-    Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
+    Value *Ptr = const_cast<Value *>(Loc.Ptr);
+    AST.add(adjustLoc(Loc));
     Accesses[MemAccessInfo(Ptr, false)].insert(AccessTy);
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -674,8 +676,8 @@ public:
 
   /// Register a store.
   void addStore(MemoryLocation &Loc, Type *AccessTy) {
-    Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
+    Value *Ptr = const_cast<Value *>(Loc.Ptr);
+    AST.add(adjustLoc(Loc));
     Accesses[MemAccessInfo(Ptr, true)].insert(AccessTy);
   }
 
@@ -731,6 +733,32 @@ public:
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
 
+  /// Adjust the MemoryLocation so that it represents accesses to this
+  /// location across all iterations, rather than a single one.
+  MemoryLocation adjustLoc(MemoryLocation Loc) const {
+    // The accessed location varies within the loop, but remains within the
+    // underlying object.
+    Loc.Size = LocationSize::beforeOrAfterPointer();
+    Loc.AATags.Scope = adjustAliasScopeList(Loc.AATags.Scope);
+    Loc.AATags.NoAlias = adjustAliasScopeList(Loc.AATags.NoAlias);
+    return Loc;
+  }
+
+  /// Drop alias scopes that are only valid within a single loop iteration.
+  MDNode *adjustAliasScopeList(MDNode *ScopeList) const {
+    if (!ScopeList)
+      return nullptr;
+
+    // For the sake of simplicity, drop the whole scope list if any scope is
+    // iteration-local.
+    if (any_of(ScopeList->operands(), [&](Metadata *Scope) {
+          return LoopAliasScopes.contains(cast<MDNode>(Scope));
+        }))
+      return nullptr;
+
+    return ScopeList;
+  }
+
   /// Go over all memory access and check whether runtime pointer checks
   /// are needed and build sets of dependency check candidates.
   void processMemAccesses();
@@ -775,6 +803,10 @@ private:
   PredicatedScalarEvolution &PSE;
 
   DenseMap<Value *, SmallVector<const Value *, 16>> UnderlyingObjects;
+
+  /// Alias scopes that are declared inside the loop, and as such not valid
+  /// across iterations.
+  SmallPtrSetImpl<MDNode *> &LoopAliasScopes;
 };
 
 } // end anonymous namespace
@@ -2283,6 +2315,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // Holds the Load and Store instructions.
   SmallVector<LoadInst *, 16> Loads;
   SmallVector<StoreInst *, 16> Stores;
+  SmallPtrSet<MDNode *, 8> LoopAliasScopes;
 
   // Holds all the different accesses in the loop.
   unsigned NumReads = 0;
@@ -2325,6 +2358,11 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       // Avoid hitting recordAnalysis multiple times.
       if (HasComplexMemInst)
         continue;
+
+      // Record alias scopes defined inside the loop.
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        for (Metadata *Op : Decl->getScopeList()->operands())
+          LoopAliasScopes.insert(cast<MDNode>(Op));
 
       // Many math library functions read the rounding mode. We will only
       // vectorize a loop if it contains known function calls that don't set
@@ -2407,7 +2445,8 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   }
 
   MemoryDepChecker::DepCandidates DependentAccesses;
-  AccessAnalysis Accesses(TheLoop, AA, LI, DependentAccesses, *PSE);
+  AccessAnalysis Accesses(TheLoop, AA, LI, DependentAccesses, *PSE,
+                          LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once

@@ -30,16 +30,16 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["map", "set", "unordered_map", "unordered_set"]
     elif header == "__split_buffer":
         return ["deque", "vector"]
-    elif header == "__threading_support":
+    elif re.match("(__thread/support[.]h)|(__thread/support/.+)", header):
         return ["atomic", "mutex", "semaphore", "thread"]
     elif header == "__tree":
         return ["map", "set"]
-    elif header == "__fwd/hash.h":
-        return ["functional"]
     elif header == "__fwd/pair.h":
         return ["utility"]
     elif header == "__fwd/subrange.h":
         return ["ranges"]
+    elif re.match("__fwd/(fstream|ios|istream|ostream|sstream|streambuf)[.]h", header):
+        return ["iosfwd"]
     # Handle remaining forward declaration headers
     elif re.match("__fwd/(.+)[.]h", header):
         return [re.match("__fwd/(.+)[.]h", header).group(1)]

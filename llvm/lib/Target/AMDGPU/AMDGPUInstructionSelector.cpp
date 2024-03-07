@@ -34,12 +34,6 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-static cl::opt<bool> AllowRiskySelect(
-  "amdgpu-global-isel-risky-select",
-  cl::desc("Allow GlobalISel to select cases that are likely to not work yet"),
-  cl::init(false),
-  cl::ReallyHidden);
-
 #define GET_GLOBALISEL_IMPL
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"
@@ -210,14 +204,13 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
-  if (DefTy == LLT::scalar(1)) {
-    if (!AllowRiskySelect) {
-      LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
-      return false;
-    }
 
-    LLVM_DEBUG(dbgs() << "Selecting risky boolean phi\n");
-  }
+  // S1 G_PHIs should not be selected in instruction-select, instead:
+  // - divergent S1 G_PHI should go through lane mask merging algorithm
+  //   and be fully inst-selected in AMDGPUGlobalISelDivergenceLowering
+  // - uniform S1 G_PHI should be lowered into S32 G_PHI in AMDGPURegBankSelect
+  if (DefTy == LLT::scalar(1))
+    return false;
 
   // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)
 
@@ -3552,8 +3545,6 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
 }
 
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
-  if (I.isPHI())
-    return selectPHI(I);
 
   if (!I.isPreISelOpcode()) {
     if (I.isCopy())
@@ -3696,6 +3687,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectWaveAddress(I);
   case AMDGPU::G_STACKRESTORE:
     return selectStackRestore(I);
+  case AMDGPU::G_PHI:
+    return selectPHI(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -3953,6 +3946,222 @@ AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+static Register buildRegSequence(SmallVectorImpl<Register> &Elts,
+                                 MachineInstr *InsertPt,
+                                 MachineRegisterInfo &MRI) {
+  const TargetRegisterClass *DstRegClass;
+  switch (Elts.size()) {
+  case 8:
+    DstRegClass = &AMDGPU::VReg_256RegClass;
+    break;
+  case 4:
+    DstRegClass = &AMDGPU::VReg_128RegClass;
+    break;
+  case 2:
+    DstRegClass = &AMDGPU::VReg_64RegClass;
+    break;
+  default:
+    llvm_unreachable("unhandled Reg sequence size");
+  }
+
+  MachineIRBuilder B(*InsertPt);
+  auto MIB = B.buildInstr(AMDGPU::REG_SEQUENCE)
+                 .addDef(MRI.createVirtualRegister(DstRegClass));
+  for (unsigned i = 0; i < Elts.size(); ++i) {
+    MIB.addReg(Elts[i]);
+    MIB.addImm(SIRegisterInfo::getSubRegFromChannel(i));
+  }
+  return MIB->getOperand(0).getReg();
+}
+
+static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
+                                 SmallVectorImpl<Register> &Elts, Register &Src,
+                                 MachineInstr *InsertPt,
+                                 MachineRegisterInfo &MRI) {
+  if (ModOpcode == TargetOpcode::G_FNEG) {
+    Mods |= SISrcMods::NEG;
+    // Check if all elements also have abs modifier
+    SmallVector<Register, 8> NegAbsElts;
+    for (auto El : Elts) {
+      Register FabsSrc;
+      if (!mi_match(El, MRI, m_GFabs(m_Reg(FabsSrc))))
+        break;
+      NegAbsElts.push_back(FabsSrc);
+    }
+    if (Elts.size() != NegAbsElts.size()) {
+      // Neg
+      Src = buildRegSequence(Elts, InsertPt, MRI);
+    } else {
+      // Neg and Abs
+      Mods |= SISrcMods::NEG_HI;
+      Src = buildRegSequence(NegAbsElts, InsertPt, MRI);
+    }
+  } else {
+    assert(ModOpcode == TargetOpcode::G_FABS);
+    // Abs
+    Mods |= SISrcMods::NEG_HI;
+    Src = buildRegSequence(Elts, InsertPt, MRI);
+  }
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectWMMAModsF32NegAbs(MachineOperand &Root) const {
+  Register Src = Root.getReg();
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  SmallVector<Register, 8> EltsF32;
+
+  if (GBuildVector *BV = dyn_cast<GBuildVector>(MRI->getVRegDef(Src))) {
+    assert(BV->getNumSources() > 0);
+    // Based on first element decide which mod we match, neg or abs
+    MachineInstr *ElF32 = MRI->getVRegDef(BV->getSourceReg(0));
+    unsigned ModOpcode = (ElF32->getOpcode() == AMDGPU::G_FNEG)
+                             ? AMDGPU::G_FNEG
+                             : AMDGPU::G_FABS;
+    for (unsigned i = 0; i < BV->getNumSources(); ++i) {
+      ElF32 = MRI->getVRegDef(BV->getSourceReg(i));
+      if (ElF32->getOpcode() != ModOpcode)
+        break;
+      EltsF32.push_back(ElF32->getOperand(1).getReg());
+    }
+
+    // All elements had ModOpcode modifier
+    if (BV->getNumSources() == EltsF32.size()) {
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, Root.getParent(),
+                           *MRI);
+    }
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectWMMAModsF16Neg(MachineOperand &Root) const {
+  Register Src = Root.getReg();
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  SmallVector<Register, 8> EltsV2F16;
+
+  if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src))) {
+    for (unsigned i = 0; i < CV->getNumSources(); ++i) {
+      Register FNegSrc;
+      if (!mi_match(CV->getSourceReg(i), *MRI, m_GFNeg(m_Reg(FNegSrc))))
+        break;
+      EltsV2F16.push_back(FNegSrc);
+    }
+
+    // All elements had ModOpcode modifier
+    if (CV->getNumSources() == EltsV2F16.size()) {
+      Mods |= SISrcMods::NEG;
+      Mods |= SISrcMods::NEG_HI;
+      Src = buildRegSequence(EltsV2F16, Root.getParent(), *MRI);
+    }
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
+  Register Src = Root.getReg();
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  SmallVector<Register, 8> EltsV2F16;
+
+  if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src))) {
+    assert(CV->getNumSources() > 0);
+    MachineInstr *ElV2F16 = MRI->getVRegDef(CV->getSourceReg(0));
+    // Based on first element decide which mod we match, neg or abs
+    unsigned ModOpcode = (ElV2F16->getOpcode() == AMDGPU::G_FNEG)
+                             ? AMDGPU::G_FNEG
+                             : AMDGPU::G_FABS;
+
+    for (unsigned i = 0; i < CV->getNumSources(); ++i) {
+      ElV2F16 = MRI->getVRegDef(CV->getSourceReg(i));
+      if (ElV2F16->getOpcode() != ModOpcode)
+        break;
+      EltsV2F16.push_back(ElV2F16->getOperand(1).getReg());
+    }
+
+    // All elements had ModOpcode modifier
+    if (CV->getNumSources() == EltsV2F16.size()) {
+      MachineIRBuilder B(*Root.getParent());
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
+                           *MRI);
+    }
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectWMMAVISrc(MachineOperand &Root) const {
+  std::optional<FPValueAndVReg> FPValReg;
+  if (mi_match(Root.getReg(), *MRI, m_GFCstOrSplat(FPValReg))) {
+    if (TII.isInlineConstant(FPValReg->Value)) {
+      return {{[=](MachineInstrBuilder &MIB) {
+        MIB.addImm(FPValReg->Value.bitcastToAPInt().getSExtValue());
+      }}};
+    }
+    // Non-inlineable splat floats should not fall-through for integer immediate
+    // checks.
+    return {};
+  }
+
+  APInt ICst;
+  if (mi_match(Root.getReg(), *MRI, m_ICstOrSplat(ICst))) {
+    if (TII.isInlineConstant(ICst)) {
+      return {
+          {[=](MachineInstrBuilder &MIB) { MIB.addImm(ICst.getSExtValue()); }}};
+    }
+  }
+
+  return {};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSWMMACIndex8(MachineOperand &Root) const {
+  Register Src =
+      getDefIgnoringCopies(Root.getReg(), *MRI)->getOperand(0).getReg();
+  unsigned Key = 0;
+
+  Register ShiftSrc;
+  std::optional<ValueAndVReg> ShiftAmt;
+  if (mi_match(Src, *MRI, m_GLShr(m_Reg(ShiftSrc), m_GCst(ShiftAmt))) &&
+      MRI->getType(ShiftSrc).getSizeInBits() == 32 &&
+      ShiftAmt->Value.getZExtValue() % 8 == 0) {
+    Key = ShiftAmt->Value.getZExtValue() / 8;
+    Src = ShiftSrc;
+  }
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Key); } // index_key
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSWMMACIndex16(MachineOperand &Root) const {
+
+  Register Src =
+      getDefIgnoringCopies(Root.getReg(), *MRI)->getOperand(0).getReg();
+  unsigned Key = 0;
+
+  Register ShiftSrc;
+  std::optional<ValueAndVReg> ShiftAmt;
+  if (mi_match(Src, *MRI, m_GLShr(m_Reg(ShiftSrc), m_GCst(ShiftAmt))) &&
+      MRI->getType(ShiftSrc).getSizeInBits() == 32 &&
+      ShiftAmt->Value.getZExtValue() == 16) {
+    Src = ShiftSrc;
+    Key = 1;
+  }
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Key); } // index_key
   }};
 }
 
@@ -4364,7 +4573,7 @@ bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
   // voffset to (soffset + inst_offset).
   auto VKnown = KB->getKnownBits(VAddr);
   auto SKnown = KnownBits::computeForAddSub(
-      true, false, KB->getKnownBits(SAddr),
+      /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KB->getKnownBits(SAddr),
       KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
@@ -5532,16 +5741,8 @@ void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
   MIB.addImm(ExpVal);
 }
 
-bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
-  return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
-}
-
-bool AMDGPUInstructionSelector::isInlineImmediate32(int64_t Imm) const {
-  return AMDGPU::isInlinableLiteral32(Imm, STI.hasInv2PiInlineImm());
-}
-
-bool AMDGPUInstructionSelector::isInlineImmediate64(int64_t Imm) const {
-  return AMDGPU::isInlinableLiteral64(Imm, STI.hasInv2PiInlineImm());
+bool AMDGPUInstructionSelector::isInlineImmediate(const APInt &Imm) const {
+  return TII.isInlineConstant(Imm);
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate(const APFloat &Imm) const {

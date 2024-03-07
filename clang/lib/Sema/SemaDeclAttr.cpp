@@ -2053,12 +2053,6 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (S.Context.getTargetInfo().getTriple().isOSAIX() &&
-      Model == "local-dynamic") {
-    S.Diag(LiteralLoc, diag::err_aix_attr_unsupported_tls_model) << Model;
-    return;
-  }
-
   D->addAttr(::new (S.Context) TLSModelAttr(S.Context, AL, Model));
 }
 
@@ -3501,9 +3495,16 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   return false;
 }
 
+static bool hasArmStreamingInterface(const FunctionDecl *FD) {
+  if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+      return true;
+  return false;
+}
+
 // Check Target Version attrs
-bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &AttrStr,
-                                  bool &isDefault) {
+bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
+                                  StringRef &AttrStr, bool &isDefault) {
   enum FirstParam { Unsupported };
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
@@ -3519,6 +3520,8 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &AttrStr,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
+  if (hasArmStreamingInterface(cast<FunctionDecl>(D)))
+    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
@@ -3527,7 +3530,7 @@ static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SourceLocation LiteralLoc;
   bool isDefault = false;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      S.checkTargetVersionAttr(LiteralLoc, Str, isDefault))
+      S.checkTargetVersionAttr(LiteralLoc, D, Str, isDefault))
     return;
   // Do not create default only target_version attribute
   if (!isDefault) {
@@ -3550,7 +3553,7 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 bool Sema::checkTargetClonesAttrString(
     SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-    bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
+    Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
     SmallVectorImpl<SmallString<64>> &StringsBuffer) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3619,6 +3622,9 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
+      if (hasArmStreamingInterface(cast<FunctionDecl>(D)))
+        return Diag(LiteralLoc,
+                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -3670,7 +3676,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (!S.checkStringLiteralArgumentAttr(AL, I, CurStr, &LiteralLoc) ||
         S.checkTargetClonesAttrString(
             LiteralLoc, CurStr,
-            cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()),
+            cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()), D,
             HasDefault, HasCommas, HasNotDefault, StringsBuffer))
       return;
   }
@@ -5235,6 +5241,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_M68kRTD:
     D->addAttr(::new (S.Context) M68kRTDAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_PreserveNone:
+    D->addAttr(::new (S.Context) PreserveNoneAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5245,11 +5254,6 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     // Suppression attribute with GSL spelling requires at least 1 argument.
     if (!AL.checkAtLeastNumArgs(S, 1))
       return;
-  } else if (!isa<VarDecl>(D)) {
-    // Analyzer suppression applies only to variables and statements.
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
-        << AL << 0 << "variables and statements";
-    return;
   }
 
   std::vector<StringRef> DiagnosticIdentifiers;
@@ -5440,6 +5444,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_M68kRTD:
     CC = CC_M68kRTD;
+    break;
+  case ParsedAttr::AT_PreserveNone:
+    CC = CC_PreserveNone;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -6690,13 +6697,10 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
   // Check whether this will be mapped to a getter or setter of a property.
   bool IsGetter = false, IsSetter = false;
-  if (Name.starts_with("getter:")) {
+  if (Name.consume_front("getter:"))
     IsGetter = true;
-    Name = Name.substr(7);
-  } else if (Name.starts_with("setter:")) {
+  else if (Name.consume_front("setter:"))
     IsSetter = true;
-    Name = Name.substr(7);
-  }
 
   if (Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
@@ -8994,6 +8998,7 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   bool HasZA = false;
+  bool HasZT0 = false;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
     StringRef StateName;
     SourceLocation LiteralLoc;
@@ -9002,16 +9007,16 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
     if (StateName == "za")
       HasZA = true;
+    else if (StateName == "zt0")
+      HasZT0 = true;
     else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
       AL.setInvalid();
       return;
     }
 
-    if (std::find(NewState.begin(), NewState.end(), StateName) ==
-        NewState.end()) { // Avoid adding duplicates.
+    if (!llvm::is_contained(NewState, StateName)) // Avoid adding duplicates.
       NewState.push_back(StateName);
-    }
   }
 
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
@@ -9019,6 +9024,11 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
     if (HasZA && ZAState != FunctionType::ARM_None &&
         checkArmNewAttrMutualExclusion(S, AL, FPT, ZAState, "za"))
+      return;
+    FunctionType::ArmStateValue ZT0State =
+        FunctionType::getArmZT0State(FPT->getAArch64SMEAttributes());
+    if (HasZT0 && ZT0State != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZT0State, "zt0"))
       return;
   }
 
@@ -9556,6 +9566,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AArch64SVEPcs:
   case ParsedAttr::AT_AMDGPUKernelCall:
   case ParsedAttr::AT_M68kRTD:
+  case ParsedAttr::AT_PreserveNone:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:
@@ -10129,6 +10140,9 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
 
   // Apply additional attributes specified by '#pragma clang attribute'.
   AddPragmaAttributes(S, D);
+
+  // Look for API notes that map to attributes.
+  ProcessAPINotes(D);
 }
 
 /// Is the given declaration allowed to use a forbidden type?

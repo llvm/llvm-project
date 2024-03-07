@@ -15,6 +15,10 @@ class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
+namespace arm_sme {
+void populateOuterProductFusionPatterns(RewritePatternSet &patterns);
+} // namespace arm_sme
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARMSME_TRANSFORMS_H

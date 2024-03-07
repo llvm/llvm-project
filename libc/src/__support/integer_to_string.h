@@ -166,7 +166,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
   static_assert(cpp::is_integral_v<T>);
 
   LIBC_INLINE static constexpr size_t compute_buffer_size() {
-    constexpr auto max_digits = []() -> size_t {
+    constexpr auto MAX_DIGITS = []() -> size_t {
       // We size the string buffer for base 10 using an approximation algorithm:
       //
       //   size = ceil(sizeof(T) * 5 / 2)
@@ -188,19 +188,19 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       // For other bases, we approximate by rounding down to the nearest power
       // of two base, since the space needed is easy to calculate and it won't
       // overestimate by too much.
-      constexpr auto floor_log_2 = [](size_t num) -> size_t {
+      constexpr auto FLOOR_LOG_2 = [](size_t num) -> size_t {
         size_t i = 0;
         for (; num > 1; num /= 2)
           ++i;
         return i;
       };
-      constexpr size_t BITS_PER_DIGIT = floor_log_2(Fmt::BASE);
+      constexpr size_t BITS_PER_DIGIT = FLOOR_LOG_2(Fmt::BASE);
       return ((sizeof(T) * 8 + (BITS_PER_DIGIT - 1)) / BITS_PER_DIGIT);
     };
-    constexpr size_t digit_size = cpp::max(max_digits(), Fmt::MIN_DIGITS);
-    constexpr size_t sign_size = Fmt::BASE == 10 ? 1 : 0;
-    constexpr size_t prefix_size = Fmt::PREFIX ? 2 : 0;
-    return digit_size + sign_size + prefix_size;
+    constexpr size_t DIGIT_SIZE = cpp::max(MAX_DIGITS(), Fmt::MIN_DIGITS);
+    constexpr size_t SIGN_SIZE = Fmt::BASE == 10 ? 1 : 0;
+    constexpr size_t PREFIX_SIZE = Fmt::PREFIX ? 2 : 0;
+    return DIGIT_SIZE + SIGN_SIZE + PREFIX_SIZE;
   }
 
   static constexpr size_t BUFFER_SIZE = compute_buffer_size();
