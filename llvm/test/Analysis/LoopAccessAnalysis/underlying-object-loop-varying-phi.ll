@@ -7,8 +7,13 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @indirect_ptr_recurrences_read_write(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'indirect_ptr_recurrences_read_write'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndidrectUnsafe:
+; CHECK-NEXT:            %l = load i32, ptr %ptr.recur, align 4, !tbaa !4 ->
+; CHECK-NEXT:            store i32 %xor, ptr %ptr.recur, align 4, !tbaa !4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
