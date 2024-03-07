@@ -280,7 +280,7 @@ private:
   /// setup/destroy pseudo instructions (as defined in the TargetFrameInfo
   /// class).  This information is important for frame pointer elimination.
   /// It is only valid during and after prolog/epilog code insertion.
-  uint64_t MaxCallFrameSize = ~0ul;
+  uint64_t MaxCallFrameSize = ~UINT64_C(0);
 
   /// The number of bytes of callee saved registers that the target wants to
   /// report for the current function in the CodeView S_FRAMEPROC record.
@@ -662,7 +662,9 @@ public:
       return 0;
     return MaxCallFrameSize;
   }
-  bool isMaxCallFrameSizeComputed() const { return MaxCallFrameSize != ~0ul; }
+  bool isMaxCallFrameSizeComputed() const {
+    return MaxCallFrameSize != ~UINT64_C(0);
+  }
   void setMaxCallFrameSize(uint64_t S) { MaxCallFrameSize = S; }
 
   /// Returns how many bytes of callee-saved registers the target pushed in the
