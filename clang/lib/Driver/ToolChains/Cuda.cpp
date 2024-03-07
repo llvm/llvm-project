@@ -503,18 +503,20 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       Exec, CmdArgs, Inputs, Output));
 }
 
-static bool shouldIncludePTX(const ArgList &Args, const char *gpu_arch) {
-  bool includePTX = true;
-  for (Arg *A : Args) {
-    if (!(A->getOption().matches(options::OPT_cuda_include_ptx_EQ) ||
-          A->getOption().matches(options::OPT_no_cuda_include_ptx_EQ)))
-      continue;
+static bool shouldIncludePTX(const ArgList &Args, StringRef InputArch) {
+  // The new driver does not include PTX by default to avoid overhead.
+  bool includePTX = !Args.hasFlag(options::OPT_offload_new_driver,
+                                  options::OPT_no_offload_new_driver, false);
+  for (Arg *A : Args.filtered(options::OPT_cuda_include_ptx_EQ,
+                              options::OPT_no_cuda_include_ptx_EQ)) {
     A->claim();
     const StringRef ArchStr = A->getValue();
-    if (ArchStr == "all" || ArchStr == gpu_arch) {
-      includePTX = A->getOption().matches(options::OPT_cuda_include_ptx_EQ);
-      continue;
-    }
+    if (A->getOption().matches(options::OPT_cuda_include_ptx_EQ) &&
+        (ArchStr == "all" || ArchStr == InputArch))
+      includePTX = true;
+    else if (A->getOption().matches(options::OPT_no_cuda_include_ptx_EQ) &&
+             (ArchStr == "all" || ArchStr == InputArch))
+      includePTX = false;
   }
   return includePTX;
 }

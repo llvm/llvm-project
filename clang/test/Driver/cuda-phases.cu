@@ -244,31 +244,32 @@
 // NEW-DRIVER-RDC-NEXT: 18: assembler, {17}, object, (host-cuda)
 // NEW-DRIVER-RDC-NEXT: 19: clang-linker-wrapper, {18}, image, (host-cuda)
 
-// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver -fgpu-rdc \
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver \
 // RUN:   --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW-DRIVER %s
-//      NEW-DRIVER: 0: input, "[[INPUT:.+]]", cuda
-// NEW-DRIVER-NEXT: 1: preprocessor, {0}, cuda-cpp-output
-// NEW-DRIVER-NEXT: 2: compiler, {1}, ir
-// NEW-DRIVER-NEXT: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_52)
+//      NEW-DRIVER: 0: input, "[[CUDA:.+]]", cuda, (host-cuda)
+// NEW-DRIVER-NEXT: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda)
+// NEW-DRIVER-NEXT: 2: compiler, {1}, ir, (host-cuda)
+// NEW-DRIVER-NEXT: 3: input, "[[CUDA]]", cuda, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 5: compiler, {4}, ir, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 6: backend, {5}, assembler, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 7: assembler, {6}, object, (device-cuda, sm_52)
-// NEW-DRIVER-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
-// NEW-DRIVER-NEXT: 9: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
+// NEW-DRIVER-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {6}, object
+// NEW-DRIVER-NEXT: 9: input, "[[CUDA]]", cuda, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 11: compiler, {10}, ir, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 12: backend, {11}, assembler, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 13: assembler, {12}, object, (device-cuda, sm_70)
-// NEW-DRIVER-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
-// NEW-DRIVER-NEXT: 15: clang-offload-packager, {8, 14}, image
-// NEW-DRIVER-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW-DRIVER-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {12}, object
+// NEW-DRIVER-NEXT: 15: linker, {8, 14}, cuda-fatbin, (device-cuda)
+// NEW-DRIVER-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (nvptx64-nvidia-cuda)" {15}, ir
 // NEW-DRIVER-NEXT: 17: backend, {16}, assembler, (host-cuda)
 // NEW-DRIVER-NEXT: 18: assembler, {17}, object, (host-cuda)
 // NEW-DRIVER-NEXT: 19: clang-linker-wrapper, {18}, image, (host-cuda)
 
 // RUN: %clang -### --target=powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver \
 // RUN:   --offload-arch=sm_52 --offload-arch=sm_70 %s %S/Inputs/empty.cpp 2>&1 | FileCheck --check-prefix=NON-CUDA-INPUT %s
+
 //      NON-CUDA-INPUT: 0: input, "[[CUDA:.+]]", cuda, (host-cuda)
 // NON-CUDA-INPUT-NEXT: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda)
 // NON-CUDA-INPUT-NEXT: 2: compiler, {1}, ir, (host-cuda)
@@ -277,13 +278,13 @@
 // NON-CUDA-INPUT-NEXT: 5: compiler, {4}, ir, (device-cuda, sm_52)
 // NON-CUDA-INPUT-NEXT: 6: backend, {5}, assembler, (device-cuda, sm_52)
 // NON-CUDA-INPUT-NEXT: 7: assembler, {6}, object, (device-cuda, sm_52)
-// NON-CUDA-INPUT-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
+// NON-CUDA-INPUT-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {6}, object
 // NON-CUDA-INPUT-NEXT: 9: input, "[[CUDA]]", cuda, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 11: compiler, {10}, ir, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 12: backend, {11}, assembler, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 13: assembler, {12}, object, (device-cuda, sm_70)
-// NON-CUDA-INPUT-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
+// NON-CUDA-INPUT-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {12}, object
 // NON-CUDA-INPUT-NEXT: 15: linker, {8, 14}, cuda-fatbin, (device-cuda)
 // NON-CUDA-INPUT-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (nvptx64-nvidia-cuda)" {15}, ir
 // NON-CUDA-INPUT-NEXT: 17: backend, {16}, assembler, (host-cuda)
