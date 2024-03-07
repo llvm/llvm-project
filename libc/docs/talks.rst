@@ -18,7 +18,7 @@ Talks
 * Using LLVM's libc - Sivachandra Reddy, Michael Jones, Tue Ly
 
   * `slides <https://llvm.org/devmtg/2022-11/slides/Tutorial1-UsingLLVM-libc.pdf>`__
-  * `video <https://www.youtube.com/watch?v>`__
+  * `video <https://www.youtube.com/watch?v=OpY4lnpnbq4>`__
 * Using modern CPU instructions to improve LLVM's libc math library - Tue Ly
 
   * `slides <https://llvm.org/devmtg/2022-11/slides/QuickTalk7-UsingModernCPUInstructionsToImproveLLVM-libcMathLib>`__
