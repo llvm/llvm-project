@@ -673,7 +673,7 @@ public:
     return !hasGFX12_10Insts();
   }
 
-  bool hasExpOrExportInsts() const { return HasExportInsts; }
+  bool hasExportInsts() const { return HasExportInsts; }
 
   bool hasInterpInsts() const {
     return GFX13Insts || !hasGFX12_10Insts();
