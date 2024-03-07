@@ -67,6 +67,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt.h" // is_big_int
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -149,6 +150,18 @@ public:
 using StringBufferWriter = StringBufferWriterImpl<true>;
 using BackwardStringBufferWriter = StringBufferWriterImpl<false>;
 
+template <typename T, class = void> struct IntegerWriterUnsigned {};
+
+template <typename T>
+struct IntegerWriterUnsigned<T, cpp::enable_if_t<cpp::is_integral_v<T>>> {
+  using type = cpp::make_unsigned_t<T>;
+};
+
+template <typename T>
+struct IntegerWriterUnsigned<T, cpp::enable_if_t<cpp::is_big_int_v<T>>> {
+  using type = typename T::unsigned_type;
+};
+
 } // namespace details
 
 namespace radix {
@@ -163,7 +176,7 @@ template <size_t radix> using Custom = details::Fmt<radix>;
 
 // See file header for documentation.
 template <typename T, typename Fmt = radix::Dec> class IntegerToString {
-  static_assert(cpp::is_integral_v<T>);
+  static_assert(cpp::is_integral_v<T> || cpp::is_big_int_v<T>);
 
   LIBC_INLINE static constexpr size_t compute_buffer_size() {
     constexpr auto MAX_DIGITS = []() -> size_t {
@@ -208,8 +221,8 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
 
   // An internal stateless structure that handles the number formatting logic.
   struct IntegerWriter {
-    static_assert(cpp::is_integral_v<T>);
-    using UNSIGNED_T = cpp::make_unsigned_t<T>;
+    static_assert(cpp::is_integral_v<T> || cpp::is_big_int_v<T>);
+    using UNSIGNED_T = typename details::IntegerWriterUnsigned<T>::type;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
       if (digit < 10)
