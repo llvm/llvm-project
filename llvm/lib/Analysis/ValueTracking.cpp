@@ -1476,6 +1476,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
       if (RV->getType() == I->getType()) {
         computeKnownBits(RV, Known2, Depth + 1, Q);
         Known = Known.unionWith(Known2);
+        // If the function doesn't return properly for all input values
+        // (e.g. unreachable exits) then there might be conflicts between the
+        // argument value and the range metadata. Simply discard the known bits
+        // in case of conflicts.
+        if (Known.hasConflict())
+          Known.resetAll();
       }
     }
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
