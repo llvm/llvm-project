@@ -1152,8 +1152,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRV::StorageClass::StorageClass SC) {
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
   unsigned AddressSpace = storageClassToAddressSpace(SC);
-  Type *LLVMTy =
-      TypedPointerType::get(const_cast<Type *>(PointerElementType), AddressSpace);
+  Type *LLVMTy = TypedPointerType::get(const_cast<Type *>(PointerElementType),
+                                       AddressSpace);
   // check if this type is already available
   Register Reg = DT.find(PointerElementType, AddressSpace, CurMF);
   if (Reg.isValid())
@@ -1170,24 +1170,10 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
-    SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
+    SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &,
     SPIRV::StorageClass::StorageClass SC) {
-  const Type *PointerElementType = getTypeForSPIRVType(BaseType);
-  unsigned AddressSpace = storageClassToAddressSpace(SC);
-  Type *LLVMTy =
-      TypedPointerType::get(const_cast<Type *>(PointerElementType), AddressSpace);
-  // check if this type is already available
-  Register Reg = DT.find(PointerElementType, AddressSpace, CurMF);
-  if (Reg.isValid())
-    return getSPIRVTypeForVReg(Reg);
-  // create a new type
-  MachineBasicBlock &BB = *I.getParent();
-  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpTypePointer))
-                 .addDef(createTypeVReg(CurMF->getRegInfo()))
-                 .addImm(static_cast<uint32_t>(SC))
-                 .addUse(getSPIRVTypeID(BaseType));
-  DT.add(PointerElementType, AddressSpace, CurMF, getSPIRVTypeID(MIB));
-  return finishCreatingSPIRVType(LLVMTy, MIB);
+  MachineIRBuilder MIRBuilder(I);
+  return getOrCreateSPIRVPointerType(BaseType, MIRBuilder, SC);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,
