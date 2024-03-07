@@ -71,7 +71,7 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
-      .Case<emitc::AddOp>([&](auto op) { return 11; })
+      .Case<emitc::AddOp>([&](auto op) { return 12; })
       .Case<emitc::ApplyOp>([&](auto op) { return 15; })
       .Case<emitc::BitwiseAndOp>([&](auto op) { return 7; })
       .Case<emitc::BitwiseLeftShiftOp>([&](auto op) { return 11; })
@@ -103,7 +103,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case<emitc::LogicalOrOp>([&](auto op) { return 3; })
       .Case<emitc::MulOp>([&](auto op) { return 13; })
       .Case<emitc::RemOp>([&](auto op) { return 13; })
-      .Case<emitc::SubOp>([&](auto op) { return 11; })
+      .Case<emitc::SubOp>([&](auto op) { return 12; })
       .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
 
