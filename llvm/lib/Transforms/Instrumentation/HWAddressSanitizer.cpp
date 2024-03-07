@@ -52,6 +52,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -61,6 +62,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <optional>
+#include <random>
 
 using namespace llvm;
 
@@ -181,16 +183,23 @@ static cl::opt<bool> ClWithTls(
     cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
-    CSkipHotCode("hwasan-skip-hot-code",
-                 cl::desc("Do not instument hot functions based on FDO."),
-                 cl::Hidden, cl::init(false));
+    CSelectiveInstrumentation("hwasan-selective-instrumentation",
+                              cl::desc("Use selective instrumentation"),
+                              cl::Hidden, cl::init(false));
 
-static cl::opt<int> HotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                        cl::init(0));
+static cl::opt<int> HotPercentileCutoff(
+    "hwasan-percentile-cutoff-hot", cl::init(0),
+    cl::desc("Alternative hot percentile cuttoff."
+             "By default `-profile-summary-cutoff-hot` is used."));
 
-STATISTIC(NumTotalFuncs, "Number of total funcs HWASAN");
-STATISTIC(NumInstrumentedFuncs, "Number of HWASAN instrumented funcs");
-STATISTIC(NumNoProfileSummaryFuncs, "Number of HWASAN funcs without PS");
+static cl::opt<float>
+    RandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+                   cl::desc("Probability value in the range [0.0, 1.0] "
+                            "to skip instrumentation of a function."));
+
+STATISTIC(NumTotalFuncs, "Number of total funcs");
+STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
+STATISTIC(NumNoProfileSummaryFuncs, "Number of funcs without PS");
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -291,6 +300,8 @@ public:
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
                               ? ClEnableKhwasan
                               : CompileKernel;
+    this->Rng =
+        RandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
 
     initializeModule();
   }
@@ -372,6 +383,7 @@ private:
   Module &M;
   const StackSafetyGlobalInfo *SSI;
   Triple TargetTriple;
+  std::unique_ptr<RandomNumberGenerator> Rng;
 
   /// This struct defines the shadow mapping using the rule:
   ///   shadow = (mem >> Scale) + Offset.
@@ -1526,19 +1538,26 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   NumTotalFuncs++;
-  if (CSkipHotCode) {
-    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    if (PSI && PSI->hasProfileSummary()) {
-      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-      if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
-              ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
-                                                           &F, BFI)
-              : PSI->isFunctionHotInCallGraph(&F, BFI))
+  if (CSelectiveInstrumentation) {
+    if (RandomSkipRate.getNumOccurrences()) {
+      std::bernoulli_distribution D(RandomSkipRate);
+      if (D(*Rng))
         return;
     } else {
-      ++NumNoProfileSummaryFuncs;
+      auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+      ProfileSummaryInfo *PSI =
+          MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+      if (PSI && PSI->hasProfileSummary()) {
+        auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+        if ((HotPercentileCutoff.getNumOccurrences() &&
+             HotPercentileCutoff >= 0)
+                ? PSI->isFunctionHotInCallGraphNthPercentile(
+                      HotPercentileCutoff, &F, BFI)
+                : PSI->isFunctionHotInCallGraph(&F, BFI))
+          return;
+      } else {
+        ++NumNoProfileSummaryFuncs;
+      }
     }
   }
   NumInstrumentedFuncs++;
