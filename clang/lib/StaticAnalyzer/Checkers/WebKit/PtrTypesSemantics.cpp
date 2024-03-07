@@ -253,6 +253,19 @@ class TrivialFunctionAnalysisVisitor
     return true;
   }
 
+  template <typename CheckFunction>
+  bool WithCachedResult(const Stmt *S, CheckFunction Function) {
+    // If the statement isn't in the cache, conservatively assume that
+    // it's not trivial until analysis completes. Insert false to the cache
+    // first to avoid infinite recursion.
+    auto [It, IsNew] = Cache.insert(std::make_pair(S, false));
+    if (!IsNew)
+      return It->second;
+    bool Result = Function();
+    Cache[S] = Result;
+    return Result;
+  }
+
 public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
@@ -267,7 +280,7 @@ public:
   bool VisitCompoundStmt(const CompoundStmt *CS) {
     // A compound statement is allowed as long each individual sub-statement
     // is trivial.
-    return VisitChildren(CS);
+    return WithCachedResult(CS, [&]() { return VisitChildren(CS); });
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
@@ -279,17 +292,36 @@ public:
 
   bool VisitDeclStmt(const DeclStmt *DS) { return VisitChildren(DS); }
   bool VisitDoStmt(const DoStmt *DS) { return VisitChildren(DS); }
-  bool VisitIfStmt(const IfStmt *IS) { return VisitChildren(IS); }
+  bool VisitIfStmt(const IfStmt *IS) {
+    return WithCachedResult(IS, [&]() { return VisitChildren(IS); });
+  }
+  bool VisitForStmt(const ForStmt *FS) {
+    return WithCachedResult(FS, [&]() { return VisitChildren(FS); });
+  }
+  bool VisitCXXForRangeStmt(const CXXForRangeStmt *FS) {
+    return WithCachedResult(FS, [&]() { return VisitChildren(FS); });
+  }
+  bool VisitWhileStmt(const WhileStmt *WS) {
+    return WithCachedResult(WS, [&]() { return VisitChildren(WS); });
+  }
   bool VisitSwitchStmt(const SwitchStmt *SS) { return VisitChildren(SS); }
   bool VisitCaseStmt(const CaseStmt *CS) { return VisitChildren(CS); }
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
     // Operator '*' and '!' are allowed as long as the operand is trivial.
-    if (UO->getOpcode() == UO_Deref || UO->getOpcode() == UO_AddrOf ||
-        UO->getOpcode() == UO_LNot)
+    auto op = UO->getOpcode();
+    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot)
       return Visit(UO->getSubExpr());
 
+    if (UO->isIncrementOp() || UO->isDecrementOp()) {
+      // Allow increment or decrement of a POD type.
+      if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
+        if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
+          return Decl->isLocalVarDeclOrParm() &&
+                 Decl->getType().isPODType(Decl->getASTContext());
+      }
+    }
     // Other operators are non-trivial.
     return false;
   }
@@ -302,22 +334,6 @@ public:
   bool VisitConditionalOperator(const ConditionalOperator *CO) {
     // Ternary operators are trivial if their conditions & values are trivial.
     return VisitChildren(CO);
-  }
-
-  bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
-    if (auto *decl = DRE->getDecl()) {
-      if (isa<ParmVarDecl>(decl))
-        return true;
-      if (isa<EnumConstantDecl>(decl))
-        return true;
-      if (auto *VD = dyn_cast<VarDecl>(decl)) {
-        if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
-          return true;
-        auto *Init = VD->getInit();
-        return !Init || Visit(Init);
-      }
-    }
-    return false;
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) { return VisitChildren(E); }
@@ -436,6 +452,11 @@ public:
     return true;
   }
 
+  bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+    // The use of a variable is trivial.
+    return true;
+  }
+
   // Constant literal expressions are always trivial
   bool VisitIntegerLiteral(const IntegerLiteral *E) { return true; }
   bool VisitFloatingLiteral(const FloatingLiteral *E) { return true; }
@@ -449,7 +470,7 @@ public:
   }
 
 private:
-  CacheTy Cache;
+  CacheTy &Cache;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
@@ -471,6 +492,19 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   if (Result)
     Cache[D] = true;
 
+  return Result;
+}
+
+bool TrivialFunctionAnalysis::isTrivialImpl(
+    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
+  // If the statement isn't in the cache, conservatively assume that
+  // it's not trivial until analysis completes. Unlike a function case,
+  // we don't insert an entry into the cache until Visit returns
+  // since Visit* functions themselves make use of the cache.
+
+  TrivialFunctionAnalysisVisitor V(Cache);
+  bool Result = V.Visit(S);
+  assert(Cache.contains(S) && "Top-level statement not properly cached!");
   return Result;
 }
 
