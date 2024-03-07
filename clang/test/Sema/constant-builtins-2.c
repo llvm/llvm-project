@@ -242,8 +242,8 @@ char popcount12[__builtin_popcountg(0xF0F0U) == 8 ? 1 : -1];
 char popcount13[__builtin_popcountg(~0U) == BITSIZE(int) ? 1 : -1];
 char popcount14[__builtin_popcountg(~0UL) == BITSIZE(long) ? 1 : -1];
 char popcount15[__builtin_popcountg(~0ULL) == BITSIZE(long long) ? 1 : -1];
-char popcount15[__builtin_popcountg(~(unsigned __int128)0) == BITSIZE(__int128) ? 1 : -1];
-char popcount16[__builtin_popcountg(~(unsigned _BitInt(128))0) == BITSIZE(_BitInt(128)) ? 1 : -1];
+char popcount16[__builtin_popcountg(~(unsigned __int128)0) == BITSIZE(__int128) ? 1 : -1];
+char popcount17[__builtin_popcountg(~(unsigned _BitInt(128))0) == BITSIZE(_BitInt(128)) ? 1 : -1];
 
 char parity1[__builtin_parity(0) == 0 ? 1 : -1];
 char parity2[__builtin_parity(0xb821) == 0 ? 1 : -1];
