@@ -14,7 +14,9 @@
 #ifndef LLVM_CLANG_SEMA_SEMAOPENACC_H
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
+#include "clang/AST/DeclGroup.h"
 #include "clang/Basic/OpenACCKinds.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 
 namespace clang {
@@ -25,7 +27,7 @@ class SemaOpenACC {
 public:
   SemaOpenACC(Sema &S);
 
-  Sema &Sema;
+  Sema &SemaRef;
 
   /// Called after parsing an OpenACC Clause so that it can be checked.
   bool ActOnClause(OpenACCClauseKind ClauseKind, SourceLocation StartLoc);
