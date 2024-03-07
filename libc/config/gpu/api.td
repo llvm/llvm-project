@@ -4,6 +4,7 @@ include "spec/stdc.td"
 include "spec/posix.td"
 include "spec/gpu_ext.td"
 include "spec/gnu_ext.td"
+include "spec/stdc_ext.td"
 include "spec/llvm_libc_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
