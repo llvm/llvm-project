@@ -460,8 +460,8 @@ public:
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
-  bool AssumeLoopExists = false;
-  void setAssumeLoopExists();
+  bool AssumeLoopExits = false;
+  void setAssumeLoopExits();
   llvm::SmallPtrSet<llvm::BasicBlock *, 4> GuaranteedUnreachable;
 
   /// An enum describing the relationship between a SCEV and a basic block.
