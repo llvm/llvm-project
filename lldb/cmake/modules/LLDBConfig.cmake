@@ -78,7 +78,7 @@ option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb." 
 option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
   "Fail to configure if certain requirements are not met for testing." OFF)
 option(LLDB_TEST_USE_VENDOR_PACKAGES
-  "Use packages from lldb/third_party/Python/module instead of system deps." ON)
+  "Use packages from lldb/third_party/Python/module instead of system deps." OFF)
 
 # BEGIN SWIFT MOD
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
