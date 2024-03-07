@@ -6095,6 +6095,7 @@ ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
 // so that we can recover argument names from it.
 static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
   TypeLoc Target;
+
   if (const auto *T = Fn->getType().getTypePtr()->getAs<TypedefType>()) {
     Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
 
@@ -6102,6 +6103,11 @@ static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
     const auto *D = DR->getDecl();
     if (const auto *const VD = dyn_cast<VarDecl>(D)) {
       Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Fn)) {
+    const auto *MD = ME->getMemberDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(MD)) {
+      Target = FD->getTypeSourceInfo()->getTypeLoc();
     }
   }
 
