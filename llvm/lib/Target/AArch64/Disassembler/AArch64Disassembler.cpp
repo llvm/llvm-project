@@ -144,8 +144,8 @@ static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
 static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                           uint64_t Addr,
-                                           const MCDisassembler *Decoder);
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder);
 static DecodeStatus DecodePNRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
@@ -745,8 +745,8 @@ static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
 }
 
 static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                           uint64_t Addr,
-                                           const MCDisassembler *Decoder) {
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
   if (RegNo > 15)
     return Fail;
 
