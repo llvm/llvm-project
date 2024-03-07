@@ -166,7 +166,7 @@ body:             |
 # GCN-NEXT: S_WAIT_SAMPLECNT 0
 # GCN-NEXT: S_WAIT_BVHCNT 0
 # GCN-NEXT: S_WAIT_KMCNT 0
-# GCN-NEXT: S_WAITCNT_DEPCTR 4095
+# GCN-NEXT: S_WAITCNT_DEPCTR 4067
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec

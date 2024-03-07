@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-17,cxx11-14,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-17,cxx11-14,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-17,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx11-17,cxx11-14,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx11-17,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
@@ -485,11 +485,11 @@ namespace dr1358 { // dr1358: 3.1
   struct B : Virt {
     int member;
     constexpr B(NonLit u) : member(u) {}
-    // since-cxx11-error@-1 {{constexpr constructor's 1st parameter type 'NonLit' is not a literal type}}
-    //   since-cxx11-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    // cxx11-20-error@-1 {{constexpr constructor's 1st parameter type 'NonLit' is not a literal type}}
+    //   cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
     constexpr NonLit f(NonLit u) const { return NonLit(); }
-    // since-cxx11-error@-1 {{constexpr function's return type 'NonLit' is not a literal type}}
-    //   since-cxx11-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    // cxx11-20-error@-1 {{constexpr function's return type 'NonLit' is not a literal type}}
+    //   cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   };
 #endif
 }
@@ -498,13 +498,13 @@ namespace dr1359 { // dr1359: 3.5
 #if __cplusplus >= 201103L
   union A { constexpr A() = default; };
   union B { constexpr B() = default; int a; }; // #dr1359-B
-  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   union C { constexpr C() = default; int a, b; }; // #dr1359-C
-  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}} 
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}} 
   struct X { constexpr X() = default; union {}; };
   // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // #dr1359-Y
-  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
 
   constexpr A a = A();
   constexpr B b = B();

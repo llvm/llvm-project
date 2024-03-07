@@ -1060,6 +1060,7 @@ void SIFoldOperands::foldOperand(
       // Don't fold if OpToFold doesn't hold an aligned register.
       const TargetRegisterClass *RC =
           TRI->getRegClassForReg(*MRI, OpToFold.getReg());
+      assert(RC);
       if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
         unsigned SubReg = OpToFold.getSubReg();
         if (const TargetRegisterClass *SubRC =

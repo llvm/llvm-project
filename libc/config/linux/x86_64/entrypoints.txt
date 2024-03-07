@@ -152,6 +152,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_bit_width_ui
     libc.src.stdbit.stdc_bit_width_ul
     libc.src.stdbit.stdc_bit_width_ull
+    libc.src.stdbit.stdc_bit_floor_uc
+    libc.src.stdbit.stdc_bit_floor_us
+    libc.src.stdbit.stdc_bit_floor_ui
+    libc.src.stdbit.stdc_bit_floor_ul
+    libc.src.stdbit.stdc_bit_floor_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
@@ -495,6 +500,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtur
     # libc.src.stdfix.sqrtulk
     libc.src.stdfix.sqrtulr
+    libc.src.stdfix.uhksqrtus
+    libc.src.stdfix.uksqrtui
   )
 endif()
 

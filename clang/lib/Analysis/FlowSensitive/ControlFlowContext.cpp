@@ -94,6 +94,38 @@ static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
   return BlockReachable;
 }
 
+static llvm::DenseSet<const CFGBlock *>
+buildContainsExprConsumedInDifferentBlock(
+    const CFG &Cfg,
+    const llvm::DenseMap<const Stmt *, const CFGBlock *> &StmtToBlock) {
+  llvm::DenseSet<const CFGBlock *> Result;
+
+  auto CheckChildExprs = [&Result, &StmtToBlock](const Stmt *S,
+                                                 const CFGBlock *Block) {
+    for (const Stmt *Child : S->children()) {
+      if (!isa<Expr>(Child))
+        continue;
+      const CFGBlock *ChildBlock = StmtToBlock.lookup(Child);
+      if (ChildBlock != Block)
+        Result.insert(ChildBlock);
+    }
+  };
+
+  for (const CFGBlock *Block : Cfg) {
+    if (Block == nullptr)
+      continue;
+
+    for (const CFGElement &Element : *Block)
+      if (auto S = Element.getAs<CFGStmt>())
+        CheckChildExprs(S->getStmt(), Block);
+
+    if (const Stmt *TerminatorCond = Block->getTerminatorCondition())
+      CheckChildExprs(TerminatorCond, Block);
+  }
+
+  return Result;
+}
+
 llvm::Expected<ControlFlowContext>
 ControlFlowContext::build(const FunctionDecl &Func) {
   if (!Func.doesThisDeclarationHaveABody())
@@ -140,8 +172,12 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
 
   llvm::BitVector BlockReachable = findReachableBlocks(*Cfg);
 
+  llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock =
+      buildContainsExprConsumedInDifferentBlock(*Cfg, StmtToBlock);
+
   return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
-                            std::move(BlockReachable));
+                            std::move(BlockReachable),
+                            std::move(ContainsExprConsumedInDifferentBlock));
 }
 
 } // namespace dataflow

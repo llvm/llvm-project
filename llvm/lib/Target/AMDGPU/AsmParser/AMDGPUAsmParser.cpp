@@ -2021,12 +2021,8 @@ static bool isInlineableLiteralOp16(int64_t Val, MVT VT, bool HasInv2Pi) {
     return isInlinableIntLiteral(Val);
   }
 
-  if (VT.getScalarType() == MVT::f16)
-    return AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
-
-  assert(VT.getScalarType() == MVT::bf16);
-
-  return AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
+  // f16/v2f16 operands work correctly for all values.
+  return AMDGPU::isInlinableLiteral16(Val, HasInv2Pi);
 }
 
 bool AMDGPUOperand::isInlinableImm(MVT type) const {
@@ -2394,26 +2390,15 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
-    if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val))) {
-      Inst.addOperand(MCOperand::createImm(Val));
-      setImmKindConst();
-      return;
-    }
-
-    Inst.addOperand(MCOperand::createImm(Val & 0xffff));
-    setImmKindLiteral();
-    return;
-
-  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
-                                       AsmParser->hasInv2PiInlineImm())) {
+        AMDGPU::isInlinableLiteral16(static_cast<int16_t>(Val),
+                                     AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       setImmKindConst();
       return;
@@ -2440,17 +2425,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16: {
-    assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val)));
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
-  }
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
     assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
-                                          AsmParser->hasInv2PiInlineImm()));
+    assert(AMDGPU::isInlinableLiteral16(static_cast<int16_t>(Val),
+                                        AsmParser->hasInv2PiInlineImm()));
 
     Inst.addOperand(MCOperand::createImm(Val));
     return;
@@ -3640,19 +3620,7 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
         OperandType == AMDGPU::OPERAND_REG_IMM_V2BF16)
       return AMDGPU::isInlinableLiteralV2BF16(Val);
 
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED)
-      return AMDGPU::isInlinableLiteralFP16(Val, hasInv2PiInlineImm());
-
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_AC_BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED)
-      return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
-
-    llvm_unreachable("invalid operand type");
+    return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
   }
   default:
     llvm_unreachable("invalid operand size");
@@ -5438,8 +5406,8 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
       NumSGPRs = IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
   }
 
-  VGPRBlocks =
-      IsaInfo::getNumVGPRBlocks(&getSTI(), NumVGPRs, EnableWavefrontSize32);
+  VGPRBlocks = IsaInfo::getEncodedNumVGPRBlocks(&getSTI(), NumVGPRs,
+                                                EnableWavefrontSize32);
   SGPRBlocks = IsaInfo::getNumSGPRBlocks(&getSTI(), NumSGPRs);
 
   return false;

@@ -2761,9 +2761,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
             .addImm(0);
       }
       if (isExpertMode(MaxCounter)) {
-        // Waiting for DS_CNT above (amongst others) will have ensured
-        // that VM_VSRC is zero, so it's only necessary to wait for VA_VDST.
         unsigned Enc = AMDGPU::DepCtr::encodeFieldVaVdst(0);
+        Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, 0);
         BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_DEPCTR))
             .addImm(Enc);
       }

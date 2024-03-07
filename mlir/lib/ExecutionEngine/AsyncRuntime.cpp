@@ -72,7 +72,7 @@ private:
   }
 
   std::atomic<int64_t> numRefCountedObjects;
-  llvm::ThreadPool threadPool;
+  llvm::DefaultThreadPool threadPool;
 };
 
 // -------------------------------------------------------------------------- //
