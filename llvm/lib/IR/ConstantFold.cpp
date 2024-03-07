@@ -1735,30 +1735,3 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
 
   return nullptr;
 }
-
-Constant *llvm::ConstantFoldBinaryIntrinsicInstruction(Intrinsic::ID ID,
-                                                       Constant *LHS,
-                                                       Constant *RHS,
-                                                       Type *Ty) {
-  auto *LC = dyn_cast<ConstantFP>(LHS);
-  if (!LC)
-    return nullptr;
-  auto *RC = dyn_cast<ConstantFP>(RHS);
-  if (!RC)
-    return nullptr;
-  auto LVal = LC->getValueAPF();
-  auto RVal = RC->getValueAPF();
-  switch (ID) {
-  case Intrinsic::maxnum:
-    return ConstantFP::get(Ty, maxnum(LVal, RVal));
-  case Intrinsic::minnum:
-    return ConstantFP::get(Ty, minnum(LVal, RVal));
-  case Intrinsic::maximum:
-    return ConstantFP::get(Ty, maximum(LVal, RVal));
-  case Intrinsic::minimum:
-    return ConstantFP::get(Ty, minimum(LVal, RVal));
-  default:
-    break;
-  }
-  return nullptr;
-}
