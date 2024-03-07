@@ -472,6 +472,8 @@ def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x64_iu8>;
 def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x128_iu4>;
 def : SourceOfDivergence<int_amdgcn_wmma_f32_16x16x128_f8f6f4>;
 def : SourceOfDivergence<int_amdgcn_wmma_bf16_16x16x128_f8f6f4>;
+def : SourceOfDivergence<int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4>;
+def : SourceOfDivergence<int_amdgcn_wmma_scale_bf16_16x16x128_f8f6f4>;
 def : SourceOfDivergence<int_amdgcn_swmmac_f16_16x16x64_f16>;
 def : SourceOfDivergence<int_amdgcn_swmmac_bf16_16x16x64_bf16>;
 def : SourceOfDivergence<int_amdgcn_swmmac_f32_16x16x64_bf16>;
