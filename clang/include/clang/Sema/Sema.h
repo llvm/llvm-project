@@ -3918,8 +3918,6 @@ public:
                                             bool BestCase,
                                             MSInheritanceModel Model);
 
-  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
-
   EnforceTCBAttr *mergeEnforceTCBAttr(Decl *D, const EnforceTCBAttr &AL);
   EnforceTCBLeafAttr *mergeEnforceTCBLeafAttr(Decl *D,
                                               const EnforceTCBLeafAttr &AL);
@@ -5232,6 +5230,7 @@ public:
     enum ExpressionKind {
       EK_Decltype,
       EK_TemplateArgument,
+      EK_BoundsAttrArgument,
       EK_Other
     } ExprContext;
 
@@ -5348,6 +5347,12 @@ public:
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
   };
+
+  bool isBoundsAttrContext() const {
+    return ExprEvalContexts.back().ExprContext ==
+           ExpressionEvaluationContextRecord::ExpressionKind::
+               EK_BoundsAttrArgument;
+  }
 
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
@@ -11714,6 +11719,8 @@ public:
                               SourceLocation AttrLoc);
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
+
+  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
