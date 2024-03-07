@@ -103,6 +103,7 @@ module {
     %0 = call @tensor_mul(%sta, %stb)
       : (tensor<?x?x?xf64, #ST>, tensor<?x?x?xf64, #ST>) -> tensor<?x?x?xf64, #ST>
 
+    //
     // Verify results.
     //
     // CHECK:      ---- Sparse Tensor ----
