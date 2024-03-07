@@ -511,13 +511,11 @@ define void @foo7(i32 %n, ptr %a, i32 %x) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_LR_PH]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[TMP2]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
