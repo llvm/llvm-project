@@ -363,7 +363,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(UseCtors);
 
   static cl::opt<bool> RelaxELFRelocations(
-      "relax-elf-relocations",
+      "x86-relax-relocations",
       cl::desc(
           "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
       cl::init(true));
