@@ -877,6 +877,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+  setOperationAction(ISD::GET_FPENV, MVT::i64, Custom);
+  setOperationAction(ISD::SET_FPENV, MVT::i64, Custom);
 
   // TODO: Could move this to custom lowering, could benefit from combines on
   // extract of relevant bits.
@@ -4081,6 +4083,72 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
 }
 
+SDValue SITargetLowering::lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  if (Op.getValueType() != MVT::i64)
+    return Op;
+
+  uint32_t ModeHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23);
+  SDValue ModeHwRegImm = DAG.getTargetConstant(ModeHwReg, SL, MVT::i32);
+  uint32_t TrapHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_TRAPSTS, 0, 5);
+  SDValue TrapHwRegImm = DAG.getTargetConstant(TrapHwReg, SL, MVT::i32);
+
+  SDVTList VTList = DAG.getVTList(MVT::i32, MVT::Other);
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, SL, MVT::i32);
+  SDValue GetModeReg = DAG.getNode(ISD::INTRINSIC_W_CHAIN, SL, VTList,
+                                   Op.getOperand(0), IntrinID, ModeHwRegImm);
+  SDValue GetTrapReg = DAG.getNode(ISD::INTRINSIC_W_CHAIN, SL, VTList,
+                                   Op.getOperand(0), IntrinID, TrapHwRegImm);
+  SDValue TokenReg =
+      DAG.getNode(ISD::TokenFactor, SL, MVT::Other, GetModeReg.getValue(1),
+                  GetTrapReg.getValue(1));
+
+  SDValue CvtPtr =
+      DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, GetModeReg, GetTrapReg);
+  SDValue Result = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
+
+  return DAG.getMergeValues({Result, TokenReg}, SL);
+}
+
+SDValue SITargetLowering::lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  if (Op.getOperand(1).getValueType() != MVT::i64)
+    return Op;
+
+  SDValue Input = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Op.getOperand(1));
+  SDValue NewModeReg = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Input,
+                                   DAG.getConstant(0, SL, MVT::i32));
+  SDValue NewTrapReg = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Input,
+                                   DAG.getConstant(1, SL, MVT::i32));
+
+  SDValue ReadFirstLaneID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, SL, MVT::i32);
+  NewModeReg = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+                           ReadFirstLaneID, NewModeReg);
+  NewTrapReg = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+                           ReadFirstLaneID, NewTrapReg);
+
+  unsigned ModeHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23);
+  SDValue ModeHwRegImm = DAG.getTargetConstant(ModeHwReg, SL, MVT::i32);
+  unsigned TrapHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_TRAPSTS, 0, 5);
+  SDValue TrapHwRegImm = DAG.getTargetConstant(TrapHwReg, SL, MVT::i32);
+
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_setreg, SL, MVT::i32);
+  SDValue SetModeReg =
+      DAG.getNode(ISD::INTRINSIC_VOID, SL, MVT::Other, Op.getOperand(0),
+                  IntrinID, ModeHwRegImm, NewModeReg);
+  SDValue SetTrapReg =
+      DAG.getNode(ISD::INTRINSIC_VOID, SL, MVT::Other, Op.getOperand(0),
+                  IntrinID, TrapHwRegImm, NewTrapReg);
+  return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, SetTrapReg, SetModeReg);
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5681,6 +5749,10 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_EXTEND:
   case ISD::STRICT_FP_EXTEND:
     return lowerFP_EXTEND(Op, DAG);
+  case ISD::GET_FPENV:
+    return lowerGET_FPENV(Op, DAG);
+  case ISD::SET_FPENV:
+    return lowerSET_FPENV(Op, DAG);
   }
   return SDValue();
 }
