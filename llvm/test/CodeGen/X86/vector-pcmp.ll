@@ -1048,11 +1048,9 @@ define <8 x i32> @is_positive_mask_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ;
 ; AVX1-LABEL: is_positive_mask_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0]
+; AVX1-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -1310,11 +1308,9 @@ define <8 x i32> @is_positive_mask_load_v8i32(<8 x i32> %x, ptr %p) {
 ;
 ; AVX1-LABEL: is_positive_mask_load_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0]
+; AVX1-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -1664,10 +1660,10 @@ define <8 x i1> @is_positive_mask_v8i32_v8i1(<8 x i32> %x, <8 x i1> %y) {
 ;
 ; AVX1-LABEL: is_positive_mask_v8i32_v8i1:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0]
+; AVX1-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vzeroupper

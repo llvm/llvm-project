@@ -23391,6 +23391,136 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     }
   }
 
+  // We get bad codegen for v8i32 compares on avx targets (without avx2) so if
+  // possible convert to a v8f32 compare.
+  if (VTOp0 == MVT::v8i32 && Subtarget.hasAVX() && !Subtarget.hasAVX2()) {
+    std::optional<KnownBits> KnownOps[2];
+    // Check if an op is known to be in a certain range.
+    auto OpInRange = [&DAG, Op, &KnownOps](unsigned OpNo, bool CmpLT,
+                                           const APInt Bound) {
+      if (!KnownOps[OpNo].has_value())
+        KnownOps[OpNo] = DAG.computeKnownBits(Op.getOperand(OpNo));
+
+      if (KnownOps[OpNo]->isUnknown())
+        return false;
+
+      std::optional<bool> Res;
+      if (CmpLT)
+        Res = KnownBits::ult(*KnownOps[OpNo], KnownBits::makeConstant(Bound));
+      else
+        Res = KnownBits::ugt(*KnownOps[OpNo], KnownBits::makeConstant(Bound));
+      return Res.value_or(false);
+    };
+
+    bool OkayCvt = false;
+    bool OkayBitcast = false;
+
+    const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(MVT::f32);
+
+    // For cvt up to 1 << (Significand Precision), (1 << 24 for ieee float)
+    const APInt MaxConvertableCvt =
+        APInt::getOneBitSet(32, APFloat::semanticsPrecision(Sem));
+    // For bitcast up to (and including) first inf representation (0x7f800000 +
+    // 1 for ieee float)
+    const APInt MaxConvertableBitcast =
+        APFloat::getInf(Sem).bitcastToAPInt() + 1;
+    // For bitcast we also exclude de-norm values. This is absolutely necessary
+    // for strict semantic correctness, but DAZ (de-norm as zero) will break if
+    // we don't have this check.
+    const APInt MinConvertableBitcast =
+        APFloat::getSmallestNormalized(Sem).bitcastToAPInt() - 1;
+
+    assert(
+        MaxConvertableBitcast.getBitWidth() == 32 &&
+        MaxConvertableCvt == (1U << 24) &&
+        MaxConvertableBitcast == 0x7f800001 &&
+        MinConvertableBitcast.isNonNegative() &&
+        MaxConvertableBitcast.sgt(MinConvertableBitcast) &&
+        "This transform has only been verified to IEEE Single Precision Float");
+
+    // For bitcast we need both lhs/op1 u< MaxConvertableBitcast
+    // NB: It might be worth it to enable to bitcast version for unsigned avx2
+    // comparisons as they typically require multiple instructions to lower
+    // (they don't fit `vpcmpeq`/`vpcmpgt` well).
+    if (OpInRange(1, /*CmpLT*/ true, MaxConvertableBitcast) &&
+        OpInRange(1, /*CmpLT*/ false, MinConvertableBitcast) &&
+        OpInRange(0, /*CmpLT*/ true, MaxConvertableBitcast) &&
+        OpInRange(0, /*CmpLT*/ false, MinConvertableBitcast)) {
+      OkayBitcast = true;
+    }
+    // We want to convert icmp -> fcmp using `sitofp` iff one of the converts
+    // will be constant folded.
+    else if ((DAG.isConstantValueOfAnyType(peekThroughBitcasts(Op1)) ||
+              DAG.isConstantValueOfAnyType(peekThroughBitcasts(Op0)))) {
+      if (isUnsignedIntSetCC(Cond)) {
+        // For cvt + unsigned compare we need both lhs/rhs >= 0 and either lhs
+        // or rhs < MaxConvertableCvt
+
+        if (OpInRange(1, /*CmpLT*/ true, APInt::getSignedMinValue(32)) &&
+            OpInRange(0, /*CmpLT*/ true, APInt::getSignedMinValue(32)) &&
+            (OpInRange(1, /*CmpLT*/ true, MaxConvertableCvt) ||
+             OpInRange(0, /*CmpLT*/ true, MaxConvertableCvt)))
+          OkayCvt = true;
+      } else {
+        // For cvt + signed compare we need  abs(lhs) or abs(rhs) <
+        // MaxConvertableCvt
+        if (OpInRange(1, /*CmpLT*/ true, MaxConvertableCvt) ||
+            OpInRange(1, /*CmpLT*/ false, -MaxConvertableCvt) ||
+            OpInRange(0, /*CmpLT*/ true, MaxConvertableCvt) ||
+            OpInRange(0, /*CmpLT*/ false, -MaxConvertableCvt))
+          OkayCvt = true;
+      }
+    }
+    // TODO: If we can't prove any of the ranges, we could unconditionally lower
+    // `(icmp eq lhs, rhs)` as `(icmp eq (int_to_fp (xor lhs, rhs)), zero)`
+    if (OkayBitcast || OkayCvt) {
+      switch (Cond) {
+      default:
+        llvm_unreachable("Unexpected SETCC condition");
+        // Get the new FP condition. Note for the unsigned conditions we have
+        // verified its okay to convert to the signed version.
+      case ISD::SETULT:
+      case ISD::SETLT:
+        Cond = ISD::SETOLT;
+        break;
+      case ISD::SETUGT:
+      case ISD::SETGT:
+        Cond = ISD::SETOGT;
+        break;
+      case ISD::SETULE:
+      case ISD::SETLE:
+        Cond = ISD::SETOLE;
+        break;
+      case ISD::SETUGE:
+      case ISD::SETGE:
+        Cond = ISD::SETOGE;
+        break;
+      case ISD::SETEQ:
+        Cond = ISD::SETOEQ;
+        break;
+      case ISD::SETNE:
+        Cond = ISD::SETONE;
+        break;
+      }
+
+      MVT FpVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+      SDNodeFlags Flags;
+      Flags.setNoNaNs(true);
+      Flags.setNoInfs(true);
+      Flags.setNoSignedZeros(true);
+      if (OkayBitcast) {
+        Op0 = DAG.getBitcast(FpVT, Op0);
+        Op1 = DAG.getBitcast(FpVT, Op1);
+      } else {
+        Op0 = DAG.getNode(ISD::SINT_TO_FP, dl, FpVT, Op0);
+        Op1 = DAG.getNode(ISD::SINT_TO_FP, dl, FpVT, Op1);
+      }
+      Op0->setFlags(Flags);
+      Op1->setFlags(Flags);
+      return DAG.getSetCC(dl, VT, Op0, Op1, Cond);
+    }
+  }
+
   // Break 256-bit integer vector compare into smaller ones.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitIntVSETCC(VT, Op0, Op1, Cond, DAG, dl);

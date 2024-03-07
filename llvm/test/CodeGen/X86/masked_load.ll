@@ -1442,11 +1442,9 @@ define <8 x float> @load_v8f32_v8i32(<8 x i32> %trigger, ptr %addr, <8 x float> 
 ;
 ; AVX1-LABEL: load_v8f32_v8i32:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpeqps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX1-NEXT:    retq

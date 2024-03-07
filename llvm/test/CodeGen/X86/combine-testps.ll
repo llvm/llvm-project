@@ -171,13 +171,24 @@ define i32 @testpsz_128_signbit(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) 
 }
 
 define i32 @testpsnzc_256_signbit(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b) {
-; CHECK-LABEL: testpsnzc_256_signbit:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vtestps %ymm1, %ymm0
-; CHECK-NEXT:    cmovnel %esi, %eax
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; AVX-LABEL: testpsnzc_256_signbit:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vcmpltps %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    vtestps %ymm1, %ymm0
+; AVX-NEXT:    cmovnel %esi, %eax
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: testpsnzc_256_signbit:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    vtestps %ymm1, %ymm0
+; AVX2-NEXT:    cmovnel %esi, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
   %t0 = bitcast <8 x float> %c to <8 x i32>
   %t1 = icmp sgt <8 x i32> zeroinitializer, %t0
   %t2 = sext <8 x i1> %t1 to <8 x i32>

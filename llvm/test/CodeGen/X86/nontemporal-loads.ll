@@ -1806,23 +1806,19 @@ define <16 x i32> @test_masked_v16i32(ptr %addr, <16 x i32> %old, <16 x i32> %ma
 ;
 ; AVX1-LABEL: test_masked_v16i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; AVX1-NEXT:    vcvtdq2ps %ymm3, %ymm3
+; AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vcmpneq_oqps %ymm4, %ymm3, %ymm3
+; AVX1-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; AVX1-NEXT:    vcmpneq_oqps %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm4
 ; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm5
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
-; AVX1-NEXT:    vblendvps %ymm3, %ymm1, %ymm4, %ymm1
+; AVX1-NEXT:    vblendvps %ymm3, %ymm4, %ymm1, %ymm1
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
-; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    vblendvps %ymm2, %ymm3, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_masked_v16i32:

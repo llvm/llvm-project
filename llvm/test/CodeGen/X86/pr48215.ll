@@ -10,18 +10,17 @@ define i32 @PR48215(i32 %a0, i32 %a1)  {
 ; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    cltd
 ; AVX1-NEXT:    idivl %esi
-; AVX1-NEXT:    vmovd %edx, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4,5,6,7]
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm3
-; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [0,1,2,3]
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vmovmskps %ymm2, %ecx
-; AVX1-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vmovd %edx, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-NEXT:    vcmpltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vmovmskps %ymm0, %ecx
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX1-NEXT:    vmovmskps %xmm0, %eax
+; AVX1-NEXT:    xorl $15, %eax
 ; AVX1-NEXT:    addl %ecx, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

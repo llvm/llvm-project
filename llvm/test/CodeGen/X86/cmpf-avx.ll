@@ -6,21 +6,15 @@ define <8 x i32> @cmp_eq_bitcast(<8 x i32> %x) {
 ; X86-LABEL: cmp_eq_bitcast:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp_eq_bitcast:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
   %and = and <8 x i32> %x, <i32 7, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %cmp = icmp eq <8 x i32> %and, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
@@ -29,17 +23,17 @@ define <8 x i32> @cmp_eq_bitcast(<8 x i32> %x) {
 }
 
 define <8 x i32> @cmp_ne_sitofp(<8 x i32> %x) {
-; CHECK-LABEL: cmp_ne_sitofp:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vpxor %xmm3, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm3, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: cmp_ne_sitofp:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vcmpneq_oqps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: cmp_ne_sitofp:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vcmpneq_oqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    retq
   %cmp = icmp ne <8 x i32> %x, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %sext = sext <8 x i1> %cmp to <8 x i32>
   ret <8 x i32> %sext
@@ -72,14 +66,17 @@ define <8 x i32> @cmp_slt_fail_no_const(<8 x i32> %x, <8 x i32> %y) {
 }
 
 define <8 x i32> @cmp_eq_sitofp(<8 x i32> %x) {
-; CHECK-LABEL: cmp_eq_sitofp:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4294967293,4294967293,4294967293,4294967293]
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: cmp_eq_sitofp:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: cmp_eq_sitofp:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    retq
   %cmp = icmp eq <8 x i32> %x, <i32 -3, i32 -3, i32 -3, i32 -3, i32 -3, i32 -3, i32 -3, i32 -3>
   %sext = sext <8 x i1> %cmp to <8 x i32>
   ret <8 x i32> %sext
@@ -214,21 +211,15 @@ define <8 x i32> @cmp_ule_bitcast(<8 x i32> %xx) {
 ; X86-LABEL: cmp_ule_bitcast:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4,4,4,4]
-; X86-NEXT:    vpcmpgtd %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vcmpltps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp_ule_bitcast:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4,4,4,4]
-; X64-NEXT:    vpcmpgtd %xmm1, %xmm2, %xmm1
-; X64-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vcmpltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
   %x = and <8 x i32> %xx, <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>
   %cmp = icmp ule <8 x i32> %x, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
@@ -240,21 +231,17 @@ define <8 x i32> @cmp_ugt_sitofp(<8 x i32> %xx) {
 ; X86-LABEL: cmp_ugt_sitofp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; X86-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vbroadcastss {{.*#+}} ymm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; X86-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp_ugt_sitofp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,3,3,3]
-; X64-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vbroadcastss {{.*#+}} ymm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; X64-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %x = and <8 x i32> %xx, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
   %cmp = icmp ugt <8 x i32> %x, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
