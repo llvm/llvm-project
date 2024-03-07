@@ -235,6 +235,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
           >,
           FunctionSpec<
+              "memset_explicit",
+              RetValSpec<VoidPtr>,
+              [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
               "strcpy",
               RetValSpec<CharPtr>,
               [ArgSpec<CharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]

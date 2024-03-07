@@ -51,6 +51,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.memset_explicit
     libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
