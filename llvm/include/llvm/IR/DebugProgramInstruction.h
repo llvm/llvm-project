@@ -223,8 +223,18 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 class DPLabel : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
+  /// This constructor intentionally left private, so that it is only called via
+  /// "createUnresolvedDPLabel", which clearly expresses that it is for parsing
+  /// only.
+  DPLabel(MDNode *Label, MDNode *DL);
+
 public:
   DPLabel(DILabel *Label, DebugLoc DL);
+
+  /// For use during parsing; creates a DPLabel from as-of-yet unresolved
+  /// MDNodes. Trying to access the resulting DPLabel's fields before they are
+  /// resolved, or if they resolve to the wrong type, will result in a crash.
+  static DPLabel *createUnresolvedDPLabel(MDNode *Label, MDNode *DL);
 
   DPLabel *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
@@ -285,6 +295,29 @@ public:
   DPValue(Metadata *Value, DILocalVariable *Variable, DIExpression *Expression,
           DIAssignID *AssignID, Metadata *Address,
           DIExpression *AddressExpression, const DILocation *DI);
+
+private:
+  /// Private constructor for creating new instances during parsing only. Only
+  /// called through `createUnresolvedDPValue` below, which makes clear that
+  /// this is used for parsing only, and will later return a subclass depending
+  /// on which Type is passed.
+  DPValue(LocationType Type, Metadata *Val, MDNode *Variable,
+          MDNode *Expression, MDNode *AssignID, Metadata *Address,
+          MDNode *AddressExpression, MDNode *DI);
+
+public:
+  /// Used to create DPValues during parsing, where some metadata references may
+  /// still be unresolved. Although for some fields a generic `Metadata*`
+  /// argument is accepted for forward type-references, the verifier and
+  /// accessors will reject incorrect types later on. The function is used for
+  /// all types of DPValues for simplicity while parsing, but asserts if any
+  /// necessary fields are empty or unused fields are not empty, i.e. if the
+  /// #dbg_assign fields are used for a non-dbg-assign type.
+  static DPValue *createUnresolvedDPValue(LocationType Type, Metadata *Val,
+                                          MDNode *Variable, MDNode *Expression,
+                                          MDNode *AssignID, Metadata *Address,
+                                          MDNode *AddressExpression,
+                                          MDNode *DI);
 
   static DPValue *createDPVAssign(Value *Val, DILocalVariable *Variable,
                                   DIExpression *Expression,
