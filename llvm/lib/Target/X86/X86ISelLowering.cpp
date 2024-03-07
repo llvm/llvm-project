@@ -53266,14 +53266,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         APInt UpperBits = APInt::getBitsSetFrom(SrcVT.getScalarSizeInBits(),
                                                 OpVT.getScalarSizeInBits());
         const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-        auto *C = cast<ConstantSDNode>(RHS);
         if (DAG.MaskedValueIsZero(LHS.getOperand(0), UpperBits) &&
             TLI.isTypeLegal(LHS.getOperand(0).getValueType()))
           return DAG.getSetCC(DL, VT, LHS.getOperand(0),
-                              DAG.getConstant(C->getAPIntValue().zextOrTrunc(
-                                                  SrcVT.getScalarSizeInBits()),
-                                              DL, SrcVT),
-                              CC);
+                              DAG.getZExtOrTrunc(RHS, DL, SrcVT), CC);
       }
 
       // With C as a power of 2 and C != 0 and C != INT_MIN:
