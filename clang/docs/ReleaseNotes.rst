@@ -157,6 +157,9 @@ Non-comprehensive list of changes in this release
 - ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
   builtins are now constexpr and may be used in constant expressions.
 
+- Added ``__builtin_popcountg`` as a type-generic alternative to
+  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type.
+
 New Compiler Flags
 ------------------
 
