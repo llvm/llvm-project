@@ -39,7 +39,7 @@ static cl::opt<uint32_t>
 
 static cl::opt<bool>
     DumpAltInstructions("dump-alt-instructions",
-                        cl::desc("dump Linux alernative instructions info"),
+                        cl::desc("dump Linux alternative instructions info"),
                         cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
