@@ -207,12 +207,12 @@ void BreakpointResolver::SetSCMatchesByLine(
   const bool ShouldQueryLanguageFilter =
       GetBreakpoint()->GetTarget().GetEnableLanguageFilterForLineBreakpoints();
 
-  for (uint32_t i = 0; i < sc_list.GetSize(); ++i) {
+  for (const auto &sc : sc_list) {
     if (ShouldQueryLanguageFilter)
-      if (Language *lang = Language::FindPlugin(sc_list[i].GetLanguage());
-          lang && lang->IgnoreForLineBreakpoints(sc_list[i]))
+      if (Language *lang = Language::FindPlugin(sc.GetLanguage());
+          lang && lang->IgnoreForLineBreakpoints(sc))
         continue;
-    all_scs.push_back(sc_list[i]);
+    all_scs.push_back(sc);
   }
 
   while (all_scs.size()) {
