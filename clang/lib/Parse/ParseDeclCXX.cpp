@@ -4537,13 +4537,6 @@ bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
-  // Handle the '()' case for a better diagnostic.
-  if (Tok.is(tok::r_paren)) {
-    Diag(Tok.getLocation(), diag::err_expected_expression);
-    T.consumeClose();
-    return true;
-  }
-
   // [dcl.attr.assume]: The expression is potentially evaluated.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
