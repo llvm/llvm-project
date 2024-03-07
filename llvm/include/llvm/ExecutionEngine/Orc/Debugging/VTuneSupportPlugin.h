@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_AMPLIFIERSUPPORTPLUGIN_H
-#define LLVM_EXECUTIONENGINE_ORC_AMPLIFIERSUPPORTPLUGIN_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_DEBUGGING_VTUNESUPPORT_H
+#define LLVM_EXECUTIONENGINE_ORC_DEBUGGING_VTUNESUPPORT_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
