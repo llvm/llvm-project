@@ -868,8 +868,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.SGPRBlocks = IsaInfo::getNumSGPRBlocks(
       &STM, ProgInfo.NumSGPRsForWavesPerEU);
-  ProgInfo.VGPRBlocks = IsaInfo::getNumVGPRBlocks(
-      &STM, ProgInfo.NumVGPRsForWavesPerEU);
+  ProgInfo.VGPRBlocks =
+      IsaInfo::getEncodedNumVGPRBlocks(&STM, ProgInfo.NumVGPRsForWavesPerEU);
 
   const SIModeRegisterDefaults Mode = MFI->getMode();
 
