@@ -336,24 +336,6 @@ public:
     return VisitChildren(CO);
   }
 
-  bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
-    return WithCachedResult(DRE, [&]() {
-      if (auto *decl = DRE->getDecl()) {
-        if (isa<ParmVarDecl>(decl))
-          return true;
-        if (isa<EnumConstantDecl>(decl))
-          return true;
-        if (auto *VD = dyn_cast<VarDecl>(decl)) {
-          if (VD->hasConstantInitialization() && VD->getEvaluatedValue())
-            return true;
-          auto *Init = VD->getInit();
-          return !Init || Visit(Init);
-        }
-      }
-      return false;
-    });
-  }
-
   bool VisitAtomicExpr(const AtomicExpr *E) { return VisitChildren(E); }
 
   bool VisitStaticAssertDecl(const StaticAssertDecl *SAD) {
@@ -467,6 +449,11 @@ public:
 
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
     // nullptr is trivial.
+    return true;
+  }
+
+  bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+    // The use of a variable is trivial.
     return true;
   }
 
