@@ -500,7 +500,8 @@ Error LinuxKernelRewriter::readORCTables() {
     // Consume the status of the cursor.
     if (!IPCursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading ORC IP table");
+                               "out of bounds while reading ORC IP table: %s",
+                               toString(IPCursor.takeError()).c_str());
 
     if (IP < PrevIP && opts::Verbosity)
       BC.errs() << "BOLT-WARNING: out of order IP 0x" << Twine::utohexstr(IP)
@@ -522,7 +523,8 @@ Error LinuxKernelRewriter::readORCTables() {
     // Consume the status of the cursor.
     if (!ORCCursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading ORC");
+                               "out of bounds while reading ORC: %s",
+                               toString(ORCCursor.takeError()).c_str());
 
     if (Entry.ORC == NullORC)
       continue;
@@ -843,7 +845,8 @@ Error LinuxKernelRewriter::readStaticCalls() {
     // Consume the status of the cursor.
     if (!Cursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading static calls");
+                               "out of bounds while reading static calls: %s",
+                               toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
@@ -954,8 +957,10 @@ Error LinuxKernelRewriter::readExceptionTable() {
 
     // Consume the status of the cursor.
     if (!Cursor)
-      return createStringError(errc::executable_format_error,
-                               "out of bounds while reading exception table");
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading exception table: %s",
+          toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
@@ -1061,8 +1066,10 @@ Error LinuxKernelRewriter::readParaInstructions() {
     const uint8_t Len = DE.getU8(Cursor);
 
     if (!Cursor)
-      return createStringError(errc::executable_format_error,
-                               "out of bounds while reading .parainstructions");
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading .parainstructions: %s",
+          toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
@@ -1129,7 +1136,8 @@ Error LinuxKernelRewriter::readBugTable() {
 
     if (!Cursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading __bug_table");
+                               "out of bounds while reading __bug_table: %s",
+                               toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
@@ -1196,8 +1204,10 @@ Error LinuxKernelRewriter::readAltInstructions() {
     const uint8_t PadLen = opts::AltInstHasPadLen ? DE.getU8(Cursor) : 0;
 
     if (!Cursor)
-      return createStringError(errc::executable_format_error,
-                               "out of bounds while reading .altinstructions");
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading .altinstructions: %s",
+          toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
