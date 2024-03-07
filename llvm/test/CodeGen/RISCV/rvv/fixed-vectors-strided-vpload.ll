@@ -549,36 +549,36 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 ; CHECK-RV32-NEXT:  # %bb.1:
 ; CHECK-RV32-NEXT:    li a3, 32
 ; CHECK-RV32-NEXT:  .LBB42_2:
-; CHECK-RV32-NEXT:    mul a5, a3, a2
-; CHECK-RV32-NEXT:    addi a6, a4, -32
-; CHECK-RV32-NEXT:    sltu a4, a4, a6
-; CHECK-RV32-NEXT:    addi a4, a4, -1
-; CHECK-RV32-NEXT:    and a6, a4, a6
-; CHECK-RV32-NEXT:    li a4, 16
-; CHECK-RV32-NEXT:    add a5, a1, a5
-; CHECK-RV32-NEXT:    bltu a6, a4, .LBB42_4
+; CHECK-RV32-NEXT:    mul a6, a3, a2
+; CHECK-RV32-NEXT:    addi a5, a4, -32
+; CHECK-RV32-NEXT:    sltu a7, a4, a5
+; CHECK-RV32-NEXT:    addi a7, a7, -1
+; CHECK-RV32-NEXT:    and a7, a7, a5
+; CHECK-RV32-NEXT:    li a5, 16
+; CHECK-RV32-NEXT:    add a6, a1, a6
+; CHECK-RV32-NEXT:    bltu a7, a5, .LBB42_4
 ; CHECK-RV32-NEXT:  # %bb.3:
-; CHECK-RV32-NEXT:    li a6, 16
+; CHECK-RV32-NEXT:    li a7, 16
 ; CHECK-RV32-NEXT:  .LBB42_4:
 ; CHECK-RV32-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vi v0, v8, 4
-; CHECK-RV32-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v16, (a5), a2, v0.t
-; CHECK-RV32-NEXT:    addi a5, a3, -16
-; CHECK-RV32-NEXT:    sltu a6, a3, a5
-; CHECK-RV32-NEXT:    addi a6, a6, -1
-; CHECK-RV32-NEXT:    and a5, a6, a5
-; CHECK-RV32-NEXT:    bltu a3, a4, .LBB42_6
+; CHECK-RV32-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v16, (a6), a2, v0.t
+; CHECK-RV32-NEXT:    addi a6, a3, -16
+; CHECK-RV32-NEXT:    sltu a3, a3, a6
+; CHECK-RV32-NEXT:    addi a3, a3, -1
+; CHECK-RV32-NEXT:    and a3, a3, a6
+; CHECK-RV32-NEXT:    bltu a4, a5, .LBB42_6
 ; CHECK-RV32-NEXT:  # %bb.5:
-; CHECK-RV32-NEXT:    li a3, 16
+; CHECK-RV32-NEXT:    li a4, 16
 ; CHECK-RV32-NEXT:  .LBB42_6:
-; CHECK-RV32-NEXT:    mul a4, a3, a2
-; CHECK-RV32-NEXT:    add a4, a1, a4
+; CHECK-RV32-NEXT:    mul a5, a4, a2
+; CHECK-RV32-NEXT:    add a5, a1, a5
 ; CHECK-RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vi v0, v8, 2
-; CHECK-RV32-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v24, (a4), a2, v0.t
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v24, (a5), a2, v0.t
+; CHECK-RV32-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a1), a2, v0.t
 ; CHECK-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
@@ -599,36 +599,36 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 ; CHECK-RV64-NEXT:  # %bb.1:
 ; CHECK-RV64-NEXT:    li a4, 32
 ; CHECK-RV64-NEXT:  .LBB42_2:
-; CHECK-RV64-NEXT:    mul a5, a4, a2
-; CHECK-RV64-NEXT:    addi a6, a3, -32
-; CHECK-RV64-NEXT:    sltu a3, a3, a6
-; CHECK-RV64-NEXT:    addi a3, a3, -1
-; CHECK-RV64-NEXT:    and a6, a3, a6
-; CHECK-RV64-NEXT:    li a3, 16
-; CHECK-RV64-NEXT:    add a5, a1, a5
-; CHECK-RV64-NEXT:    bltu a6, a3, .LBB42_4
+; CHECK-RV64-NEXT:    mul a6, a4, a2
+; CHECK-RV64-NEXT:    addi a5, a3, -32
+; CHECK-RV64-NEXT:    sltu a7, a3, a5
+; CHECK-RV64-NEXT:    addi a7, a7, -1
+; CHECK-RV64-NEXT:    and a7, a7, a5
+; CHECK-RV64-NEXT:    li a5, 16
+; CHECK-RV64-NEXT:    add a6, a1, a6
+; CHECK-RV64-NEXT:    bltu a7, a5, .LBB42_4
 ; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    li a6, 16
+; CHECK-RV64-NEXT:    li a7, 16
 ; CHECK-RV64-NEXT:  .LBB42_4:
 ; CHECK-RV64-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vi v0, v8, 4
-; CHECK-RV64-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    vlse64.v v16, (a5), a2, v0.t
-; CHECK-RV64-NEXT:    addi a5, a4, -16
-; CHECK-RV64-NEXT:    sltu a6, a4, a5
-; CHECK-RV64-NEXT:    addi a6, a6, -1
-; CHECK-RV64-NEXT:    and a5, a6, a5
-; CHECK-RV64-NEXT:    bltu a4, a3, .LBB42_6
+; CHECK-RV64-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    vlse64.v v16, (a6), a2, v0.t
+; CHECK-RV64-NEXT:    addi a6, a4, -16
+; CHECK-RV64-NEXT:    sltu a4, a4, a6
+; CHECK-RV64-NEXT:    addi a4, a4, -1
+; CHECK-RV64-NEXT:    and a4, a4, a6
+; CHECK-RV64-NEXT:    bltu a3, a5, .LBB42_6
 ; CHECK-RV64-NEXT:  # %bb.5:
-; CHECK-RV64-NEXT:    li a4, 16
+; CHECK-RV64-NEXT:    li a3, 16
 ; CHECK-RV64-NEXT:  .LBB42_6:
-; CHECK-RV64-NEXT:    mul a3, a4, a2
-; CHECK-RV64-NEXT:    add a3, a1, a3
+; CHECK-RV64-NEXT:    mul a5, a3, a2
+; CHECK-RV64-NEXT:    add a5, a1, a5
 ; CHECK-RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vi v0, v8, 2
-; CHECK-RV64-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    vlse64.v v24, (a3), a2, v0.t
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    vlse64.v v24, (a5), a2, v0.t
+; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a1), a2, v0.t
 ; CHECK-RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
