@@ -850,6 +850,13 @@ def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped
   let HasExtDPP = 0;
 }
 
+def VOP3_PERMLANE_NOOPSEL_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>> {
+  let Ins64 = (ins VRegSrc_32:$src0, SSrc_b32:$src1, SSrc_b32:$src2, VGPR_32:$vdst_in);
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
+
 def opsel_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(
       N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
@@ -872,6 +879,12 @@ class PermlaneVarPat<SDPatternOperator permlane,
             timm:$fi, timm:$bc),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         VGPR_32:$src1, VGPR_32:$vdst_in)
+>;
+
+class PermlaneNoDppPat<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
 
 class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f> {
@@ -956,6 +969,14 @@ let SubtargetPredicate = isGFX12Plus in {
   def : PermlaneVarPat<int_amdgcn_permlanex16_var, V_PERMLANEX16_VAR_B32_e64>;
 
 } // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = isGFX12_10Plus in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    defm V_PERMLANE_BCAST_B32 : VOP3Inst<"v_permlane_bcast_b32", VOP3_PERMLANE_NOOPSEL_Profile>;
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+
+  def : PermlaneNoDppPat<int_amdgcn_permlane_bcast,  V_PERMLANE_BCAST_B32_e64>;
+} // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = HasBitOp3Insts in {
   let isReMaterializable = 1 in {
@@ -1293,6 +1314,7 @@ defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1210<0x25e>;
 defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1210<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1210<0x260>;
 defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1210<0x261>;
+defm V_PERMLANE_BCAST_B32 : VOP3Only_Real_Base_gfx12<0x270>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

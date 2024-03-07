@@ -817,3 +817,28 @@ void test_permlane16_swap(global uint* out, uint old, uint src) {
   *out = __builtin_amdgcn_permlane16_swap(old, src, true, false);
   *out = __builtin_amdgcn_permlane16_swap(old, src, false, true);
 }
+
+// CHECK-LABEL: @test_permlane_bcast(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC2_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr addrspace(5) [[OLD_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[SRC2:%.*]], ptr addrspace(5) [[SRC2_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[OLD_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC0_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[SRC2_ADDR]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.permlane.bcast(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]])
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(1) [[TMP5]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_permlane_bcast(global uint* out, uint old, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_permlane_bcast(old, src0, src1, src2);
+}
