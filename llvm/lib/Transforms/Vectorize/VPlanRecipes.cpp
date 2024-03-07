@@ -274,7 +274,7 @@ VPInstruction::VPInstruction(unsigned Opcode,
   assert(isFPMathOp() && "this op can't take fast-math flags");
 }
 
-bool VPInstruction::generatesScalars() const {
+bool VPInstruction::doesGenerateScalars() const {
   return Opcode == VPInstruction::PtrAdd;
 }
 
@@ -536,12 +536,18 @@ void VPInstruction::execute(VPTransformState &State) {
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    if (generatesScalars()) {
-      unsigned NumLanes =
-          vputils::onlyFirstLaneUsed(this) ? 1 : State.VF.getKnownMinValue();
-      if (getOpcode() == VPInstruction::ComputeReductionResult)
-        NumLanes = 1;
-      for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+    bool OnlyFirstLaneDefined =
+        vputils::onlyFirstLaneUsed(this) ||
+        getOpcode() == VPInstruction::ComputeReductionResult;
+    if (doesGenerateScalars()) {
+      if (OnlyFirstLaneDefined) {
+        Value *P = generatePerLane(State, VPIteration(Part, 0));
+        State.set(this, P, Part, /*IsScalar*/ true);
+        continue;
+      }
+
+      for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
+           Lane != NumLanes; ++Lane) {
         Value *P = generatePerLane(State, VPIteration(Part, Lane));
         State.set(this, P, VPIteration(Part, Lane));
       }
@@ -555,8 +561,7 @@ void VPInstruction::execute(VPTransformState &State) {
 
     bool IsVector = GeneratedValue->getType()->isVectorTy();
     State.set(this, GeneratedValue, Part, !IsVector);
-    assert((IsVector || getOpcode() == VPInstruction::ComputeReductionResult ||
-            State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+    assert((IsVector || OnlyFirstLaneDefined || State.VF.isScalar()) &&
            "scalar value but not only first lane used");
   }
 }

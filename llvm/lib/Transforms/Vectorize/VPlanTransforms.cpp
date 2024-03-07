@@ -586,6 +586,8 @@ static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
     }
 
+    // Replace widened induction with scalar steps for users that only use
+    // scalars.
     auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (!WideIV)
       continue;

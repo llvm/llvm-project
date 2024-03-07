@@ -861,7 +861,7 @@ void VPlan::execute(VPTransformState *State) {
       } else {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
         assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-               "recipe only generating scalars should have been replaced");
+               "recipe generating only scalars should have been replaced");
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }

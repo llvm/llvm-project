@@ -1155,6 +1155,9 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    // Add an offset in bytes (second operand) to a base pointer (first
+    // operand). Only generates scalar valuse (either for the first lane only or
+    // for all lanes, depending on its uses).
     PtrAdd,
   };
 
@@ -1165,13 +1168,18 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   const std::string Name;
 
-  bool generatesScalars() const;
+  /// Returns true if this VPInstruction generates scalar values only.
+  bool doesGenerateScalars() const;
 
-  /// Utility method serving execute(): generates a single instance of the
-  /// modeled instruction. \returns the generated value for \p Part.
-  /// In some cases an existing value is returned rather than a generated
+  /// Utility methods serving execute(): generates a single instance of the
+  /// modeled instruction for a given part. \returns the generated value for \p
+  /// Part. In some cases an existing value is returned rather than a generated
   /// one.
   Value *generatePerPart(VPTransformState &State, unsigned Part);
+
+  /// Utility methods serving execute(): generates a scalar single instance of
+  /// the modeled instruction for a given lane. \returns the scalar generated
+  /// value for lane \p Lane.
   Value *generatePerLane(VPTransformState &State, const VPIteration &Lane);
 
 #if !defined(NDEBUG)
