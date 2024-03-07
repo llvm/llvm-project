@@ -27,7 +27,9 @@ add_libc_test(
   SRCS
     math_extras_test.cpp
   DEPENDS
+    libc.src.__support.integer_literals
     libc.src.__support.math_extras
+    libc.src.__support.uint128
 )
 
 add_libc_test(
