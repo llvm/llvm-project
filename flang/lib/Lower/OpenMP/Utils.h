@@ -21,6 +21,10 @@ namespace fir {
 class FirOpBuilder;
 } // namespace fir
 
+namespace llvm::omp {
+enum class OpenMPOffloadMappingFlags : uint64_t;
+} // namespace llvm::omp
+
 namespace Fortran {
 
 namespace semantics {
@@ -49,6 +53,11 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::SmallVector<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal = false);
+
+void checkAndApplyDeclTargetMapFlags(
+    Fortran::lower::AbstractConverter &converter,
+    llvm::omp::OpenMPOffloadMappingFlags &mapFlags,
+    const Fortran::semantics::Symbol &symbol);
 
 void gatherFuncAndVarSyms(
     const Fortran::parser::OmpObjectList &objList,

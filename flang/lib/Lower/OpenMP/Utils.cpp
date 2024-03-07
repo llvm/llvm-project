@@ -34,6 +34,22 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+void checkAndApplyDeclTargetMapFlags(
+    Fortran::lower::AbstractConverter &converter,
+    llvm::omp::OpenMPOffloadMappingFlags &mapFlags,
+    const Fortran::semantics::Symbol &symbol) {
+  if (auto declareTargetOp =
+          llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(
+              converter.getModuleOp().lookupSymbol(
+                  converter.mangleName(symbol)))) {
+    // Only Link clauses have OMP_MAP_PTR_AND_OBJ applied, To clause
+    // seems to function differently.
+    if (declareTargetOp.getDeclareTargetCaptureClause() ==
+        mlir::omp::DeclareTargetCaptureClause::link)
+      mapFlags |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+  }
+}
+
 void genObjectList(const Fortran::parser::OmpObjectList &objectList,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {

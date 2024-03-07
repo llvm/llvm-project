@@ -29,6 +29,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <iterator>
 
 namespace fir {
@@ -76,6 +77,11 @@ class OMPDescriptorMapInfoGenPass
     mlir::Value baseAddrAddr = builder.create<fir::BoxOffsetOp>(
         loc, descriptor, fir::BoxFieldAttr::base_addr);
 
+    llvm::omp::OpenMPOffloadMappingFlags baseAddrMapFlag =
+        llvm::omp::OpenMPOffloadMappingFlags(op.getMapType().value());
+    baseAddrMapFlag |=
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+
     // Member of the descriptor pointing at the allocated data
     mlir::Value baseAddr = builder.create<mlir::omp::MapInfoOp>(
         loc, baseAddrAddr.getType(), descriptor,
@@ -83,8 +89,11 @@ class OMPDescriptorMapInfoGenPass
             fir::unwrapRefType(baseAddrAddr.getType()))
             .getElementType(),
         baseAddrAddr, mlir::SmallVector<mlir::Value>{}, op.getBounds(),
-        builder.getIntegerAttr(builder.getIntegerType(64, false),
-                               op.getMapType().value()),
+        builder.getIntegerAttr(
+            builder.getIntegerType(64, false),
+            static_cast<
+                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+                baseAddrMapFlag)),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         builder.getStringAttr("") /*name*/);

@@ -203,6 +203,10 @@ bool ClauseProcessor::processMotionClauses(
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
         for (const Fortran::parser::OmpObject &ompObject : motionClause->v.v) {
+          llvm::omp::OpenMPOffloadMappingFlags objectsMapTypeBits = mapTypeBits;
+          checkAndApplyDeclTargetMapFlags(converter, objectsMapTypeBits,
+                                          *getOmpObjectSymbol(ompObject));
+
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           Fortran::lower::AddrAndBoundsInfo info =
@@ -226,7 +230,7 @@ bool ClauseProcessor::processMotionClauses(
               asFortran.str(), bounds, {},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                  mapTypeBits),
+                  objectsMapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
           mapOperands.push_back(mapOp);

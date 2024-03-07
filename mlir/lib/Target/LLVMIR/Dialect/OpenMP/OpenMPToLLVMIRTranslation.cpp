@@ -1820,6 +1820,18 @@ uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
   return dl.getTypeSizeInBits(arrTy.getElementType());
 }
 
+// This may be a bit of a naive check, the intent is to verify if the
+// mapped data being passed is a pointer -> pointee that requires special
+// handling in certain cases. There may be a better way to verify this, but
+// unfortunately with opaque pointers we lose the ability to easily check if
+// something is a pointer whilst maintaining access to the underlying type.
+static bool checkIfPointerMap(llvm::omp::OpenMPOffloadMappingFlags mapFlag) {
+  return static_cast<
+             std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+             mapFlag &
+             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ) != 0;
+}
+
 // This function calculates the size to be offloaded for a specified type, given
 // its associated map clause (which can contain bounds information which affects
 // the total size), this size is calculated based on the underlying element type
@@ -2034,12 +2046,13 @@ static void processMapMembersWithParent(
     assert(memberDataIdx >= 0 && "could not find mapped member of structure");
 
     // Same MemberOfFlag to indicate its link with parent and other members
-    // of, and we flag that it's part of a pointer and object coupling.
+    // of
     auto mapFlag =
         llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType().value());
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
+    mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
-    mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+
     combinedInfo.Types.emplace_back(mapFlag);
     combinedInfo.DevicePointers.emplace_back(
         llvm::OpenMPIRBuilder::DeviceInfoTy::None);
@@ -2159,15 +2172,13 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
     // OMP_MAP_TARGET_PARAM as they are not passed as parameters, they're
     // marked with OMP_MAP_PTR_AND_OBJ instead.
     auto mapFlag = mapData.Types[i];
-    if (mapData.IsDeclareTarget[i])
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
-    else if (isTargetParams)
+    if (isTargetParams && !mapData.IsDeclareTarget[i])
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
     if (auto mapInfoOp = dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[i]))
       if (mapInfoOp.getMapCaptureType().value() ==
               mlir::omp::VariableCaptureKind::ByCopy &&
-          !mapInfoOp.getVarType().isa<LLVM::LLVMPointerType>())
+          !checkIfPointerMap(mapFlag))
         mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
 
     combinedInfo.BasePointers.emplace_back(mapData.BasePointers[i]);
@@ -2630,10 +2641,14 @@ createAlteredByCaptureMap(MapInfoData &mapData,
       mlir::omp::VariableCaptureKind captureKind =
           mlir::omp::VariableCaptureKind::ByRef;
 
+      bool isPtrTy = false;
       if (auto mapOp = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
               mapData.MapClause[i])) {
         captureKind = mapOp.getMapCaptureType().value_or(
             mlir::omp::VariableCaptureKind::ByRef);
+
+        isPtrTy = checkIfPointerMap(
+            llvm::omp::OpenMPOffloadMappingFlags(mapOp.getMapType().value()));
       }
 
       switch (captureKind) {
@@ -2673,7 +2688,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
         else
           newV = mapData.Pointers[i];
 
-        if (!type->isPointerTy()) {
+        if (!isPtrTy) {
           auto curInsert = builder.saveIP();
           builder.restoreIP(findAllocaInsertPoint(builder, moduleTranslation));
           auto *memTempAlloc =
