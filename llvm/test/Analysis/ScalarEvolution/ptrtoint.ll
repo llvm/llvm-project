@@ -229,7 +229,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X64-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
 ; X64-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
-; X64-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; X64-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
 ; X64-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X64-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X64-NEXT:   Predicates:
@@ -249,7 +249,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X32-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
 ; X32-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
-; X32-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; X32-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
 ; X32-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X32-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X32-NEXT:   Predicates:
@@ -397,7 +397,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    --> {(1 + %arg),+,1}<nuw><%bb6> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64) + %arg) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_char
 ; X64-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
-; X64-NEXT:  Loop %bb6: constant max backedge-taken count is -1
+; X64-NEXT:  Loop %bb6: constant max backedge-taken count is i64 -1
 ; X64-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
 ; X64-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
 ; X64-NEXT:   Predicates:
@@ -425,7 +425,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    --> {(1 + %arg),+,1}<nuw><%bb6> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_char
 ; X32-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
-; X32-NEXT:  Loop %bb6: constant max backedge-taken count is -1
+; X32-NEXT:  Loop %bb6: constant max backedge-taken count is i32 -1
 ; X32-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
 ; X32-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
 ; X32-NEXT:   Predicates:
@@ -486,7 +486,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    --> {(4 + %arg),+,4}<nuw><%bb6> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_int
 ; X64-NEXT:  Loop %bb6: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) /u 4)
-; X64-NEXT:  Loop %bb6: constant max backedge-taken count is 4611686018427387903
+; X64-NEXT:  Loop %bb6: constant max backedge-taken count is i64 4611686018427387903
 ; X64-NEXT:  Loop %bb6: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) /u 4)
 ; X64-NEXT:  Loop %bb6: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) /u 4)
 ; X64-NEXT:   Predicates:
@@ -516,7 +516,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    --> {(4 + %arg),+,4}<nuw><%bb6> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_int
 ; X32-NEXT:  Loop %bb6: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) /u 4)
-; X32-NEXT:  Loop %bb6: constant max backedge-taken count is 1073741823
+; X32-NEXT:  Loop %bb6: constant max backedge-taken count is i32 1073741823
 ; X32-NEXT:  Loop %bb6: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) /u 4)
 ; X32-NEXT:  Loop %bb6: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) /u 4)
 ; X32-NEXT:   Predicates:
@@ -564,7 +564,7 @@ define void @ptrtoint_of_integer(ptr %arg, i64 %arg1, i1 %arg2) local_unnamed_ad
 ; X64-NEXT:  Loop %bb8: <multiple exits> Unpredictable backedge-taken count.
 ; X64-NEXT:    exit count for bb8: ***COULDNOTCOMPUTE***
 ; X64-NEXT:    exit count for bb10: (-2 + (-1 * %arg1) + (ptrtoint ptr %arg to i64))
-; X64-NEXT:  Loop %bb8: constant max backedge-taken count is -1
+; X64-NEXT:  Loop %bb8: constant max backedge-taken count is i64 -1
 ; X64-NEXT:  Loop %bb8: symbolic max backedge-taken count is (-2 + (-1 * %arg1) + (ptrtoint ptr %arg to i64))
 ; X64-NEXT:    symbolic max exit count for bb8: ***COULDNOTCOMPUTE***
 ; X64-NEXT:    symbolic max exit count for bb10: (-2 + (-1 * %arg1) + (ptrtoint ptr %arg to i64))
@@ -584,7 +584,7 @@ define void @ptrtoint_of_integer(ptr %arg, i64 %arg1, i1 %arg2) local_unnamed_ad
 ; X32-NEXT:  Loop %bb8: <multiple exits> Unpredictable backedge-taken count.
 ; X32-NEXT:    exit count for bb8: ***COULDNOTCOMPUTE***
 ; X32-NEXT:    exit count for bb10: (-2 + (zext i32 (ptrtoint ptr %arg to i32) to i64) + (-1 * %arg1))
-; X32-NEXT:  Loop %bb8: constant max backedge-taken count is -1
+; X32-NEXT:  Loop %bb8: constant max backedge-taken count is i64 -1
 ; X32-NEXT:  Loop %bb8: symbolic max backedge-taken count is (-2 + (zext i32 (ptrtoint ptr %arg to i32) to i64) + (-1 * %arg1))
 ; X32-NEXT:    symbolic max exit count for bb8: ***COULDNOTCOMPUTE***
 ; X32-NEXT:    symbolic max exit count for bb10: (-2 + (zext i32 (ptrtoint ptr %arg to i32) to i64) + (-1 * %arg1))
