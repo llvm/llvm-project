@@ -520,9 +520,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
   NoAutoPaddingScope NoPadScope(*OutStreamer);
   bool Is64Bits = getSubtarget().is64Bit();
-  bool Is64BitsLP64 = MI.getOpcode() == X86::TLS_addr64 ||
-                      MI.getOpcode() == X86::TLS_base_addr64 ||
-                      MI.getOpcode() == X86::TLS_desc64;
+  bool Is64BitsLP64 = getSubtarget().isTarget64BitLP64();
   MCContext &Ctx = OutStreamer->getContext();
 
   MCSymbolRefExpr::VariantKind SRVK;

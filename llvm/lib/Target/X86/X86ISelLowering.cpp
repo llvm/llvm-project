@@ -18527,6 +18527,7 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
   if (LocalDynamic && UseTLSDESC) {
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
     auto UI = TGA->use_begin();
+    // Reuse existing GetTLSADDR node if we can find it.
     if (UI != TGA->use_end())
       return SDValue(*UI->use_begin()->use_begin(), 0);
   } else {
@@ -18557,14 +18558,13 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
     return Ret;
 
   const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
-  MVT VT = Subtarget.isTarget64BitLP64() ? MVT::i64 : MVT::i32;
   unsigned Seg = Subtarget.is64Bit() ? X86AS::FS : X86AS::GS;
 
   Value *Ptr = Constant::getNullValue(PointerType::get(*DAG.getContext(), Seg));
   SDValue Offset =
-      DAG.getLoad(VT, dl, DAG.getEntryNode(), DAG.getIntPtrConstant(0, dl),
+      DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), DAG.getIntPtrConstant(0, dl),
                   MachinePointerInfo(Ptr));
-  return DAG.getNode(ISD::ADD, dl, VT, Ret, Offset);
+  return DAG.getNode(ISD::ADD, dl, PtrVT, Ret, Offset);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 32 bit
