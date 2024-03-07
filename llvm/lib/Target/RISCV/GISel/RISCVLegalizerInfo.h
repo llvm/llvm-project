@@ -43,6 +43,7 @@ private:
 
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeVScale(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeExt(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
 };
 } // end namespace llvm
 #endif
