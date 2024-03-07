@@ -2268,6 +2268,30 @@ public:
   }
 };
 
+class CIRTrapLowering : public mlir::OpConversionPattern<mlir::cir::TrapOp> {
+public:
+  using OpConversionPattern<mlir::cir::TrapOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::TrapOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    rewriter.eraseOp(op);
+
+    auto llvmTrapIntrinsicType =
+        mlir::LLVM::LLVMVoidType::get(op->getContext());
+    rewriter.create<mlir::LLVM::CallIntrinsicOp>(
+        loc, llvmTrapIntrinsicType, "llvm.trap", mlir::ValueRange{});
+
+    // Note that the call to llvm.trap is not a terminator in LLVM dialect.
+    // So we must emit an additional llvm.unreachable to terminate the current
+    // block.
+    rewriter.create<mlir::LLVM::UnreachableOp>(loc);
+
+    return mlir::success();
+  }
+};
+
 class CIRInlineAsmOpLowering
     : public mlir::OpConversionPattern<mlir::cir::InlineAsmOp> {
 
@@ -2315,8 +2339,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRStackSaveLowering,
-      CIRStackRestoreLowering, CIRUnreachableLowering, CIRInlineAsmOpLowering>(
-      converter, patterns.getContext());
+      CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
+      CIRInlineAsmOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
