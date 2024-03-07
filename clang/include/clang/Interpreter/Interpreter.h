@@ -48,8 +48,6 @@ public:
     UserArgs = Args;
   }
 
-  void SetTargetTriple(std::string TT) { TargetTriple = TT; }
-
   // General C++
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCpp();
 
@@ -64,12 +62,11 @@ public:
 
 private:
   static llvm::Expected<std::unique_ptr<CompilerInstance>>
-  create(std::string TT, std::vector<const char *> &ClangArgv);
+  create(std::vector<const char *> &ClangArgv);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
 
   std::vector<const char *> UserArgs;
-  std::optional<std::string> TargetTriple;
 
   llvm::StringRef OffloadArch;
   llvm::StringRef CudaSDKPath;

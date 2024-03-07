@@ -97,6 +97,8 @@ C++23 Feature Support
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
 
+- Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Compiler flags ``-std=c++2c`` and ``-std=gnu++2c`` have been added for experimental C++2c implementation work.
@@ -324,6 +326,8 @@ Bug Fixes to C++ Support
   Fixes (#GH80630)
 - Fix a crash when an explicit template argument list is used with a name for which lookup
   finds a non-template function and a dependent using declarator.
+- Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
+  calculation. (#GH56556), (#GH82849).
 - Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
   a member-function against a non member function or a member-function with an
   explicit object parameter against a member function with no explicit object parameter

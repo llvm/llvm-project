@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -481,6 +482,7 @@ enum Kind {
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
   DIOp,             // DIOpFoo
+  DbgRecordType,    // dbg_foo
 
   // Type valued tokens (TyVal).
   Type,

@@ -9380,9 +9380,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
                                        LinkCommand->getExecutable()));
-  CmdArgs.push_back("--");
   for (const char *LinkArg : LinkCommand->getArguments())
     CmdArgs.push_back(LinkArg);
+
+  if (Args.hasFlag(options::OPT_offload_compress,
+                   options::OPT_no_offload_compress, false))
+    CmdArgs.push_back("--compress");
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));

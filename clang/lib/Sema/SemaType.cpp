@@ -1561,7 +1561,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
-        !S.getLangOpts().SYCLIsDevice &&
+        !S.getLangOpts().SYCLIsDevice && !S.getLangOpts().CUDAIsDevice &&
         !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";

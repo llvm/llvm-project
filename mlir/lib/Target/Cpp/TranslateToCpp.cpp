@@ -71,9 +71,17 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
-      .Case<emitc::AddOp>([&](auto op) { return 11; })
-      .Case<emitc::ApplyOp>([&](auto op) { return 13; })
-      .Case<emitc::CastOp>([&](auto op) { return 13; })
+      .Case<emitc::AddOp>([&](auto op) { return 12; })
+      .Case<emitc::ApplyOp>([&](auto op) { return 15; })
+      .Case<emitc::BitwiseAndOp>([&](auto op) { return 7; })
+      .Case<emitc::BitwiseLeftShiftOp>([&](auto op) { return 11; })
+      .Case<emitc::BitwiseNotOp>([&](auto op) { return 15; })
+      .Case<emitc::BitwiseOrOp>([&](auto op) { return 5; })
+      .Case<emitc::BitwiseRightShiftOp>([&](auto op) { return 11; })
+      .Case<emitc::BitwiseXorOp>([&](auto op) { return 6; })
+      .Case<emitc::CallOp>([&](auto op) { return 16; })
+      .Case<emitc::CallOpaqueOp>([&](auto op) { return 16; })
+      .Case<emitc::CastOp>([&](auto op) { return 15; })
       .Case<emitc::CmpOp>([&](auto op) -> FailureOr<int> {
         switch (op.getPredicate()) {
         case emitc::CmpPredicate::eq:
@@ -89,11 +97,13 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
         }
         return op->emitError("unsupported cmp predicate");
       })
-      .Case<emitc::DivOp>([&](auto op) { return 12; })
-      .Case<emitc::MulOp>([&](auto op) { return 12; })
-      .Case<emitc::RemOp>([&](auto op) { return 12; })
-      .Case<emitc::SubOp>([&](auto op) { return 11; })
-      .Case<emitc::CallOpaqueOp>([&](auto op) { return 14; })
+      .Case<emitc::DivOp>([&](auto op) { return 13; })
+      .Case<emitc::LogicalAndOp>([&](auto op) { return 4; })
+      .Case<emitc::LogicalNotOp>([&](auto op) { return 15; })
+      .Case<emitc::LogicalOrOp>([&](auto op) { return 3; })
+      .Case<emitc::MulOp>([&](auto op) { return 13; })
+      .Case<emitc::RemOp>([&](auto op) { return 13; })
+      .Case<emitc::SubOp>([&](auto op) { return 12; })
       .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
 

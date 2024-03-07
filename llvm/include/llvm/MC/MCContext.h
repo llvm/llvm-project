@@ -454,6 +454,8 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
+  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+
   CodeViewContext &getCVContext();
 
   void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }

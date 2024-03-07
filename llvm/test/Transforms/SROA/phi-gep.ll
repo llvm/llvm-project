@@ -638,6 +638,41 @@ bb3:
   ret i1 %icmp
 }
 
+define i32 @test_phi_mem2reg_alloca_not_in_entry_block(i1 %arg) {
+; CHECK-LABEL: @test_phi_mem2reg_alloca_not_in_entry_block(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 123, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[ALLOCA2:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 124, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOCA]], [[BB2]] ], [ [[ALLOCA2]], [[BB3]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+bb:
+  %alloca = alloca i64
+  store i64 123, ptr %alloca
+  br label %bb2
+bb2:
+  %alloca2 = alloca i64
+  store i64 124, ptr %alloca
+  br i1 %arg, label %bb3, label %bb4
+bb3:
+  br label %bb4
+bb4:
+  %phi = phi ptr [ %alloca, %bb2 ], [ %alloca2, %bb3 ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  %load = load i32, ptr %gep
+  ret i32 %load
+}
+
 define i64 @test_unfold_phi_duplicate_phi_entry(ptr %arg, i8 %arg1, i1 %arg2) {
 ; CHECK-LABEL: @test_unfold_phi_duplicate_phi_entry(
 ; CHECK-NEXT:  bb:

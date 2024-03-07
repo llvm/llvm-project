@@ -1960,8 +1960,22 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
+
+  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
 
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
   return true;

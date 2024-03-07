@@ -157,6 +157,12 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Alignment of paravirtual patch structures.
   static constexpr size_t PARA_PATCH_ALIGN = 8;
 
+  /// Section containing Linux bug table.
+  ErrorOr<BinarySection &> BugTableSection = std::errc::bad_address;
+
+  /// Size of bug_entry struct.
+  static constexpr size_t BUG_TABLE_ENTRY_SIZE = 12;
+
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
   void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
@@ -171,9 +177,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Process __ksymtab and __ksymtab_gpl.
   void processLKKSymtab(bool IsGPL = false);
-
-  /// Process special linux kernel section, __bug_table.
-  void processLKBugTable();
 
   /// Process special linux kernel section, .smp_locks.
   void processLKSMPLocks();
@@ -200,6 +203,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Paravirtual instruction patch sites.
   Error readParaInstructions();
 
+  Error readBugTable();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -222,6 +227,9 @@ public:
       return E;
 
     if (Error E = readParaInstructions())
+      return E;
+
+    if (Error E = readBugTable())
       return E;
 
     return Error::success();
@@ -289,7 +297,6 @@ void LinuxKernelRewriter::processLKSections() {
   processLKPCIFixup();
   processLKKSymtab();
   processLKKSymtab(true);
-  processLKBugTable();
   processLKSMPLocks();
 }
 
@@ -353,37 +360,6 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
     BC.addRelocation(EntryAddress, BF->getSymbol(), Relocation::getPC32(), 0,
                      *Offset);
-  }
-}
-
-/// Process __bug_table section.
-/// This section contains information useful for kernel debugging.
-/// Each entry in the section is a struct bug_entry that contains a pointer to
-/// the ud2 instruction corresponding to the bug, corresponding file name (both
-/// pointers use PC relative offset addressing), line number, and flags.
-/// The definition of the struct bug_entry can be found in
-/// `include/asm-generic/bug.h`
-void LinuxKernelRewriter::processLKBugTable() {
-  ErrorOr<BinarySection &> SectionOrError =
-      BC.getUniqueSectionByName("__bug_table");
-  if (!SectionOrError)
-    return;
-
-  const uint64_t SectionSize = SectionOrError->getSize();
-  const uint64_t SectionAddress = SectionOrError->getAddress();
-  assert((SectionSize % 12) == 0 &&
-         "The size of the __bug_table section should be a multiple of 12");
-  for (uint64_t I = 0; I < SectionSize; I += 12) {
-    const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
-    assert(Offset &&
-           "Reading valid PC-relative offset for a __bug_table entry");
-    const int32_t SignedOffset = *Offset;
-    const uint64_t RefAddress = EntryAddress + SignedOffset;
-    assert(BC.getBinaryFunctionContainingAddress(RefAddress) &&
-           "__bug_table entries should point to a function");
-
-    insertLKMarker(RefAddress, I, SignedOffset, true, "__bug_table");
   }
 }
 
@@ -1093,6 +1069,65 @@ Error LinuxKernelRewriter::readParaInstructions() {
   }
 
   BC.outs() << "BOLT-INFO: parsed " << EntryID << " paravirtual patch sites\n";
+
+  return Error::success();
+}
+
+/// Process __bug_table section.
+/// This section contains information useful for kernel debugging.
+/// Each entry in the section is a struct bug_entry that contains a pointer to
+/// the ud2 instruction corresponding to the bug, corresponding file name (both
+/// pointers use PC relative offset addressing), line number, and flags.
+/// The definition of the struct bug_entry can be found in
+/// `include/asm-generic/bug.h`
+///
+/// NB: find_bug() uses linear search to match an address to an entry in the bug
+///     table. Hence there is no need to sort entries when rewriting the table.
+Error LinuxKernelRewriter::readBugTable() {
+  BugTableSection = BC.getUniqueSectionByName("__bug_table");
+  if (!BugTableSection)
+    return Error::success();
+
+  if (BugTableSection->getSize() % BUG_TABLE_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "bug table size error");
+
+  const uint64_t SectionAddress = BugTableSection->getAddress();
+  DataExtractor DE(BugTableSection->getContents(), BC.AsmInfo->isLittleEndian(),
+                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor Cursor(0);
+  uint32_t EntryID = 0;
+  while (Cursor && Cursor.tell() < BugTableSection->getSize()) {
+    const uint64_t Pos = Cursor.tell();
+    const uint64_t InstAddress =
+        SectionAddress + Pos + (int32_t)DE.getU32(Cursor);
+    Cursor.seek(Pos + BUG_TABLE_ENTRY_SIZE);
+
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading __bug_table");
+
+    ++EntryID;
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(InstAddress);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(InstAddress)
+                << " referenced by bug table\n";
+    }
+
+    if (BF && BC.shouldEmit(*BF)) {
+      MCInst *Inst = BF->getInstructionAtOffset(InstAddress - BF->getAddress());
+      if (!Inst)
+        return createStringError(errc::executable_format_error,
+                                 "no instruction at address 0x%" PRIx64
+                                 " referenced by bug table entry %d",
+                                 InstAddress, EntryID);
+      BC.MIB->addAnnotation(*Inst, "BugEntry", EntryID);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID << " bug table entries\n";
 
   return Error::success();
 }
