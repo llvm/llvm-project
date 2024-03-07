@@ -744,8 +744,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
                                                        const SrcOp &Src) {
-  LLT DstTy = Res.getLLTTy(*getMRI());
-  assert(Src.getLLTTy(*getMRI()) == DstTy.getElementType() &&
+  assert(Src.getLLTTy(*getMRI()) == Res.getLLTTy(*getMRI()).getElementType() &&
          "Expected Src to match Dst elt ty");
   return buildInstr(TargetOpcode::G_SPLAT_VECTOR, Res, Src);
 }
