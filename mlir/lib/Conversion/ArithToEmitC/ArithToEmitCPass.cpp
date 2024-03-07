@@ -41,7 +41,9 @@ void ConvertArithToEmitC::runOnOperation() {
   target.addLegalOp<arith::ConstantOp>();
 
   RewritePatternSet patterns(&getContext());
+
   TypeConverter typeConverter;
+  typeConverter.addConversion([](Type type) { return type; });
 
   populateArithToEmitCPatterns(typeConverter, patterns);
 

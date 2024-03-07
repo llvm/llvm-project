@@ -45,7 +45,7 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateArithToEmitCPatterns(TypeConverter typeConverter,
+void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
                                         RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
@@ -55,6 +55,6 @@ void mlir::populateArithToEmitCPatterns(TypeConverter typeConverter,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>
-  >(ctx);
+  >(typeConverter, ctx);
   // clang-format on
 }

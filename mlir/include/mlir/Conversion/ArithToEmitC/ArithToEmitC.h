@@ -13,7 +13,7 @@ namespace mlir {
 class RewritePatternSet;
 class TypeConverter;
 
-void populateArithToEmitCPatterns(TypeConverter typeConverter,
+void populateArithToEmitCPatterns(TypeConverter &typeConverter,
                                   RewritePatternSet &patterns);
 } // namespace mlir
 
