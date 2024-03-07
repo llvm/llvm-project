@@ -489,7 +489,7 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    snez a1, s0
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -513,7 +513,7 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NEXT:    add a0, a1, a0
 ; RV64XTHEADBB-NEXT:    lbu a0, 0(a0)
 ; RV64XTHEADBB-NEXT:    snez a1, s0
-; RV64XTHEADBB-NEXT:    addi a1, a1, -1
+; RV64XTHEADBB-NEXT:    addiw a1, a1, -1
 ; RV64XTHEADBB-NEXT:    or a0, a1, a0
 ; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64XTHEADBB-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -542,12 +542,10 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    addi a1, a1, %lo(.LCPI9_0)
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    addiw a0, a0, 1
 ; RV64I-NEXT:    seqz a1, s0
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -569,12 +567,10 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NEXT:    addi a1, a1, %lo(.LCPI9_0)
 ; RV64XTHEADBB-NEXT:    add a0, a1, a0
 ; RV64XTHEADBB-NEXT:    lbu a0, 0(a0)
-; RV64XTHEADBB-NEXT:    addi a0, a0, 1
+; RV64XTHEADBB-NEXT:    addiw a0, a0, 1
 ; RV64XTHEADBB-NEXT:    seqz a1, s0
-; RV64XTHEADBB-NEXT:    addi a1, a1, -1
+; RV64XTHEADBB-NEXT:    addiw a1, a1, -1
 ; RV64XTHEADBB-NEXT:    and a0, a1, a0
-; RV64XTHEADBB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NEXT:    srli a0, a0, 32
 ; RV64XTHEADBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64XTHEADBB-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64XTHEADBB-NEXT:    addi sp, sp, 16
