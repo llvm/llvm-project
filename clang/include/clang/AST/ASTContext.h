@@ -2182,6 +2182,16 @@ public:
     return getQualifiedType(type.getUnqualifiedType(), Qs);
   }
 
+  /// \brief Return a type with the given __ptrauth qualifier.
+  QualType getPointerAuthType(QualType type, PointerAuthQualifier pointerAuth) {
+    assert(!type.getPointerAuth());
+    assert(pointerAuth);
+
+    Qualifiers qs;
+    qs.setPointerAuth(pointerAuth);
+    return getQualifiedType(type, qs);
+  }
+
   unsigned char getFixedPointScale(QualType Ty) const;
   unsigned char getFixedPointIBits(QualType Ty) const;
   llvm::FixedPointSemantics getFixedPointSemantics(QualType Ty) const;

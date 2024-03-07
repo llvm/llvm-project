@@ -1434,6 +1434,10 @@ public:
   // true when Type is objc's weak and weak is enabled but ARC isn't.
   bool isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const;
 
+  PointerAuthQualifier getPointerAuth() const {
+    return getQualifiers().getPointerAuth();
+  }
+
   enum PrimitiveDefaultInitializeKind {
     /// The type does not fall into any of the following categories. Note that
     /// this case is zero-valued so that values of this enum can be used as a
