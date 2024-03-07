@@ -158,7 +158,9 @@ Non-comprehensive list of changes in this release
   builtins are now constexpr and may be used in constant expressions.
 
 - Added ``__builtin_popcountg`` as a type-generic alternative to
-  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type.
+  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type. Like
+  the previous builtins, this new builtin is constexpr and may be used in
+  constant expressions.
 
 New Compiler Flags
 ------------------
