@@ -1296,6 +1296,8 @@ public:
   bool IsSwiftREPL();
 
   bool IsSwiftCxxInteropEnabled();
+
+  bool IsEmbeddedSwift();
 private:
   void DisplayFallbackSwiftContextErrors(
       SwiftASTContextForExpressions *swift_ast_ctx);

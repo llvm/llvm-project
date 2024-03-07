@@ -3120,6 +3120,14 @@ bool Target::IsSwiftCxxInteropEnabled() {
   return m_is_swift_cxx_interop_enabled == eLazyBoolYes;
 }
 
+bool Target::IsEmbeddedSwift() {
+  if (GetImages().IsEmpty())
+    return false;
+
+  // Embedded Swift cannot be mixed with non-embedded, so checking the first
+  // module should be enough.
+  return GetImages().GetModuleAtIndex(0)->IsEmbeddedSwift();
+}
 #endif // LLDB_ENABLE_SWIFT
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }

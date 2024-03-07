@@ -822,6 +822,8 @@ public:
                                  std::optional<lldb::user_id_t> debugger_id);
 
   bool IsSwiftCxxInteropEnabled();
+
+  bool IsEmbeddedSwift();
 #endif
 
   // Return true if the file backing this module has changed since the module
@@ -1108,6 +1110,7 @@ private:
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
 #ifdef LLDB_ENABLE_SWIFT
   LazyBool m_is_swift_cxx_interop_enabled = eLazyBoolCalculate;
+  LazyBool m_is_embedded_swift = eLazyBoolCalculate;
 #endif
 };
 
