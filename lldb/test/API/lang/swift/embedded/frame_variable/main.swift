@@ -62,18 +62,6 @@ class SubSub: Sub {
   var subSubField = A()
 }
 
-class Sup {
-  var supField: Int8 = 42
-}
-
-class Sub: Sup {
-  var subField = B()
-}
-
-class SubSub: Sub {
-  var subSubField = A()
-}
-
 let varB = B()
 let tuple = (A(), B())
 let trivial = TrivialEnum.theCase
