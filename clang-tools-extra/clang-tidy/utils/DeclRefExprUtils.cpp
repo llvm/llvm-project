@@ -155,15 +155,16 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
       if (const auto *const Member = dyn_cast<MemberExpr>(P)) {
         if (const auto *const Method =
                 dyn_cast<CXXMethodDecl>(Member->getMemberDecl())) {
-          if (!Method->isConst()) {
-            // The method can mutate our variable.
-            return false;
+          if (Method->isConst() || Method->isStatic()) {
+            // The method call cannot mutate our variable.
+            continue;
           }
-          continue;
+          return false;
         }
         Stack.emplace_back(Member, 0);
         continue;
       }
+
       if (const auto *const Op = dyn_cast<UnaryOperator>(P)) {
         switch (Op->getOpcode()) {
         case UO_AddrOf:
