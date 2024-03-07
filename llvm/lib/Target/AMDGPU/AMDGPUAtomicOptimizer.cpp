@@ -209,8 +209,9 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
     break;
   }
 
-  // Only 32-bit floating point atomic ops are supported.
-  if (AtomicRMWInst::isFPOperation(Op) && !I.getType()->isFloatTy()) {
+  // Only 32 and 64 bit floating point atomic ops are supported.
+  if (AtomicRMWInst::isFPOperation(Op) &&
+      !(I.getType()->isFloatTy() || I.getType()->isDoubleTy())) {
     return;
   }
 
