@@ -1011,8 +1011,6 @@ class PPRorPNRClass : RegisterClass<
   let Size = 16;
 }
 
-def PPRorPNR         : PPRorPNRClass;
-
 class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
   let PredicateMethod = "isSVEPredicateOrPredicateAsCounterRegOfWidth<"
@@ -1023,8 +1021,9 @@ class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandCla
   let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
 }
 
-def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny",   "PPRorPNR",     0>;
-def PPRorPNRAny      : PPRRegOp<"",  PPRorPNRAsmOpAny,   ElementSizeNone, PPRorPNR>;
+def PPRorPNR         : PPRorPNRClass;
+def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
+def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
