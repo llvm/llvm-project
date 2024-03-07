@@ -4652,9 +4652,14 @@ bool CombinerHelper::matchReassocFoldConstantsInSubTree(GPtrAdd &MI,
   if (!C2)
     return false;
 
+  // If constant widths differ pick larger one.
+  unsigned BitWidth = std::max(C1->getBitWidth(), C2->getBitWidth());
+  APInt NewConst = C1->sext(BitWidth) + C2->sext(BitWidth);
+  LLT Type =
+      MRI.getType(C1->getBitWidth() > C2->getBitWidth() ? LHSSrc2 : Src2Reg);
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    auto NewCst = B.buildConstant(MRI.getType(Src2Reg),
-                                  C1->sextOrTrunc(C2->getBitWidth()) + *C2);
+    auto NewCst = B.buildConstant(Type, NewConst);
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(LHSSrc1);
     MI.getOperand(2).setReg(NewCst.getReg(0));
