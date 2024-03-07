@@ -90,7 +90,7 @@ Additions:
   * memalignment
 * string.h
 
-  * memset_explicit
+  * memset_explicit |check|
   * memccpy
   * strdup
   * strndup
