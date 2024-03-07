@@ -811,6 +811,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   if (IsDwarfSec)
     QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(CachedName));
   else
+    // For TLS local-dynamic model RenamePrefix is "_$TLSLD.", otherwise empty.
     QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
         RenamePrefix + CachedName + "[" +
         XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
