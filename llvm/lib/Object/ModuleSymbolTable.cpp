@@ -199,6 +199,19 @@ void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {
   Mang.getNameWithPrefix(OS, GV, false);
 }
 
+static bool isExportedToOtherDSO(const Triple TT, GlobalValue &GV) {
+  if (TT.isOSBinFormatELF())
+    // A defintition is exported if its non-local, and its visibility
+    // is either DEFAULT or PROTECTED. All other symbols are not exported.
+    return !GV.isDeclarationForLinker() && !GV.hasLocalLinkage() &&
+           (GV.hasDefaultVisibility() || GV.hasProtectedVisibility());
+  else if (TT.isOSBinFormatXCOFF())
+    return true;
+
+  // TODO: Add support for other file formats
+  return false;
+}
+
 uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
   if (isa<AsmSymbol *>(S))
     return cast<AsmSymbol *>(S)->second;
@@ -214,6 +227,8 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
     if (GVar->isConstant())
       Res |= BasicSymbolRef::SF_Const;
   }
+  if (isExportedToOtherDSO(Triple(FirstMod->getTargetTriple()), *GV))
+    Res |= BasicSymbolRef::SF_Exported;
   if (const GlobalObject *GO = GV->getAliaseeObject())
     if (isa<Function>(GO) || isa<GlobalIFunc>(GO))
       Res |= BasicSymbolRef::SF_Executable;

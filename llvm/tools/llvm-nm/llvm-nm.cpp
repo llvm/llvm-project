@@ -254,16 +254,17 @@ struct NMSymbol {
     return true;
   }
 
-  bool shouldPrint() const {
+  bool shouldPrint(bool OnlyExported) const {
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
     bool Global = SymFlags & SymbolRef::SF_Global;
     bool Weak = SymFlags & SymbolRef::SF_Weak;
+    bool Export = SymFlags & SymbolRef::SF_Exported;
     bool FormatSpecific = SymFlags & SymbolRef::SF_FormatSpecific;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
         (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
         (FormatSpecific && !(SpecialSyms || DebugSyms)))
       return false;
-    return true;
+    return OnlyExported ? Export : true;
   }
 };
 
@@ -777,7 +778,7 @@ static void printSymbolList(SymbolicFile &Obj,
   }
 
   for (const NMSymbol &S : SymbolList) {
-    if (!S.shouldPrint())
+    if (!S.shouldPrint(false /*OnlyExported*/))
       continue;
 
     std::string Name = S.Name;
@@ -1768,8 +1769,10 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
       else if ((SymType & XCOFF::VISIBILITY_MASK) == XCOFF::SYM_V_EXPORTED)
         S.Visibility = "export";
     }
-    if (S.initializeFlags(*XCOFFObj))
+    if (S.initializeFlags(*XCOFFObj)) {
+      S.SymFlags |= SymbolRef::SF_Exported;
       SymbolList.push_back(S);
+    }
   }
 }
 
@@ -2392,8 +2395,9 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   }
 
   // Delete symbols which should not be printed from SymolList.
-  llvm::erase_if(SymbolList,
-                 [](const NMSymbol &s) { return !s.shouldPrint(); });
+  llvm::erase_if(SymbolList, [](const NMSymbol &s) {
+    return !s.shouldPrint(true /*OnlyExported*/);
+  });
   sortSymbolList(SymbolList);
   SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
                    SymbolList.end());

@@ -1,0 +1,108 @@
+## Test the "--export-symbols" option.
+## The option prints out a sorted list of the unique exports from the input files.
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+
+# RUN: llvm-as %t/1.ll -o %t/1.bc
+# RUN: llvm-as %t/2.ll -o %t/2.bc
+# RUN: llc -filetype=obj -mtriple=x86_64-pc-linux %t/1.ll -o %t/1.o
+# RUN: llc -filetype=obj -mtriple=x86_64-pc-linux %t/2.ll -o %t/2.o
+
+## Test the following cases:
+## - Show that non-exports are ignored.
+## - Show that only unique exports (with a different name or visibility) are printed.
+## - Show that XCOFF special cases are not handled specially.
+## - Show that the --no-weak option is honoured.
+## - Show that the XCOFF specific --no-rsrc is ignored.
+# RUN: llvm-nm --export-symbols %t/1.bc | FileCheck --check-prefixes=COMMON,WEAK %s --implicit-check-not={{.}}
+# RUN: llvm-nm --export-symbols %t/1.o | FileCheck --check-prefixes=COMMON,WEAK %s --implicit-check-not={{.}}
+# RUN: llvm-nm --export-symbols %t/1.bc %t/2.bc | FileCheck --check-prefixes=COMMON,WEAK,HIDDEN %s --implicit-check-not={{.}}
+# RUN: llvm-nm --export-symbols %t/1.o %t/2.o | FileCheck --check-prefixes=COMMON,WEAK,HIDDEN %s --implicit-check-not={{.}}
+# RUN: llvm-nm --export-symbols --no-weak --no-rsrc  %t/1.bc %t/2.bc %t/1.o %t/2.o | FileCheck --check-prefixes=COMMON,HIDDEN %s --implicit-check-not={{.}}
+
+# COMMON: .
+# COMMON: __1__
+# COMMON: __rsrc
+# COMMON: __sinit
+# COMMON: __sterm
+# COMMON: __tf1
+# COMMON: __tf9
+# COMMON: c
+# COMMON: d
+# HIDDEN: h
+# WEAK:   w
+
+#--- 1.ll
+target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @d() {
+  ret void
+}
+
+define hidden void @h() {
+  ret void
+}
+
+declare void @u()
+
+declare i32 @r(...)
+
+declare extern_weak void @wr()
+
+define internal void @l() {
+  ret void
+}
+
+@c = common global i32 0
+
+define weak void @w() {
+  ret void
+}
+
+;; special cases from the AIX implementation.
+
+define void @__sinit() {
+  ret void
+}
+
+define void @__sterm() {
+  ret void
+}
+
+define void @.() {
+  ret void
+}
+
+;define void @(() {
+;  ret void
+;}
+
+define void @__1__() {
+  ret void
+}
+
+define void @__tf1() {
+  ret void
+}
+
+define void @__tf9() {
+  ret void
+}
+
+define void @__rsrc() {
+  ret void
+}
+
+#--- 2.ll
+target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define protected void @d() {
+  ret void
+}
+
+define void @h() {
+  ret void
+}
