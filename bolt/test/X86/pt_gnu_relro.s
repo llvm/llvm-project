@@ -3,7 +3,7 @@
 # Check that BOLT recognizes PT_GNU_RELRO segment and marks respective sections
 # accordingly.
 
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o -relax-relocations
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q --no-relax
 # RUN: llvm-readelf -We %t.exe | FileCheck --check-prefix=READELF %s
 # Unfortunately there's no direct way to extract a segment to section mapping
