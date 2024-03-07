@@ -352,7 +352,7 @@ static bool emitCompilationDBWithCASTreeArguments(
     std::shared_ptr<llvm::cas::ObjectStore> DB,
     std::vector<tooling::CompileCommand> Inputs,
     DiagnosticConsumer &DiagsConsumer, DependencyScanningService &Service,
-    llvm::ThreadPool &Pool, llvm::raw_ostream &OS) {
+    llvm::DefaultThreadPool &Pool, llvm::raw_ostream &OS) {
 
   // Follow `-cc1depscan` and also ignore diagnostics.
   // FIXME: Seems not a good idea to do this..

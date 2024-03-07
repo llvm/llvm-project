@@ -823,7 +823,7 @@ void ScanServer::start(bool Exclusive) {
 }
 
 int ScanServer::listen() {
-  llvm::ThreadPool Pool;
+  llvm::DefaultThreadPool Pool;
 
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   CASOptions CASOpts;
