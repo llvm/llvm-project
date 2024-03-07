@@ -104,6 +104,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.string
     libc.src.__support.CPP.type_traits
+    libc.src.__support.uint
 )
 
 add_unittest_framework_library(

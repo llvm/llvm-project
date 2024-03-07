@@ -756,8 +756,8 @@ static void addSanitizers(const Triple &TargetTriple,
     // is called from `buildModuleOptimizationPipeline` just after profile use,
     // and inliner is a part of `buildModuleSimplificationPipeline`, which is
     // before `buildModuleOptimizationPipeline`.
-    PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
-                                            OptimizationLevel Level) {
+    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                           OptimizationLevel Level) {
       FunctionPassManager FPM;
       FPM.addPass(RemoveTrapsPass());
       FPM.addPass(
