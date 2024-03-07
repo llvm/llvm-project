@@ -4014,6 +4014,7 @@ cc_library(
         ":AffineToStandard",
         ":ArithToAMDGPU",
         ":ArithToArmSME",
+        ":ArithToEmitC",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -8157,6 +8158,32 @@ cc_library(
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ArithToEmitC",
+    srcs = glob([
+        "lib/Conversion/ArithToEmitC/*.cpp",
+        "lib/Conversion/ArithToEmitC/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithToEmitC/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/ArithToEmitC",
+    ],
+    deps = [
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
