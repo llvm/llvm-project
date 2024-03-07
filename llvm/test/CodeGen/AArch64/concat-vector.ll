@@ -6,7 +6,6 @@
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for concat4
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for concat9
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for concat_v8s16_v2s16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for concat_v16s8_v4s8
 
 define <4 x i8> @concat1(<2 x i8> %A, <2 x i8> %B) {
 ; CHECK-SD-LABEL: concat1:
