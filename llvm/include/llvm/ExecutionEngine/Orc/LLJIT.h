@@ -490,7 +490,7 @@ public:
 
     if (impl().NotifyCreated)
       if (Error Err = impl().NotifyCreated(*J))
-        return Err;
+        return std::move(Err);
 
     return std::move(J);
   }
