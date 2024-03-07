@@ -714,6 +714,7 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 
 let SubtargetPredicate = isGFX11Plus in {
 
+let OtherPredicates = [HasImageInsts] in
 def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 } // let SubtargetPredicate = isGFX11Plus
