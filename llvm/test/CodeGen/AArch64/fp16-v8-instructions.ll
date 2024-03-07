@@ -312,25 +312,12 @@ define <8 x half> @s_to_h(<8 x float> %a) {
 define <8 x half> @d_to_h(<8 x double> %a) {
 ; CHECK-LABEL: d_to_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d5, v0.d[1]
-; CHECK-NEXT:    fcvt h0, d0
-; CHECK-NEXT:    fcvt h4, d1
-; CHECK-NEXT:    mov d1, v1.d[1]
-; CHECK-NEXT:    fcvt h5, d5
-; CHECK-NEXT:    fcvt h1, d1
-; CHECK-NEXT:    mov v0.h[1], v5.h[0]
-; CHECK-NEXT:    mov v0.h[2], v4.h[0]
-; CHECK-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-NEXT:    fcvt h1, d2
-; CHECK-NEXT:    mov d2, v2.d[1]
-; CHECK-NEXT:    mov v0.h[4], v1.h[0]
-; CHECK-NEXT:    fcvt h1, d2
-; CHECK-NEXT:    mov d2, v3.d[1]
-; CHECK-NEXT:    mov v0.h[5], v1.h[0]
-; CHECK-NEXT:    fcvt h1, d3
-; CHECK-NEXT:    mov v0.h[6], v1.h[0]
-; CHECK-NEXT:    fcvt h1, d2
-; CHECK-NEXT:    mov v0.h[7], v1.h[0]
+; CHECK-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-NEXT:    fcvtxn2 v2.4s, v3.2d
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-NEXT:    ret
   %1 = fptrunc <8 x double> %a to <8 x half>
   ret <8 x half> %1
@@ -349,25 +336,12 @@ define <8 x float> @h_to_s(<8 x half> %a) {
 define <8 x double> @h_to_d(<8 x half> %a) {
 ; CHECK-LABEL: h_to_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    mov h3, v0.h[3]
-; CHECK-NEXT:    mov h4, v0.h[2]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    mov h5, v2.h[1]
-; CHECK-NEXT:    mov h6, v2.h[3]
-; CHECK-NEXT:    mov h7, v2.h[2]
-; CHECK-NEXT:    fcvt d16, h1
-; CHECK-NEXT:    fcvt d17, h3
-; CHECK-NEXT:    fcvt d1, h4
-; CHECK-NEXT:    fcvt d2, h2
-; CHECK-NEXT:    fcvt d4, h5
-; CHECK-NEXT:    fcvt d5, h6
-; CHECK-NEXT:    fcvt d3, h7
-; CHECK-NEXT:    mov v0.d[1], v16.d[0]
-; CHECK-NEXT:    mov v1.d[1], v17.d[0]
-; CHECK-NEXT:    mov v2.d[1], v4.d[0]
-; CHECK-NEXT:    mov v3.d[1], v5.d[0]
+; CHECK-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-NEXT:    fcvtl2 v2.4s, v0.8h
+; CHECK-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-NEXT:    fcvtl2 v3.2d, v2.4s
+; CHECK-NEXT:    fcvtl2 v1.2d, v1.4s
+; CHECK-NEXT:    fcvtl v2.2d, v2.2s
 ; CHECK-NEXT:    ret
   %1 = fpext <8 x half> %a to <8 x double>
   ret <8 x double> %1

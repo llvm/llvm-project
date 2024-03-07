@@ -4507,13 +4507,16 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   };
 
   if (Op.getValueType() == MVT::bf16) {
+    unsigned MaxWidth = IsSigned
+                            ? DAG.ComputeMaxSignificantBits(SrcVal)
+                            : DAG.computeKnownBits(SrcVal).countMaxActiveBits();
     // bf16 conversions are promoted to f32 when converting from i16.
-    if (DAG.ComputeMaxSignificantBits(SrcVal) <= 24) {
+    if (MaxWidth <= 24) {
       return IntToFpViaPromotion(MVT::f32);
     }
 
     // bf16 conversions are promoted to f64 when converting from i32.
-    if (DAG.ComputeMaxSignificantBits(SrcVal) <= 53) {
+    if (MaxWidth <= 53) {
       return IntToFpViaPromotion(MVT::f64);
     }
 
@@ -19375,6 +19378,94 @@ static SDValue performBuildVectorCombine(SDNode *N,
                                          SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+    SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
+            Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
+    if (Elt0->getOpcode() == ISD::FP_ROUND &&
+        Elt1->getOpcode() == ISD::FP_ROUND &&
+        isa<ConstantSDNode>(Elt0->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(1)) &&
+        Elt0->getConstantOperandVal(1) == Elt1->getConstantOperandVal(1) &&
+        Elt0->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt1->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        // Constant index.
+        isa<ConstantSDNode>(Elt0->getOperand(0)->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(0)->getOperand(1)) &&
+        Elt0->getOperand(0)->getOperand(0) ==
+            Elt1->getOperand(0)->getOperand(0) &&
+        Elt0->getOperand(0)->getConstantOperandVal(1) == 0 &&
+        Elt1->getOperand(0)->getConstantOperandVal(1) == 1) {
+      SDValue LowLanesSrcVec = Elt0->getOperand(0)->getOperand(0);
+      if (LowLanesSrcVec.getValueType() == MVT::v2f64) {
+        SDValue HighLanes;
+        if (Elt2->getOpcode() == ISD::UNDEF &&
+            Elt3->getOpcode() == ISD::UNDEF) {
+          HighLanes = DAG.getUNDEF(MVT::v2f32);
+        } else if (Elt2->getOpcode() == ISD::FP_ROUND &&
+                   Elt3->getOpcode() == ISD::FP_ROUND &&
+                   isa<ConstantSDNode>(Elt2->getOperand(1)) &&
+                   isa<ConstantSDNode>(Elt3->getOperand(1)) &&
+                   Elt2->getConstantOperandVal(1) ==
+                       Elt3->getConstantOperandVal(1) &&
+                   Elt2->getOperand(0)->getOpcode() ==
+                       ISD::EXTRACT_VECTOR_ELT &&
+                   Elt3->getOperand(0)->getOpcode() ==
+                       ISD::EXTRACT_VECTOR_ELT &&
+                   // Constant index.
+                   isa<ConstantSDNode>(Elt2->getOperand(0)->getOperand(1)) &&
+                   isa<ConstantSDNode>(Elt3->getOperand(0)->getOperand(1)) &&
+                   Elt2->getOperand(0)->getOperand(0) ==
+                       Elt3->getOperand(0)->getOperand(0) &&
+                   Elt2->getOperand(0)->getConstantOperandVal(1) == 0 &&
+                   Elt3->getOperand(0)->getConstantOperandVal(1) == 1) {
+          SDValue HighLanesSrcVec = Elt2->getOperand(0)->getOperand(0);
+          HighLanes =
+              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, HighLanesSrcVec);
+        }
+        if (HighLanes) {
+          SDValue DoubleToSingleSticky =
+              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, LowLanesSrcVec);
+          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32,
+                                       DoubleToSingleSticky, HighLanes);
+          return DAG.getNode(ISD::FP_ROUND, DL, VT, Concat,
+                             Elt0->getOperand(1));
+        }
+      }
+    }
+  }
+
+  if (VT == MVT::v2f64) {
+    SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1);
+    if (Elt0->getOpcode() == ISD::FP_EXTEND &&
+        Elt1->getOpcode() == ISD::FP_EXTEND &&
+        Elt0->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt1->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt0->getOperand(0)->getOperand(0) ==
+            Elt1->getOperand(0)->getOperand(0) &&
+        // Constant index.
+        isa<ConstantSDNode>(Elt0->getOperand(0)->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(0)->getOperand(1)) &&
+        Elt0->getOperand(0)->getConstantOperandVal(1) + 1 ==
+            Elt1->getOperand(0)->getConstantOperandVal(1) &&
+        // EXTRACT_SUBVECTOR requires that Idx be a constant multiple of
+        // ResultType's known minimum vector length.
+        Elt0->getOperand(0)->getConstantOperandVal(1) %
+                VT.getVectorMinNumElements() ==
+            0) {
+      SDValue SrcVec = Elt0->getOperand(0)->getOperand(0);
+      if (SrcVec.getValueType() == MVT::v4f16 ||
+          SrcVec.getValueType() == MVT::v4bf16) {
+        SDValue HalfToSingle =
+            DAG.getNode(ISD::FP_EXTEND, DL, MVT::v4f32, SrcVec);
+        SDValue SubvectorIdx = Elt0->getOperand(0)->getOperand(1);
+        SDValue Extract = DAG.getNode(
+            ISD::EXTRACT_SUBVECTOR, DL, VT.changeVectorElementType(MVT::f32),
+            HalfToSingle, SubvectorIdx);
+        return DAG.getNode(ISD::FP_EXTEND, DL, VT, Extract);
+      }
+    }
+  }
 
   // A build vector of two extracted elements is equivalent to an
   // extract subvector where the inner vector is any-extended to the
