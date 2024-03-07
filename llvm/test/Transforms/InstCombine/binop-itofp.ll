@@ -110,7 +110,7 @@ define half @test_ui_si_i8_add(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 63
 ; CHECK-NEXT:    [[Y:%.*]] = and i8 [[Y_IN:%.*]], 63
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[TMP1]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 63
@@ -125,9 +125,8 @@ define half @test_ui_si_i8_add_overflow(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-LABEL: @test_ui_si_i8_add_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 63
 ; CHECK-NEXT:    [[Y:%.*]] = and i8 [[Y_IN:%.*]], 65
-; CHECK-NEXT:    [[XF:%.*]] = sitofp i8 [[X]] to half
-; CHECK-NEXT:    [[YF:%.*]] = uitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fadd half [[XF]], [[YF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 63
@@ -152,9 +151,8 @@ define half @test_ui_ui_i8_sub_C(i8 noundef %x_in) {
 
 define half @test_ui_ui_i8_sub_C_fail_overflow(i8 noundef %x_in) {
 ; CHECK-LABEL: @test_ui_ui_i8_sub_C_fail_overflow(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 127
-; CHECK-NEXT:    [[XF:%.*]] = uitofp i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fadd half [[XF]], 0xHD800
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X_IN:%.*]], -128
+; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 127
@@ -212,8 +210,8 @@ define half @test_si_si_i8_sub_C(i8 noundef %x_in) {
 define half @test_si_si_i8_sub_C_fail_overflow(i8 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i8_sub_C_fail_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 65
-; CHECK-NEXT:    [[XF:%.*]] = sitofp i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fadd half [[XF]], 0xH5400
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], 64
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 65
@@ -242,9 +240,8 @@ define half @test_ui_si_i8_sub_fail_maybe_sign(i8 noundef %x_in, i8 noundef %y_i
 ; CHECK-LABEL: @test_ui_si_i8_sub_fail_maybe_sign(
 ; CHECK-NEXT:    [[X:%.*]] = or i8 [[X_IN:%.*]], 64
 ; CHECK-NEXT:    [[Y:%.*]] = and i8 [[Y_IN:%.*]], 63
-; CHECK-NEXT:    [[XF:%.*]] = uitofp i8 [[X]] to half
-; CHECK-NEXT:    [[YF:%.*]] = sitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fsub half [[XF]], [[YF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i8 %x_in, 64
@@ -273,8 +270,8 @@ define half @test_ui_ui_i8_mul(i8 noundef %x_in, i8 noundef %y_in) {
 
 define half @test_ui_ui_i8_mul_C(i8 noundef %x_in) {
 ; CHECK-LABEL: @test_ui_ui_i8_mul_C(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X_IN:%.*]], 4
-; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
+; CHECK-NEXT:    [[X:%.*]] = shl i8 [[X_IN:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[X]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 15
@@ -368,7 +365,7 @@ define half @test_ui_si_i8_mul(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y_IN:%.*]], 7
 ; CHECK-NEXT:    [[Y:%.*]] = add nuw nsw i8 [[YY]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[TMP1]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 6
@@ -386,9 +383,8 @@ define half @test_ui_si_i8_mul_fail_maybe_zero(i8 noundef %x_in, i8 noundef %y_i
 ; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X_IN:%.*]], 7
 ; CHECK-NEXT:    [[X:%.*]] = add nuw nsw i8 [[XX]], 1
 ; CHECK-NEXT:    [[Y:%.*]] = and i8 [[Y_IN:%.*]], 7
-; CHECK-NEXT:    [[XF:%.*]] = sitofp i8 [[X]] to half
-; CHECK-NEXT:    [[YF:%.*]] = uitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = uitofp i8 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 7
@@ -694,7 +690,7 @@ define half @test_ui_si_i16_mul(i16 noundef %x_in, i16 noundef %y_in) {
 ; CHECK-NEXT:    [[YY:%.*]] = and i16 [[Y_IN:%.*]], 126
 ; CHECK-NEXT:    [[Y:%.*]] = or disjoint i16 [[YY]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sitofp i16 [[TMP1]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i16 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i16 %x_in, 126
@@ -807,9 +803,8 @@ define half @test_ui_ui_i12_sub_fail_overflow(i12 noundef %x_in, i12 noundef %y_
 ; CHECK-LABEL: @test_ui_ui_i12_sub_fail_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = and i12 [[X_IN:%.*]], 1023
 ; CHECK-NEXT:    [[Y:%.*]] = and i12 [[Y_IN:%.*]], 2047
-; CHECK-NEXT:    [[XF:%.*]] = uitofp i12 [[X]] to half
-; CHECK-NEXT:    [[YF:%.*]] = uitofp i12 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fsub half [[XF]], [[YF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i12 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sitofp i12 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i12 %x_in, 1023
@@ -984,7 +979,7 @@ define half @test_ui_si_i12_mul_nsw(i12 noundef %x_in, i12 noundef %y_in) {
 ; CHECK-NEXT:    [[YY:%.*]] = and i12 [[Y_IN:%.*]], 30
 ; CHECK-NEXT:    [[Y:%.*]] = or disjoint i12 [[YY]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i12 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sitofp i12 [[TMP1]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i12 [[TMP1]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i12 %x_in, 31
@@ -1000,8 +995,8 @@ define half @test_ui_si_i12_mul_nsw(i12 noundef %x_in, i12 noundef %y_in) {
 define float @test_ui_add_with_signed_constant(i32 %shr.i) {
 ; CHECK-LABEL: @test_ui_add_with_signed_constant(
 ; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[SHR_I:%.*]], 32767
-; CHECK-NEXT:    [[SUB:%.*]] = uitofp i32 [[AND_I]] to float
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[SUB]], -1.638300e+04
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[AND_I]], -16383
+; CHECK-NEXT:    [[ADD:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %and.i = and i32 %shr.i, 32767
