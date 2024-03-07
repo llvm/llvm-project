@@ -656,6 +656,7 @@ public:
                               ArrayRef<Value *> Args = {},
                               const Twine &Name = "") {
     assert(IRB.GetInsertBlock()->getParent() == OwnerFn);
+    (void)OwnerFn;
     return IRB.CreateCall(Callee, Args, Name, nullptr);
   }
 };
