@@ -11,7 +11,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -313,7 +313,7 @@ MachineBasicBlock::reverse_iterator SIOptimizeExecMasking::findExecCopy(
   return E;
 }
 
-// XXX - Seems LiveRegUnits doesn't work correctly since it will incorrectly
+// XXX - Seems LivePhysRegs doesn't work correctly since it will incorrectly
 // report the register as unavailable because a super-register with a lane mask
 // is unavailable.
 static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
@@ -383,7 +383,7 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
                                                    MCRegister Reg,
                                                    bool UseLiveOuts,
                                                    bool IgnoreStart) const {
-  LiveRegUnits LR(*TRI);
+  LivePhysRegs LR(*TRI);
   if (UseLiveOuts)
     LR.addLiveOuts(*Stop.getParent());
 
@@ -396,7 +396,7 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
     LR.stepBackward(*A);
   }
 
-  return !LR.available(Reg);
+  return !LR.available(*MRI, Reg);
 }
 
 // Determine if a register Reg is not re-defined and still in use
