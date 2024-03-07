@@ -166,7 +166,6 @@ struct UnimplementedFeature {
   static bool escapedLocals() { return false; }
   static bool deferredReplacements() { return false; }
   static bool shouldInstrumentFunction() { return false; }
-  static bool trap() { return false; }
 };
 } // namespace cir
 

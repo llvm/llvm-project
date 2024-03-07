@@ -1,4 +1,5 @@
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
 
 module {
   cir.func @test_unreachable() {
@@ -7,4 +8,16 @@ module {
 
   //      MLIR: llvm.func @test_unreachable()
   // MLIR-NEXT:   llvm.unreachable
+
+  cir.func @test_trap() {
+    cir.trap
+  }
+
+  //      MLIR: llvm.func @test_trap()
+  // MLIR-NEXT:   llvm.call_intrinsic "llvm.trap"() : () -> !llvm.void
+  // MLIR-NEXT:   llvm.unreachable
+
+  //      LLVM: define void @test_trap()
+  // LLVM-NEXT:   call void @llvm.trap()
+  // LLVM-NEXT:   unreachable
 }

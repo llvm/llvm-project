@@ -3119,6 +3119,23 @@ def UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// TrapOp
+//===----------------------------------------------------------------------===//
+
+def TrapOp : CIR_Op<"trap", [Terminator]> {
+  let summary = "Exit the program abnormally";
+  let description = [{
+    The cir.trap operation causes the program to exit abnormally. The
+    implementations may implement this operation with different mechanisms. For
+    example, an implementation may implement this operation by calling abort,
+    while another implementation may implement this operation by executing an
+    illegal instruction.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
 // These operations are hacks to get around missing features in LLVM's dialect.

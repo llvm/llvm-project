@@ -464,8 +464,9 @@ void CIRGenFunction::LexicalScope::buildImplicitReturn() {
       llvm_unreachable("NYI");
     } else if (shouldEmitUnreachable) {
       if (CGF.CGM.getCodeGenOpts().OptimizationLevel == 0) {
-        // TODO: buildTrapCall(llvm::Intrinsic::trap);
-        assert(!UnimplementedFeature::trap());
+        builder.create<mlir::cir::TrapOp>(localScope->EndLoc);
+        builder.clearInsertionPoint();
+        return;
       }
     }
 

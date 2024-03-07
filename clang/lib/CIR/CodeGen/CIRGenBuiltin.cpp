@@ -505,6 +505,15 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_trap: {
+    builder.create<mlir::cir::TrapOp>(getLoc(E->getExprLoc()));
+
+    // Note that cir.trap is a terminator so we need to start a new block to
+    // preserve the insertion point.
+    builder.createBlock(builder.getBlock()->getParent());
+
+    return RValue::get(nullptr);
+  }
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImempcpy:
