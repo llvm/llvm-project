@@ -5091,10 +5091,24 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_PAIR:
     return false;
 
-  case ISD::SETCC:
+  case ISD::SETCC: {
     // Integer setcc cannot create undef or poison.
-    // FIXME: Support FP.
-    return !Op.getOperand(0).getValueType().isInteger();
+    if (Op.getOperand(0).getValueType().isInteger())
+      return false;
+
+    // FP compares are more complicated. They can create poison for nan/infinity
+    // based on options and flags. The options and flags also cause special
+    // nonan condition codes to be used. Those condition codes may be preserved
+    // even if the nonan flag is dropped somewhere.
+    ISD::CondCode CCCode = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    if (((unsigned)CCCode & 0x10U))
+      return true;
+
+    const TargetOptions &Options = getTarget().Options;
+    return Options.NoNaNsFPMath || Options.NoInfsFPMath ||
+           (ConsiderFlags && (Op->getFlags().hasNoNaNs() ||
+                              Op->getFlags().hasNoInfs()));
+  }
 
   // Matches hasPoisonGeneratingFlags().
   case ISD::ZERO_EXTEND:
