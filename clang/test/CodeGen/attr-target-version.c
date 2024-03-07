@@ -273,7 +273,7 @@ int hoo(void) {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @fmv_inline._MfcmaMfp16Mfp16MrdmMsme
+// CHECK-NEXT:    ret ptr @fmv_inline._MfcmaMfp16MrdmMsme
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 864726312827224064
@@ -582,7 +582,7 @@ int hoo(void) {
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MfcmaMfp16Mfp16MrdmMsme
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MfcmaMfp16MrdmMsme
 // CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
