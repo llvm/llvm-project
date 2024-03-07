@@ -386,8 +386,10 @@ void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
 }
 
 bool BoundsAttributedType::referencesFieldDecls() const {
-  return llvm::any_of(dependent_decls(), [](const TypeCoupledDeclRefInfo &Info) {
-    return isa<FieldDecl>(Info.getDecl()); });
+  return llvm::any_of(dependent_decls(),
+                      [](const TypeCoupledDeclRefInfo &Info) {
+                        return isa<FieldDecl>(Info.getDecl());
+                      });
 }
 
 void CountAttributedType::Profile(llvm::FoldingSetNodeID &ID,

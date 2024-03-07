@@ -9748,14 +9748,16 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   return Context.getTypeOfExprType(E, Kind);
 }
 
-static void BuildTypeCoupledDecls(Expr *E,
-                                  llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
+static void
+BuildTypeCoupledDecls(Expr *E,
+                      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
   // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
   auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
 }
 
-QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr) {
+QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
+                                             Expr *CountExpr) {
   assert(WrappedTy->isIncompleteArrayType());
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
