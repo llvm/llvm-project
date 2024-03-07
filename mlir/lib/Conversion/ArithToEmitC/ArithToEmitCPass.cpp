@@ -37,6 +37,8 @@ void ConvertArithToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
 
   target.addLegalDialect<emitc::EmitCDialect>();
+  target.addIllegalDialect<arith::ArithDialect>();
+  target.addLegalOp<arith::ConstantOp>();
 
   RewritePatternSet patterns(&getContext());
   TypeConverter typeConverter;
