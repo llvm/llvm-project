@@ -1573,7 +1573,7 @@ def Unlikely : StmtAttr {
 def : MutualExclusions<[Likely, Unlikely]>;
 
 def CXXAssume : StmtAttr {
-  let Spellings = [CXX11<"", "assume", 202302>];
+  let Spellings = [CXX11<"", "assume", 202207>];
   let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
   let Args = [ExprArgument<"Assumption">];
   let Documentation = [CXXAssumeDocs];

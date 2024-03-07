@@ -62,7 +62,7 @@ void g(int x) {
 constexpr int h(int x) { return sizeof([=] { [[assume(x)]]; }); } // ext-warning {{C++23 extension}}
 static_assert(h(4) == sizeof(int));
 
-static_assert(__has_cpp_attribute(assume));
+static_assert(__has_cpp_attribute(assume) == 202207L);
 static_assert(__has_attribute(assume));
 
 constexpr bool i() { // expected-error {{never produces a constant expression}}
