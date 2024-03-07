@@ -8066,25 +8066,6 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   case ARM::sysSTMIB_UPD:
     return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                  "system STM cannot have writeback register");
-  case ARM::tMUL:
-    // The second source operand must be the same register as the destination
-    // operand.
-    //
-    // In this case, we must directly check the parsed operands because the
-    // cvtThumbMultiply() function is written in such a way that it guarantees
-    // this first statement is always true for the new Inst.  Essentially, the
-    // destination is unconditionally copied into the second source operand
-    // without checking to see if it matches what we actually parsed.
-    if (Operands.size() == MnemonicOpsEndInd + 3 &&
-        (((ARMOperand &)*Operands[MnemonicOpsEndInd]).getReg() !=
-         ((ARMOperand &)*Operands[MnemonicOpsEndInd + 2]).getReg()) &&
-        (((ARMOperand &)*Operands[MnemonicOpsEndInd]).getReg() !=
-         ((ARMOperand &)*Operands[MnemonicOpsEndInd + 1]).getReg())) {
-      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
-                   "destination register must match source register");
-    }
-    break;
-
   // Like for ldm/stm, push and pop have hi-reg handling version in Thumb2,
   // so only issue a diagnostic for thumb1. The instructions will be
   // switched to the t2 encodings in processInstruction() if necessary.
