@@ -188,6 +188,8 @@ public:
 
   bool GetSwiftEnableFullDwarfDebugging() const;
 
+  bool GetSwiftAllowExplicitModules() const;
+
   Args GetSwiftPluginServerForPath() const;
 
   bool GetSwiftAutoImportFrameworks() const;

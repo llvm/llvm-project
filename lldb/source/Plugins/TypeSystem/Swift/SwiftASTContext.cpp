@@ -1579,9 +1579,10 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
     // module loading.
     // TODO: Incorporate loading explicit module dependencies to
     // speedup dependency resolution.
-    if (has_explicit_builds_enabled &&
-        match_explicit_build_option(clang_argument))
-      continue;
+    if (!Target::GetGlobalProperties().GetSwiftAllowExplicitModules())
+      if (has_explicit_builds_enabled &&
+          match_explicit_build_option(clang_argument))
+        continue;
 
     // Otherwise add the argument to the list.
     if (!IsMacroDefinition(clang_argument))

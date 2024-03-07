@@ -28,8 +28,11 @@ let Definition = "target_experimental" in {
     ElementType<"String">,
     Desc<"A dictionary of plugin paths as keys and swift-plugin-server binaries as values">;
   def SwiftEnableFullDwarfDebugging: Property<"swift-enable-full-dwarf-debugging", "Boolean">,
-  DefaultFalse,
-  Desc<"Read full debug information from DWARF for Swift debugging, whenever possible">;
+    DefaultFalse,
+    Desc<"Read full debug information from DWARF for Swift debugging, whenever possible">;
+  def SwiftAllowExplicitModules: Property<"swift-allow-explicit-modules", "Boolean">,
+    DefaultFalse,
+    Desc<"Allows explicit module flags to be passed through to ClangImporter.">;
 }
 
 let Definition = "target" in {
