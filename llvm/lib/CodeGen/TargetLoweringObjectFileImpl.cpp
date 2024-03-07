@@ -2687,6 +2687,9 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   // allocated with TE storage-mapping class.
   // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC, otherwise
   // the AIX assembler will complain.
+  // For AIX TLS local-dynamic symbol references, add fixed prefix "_$TLSLD." to
+  // force rename. Different TLS model (local-dynamic and initial-exec) in the
+  // same module can access to the same GV with the rename.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
       XCOFF::CsectProperties(
