@@ -684,7 +684,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     if (!res_type)
       break;
     attrs.type.Clear();
-    encoding_data_type = Type::eEncodingIsUID;
+    encoding_data_type = Type::eEncodingIsLLVMPtrAuthUID;
     resolve_state = Type::ResolveState::Full;
 
     // Apply the ptrauth qualifier to the resolved type.
