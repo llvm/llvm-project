@@ -3101,15 +3101,15 @@ bool Target::IsSwiftCxxInteropEnabled() {
     break;
   }
 
-  EnableSwiftCxxInterop interop_enabled = GetEnableSwiftCxxInterop();
+  AutoBool interop_enabled = GetEnableSwiftCxxInterop();
   switch (interop_enabled) {
-  case eEnableSwiftCxxInterop:
+  case AutoBool::True:
     m_is_swift_cxx_interop_enabled = eLazyBoolYes;
     break;
-  case eDisableSwiftCxxInterop:
+  case AutoBool::False:
     m_is_swift_cxx_interop_enabled = eLazyBoolNo;
     break;
-  case eAutoDetectSwiftCxxInterop: {
+  case AutoBool::Auto: {
     if (GetImages().IsEmpty())
       m_is_swift_cxx_interop_enabled = eLazyBoolNo;
     else
@@ -4633,10 +4633,21 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
 };
 
 static constexpr OptionEnumValueElement g_enable_swift_cxx_interop_values[] = {
-    {eAutoDetectSwiftCxxInterop, "auto",
+    {llvm::to_underlying(AutoBool::Auto), "auto",
      "Automatically detect if C++ interop mode should be enabled."},
-    {eEnableSwiftCxxInterop, "true", "Enable C++ interop."},
-    {eDisableSwiftCxxInterop, "false", "Disable C++ interop."},
+    {llvm::to_underlying(AutoBool::True), "true", "Enable C++ interop."},
+    {llvm::to_underlying(AutoBool::False), "false", "Disable C++ interop."},
+};
+
+static constexpr OptionEnumValueElement g_enable_full_dwarf_debugging[] = {
+    {llvm::to_underlying(AutoBool::Auto), "auto",
+     "Automatically detect if full DWARF debugging should be enabled. Full "
+     "DWARF debugging is enabled if no reflection metadata is added to the "
+     "debugger."},
+    {llvm::to_underlying(AutoBool::True), "true",
+     "Enable full DWARF debugging."},
+    {llvm::to_underlying(AutoBool::False), "false",
+     "Disable full DWARF debugging."},
 };
 
 #define LLDB_PROPERTIES_target
@@ -4856,28 +4867,25 @@ bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
   return true;
 }
 
-EnableSwiftCxxInterop TargetProperties::GetEnableSwiftCxxInterop() const {
+AutoBool TargetProperties::GetEnableSwiftCxxInterop() const {
   const uint32_t idx = ePropertySwiftEnableCxxInterop;
 
-  EnableSwiftCxxInterop enable_interop =
-      (EnableSwiftCxxInterop)m_experimental_properties_up->GetValueProperties()
-          ->GetPropertyAtIndexAs<EnableSwiftCxxInterop>(idx)
-          .value_or(static_cast<EnableSwiftCxxInterop>(
+  AutoBool enable_interop =
+      (AutoBool)m_experimental_properties_up->GetValueProperties()
+          ->GetPropertyAtIndexAs<AutoBool>(idx)
+          .value_or(static_cast<AutoBool>(
               g_target_properties[idx].default_uint_value));
   return enable_interop;
 }
 
-bool TargetProperties::GetSwiftEnableFullDwarfDebugging() const {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    return exp_values
-        ->GetPropertyAtIndexAs<bool>(ePropertySwiftEnableFullDwarfDebugging)
-        .value_or(false);
-
-  return false;
+AutoBool TargetProperties::GetSwiftEnableFullDwarfDebugging() const {
+  const uint32_t idx = ePropertySwiftEnableCxxInterop;
+  AutoBool enable_dwarf_debugging =
+      (AutoBool)m_experimental_properties_up->GetValueProperties()
+          ->GetPropertyAtIndexAs<AutoBool>(idx)
+          .value_or(static_cast<AutoBool>(
+              g_target_properties[idx].default_uint_value));
+  return enable_dwarf_debugging;
 }
 
 bool TargetProperties::GetSwiftAllowExplicitModules() const {

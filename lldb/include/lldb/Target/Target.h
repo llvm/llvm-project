@@ -184,9 +184,9 @@ public:
 
   bool GetSwiftEnableBareSlashRegex() const;
 
-  EnableSwiftCxxInterop GetEnableSwiftCxxInterop() const;
+  AutoBool GetEnableSwiftCxxInterop() const;
 
-  bool GetSwiftEnableFullDwarfDebugging() const;
+  AutoBool GetSwiftEnableFullDwarfDebugging() const;
 
   bool GetSwiftAllowExplicitModules() const;
 

@@ -147,8 +147,10 @@ public:
 
   std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
   getFieldRecords() override {
-    if (!Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging())
-      return {};
+    assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+               lldb_private::AutoBool::False &&
+           "Full DWARF debugging for Swift is disabled!");
+
     auto *dwarf =
         llvm::dyn_cast<SymbolFileDWARF>(m_type_system.GetSymbolFile());
     auto *dwarf_parser = m_type_system.GetDWARFParser();
@@ -303,8 +305,9 @@ public:
 std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
 DWARFASTParserSwift::getBuiltinTypeDescriptor(
     const swift::reflection::TypeRef *TR) {
-  if (!Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging())
-    return nullptr;
+  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+             lldb_private::AutoBool::False &&
+         "Full DWARF debugging for Swift is disabled!");
 
   auto pair = getTypeAndDie(m_swift_typesystem, TR);
   if (!pair)
@@ -344,8 +347,9 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
 std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
 DWARFASTParserSwift::getMultiPayloadEnumDescriptor(
     const swift::reflection::TypeRef *TR) {
-  if (!Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging())
-    return nullptr;
+  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+             lldb_private::AutoBool::False &&
+         "Full DWARF debugging for Swift is disabled!");
 
   auto pair = getTypeAndDie(m_swift_typesystem, TR);
   if (!pair)
@@ -449,8 +453,10 @@ NodePointer DWARFASTParserSwift::GetCanonicalDemangleTree(DWARFDIE &die) {
 
 std::unique_ptr<swift::reflection::FieldDescriptorBase>
 DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
-  if (!Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging())
-    return nullptr;
+  assert(Target::GetGlobalProperties().GetSwiftEnableFullDwarfDebugging() !=
+             lldb_private::AutoBool::False &&
+         "Full DWARF debugging for Swift is disabled!");
+
 
   auto pair = getTypeAndDie(m_swift_typesystem, TR);
   if (!pair)

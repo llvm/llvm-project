@@ -20,16 +20,17 @@ let Definition = "target_experimental" in {
     DefaultFalse,
     Desc<"Passes the -enable-bare-slash-regex compiler flag to the swift compiler.">;
   def SwiftEnableCxxInterop: Property<"swift-enable-cxx-interop", "Enum">,
-    DefaultEnumValue<"eAutoDetectSwiftCxxInterop">,
+    DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
     EnumValues<"OptionEnumValues(g_enable_swift_cxx_interop_values)">,
     Desc<"Passes the -enable-cxx-interop flag to the swift compiler.">;
   def SwiftPluginServerForPath: Property<"swift-plugin-server-for-path",
       "Dictionary">,
     ElementType<"String">,
     Desc<"A dictionary of plugin paths as keys and swift-plugin-server binaries as values">;
-  def SwiftEnableFullDwarfDebugging: Property<"swift-enable-full-dwarf-debugging", "Boolean">,
-    DefaultFalse,
-    Desc<"Read full debug information from DWARF for Swift debugging, whenever possible">;
+  def SwiftEnableFullDwarfDebugging: Property<"swift-enable-full-dwarf-debugging", "Enum">,
+    DefaultEnumValue<"llvm::to_underlying(AutoBool::Auto)">,
+    EnumValues<"OptionEnumValues(g_enable_full_dwarf_debugging)">,
+    Desc<"Read full debug information from DWARF for Swift debugging. By default LLDB will use DWARF debug information if it cannot use reflection metadata.">;
   def SwiftAllowExplicitModules: Property<"swift-allow-explicit-modules", "Boolean">,
     DefaultTrue,
     Desc<"Allows explicit module flags to be passed through to ClangImporter.">;

@@ -1168,16 +1168,16 @@ bool Module::IsSwiftCxxInteropEnabled() {
   case eLazyBoolCalculate:
     break;
   }
-  EnableSwiftCxxInterop interop_enabled =
+  AutoBool interop_enabled =
       Target::GetGlobalProperties().GetEnableSwiftCxxInterop();
   switch (interop_enabled) {
-  case eEnableSwiftCxxInterop:
+  case AutoBool::True:
     m_is_swift_cxx_interop_enabled = eLazyBoolYes;
     break;
-  case eDisableSwiftCxxInterop:
+  case AutoBool::False:
     m_is_swift_cxx_interop_enabled = eLazyBoolNo;
     break;
-  case eAutoDetectSwiftCxxInterop: {
+  case AutoBool::Auto: {
     // Look for the "-enable-experimental-cxx-interop" compile flag in the args
     // of the compile units this module is composed of.
     auto *sym_file = GetSymbolFile();
