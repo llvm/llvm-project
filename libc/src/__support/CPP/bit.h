@@ -27,14 +27,13 @@ namespace LIBC_NAMESPACE::cpp {
 
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
-template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    (sizeof(To) == sizeof(From)) &&
-        cpp::is_trivially_constructible<To>::value &&
-        cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<From>::value,
-    To>
-bit_cast(const From &from) {
+template <
+    typename To, typename From,
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
+                                cpp::is_trivially_constructible<To>::value &&
+                                cpp::is_trivially_copyable<To>::value &&
+                                cpp::is_trivially_copyable<From>::value>>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
 #if LIBC_HAS_BUILTIN(__builtin_bit_cast)
   return __builtin_bit_cast(To, from);
@@ -52,10 +51,8 @@ bit_cast(const From &from) {
 #endif // LIBC_HAS_BUILTIN(__builtin_bit_cast)
 }
 
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>,
-                                                     bool>
-has_single_bit(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr bool has_single_bit(T value) {
   return (value != 0) && ((value & (value - 1)) == 0);
 }
 
@@ -73,9 +70,8 @@ has_single_bit(T value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-countr_zero(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int countr_zero(T value) {
   if (!value)
     return cpp::numeric_limits<T>::digits;
   if (value & 0x1)
@@ -107,9 +103,8 @@ ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-countl_zero(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int countl_zero(T value) {
   if (!value)
     return cpp::numeric_limits<T>::digits;
   // Bisection method.
@@ -140,9 +135,8 @@ ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of all ones.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-countl_one(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int countl_one(T value) {
   return cpp::countl_zero<T>(~value);
 }
 
@@ -153,9 +147,8 @@ countl_one(T value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of all ones.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-countr_one(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int countr_one(T value) {
   return cpp::countr_zero<T>(~value);
 }
 
@@ -163,9 +156,8 @@ countr_one(T value) {
 /// Returns 0 otherwise.
 ///
 /// Ex. bit_width(5) == 3.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-bit_width(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int bit_width(T value) {
   return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
 }
 
@@ -173,9 +165,8 @@ bit_width(T value) {
 /// nonzero.  Returns 0 otherwise.
 ///
 /// Ex. bit_floor(5) == 4.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-bit_floor(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr T bit_floor(T value) {
   if (!value)
     return 0;
   return T(1) << (cpp::bit_width(value) - 1);
@@ -188,9 +179,8 @@ bit_floor(T value) {
 ///
 /// The return value is undefined if the input is larger than the largest power
 /// of two representable in T.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-bit_ceil(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr T bit_ceil(T value) {
   if (value < 2)
     return 1;
   return T(1) << cpp::bit_width<T>(value - 1u);
@@ -200,31 +190,28 @@ bit_ceil(T value) {
 // from https://blog.regehr.org/archives/1063.
 
 // Forward-declare rotr so that rotl can use it.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-rotr(T value, int rotate);
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr T rotr(T value, int rotate);
 
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-rotl(T value, int rotate) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr T rotl(T value, int rotate) {
   constexpr unsigned N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
-    return cpp::rotr<T>(value, -rotate);
+    return cpp::rotr(value, -rotate);
   return (value << rotate) | (value >> (N - rotate));
 }
 
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-rotr(T value, int rotate) {
+template <typename T, typename>
+[[nodiscard]] LIBC_INLINE constexpr T rotr(T value, int rotate) {
   constexpr unsigned N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
-    return cpp::rotl<T>(value, -rotate);
+    return cpp::rotl(value, -rotate);
   return (value >> rotate) | (value << (N - rotate));
 }
 
@@ -239,44 +226,33 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   }
 }
 
-// TODO: remove from 'bit.h' as it is not a standard function.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-first_leading_zero(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_leading_zero(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0 : countl_one(value) + 1;
 }
 
-// TODO: remove from 'bit.h' as it is not a standard function.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-first_leading_one(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_leading_one(T value) {
   return first_leading_zero(static_cast<T>(~value));
 }
 
-// TODO: remove from 'bit.h' as it is not a standard function.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-first_trailing_zero(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_trailing_zero(T value) {
   return value == cpp::numeric_limits<T>::max()
              ? 0
              : countr_zero(static_cast<T>(~value)) + 1;
 }
 
-// TODO: remove from 'bit.h' as it is not a standard function.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-first_trailing_one(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_trailing_one(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0 : countr_zero(value) + 1;
 }
 
 /// Count number of 1's aka population count or hamming weight.
 ///
 /// Only unsigned integral types are allowed.
-// TODO: rename as 'popcount' to follow the standard
-// https://en.cppreference.com/w/cpp/numeric/popcount
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-count_ones(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int count_ones(T value) {
   int count = 0;
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     if ((value >> i) & 0x1)
@@ -296,10 +272,8 @@ ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
 // TODO: 128b specializations?
 #undef ADD_SPECIALIZATION
 
-// TODO: remove from 'bit.h' as it is not a standard function.
-template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-count_zeros(T value) {
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int count_zeros(T value) {
   return count_ones<T>(static_cast<T>(~value));
 }
 

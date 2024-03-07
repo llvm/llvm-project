@@ -38,8 +38,7 @@ TestLogger &operator<<(TestLogger &logger, Location Loc) {
 // When the value is UInt128, __uint128_t or wider, show its hexadecimal
 // digits.
 template <typename T>
-cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
-                     cpp::is_big_int_v<T>,
+cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t)),
                  cpp::string>
 describeValue(T Value) {
   static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
@@ -48,10 +47,11 @@ describeValue(T Value) {
 }
 
 // When the value is of a standard integral type, just display it as normal.
-template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) <= sizeof(uint64_t)),
+template <typename ValType>
+cpp::enable_if_t<cpp::is_integral_v<ValType> &&
+                     sizeof(ValType) <= sizeof(uint64_t),
                  cpp::string>
-describeValue(T Value) {
+describeValue(ValType Value) {
   return cpp::to_string(Value);
 }
 
