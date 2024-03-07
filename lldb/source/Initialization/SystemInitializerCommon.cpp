@@ -9,6 +9,7 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
@@ -69,6 +70,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
   Diagnostics::Initialize();
   FileSystem::Initialize();
   HostInfo::Initialize(m_shlib_dir_helper);
+  ProgressManager::Initialize();
 
   llvm::Error error = Socket::Initialize();
   if (error)
@@ -97,6 +99,7 @@ void SystemInitializerCommon::Terminate() {
 #endif
 
   Socket::Terminate();
+  ProgressManager::Terminate();
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
   FileSystem::Terminate();

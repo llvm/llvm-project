@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_PROGRESS_H
 #define LLDB_CORE_PROGRESS_H
 
+#include "lldb/Host/Alarm.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringMap.h"
@@ -150,9 +151,12 @@ public:
   void Increment(const Progress::ProgressData &);
   void Decrement(const Progress::ProgressData &);
 
+  static void Initialize();
+  static void Terminate();
+  static bool Enabled();
   static ProgressManager &Instance();
 
-private:
+protected:
   enum class EventType {
     Begin,
     End,
@@ -160,9 +164,32 @@ private:
   static void ReportProgress(const Progress::ProgressData &progress_data,
                              EventType type);
 
-  llvm::StringMap<std::pair<uint64_t, Progress::ProgressData>>
-      m_progress_category_map;
-  std::mutex m_progress_map_mutex;
+  static std::optional<ProgressManager> &InstanceImpl();
+
+  /// Helper function for reporting progress when the alarm in the corresponding
+  /// entry in the map expires.
+  void Expire(llvm::StringRef key);
+
+  /// Entry used for bookkeeping.
+  struct Entry {
+    /// Reference count used for overlapping events.
+    uint64_t refcount = 0;
+
+    /// Data used to emit progress events.
+    Progress::ProgressData data;
+
+    /// Alarm handle used when the refcount reaches zero.
+    Alarm::Handle handle = Alarm::INVALID_HANDLE;
+  };
+
+  /// Map used for bookkeeping.
+  llvm::StringMap<Entry> m_entries;
+
+  /// Mutex to provide the map.
+  std::mutex m_entries_mutex;
+
+  /// Alarm instance to coalesce progress events.
+  Alarm m_alarm;
 };
 
 } // namespace lldb_private
