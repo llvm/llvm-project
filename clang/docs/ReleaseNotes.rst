@@ -319,6 +319,8 @@ Bug Fixes to C++ Support
   Fixes (#GH80630)
 - Fix a crash when an explicit template argument list is used with a name for which lookup
   finds a non-template function and a dependent using declarator.
+- Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
+  calculation. (#GH56556), (#GH82849).
 - Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
   a member-function against a non member function or a member-function with an
   explicit object parameter against a member function with no explicit object parameter
