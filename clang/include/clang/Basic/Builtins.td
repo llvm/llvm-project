@@ -706,7 +706,7 @@ def Popcount : Builtin, BitInt_Long_LongLongTemplate {
 
 def Popcountg : Builtin {
   let Spellings = ["__builtin_popcountg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
