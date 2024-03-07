@@ -40,6 +40,8 @@ public:
     if (!op || !op.getIsTargetDevice())
       return;
 
+    llvm::SmallVector<func::FuncOp> removedFuncs;
+
     op->walk<WalkOrder::PreOrder>([&](func::FuncOp funcOp) {
       // Do not filter functions with target regions inside, because they have
       // to be available for both host and device so that regular and reverse
@@ -80,12 +82,14 @@ public:
           callOp->erase();
         }
         if (!hasTargetRegion)
-          funcOp.erase();
+          removedFuncs.push_back(funcOp);
         else if (declareTargetOp)
           declareTargetOp.setDeclareTarget(declareType,
                                            omp::DeclareTargetCaptureClause::to);
       }
     });
+    for (func::FuncOp f : removedFuncs)
+      f.erase();
   }
 };
 } // namespace
