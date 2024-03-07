@@ -193,9 +193,8 @@ define <32 x i32> @concat_8xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; VLA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
 ; VLA-NEXT:    vmv1r.v v16, v15
 ; VLA-NEXT:    csrr a0, vlenb
-; VLA-NEXT:    li a1, 0
 ; VLA-NEXT:    slli a0, a0, 3
-; VLA-NEXT:    add a1, a1, a0
+; VLA-NEXT:    mv a1, a0
 ; VLA-NEXT:    slli a0, a0, 1
 ; VLA-NEXT:    add a0, a0, a1
 ; VLA-NEXT:    add a0, sp, a0
@@ -245,9 +244,8 @@ define <32 x i32> @concat_8xv4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; VLA-NEXT:    li a0, 32
 ; VLA-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; VLA-NEXT:    csrr a0, vlenb
-; VLA-NEXT:    li a1, 0
 ; VLA-NEXT:    slli a0, a0, 3
-; VLA-NEXT:    add a1, a1, a0
+; VLA-NEXT:    mv a1, a0
 ; VLA-NEXT:    slli a0, a0, 1
 ; VLA-NEXT:    add a0, a0, a1
 ; VLA-NEXT:    add a0, sp, a0

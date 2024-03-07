@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
@@ -1816,6 +1817,7 @@ private:
 
 public:
   void onBeginOfFile() override;
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   ParseStatus parseCustomOperand(OperandVector &Operands, unsigned MCK);
 
@@ -2006,12 +2008,8 @@ static bool isInlineableLiteralOp16(int64_t Val, MVT VT, bool HasInv2Pi) {
     return isInlinableIntLiteral(Val);
   }
 
-  if (VT.getScalarType() == MVT::f16)
-    return AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
-
-  assert(VT.getScalarType() == MVT::bf16);
-
-  return AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
+  // f16/v2f16 operands work correctly for all values.
+  return AMDGPU::isInlinableLiteral16(Val, HasInv2Pi);
 }
 
 bool AMDGPUOperand::isInlinableImm(MVT type) const {
@@ -2379,26 +2377,15 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
-    if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val))) {
-      Inst.addOperand(MCOperand::createImm(Val));
-      setImmKindConst();
-      return;
-    }
-
-    Inst.addOperand(MCOperand::createImm(Val & 0xffff));
-    setImmKindLiteral();
-    return;
-
-  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
-                                       AsmParser->hasInv2PiInlineImm())) {
+        AMDGPU::isInlinableLiteral16(static_cast<int16_t>(Val),
+                                     AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       setImmKindConst();
       return;
@@ -2425,17 +2412,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16: {
-    assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val)));
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
-  }
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
     assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
-                                          AsmParser->hasInv2PiInlineImm()));
+    assert(AMDGPU::isInlinableLiteral16(static_cast<int16_t>(Val),
+                                        AsmParser->hasInv2PiInlineImm()));
 
     Inst.addOperand(MCOperand::createImm(Val));
     return;
@@ -3579,19 +3561,7 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
         OperandType == AMDGPU::OPERAND_REG_IMM_V2BF16)
       return AMDGPU::isInlinableLiteralV2BF16(Val);
 
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED)
-      return AMDGPU::isInlinableLiteralFP16(Val, hasInv2PiInlineImm());
-
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_AC_BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED)
-      return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
-
-    llvm_unreachable("invalid operand type");
+    return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
   }
   default:
     llvm_unreachable("invalid operand size");
@@ -8307,6 +8277,59 @@ void AMDGPUAsmParser::onBeginOfFile() {
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
+}
+
+/// Parse AMDGPU specific expressions.
+///
+///  expr ::= or(expr, ...) |
+///           max(expr, ...)
+///
+bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  using AGVK = AMDGPUVariadicMCExpr::VariadicKind;
+
+  if (isToken(AsmToken::Identifier)) {
+    StringRef TokenId = getTokenStr();
+    AGVK VK = StringSwitch<AGVK>(TokenId)
+                  .Case("max", AGVK::AGVK_Max)
+                  .Case("or", AGVK::AGVK_Or)
+                  .Default(AGVK::AGVK_None);
+
+    if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
+      SmallVector<const MCExpr *, 4> Exprs;
+      uint64_t CommaCount = 0;
+      lex(); // Eat 'max'/'or'
+      lex(); // Eat '('
+      while (true) {
+        if (trySkipToken(AsmToken::RParen)) {
+          if (Exprs.empty()) {
+            Error(getToken().getLoc(),
+                  "empty " + Twine(TokenId) + " expression");
+            return true;
+          }
+          if (CommaCount + 1 != Exprs.size()) {
+            Error(getToken().getLoc(),
+                  "mismatch of commas in " + Twine(TokenId) + " expression");
+            return true;
+          }
+          Res = AMDGPUVariadicMCExpr::create(VK, Exprs, getContext());
+          return false;
+        }
+        const MCExpr *Expr;
+        if (getParser().parseExpression(Expr, EndLoc))
+          return true;
+        Exprs.push_back(Expr);
+        bool LastTokenWasComma = trySkipToken(AsmToken::Comma);
+        if (LastTokenWasComma)
+          CommaCount++;
+        if (!LastTokenWasComma && !isToken(AsmToken::RParen)) {
+          Error(getToken().getLoc(),
+                "unexpected token in " + Twine(TokenId) + " expression");
+          return true;
+        }
+      }
+    }
+  }
+  return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
 }
 
 ParseStatus AMDGPUAsmParser::parseOModSI(OperandVector &Operands) {
