@@ -956,18 +956,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           },
           changeTo(1, 0))
       .moreElementsToNextPow2(0)
-      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
-      .clampNumElements(0, v8s8, v16s8)
-      .clampNumElements(0, v4s16, v8s16)
-      .clampNumElements(0, v4s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64)
       .moreElementsIf(
           [](const LegalityQuery &Query) {
             return Query.Types[0].isVector() && Query.Types[1].isVector() &&
                    Query.Types[0].getNumElements() <
                        Query.Types[1].getNumElements();
           },
-          changeTo(0, 1));
+          changeTo(0, 1))
+      .widenScalarOrEltToNextPow2OrMinSize(0, 8)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v4s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}});

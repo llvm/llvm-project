@@ -95,6 +95,7 @@ add_header_library(
   HDRS
     integer_to_string.h
   DEPENDS
+    .uint
     libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
