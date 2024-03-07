@@ -1859,11 +1859,12 @@ void VectorLegalizer::ExpandREM(SDNode *Node,
   Results.push_back(Result);
 }
 
-// Try to expand libm nodes into a call to a vector math. Callers provide the
+// Try to expand libm nodes into vector math routine calls. Callers provide the
 // LibFunc equivalent of the passed in Node, which is used to lookup mappings
-// within TargetLibraryInfo. Only simply mappings are considered whereby only
-// matching vector operands are allowed and masked functions are passed an all
-// true vector (i.e. Node cannot be a predicated operation).
+// within TargetLibraryInfo. The only mappings considered are those where the
+// result and all operands are the same vector type. While predicated nodes are
+// not supported, we will emit calls to masked routines by passing in an all
+// true mask.
 bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
                                            SmallVectorImpl<SDValue> &Results) {
   // Chain must be propagated but currently strict fp operations are down
@@ -1883,7 +1884,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   const TargetLibraryInfo &TLibInfo = DAG.getLibInfo();
   const VecDesc *VD = TLibInfo.getVectorMappingInfo(LCName, VL, false);
   if (!VD)
-    VD = TLibInfo.getVectorMappingInfo(LCName, VL, /*Masked*/ true);
+    VD = TLibInfo.getVectorMappingInfo(LCName, VL, /*Masked=*/ true);
   if (!VD)
     return false;
 
@@ -1909,7 +1910,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   LLVM_DEBUG(dbgs() << "Found vector variant " << VD->getVectorFnName()
                     << "\n");
 
-  // Sanity check just in case OptVFInfo has unexpected paramaters.
+  // Sanity check just in case OptVFInfo has unexpected parameters.
   if (OptVFInfo->Shape.Parameters.size() !=
       Node->getNumOperands() + VD->isMasked())
     return false;
