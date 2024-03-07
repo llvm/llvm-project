@@ -2524,6 +2524,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
     const int DMFMA16x16WriteVgprMemExpReadWaitStates = 18;
     const int DMFMA4x4WriteVgprVALUReadWaitStates = 6;
     const int DMFMA16x16WriteVgprVALUReadWaitStates = 11;
+    const int GFX950_DMFMA16x16WriteVgprVALUReadWaitStates = 19;
     const int DotWriteSameDotReadSrcAB = 3;
     const int DotWriteDifferentVALURead = 3;
     const int DMFMABetweenVALUWriteVMEMRead = 2;
@@ -2584,9 +2585,12 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
           break;
         case 8:
         case 16:
-          NeedWaitStates = IsMemOrExport
-                               ? DMFMA16x16WriteVgprMemExpReadWaitStates
-                               : DMFMA16x16WriteVgprVALUReadWaitStates;
+          NeedWaitStates =
+              IsMemOrExport
+                  ? DMFMA16x16WriteVgprMemExpReadWaitStates
+                  : (ST.hasGFX950Insts()
+                         ? GFX950_DMFMA16x16WriteVgprVALUReadWaitStates
+                         : DMFMA16x16WriteVgprVALUReadWaitStates);
           break;
         default:
           llvm_unreachable("unexpected dgemm");
