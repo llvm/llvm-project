@@ -29,7 +29,9 @@
 
 namespace llvm {
 namespace orc {
+class JITTargetMachineBuilder;
 class LLJIT;
+class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -126,6 +128,13 @@ protected:
   // targets the in-process __clang_Interpreter runtime. Override this to use a
   // custom runtime.
   virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
+
+  // Lazily construct thev ORCv2 JITBuilder. This called when the internal
+  // IncrementalExecutor is created. The default implementation populates an
+  // in-process JIT with debugging support. Override this to configure the JIT
+  // engine used for execution.
+  virtual llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+  CreateJITBuilder(CompilerInstance &CI);
 
 public:
   virtual ~Interpreter();
