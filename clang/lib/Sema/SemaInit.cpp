@@ -10723,7 +10723,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   // We can only perform deduction for class templates or alias templates.
   auto *Template =
       dyn_cast_or_null<ClassTemplateDecl>(TemplateName.getAsTemplateDecl());
-  TemplateDecl* LookupTemplateDecl = Template;
+  TemplateDecl *LookupTemplateDecl = Template;
   if (!Template) {
     if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
             TemplateName.getAsTemplateDecl())) {
@@ -10753,7 +10753,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   if (!Template) {
     Diag(Kind.getLocation(),
          diag::err_deduced_non_class_or_alias_template_specialization_type)
-      << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
+        << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
     if (auto *TD = TemplateName.getAsTemplateDecl())
       NoteTemplateLocation(*TD);
     return QualType();

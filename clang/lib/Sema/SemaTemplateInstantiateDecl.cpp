@@ -2219,8 +2219,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       FunctionTemplate->setInstantiatedFromMemberTemplate(
                                            D->getDescribedFunctionTemplate());
     }
-  } else if (FunctionTemplate && SemaRef.CodeSynthesisContexts.back().Kind !=
-                   Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+  } else if (FunctionTemplate &&
+             SemaRef.CodeSynthesisContexts.back().Kind !=
+                 Sema::CodeSynthesisContext::BuildingDeductionGuides) {
     // Record this function template specialization.
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
     Function->setFunctionTemplateSpecialization(FunctionTemplate,

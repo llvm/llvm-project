@@ -2265,13 +2265,12 @@ public:
 };
 
 // Build a deduction guide with the specified parameter types.
-FunctionTemplateDecl *
-buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
-                    TemplateParameterList *TemplateParams,
-                    CXXConstructorDecl *Ctor, ExplicitSpecifier ES,
-                    TypeSourceInfo *TInfo, SourceLocation LocStart,
-                    SourceLocation Loc, SourceLocation LocEnd, bool IsImplicit,
-                    llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {}) {
+FunctionTemplateDecl *buildDeductionGuide(
+    Sema &SemaRef, TemplateDecl *OriginalTemplate,
+    TemplateParameterList *TemplateParams, CXXConstructorDecl *Ctor,
+    ExplicitSpecifier ES, TypeSourceInfo *TInfo, SourceLocation LocStart,
+    SourceLocation Loc, SourceLocation LocEnd, bool IsImplicit,
+    llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {}) {
   DeclContext *DC = OriginalTemplate->getDeclContext();
   auto DeductionGuideName =
       SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(
@@ -2340,8 +2339,7 @@ template <typename NonTypeTemplateOrTemplateTemplateParmDecl>
 NonTypeTemplateOrTemplateTemplateParmDecl *
 transformTemplateParam(Sema &SemaRef, DeclContext *DC,
                        NonTypeTemplateOrTemplateTemplateParmDecl *OldParam,
-                       MultiLevelTemplateArgumentList &Args,
-                       unsigned NewIndex,
+                       MultiLevelTemplateArgumentList &Args, unsigned NewIndex,
                        unsigned NewDepth) {
   // Ask the template instantiator to do the heavy lifting for us, then adjust
   // the index of the parameter once it's done.
@@ -2554,13 +2552,13 @@ private:
           SemaRef, DC, TTP, Args, TTP->getDepth() - 1,
           Depth1IndexAdjustment + TTP->getIndex());
     if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-      return transformTemplateParam(
-          SemaRef, DC, TTP, Args, Depth1IndexAdjustment + TTP->getIndex(),
-          TTP->getDepth() - 1);
+      return transformTemplateParam(SemaRef, DC, TTP, Args,
+                                    Depth1IndexAdjustment + TTP->getIndex(),
+                                    TTP->getDepth() - 1);
     auto *NTTP = cast<NonTypeTemplateParmDecl>(TemplateParam);
-    return transformTemplateParam(
-        SemaRef, DC, NTTP, Args, Depth1IndexAdjustment + NTTP->getIndex(),
-          NTTP->getDepth() - 1);
+    return transformTemplateParam(SemaRef, DC, NTTP, Args,
+                                  Depth1IndexAdjustment + NTTP->getIndex(),
+                                  NTTP->getDepth() - 1);
   }
 
   QualType transformFunctionProtoType(
@@ -2710,8 +2708,7 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
 
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParams.size(); ++Index) {
-    if (Finder.ReferencedTemplateParams.contains(
-            TemplateParams[Index]))
+    if (Finder.ReferencedTemplateParams.contains(TemplateParams[Index]))
       Results.push_back(Index);
   }
   return Results;
@@ -3023,10 +3020,10 @@ FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
 
 void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
                                           SourceLocation Loc) {
-  if (auto* AliasTemplate = llvm::dyn_cast<TypeAliasTemplateDecl>(Template)) {
-      DeclareImplicitDeductionGuidesForTypeAlias(*this, AliasTemplate, Loc);
-     return;
-  } 
+  if (auto *AliasTemplate = llvm::dyn_cast<TypeAliasTemplateDecl>(Template)) {
+    DeclareImplicitDeductionGuidesForTypeAlias(*this, AliasTemplate, Loc);
+    return;
+  }
   if (CXXRecordDecl *DefRecord =
           cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
     if (TemplateDecl *DescribedTemplate = DefRecord->getDescribedClassTemplate())
