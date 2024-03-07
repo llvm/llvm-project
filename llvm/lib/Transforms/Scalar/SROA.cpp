@@ -4062,10 +4062,14 @@ private:
   bool unfoldGEPPhi(GetElementPtrInst &GEPI) {
     // To prevent infinitely expanding recursive phis, bail if the GEP pointer
     // operand (looking through the phi if it is the phi we want to unfold) is
-    // an instruction besides an alloca.
+    // an instruction besides a static alloca.
     PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
     auto IsInvalidPointerOperand = [](Value *V) {
-      return isa<Instruction>(V) && !isa<AllocaInst>(V);
+      if (!isa<Instruction>(V))
+        return false;
+      if (auto *AI = dyn_cast<AllocaInst>(V))
+        return !AI->isStaticAlloca();
+      return true;
     };
     if (Phi) {
       if (any_of(Phi->operands(), IsInvalidPointerOperand))
