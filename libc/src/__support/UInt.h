@@ -1069,12 +1069,13 @@ mask_trailing_ones() {
   static_assert(count <= T_BITS && "Invalid bit index");
   using word_type = typename T::word_type;
   T out;
-  const int chunk_index_containing_bit = static_cast<int>(count / T::WORD_SIZE);
+  constexpr int CHUNK_INDEX_CONTAINING_BIT =
+      static_cast<int>(count / T::WORD_SIZE);
   int index = 0;
   for (auto &word : out.val) {
-    if (index < chunk_index_containing_bit)
+    if (index < CHUNK_INDEX_CONTAINING_BIT)
       word = -1;
-    else if (index > chunk_index_containing_bit)
+    else if (index > CHUNK_INDEX_CONTAINING_BIT)
       word = 0;
     else
       word = mask_trailing_ones<word_type, count % T::WORD_SIZE>();
@@ -1094,13 +1095,13 @@ mask_leading_ones() {
   static_assert(count <= T_BITS && "Invalid bit index");
   using word_type = typename T::word_type;
   T out;
-  const int chunk_index_containing_bit =
+  constexpr int CHUNK_INDEX_CONTAINING_BIT =
       static_cast<int>((T::BITS - count - 1ULL) / T::WORD_SIZE);
   int index = 0;
   for (auto &word : out.val) {
-    if (index < chunk_index_containing_bit)
+    if (index < CHUNK_INDEX_CONTAINING_BIT)
       word = 0;
-    else if (index > chunk_index_containing_bit)
+    else if (index > CHUNK_INDEX_CONTAINING_BIT)
       word = -1;
     else
       word = mask_leading_ones<word_type, count % T::WORD_SIZE>();
