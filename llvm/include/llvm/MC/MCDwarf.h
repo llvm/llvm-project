@@ -508,7 +508,7 @@ private:
   MCSymbol *Label;
   unsigned Register;
   union {
-    long Offset;
+    int64_t Offset;
     unsigned Register2;
   };
   unsigned AddressSpace = ~0u;
@@ -516,7 +516,7 @@ private:
   std::vector<char> Values;
   std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, long O, SMLoc Loc,
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, SMLoc Loc,
                    StringRef V = "", StringRef Comment = "")
       : Operation(Op), Label(L), Register(R), Offset(O), Loc(Loc),
         Values(V.begin(), V.end()), Comment(Comment) {
@@ -528,7 +528,7 @@ private:
     assert(Op == OpRegister);
   }
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, long O, unsigned AS,
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, unsigned AS,
                    SMLoc Loc)
       : Operation(Op), Label(L), Register(R), Offset(O), AddressSpace(AS),
         Loc(Loc) {
@@ -538,8 +538,8 @@ private:
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
-  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register, long Offset,
-                                    SMLoc Loc = {}) {
+  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
+                                    int64_t Offset, SMLoc Loc = {}) {
     return MCCFIInstruction(OpDefCfa, L, Register, Offset, Loc);
   }
 
@@ -553,7 +553,7 @@ public:
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, long Offset,
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int64_t Offset,
                                           SMLoc Loc = {}) {
     return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, Loc);
   }
@@ -561,7 +561,7 @@ public:
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
   /// Offset is a relative value that is added/subtracted from the previous
   /// offset.
-  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, long Adjustment,
+  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int64_t Adjustment,
                                                 SMLoc Loc = {}) {
     return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, Loc);
   }
@@ -581,7 +581,7 @@ public:
   /// .cfi_offset Previous value of Register is saved at offset Offset
   /// from CFA.
   static MCCFIInstruction createOffset(MCSymbol *L, unsigned Register,
-                                       long Offset, SMLoc Loc = {}) {
+                                       int64_t Offset, SMLoc Loc = {}) {
     return MCCFIInstruction(OpOffset, L, Register, Offset, Loc);
   }
 
@@ -589,7 +589,7 @@ public:
   /// Offset from the current CFA register. This is transformed to .cfi_offset
   /// using the known displacement of the CFA register from the CFA.
   static MCCFIInstruction createRelOffset(MCSymbol *L, unsigned Register,
-                                          long Offset, SMLoc Loc = {}) {
+                                          int64_t Offset, SMLoc Loc = {}) {
     return MCCFIInstruction(OpRelOffset, L, Register, Offset, Loc);
   }
 
@@ -650,7 +650,7 @@ public:
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
-  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, long Size,
+  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int64_t Size,
                                             SMLoc Loc = {}) {
     return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
   }
@@ -677,7 +677,7 @@ public:
     return AddressSpace;
   }
 
-  long getOffset() const {
+  int64_t getOffset() const {
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||

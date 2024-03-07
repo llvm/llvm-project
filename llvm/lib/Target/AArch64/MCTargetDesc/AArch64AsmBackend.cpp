@@ -612,10 +612,10 @@ public:
       return CU::UNWIND_ARM64_MODE_DWARF;
 
     bool HasFP = false;
-    unsigned long StackSize = 0;
+    uint64_t StackSize = 0;
 
     uint64_t CompactUnwindEncoding = 0;
-    long CurOffset = 0;
+    int64_t CurOffset = 0;
     for (size_t i = 0, e = Instrs.size(); i != e; ++i) {
       const MCCFIInstruction &Inst = Instrs[i];
 

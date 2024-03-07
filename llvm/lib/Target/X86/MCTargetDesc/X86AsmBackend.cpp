@@ -1348,8 +1348,8 @@ public:
     unsigned SubtractInstrIdx = Is64Bit ? 3 : 2;
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
-    unsigned long StackSize = 0;
-    long MinAbsOffset = std::numeric_limits<long>::max();
+    uint64_t StackSize = 0;
+    int64_t MinAbsOffset = std::numeric_limits<long>::max();
 
     for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
