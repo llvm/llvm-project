@@ -64,9 +64,29 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  uint64_t stackSize = MF.getFrameInfo().getStackSize();
-  int64_t spOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
-  unsigned FrameReg = Xtensa::SP;
+  uint64_t StackSize = MF.getFrameInfo().getStackSize();
+  int64_t SPOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  int MinCSFI = 0;
+  int MaxCSFI = -1;
+
+  if (CSI.size()) {
+    MinCSFI = CSI[0].getFrameIdx();
+    MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
+  }
+  // The following stack frame objects are always referenced relative to $sp:
+  //  1. Outgoing arguments.
+  //  2. Pointer to dynamically allocated stack space.
+  //  3. Locations for callee-saved registers.
+  //  4. Locations for eh data registers.
+  // Everything else is referenced relative to whatever register
+  // getFrameRegister() returns.
+  unsigned FrameReg;
+  if ((FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI))
+    FrameReg = Xtensa::SP;
+  else
+    FrameReg = getFrameRegister(MF);
 
   // Calculate final offset.
   // - There is no need to change the offset if the frame object is one of the
@@ -83,8 +103,23 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate
   // field.
-  if (!MI.isDebugValue() && !Valid)
-    report_fatal_error("Load immediate not supported yet");
+  if (!MI.isDebugValue() && !Valid) {
+    MachineBasicBlock &MBB = *MI.getParent();
+    DebugLoc DL = II->getDebugLoc();
+    unsigned ADD = Xtensa::ADD;
+    unsigned Reg;
+    const XtensaInstrInfo &TII = *static_cast<const XtensaInstrInfo *>(
+        MBB.getParent()->getSubtarget().getInstrInfo());
+
+    TII.loadImmediate(MBB, II, &Reg, Offset);
+    BuildMI(MBB, II, DL, TII.get(ADD), Reg)
+        .addReg(FrameReg)
+        .addReg(Reg, RegState::Kill);
+
+    FrameReg = Reg;
+    Offset = 0;
+    IsKill = true;
+  }
 
   MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false, false, IsKill);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);

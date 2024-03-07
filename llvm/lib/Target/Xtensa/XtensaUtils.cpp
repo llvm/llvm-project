@@ -46,6 +46,8 @@ bool isValidAddrOffset(MachineInstr &MI, int64_t Offset) {
   case Xtensa::S16I:
     Scale = 2;
     break;
+  case Xtensa::LEA_ADD:
+    return (Offset >= -128 && Offset <= 127);
   default:
     // assume that MI is 32-bit load/store operation
     Scale = 4;

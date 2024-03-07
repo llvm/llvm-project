@@ -8,7 +8,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XtensaMCExpr.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
+#include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 
@@ -35,6 +38,12 @@ class XtensaAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
+  XtensaTargetStreamer &getTargetStreamer() {
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<XtensaTargetStreamer &>(TS);
+  }
+
+  bool ParseDirective(AsmToken DirectiveID) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -44,6 +53,9 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
+
+  bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                          const MCSubtargetInfo *STI);
 
 // Auto-generated instruction matching functions
 #define GET_ASSEMBLER_HEADER
@@ -62,6 +74,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
     return ParseStatus::NoMatch;
   }
   ParseStatus parsePCRelTarget(OperandVector &Operands);
+  bool parseLiteralDirective(SMLoc L);
 
 public:
   enum XtensaMatchResultTy {
@@ -148,7 +161,13 @@ public:
 
   bool isImm12() const { return isImm(-2048, 2047); }
 
-  bool isImm12m() const { return isImm(-2048, 2047); }
+  // Convert MOVI to literal load, when immediate is not in range (-2048, 2047)
+  bool isImm12m() const {
+    if (Kind == Immediate)
+      return true;
+
+    return false;
+  }
 
   bool isOffset4m32() const {
     return isImm(0, 60) &&
@@ -348,6 +367,67 @@ static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
   return Loc;
 }
 
+bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
+                                         MCStreamer &Out,
+                                         const MCSubtargetInfo *STI) {
+  Inst.setLoc(IDLoc);
+  const unsigned Opcode = Inst.getOpcode();
+  switch (Opcode) {
+  case Xtensa::L32R: {
+    const MCSymbolRefExpr *OpExpr =
+        (const MCSymbolRefExpr *)Inst.getOperand(1).getExpr();
+    XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
+    const MCExpr *NewOpExpr = XtensaMCExpr::create(OpExpr, Kind, getContext());
+    Inst.getOperand(1).setExpr(NewOpExpr);
+  } break;
+  case Xtensa::MOVI: {
+    XtensaTargetStreamer &TS = this->getTargetStreamer();
+
+    // Expand MOVI operand
+    if (!Inst.getOperand(1).isExpr()) {
+      uint64_t ImmOp64 = Inst.getOperand(1).getImm();
+      int32_t Imm = ImmOp64;
+      if ((Imm < -2048) || (Imm > 2047)) {
+        XtensaTargetStreamer &TS = this->getTargetStreamer();
+        MCInst TmpInst;
+        TmpInst.setLoc(IDLoc);
+        TmpInst.setOpcode(Xtensa::L32R);
+        const MCExpr *Value = MCConstantExpr::create(ImmOp64, getContext());
+        MCSymbol *Sym = getContext().createTempSymbol();
+        const MCExpr *Expr = MCSymbolRefExpr::create(
+            Sym, MCSymbolRefExpr::VK_None, getContext());
+        const MCExpr *OpExpr = XtensaMCExpr::create(
+            Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+        TmpInst.addOperand(Inst.getOperand(0));
+        MCOperand Op1 = MCOperand::createExpr(OpExpr);
+        TmpInst.addOperand(Op1);
+        TS.emitLiteral(Sym, Value, IDLoc);
+        Inst = TmpInst;
+      }
+    } else {
+      MCInst TmpInst;
+      TmpInst.setLoc(IDLoc);
+      TmpInst.setOpcode(Xtensa::L32R);
+      const MCExpr *Value = Inst.getOperand(1).getExpr();
+      MCSymbol *Sym = getContext().createTempSymbol();
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+      const MCExpr *OpExpr = XtensaMCExpr::create(
+          Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+      TmpInst.addOperand(Inst.getOperand(0));
+      MCOperand Op1 = MCOperand::createExpr(OpExpr);
+      TmpInst.addOperand(Op1);
+      Inst = TmpInst;
+      TS.emitLiteral(Sym, Value, IDLoc);
+    }
+  } break;
+  default:
+    break;
+  }
+
+  return true;
+}
+
 bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -361,6 +441,7 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   default:
     break;
   case Match_Success:
+    processInstruction(Inst, IDLoc, Out, STI);
     Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
@@ -684,6 +765,58 @@ bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   getParser().Lex(); // Consume the EndOfStatement.
   return false;
+}
+
+bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  MCSymbol *Sym;
+  const MCExpr *Value;
+  SMLoc LiteralLoc = getLexer().getLoc();
+  XtensaTargetStreamer &TS = this->getTargetStreamer();
+
+  if (Parser.parseExpression(Value))
+    return true;
+
+  const MCSymbolRefExpr *SE = dyn_cast<MCSymbolRefExpr>(Value);
+  if (!SE)
+    return Error(LiteralLoc, "literal label must be a symbol");
+  else {
+    Sym = getContext().getOrCreateSymbol(SE->getSymbol().getName());
+  }
+
+  if (Parser.parseToken(AsmToken::Comma, "expected comma"))
+    return true;
+
+  SMLoc OpcodeLoc = getLexer().getLoc();
+  if (parseOptionalToken(AsmToken::EndOfStatement))
+    return Error(OpcodeLoc, "expected value");
+
+  if (Parser.parseExpression(Value))
+    return true;
+
+  TS.emitLiteral(Sym, Value, LiteralLoc);
+
+  return false;
+}
+
+bool XtensaAsmParser::ParseDirective(AsmToken DirectiveID) {
+  StringRef IDVal = DirectiveID.getString();
+  SMLoc Loc = getLexer().getLoc();
+
+  if (IDVal == ".literal_position") {
+    XtensaTargetStreamer &TS = this->getTargetStreamer();
+    TS.emitLiteralPosition();
+    Lex();
+    return false;
+  }
+
+  if (IDVal == ".literal") {
+    parseLiteralDirective(Loc);
+    Lex();
+    return false;
+  }
+
+  return true;
 }
 
 // Force static initialization.
