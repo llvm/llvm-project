@@ -12,8 +12,6 @@ define void @foo(ptr addrspace(1) nocapture %d, i32 %n) nounwind {
 ; CHECK-NEXT:  Loop %bb: backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is (-1 + %n)
-; CHECK-NEXT:  Loop %bb: Predicated backedge-taken count is (-1 + %n)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb: Trip multiple is 1
 ;
 entry:
@@ -52,8 +50,6 @@ define void @test(ptr addrspace(1) %a, i32 %n) nounwind {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (zext i32 %n to i64))<nsw>
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (zext i32 %n to i64))<nsw>
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (zext i32 %n to i64))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:

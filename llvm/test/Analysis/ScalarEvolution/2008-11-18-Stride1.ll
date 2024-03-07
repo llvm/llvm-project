@@ -13,8 +13,6 @@ define i32 @f(i32 %x) nounwind readnone {
 ; CHECK-NEXT:  Loop %bb: backedge-taken count is ((-5 + %x) /u 3)
 ; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 1431655764
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is ((-5 + %x) /u 3)
-; CHECK-NEXT:  Loop %bb: Predicated backedge-taken count is ((-5 + %x) /u 3)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb: Trip multiple is 1
 ;
 entry:
