@@ -3019,6 +3019,7 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SP)
       .addReg(AArch64::SP);
 
+  // Allocate a lazy-save buffer object of size SVL.B * SVL.B (worst-case)
   Register MSub = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::MSUBXrrr), MSub)
       .addReg(RDSVL)
@@ -3027,6 +3028,7 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), AArch64::SP)
       .addReg(MSub);
 
+  // Allocate an additional TPIDR2 object on the stack (16 bytes)
   unsigned TPIDR2Object = TPIDR2->FrameIndex;
   MFI.CreateVariableSizedObject(Align(16), nullptr);
 
@@ -3035,10 +3037,12 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
       BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Zero32)
           .addReg(AArch64::WZR);
 
+  // Store the buffer pointer to the TPIDR2 stack object.
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
       .addReg(MSub)
       .addFrameIndex(TPIDR2Object)
       .addImm(0);
+  // Set the reserved bytes (10-15) to zero
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
       .addReg(Wzr.getReg(0))
       .addFrameIndex(TPIDR2Object)
