@@ -1056,4 +1056,60 @@ rotr(T value, int rotate) {
 
 } // namespace LIBC_NAMESPACE::cpp
 
+namespace LIBC_NAMESPACE {
+
+// Specialization of mask_trailing_ones ('math_extras.h') for BigInt.
+template <typename T, size_t count>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+mask_trailing_ones() {
+  static_assert(!T::SIGNED);
+  if (count == 0)
+    return T();
+  constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
+  static_assert(count <= T_BITS && "Invalid bit index");
+  using word_type = typename T::word_type;
+  T out;
+  constexpr int CHUNK_INDEX_CONTAINING_BIT =
+      static_cast<int>(count / T::WORD_SIZE);
+  int index = 0;
+  for (auto &word : out.val) {
+    if (index < CHUNK_INDEX_CONTAINING_BIT)
+      word = -1;
+    else if (index > CHUNK_INDEX_CONTAINING_BIT)
+      word = 0;
+    else
+      word = mask_trailing_ones<word_type, count % T::WORD_SIZE>();
+    ++index;
+  }
+  return out;
+}
+
+// Specialization of mask_leading_ones ('math_extras.h') for BigInt.
+template <typename T, size_t count>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+mask_leading_ones() {
+  static_assert(!T::SIGNED);
+  if (count == 0)
+    return T();
+  constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
+  static_assert(count <= T_BITS && "Invalid bit index");
+  using word_type = typename T::word_type;
+  T out;
+  constexpr int CHUNK_INDEX_CONTAINING_BIT =
+      static_cast<int>((T::BITS - count - 1ULL) / T::WORD_SIZE);
+  int index = 0;
+  for (auto &word : out.val) {
+    if (index < CHUNK_INDEX_CONTAINING_BIT)
+      word = 0;
+    else if (index > CHUNK_INDEX_CONTAINING_BIT)
+      word = -1;
+    else
+      word = mask_leading_ones<word_type, count % T::WORD_SIZE>();
+    ++index;
+  }
+  return out;
+}
+
+} // namespace LIBC_NAMESPACE
+
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
