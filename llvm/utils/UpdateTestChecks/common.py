@@ -1544,7 +1544,7 @@ def generalize_check_lines_common(
     nameless_value_regex: re.Pattern,
     is_asm,
     preserve_names,
-    original_check_lines: List[str] | None = None,
+    original_check_lines = None,
 ):
     # This gets called for each match that occurs in
     # a line. We transform variables we haven't seen
