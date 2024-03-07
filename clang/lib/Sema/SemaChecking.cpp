@@ -19196,6 +19196,9 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
           (Field1Parent->isUnionType() && Field2Parent->isUnionType())) &&
          "Can't evaluate layout compatibility between a struct field and a "
          "union field.");
+  assert(((!AreUnionMembers && Field1Parent->isStructureOrClassType()) ||
+          (AreUnionMembers && Field1Parent->isUnionType())) &&
+         "AreUnionMembers should be 'true' for union fields (only).");
 
   if (!isLayoutCompatible(C, Field1->getType(), Field2->getType()))
     return false;
