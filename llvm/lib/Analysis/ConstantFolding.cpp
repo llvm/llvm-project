@@ -2625,38 +2625,37 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return nullptr;
       const APFloat &Op2V = Op2->getValueAPF();
 
-      if (Call) {
-        if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
-          RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
-          APFloat Res = Op1V;
-          APFloat::opStatus St;
-          switch (IntrinsicID) {
-          default:
-            return nullptr;
-          case Intrinsic::experimental_constrained_fadd:
-            St = Res.add(Op2V, RM);
-            break;
-          case Intrinsic::experimental_constrained_fsub:
-            St = Res.subtract(Op2V, RM);
-            break;
-          case Intrinsic::experimental_constrained_fmul:
-            St = Res.multiply(Op2V, RM);
-            break;
-          case Intrinsic::experimental_constrained_fdiv:
-            St = Res.divide(Op2V, RM);
-            break;
-          case Intrinsic::experimental_constrained_frem:
-            St = Res.mod(Op2V);
-            break;
-          case Intrinsic::experimental_constrained_fcmp:
-          case Intrinsic::experimental_constrained_fcmps:
-            return evaluateCompare(Op1V, Op2V, ConstrIntr);
-          }
-          if (mayFoldConstrained(
-                  const_cast<ConstrainedFPIntrinsic *>(ConstrIntr), St))
-            return ConstantFP::get(Ty->getContext(), Res);
+      if (const auto *ConstrIntr =
+              dyn_cast_if_present<ConstrainedFPIntrinsic>(Call)) {
+        RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
+        APFloat Res = Op1V;
+        APFloat::opStatus St;
+        switch (IntrinsicID) {
+        default:
           return nullptr;
+        case Intrinsic::experimental_constrained_fadd:
+          St = Res.add(Op2V, RM);
+          break;
+        case Intrinsic::experimental_constrained_fsub:
+          St = Res.subtract(Op2V, RM);
+          break;
+        case Intrinsic::experimental_constrained_fmul:
+          St = Res.multiply(Op2V, RM);
+          break;
+        case Intrinsic::experimental_constrained_fdiv:
+          St = Res.divide(Op2V, RM);
+          break;
+        case Intrinsic::experimental_constrained_frem:
+          St = Res.mod(Op2V);
+          break;
+        case Intrinsic::experimental_constrained_fcmp:
+        case Intrinsic::experimental_constrained_fcmps:
+          return evaluateCompare(Op1V, Op2V, ConstrIntr);
         }
+        if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
+                               St))
+          return ConstantFP::get(Ty->getContext(), Res);
+        return nullptr;
       }
 
       switch (IntrinsicID) {
@@ -3181,7 +3180,8 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
     return ConstantFoldScalarCall1(Name, IntrinsicID, Ty, Operands, TLI, Call);
 
   if (Operands.size() == 2) {
-    if (auto *FoldedLibCall = ConstantFoldLibCall2(Name, Ty, Operands, TLI)) {
+    if (Constant *FoldedLibCall =
+            ConstantFoldLibCall2(Name, Ty, Operands, TLI)) {
       return FoldedLibCall;
     }
     return ConstantFoldIntrinsicCall2(IntrinsicID, Ty, Operands, Call);
