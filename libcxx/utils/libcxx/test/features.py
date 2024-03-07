@@ -107,6 +107,10 @@ DEFAULT_FEATURES = [
             AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
             AddCompileFlag("-Wno-placement-new"),
             AddCompileFlag("-Wno-class-memaccess"),
+            # Attempt to fix slow github actions bot performance with GCC. As of writing the test produces
+            # a lot of warnings and errors with GCC 13, and those warnings block the test threads from making progress
+            # This is a temporary fix until the issue is resolved.
+            AddCompileFlag("-Wno-deprecated-declarations"),
             AddFeature("GCC-ALWAYS_INLINE-FIXME"),
         ],
     ),
