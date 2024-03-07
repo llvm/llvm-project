@@ -58,6 +58,8 @@ def print_wrapped_module : Flag<["--"], "print-wrapped-module">,
   HelpText<"Print the wrapped module's IR for testing">;
 def save_temps : Flag<["--"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
+def compress : Flag<["--"], "compress">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Compress bundled files">;
 
 def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,
