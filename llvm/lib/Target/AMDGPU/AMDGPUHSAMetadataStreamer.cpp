@@ -498,9 +498,9 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
   unsigned NumWGY = MFI.getMaxNumWorkGroupsY();
   unsigned NumWGZ = MFI.getMaxNumWorkGroupsZ();
   if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0) {
-    Kern[".max_num_work_groups_x"] = Kern.getDocument()->getNode(NumWGX);
-    Kern[".max_num_work_groups_y"] = Kern.getDocument()->getNode(NumWGY);
-    Kern[".max_num_work_groups_z"] = Kern.getDocument()->getNode(NumWGZ);
+    Kern[".max_num_workgroups_x"] = Kern.getDocument()->getNode(NumWGX);
+    Kern[".max_num_workgroups_y"] = Kern.getDocument()->getNode(NumWGY);
+    Kern[".max_num_workgroups_z"] = Kern.getDocument()->getNode(NumWGZ);
   }
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());

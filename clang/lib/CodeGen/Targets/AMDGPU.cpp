@@ -377,7 +377,7 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     llvm::raw_svector_ostream OS(AttrVal);
     OS << X << ',' << Y << ',' << Z;
 
-    F->addFnAttr("amdgpu-max-num-work-groups", AttrVal.str());
+    F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
 }
 

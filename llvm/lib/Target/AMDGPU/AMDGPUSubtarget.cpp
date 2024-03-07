@@ -432,7 +432,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
   std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
 
   // If minimum/maximum flat work group sizes were explicitly requested using
-  // "amdgpu-flat-work-group-size" attribute, then set default minimum/maximum
+  // "amdgpu-flat-workgroup-size" attribute, then set default minimum/maximum
   // number of waves per execution unit to values implied by requested
   // minimum/maximum flat work group sizes.
   unsigned MinImpliedByFlatWorkGroupSize =
@@ -1111,5 +1111,5 @@ unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
 
 SmallVector<unsigned>
 AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-work-groups", 3);
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3);
 }
