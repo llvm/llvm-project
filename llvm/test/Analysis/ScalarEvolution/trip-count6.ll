@@ -9,11 +9,10 @@ define i8 @f() {
 ; CHECK-NEXT:  Loop %bb: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for bb: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for bb2: 1
-; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:    symbolic max exit count for bb: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for bb2: 1
-; CHECK-NEXT:  Loop %bb: Unpredictable predicated backedge-taken count.
 ;
 entry:
   tail call i32 @fegetround( )          ; <i32>:0 [#uses=1]

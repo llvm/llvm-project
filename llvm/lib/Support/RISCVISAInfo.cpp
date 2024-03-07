@@ -531,6 +531,17 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
   return Features;
 }
 
+static Error getStringErrorForInvalidExt(std::string_view ExtName) {
+  if (ExtName.size() == 1) {
+    return createStringError(errc::invalid_argument,
+                             "unsupported standard user-level extension '" +
+                                 ExtName + "'");
+  }
+  return createStringError(errc::invalid_argument,
+                           "unsupported " + getExtensionTypeDesc(ExtName) +
+                               " '" + ExtName + "'");
+}
+
 // Extensions may have a version number, and may be separated by
 // an underscore '_' e.g.: rv32i2_m2.
 // Version number is divided into major and minor version numbers,
@@ -628,6 +639,9 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
 
   if (RISCVISAInfo::isSupportedExtension(Ext, Major, Minor))
     return Error::success();
+
+  if (!RISCVISAInfo::isSupportedExtension(Ext))
+    return getStringErrorForInvalidExt(Ext);
 
   std::string Error = "unsupported version number " + std::string(MajorStr);
   if (!MinorStr.empty())
@@ -965,16 +979,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     const std::string &ExtName = SeenExtAndVers.first;
     RISCVISAInfo::ExtensionVersion ExtVers = SeenExtAndVers.second;
 
-    if (!RISCVISAInfo::isSupportedExtension(ExtName)) {
-      if (ExtName.size() == 1) {
-        return createStringError(errc::invalid_argument,
-                                 "unsupported standard user-level extension '" +
-                                     ExtName + "'");
-      }
-      return createStringError(errc::invalid_argument,
-                               "unsupported " + getExtensionTypeDesc(ExtName) +
-                                   " '" + ExtName + "'");
-    }
+    if (!RISCVISAInfo::isSupportedExtension(ExtName))
+      return getStringErrorForInvalidExt(ExtName);
     ISAInfo->addExtension(ExtName, ExtVers);
   }
 

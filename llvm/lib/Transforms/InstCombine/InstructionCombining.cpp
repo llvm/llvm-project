@@ -3241,9 +3241,12 @@ void InstCombinerImpl::handleUnreachableFrom(
     MadeIRChange = true;
   }
 
-  // RemoveDIs: to match behaviour in dbg.value mode, drop debug-info on
-  // terminator too.
-  BB->getTerminator()->dropDbgValues();
+  SmallVector<Value *> Changed;
+  if (handleUnreachableTerminator(BB->getTerminator(), Changed)) {
+    MadeIRChange = true;
+    for (Value *V : Changed)
+      addToWorklist(cast<Instruction>(V));
+  }
 
   // Handle potentially dead successors.
   for (BasicBlock *Succ : successors(BB))

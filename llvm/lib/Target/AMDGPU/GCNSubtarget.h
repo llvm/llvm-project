@@ -653,6 +653,10 @@ public:
     return !hasGFX940Insts();
   }
 
+  bool hasInterpInsts() const {
+    return GFX11Insts;
+  }
+
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
 
