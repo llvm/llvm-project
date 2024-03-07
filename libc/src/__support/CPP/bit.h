@@ -178,7 +178,7 @@ template <typename T>
 bit_floor(T value) {
   if (!value)
     return 0;
-  return T(1) << (cpp::bit_width(value) - 1);
+  return static_cast<T>(T(1) << (cpp::bit_width(value) - 1));
 }
 
 /// Returns the smallest integral power of two no smaller than value if value is
