@@ -127,6 +127,8 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   I.getOperand(OpIdx).setReg(NewReg);
 }
 
+// TODO: the logic of inserting additional bitcast's is to be moved
+// to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();

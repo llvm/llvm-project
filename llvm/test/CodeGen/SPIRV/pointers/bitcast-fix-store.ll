@@ -18,7 +18,6 @@
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }
 
-;define spir_kernel void @foo(ptr noundef byval(%struct.__wrapper_class) align 4 %_arg_Arr) {
 define spir_kernel void @foo(%struct.S %arg, ptr %ptr) {
 entry:
   store %struct.S %arg, ptr %ptr
