@@ -2997,14 +2997,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
 
-    if (IsZExtLoad ||
-        (isa<GLoad>(LdSt) && ValTy == LLT::scalar(64) && MemSizeInBits == 32)) {
-      // The any/zextload from a smaller type to i32 should be handled by the
+    if (IsZExtLoad) {
+      // The zextload from a smaller type to i32 should be handled by the
       // importer.
       if (MRI.getType(LoadStore->getOperand(0).getReg()).getSizeInBits() != 64)
         return false;
-      // If we have an extending load then change the load's type to be a
-      // narrower reg and zero_extend with SUBREG_TO_REG.
+      // If we have a ZEXTLOAD then change the load's type to be a narrower reg
+      // and zero_extend with SUBREG_TO_REG.
       Register LdReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
       Register DstReg = LoadStore->getOperand(0).getReg();
       LoadStore->getOperand(0).setReg(LdReg);
