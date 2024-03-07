@@ -591,7 +591,7 @@ struct ConvertIllegalShapeCastOpsToTransposes
       return rewriter.notifyMatchFailure(shapeCastOp,
                                          kMatchFailureNotIllegalToLegal);
 
-    // Note: If we know the that is source is an illegal vector type (and 2D)
+    // Note: If we know that `sourceType` is an illegal vector type (and 2D)
     // then dim 0 is scalable and dim 1 is fixed.
     if (sourceType.getRank() != 2 || sourceType.getDimSize(1) != 1)
       return rewriter.notifyMatchFailure(
