@@ -26,9 +26,9 @@ class LibStdcppTupleSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppTupleSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -89,13 +89,13 @@ lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
 bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
-LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx < m_members.size() && m_members[idx])
     return m_members[idx]->GetSP();
   return lldb::ValueObjectSP();
 }
 
-size_t LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
+uint32_t LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
   return m_members.size();
 }
 
