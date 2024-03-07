@@ -123,10 +123,10 @@ SECTIONS {
 #--- rbrace.lds
 # RUN: not ld.lld -T rbrace.lds a.o 2>&1 | FileCheck %s --check-prefix=ERR-RBRACE --match-full-lines --strict-whitespace
 #      ERR-RBRACE:{{.*}}: section pattern is expected
-# ERR-RBRACE-NEXT:>>>   .text : { *(.a* } ) }
-# ERR-RBRACE-NEXT:>>>                   ^
+# ERR-RBRACE-NEXT:>>>   .text : { *(.a* x = 3; } ) }
+# ERR-RBRACE-NEXT:>>>                          ^
 SECTIONS {
-  .text : { *(.a* } ) }
+  .text : { *(.a* x = 3; } ) }
 }
 
 #--- rparen.lds
