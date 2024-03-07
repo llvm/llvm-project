@@ -240,6 +240,7 @@ protected:
   bool HasForceVALUThrottle = false;
 
   bool RequiresCOV6 = false;
+  bool HasExportInsts = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -671,6 +672,8 @@ public:
   bool hasFormattedMUBUFInsts() const {
     return !hasGFX12_10Insts();
   }
+
+  bool hasExpOrExportInsts() const { return HasExportInsts; }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const {
