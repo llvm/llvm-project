@@ -1570,7 +1570,6 @@ private:
     if (TabSize > UINT32_MAX / kFramesPerStack)
       return;
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
-    DCHECK(isPowerOfTwo(RingSize));
 
     uptr StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
                           sizeof(atomic_u32) * TabSize;
