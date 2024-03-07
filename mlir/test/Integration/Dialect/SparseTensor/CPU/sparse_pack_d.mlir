@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -48,7 +48,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f32
 
@@ -107,26 +107,39 @@ module {
     //
     // Verify.
     //
-    // CHECK: ( ( ( 1, 2 ), ( 3, 4 ), ( 0, 0 ) ), ( ( 0, 0 ), ( 0, 0 ), ( 0, 0 ) ), ( ( 0, 0 ), ( 5, 0 ), ( 6, 7 ) ), ( ( 0, 0 ), ( 8, 0 ), ( 0, 0 ) ) )
-    // CHECK: ( ( ( 1, 2 ), ( 0, 3 ), ( 4, 0 ) ), ( ( 5, 6 ), ( 0, 0 ), ( 0, 7 ) ), ( ( 8, 9 ), ( 10, 11 ), ( 12, 13 ) ), ( ( 14, 0 ), ( 0, 15 ), ( 0, 16 ) ) )
-    // CHECK: ( ( ( 1, 2 ), ( 0, 3 ), ( 4, 0 ) ), ( ( 5, 6 ), ( 0, 0 ), ( 0, 7 ) ), ( ( 8, 9 ), ( 10, 11 ), ( 12, 13 ) ), ( ( 14, 0 ), ( 0, 15 ), ( 0, 16 ) ) )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: dim = ( 4, 3, 2 )
+    // CHECK-NEXT: lvl = ( 4, 3, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 5
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 2, 1
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 5, 7, 8
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 0, 1, 0
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 16
+    // CHECK-NEXT: dim = ( 4, 3, 2 )
+    // CHECK-NEXT: lvl = ( 4, 3, 2 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 3, 4, 6, 6, 7, 9, 11, 13, 14, 15, 16
+    // CHECK-NEXT: crd[2] : ( 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 22
+    // CHECK-NEXT: dim = ( 4, 3, 2 )
+    // CHECK-NEXT: lvl = ( 4, 3, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 8, 11
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 2, 0, 1, 2, 0, 1, 2
+    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 5, 6, 0, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0, 15, 0, 16
+    // CHECK-NEXT: ----
     //
+    sparse_tensor.print %s0 : tensor<4x3x2xf32, #CCC>
+    sparse_tensor.print %s1 : tensor<4x3x2xf32, #BatchedCSR>
+    sparse_tensor.print %s2 : tensor<4x3x2xf32, #CSRDense>
 
-    %d0 = sparse_tensor.convert %s0 : tensor<4x3x2xf32, #CCC> to tensor<4x3x2xf32>
-    %v0 = vector.transfer_read %d0[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
-    vector.print %v0 : vector<4x3x2xf32>
-
-    %d1 = sparse_tensor.convert %s1 : tensor<4x3x2xf32, #BatchedCSR> to tensor<4x3x2xf32>
-    %v1 = vector.transfer_read %d1[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
-    vector.print %v1 : vector<4x3x2xf32>
-
-    %d2 = sparse_tensor.convert %s2 : tensor<4x3x2xf32, #CSRDense> to tensor<4x3x2xf32>
-    %v2 = vector.transfer_read %d1[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
-    vector.print %v2 : vector<4x3x2xf32>
-
-    bufferization.dealloc_tensor %d0 : tensor<4x3x2xf32>
-    bufferization.dealloc_tensor %d1 : tensor<4x3x2xf32>
-    bufferization.dealloc_tensor %d2 : tensor<4x3x2xf32>
     // FIXME: doing this explicitly crashes runtime
     // bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
     // bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #BatchedCSR>

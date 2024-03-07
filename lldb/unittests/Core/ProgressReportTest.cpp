@@ -168,7 +168,7 @@ TEST_F(ProgressReportTest, TestProgressManager) {
 
   ASSERT_EQ(data->GetDetails(), "");
   ASSERT_FALSE(data->IsFinite());
-  ASSERT_TRUE(data->GetCompleted());
+  ASSERT_FALSE(data->GetCompleted());
   ASSERT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
   ASSERT_EQ(data->GetMessage(), "Progress report 1");
 
@@ -199,7 +199,7 @@ TEST_F(ProgressReportTest, TestProgressManager) {
 
   ASSERT_EQ(data->GetDetails(), "");
   ASSERT_FALSE(data->IsFinite());
-  ASSERT_TRUE(data->GetCompleted());
+  ASSERT_FALSE(data->GetCompleted());
   ASSERT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
   ASSERT_EQ(data->GetMessage(), "Overlapping report 1");
 
