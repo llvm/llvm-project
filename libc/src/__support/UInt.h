@@ -979,7 +979,7 @@ has_single_bit(T value) {
   for (auto word : value.val) {
     if (word == 0)
       continue;
-    bits += count_ones(word);
+    bits += popcount(word);
     if (bits > 1)
       return false;
   }
