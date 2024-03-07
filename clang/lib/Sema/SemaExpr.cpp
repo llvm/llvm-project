@@ -2776,7 +2776,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // results until we get here but it's likely not worth it.
     bool MemberOfUnknownSpecialization;
     AssumedTemplateKind AssumedTemplate;
-    if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
+    if (LookupTemplateName(R, S, SS, /*ObjectType=*/QualType(),
+                           /*EnteringContext=*/false,
                            MemberOfUnknownSpecialization, TemplateKWLoc,
                            &AssumedTemplate))
       return ExprError();
@@ -2787,7 +2788,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                         IsAddressOfOperand, TemplateArgs);
   } else {
     bool IvarLookupFollowUp = II && !SS.isSet() && getCurMethodDecl();
-    LookupParsedName(R, S, &SS, !IvarLookupFollowUp);
+    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType(), /*AllowBuiltinCreation=*/!IvarLookupFollowUp);
 
     // If the result might be in a dependent base class, this is a dependent
     // id-expression.

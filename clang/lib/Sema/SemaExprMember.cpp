@@ -718,6 +718,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
                                      SourceLocation TemplateKWLoc,
                                      TypoExpr *&TE) {
+  #if 1
   DeclContext *DC = SemaRef.computeDeclContext(RTy);
   // If the object expression is dependent and isn't the current instantiation,
   // lookup will not find anything and we must defer until instantiation.
@@ -725,6 +726,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
     R.setNotFoundInCurrentInstantiation();
     return false;
   }
+  #endif
 
   // FIXME: Should this use Name.isDependentName()?
   if (DeclarationName Name = R.getLookupName();
@@ -741,15 +743,21 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
           OpLoc, RTy, diag::err_typecheck_incomplete_tag, BaseRange))
     return true;
 
+  // LookupTemplateName/LookupParsedName don't expect these both to exist simultaneously.
+  QualType ObjectType = SS.isSet() ? QualType() : RTy;
   if (HasTemplateArgs || TemplateKWLoc.isValid()) {
-    // LookupTemplateName doesn't expect these both to exist simultaneously.
-    QualType ObjectType = SS.isSet() ? QualType() : RTy;
-
     bool MOUS;
-    return SemaRef.LookupTemplateName(R, nullptr, SS, ObjectType, false, MOUS,
+    return SemaRef.LookupTemplateName(R,
+                                      /*S=*/nullptr,
+                                      SS,
+                                      ObjectType,
+                                      /*EnteringContext=*/false,
+                                      MOUS,
                                       TemplateKWLoc);
   }
-
+  #if 0
+  SemaRef.LookupParsedName(R, /*S=*/nullptr, &SS, ObjectType);
+  #else
   if (SS.isSet()) {
     // If the member name was a qualified-id, look into the
     // nested-name-specifier.
@@ -778,12 +786,18 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
 
   // The record definition is complete, now look up the member.
   SemaRef.LookupQualifiedName(R, DC, SS);
+  #endif
 
   if (!R.empty() || R.wasNotFoundInCurrentInstantiation())
     return false;
 
   DeclarationName Typo = R.getLookupName();
   SourceLocation TypoLoc = R.getNameLoc();
+  #if 0
+  DeclContext *DC = SS.isSet()
+      ? SemaRef.computeDeclContext(SS)
+      : SemaRef.computeDeclContext(RTy);
+  #endif
 
   struct QueryState {
     Sema &SemaRef;

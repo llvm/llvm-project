@@ -5816,7 +5816,7 @@ bool Sema::CheckTemplateTypeArgument(
 
     if (auto *II = NameInfo.getName().getAsIdentifierInfo()) {
       LookupResult Result(*this, NameInfo, LookupOrdinaryName);
-      LookupParsedName(Result, CurScope, &SS);
+      LookupParsedName(Result, CurScope, &SS, /*ObjectType=*/QualType());
 
       if (Result.getAsSingle<TypeDecl>() ||
           Result.getResultKind() ==
@@ -11179,7 +11179,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                            : TSK_ExplicitInstantiationDeclaration;
 
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName);
-  LookupParsedName(Previous, S, &D.getCXXScopeSpec());
+  LookupParsedName(Previous, S, &D.getCXXScopeSpec(), /*ObjectType=*/QualType());
 
   if (!R->isFunctionType()) {
     // C++ [temp.explicit]p1:

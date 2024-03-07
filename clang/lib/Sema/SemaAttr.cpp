@@ -837,7 +837,10 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   IdentifierInfo *Name = IdTok.getIdentifierInfo();
   LookupResult Lookup(*this, Name, IdTok.getLocation(), LookupOrdinaryName);
-  LookupParsedName(Lookup, curScope, nullptr, true);
+  LookupParsedName(Lookup, curScope,
+                   /*SS=*/nullptr,
+                   /*ObjectType=*/QualType(),
+                   /*AllowBuiltinCreation*/true);
 
   if (Lookup.empty()) {
     Diag(PragmaLoc, diag::warn_pragma_unused_undeclared_var)
