@@ -349,6 +349,7 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   return Out;
 }
 
+// clang/tools/driver/cc1as_main.cpp,  ExecuteAssemblerImpl()
 static bool executeAssemblerImpl(AssemblerInvocation &Opts,
                                  DiagnosticsEngine &Diags, raw_ostream &LogS) {
   // Get the target specific parser.
@@ -384,15 +385,14 @@ static bool executeAssemblerImpl(AssemblerInvocation &Opts,
   assert(MRI && "Unable to create target register info!");
 
   llvm::MCTargetOptions MCOptions;
+  MCOptions.X86RelaxRelocations = Opts.RelaxELFRelocations;
+  MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
   // may be created with a combination of default and explicit settings.
-  MAI->setCompressDebugSections(Opts.CompressDebugSections);
-
-  MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
 
   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
   std::unique_ptr<raw_fd_ostream> FDOS = getOutputStream(Opts, Diags, IsBinary);
