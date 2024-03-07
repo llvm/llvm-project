@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD
 
 include "mlir/IR/BuiltinTypes.td"
-
 include "mlir/Dialect/XeGPU/IR/XeGPUAttrs.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
 

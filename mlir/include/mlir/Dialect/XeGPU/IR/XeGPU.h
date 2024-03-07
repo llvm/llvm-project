@@ -9,27 +9,7 @@
 #ifndef MLIR_DIALECT_XEGPU_IR_XEGPU_H
 #define MLIR_DIALECT_XEGPU_IR_XEGPU_H
 
-#include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/Dialect.h>
-#include <mlir/IR/OpDefinition.h>
-#include <mlir/IR/Region.h>
-#include <mlir/IR/Types.h>
-#include <mlir/Interfaces/CastInterfaces.h>
-#include <mlir/Interfaces/ControlFlowInterfaces.h>
-#include <mlir/Interfaces/CopyOpInterface.h>
-#include <mlir/Interfaces/InferTypeOpInterface.h>
-#include <mlir/Interfaces/ShapedOpInterfaces.h>
-#include <mlir/Interfaces/SideEffectInterfaces.h>
-#include <mlir/Interfaces/ViewLikeInterface.h>
-
-namespace mlir {
-namespace xegpu {
-
-class TensorDescType;
-
-} // namespace xegpu
-} // namespace mlir
-
 #include <mlir/Dialect/XeGPU/IR/XeGPUDialect.h.inc>
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc>
 #define GET_ATTRDEF_CLASSES

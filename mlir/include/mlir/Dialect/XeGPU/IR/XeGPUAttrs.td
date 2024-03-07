@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD
 
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
-include "mlir/IR/EnumAttr.td"
 
 class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">

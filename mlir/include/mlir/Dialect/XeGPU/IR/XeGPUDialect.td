@@ -10,17 +10,6 @@
 #define MLIR_DIALECT_XEGPU_IR_XEGPUDIALECT_TD
 
 include "mlir/IR/OpBase.td"
-include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/BuiltinTypes.td"
-include "mlir/IR/BuiltinTypeInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/Interfaces/CastInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
-include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/ShapedOpInterfaces.td"
 
 def XeGPU_Dialect : Dialect {
     let name = "xegpu";

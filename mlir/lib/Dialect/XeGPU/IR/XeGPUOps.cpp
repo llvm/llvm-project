@@ -6,25 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <llvm/ADT/TypeSwitch.h>
-#include <llvm/Support/Debug.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/Linalg/IR/Linalg.h>
-#include <mlir/Dialect/MemRef/IR/MemRef.h>
-#include <mlir/Dialect/Tensor/IR/Tensor.h>
-#include <mlir/Dialect/Utils/StaticValueUtils.h>
 #include <mlir/Dialect/XeGPU/IR/XeGPU.h>
-#include <mlir/IR/Builders.h>
-#include <mlir/IR/DialectImplementation.h>
-#include <mlir/IR/TypeUtilities.h>
-#include <numeric>
-#include <type_traits>
 
 #define DEBUG_TYPE "xegpu"
 
 namespace mlir {
-class Token;
-
 namespace xegpu {
 // this file is for position occupation,
 // we will add functions in following PRs.
