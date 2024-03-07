@@ -839,6 +839,18 @@ namespace IncDec {
     return a[1];
   }
   static_assert(f() == 3, "");
+
+  int nonconst(int a) { // both-note 4{{declared here}}
+    static_assert(a++, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(a--, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(++a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(--a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
 };
 #endif
 
