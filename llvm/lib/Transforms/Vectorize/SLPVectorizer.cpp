@@ -10094,16 +10094,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         BitWidth = UserIt->second.second;
     }
   }
-  auto CheckBitwidth = [&](const TreeEntry &TE) {
-    Type *ScalarTy = TE.Scalars.front()->getType();
-    if (!ScalarTy->isIntegerTy())
-      return true;
-    unsigned TEBitWidth = DL->getTypeStoreSize(ScalarTy);
-    auto UserIt = MinBWs.find(TEUseEI.UserTE);
-    if (UserIt != MinBWs.end())
-      TEBitWidth = UserIt->second.second;
-    return BitWidth == TEBitWidth;
-  };
   SmallVector<SmallPtrSet<const TreeEntry *, 4>> UsedTEs;
   DenseMap<Value *, int> UsedValuesEntry;
   for (Value *V : VL) {
@@ -10138,8 +10128,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
       }
 
-      if (!CheckBitwidth(*TEPtr))
-        continue;
       // Check if the user node of the TE comes after user node of TEPtr,
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
@@ -10157,7 +10145,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           VTE = *It->getSecond().begin();
           // Iterate through all vectorized nodes.
           auto *MIt = find_if(It->getSecond(), [&](const TreeEntry *MTE) {
-            return MTE->State == TreeEntry::Vectorize && CheckBitwidth(*MTE);
+            return MTE->State == TreeEntry::Vectorize;
           });
           if (MIt == It->getSecond().end())
             continue;
@@ -10166,8 +10154,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
       Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
       if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
-        continue;
-      if (!CheckBitwidth(*VTE))
         continue;
       VToTEs.insert(VTE);
     }
@@ -10214,6 +10200,45 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   if (UsedTEs.empty()) {
     Entries.clear();
     return std::nullopt;
+  }
+
+  if (BitWidth > 0) {
+    // Check if the used TEs supposed to be resized and choose the best
+    // candidates.
+    unsigned NodesBitWidth = 0;
+    auto CheckBitwidth = [&](const TreeEntry &TE) {
+      unsigned TEBitWidth = BitWidth;
+      auto UserIt = MinBWs.find(TEUseEI.UserTE);
+      if (UserIt != MinBWs.end())
+        TEBitWidth = UserIt->second.second;
+      if (BitWidth <= TEBitWidth) {
+        if (NodesBitWidth == 0)
+          NodesBitWidth = TEBitWidth;
+        return NodesBitWidth == TEBitWidth;
+      }
+      return false;
+    };
+    for (auto [Idx, Set] : enumerate(UsedTEs)) {
+      DenseSet<const TreeEntry *> ForRemoval;
+      for (const TreeEntry *TE : Set) {
+        if (!CheckBitwidth(*TE))
+          ForRemoval.insert(TE);
+      }
+      // All elements must be removed - remove the whole container.
+      if (ForRemoval.size() == Set.size()) {
+        Set.clear();
+        continue;
+      }
+      for (const TreeEntry *TE : ForRemoval)
+        Set.erase(TE);
+    }
+    for (auto *It = UsedTEs.begin(); It != UsedTEs.end();) {
+      if (It->empty()) {
+        UsedTEs.erase(It);
+        continue;
+      }
+      std::advance(It, 1);
+    }
   }
 
   unsigned VF = 0;
@@ -13937,6 +13962,63 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::Xor: {
     unsigned Level1, Level2;
     if (!collectValuesToDemote(I->getOperand(0), IsProfitableToDemoteRoot,
+                               BitWidth, ToDemote, DemotedConsts, Visited,
+                               Level1, IsProfitableToDemote) ||
+        !collectValuesToDemote(I->getOperand(1), IsProfitableToDemoteRoot,
+                               BitWidth, ToDemote, DemotedConsts, Visited,
+                               Level2, IsProfitableToDemote))
+      return false;
+    MaxDepthLevel = std::max(Level1, Level2);
+    break;
+  }
+  case Instruction::Shl: {
+    // If we are truncating the result of this SHL, and if it's a shift of an
+    // inrange amount, we can always perform a SHL in a smaller type.
+    unsigned Level1, Level2;
+    KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+    if (AmtKnownBits.getMaxValue().uge(BitWidth) ||
+        !collectValuesToDemote(I->getOperand(0), IsProfitableToDemoteRoot,
+                               BitWidth, ToDemote, DemotedConsts, Visited,
+                               Level1, IsProfitableToDemote) ||
+        !collectValuesToDemote(I->getOperand(1), IsProfitableToDemoteRoot,
+                               BitWidth, ToDemote, DemotedConsts, Visited,
+                               Level2, IsProfitableToDemote))
+      return false;
+    MaxDepthLevel = std::max(Level1, Level2);
+    break;
+  }
+  case Instruction::LShr: {
+    // If this is a truncate of a logical shr, we can truncate it to a smaller
+    // lshr iff we know that the bits we would otherwise be shifting in are
+    // already zeros.
+    uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+    unsigned Level1, Level2;
+    KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+    APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+    if (AmtKnownBits.getMaxValue().uge(BitWidth) ||
+        !MaskedValueIsZero(I->getOperand(0), ShiftedBits, SimplifyQuery(*DL)) ||
+        !collectValuesToDemote(I->getOperand(0), IsProfitableToDemoteRoot,
+                               BitWidth, ToDemote, DemotedConsts, Visited,
+                               Level1, IsProfitableToDemote) ||
+        !collectValuesToDemote(I->getOperand(1), IsProfitableToDemoteRoot,
+                               BitWidth, ToDemote, DemotedConsts, Visited,
+                               Level2, IsProfitableToDemote))
+      return false;
+    MaxDepthLevel = std::max(Level1, Level2);
+    break;
+  }
+  case Instruction::AShr: {
+    // If this is a truncate of an arithmetic shr, we can truncate it to a
+    // smaller ashr iff we know that all the bits from the sign bit of the
+    // original type and the sign bit of the truncate type are similar.
+    uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+    unsigned Level1, Level2;
+    KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+    unsigned ShiftedBits = OrigBitWidth - BitWidth;
+    if (AmtKnownBits.getMaxValue().uge(BitWidth) ||
+        ShiftedBits >=
+            ComputeNumSignBits(I->getOperand(0), *DL, 0, AC, nullptr, DT) ||
+        !collectValuesToDemote(I->getOperand(0), IsProfitableToDemoteRoot,
                                BitWidth, ToDemote, DemotedConsts, Visited,
                                Level1, IsProfitableToDemote) ||
         !collectValuesToDemote(I->getOperand(1), IsProfitableToDemoteRoot,
