@@ -1,0 +1,27 @@
+# RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            g_splat_vector
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(<2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Destination type must be a scalable vector
+    %3:_(s32) = G_SPLAT_VECTOR %0
+
+    ; CHECK: Destination type must be a scalable vector
+    %4:_(<2 x s32>) = G_SPLAT_VECTOR %0
+
+    ; CHECK: Source type must be a scalar
+    %5:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR %1
+
+    ; CHECK: Source type must be a scalar
+    %6:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR %2
+
+    ; CHECK: Element type of the destination must be the same type as the source type
+    %7:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR %0
+...

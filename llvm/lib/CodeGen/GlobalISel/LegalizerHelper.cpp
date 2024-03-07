@@ -8391,7 +8391,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 
   // For vector types create a G_BUILD_VECTOR.
   if (Ty.isVector())
-    Val = MIB.buildSplatVector(Ty, Val).getReg(0);
+    Val = MIB.buildSplatBuildVector(Ty, Val).getReg(0);
 
   return Val;
 }
