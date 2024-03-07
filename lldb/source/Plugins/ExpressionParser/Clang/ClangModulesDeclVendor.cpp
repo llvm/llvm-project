@@ -80,7 +80,6 @@ private:
   std::shared_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os. Will be reused for different diagnostics.
   std::string m_output;
-  Log *m_log;
   /// A Progress with explicitly managed lifetime.
   std::unique_ptr<Progress> m_current_progress_up;
   std::vector<std::string> m_module_build_stack;
@@ -142,12 +141,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_log = GetLog(LLDBLog::Expressions);
-
-  clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
+  clang::DiagnosticOptions *options = new clang::DiagnosticOptions();
   m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
