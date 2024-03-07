@@ -210,12 +210,14 @@ declare void @g.f1()
 @g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress
 @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
+@g.sanitized_padded_global = global i32 0 sanitized_padded_global
 ; CHECK: @g.no_sanitize_address = global i32 0, no_sanitize_address
 ; CHECK: @g.no_sanitize_hwaddress = global i32 0, no_sanitize_hwaddress
 ; CHECK: @g.sanitize_memtag = global i32 0, sanitize_memtag
 ; CHECK: @g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
+; CHECK: @g.sanitized_padded_global = global i32 0 #0
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -587,76 +589,76 @@ declare void @f.local_unnamed_addr() local_unnamed_addr
 
 ; Functions -- fn Attrs (Function attributes)
 declare void @f.alignstack4() alignstack(4)
-; CHECK: declare void @f.alignstack4() #0
+; CHECK: declare void @f.alignstack4() #1
 declare void @f.alignstack8() alignstack(8)
-; CHECK: declare void @f.alignstack8() #1
+; CHECK: declare void @f.alignstack8() #2
 declare void @f.alwaysinline() alwaysinline
-; CHECK: declare void @f.alwaysinline() #2
+; CHECK: declare void @f.alwaysinline() #3
 declare void @f.cold() cold
-; CHECK: declare void @f.cold() #3
+; CHECK: declare void @f.cold() #4
 declare void @f.convergent() convergent
-; CHECK: declare void @f.convergent() #4
+; CHECK: declare void @f.convergent() #5
 declare void @f.inlinehint() inlinehint
-; CHECK: declare void @f.inlinehint() #5
+; CHECK: declare void @f.inlinehint() #6
 declare void @f.jumptable() unnamed_addr jumptable
-; CHECK: declare void @f.jumptable() unnamed_addr #6
+; CHECK: declare void @f.jumptable() unnamed_addr #7
 declare void @f.minsize() minsize
-; CHECK: declare void @f.minsize() #7
+; CHECK: declare void @f.minsize() #8
 declare void @f.naked() naked
-; CHECK: declare void @f.naked() #8
+; CHECK: declare void @f.naked() #9
 declare void @f.nobuiltin() nobuiltin
-; CHECK: declare void @f.nobuiltin() #9
+; CHECK: declare void @f.nobuiltin() #10
 declare void @f.noduplicate() noduplicate
-; CHECK: declare void @f.noduplicate() #10
+; CHECK: declare void @f.noduplicate() #11
 declare void @f.noimplicitfloat() noimplicitfloat
-; CHECK: declare void @f.noimplicitfloat() #11
+; CHECK: declare void @f.noimplicitfloat() #12
 declare void @f.noinline() noinline
-; CHECK: declare void @f.noinline() #12
+; CHECK: declare void @f.noinline() #13
 declare void @f.nonlazybind() nonlazybind
-; CHECK: declare void @f.nonlazybind() #13
+; CHECK: declare void @f.nonlazybind() #14
 declare void @f.noredzone() noredzone
-; CHECK: declare void @f.noredzone() #14
+; CHECK: declare void @f.noredzone() #15
 declare void @f.noreturn() noreturn
-; CHECK: declare void @f.noreturn() #15
+; CHECK: declare void @f.noreturn() #16
 declare void @f.nounwind() nounwind
-; CHECK: declare void @f.nounwind() #16
+; CHECK: declare void @f.nounwind() #17
 declare void @f.optnone() noinline optnone
-; CHECK: declare void @f.optnone() #17
+; CHECK: declare void @f.optnone() #18
 declare void @f.optsize() optsize
-; CHECK: declare void @f.optsize() #18
+; CHECK: declare void @f.optsize() #19
 declare void @f.readnone() readnone
-; CHECK: declare void @f.readnone() #19
+; CHECK: declare void @f.readnone() #20
 declare void @f.readonly() readonly
-; CHECK: declare void @f.readonly() #20
+; CHECK: declare void @f.readonly() #21
 declare void @f.returns_twice() returns_twice
-; CHECK: declare void @f.returns_twice() #21
+; CHECK: declare void @f.returns_twice() #22
 declare void @f.safestack() safestack
-; CHECK: declare void @f.safestack() #22
+; CHECK: declare void @f.safestack() #23
 declare void @f.sanitize_address() sanitize_address
-; CHECK: declare void @f.sanitize_address() #23
+; CHECK: declare void @f.sanitize_address() #24
 declare void @f.sanitize_memory() sanitize_memory
-; CHECK: declare void @f.sanitize_memory() #24
+; CHECK: declare void @f.sanitize_memory() #25
 declare void @f.sanitize_thread() sanitize_thread
-; CHECK: declare void @f.sanitize_thread() #25
+; CHECK: declare void @f.sanitize_thread() #26
 declare void @f.ssp() ssp
-; CHECK: declare void @f.ssp() #26
+; CHECK: declare void @f.ssp() #27
 declare void @f.sspreq() sspreq
-; CHECK: declare void @f.sspreq() #27
+; CHECK: declare void @f.sspreq() #28
 declare void @f.sspstrong() sspstrong
-; CHECK: declare void @f.sspstrong() #28
+; CHECK: declare void @f.sspstrong() #29
 declare void @f.thunk() "thunk"
-; CHECK: declare void @f.thunk() #29
+; CHECK: declare void @f.thunk() #30
 declare void @f.uwtable() uwtable
-; CHECK: declare void @f.uwtable() #30
+; CHECK: declare void @f.uwtable() #31
 declare void @f.kvpair() "cpu"="cortex-a8"
-; CHECK:declare void @f.kvpair() #31
+; CHECK:declare void @f.kvpair() #32
 declare void @f.norecurse() norecurse
-; CHECK: declare void @f.norecurse() #32
+; CHECK: declare void @f.norecurse() #33
 declare void @f.inaccessiblememonly() inaccessiblememonly
-; CHECK: declare void @f.inaccessiblememonly() #33
+; CHECK: declare void @f.inaccessiblememonly() #34
 declare void @f.inaccessiblemem_or_argmemonly() inaccessiblemem_or_argmemonly
-; CHECK: declare void @f.inaccessiblemem_or_argmemonly() #34
-declare void @f.strictfp() #35
+; CHECK: declare void @f.inaccessiblemem_or_argmemonly() #35
+declare void @f.strictfp() #36
 
 ; Functions -- section
 declare void @f.section() section "80"
@@ -721,7 +723,7 @@ declare void @f.prologuearray() prologue [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 
 ; Functions -- Personality constant
 declare void @llvm.donothing() nounwind readnone
-; CHECK: declare void @llvm.donothing() #35
+; CHECK: declare void @llvm.donothing() #36
 define void @f.no_personality() personality i8 3 {
 ; CHECK: define void @f.no_personality() personality i8 3
   invoke void @llvm.donothing() to label %normal unwind label %exception
@@ -1560,12 +1562,12 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #51
+  ; CHECK: call void @f.nobuiltin() #52
 
   call fastcc noalias ptr @f.noalias() noinline
-  ; CHECK: call fastcc noalias ptr @f.noalias() #12
+  ; CHECK: call fastcc noalias ptr @f.noalias() #13
   tail call ghccc nonnull ptr @f.nonnull() minsize
-  ; CHECK: tail call ghccc nonnull ptr @f.nonnull() #7
+  ; CHECK: tail call ghccc nonnull ptr @f.nonnull() #8
 
   freeze i32 %op1
   ; CHECK: freeze i32 %op1
@@ -1933,10 +1935,10 @@ normal:
 
 
 declare void @f.writeonly() writeonly
-; CHECK: declare void @f.writeonly() #42
+; CHECK: declare void @f.writeonly() #43
 
 declare void @f.speculatable() speculatable
-; CHECK: declare void @f.speculatable() #43
+; CHECK: declare void @f.speculatable() #44
 
 ;; Constant Expressions
 
@@ -1947,16 +1949,16 @@ define ptr @constexpr() {
 
 define void @instructions.strictfp() strictfp {
   call void @f.strictfp() strictfp
-  ; CHECK: call void @f.strictfp() #44
+  ; CHECK: call void @f.strictfp() #45
 
   ret void
 }
 
 declare void @f.nosanitize_coverage() nosanitize_coverage
-; CHECK: declare void @f.nosanitize_coverage() #45
+; CHECK: declare void @f.nosanitize_coverage() #46
 
 declare void @f.disable_sanitizer_instrumentation() disable_sanitizer_instrumentation
-; CHECK: declare void @f.disable_sanitizer_instrumentation() #46
+; CHECK: declare void @f.disable_sanitizer_instrumentation() #47
 
 ; immarg attribute
 declare void @llvm.test.immarg.intrinsic(i32 immarg)
@@ -1979,10 +1981,10 @@ declare void @f.allocsize_two(i32, i32) allocsize(1, 0)
 ; CHECK: declare void @f.allocsize_two(i32, i32)
 
 declare void @f.nosanitize_bounds() nosanitize_bounds
-; CHECK: declare void @f.nosanitize_bounds() #49
+; CHECK: declare void @f.nosanitize_bounds() #50
 
 declare void @f.allockind() allockind("alloc,uninitialized")
-; CHECK: declare void @f.allockind() #50
+; CHECK: declare void @f.allockind() #51
 
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
@@ -2055,58 +2057,60 @@ define float @nofpclass_callsites(float %arg) {
   ret float %add1
 }
 
-; CHECK: attributes #0 = { alignstack=4 }
-; CHECK: attributes #1 = { alignstack=8 }
-; CHECK: attributes #2 = { alwaysinline }
-; CHECK: attributes #3 = { cold }
-; CHECK: attributes #4 = { convergent }
-; CHECK: attributes #5 = { inlinehint }
-; CHECK: attributes #6 = { jumptable }
-; CHECK: attributes #7 = { minsize }
-; CHECK: attributes #8 = { naked }
-; CHECK: attributes #9 = { nobuiltin }
-; CHECK: attributes #10 = { noduplicate }
-; CHECK: attributes #11 = { noimplicitfloat }
-; CHECK: attributes #12 = { noinline }
-; CHECK: attributes #13 = { nonlazybind }
-; CHECK: attributes #14 = { noredzone }
-; CHECK: attributes #15 = { noreturn }
-; CHECK: attributes #16 = { nounwind }
-; CHECK: attributes #17 = { noinline optnone }
-; CHECK: attributes #18 = { optsize }
-; CHECK: attributes #19 = { memory(none) }
-; CHECK: attributes #20 = { memory(read) }
-; CHECK: attributes #21 = { returns_twice }
-; CHECK: attributes #22 = { safestack }
-; CHECK: attributes #23 = { sanitize_address }
-; CHECK: attributes #24 = { sanitize_memory }
-; CHECK: attributes #25 = { sanitize_thread }
-; CHECK: attributes #26 = { ssp }
-; CHECK: attributes #27 = { sspreq }
-; CHECK: attributes #28 = { sspstrong }
-; CHECK: attributes #29 = { "thunk" }
-; CHECK: attributes #30 = { uwtable }
-; CHECK: attributes #31 = { "cpu"="cortex-a8" }
-; CHECK: attributes #32 = { norecurse }
-; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
-; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { nounwind memory(argmem: read) }
-; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #40 = { nocallback nounwind }
-; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #42 = { memory(write) }
-; CHECK: attributes #43 = { speculatable }
-; CHECK: attributes #44 = { strictfp }
-; CHECK: attributes #45 = { nosanitize_coverage }
-; CHECK: attributes #46 = { disable_sanitizer_instrumentation }
-; CHECK: attributes #47 = { allocsize(0) }
-; CHECK: attributes #48 = { allocsize(1,0) }
-; CHECK: attributes #49 = { nosanitize_bounds }
-; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
-; CHECK: attributes #51 = { builtin }
+; CHECK: attributes #0 = { sanitized_padded_global }
+; CHECK: attributes #1 = { alignstack=4 }
+; CHECK: attributes #2 = { alignstack=8 }
+; CHECK: attributes #3 = { alwaysinline }
+; CHECK: attributes #4 = { cold }
+; CHECK: attributes #5 = { convergent }
+; CHECK: attributes #6 = { inlinehint }
+; CHECK: attributes #7 = { jumptable }
+; CHECK: attributes #8 = { minsize }
+; CHECK: attributes #9 = { naked }
+; CHECK: attributes #10 = { nobuiltin }
+; CHECK: attributes #11 = { noduplicate }
+; CHECK: attributes #12 = { noimplicitfloat }
+; CHECK: attributes #13 = { noinline }
+; CHECK: attributes #14 = { nonlazybind }
+; CHECK: attributes #15 = { noredzone }
+; CHECK: attributes #16 = { noreturn }
+; CHECK: attributes #17 = { nounwind }
+; CHECK: attributes #18 = { noinline optnone }
+; CHECK: attributes #19 = { optsize }
+; CHECK: attributes #20 = { memory(none) }
+; CHECK: attributes #21 = { memory(read) }
+; CHECK: attributes #22 = { returns_twice }
+; CHECK: attributes #23 = { safestack }
+; CHECK: attributes #24 = { sanitize_address }
+; CHECK: attributes #25 = { sanitize_memory }
+; CHECK: attributes #26 = { sanitize_thread }
+; CHECK: attributes #27 = { ssp }
+; CHECK: attributes #28 = { sspreq }
+; CHECK: attributes #29 = { sspstrong }
+; CHECK: attributes #30 = { "thunk" }
+; CHECK: attributes #31 = { uwtable }
+; CHECK: attributes #32 = { "cpu"="cortex-a8" }
+; CHECK: attributes #33 = { norecurse }
+; CHECK: attributes #34 = { memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #35 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #37 = { nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes #38 = { nounwind memory(argmem: read) }
+; CHECK: attributes #39 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #41 = { nocallback nounwind }
+; CHECK: attributes #42 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #43 = { memory(write) }
+; CHECK: attributes #44 = { speculatable }
+; CHECK: attributes #45 = { strictfp }
+; CHECK: attributes #46 = { nosanitize_coverage }
+; CHECK: attributes #47 = { disable_sanitizer_instrumentation }
+; CHECK: attributes #48 = { allocsize(0) }
+; CHECK: attributes #49 = { allocsize(1,0) }
+; CHECK: attributes #50 = { nosanitize_bounds }
+; CHECK: attributes #51 = { allockind("alloc,uninitialized") }
+; CHECK: attributes #52 = { builtin }
+
 
 ;; Metadata
 

@@ -408,6 +408,10 @@ FPClassTest Attribute::getNoFPClass() const {
   return static_cast<FPClassTest>(pImpl->getValueAsInt());
 }
 
+bool Attribute::isSanitizedPaddedGlobal() const {
+  return hasAttribute(Attribute::SanitizedPaddedGlobal);
+}
+
 static const char *getModRefStr(ModRefInfo MR) {
   switch (MR) {
   case ModRefInfo::NoModRef:
@@ -561,6 +565,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     OS << getNoFPClass();
     return Result;
   }
+
+  if (hasAttribute(Attribute::SanitizedPaddedGlobal))
+    return "sanitized_padded_global";
 
   // Convert target-dependent attributes to strings of the form:
   //

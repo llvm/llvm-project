@@ -1665,6 +1665,14 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
       continue;
     }
 
+    if (Token == lltok::kw_sanitized_padded_global) {
+      if (parseToken(lltok::kw_sanitized_padded_global,
+                     "expected 'sanitized_padded_global'"))
+        return true;
+      B.addAttribute(Attribute::SanitizedPaddedGlobal);
+      continue;
+    }
+
     SMLoc Loc = Lex.getLoc();
     if (Token == lltok::kw_builtin)
       BuiltinLoc = Loc;
