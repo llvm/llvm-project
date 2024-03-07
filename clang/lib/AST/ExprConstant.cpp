@@ -5583,7 +5583,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
 
-    if (!Info.getCtx().getLangOpts().MSVCCompat) {
+    auto LO = Info.getCtx().getLangOpts();
+    if (LO.CXXAssumptions && !LO.MSVCCompat) {
       for (auto *Attr : AS->getAttrs()) {
         auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
         if (!AA)

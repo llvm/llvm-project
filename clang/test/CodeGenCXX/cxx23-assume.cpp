@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++23 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++23 -fno-assumptions %s -emit-llvm -o - | FileCheck %s --check-prefix=DISABLED
+
+// DISABLED-NOT: @llvm.assume
 
 bool f();
 
