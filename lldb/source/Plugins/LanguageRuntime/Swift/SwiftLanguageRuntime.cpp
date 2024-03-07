@@ -183,9 +183,19 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
     return {};
   }
 
+  SymbolContextList sc_list;
+  image->FindSymbolsWithNameAndType(ConstString(object), sym_type, sc_list);
+  if (sc_list.GetSize() != 1)
+    return {};
+
+  SymbolContext SwiftObject_Class;
+  if (!sc_list.GetContextAtIndex(0, SwiftObject_Class))
+    return {};
+  if (!SwiftObject_Class.symbol)
+    return {};
   lldb::addr_t addr =
-      target.FindLoadAddrForNameInSymbols(ConstString(object), sym_type);
-  if (addr != LLDB_INVALID_ADDRESS)
+      SwiftObject_Class.symbol->GetAddress().GetLoadAddress(&target);
+  if (addr && addr != LLDB_INVALID_ADDRESS)
     return addr;
 
   return {};
