@@ -283,7 +283,7 @@ popcount(T value) {
 }
 #define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
   template <>                                                                  \
-  [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {       \
+  [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {         \
     return BUILTIN(value);                                                     \
   }
 ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
