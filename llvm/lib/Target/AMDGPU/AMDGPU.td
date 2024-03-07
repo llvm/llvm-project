@@ -2135,6 +2135,9 @@ def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
 def HasExpOrExportInsts : Predicate<"Subtarget->hasExpOrExportInsts()">,
   AssemblerPredicate<(all_of FeatureExportInsts)>;
 
+def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX12_10Insts))>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
