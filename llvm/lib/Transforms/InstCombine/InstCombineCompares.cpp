@@ -556,8 +556,9 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
     // Create empty phi nodes. This avoids cyclic dependencies when creating
     // the remaining instructions.
     if (auto *PHI = dyn_cast<PHINode>(Val))
-      NewInsts[PHI] = PHINode::Create(IndexType, PHI->getNumIncomingValues(),
-                                      PHI->getName() + ".idx", PHI);
+      NewInsts[PHI] =
+          PHINode::Create(IndexType, PHI->getNumIncomingValues(),
+                          PHI->getName() + ".idx", PHI->getIterator());
   }
   IRBuilder<> Builder(Base->getContext());
 

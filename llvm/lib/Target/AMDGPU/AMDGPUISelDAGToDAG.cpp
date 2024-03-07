@@ -1903,7 +1903,8 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
   // voffset to (soffset + inst_offset).
   KnownBits VKnown = CurDAG->computeKnownBits(VAddr);
   KnownBits SKnown = KnownBits::computeForAddSub(
-      true, false, CurDAG->computeKnownBits(SAddr),
+      /*Add=*/true, /*NSW=*/false, /*NUW=*/false,
+      CurDAG->computeKnownBits(SAddr),
       KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
@@ -2687,7 +2688,18 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(0);
-  unsigned Opcode;
+  unsigned Opcode = AMDGPU::INSTRUCTION_LIST_END;
+  SDNode *ConvGlueNode = N->getGluedNode();
+  if (ConvGlueNode) {
+    // FIXME: Possibly iterate over multiple glue nodes?
+    assert(ConvGlueNode->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
+    ConvGlueNode = ConvGlueNode->getOperand(0).getNode();
+    ConvGlueNode =
+        CurDAG->getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE, {},
+                               MVT::Glue, SDValue(ConvGlueNode, 0));
+  } else {
+    ConvGlueNode = nullptr;
+  }
   switch (IntrID) {
   case Intrinsic::amdgcn_wqm:
     Opcode = AMDGPU::WQM;
@@ -2719,11 +2731,19 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
     break;
   default:
     SelectCode(N);
-    return;
+    break;
   }
 
-  SDValue Src = N->getOperand(1);
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), {Src});
+  if (Opcode != AMDGPU::INSTRUCTION_LIST_END) {
+    SDValue Src = N->getOperand(1);
+    CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), {Src});
+  }
+
+  if (ConvGlueNode) {
+    SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+    NewOps.push_back(SDValue(ConvGlueNode, 0));
+    CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), NewOps);
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {

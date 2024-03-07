@@ -21,7 +21,7 @@ services:
       dockerfile: Dockerfile
       target: actions-builder
       args:
-        BASE_IMAGE: ghcr.io/actions/actions-runner:2.311.0
+        BASE_IMAGE: ghcr.io/actions/actions-runner:2.314.1
         <<: *compiler_versions
   android-buildkite-builder:
     image: ghcr.io/libcxx/android-buildkite-builder:${TAG:-latest}
