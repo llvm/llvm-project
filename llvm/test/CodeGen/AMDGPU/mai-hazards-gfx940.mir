@@ -536,8 +536,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
 body:             |
@@ -562,7 +566,7 @@ body:             |
 
 # GFX950-NEXT: S_NOP 7
 # GFX950-NEXT: S_NOP 7
-# GFX950-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
 body:             |
@@ -632,8 +636,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 body:             |
@@ -643,8 +651,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_smfmac_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_SMFMAC
 name:            dgemm16x16_mfma_write_vgpr_smfmac_srcb_read_overlap
 body:             |
@@ -654,8 +666,13 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_smfmac_srcc_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
+
 # GCN-NEXT: V_SMFMAC
 name:            dgemm16x16_mfma_write_vgpr_smfmac_srcc_read_overlap
 body:             |
@@ -1452,8 +1469,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
@@ -1473,8 +1494,13 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
+
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 body:             |
@@ -1504,8 +1530,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
