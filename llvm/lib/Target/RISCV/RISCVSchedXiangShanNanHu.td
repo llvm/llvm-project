@@ -64,11 +64,13 @@ def : WriteRes<WriteIMul, [XS2MDU]>;
 def : WriteRes<WriteIMul32, [XS2MDU]>;
 }
 
-// Integer division
+// Integer division/remainder
 // SRT16 algorithm
 let Latency = 20, ReleaseAtCycles = [20] in {
 def : WriteRes<WriteIDiv32, [XS2MDU]>;
 def : WriteRes<WriteIDiv, [XS2MDU]>;
+def : WriteRes<WriteIRem32, [XS2MDU]>;
+def : WriteRes<WriteIRem, [XS2MDU]>;
 }
 
 // Zb*
@@ -221,6 +223,8 @@ def : XS2LoadToALUBypass<ReadShiftReg>;
 def : XS2LoadToALUBypass<ReadShiftReg32>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;
