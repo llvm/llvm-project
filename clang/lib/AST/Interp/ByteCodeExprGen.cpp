@@ -1646,7 +1646,8 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
             SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true)) {
       if (!this->visit(SubExpr))
         return false;
-      this->emitSetLocal(*SubExprT, *LocalIndex, E);
+      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
+        return false;
       return this->emitGetPtrLocal(*LocalIndex, E);
     }
   } else {
