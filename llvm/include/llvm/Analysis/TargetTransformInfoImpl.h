@@ -1382,9 +1382,9 @@ public:
 
         SmallVector<int, 16> ExtractMask(Mask.size());
         std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
-        return ShuffleCost + TargetTTI->getShuffleCost(
-                                 TTI::SK_ExtractSubvector, VecTy, ExtractMask,
-                                 CostKind, 0, VecSrcTy, Operands);
+        return ShuffleCost + TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector,
+                                                       VecSrcTy, ExtractMask,
+                                                       CostKind, 0, VecTy);
       }
 
       if (Shuffle->isIdentity())
