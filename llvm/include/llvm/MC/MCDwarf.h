@@ -547,7 +547,7 @@ public:
   /// on Register will be used instead of the old one. Offset remains the same.
   static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register,
                                                SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfaRegister, L, Register, 0L, Loc);
+    return MCCFIInstruction(OpDefCfaRegister, L, Register, (int64_t)0, Loc);
   }
 
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
@@ -602,12 +602,12 @@ public:
 
   /// .cfi_window_save SPARC register window is saved.
   static MCCFIInstruction createWindowSave(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpWindowSave, L, 0, 0L, Loc);
+    return MCCFIInstruction(OpWindowSave, L, 0, (int64_t)0, Loc);
   }
 
   /// .cfi_negate_ra_state AArch64 negate RA state.
   static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpNegateRAState, L, 0, 0L, Loc);
+    return MCCFIInstruction(OpNegateRAState, L, 0, (int64_t)0, Loc);
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
@@ -615,31 +615,31 @@ public:
   /// by .cfi_startproc were executed.
   static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register,
                                         SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestore, L, Register, 0L, Loc);
+    return MCCFIInstruction(OpRestore, L, Register, (int64_t)0, Loc);
   }
 
   /// .cfi_undefined From now on the previous value of Register can't be
   /// restored anymore.
   static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpUndefined, L, Register, 0L, Loc);
+    return MCCFIInstruction(OpUndefined, L, Register, (int64_t)0, Loc);
   }
 
   /// .cfi_same_value Current value of Register is the same as in the
   /// previous frame. I.e., no restoration is needed.
   static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpSameValue, L, Register, 0L, Loc);
+    return MCCFIInstruction(OpSameValue, L, Register, (int64_t)0, Loc);
   }
 
   /// .cfi_remember_state Save all current rules for all registers.
   static MCCFIInstruction createRememberState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRememberState, L, 0, 0L, Loc);
+    return MCCFIInstruction(OpRememberState, L, 0, (int64_t)0, Loc);
   }
 
   /// .cfi_restore_state Restore the previously saved state.
   static MCCFIInstruction createRestoreState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestoreState, L, 0, 0L, Loc);
+    return MCCFIInstruction(OpRestoreState, L, 0, (int64_t)0, Loc);
   }
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
