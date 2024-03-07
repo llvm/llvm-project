@@ -8,10 +8,10 @@
 
 define spir_kernel void @f() {
 entry:
-  %0 = call spir_func i32 @_Z29__spirv_BuiltInGlobalLinearIdv()
-  %1 = call spir_func i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 1)
+  %0 = call spir_func i32 @__spirv_BuiltInGlobalLinearId()
+  %1 = call spir_func i64 @__spirv_BuiltInGlobalInvocationId(i32 1)
   ret void
 }
 
-declare spir_func i32 @_Z29__spirv_BuiltInGlobalLinearIdv()
-declare spir_func i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32)
+declare spir_func i32 @__spirv_BuiltInGlobalLinearId()
+declare spir_func i64 @__spirv_BuiltInGlobalInvocationId(i32)
