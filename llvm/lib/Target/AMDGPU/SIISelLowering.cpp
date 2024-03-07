@@ -3705,7 +3705,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool &IsTailCall = CLI.IsTailCall;
   bool IsVarArg = CLI.IsVarArg;
   bool IsSibCall = false;
-  bool IsThisReturn = false;
   MachineFunction &MF = DAG.getMachineFunction();
 
   if (Callee.isUndef() || isNullConstant(Callee)) {
@@ -3996,8 +3995,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Handle result values, copying them out of physregs into vregs that we
   // return.
   return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG,
-                         InVals, IsThisReturn,
-                         IsThisReturn ? OutVals[0] : SDValue());
+                         InVals, /*IsThisReturn=*/false, SDValue());
 }
 
 // This is identical to the default implementation in ExpandDYNAMIC_STACKALLOC,

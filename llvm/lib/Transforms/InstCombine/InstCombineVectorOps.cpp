@@ -1263,7 +1263,8 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   PoisonValue *PoisonVec = PoisonValue::get(VecTy);
   Constant *Zero = ConstantInt::get(Int64Ty, 0);
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
-    FirstIE = InsertElementInst::Create(PoisonVec, SplatVal, Zero, "", &InsElt);
+    FirstIE = InsertElementInst::Create(PoisonVec, SplatVal, Zero, "",
+                                        InsElt.getIterator());
 
   // Splat from element 0, but replace absent elements with poison in the mask.
   SmallVector<int, 16> Mask(NumElements, 0);
