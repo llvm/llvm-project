@@ -15,7 +15,7 @@ define void @bsl(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
   %2 = load <vscale x 4 x i32>, ptr %ptr2, align 4
   %3 = and <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2147483647, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
   %4 = and <vscale x 4 x i32> %2, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -2147483648, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-  %5 = or disjoint <vscale x 4 x i32> %3, %4
+  %5 = or <vscale x 4 x i32> %3, %4
   store <vscale x 4 x i32> %5, ptr %ptr3, align 4
   ret void
 }
@@ -35,7 +35,7 @@ define void @nobsl(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
   %2 = load <vscale x 4 x i32>, ptr %ptr2, align 4
   %3 = and <vscale x 4 x i32> %1, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2147483647, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
   %4 = and <vscale x 4 x i32> %2, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2147483646, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-  %5 = or disjoint <vscale x 4 x i32> %3, %4
+  %5 = or <vscale x 4 x i32> %3, %4
   store <vscale x 4 x i32> %5, ptr %ptr3, align 4
   ret void
 }
