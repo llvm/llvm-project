@@ -954,9 +954,10 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
     DPValue *DPV = DPValue::createDPVAssign(Val, SrcVar, ValExpr, Link, Addr,
                                             AddrExpr, DL);
     BasicBlock *InsertBB = LinkedInstr->getParent();
+    // Insert after LinkedInstr.
     BasicBlock::iterator NextIt = std::next(LinkedInstr->getIterator());
     Instruction *InsertBefore = NextIt == InsertBB->end() ? nullptr : &*NextIt;
-    insertDPValue(DPV, InsertBB, InsertBefore);
+    insertDPValue(DPV, InsertBB, InsertBefore, true);
     return DPV;
   }
 
@@ -1081,17 +1082,20 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
 }
 
 void DIBuilder::insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
-                              Instruction *InsertBefore) {
+                              Instruction *InsertBefore, bool InsertAtHead) {
   assert(InsertBefore || InsertBB);
   trackIfUnresolved(DPV->getVariable());
   trackIfUnresolved(DPV->getExpression());
   if (DPV->isDbgAssign())
     trackIfUnresolved(DPV->getAddressExpression());
 
+  BasicBlock::iterator InsertPt;
   if (InsertBB && InsertBefore)
-    InsertBB->insertDPValueBefore(DPV, InsertBefore->getIterator());
+    InsertPt = InsertBefore->getIterator();
   else if (InsertBB)
-    InsertBB->insertDPValueBefore(DPV, InsertBB->end());
+    InsertPt = InsertBB->end();
+  InsertPt.setHeadBit(InsertAtHead);
+  InsertBB->insertDPValueBefore(DPV, InsertPt);
 }
 
 Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,

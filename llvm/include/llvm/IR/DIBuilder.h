@@ -103,7 +103,7 @@ namespace llvm {
 
     /// Internal helper. Track metadata if untracked and insert \p DPV.
     void insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
-                       Instruction *InsertBefore);
+                       Instruction *InsertBefore, bool InsertAtHead = false);
 
     /// Internal helper with common code used by insertDbg{Value,Addr}Intrinsic.
     Instruction *insertDbgIntrinsic(llvm::Function *Intrinsic, llvm::Value *Val,
