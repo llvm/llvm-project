@@ -639,6 +639,11 @@ Concatenate two vectors and shuffle the elements according to the mask operand.
 The mask operand should be an IR Constant which exactly matches the
 corresponding mask for the IR shufflevector instruction.
 
+G_SPLAT_VECTOR
+^^^^^^^^^^^^^^^^
+
+Create a vector where all elements are the scalar from the source operand.
+
 Vector Reduction Operations
 ---------------------------
 
