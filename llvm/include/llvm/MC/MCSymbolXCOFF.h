@@ -78,7 +78,7 @@ public:
 
   CodeModel getPerSymbolCodeModel() const {
     assert(hasPerSymbolCodeModel() &&
-           "Requested codemodel for symbol with out one");
+           "Requested code model for symbol without one");
     return *PerSymbolCodeModel;
   }
 
