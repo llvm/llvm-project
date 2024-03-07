@@ -1349,7 +1349,7 @@ public:
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
     uint64_t StackSize = 0;
-    int64_t MinAbsOffset = std::numeric_limits<long>::max();
+    int64_t MinAbsOffset = std::numeric_limits<int64_t>::max();
 
     for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
@@ -1419,7 +1419,7 @@ public:
         unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
-        MinAbsOffset = std::min(MinAbsOffset, labs(Inst.getOffset()));
+        MinAbsOffset = std::min<int64_t>(MinAbsOffset, llabs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);
         break;
       }
