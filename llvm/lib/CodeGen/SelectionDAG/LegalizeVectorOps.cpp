@@ -1884,7 +1884,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
   const TargetLibraryInfo &TLibInfo = DAG.getLibInfo();
   const VecDesc *VD = TLibInfo.getVectorMappingInfo(LCName, VL, false);
   if (!VD)
-    VD = TLibInfo.getVectorMappingInfo(LCName, VL, /*Masked=*/ true);
+    VD = TLibInfo.getVectorMappingInfo(LCName, VL, /*Masked=*/true);
   if (!VD)
     return false;
 
