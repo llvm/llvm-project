@@ -1458,7 +1458,7 @@ namespace {
         // Return a TemplateSpecializationType for transforming a deduction
         // guide.
         if (auto *ICT = TL.getType()->getAs<InjectedClassNameType>()) {
-          auto Type = 
+          auto Type =
               inherited::TransformType(ICT->getInjectedSpecializationType());
           TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
           return Type;
