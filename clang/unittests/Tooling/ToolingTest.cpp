@@ -421,9 +421,9 @@ TEST_F(CommandLineExtractorTest, AcceptOffloadingCompile) {
 TEST_F(CommandLineExtractorTest, AcceptOffloadingSyntaxOnly) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {
-      "clang",         "-target",   "arm64-apple-macosx11.0.0",
-      "-fsyntax-only", "-x",        "hip",
-      "test.c",        "-nogpulib", "-nogpuinc"};
+      "clang",     "-target",  "arm64-apple-macosx11.0.0", "-fsyntax-only",
+      "-x",        "hip",      "--no-offload-new-driver",  "test.c",
+      "-nogpulib", "-nogpuinc"};
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 
