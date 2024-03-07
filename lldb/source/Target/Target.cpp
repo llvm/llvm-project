@@ -4896,10 +4896,8 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   SetPropertyAtIndex(idx, debug);
 }
 
-bool TargetProperties::GetIgnoreBreakpointsFromLanguageArtificialLocations()
-    const {
-  const uint32_t idx =
-      ePropertyIgnoreBreakpointsFromLanguageArtificialLocations;
+bool TargetProperties::GetEnableLanguageFilterForLineBreakpoints() const {
+  const uint32_t idx = ePropertyEnableLanguageFilterForLineBreakpoints;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
 }

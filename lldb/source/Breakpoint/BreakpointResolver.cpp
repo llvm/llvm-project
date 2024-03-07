@@ -205,14 +205,12 @@ void BreakpointResolver::SetSCMatchesByLine(
     llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
   const bool ShouldQueryLanguageFilter =
-      GetBreakpoint()
-          ->GetTarget()
-          .GetIgnoreBreakpointsFromLanguageArtificialLocations();
+      GetBreakpoint()->GetTarget().GetEnableLanguageFilterForLineBreakpoints();
 
   for (uint32_t i = 0; i < sc_list.GetSize(); ++i) {
     if (ShouldQueryLanguageFilter)
       if (Language *lang = Language::FindPlugin(sc_list[i].GetLanguage());
-          lang && lang->IsArtificialCtxForLineBreakpoint(sc_list[i]))
+          lang && lang->IgnoreForLineBreakpoints(sc_list[i]))
         continue;
     all_scs.push_back(sc_list[i]);
   }

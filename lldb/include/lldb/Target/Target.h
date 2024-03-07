@@ -258,7 +258,7 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
-  bool GetIgnoreBreakpointsFromLanguageArtificialLocations() const;
+  bool GetEnableLanguageFilterForLineBreakpoints() const;
 
 private:
   // Callbacks for m_launch_info.
