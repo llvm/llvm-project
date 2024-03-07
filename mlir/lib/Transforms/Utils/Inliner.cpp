@@ -1,4 +1,4 @@
-//===- Inliner.cpp - Pass to inline function calls ------------------------===//
+//===- Inliner.cpp ---- SCC-based inliner ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,38 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a basic inlining algorithm that operates bottom up over
-// the Strongly Connect Components(SCCs) of the CallGraph. This enables a more
-// incremental propagation of inlining decisions from the leafs to the roots of
-// the callgraph.
+// This file implements Inliner that uses a basic inlining
+// algorithm that operates bottom up over the Strongly Connect Components(SCCs)
+// of the CallGraph. This enables a more incremental propagation of inlining
+// decisions from the leafs to the roots of the callgraph.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Passes.h"
-
-#include "mlir/Analysis/CallGraph.h"
+#include "mlir/Transforms/Inliner.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_INLINER
-#include "mlir/Transforms/Passes.h.inc"
-} // namespace mlir
 
 #define DEBUG_TYPE "inlining"
 
 using namespace mlir;
 
-/// This function implements the default inliner optimization pipeline.
-static void defaultInlinerOptPipeline(OpPassManager &pm) {
-  pm.addPass(createCanonicalizerPass());
-}
+using ResolvedCall = Inliner::ResolvedCall;
 
 //===----------------------------------------------------------------------===//
 // Symbol Use Tracking
@@ -306,20 +297,6 @@ static LogicalResult runTransformOnCGSCCs(
   return success();
 }
 
-namespace {
-/// This struct represents a resolved call to a given callgraph node. Given that
-/// the call does not actually contain a direct reference to the
-/// Region(CallGraphNode) that it is dispatching to, we need to resolve them
-/// explicitly.
-struct ResolvedCall {
-  ResolvedCall(CallOpInterface call, CallGraphNode *sourceNode,
-               CallGraphNode *targetNode)
-      : call(call), sourceNode(sourceNode), targetNode(targetNode) {}
-  CallOpInterface call;
-  CallGraphNode *sourceNode, *targetNode;
-};
-} // namespace
-
 /// Collect all of the callable operations within the given range of blocks. If
 /// `traverseNestedCGNodes` is true, this will also collect call operations
 /// inside of nested callgraph nodes.
@@ -368,7 +345,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 }
 
 //===----------------------------------------------------------------------===//
-// Inliner
+// InlinerInterfaceImpl
 //===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
@@ -397,9 +374,9 @@ static bool inlineHistoryIncludes(
 
 namespace {
 /// This class provides a specialization of the main inlining interface.
-struct Inliner : public InlinerInterface {
-  Inliner(MLIRContext *context, CallGraph &cg,
-          SymbolTableCollection &symbolTable)
+struct InlinerInterfaceImpl : public InlinerInterface {
+  InlinerInterfaceImpl(MLIRContext *context, CallGraph &cg,
+                       SymbolTableCollection &symbolTable)
       : InlinerInterface(context), cg(cg), symbolTable(symbolTable) {}
 
   /// Process a set of blocks that have been inlined. This callback is invoked
@@ -442,45 +419,172 @@ struct Inliner : public InlinerInterface {
 };
 } // namespace
 
-/// Returns true if the given call should be inlined.
-static bool shouldInline(ResolvedCall &resolvedCall) {
-  // Don't allow inlining terminator calls. We currently don't support this
-  // case.
-  if (resolvedCall.call->hasTrait<OpTrait::IsTerminator>())
-    return false;
+namespace mlir {
 
-  // Don't allow inlining if the target is an ancestor of the call. This
-  // prevents inlining recursively.
-  Region *callableRegion = resolvedCall.targetNode->getCallableRegion();
-  if (callableRegion->isAncestor(resolvedCall.call->getParentRegion()))
-    return false;
+class Inliner::Impl {
+public:
+  Impl(Inliner &inliner) : inliner(inliner) {}
 
-  // Don't allow inlining if the callee has multiple blocks (unstructured
-  // control flow) but we cannot be sure that the caller region supports that.
-  bool calleeHasMultipleBlocks =
-      llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
-  // If both parent ops have the same type, it is safe to inline. Otherwise,
-  // decide based on whether the op has the SingleBlock trait or not.
-  // Note: This check does currently not account for SizedRegion/MaxSizedRegion.
-  auto callerRegionSupportsMultipleBlocks = [&]() {
-    return callableRegion->getParentOp()->getName() ==
-               resolvedCall.call->getParentOp()->getName() ||
-           !resolvedCall.call->getParentOp()
-                ->mightHaveTrait<OpTrait::SingleBlock>();
-  };
-  if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
-    return false;
+  /// Attempt to inline calls within the given scc, and run simplifications,
+  /// until a fixed point is reached. This allows for the inlining of newly
+  /// devirtualized calls. Returns failure if there was a fatal error during
+  /// inlining.
+  LogicalResult inlineSCC(InlinerInterfaceImpl &inlinerIface,
+                          CGUseList &useList, CallGraphSCC &currentSCC,
+                          MLIRContext *context);
 
-  // Otherwise, inline.
-  return true;
+private:
+  /// Optimize the nodes within the given SCC with one of the held optimization
+  /// pass pipelines. Returns failure if an error occurred during the
+  /// optimization of the SCC, success otherwise.
+  LogicalResult optimizeSCC(CallGraph &cg, CGUseList &useList,
+                            CallGraphSCC &currentSCC, MLIRContext *context);
+
+  /// Optimize the nodes within the given SCC in parallel. Returns failure if an
+  /// error occurred during the optimization of the SCC, success otherwise.
+  LogicalResult optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
+                                 MLIRContext *context);
+
+  /// Optimize the given callable node with one of the pass managers provided
+  /// with `pipelines`, or the generic pre-inline pipeline. Returns failure if
+  /// an error occurred during the optimization of the callable, success
+  /// otherwise.
+  LogicalResult optimizeCallable(CallGraphNode *node,
+                                 llvm::StringMap<OpPassManager> &pipelines);
+
+  /// Attempt to inline calls within the given scc. This function returns
+  /// success if any calls were inlined, failure otherwise.
+  LogicalResult inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
+                                 CGUseList &useList, CallGraphSCC &currentSCC);
+
+  /// Returns true if the given call should be inlined.
+  bool shouldInline(ResolvedCall &resolvedCall);
+
+private:
+  Inliner &inliner;
+  llvm::SmallVector<llvm::StringMap<OpPassManager>> pipelines;
+};
+
+LogicalResult Inliner::Impl::inlineSCC(InlinerInterfaceImpl &inlinerIface,
+                                       CGUseList &useList,
+                                       CallGraphSCC &currentSCC,
+                                       MLIRContext *context) {
+  // Continuously simplify and inline until we either reach a fixed point, or
+  // hit the maximum iteration count. Simplifying early helps to refine the cost
+  // model, and in future iterations may devirtualize new calls.
+  unsigned iterationCount = 0;
+  do {
+    if (failed(optimizeSCC(inlinerIface.cg, useList, currentSCC, context)))
+      return failure();
+    if (failed(inlineCallsInSCC(inlinerIface, useList, currentSCC)))
+      break;
+  } while (++iterationCount < inliner.config.getMaxInliningIterations());
+  return success();
+}
+
+LogicalResult Inliner::Impl::optimizeSCC(CallGraph &cg, CGUseList &useList,
+                                         CallGraphSCC &currentSCC,
+                                         MLIRContext *context) {
+  // Collect the sets of nodes to simplify.
+  SmallVector<CallGraphNode *, 4> nodesToVisit;
+  for (auto *node : currentSCC) {
+    if (node->isExternal())
+      continue;
+
+    // Don't simplify nodes with children. Nodes with children require special
+    // handling as we may remove the node during simplification. In the future,
+    // we should be able to handle this case with proper node deletion tracking.
+    if (node->hasChildren())
+      continue;
+
+    // We also won't apply simplifications to nodes that can't have passes
+    // scheduled on them.
+    auto *region = node->getCallableRegion();
+    if (!region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      continue;
+    nodesToVisit.push_back(node);
+  }
+  if (nodesToVisit.empty())
+    return success();
+
+  // Optimize each of the nodes within the SCC in parallel.
+  if (failed(optimizeSCCAsync(nodesToVisit, context)))
+    return failure();
+
+  // Recompute the uses held by each of the nodes.
+  for (CallGraphNode *node : nodesToVisit)
+    useList.recomputeUses(node, cg);
+  return success();
+}
+
+LogicalResult
+Inliner::Impl::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
+                                MLIRContext *ctx) {
+  // We must maintain a fixed pool of pass managers which is at least as large
+  // as the maximum parallelism of the failableParallelForEach below.
+  // Note: The number of pass managers here needs to remain constant
+  // to prevent issues with pass instrumentations that rely on having the same
+  // pass manager for the main thread.
+  size_t numThreads = ctx->getNumThreads();
+  const auto &opPipelines = inliner.config.getOpPipelines();
+  if (pipelines.size() < numThreads) {
+    pipelines.reserve(numThreads);
+    pipelines.resize(numThreads, opPipelines);
+  }
+
+  // Ensure an analysis manager has been constructed for each of the nodes.
+  // This prevents thread races when running the nested pipelines.
+  for (CallGraphNode *node : nodesToVisit)
+    inliner.am.nest(node->getCallableRegion()->getParentOp());
+
+  // An atomic failure variable for the async executors.
+  std::vector<std::atomic<bool>> activePMs(pipelines.size());
+  std::fill(activePMs.begin(), activePMs.end(), false);
+  return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
+    // Find a pass manager for this operation.
+    auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
+      bool expectedInactive = false;
+      return isActive.compare_exchange_strong(expectedInactive, true);
+    });
+    assert(it != activePMs.end() &&
+           "could not find inactive pass manager for thread");
+    unsigned pmIndex = it - activePMs.begin();
+
+    // Optimize this callable node.
+    LogicalResult result = optimizeCallable(node, pipelines[pmIndex]);
+
+    // Reset the active bit for this pass manager.
+    activePMs[pmIndex].store(false);
+    return result;
+  });
+}
+
+LogicalResult
+Inliner::Impl::optimizeCallable(CallGraphNode *node,
+                                llvm::StringMap<OpPassManager> &pipelines) {
+  Operation *callable = node->getCallableRegion()->getParentOp();
+  StringRef opName = callable->getName().getStringRef();
+  auto pipelineIt = pipelines.find(opName);
+  const auto &defaultPipeline = inliner.config.getDefaultPipeline();
+  if (pipelineIt == pipelines.end()) {
+    // If a pipeline didn't exist, use the generic pipeline if possible.
+    if (!defaultPipeline)
+      return success();
+
+    OpPassManager defaultPM(opName);
+    defaultPipeline(defaultPM);
+    pipelineIt = pipelines.try_emplace(opName, std::move(defaultPM)).first;
+  }
+  return inliner.runPipelineHelper(inliner.pass, pipelineIt->second, callable);
 }
 
 /// Attempt to inline calls within the given scc. This function returns
 /// success if any calls were inlined, failure otherwise.
-static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
-                                      CallGraphSCC &currentSCC) {
-  CallGraph &cg = inliner.cg;
-  auto &calls = inliner.calls;
+LogicalResult
+Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
+                                CGUseList &useList, CallGraphSCC &currentSCC) {
+  CallGraph &cg = inlinerIface.cg;
+  auto &calls = inlinerIface.calls;
 
   // A set of dead nodes to remove after inlining.
   llvm::SmallSetVector<CallGraphNode *, 1> deadNodes;
@@ -496,8 +600,9 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
     if (useList.isDead(node)) {
       deadNodes.insert(node);
     } else {
-      collectCallOps(*node->getCallableRegion(), node, cg, inliner.symbolTable,
-                     calls, /*traverseNestedCGNodes=*/false);
+      collectCallOps(*node->getCallableRegion(), node, cg,
+                     inlinerIface.symbolTable, calls,
+                     /*traverseNestedCGNodes=*/false);
     }
   }
 
@@ -544,9 +649,10 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
     // then inline it in-place and delete the node if successful.
     bool inlineInPlace = useList.hasOneUseAndDiscardable(it.targetNode);
 
-    LogicalResult inlineResult = inlineCall(
-        inliner, call, cast<CallableOpInterface>(targetRegion->getParentOp()),
-        targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
+    LogicalResult inlineResult =
+        inlineCall(inlinerIface, call,
+                   cast<CallableOpInterface>(targetRegion->getParentOp()),
+                   targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
     if (failed(inlineResult)) {
       LLVM_DEBUG(llvm::dbgs() << "** Failed to inline\n");
       continue;
@@ -592,262 +698,63 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
 
   for (CallGraphNode *node : deadNodes) {
     currentSCC.remove(node);
-    inliner.markForDeletion(node);
+    inlinerIface.markForDeletion(node);
   }
   calls.clear();
   return success(inlinedAnyCalls);
 }
 
-//===----------------------------------------------------------------------===//
-// InlinerPass
-//===----------------------------------------------------------------------===//
+/// Returns true if the given call should be inlined.
+bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
+  // Don't allow inlining terminator calls. We currently don't support this
+  // case.
+  if (resolvedCall.call->hasTrait<OpTrait::IsTerminator>())
+    return false;
 
-namespace {
-class InlinerPass : public impl::InlinerBase<InlinerPass> {
-public:
-  InlinerPass();
-  InlinerPass(const InlinerPass &) = default;
-  InlinerPass(std::function<void(OpPassManager &)> defaultPipeline);
-  InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
-              llvm::StringMap<OpPassManager> opPipelines);
-  void runOnOperation() override;
+  // Don't allow inlining if the target is an ancestor of the call. This
+  // prevents inlining recursively.
+  Region *callableRegion = resolvedCall.targetNode->getCallableRegion();
+  if (callableRegion->isAncestor(resolvedCall.call->getParentRegion()))
+    return false;
 
-private:
-  /// Attempt to inline calls within the given scc, and run simplifications,
-  /// until a fixed point is reached. This allows for the inlining of newly
-  /// devirtualized calls. Returns failure if there was a fatal error during
-  /// inlining.
-  LogicalResult inlineSCC(Inliner &inliner, CGUseList &useList,
-                          CallGraphSCC &currentSCC, MLIRContext *context);
+  // Don't allow inlining if the callee has multiple blocks (unstructured
+  // control flow) but we cannot be sure that the caller region supports that.
+  bool calleeHasMultipleBlocks =
+      llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
+  // If both parent ops have the same type, it is safe to inline. Otherwise,
+  // decide based on whether the op has the SingleBlock trait or not.
+  // Note: This check does currently not account for SizedRegion/MaxSizedRegion.
+  auto callerRegionSupportsMultipleBlocks = [&]() {
+    return callableRegion->getParentOp()->getName() ==
+               resolvedCall.call->getParentOp()->getName() ||
+           !resolvedCall.call->getParentOp()
+                ->mightHaveTrait<OpTrait::SingleBlock>();
+  };
+  if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
+    return false;
 
-  /// Optimize the nodes within the given SCC with one of the held optimization
-  /// pass pipelines. Returns failure if an error occurred during the
-  /// optimization of the SCC, success otherwise.
-  LogicalResult optimizeSCC(CallGraph &cg, CGUseList &useList,
-                            CallGraphSCC &currentSCC, MLIRContext *context);
-
-  /// Optimize the nodes within the given SCC in parallel. Returns failure if an
-  /// error occurred during the optimization of the SCC, success otherwise.
-  LogicalResult optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
-                                 MLIRContext *context);
-
-  /// Optimize the given callable node with one of the pass managers provided
-  /// with `pipelines`, or the default pipeline. Returns failure if an error
-  /// occurred during the optimization of the callable, success otherwise.
-  LogicalResult optimizeCallable(CallGraphNode *node,
-                                 llvm::StringMap<OpPassManager> &pipelines);
-
-  /// Attempt to initialize the options of this pass from the given string.
-  /// Derived classes may override this method to hook into the point at which
-  /// options are initialized, but should generally always invoke this base
-  /// class variant.
-  LogicalResult initializeOptions(StringRef options) override;
-
-  /// An optional function that constructs a default optimization pipeline for
-  /// a given operation.
-  std::function<void(OpPassManager &)> defaultPipeline;
-  /// A map of operation names to pass pipelines to use when optimizing
-  /// callable operations of these types. This provides a specialized pipeline
-  /// instead of the default. The vector size is the number of threads used
-  /// during optimization.
-  SmallVector<llvm::StringMap<OpPassManager>, 8> opPipelines;
-};
-} // namespace
-
-InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
-InlinerPass::InlinerPass(
-    std::function<void(OpPassManager &)> defaultPipelineArg)
-    : defaultPipeline(std::move(defaultPipelineArg)) {
-  opPipelines.push_back({});
+  // Otherwise, inline.
+  return true;
 }
 
-InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
-                         llvm::StringMap<OpPassManager> opPipelines)
-    : InlinerPass(std::move(defaultPipeline)) {
-  if (opPipelines.empty())
-    return;
-
-  // Update the option for the op specific optimization pipelines.
-  for (auto &it : opPipelines)
-    opPipelineList.addValue(it.second);
-  this->opPipelines.emplace_back(std::move(opPipelines));
-}
-
-void InlinerPass::runOnOperation() {
-  CallGraph &cg = getAnalysis<CallGraph>();
-  auto *context = &getContext();
-
-  // The inliner should only be run on operations that define a symbol table,
-  // as the callgraph will need to resolve references.
-  Operation *op = getOperation();
-  if (!op->hasTrait<OpTrait::SymbolTable>()) {
-    op->emitOpError() << " was scheduled to run under the inliner, but does "
-                         "not define a symbol table";
-    return signalPassFailure();
-  }
-
+LogicalResult Inliner::doInlining() {
+  Impl impl(*this);
+  auto *context = op->getContext();
   // Run the inline transform in post-order over the SCCs in the callgraph.
   SymbolTableCollection symbolTable;
-  Inliner inliner(context, cg, symbolTable);
-  CGUseList useList(getOperation(), cg, symbolTable);
+  // FIXME: some clean-up can be done for the arguments
+  // of the Impl's methods, if the inlinerIface and useList
+  // become the states of the Impl.
+  InlinerInterfaceImpl inlinerIface(context, cg, symbolTable);
+  CGUseList useList(op, cg, symbolTable);
   LogicalResult result = runTransformOnCGSCCs(cg, [&](CallGraphSCC &scc) {
-    return inlineSCC(inliner, useList, scc, context);
+    return impl.inlineSCC(inlinerIface, useList, scc, context);
   });
   if (failed(result))
-    return signalPassFailure();
+    return result;
 
   // After inlining, make sure to erase any callables proven to be dead.
-  inliner.eraseDeadCallables();
-}
-
-LogicalResult InlinerPass::inlineSCC(Inliner &inliner, CGUseList &useList,
-                                     CallGraphSCC &currentSCC,
-                                     MLIRContext *context) {
-  // Continuously simplify and inline until we either reach a fixed point, or
-  // hit the maximum iteration count. Simplifying early helps to refine the cost
-  // model, and in future iterations may devirtualize new calls.
-  unsigned iterationCount = 0;
-  do {
-    if (failed(optimizeSCC(inliner.cg, useList, currentSCC, context)))
-      return failure();
-    if (failed(inlineCallsInSCC(inliner, useList, currentSCC)))
-      break;
-  } while (++iterationCount < maxInliningIterations);
+  inlinerIface.eraseDeadCallables();
   return success();
 }
-
-LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
-                                       CallGraphSCC &currentSCC,
-                                       MLIRContext *context) {
-  // Collect the sets of nodes to simplify.
-  SmallVector<CallGraphNode *, 4> nodesToVisit;
-  for (auto *node : currentSCC) {
-    if (node->isExternal())
-      continue;
-
-    // Don't simplify nodes with children. Nodes with children require special
-    // handling as we may remove the node during simplification. In the future,
-    // we should be able to handle this case with proper node deletion tracking.
-    if (node->hasChildren())
-      continue;
-
-    // We also won't apply simplifications to nodes that can't have passes
-    // scheduled on them.
-    auto *region = node->getCallableRegion();
-    if (!region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
-      continue;
-    nodesToVisit.push_back(node);
-  }
-  if (nodesToVisit.empty())
-    return success();
-
-  // Optimize each of the nodes within the SCC in parallel.
-  if (failed(optimizeSCCAsync(nodesToVisit, context)))
-    return failure();
-
-  // Recompute the uses held by each of the nodes.
-  for (CallGraphNode *node : nodesToVisit)
-    useList.recomputeUses(node, cg);
-  return success();
-}
-
-LogicalResult
-InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
-                              MLIRContext *ctx) {
-  // We must maintain a fixed pool of pass managers which is at least as large
-  // as the maximum parallelism of the failableParallelForEach below.
-  // Note: The number of pass managers here needs to remain constant
-  // to prevent issues with pass instrumentations that rely on having the same
-  // pass manager for the main thread.
-  size_t numThreads = ctx->getNumThreads();
-  if (opPipelines.size() < numThreads) {
-    // Reserve before resizing so that we can use a reference to the first
-    // element.
-    opPipelines.reserve(numThreads);
-    opPipelines.resize(numThreads, opPipelines.front());
-  }
-
-  // Ensure an analysis manager has been constructed for each of the nodes.
-  // This prevents thread races when running the nested pipelines.
-  for (CallGraphNode *node : nodesToVisit)
-    getAnalysisManager().nest(node->getCallableRegion()->getParentOp());
-
-  // An atomic failure variable for the async executors.
-  std::vector<std::atomic<bool>> activePMs(opPipelines.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
-  return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
-    // Find a pass manager for this operation.
-    auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
-      bool expectedInactive = false;
-      return isActive.compare_exchange_strong(expectedInactive, true);
-    });
-    assert(it != activePMs.end() &&
-           "could not find inactive pass manager for thread");
-    unsigned pmIndex = it - activePMs.begin();
-
-    // Optimize this callable node.
-    LogicalResult result = optimizeCallable(node, opPipelines[pmIndex]);
-
-    // Reset the active bit for this pass manager.
-    activePMs[pmIndex].store(false);
-    return result;
-  });
-}
-
-LogicalResult
-InlinerPass::optimizeCallable(CallGraphNode *node,
-                              llvm::StringMap<OpPassManager> &pipelines) {
-  Operation *callable = node->getCallableRegion()->getParentOp();
-  StringRef opName = callable->getName().getStringRef();
-  auto pipelineIt = pipelines.find(opName);
-  if (pipelineIt == pipelines.end()) {
-    // If a pipeline didn't exist, use the default if possible.
-    if (!defaultPipeline)
-      return success();
-
-    OpPassManager defaultPM(opName);
-    defaultPipeline(defaultPM);
-    pipelineIt = pipelines.try_emplace(opName, std::move(defaultPM)).first;
-  }
-  return runPipeline(pipelineIt->second, callable);
-}
-
-LogicalResult InlinerPass::initializeOptions(StringRef options) {
-  if (failed(Pass::initializeOptions(options)))
-    return failure();
-
-  // Initialize the default pipeline builder to use the option string.
-  // TODO: Use a generic pass manager for default pipelines, and remove this.
-  if (!defaultPipelineStr.empty()) {
-    std::string defaultPipelineCopy = defaultPipelineStr;
-    defaultPipeline = [=](OpPassManager &pm) {
-      (void)parsePassPipeline(defaultPipelineCopy, pm);
-    };
-  } else if (defaultPipelineStr.getNumOccurrences()) {
-    defaultPipeline = nullptr;
-  }
-
-  // Initialize the op specific pass pipelines.
-  llvm::StringMap<OpPassManager> pipelines;
-  for (OpPassManager pipeline : opPipelineList)
-    if (!pipeline.empty())
-      pipelines.try_emplace(pipeline.getOpAnchorName(), pipeline);
-  opPipelines.assign({std::move(pipelines)});
-
-  return success();
-}
-
-std::unique_ptr<Pass> mlir::createInlinerPass() {
-  return std::make_unique<InlinerPass>();
-}
-std::unique_ptr<Pass>
-mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
-  return std::make_unique<InlinerPass>(defaultInlinerOptPipeline,
-                                       std::move(opPipelines));
-}
-std::unique_ptr<Pass> mlir::createInlinerPass(
-    llvm::StringMap<OpPassManager> opPipelines,
-    std::function<void(OpPassManager &)> defaultPipelineBuilder) {
-  return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
-                                       std::move(opPipelines));
-}
+} // namespace mlir
