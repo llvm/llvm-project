@@ -17,6 +17,7 @@ define i32 @test_cr2() nounwind uwtable {
 ; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    mr 31, 1
 ; PPC32-NEXT:    .cfi_def_cfa_register r31
+; PPC32-NEXT:    .cfi_offset cr2, -8
 ; PPC32-NEXT:    mfcr 12
 ; PPC32-NEXT:    stw 12, 24(31)
 ; PPC32-NEXT:    li 3, 1
@@ -227,6 +228,7 @@ define void @cloberOneNvCrField() {
 ; PPC32-NEXT:    .cfi_offset r31, -4
 ; PPC32-NEXT:    mr 31, 1
 ; PPC32-NEXT:    .cfi_def_cfa_register r31
+; PPC32-NEXT:    .cfi_offset cr2, -8
 ; PPC32-NEXT:    mfcr 12
 ; PPC32-NEXT:    stw 12, 24(31)
 ; PPC32-NEXT:    #APP
@@ -274,6 +276,9 @@ define void @cloberAllNvCrField() {
 ; PPC32-NEXT:    .cfi_offset r31, -4
 ; PPC32-NEXT:    mr 31, 1
 ; PPC32-NEXT:    .cfi_def_cfa_register r31
+; PPC32-NEXT:    .cfi_offset cr2, -8
+; PPC32-NEXT:    .cfi_offset cr3, -8
+; PPC32-NEXT:    .cfi_offset cr4, -8
 ; PPC32-NEXT:    mfcr 12
 ; PPC32-NEXT:    stw 12, 24(31)
 ; PPC32-NEXT:    #APP

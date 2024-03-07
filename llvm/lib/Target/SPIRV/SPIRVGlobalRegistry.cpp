@@ -525,7 +525,9 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
   // Output decorations for the GV.
   // TODO: maybe move to GenerateDecorations pass.
-  if (IsConst)
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (IsConst && ST.isOpenCLEnv())
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Constant, {});
 
   if (GVar && GVar->getAlign().valueOrOne().value() != 1) {
@@ -820,6 +822,15 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
 }
 
 unsigned
+SPIRVGlobalRegistry::getScalarOrVectorComponentCount(Register VReg) const {
+  if (SPIRVType *Type = getSPIRVTypeForVReg(VReg))
+    return Type->getOpcode() == SPIRV::OpTypeVector
+               ? static_cast<unsigned>(Type->getOperand(2).getImm())
+               : 1;
+  return 0;
+}
+
+unsigned
 SPIRVGlobalRegistry::getScalarOrVectorBitWidth(const SPIRVType *Type) const {
   assert(Type && "Invalid Type pointer");
   if (Type->getOpcode() == SPIRV::OpTypeVector) {
@@ -834,15 +845,49 @@ SPIRVGlobalRegistry::getScalarOrVectorBitWidth(const SPIRVType *Type) const {
   llvm_unreachable("Attempting to get bit width of non-integer/float type.");
 }
 
-bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
+unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
+    const SPIRVType *Type) const {
   assert(Type && "Invalid Type pointer");
+  unsigned NumElements = 1;
   if (Type->getOpcode() == SPIRV::OpTypeVector) {
-    auto EleTypeReg = Type->getOperand(1).getReg();
-    Type = getSPIRVTypeForVReg(EleTypeReg);
+    NumElements = static_cast<unsigned>(Type->getOperand(2).getImm());
+    Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
   }
-  if (Type->getOpcode() == SPIRV::OpTypeInt)
-    return Type->getOperand(2).getImm() != 0;
-  llvm_unreachable("Attempting to get sign of non-integer type.");
+  return Type->getOpcode() == SPIRV::OpTypeInt ||
+                 Type->getOpcode() == SPIRV::OpTypeFloat
+             ? NumElements * Type->getOperand(1).getImm()
+             : 0;
+}
+
+const SPIRVType *SPIRVGlobalRegistry::retrieveScalarOrVectorIntType(
+    const SPIRVType *Type) const {
+  if (Type && Type->getOpcode() == SPIRV::OpTypeVector)
+    Type = getSPIRVTypeForVReg(Type->getOperand(1).getReg());
+  return Type && Type->getOpcode() == SPIRV::OpTypeInt ? Type : nullptr;
+}
+
+bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
+  const SPIRVType *IntType = retrieveScalarOrVectorIntType(Type);
+  return IntType && IntType->getOperand(2).getImm() != 0;
+}
+
+bool SPIRVGlobalRegistry::isBitcastCompatible(const SPIRVType *Type1,
+                                              const SPIRVType *Type2) const {
+  if (!Type1 || !Type2)
+    return false;
+  auto Op1 = Type1->getOpcode(), Op2 = Type2->getOpcode();
+  // Ignore difference between <1.5 and >=1.5 protocol versions:
+  // it's valid if either Result Type or Operand is a pointer, and the other
+  // is a pointer, an integer scalar, or an integer vector.
+  if (Op1 == SPIRV::OpTypePointer &&
+      (Op2 == SPIRV::OpTypePointer || retrieveScalarOrVectorIntType(Type2)))
+    return true;
+  if (Op2 == SPIRV::OpTypePointer &&
+      (Op1 == SPIRV::OpTypePointer || retrieveScalarOrVectorIntType(Type1)))
+    return true;
+  unsigned Bits1 = getNumScalarOrVectorTotalBitWidth(Type1),
+           Bits2 = getNumScalarOrVectorTotalBitWidth(Type2);
+  return Bits1 > 0 && Bits1 == Bits2;
 }
 
 SPIRV::StorageClass::StorageClass
@@ -947,7 +992,6 @@ SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
 }
 
 // Returns nullptr if unable to recognize SPIRV type name
-// TODO: maybe use tablegen to implement this.
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
     StringRef TypeStr, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC,
@@ -957,51 +1001,18 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
 
   // Parse strings representing either a SPIR-V or OpenCL builtin type.
   if (hasBuiltinTypePrefix(TypeStr))
-    return getOrCreateSPIRVType(
-        SPIRV::parseBuiltinTypeNameToTargetExtType(TypeStr.str(), MIRBuilder),
-        MIRBuilder, AQ);
+    return getOrCreateSPIRVType(SPIRV::parseBuiltinTypeNameToTargetExtType(
+                                    TypeStr.str(), MIRBuilder.getContext()),
+                                MIRBuilder, AQ);
 
   // Parse type name in either "typeN" or "type vector[N]" format, where
   // N is the number of elements of the vector.
   Type *Ty;
 
-  TypeStr.consume_front("atomic_");
-
-  if (TypeStr.starts_with("void")) {
-    Ty = Type::getVoidTy(Ctx);
-    TypeStr = TypeStr.substr(strlen("void"));
-  } else if (TypeStr.starts_with("bool")) {
-    Ty = Type::getIntNTy(Ctx, 1);
-    TypeStr = TypeStr.substr(strlen("bool"));
-  } else if (TypeStr.starts_with("char") || TypeStr.starts_with("uchar")) {
-    Ty = Type::getInt8Ty(Ctx);
-    TypeStr = TypeStr.starts_with("char") ? TypeStr.substr(strlen("char"))
-                                          : TypeStr.substr(strlen("uchar"));
-  } else if (TypeStr.starts_with("short") || TypeStr.starts_with("ushort")) {
-    Ty = Type::getInt16Ty(Ctx);
-    TypeStr = TypeStr.starts_with("short") ? TypeStr.substr(strlen("short"))
-                                           : TypeStr.substr(strlen("ushort"));
-  } else if (TypeStr.starts_with("int") || TypeStr.starts_with("uint")) {
-    Ty = Type::getInt32Ty(Ctx);
-    TypeStr = TypeStr.starts_with("int") ? TypeStr.substr(strlen("int"))
-                                         : TypeStr.substr(strlen("uint"));
-  } else if (TypeStr.starts_with("long") || TypeStr.starts_with("ulong")) {
-    Ty = Type::getInt64Ty(Ctx);
-    TypeStr = TypeStr.starts_with("long") ? TypeStr.substr(strlen("long"))
-                                          : TypeStr.substr(strlen("ulong"));
-  } else if (TypeStr.starts_with("half")) {
-    Ty = Type::getHalfTy(Ctx);
-    TypeStr = TypeStr.substr(strlen("half"));
-  } else if (TypeStr.starts_with("float")) {
-    Ty = Type::getFloatTy(Ctx);
-    TypeStr = TypeStr.substr(strlen("float"));
-  } else if (TypeStr.starts_with("double")) {
-    Ty = Type::getDoubleTy(Ctx);
-    TypeStr = TypeStr.substr(strlen("double"));
-  } else {
+  Ty = parseBasicTypeName(TypeStr, Ctx);
+  if (!Ty)
     // Unable to recognize SPIRV type name
     return nullptr;
-  }
 
   auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ);
 

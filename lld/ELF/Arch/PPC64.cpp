@@ -26,6 +26,7 @@ using namespace lld::elf;
 constexpr uint64_t ppc64TocOffset = 0x8000;
 constexpr uint64_t dynamicThreadPointerOffset = 0x8000;
 
+namespace {
 // The instruction encoding of bits 21-30 from the ISA for the Xform and Dform
 // instructions that can be used as part of the initial exec TLS sequence.
 enum XFormOpcd {
@@ -139,6 +140,7 @@ enum class PPCPrefixedInsn : uint64_t {
   PSTXV = PREFIX_8LS | 0xd8000000,
   PSTXVP = PREFIX_8LS | 0xf8000000
 };
+
 static bool checkPPCLegacyInsn(uint32_t encoding) {
   PPCLegacyInsn insn = static_cast<PPCLegacyInsn>(encoding);
   if (insn == PPCLegacyInsn::NOINSN)
@@ -164,7 +166,6 @@ enum class LegacyToPrefixMask : uint64_t {
       0x8000000003e00000, // S/T (6-10) - The [S/T]X bit moves from 28 to 5.
 };
 
-namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();

@@ -316,13 +316,20 @@ unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs);
 
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
-/// \p NumVGPRs are used.
+/// \p NumVGPRs are used. We actually return the number of blocks -1, since
+/// that's what we encode.
 ///
 /// For subtargets which support it, \p EnableWavefrontSize32 should match the
 /// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned
-getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
-                 std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+unsigned getEncodedNumVGPRBlocks(
+    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+
+/// \returns Number of VGPR blocks that need to be allocated for the given
+/// subtarget \p STI when \p NumVGPRs are used.
+unsigned getAllocatedNumVGPRBlocks(
+    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
 

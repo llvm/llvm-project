@@ -74,6 +74,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.uint
     libc.src.__support.uint128
 )
 

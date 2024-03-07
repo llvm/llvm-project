@@ -143,6 +143,7 @@ public:
   ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
   ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
   std::vector<ObjCIVarRecord *> getObjCIVars() const;
+  RecordLinkage getLinkage() const { return Linkage; }
 
 private:
   RecordMap<ObjCIVarRecord> IVars;

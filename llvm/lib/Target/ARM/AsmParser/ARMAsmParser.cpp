@@ -506,9 +506,10 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   bool isMnemonicVPTPredicable(StringRef Mnemonic, StringRef ExtraToken);
   StringRef splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
-                          unsigned &PredicationCode,
-                          unsigned &VPTPredicationCode, bool &CarrySetting,
-                          unsigned &ProcessorIMod, StringRef &ITMask);
+                          ARMCC::CondCodes &PredicationCode,
+                          ARMVCC::VPTCodes &VPTPredicationCode,
+                          bool &CarrySetting, unsigned &ProcessorIMod,
+                          StringRef &ITMask);
   void getMnemonicAcceptInfo(StringRef Mnemonic, StringRef ExtraToken,
                              StringRef FullInst, bool &CanAcceptCarrySet,
                              bool &CanAcceptPredicationCode,
@@ -6283,10 +6284,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
 //
 // FIXME: Would be nice to autogen this.
 // FIXME: This is a bit of a maze of special cases.
-StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
-                                      StringRef ExtraToken,
-                                      unsigned &PredicationCode,
-                                      unsigned &VPTPredicationCode,
+StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
+                                      ARMCC::CondCodes &PredicationCode,
+                                      ARMVCC::VPTCodes &VPTPredicationCode,
                                       bool &CarrySetting,
                                       unsigned &ProcessorIMod,
                                       StringRef &ITMask) {
@@ -6340,7 +6340,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);
-      PredicationCode = CC;
+      PredicationCode = static_cast<ARMCC::CondCodes>(CC);
     }
   }
 
@@ -6384,10 +6384,11 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
       Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
       Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
-    unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
-    if (CC != ~0U) {
+    unsigned VCC =
+        ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
+    if (VCC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
-      VPTPredicationCode = CC;
+      VPTPredicationCode = static_cast<ARMVCC::VPTCodes>(VCC);
     }
     return Mnemonic;
   }
@@ -6966,8 +6967,8 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   StringRef ExtraToken = Name.slice(Next, Name.find(' ', Next + 1));
 
   // Split out the predication code and carry setting flag from the mnemonic.
-  unsigned PredicationCode;
-  unsigned VPTPredicationCode;
+  ARMCC::CondCodes PredicationCode;
+  ARMVCC::VPTCodes VPTPredicationCode;
   unsigned ProcessorIMod;
   bool CarrySetting;
   StringRef ITMask;
