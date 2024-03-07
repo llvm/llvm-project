@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-obj -verify -fopenmp %s
+// RUN: %clang_cc1 -emit-llvm -verify -fopenmp %s
 
 int main () {
   int r = 0;
