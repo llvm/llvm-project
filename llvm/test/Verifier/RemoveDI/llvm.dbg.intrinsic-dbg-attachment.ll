@@ -6,7 +6,7 @@ entry:
       !DILocalVariable(scope: !1),
       !DIExpression(),
       !{})
-; CHECK-LABEL: invalid #dbg record location
+; CHECK-LABEL: invalid #dbg record DILocation
 ; CHECK-NEXT: #dbg_value({{.*}})
 
     #dbg_declare(
@@ -14,7 +14,7 @@ entry:
       !DILocalVariable(scope: !1),
       !DIExpression(),
       !{})
-; CHECK-LABEL: invalid #dbg record location
+; CHECK-LABEL: invalid #dbg record DILocation
 ; CHECK-NEXT: #dbg_declare({{.*}})
 
     #dbg_value(
