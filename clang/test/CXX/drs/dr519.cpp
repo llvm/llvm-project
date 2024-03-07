@@ -21,7 +21,7 @@ void f() {
 // We're checking that `null`s that were initially stored in `a` and `w`
 // are simply copied over all the way to respective comparisons with `null`.
 
-// CHECK-LABEL: define {{.*}} void dr519::f()()
+// CHECK-LABEL: define {{.*}} void @dr519::f()()
 // CHECK:         store ptr null, ptr [[A:%.+]],
 // CHECK-NEXT:    [[TEMP_A:%.+]] = load ptr, ptr [[A]] 
 // CHECK-NEXT:    store ptr [[TEMP_A]], ptr [[V:%.+]],

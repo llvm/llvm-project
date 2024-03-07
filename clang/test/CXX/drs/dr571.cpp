@@ -15,7 +15,6 @@ namespace dr571 { // dr571: 2.7
 }
 
 // Entities have external linkage by default.
-// `dso_local` is not a linkage specification.
 
-// CHECK: @dr571::r = dso_local constant ptr @dr571::n
-// CHECK: @dr571::r2 = dso_local constant ptr @dr571::n
+// CHECK: @dr571::r = constant ptr @dr571::n
+// CHECK: @dr571::r2 = constant ptr @dr571::n
