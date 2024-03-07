@@ -412,8 +412,8 @@ private:
   Type *VoidTy = Type::getVoidTy(M.getContext());
   Type *IntptrTy;
   PointerType *PtrTy;
-  Type *Int8Ty;
-  Type *Int32Ty;
+  Type *Int8Ty = Type::getInt8Ty(M.getContext());
+  Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
 
   bool CompileKernel;
@@ -615,8 +615,6 @@ void HWAddressSanitizer::initializeModule() {
   IRBuilder<> IRB(*C);
   IntptrTy = IRB.getIntPtrTy(DL);
   PtrTy = IRB.getPtrTy();
-  Int8Ty = IRB.getInt8Ty();
-  Int32Ty = IRB.getInt32Ty();
 
   HwasanCtorFunction = nullptr;
 
