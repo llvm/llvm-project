@@ -176,7 +176,7 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
   // Eager Zero-Copy Maps makes a "copy" execution turn into
   // an automatic zero-copy. It also applies to unified_shared_memory.
   // It is only available on APUs.
-  if (IsAPU && SupportsUnifiedMemory && EagerMapsRequested) {
+  if (IsAPU && EagerMapsRequested) {
     PM.addRequirements(OMPX_REQ_EAGER_ZERO_COPY_MAPS);
     if (!(PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
       PM.addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
