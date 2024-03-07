@@ -28,6 +28,21 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
+    AltInstHasPadLen("alt-inst-has-padlen",
+                     cl::desc("specify that .altinstructions has padlen field"),
+                     cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<uint32_t>
+    AltInstFeatureSize("alt-inst-feature-size",
+                       cl::desc("size of feature field in .altinstructions"),
+                       cl::init(2), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    DumpAltInstructions("dump-alt-instructions",
+                        cl::desc("dump Linux alternative instructions info"),
+                        cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<bool>
     DumpExceptions("dump-linux-exceptions",
                    cl::desc("dump Linux kernel exception table"),
                    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
@@ -157,6 +172,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Alignment of paravirtual patch structures.
   static constexpr size_t PARA_PATCH_ALIGN = 8;
 
+  /// .altinstructions section.
+  ErrorOr<BinarySection &> AltInstrSection = std::errc::bad_address;
+
   /// Section containing Linux bug table.
   ErrorOr<BinarySection &> BugTableSection = std::errc::bad_address;
 
@@ -205,6 +223,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   Error readBugTable();
 
+  /// Read alternative instruction info from .altinstructions.
+  Error readAltInstructions();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -230,6 +251,9 @@ public:
       return E;
 
     if (Error E = readBugTable())
+      return E;
+
+    if (Error E = readAltInstructions())
       return E;
 
     return Error::success();
@@ -1128,6 +1152,123 @@ Error LinuxKernelRewriter::readBugTable() {
   }
 
   BC.outs() << "BOLT-INFO: parsed " << EntryID << " bug table entries\n";
+
+  return Error::success();
+}
+
+/// The kernel can replace certain instruction sequences depending on hardware
+/// it is running on and features specified during boot time. The information
+/// about alternative instruction sequences is stored in .altinstructions
+/// section. The format of entries in this section is defined in
+/// arch/x86/include/asm/alternative.h:
+///
+///   struct alt_instr {
+///     s32 instr_offset;
+///     s32 repl_offset;
+///     uXX feature;
+///     u8  instrlen;
+///     u8  replacementlen;
+///	    u8  padlen;         // present in older kernels
+///   } __packed;
+///
+/// Note the structures is packed.
+Error LinuxKernelRewriter::readAltInstructions() {
+  AltInstrSection = BC.getUniqueSectionByName(".altinstructions");
+  if (!AltInstrSection)
+    return Error::success();
+
+  const uint64_t Address = AltInstrSection->getAddress();
+  DataExtractor DE = DataExtractor(AltInstrSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  uint64_t EntryID = 0;
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && !DE.eof(Cursor)) {
+    const uint64_t OrgInstAddress =
+        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t AltInstAddress =
+        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t Feature = DE.getUnsigned(Cursor, opts::AltInstFeatureSize);
+    const uint8_t OrgSize = DE.getU8(Cursor);
+    const uint8_t AltSize = DE.getU8(Cursor);
+
+    // Older kernels may have the padlen field.
+    const uint8_t PadLen = opts::AltInstHasPadLen ? DE.getU8(Cursor) : 0;
+
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading .altinstructions");
+
+    ++EntryID;
+
+    if (opts::DumpAltInstructions) {
+      BC.outs() << "Alternative instruction entry: " << EntryID
+                << "\n\tOrg:     0x" << Twine::utohexstr(OrgInstAddress)
+                << "\n\tAlt:     0x" << Twine::utohexstr(AltInstAddress)
+                << "\n\tFeature: 0x" << Twine::utohexstr(Feature)
+                << "\n\tOrgSize: " << (int)OrgSize
+                << "\n\tAltSize: " << (int)AltSize << '\n';
+      if (opts::AltInstHasPadLen)
+        BC.outs() << "\tPadLen:  " << (int)PadLen << '\n';
+    }
+
+    if (AltSize > OrgSize)
+      return createStringError(errc::executable_format_error,
+                               "error reading .altinstructions");
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(OrgInstAddress);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(OrgInstAddress)
+                << " of instruction from .altinstructions\n";
+    }
+
+    BinaryFunction *AltBF =
+        BC.getBinaryFunctionContainingAddress(AltInstAddress);
+    if (AltBF && BC.shouldEmit(*AltBF)) {
+      BC.errs()
+          << "BOLT-WARNING: alternative instruction sequence found in function "
+          << *AltBF << '\n';
+      AltBF->setIgnored();
+    }
+
+    if (!BF || !BC.shouldEmit(*BF))
+      continue;
+
+    if (OrgInstAddress + OrgSize > BF->getAddress() + BF->getSize())
+      return createStringError(errc::executable_format_error,
+                               "error reading .altinstructions");
+
+    MCInst *Inst =
+        BF->getInstructionAtOffset(OrgInstAddress - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction at address 0x%" PRIx64
+                               " referenced by .altinstructions entry %d",
+                               OrgInstAddress, EntryID);
+
+    // There could be more than one alternative instruction sequences for the
+    // same original instruction. Annotate each alternative separately.
+    std::string AnnotationName = "AltInst";
+    unsigned N = 2;
+    while (BC.MIB->hasAnnotation(*Inst, AnnotationName))
+      AnnotationName = "AltInst" + std::to_string(N++);
+
+    BC.MIB->addAnnotation(*Inst, AnnotationName, EntryID);
+
+    // Annotate all instructions from the original sequence. Note that it's not
+    // the most efficient way to look for instructions in the address range,
+    // but since alternative instructions are uncommon, it will do for now.
+    for (uint32_t Offset = 1; Offset < OrgSize; ++Offset) {
+      Inst = BF->getInstructionAtOffset(OrgInstAddress + Offset -
+                                        BF->getAddress());
+      if (Inst)
+        BC.MIB->addAnnotation(*Inst, AnnotationName, EntryID);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID
+            << " alternative instruction entries\n";
 
   return Error::success();
 }
