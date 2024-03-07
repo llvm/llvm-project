@@ -101,7 +101,7 @@ void InlinerPass::runOnOperation() {
   }
 
   // By default, assume that any inlining is profitable.
-  auto profitabilityCb = [](Inliner::ResolvedCall &) { return true; };
+  auto profitabilityCb = [](const Inliner::ResolvedCall &) { return true; };
 
   // Get an instance of the inliner.
   Inliner inliner(op, cg, *this, getAnalysisManager(), runPipelineHelper,

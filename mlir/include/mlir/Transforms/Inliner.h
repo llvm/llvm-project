@@ -89,7 +89,7 @@ public:
   /// It might be the case that the ResolvedCall does not provide
   /// enough context to make the profitability decision, so
   /// this hook's interface might need to be extended in future.
-  using ProfitabilityCallbackTy = std::function<bool(ResolvedCall &)>;
+  using ProfitabilityCallbackTy = std::function<bool(const ResolvedCall &)>;
 
   Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
           RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config,
