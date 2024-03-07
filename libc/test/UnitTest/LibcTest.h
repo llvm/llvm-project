@@ -127,6 +127,7 @@ protected:
   // of type promotion.
   template <typename ValType,
             cpp::enable_if_t<cpp::is_integral_v<ValType> ||
+                                 cpp::is_big_int_v<ValType> ||
                                  cpp::is_fixed_point_v<ValType>,
                              int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
