@@ -84,7 +84,7 @@ declare void @foo() nounwind
 ; After simplifying, the max backedge count is refined.
 ; Second SCEV print:
 ; CHECK-LABEL: Determining loop execution counts for: @mergeExit
-; CHECK: Loop %while.cond191: <multiple exits> backedge-taken count is 0
+; CHECK: Loop %while.cond191: <multiple exits> backedge-taken count is i32 0
 ; CHECK: Loop %while.cond191: constant max backedge-taken count is i32 0
 ; CHECK: Loop %while.cond191.outer: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK: Loop %while.cond191.outer: constant max backedge-taken count is i1 false

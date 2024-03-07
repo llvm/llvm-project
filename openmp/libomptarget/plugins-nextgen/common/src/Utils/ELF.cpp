@@ -36,10 +36,18 @@ bool utils::elf::isELF(StringRef Buffer) {
   }
 }
 
-template <class ELFT>
-static Expected<bool>
-checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
-  const auto Header = ELFObj.getELFFile().getHeader();
+Expected<bool> utils::elf::checkMachine(StringRef Object, uint16_t EMachine) {
+  assert(isELF(Object) && "Input is not an ELF!");
+
+  Expected<ELF64LEObjectFile> ElfOrErr =
+      ELF64LEObjectFile::create(MemoryBufferRef(Object, /*Identifier=*/""),
+                                /*InitContent=*/false);
+  if (!ElfOrErr)
+    return ElfOrErr.takeError();
+
+  const auto Header = ElfOrErr->getELFFile().getHeader();
+  if (Header.e_ident[EI_CLASS] != ELFCLASS64)
+    return createError("Only 64-bit ELF files are supported");
   if (Header.e_type != ET_EXEC && Header.e_type != ET_DYN)
     return createError("Only executable ELF files are supported");
 
@@ -61,25 +69,6 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
   }
 
   return Header.e_machine == EMachine;
-}
-
-Expected<bool> utils::elf::checkMachine(StringRef Object, uint16_t EMachine) {
-  assert(isELF(Object) && "Input is not an ELF!");
-
-  Expected<std::unique_ptr<ObjectFile>> ElfOrErr =
-      ObjectFile::createELFObjectFile(
-          MemoryBufferRef(Object, /*Identifier=*/""),
-          /*InitContent=*/false);
-  if (!ElfOrErr)
-    return ElfOrErr.takeError();
-
-  if (const ELF64LEObjectFile *ELFObj =
-          dyn_cast<ELF64LEObjectFile>(&**ElfOrErr))
-    return checkMachineImpl(*ELFObj, EMachine);
-  if (const ELF64BEObjectFile *ELFObj =
-          dyn_cast<ELF64BEObjectFile>(&**ElfOrErr))
-    return checkMachineImpl(*ELFObj, EMachine);
-  return createError("Only 64-bit ELF files are supported");
 }
 
 template <class ELFT>
@@ -242,9 +231,8 @@ getSymTableSymbol(const ELFFile<ELFT> &Elf, const typename ELFT::Shdr &Sec,
   return nullptr;
 }
 
-template <class ELFT>
-static Expected<const typename ELFT::Sym *>
-getSymbol(const ELFObjectFile<ELFT> &ELFObj, StringRef Name) {
+Expected<const typename ELF64LE::Sym *>
+utils::elf::getSymbol(const ELFObjectFile<ELF64LE> &ELFObj, StringRef Name) {
   // First try to look up the symbol via the hash table.
   for (ELFSectionRef Sec : ELFObj.sections()) {
     if (Sec.getType() != SHT_HASH && Sec.getType() != SHT_GNU_HASH)
@@ -253,7 +241,8 @@ getSymbol(const ELFObjectFile<ELFT> &ELFObj, StringRef Name) {
     auto HashTabOrErr = ELFObj.getELFFile().getSection(Sec.getIndex());
     if (!HashTabOrErr)
       return HashTabOrErr.takeError();
-    return getHashTableSymbol<ELFT>(ELFObj.getELFFile(), **HashTabOrErr, Name);
+    return getHashTableSymbol<ELF64LE>(ELFObj.getELFFile(), **HashTabOrErr,
+                                       Name);
   }
 
   // If this is an executable file check the entire standard symbol table.
@@ -264,17 +253,16 @@ getSymbol(const ELFObjectFile<ELFT> &ELFObj, StringRef Name) {
     auto SymTabOrErr = ELFObj.getELFFile().getSection(Sec.getIndex());
     if (!SymTabOrErr)
       return SymTabOrErr.takeError();
-    return getSymTableSymbol<ELFT>(ELFObj.getELFFile(), **SymTabOrErr, Name);
+    return getSymTableSymbol<ELF64LE>(ELFObj.getELFFile(), **SymTabOrErr, Name);
   }
 
   return nullptr;
 }
 
-template <class ELFT>
-static Expected<const void *>
-getSymbolAddress(const object::ELFObjectFile<ELFT> &ELFObj,
-                 const typename ELFT::Sym &Symbol) {
-  const ELFFile<ELFT> &ELFFile = ELFObj.getELFFile();
+Expected<const void *> utils::elf::getSymbolAddress(
+    const object::ELFObjectFile<object::ELF64LE> &ELFObj,
+    const object::ELF64LE::Sym &Symbol) {
+  const ELFFile<ELF64LE> &ELFFile = ELFObj.getELFFile();
 
   auto SecOrErr = ELFFile.getSection(Symbol.st_shndx);
   if (!SecOrErr)
@@ -294,41 +282,4 @@ getSymbolAddress(const object::ELFObjectFile<ELFT> &ELFObj,
                        Twine(ELFFile.getBufSize()) + "]");
 
   return ELFFile.base() + Offset;
-}
-
-template <class ELFT>
-static Expected<std::optional<StringRef>>
-findSymbolInImageImpl(const object::ELFObjectFile<ELFT> &ELFObj,
-                      StringRef Name) {
-  auto SymOrErr = getSymbol(ELFObj, Name);
-  if (!SymOrErr)
-    return SymOrErr.takeError();
-  if (!*SymOrErr)
-    return std::nullopt;
-
-  // If the symbol was found, return a StringRef covering the associated data,
-  // based on the symbol's address and size.
-  auto AddrOrErr = getSymbolAddress(ELFObj, **SymOrErr);
-  if (!AddrOrErr)
-    return AddrOrErr.takeError();
-  return StringRef(static_cast<const char *>(*AddrOrErr), (*SymOrErr)->st_size);
-}
-
-Expected<std::optional<StringRef>>
-utils::elf::findSymbolInImage(StringRef Obj, StringRef Name) {
-  assert(isELF(Obj) && "Input is not an ELF!");
-
-  Expected<std::unique_ptr<ObjectFile>> ElfOrErr =
-      ObjectFile::createELFObjectFile(MemoryBufferRef(Obj, /*Identifier=*/""),
-                                      /*InitContent=*/false);
-  if (!ElfOrErr)
-    return ElfOrErr.takeError();
-
-  if (const ELF64LEObjectFile *ELFObj =
-          dyn_cast<ELF64LEObjectFile>(&**ElfOrErr))
-    return findSymbolInImageImpl(*ELFObj, Name);
-  if (const ELF64BEObjectFile *ELFObj =
-          dyn_cast<ELF64BEObjectFile>(&**ElfOrErr))
-    return findSymbolInImageImpl(*ELFObj, Name);
-  return createError("Only 64-bit ELF files are supported");
 }

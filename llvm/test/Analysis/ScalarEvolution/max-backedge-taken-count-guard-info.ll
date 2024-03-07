@@ -1549,9 +1549,9 @@ define i32 @ptr_induction_ult_1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (4 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -1607,9 +1607,9 @@ define void @gep_addrec_nw(ptr %a) {
 ; CHECK-NEXT:    %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
 ; CHECK-NEXT:    --> {(4 + %a),+,4}<nw><%for.body> U: full-set S: full-set Exits: (1516 + %a) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @gep_addrec_nw
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 378
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 378
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 378
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 378
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 378
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 379
 ;
 entry:
