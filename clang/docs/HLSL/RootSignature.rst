@@ -239,7 +239,7 @@ signature for given entry function.
 
 In LLVM DirectX backend, the global variable will be serialized and saved as 
 another global variable with section 'RTS0' with the serialized root signature 
-as initializer. 
+as initializer in DXContainerGlobals pass. 
 The MC ObjectWriter for DXContainer will take the global and write it to the 
 correct part based on the section name given to the global.
 
