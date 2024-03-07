@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(ClangReplInterpreterTests
-  IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
   InterpreterTest.cpp
   CodeCompletionTest.cpp
