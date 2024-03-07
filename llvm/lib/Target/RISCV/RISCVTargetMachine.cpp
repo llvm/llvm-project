@@ -278,7 +278,7 @@ public:
 
 static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
                                const TargetRegisterClass &RC) {
-  return static_cast<const RISCVRegisterInfo &>(TRI).isRVVRegClass(&RC);
+  return RISCVRegisterInfo::isRVVRegClass(&RC);
 }
 
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
