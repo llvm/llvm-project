@@ -996,3 +996,16 @@ define half @test_ui_si_i12_mul_nsw(i12 noundef %x_in, i12 noundef %y_in) {
   %r = fmul half %xf, %yf
   ret half %r
 }
+
+define float @test_ui_add_with_signed_constant(i32 %shr.i) {
+; CHECK-LABEL: @test_ui_add_with_signed_constant(
+; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[SHR_I:%.*]], 32767
+; CHECK-NEXT:    [[SUB:%.*]] = uitofp i32 [[AND_I]] to float
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[SUB]], -1.638300e+04
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %and.i = and i32 %shr.i, 32767
+  %sub = uitofp i32 %and.i to float
+  %add = fadd float %sub, -16383.0
+  ret float %add
+}
