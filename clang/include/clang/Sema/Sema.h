@@ -3266,7 +3266,8 @@ public:
   Decl *ActOnFileScopeAsmDecl(Expr *expr, SourceLocation AsmLoc,
                               SourceLocation RParenLoc);
 
-  Decl *ActOnTopLevelStmtDecl(Stmt *Statement);
+  TopLevelStmtDecl *ActOnStartTopLevelStmtDecl(Scope *S);
+  void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement);
 
   void ActOnPopScope(SourceLocation Loc, Scope *S);
 
