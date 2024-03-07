@@ -19185,7 +19185,8 @@ static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
 
 /// Check if two fields are layout-compatible.
 static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
-                               FieldDecl *Field2) {
+                               FieldDecl *Field2,
+                               bool IgnoreAlignment = false) {
   if (!isLayoutCompatible(C, Field1->getType(), Field2->getType()))
     return false;
 
@@ -19203,6 +19204,10 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
 
   if (Field1->hasAttr<clang::NoUniqueAddressAttr>() ||
       Field2->hasAttr<clang::NoUniqueAddressAttr>())
+    return false;
+
+  if (!IgnoreAlignment &&
+      Field1->getMaxAlignment() != Field2->getMaxAlignment())
     return false;
   return true;
 }
@@ -19265,7 +19270,7 @@ static bool isLayoutCompatibleUnion(ASTContext &C, RecordDecl *RD1,
         E = UnmatchedFields.end();
 
     for ( ; I != E; ++I) {
-      if (isLayoutCompatible(C, Field1, *I)) {
+      if (isLayoutCompatible(C, Field1, *I, /*IgnoreAlignment=*/true)) {
         bool Result = UnmatchedFields.erase(*I);
         (void) Result;
         assert(Result);
