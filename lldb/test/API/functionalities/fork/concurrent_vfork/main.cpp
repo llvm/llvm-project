@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <cstring>
 #include <iostream>
 #include <mutex>
 #include <sys/wait.h>
