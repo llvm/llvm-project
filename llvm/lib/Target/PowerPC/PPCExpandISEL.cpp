@@ -36,10 +36,9 @@ STATISTIC(NumFolded, "Number of ISEL instructions folded");
 // instruction on all PPC targets. Otherwise, if the user set option
 // -misel or the platform supports ISEL by default, still generate the
 // ISEL instruction, else expand it.
-static cl::opt<bool>
-    GenerateISEL("ppc-gen-isel",
-                 cl::desc("Enable generating the ISEL instruction."),
-                 cl::init(true), cl::Hidden);
+cl::opt<bool> GenerateISEL("ppc-gen-isel",
+                           cl::desc("Enable generating the ISEL instruction."),
+                           cl::init(true), cl::Hidden);
 
 namespace {
 class PPCExpandISEL : public MachineFunctionPass {

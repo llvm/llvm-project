@@ -21,14 +21,16 @@ define signext i32 @testi32slt(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32slt:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB0_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB0_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB0_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB0_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB0_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -51,14 +53,16 @@ define signext i32 @testi32ult(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32ult:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB1_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB1_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB1_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB1_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB1_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -81,14 +85,14 @@ define signext i32 @testi32sle(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32sle:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB2_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB2_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB2_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB2_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB2_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -111,14 +115,14 @@ define signext i32 @testi32ule(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32ule:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB3_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB3_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB3_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB3_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB3_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -145,10 +149,9 @@ define signext i32 @testi32eq(i32 signext %c1, i32 signext %c2, i32 signext %c3,
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 6, 2
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB4_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
 ; CHECK-NO-ISEL-NEXT:  .LBB4_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -171,14 +174,14 @@ define signext i32 @testi32sge(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32sge:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB5_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB5_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB5_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB5_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB5_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -201,14 +204,14 @@ define signext i32 @testi32uge(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32uge:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB6_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB6_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB6_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB6_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB6_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -231,14 +234,16 @@ define signext i32 @testi32sgt(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32sgt:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB7_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB7_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB7_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB7_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB7_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -261,14 +266,16 @@ define signext i32 @testi32ugt(i32 signext %c1, i32 signext %c2, i32 signext %c3
 ; CHECK-NO-ISEL-LABEL: testi32ugt:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpw 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB8_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB8_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB8_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB8_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB8_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i32 %c3, %c4
@@ -321,14 +328,16 @@ define i64 @testi64slt(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64slt:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB10_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB10_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB10_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB10_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB10_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -351,14 +360,16 @@ define i64 @testi64ult(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64ult:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB11_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB11_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB11_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB11_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB11_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -381,14 +392,14 @@ define i64 @testi64sle(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64sle:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB12_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB12_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB12_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB12_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB12_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -411,14 +422,14 @@ define i64 @testi64ule(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64ule:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB13_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB13_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB13_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB13_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB13_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -445,10 +456,9 @@ define i64 @testi64eq(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 {
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 6, 2
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB14_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
 ; CHECK-NO-ISEL-NEXT:  .LBB14_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -471,14 +481,14 @@ define i64 @testi64sge(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64sge:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB15_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB15_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB15_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB15_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB15_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -501,14 +511,14 @@ define i64 @testi64uge(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64uge:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crorc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB16_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB16_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
-; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB16_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB16_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:  .LBB16_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -531,14 +541,16 @@ define i64 @testi64sgt(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64sgt:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 2, 6
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB17_2
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB17_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB17_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB17_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB17_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4
@@ -561,14 +573,16 @@ define i64 @testi64ugt(i64 %c1, i64 %c2, i64 %c3, i64 %c4, i64 %a1, i64 %a2) #0 
 ; CHECK-NO-ISEL-LABEL: testi64ugt:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpd 5, 6
-; CHECK-NO-ISEL-NEXT:    cmpd 1, 3, 4
-; CHECK-NO-ISEL-NEXT:    crandc 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB18_2
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB18_3
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 8, 0
+; CHECK-NO-ISEL-NEXT:    cmpd 3, 4
+; CHECK-NO-ISEL-NEXT:    bc 4, 2, .LBB18_3
+; CHECK-NO-ISEL-NEXT:  # %bb.2: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
-; CHECK-NO-ISEL-NEXT:  .LBB18_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 3, 7, 0
+; CHECK-NO-ISEL-NEXT:  .LBB18_3: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 7, 8
+; CHECK-NO-ISEL-NEXT:    mr 3, 7
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = icmp eq i64 %c3, %c4

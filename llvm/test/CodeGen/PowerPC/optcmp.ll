@@ -336,12 +336,10 @@ define signext i64 @fooct(i64 signext %a, i64 signext %b, ptr nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:    and 6, 6, 7
 ; CHECK-NO-ISEL-NEXT:    mulld 6, 6, 9
 ; CHECK-NO-ISEL-NEXT:    rldicl. 6, 6, 8, 56
-; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB10_2
-; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB10_2
-; CHECK-NO-ISEL-NEXT:  .LBB10_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    std 6, 0(5)
+; CHECK-NO-ISEL-NEXT:    bgtlr 0
+; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
+; CHECK-NO-ISEL-NEXT:    mr 3, 4
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %sub = sub nsw i64 %a, %b
