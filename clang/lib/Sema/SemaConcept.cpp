@@ -615,10 +615,8 @@ bool Sema::SetupConstraintScope(
     // reference the original primary template.
     // We walk up the instantiated template chain so that nested lambdas get
     // handled properly.
-    // Note that we shall not collect instantiated parameters from
-    // 'intermediate' transformed function templates but the primary template
-    // for which we have built up the template arguments relative to. Otherwise,
-    // we may have mismatched template parameter depth!
+    // We should only collect instantiated parameters from the primary template.
+    // Otherwise, we may have mismatched template parameter depth!
     if (FunctionTemplateDecl *FromMemTempl =
             PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
       while (FromMemTempl->getInstantiatedFromMemberTemplate())
