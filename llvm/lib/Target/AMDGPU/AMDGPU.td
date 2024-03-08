@@ -1121,12 +1121,6 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "Target Requires Code Object V6"
 >;
 
-def FeatureExportInsts : SubtargetFeature<"export-insts",
-  "HasExportInsts",
-  "true",
-  "Has exp or export instructions"
->;
-
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1146,7 +1140,7 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
-  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero, FeatureExportInsts
+  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1157,8 +1151,7 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
-  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
-  FeatureExportInsts
+  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1174,7 +1167,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-   FeatureDefaultComponentZero, FeatureExportInsts
+   FeatureDefaultComponentZero
   ]
 >;
 
@@ -1213,7 +1206,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength63, FeatureExportInsts
+   FeatureMaxHardClauseLength63
   ]
 >;
 
@@ -1234,7 +1227,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
    FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength32, FeatureExportInsts
+   FeatureMaxHardClauseLength32
   ]
 >;
 
@@ -1274,7 +1267,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast, FeatureExportInsts
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
   ]
 >;
 
@@ -1358,8 +1351,7 @@ def FeatureISAVersion9_0_Common : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
    FeatureImageInsts,
-   FeatureMadMacF32Insts,
-   FeatureExportInsts]>;
+   FeatureMadMacF32Insts]>;
 
 def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
@@ -1676,8 +1668,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
-   FeatureMaxHardClauseLength32,
-   FeatureExportInsts
+   FeatureMaxHardClauseLength32
 ]>;
 
 def FeatureISAVersion12_10 : FeatureSet<
@@ -2140,7 +2131,7 @@ def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX12_10Insts))>;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
-  AssemblerPredicate<(all_of FeatureExportInsts)>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX12_10Insts)))>;
 
 def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
   AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX12_10Insts))>;

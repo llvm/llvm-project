@@ -241,7 +241,6 @@ protected:
   bool HasForceVALUThrottle = false;
 
   bool RequiresCOV6 = false;
-  bool HasExportInsts = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -674,7 +673,9 @@ public:
     return !hasGFX12_10Insts();
   }
 
-  bool hasExportInsts() const { return HasExportInsts; }
+  bool hasExportInsts() const {
+    return GFX13Insts || (!hasGFX940Insts() && !hasGFX12_10Insts());
+  }
 
   bool hasInterpInsts() const {
     return GFX13Insts || !hasGFX12_10Insts();
