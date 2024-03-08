@@ -630,6 +630,8 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
           if (LRLoc->getLocation() == UnwindLocation::Constant) {
             // Toggle the constant value from 0 to 1 or 1 to 0.
             LRLoc->setConstant(LRLoc->getConstant() ^ 1);
+            Row.getRegisterLocations().setRegisterLocation(
+                AArch64DWARFPAuthRaState, *LRLoc);
           } else {
             return createStringError(
                 errc::invalid_argument,
