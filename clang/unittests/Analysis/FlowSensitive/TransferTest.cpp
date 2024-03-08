@@ -5735,6 +5735,39 @@ TEST(TransferTest, ContextSensitiveReturnInt) {
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
+TEST(TransferTest, ContextSensitiveReturnRecord) {
+  std::string Code = R"(
+    struct S {
+      bool B;
+    };
+
+    S makeS(bool BVal) { return {BVal}; }
+
+    void target() {
+      S FalseS = makeS(false);
+      S TrueS = makeS(true);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &FalseSLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "FalseS");
+        auto &TrueSLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "TrueS");
+
+        EXPECT_EQ(getFieldValue(&FalseSLoc, "B", ASTCtx, Env),
+                  &Env.getBoolLiteralValue(false));
+        EXPECT_EQ(getFieldValue(&TrueSLoc, "B", ASTCtx, Env),
+                  &Env.getBoolLiteralValue(true));
+      },
+      {BuiltinOptions{ContextSensitiveOptions{}}});
+}
+
 TEST(TransferTest, ContextSensitiveMethodLiteral) {
   std::string Code = R"(
     class MyClass {
