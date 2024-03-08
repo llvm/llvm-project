@@ -49,12 +49,11 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
-          VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
+          VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
         } else {
-          Plan->addVPValue(Phi, VPPhi);
           continue;
         }
       } else {
@@ -625,9 +624,9 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     return;
 
   LLVMContext &Ctx = SE.getContext();
-  auto *BOC = new VPInstruction(
-      VPInstruction::BranchOnCond,
-      {Plan.getVPValueOrAddLiveIn(ConstantInt::getTrue(Ctx))});
+  auto *BOC =
+      new VPInstruction(VPInstruction::BranchOnCond,
+                        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))});
   Term->eraseFromParent();
   ExitingVPBB->appendRecipe(BOC);
   Plan.setVF(BestVF);
