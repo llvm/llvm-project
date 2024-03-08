@@ -112,7 +112,9 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   for (const Arg *A : ArgList) {
     if (A->isClaimed())
       continue;
-    FrontendArgs.emplace_back(A->getAsString(ArgList));
+
+    FrontendArgs.emplace_back(A->getSpelling());
+    llvm::copy(A->getValues(), std::back_inserter(FrontendArgs));
   }
   FrontendArgs.push_back("-fsyntax-only");
 }
