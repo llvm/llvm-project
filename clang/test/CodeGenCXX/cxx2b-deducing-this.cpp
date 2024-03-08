@@ -121,3 +121,24 @@ void a() {
   l();
 }
 }
+
+namespace GH84425 {
+// Check that this doesn't crash.
+void do_thing(int x) {
+    auto second = [&](this auto const& self, int b) -> int {
+        if (x) return x;
+        else return self(x);
+    };
+
+     second(1);
+}
+
+void do_thing2(int x) {
+    auto second = [&](this auto const& self)  {
+        if (true) return x;
+        else return x;
+    };
+
+     second();
+}
+}
