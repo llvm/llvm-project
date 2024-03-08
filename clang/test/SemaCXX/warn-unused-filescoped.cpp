@@ -76,9 +76,32 @@ struct S {
   struct SVS : public VS {
     void vm() { }
   };
+
+  struct CS {
+    CS() {}
+    CS(bool a) {}
+    CS(int b) {} // expected-warning{{unused constructor 'CS'}}
+    CS(float c);
+  };
+
+  struct DCS : public CS {
+    DCS() = default; // expected-warning{{unused constructor 'DCS'}}
+    DCS(bool a) : CS(a) {} // expected-warning{{unused constructor 'DCS'}}
+    DCS(const DCS&) {}
+    DCS(DCS&&) {} // expected-warning{{unused constructor 'DCS'}}
+  };
+
+  template<typename T>
+  struct TCS {
+    TCS();
+  };
+  template <typename T> TCS<T>::TCS() {}
+  template <> TCS<int>::TCS() {} // expected-warning{{unused constructor 'TCS'}}
 }
 
 void S::m3() {} // expected-warning{{unused member function 'm3'}}
+
+CS::CS(float c) {} // expected-warning{{unused constructor 'CS'}}
 
 static inline void f4() {} // expected-warning{{unused function 'f4'}}
 const unsigned int cx = 0; // expected-warning{{unused variable 'cx'}}
