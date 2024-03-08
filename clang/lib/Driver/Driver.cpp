@@ -3373,7 +3373,7 @@ class OffloadingActionBuilder final {
                      const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
 
-      DefaultCudaArch = CudaArch::GFX906;
+      DefaultCudaArch = CudaArch::HIPDefault;
 
       if (Args.hasArg(options::OPT_fhip_emit_relocatable,
                       options::OPT_fno_hip_emit_relocatable)) {
