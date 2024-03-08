@@ -15,7 +15,7 @@ services:
         BASE_IMAGE: ubuntu:jammy
         <<: *compiler_versions
   actions-builder:
-    image: ghcr.io/libcxx/actions-builder:${TAG:-latest}
+    image: ghcr.io/libcxx/actions-builder:${TAG:-clang-18.0}
     build:
       context: .
       dockerfile: Dockerfile

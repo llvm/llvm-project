@@ -130,7 +130,11 @@ RUN <<EOF
   sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) all  # for CI transitions
   sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) all  # previous release
   sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
-  sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
+
+
+  # FIXME(EricWF): Remove the ".0" from the version number. We're doing this temporarily to allow clang-tidy to be
+  # built against binary packages, and we need to pin those packages for stability.
+  sudo /tmp/llvm.sh ${LLVM_HEAD_VERSION}.0      all  # current ToT
   sudo apt-get install -y libomp5-$LLVM_HEAD_VERSION
   sudo rm -rf /var/lib/apt/lists/*
 EOF
