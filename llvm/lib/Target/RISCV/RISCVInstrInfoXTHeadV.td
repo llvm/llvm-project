@@ -258,8 +258,8 @@ multiclass TH_VAMO<bits<5> amoop, bits<3> width, string opcodestr> {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let DecoderNamespace = "RVV0p71" in {
-let Predicates = [HasVendorXTHeadV] in {
+let DecoderNamespace = "XTHeadVector" in {
+let Predicates = [HasVendorXTHeadVector] in {
 // Configuration-Setting Instructions
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 def TH_VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, XTHeadVTypeI:$vtypei),
@@ -321,10 +321,10 @@ def TH_VLBUFF_V : TH_VLxUFF<0b000, 0b000, "th.vlbuff.v">;
 def TH_VLHUFF_V : TH_VLxUFF<0b000, 0b101, "th.vlhuff.v">;
 def TH_VLWUFF_V : TH_VLxUFF<0b000, 0b110, "th.vlwuff.v">;
 def TH_VLEFF_V : TH_VLxUFF<0b000, 0b111, "th.vleff.v">;
-} // Predicates = [HasVendorXTHeadV]
+} // Predicates = [HasVendorXTHeadVector]
 
 // The extension `Zvlsseg (chapter 7.8)` is not a subextension but a mandatory part of `XTheadVector`.
-let Predicates = [HasVendorXTHeadV] in {
+let Predicates = [HasVendorXTHeadVector] in {
 foreach nf=2-8 in {
   // Vector Unit-Stride Segment Loads and Stores
   def TH_VLSEG#nf#B_V : TH_VLx<!add(nf, -1), 0b000, "th.vlseg"#nf#"b.v">;
@@ -372,10 +372,10 @@ foreach nf=2-8 in {
   def TH_VSXSEG#nf#W_V : TH_VSXx<!add(nf, -1), 0b110, "th.vsxseg"#nf#"w.v">;
   def TH_VSXSEG#nf#E_V : TH_VSXx<!add(nf, -1), 0b111, "th.vsxseg"#nf#"e.v">;
 }
-} // Predicates = [HasVendorXTHeadV]
+} // Predicates = [HasVendorXTHeadVector]
 
 // The extension `Zvamo` is renamed to `XTheadZvamo`.
-let Predicates = [HasVendorXTHeadV, HasVendorXTHeadZvamo, HasStdExtA] in {
+let Predicates = [HasVendorXTHeadVector, HasVendorXTHeadZvamo, HasStdExtA] in {
   // Vector AMO Instruction
   defm TH_VAMOSWAPW : TH_VAMO<0b00001, 0b110, "th.vamoswapw.v">;
   defm TH_VAMOADDW : TH_VAMO<0b00000, 0b110, "th.vamoaddw.v">;
@@ -406,9 +406,9 @@ let Predicates = [HasVendorXTHeadV, HasVendorXTHeadZvamo, HasStdExtA] in {
   defm TH_VAMOMAXQ : TH_VAMO<0b10100, 0b000, "th.vamomaxq.v">;
   defm TH_VAMOMINUQ : TH_VAMO<0b11000, 0b000, "th.vamominuq.v">;
   defm TH_VAMOMAXUQ : TH_VAMO<0b11100, 0b000, "th.vamomaxuq.v">;
-} // Predicates = [HasVendorXTHeadV, HasVendorXTHeadZvamo, HasStdExtA]
+} // Predicates = [HasVendorXTHeadVector, HasVendorXTHeadZvamo, HasStdExtA]
 
-let Predicates = [HasVendorXTHeadV] in {
+let Predicates = [HasVendorXTHeadVector] in {
 // Vector Single-Width Integer Add and Subtract
 defm TH_VADD_V : VALU_IV_V_X_I<"th.vadd", 0b000000>;
 defm TH_VSUB_V : VALU_IV_V_X<"th.vsub", 0b000010>;
@@ -565,9 +565,9 @@ let Constraints = "@earlyclobber $vd" in {
 defm TH_VNCLIPU_W : TH_VNCLP_IV_V_X_I<"th.vnclipu", 0b101110>;
 defm TH_VNCLIP_W : TH_VNCLP_IV_V_X_I<"th.vnclip", 0b101111>;
 } // Constraints = "@earlyclobber $vd"
-} // Predicates = [HasVendorXTHeadV]
+} // Predicates = [HasVendorXTHeadVector]
 
-let Predicates = [HasVendorXTHeadV, HasStdExtF] in {
+let Predicates = [HasVendorXTHeadVector, HasStdExtF] in {
 // Vector Single-Width Floating-Point Add/Subtract Instructions
 let Uses = [FRM], mayRaiseFPException = true in {
 defm TH_VFADD_V : VALU_FV_V_F<"th.vfadd", 0b000000>;
@@ -707,9 +707,9 @@ defm TH_VFNCVT_F_X_W : VNCVTF_IV_VS2<"th.vfncvt.f.x.v", 0b100010, 0b10011>;
 defm TH_VFNCVT_F_F_W : VNCVTF_FV_VS2<"th.vfncvt.f.f.v", 0b100010, 0b10100>;
 }
 } // Constraints = "@earlyclobber $vd", mayRaiseFPException = true
-} // Predicates = [HasVendorXTHeadV, HasStdExtF]
+} // Predicates = [HasVendorXTHeadVector, HasStdExtF]
 
-let Predicates = [HasVendorXTHeadV] in {
+let Predicates = [HasVendorXTHeadVector] in {
 // Vector Single-Width Integer Reduction Instructions
 let RVVConstraint = NoConstraint in {
 defm TH_VREDSUM : VRED_MV_V<"th.vredsum", 0b000000>;
@@ -732,9 +732,9 @@ defm TH_VWREDSUMU : VWRED_IV_V<"th.vwredsumu", 0b110000>;
 defm TH_VWREDSUM : VWRED_IV_V<"th.vwredsum", 0b110001>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 
-} // Predicates = [HasVendorXTHeadV]
+} // Predicates = [HasVendorXTHeadVector]
 
-let Predicates = [HasVendorXTHeadV, HasStdExtF] in {
+let Predicates = [HasVendorXTHeadVector, HasStdExtF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
 let RVVConstraint = NoConstraint in {
 let Uses = [FRM], mayRaiseFPException = true in {
@@ -758,9 +758,9 @@ defm TH_VFWREDOSUM : VWREDO_FV_V<"th.vfwredosum", 0b110011>;
 defm TH_VFWREDUSUM : VWRED_FV_V<"th.vfwredsum", 0b110001>;
 }
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
-} // Predicates = [HasVendorXTHeadV, HasStdExtF]
+} // Predicates = [HasVendorXTHeadVector, HasStdExtF]
 
-let Predicates = [HasVendorXTHeadV] in {
+let Predicates = [HasVendorXTHeadVector] in {
 // Vector Mask-Register Logical Instructions
 let RVVConstraint = NoConstraint in {
 defm TH_VMAND_M : VMALU_MV_Mask<"th.vmand", 0b011001, "m">;
@@ -828,9 +828,9 @@ def TH_VMV_S_X : RVInstV2<0b001101, 0b00000, OPMVX, (outs VR:$vd_wb),
                  Sched<[WriteVIMovXV, ReadVIMovXV,  ReadVIMovXX]>;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
-} // Predicates = [HasVendorXTHeadV]
+} // Predicates = [HasVendorXTHeadVector]
 
-let Predicates = [HasVendorXTHeadV, HasStdExtF] in {
+let Predicates = [HasVendorXTHeadVector, HasStdExtF] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
     RVVConstraint = NoConstraint  in {
 // Floating-Point Scalar Move Instructions
@@ -845,9 +845,9 @@ def TH_VFMV_S_F : RVInstV2<0b001101, 0b00000, OPFVF, (outs VR:$vd_wb),
                   Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
-} // Predicates = [HasVendorXTHeadV, HasStdExtF]
+} // Predicates = [HasVendorXTHeadVector, HasStdExtF]
 
-let Predicates = [HasVendorXTHeadV] in  {
+let Predicates = [HasVendorXTHeadVector] in  {
 // Vector Slide Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
 defm TH_VSLIDEUP_V : VSLD_IV_X_I<"th.vslideup", 0b001110>;
@@ -865,11 +865,11 @@ defm TH_VRGATHER_V : VGTR_IV_V_X_I<"th.vrgather", 0b001100>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress in {
 defm TH_VCOMPRESS_V : VCPR_MV_Mask<"th.vcompress", 0b010111>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress
-} // Predicates = [HasVendorXTHeadV]
-} // DecoderNamespace = "RVV0p71"
+} // Predicates = [HasVendorXTHeadVector]
+} // DecoderNamespace = "XTHeadVector"
 
 // Pseudo instructions
-let Predicates = [HasVendorXTHeadV] in {
+let Predicates = [HasVendorXTHeadVector] in {
 // Vector Integer Comparison Instructions
 def : InstAlias<"th.vmsgtu.vv $vd, $va, $vb$vm",
                 (TH_VMSLTU_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
@@ -964,4 +964,4 @@ def : InstAlias<"th.vmset.m $vd",
 def : InstAlias<"th.vmnot.m $vd, $vs",
                 (TH_VMNAND_MM VR:$vd, VR:$vs, VR:$vs)>;
 
-} // Predicates = [HasVendorXTHeadV]
+} // Predicates = [HasVendorXTHeadVector]

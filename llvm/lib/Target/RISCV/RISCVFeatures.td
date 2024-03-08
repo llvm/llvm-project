@@ -1242,9 +1242,9 @@ def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;
 //===----------------------------------------------------------------------===//
 
 def FeatureVendorXTHeadV
-    : SubtargetFeature<"xtheadvector", "HasVendorXTHeadV", "true",
+    : SubtargetFeature<"xtheadvector", "HasVendorXTHeadVector", "true",
                        "'xtheadvector' (T-Head Base Vector Instructions)">;
-def HasVendorXTHeadV : Predicate<"Subtarget->hasVendorXTHeadV()">,
+def HasVendorXTHeadVector : Predicate<"Subtarget->HasVendorXTHeadVector()">,
                                   AssemblerPredicate<(all_of FeatureVendorXTHeadV),
                                   "'xtheadvector' (T-Head Base Vector Instructions)">;
 
