@@ -319,6 +319,9 @@ Bug Fixes to C++ Support
   Fixes (#GH80630)
 - Fix a crash when an explicit template argument list is used with a name for which lookup
   finds a non-template function and a dependent using declarator.
+- Clang now correctly tracks type dependence of by-value captures in lambdas with explicit
+  object parameters.
+  Fixes (#GH84163).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
