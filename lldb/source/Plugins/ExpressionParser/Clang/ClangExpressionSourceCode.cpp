@@ -229,7 +229,7 @@ void AddLambdaCaptureDecls(StreamString &stream, StackFrame *frame,
   assert(frame);
 
   if (auto thisValSP = ClangExpressionUtil::GetLambdaValueObject(frame)) {
-    uint32_t numChildren = thisValSP->GetNumChildrenIgnoringErrors();
+    uint32_t numChildren = thisValSP->GetNumChildren();
     for (uint32_t i = 0; i < numChildren; ++i) {
       auto childVal = thisValSP->GetChildAtIndex(i);
       ConstString childName(childVal ? childVal->GetName() : ConstString(""));

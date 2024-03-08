@@ -5263,10 +5263,9 @@ GetDynamicArrayInfo(TypeSystemClang &ast, SymbolFile *sym_file,
   return std::nullopt;
 }
 
-llvm::Expected<uint32_t>
-TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
-                                bool omit_empty_base_classes,
-                                const ExecutionContext *exe_ctx) {
+uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
+                                         bool omit_empty_base_classes,
+                                         const ExecutionContext *exe_ctx) {
   if (!type)
     return 0;
 
@@ -5362,13 +5361,9 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     CompilerType pointee_clang_type(GetPointeeType(type));
 
     uint32_t num_pointee_children = 0;
-    if (pointee_clang_type.IsAggregateType()) {
-      auto num_children_or_err =
+    if (pointee_clang_type.IsAggregateType())
+      num_pointee_children =
           pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
-      if (!num_children_or_err)
-        return num_children_or_err;
-      num_pointee_children = *num_children_or_err;
-    }
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5402,13 +5397,9 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     clang::QualType pointee_type(pointer_type->getPointeeType());
     CompilerType pointee_clang_type(GetType(pointee_type));
     uint32_t num_pointee_children = 0;
-    if (pointee_clang_type.IsAggregateType()) {
-      auto num_children_or_err =
+    if (pointee_clang_type.IsAggregateType())
+      num_pointee_children =
           pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
-      if (!num_children_or_err)
-        return num_children_or_err;
-      num_pointee_children = *num_children_or_err;
-    }
     if (num_pointee_children == 0) {
       // We have a pointer to a pointee type that claims it has no children. We
       // will want to look at
@@ -6117,15 +6108,8 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
   child_is_base_class = false;
   language_flags = 0;
 
-  auto num_children_or_err =
-      GetNumChildren(type, omit_empty_base_classes, exe_ctx);
-  if (!num_children_or_err) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children_or_err.takeError(),
-                    "{0}");
-    return {};
-  }
-
-  const bool idx_is_valid = idx < *num_children_or_err;
+  const bool idx_is_valid =
+      idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx);
   int32_t bit_offset;
   switch (parent_type_class) {
   case clang::Type::Builtin:
@@ -6281,10 +6265,8 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
               CompilerType base_class_clang_type =
                   GetType(getASTContext().getObjCInterfaceType(
                       superclass_interface_decl));
-              if (llvm::expectedToStdOptional(
-                      base_class_clang_type.GetNumChildren(
-                          omit_empty_base_classes, exe_ctx))
-                      .value_or(0) > 0) {
+              if (base_class_clang_type.GetNumChildren(omit_empty_base_classes,
+                                                       exe_ctx) > 0) {
                 if (idx == 0) {
                   clang::QualType ivar_qual_type(
                       getASTContext().getObjCInterfaceType(

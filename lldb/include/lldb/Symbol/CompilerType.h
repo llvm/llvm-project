@@ -386,9 +386,8 @@ public:
 
   std::optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
 
-  llvm::Expected<uint32_t>
-  GetNumChildren(bool omit_empty_base_classes,
-                 const ExecutionContext *exe_ctx) const;
+  uint32_t GetNumChildren(bool omit_empty_base_classes,
+                          const ExecutionContext *exe_ctx) const;
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 

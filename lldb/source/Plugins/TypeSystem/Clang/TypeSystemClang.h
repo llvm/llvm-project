@@ -833,10 +833,9 @@ public:
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
 
-  llvm::Expected<uint32_t>
-  GetNumChildren(lldb::opaque_compiler_type_t type,
-                 bool omit_empty_base_classes,
-                 const ExecutionContext *exe_ctx) override;
+  uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
+                          bool omit_empty_base_classes,
+                          const ExecutionContext *exe_ctx) override;
 
   CompilerType GetBuiltinTypeByName(ConstString name) override;
 

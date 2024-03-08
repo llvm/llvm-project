@@ -4519,7 +4519,7 @@ struct Row {
       calculated_children = true;
       ValueObjectSP valobj = value.GetSP();
       if (valobj) {
-        const uint32_t num_children = valobj->GetNumChildrenIgnoringErrors();
+        const size_t num_children = valobj->GetNumChildren();
         for (size_t i = 0; i < num_children; ++i) {
           children.push_back(Row(valobj->GetChildAtIndex(i), this));
         }

@@ -476,13 +476,7 @@ public:
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
-  llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
-  /// Like \c GetNumChildren but returns 0 on error.  You probably
-  /// shouldn't be using this function. It exists primarily to ease the
-  /// transition to more pervasive error handling while not all APIs
-  /// have been updated.
-  uint32_t GetNumChildrenIgnoringErrors(uint32_t max = UINT32_MAX);
-  bool HasChildren() { return GetNumChildrenIgnoringErrors() > 0; }
+  uint32_t GetNumChildren(uint32_t max = UINT32_MAX);
 
   const Value &GetValue() const { return m_value; }
 
@@ -964,8 +958,7 @@ protected:
                                           int32_t synthetic_index);
 
   /// Should only be called by ValueObject::GetNumChildren().
-  virtual llvm::Expected<uint32_t>
-  CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
+  virtual uint32_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
 
   void SetNumChildren(uint32_t num_children);
 

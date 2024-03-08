@@ -38,16 +38,12 @@ public:
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
-  virtual llvm::Expected<uint32_t> CalculateNumChildren() = 0;
+  virtual uint32_t CalculateNumChildren() = 0;
 
-  virtual llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) {
+  virtual uint32_t CalculateNumChildren(uint32_t max) {
     auto count = CalculateNumChildren();
-    if (!count)
-      return count;
-    return *count <= max ? *count : max;
+    return count <= max ? count : max;
   }
-
-  uint32_t CalculateNumChildrenIgnoringErrors(uint32_t max = UINT32_MAX);
 
   virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
@@ -113,7 +109,7 @@ public:
 
   ~SyntheticValueProviderFrontEnd() override = default;
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override { return 0; }
+  uint32_t CalculateNumChildren() override { return 0; }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
@@ -326,9 +322,7 @@ public:
 
     ~FrontEnd() override = default;
 
-    llvm::Expected<uint32_t> CalculateNumChildren() override {
-      return filter->GetCount();
-    }
+    uint32_t CalculateNumChildren() override { return filter->GetCount(); }
 
     lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
       if (idx >= filter->GetCount())
@@ -432,9 +426,9 @@ public:
 
     bool IsValid();
 
-    llvm::Expected<uint32_t> CalculateNumChildren() override;
+    uint32_t CalculateNumChildren() override;
 
-    llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
+    uint32_t CalculateNumChildren(uint32_t max) override;
 
     lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 

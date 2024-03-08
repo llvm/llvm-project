@@ -43,7 +43,7 @@ class LibstdcppMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibstdcppMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -64,7 +64,7 @@ class LibStdcppSharedPtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   explicit LibStdcppSharedPtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -132,8 +132,7 @@ lldb::ChildCacheState LibstdcppMapIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eReuse;
 }
 
-llvm::Expected<uint32_t>
-LibstdcppMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
+uint32_t LibstdcppMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
   return 2;
 }
 
@@ -220,10 +219,7 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-llvm::Expected<uint32_t>
-VectorIteratorSyntheticFrontEnd::CalculateNumChildren() {
-  return 1;
-}
+uint32_t VectorIteratorSyntheticFrontEnd::CalculateNumChildren() { return 1; }
 
 lldb::ValueObjectSP
 VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
@@ -375,10 +371,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
     Update();
 }
 
-llvm::Expected<uint32_t>
-LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
-  return 1;
-}
+uint32_t LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() { return 1; }
 
 lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
