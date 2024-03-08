@@ -1046,8 +1046,8 @@ _mm_cmpunord_ps(__m128 __a, __m128 __b)
 /// Compares two 32-bit float values in the low-order bits of both
 ///    operands for equality.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    floating-point values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower floating-point values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1071,8 +1071,8 @@ _mm_comieq_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is less than the second
 ///    operand.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    floating-point values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower floating-point values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1096,8 +1096,8 @@ _mm_comilt_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is less than or equal to the
 ///    second operand.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    floating-point values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower floating-point values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1120,8 +1120,8 @@ _mm_comile_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is greater than the second
 ///    operand.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    floating-point values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower floating-point values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1144,8 +1144,8 @@ _mm_comigt_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is greater than or equal to
 ///    the second operand.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    floating-point values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower floating-point values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1168,8 +1168,8 @@ _mm_comige_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is not equal to the second
 ///    operand.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    floating-point values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower floating-point values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///

@@ -1093,8 +1093,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_comineq_sd(__m128d __a,
 /// Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] for equality.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    double-precision values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower double-precision values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1117,8 +1117,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomieq_sd(__m128d __a,
 ///    the value in the first parameter is less than the corresponding value in
 ///    the second parameter.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    double-precision values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower double-precision values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1141,8 +1141,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomilt_sd(__m128d __a,
 ///    the value in the first parameter is less than or equal to the
 ///    corresponding value in the second parameter.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    double-precision values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower double-precision values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1165,8 +1165,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomile_sd(__m128d __a,
 ///    the value in the first parameter is greater than the corresponding value
 ///    in the second parameter.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    double-precision values is NaN, returns 0.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower double-precision values is NaN, returns 0.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1213,8 +1213,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomige_sd(__m128d __a,
 ///    the value in the first parameter is unequal to the corresponding value in
 ///    the second parameter.
 ///
-///    The comparison returns 0 for false, 1 for true. If either of the two lower
-///    double-precision values is NaN, 1 is returned.
+///    The comparison returns 0 for false, 1 for true. If either of the two
+///    lower double-precision values is NaN, 1 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
