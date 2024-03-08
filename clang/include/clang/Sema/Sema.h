@@ -8889,6 +8889,12 @@ public:
       bool EnteringContext, bool &MemberOfUnknownSpecialization,
       RequiredTemplateKind RequiredTemplate = SourceLocation(),
       AssumedTemplateKind *ATK = nullptr, bool AllowTypoCorrection = true);
+  
+  bool LookupTemplateName(
+      LookupResult &R, Scope *S, CXXScopeSpec &SS, QualType ObjectType,
+      bool EnteringContext,
+      RequiredTemplateKind RequiredTemplate = SourceLocation(),
+      AssumedTemplateKind *ATK = nullptr, bool AllowTypoCorrection = true);
 
   TemplateNameKind isTemplateName(Scope *S, CXXScopeSpec &SS,
                                   bool hasTemplateKeyword,

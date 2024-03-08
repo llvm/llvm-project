@@ -2723,19 +2723,19 @@ bool Sema::LookupParsedName(LookupResult &R,
                             QualType ObjectType,
                             bool AllowBuiltinCreation,
                             bool EnteringContext) {
-  if (SS && SS->isInvalid()) {
-    // When the scope specifier is invalid, don't even look for
-    // anything.
+  // When the scope specifier is invalid, don't even look for anything.
+  if (SS && SS->isInvalid())
     return false;
-  }
 
   // Determine where to perform name lookup
   DeclContext *DC = nullptr;
+  bool IsDependent = false;
   if (!ObjectType.isNull()) {
     // This nested-name-specifier occurs in a member access expression, e.g.,
     // x->B::f, and we are looking into the type of the object.
     assert((!SS || SS->isEmpty()) && "ObjectType and scope specifier cannot coexist");
     DC = computeDeclContext(ObjectType);
+    IsDependent = !DC && ObjectType->isDependentType();
     assert(((!DC && ObjectType->isDependentType()) ||
             !ObjectType->isIncompleteType() ||
             !ObjectType->getAs<TagType>() ||
@@ -2753,6 +2753,7 @@ bool Sema::LookupParsedName(LookupResult &R,
         return false;
       R.setContextRange(SS->getRange());
     }
+    IsDependent = !DC && isDependentScopeSpecifier(*SS);
   } else {
     // Perform unqualified name lookup starting in the given scope.
     return LookupName(R, S, AllowBuiltinCreation);
@@ -2762,11 +2763,11 @@ bool Sema::LookupParsedName(LookupResult &R,
   // lookup in that context.
   if (DC)
     return LookupQualifiedName(R, DC);
-
-  // We could not resolve the scope specified to a specific declaration
-  // context, which means that SS refers to an unknown specialization.
-  // Name lookup can't find anything in this case.
-  R.setNotFoundInCurrentInstantiation();
+  else if (IsDependent)
+    // We could not resolve the scope specified to a specific declaration
+    // context, which means that SS refers to an unknown specialization.
+    // Name lookup can't find anything in this case.
+    R.setNotFoundInCurrentInstantiation();
   return false;
 }
 
