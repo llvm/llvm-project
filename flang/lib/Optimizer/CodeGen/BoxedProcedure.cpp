@@ -208,11 +208,7 @@ public:
       mlir::IRRewriter rewriter(context);
       BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
       mlir::Dialect *firDialect = context->getLoadedDialect("fir");
-      llvm::SmallVector<mlir::Operation *> operations;
-
-      getModule().walk([&](mlir::Operation *op) { operations.push_back(op); });
-
-      for (mlir::Operation *op : operations) {
+      getModule().walk([&](mlir::Operation *op) {
         bool opIsValid = true;
         typeConverter.setLocation(op->getLoc());
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
@@ -379,7 +375,7 @@ public:
                 }
           rewriter.finalizeOpModification(op);
         }
-      }
+      });
     }
   }
 
