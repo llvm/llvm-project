@@ -262,15 +262,13 @@ struct BigInt {
   // Returns the carry value produced by the multiplication operation.
   LIBC_INLINE constexpr WordType mul(WordType x) {
     BigInt<2 * WORD_SIZE, Signed, WordType> partial_sum(0);
-    WordType carry = 0;
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       NumberPair<WordType> prod = full_mul(val[i], x);
       BigInt<2 * WORD_SIZE, Signed, WordType> tmp({prod.lo, prod.hi});
-      carry += partial_sum.add(tmp);
+      const WordType carry = partial_sum.add(tmp);
       val[i] = partial_sum.val[0];
       partial_sum.val[0] = partial_sum.val[1];
       partial_sum.val[1] = carry;
-      carry = 0;
     }
     return partial_sum.val[1];
   }
