@@ -859,8 +859,10 @@ def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped
   let HasExtDPP = 0;
 }
 
-def VOP3_PERMLANE_NOOPSEL_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>> {
-  let Ins64 = (ins VRegSrc_32:$src0, SSrc_b32:$src1, SSrc_b32:$src2, VGPR_32:$vdst_in);
+class VOP3_PERMLANE_NOOPSEL_Profile<VOPProfile P> : VOP3_Profile<P> {
+  let Ins64 = !con((ins VRegSrc_32:$src0, SSrc_b32:$src1),
+                   !if(P.HasSrc2, (ins SSrc_b32:$src2), (ins)),
+                   (ins VGPR_32:$vdst_in));
   let HasClamp = 0;
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
@@ -890,10 +892,16 @@ class PermlaneVarPat<SDPatternOperator permlane,
         VGPR_32:$src1, VGPR_32:$vdst_in)
 >;
 
-class PermlaneNoDppPat<SDPatternOperator permlane,
+class PermlaneNoDppPat3Src<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2),
   (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2, VGPR_32:$vdst_in)
+>;
+
+class PermlaneNoDppPat2Src<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$vdst_in, i32:$src0, i32:$src1),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 >;
 
 class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f> {
@@ -981,16 +989,18 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let SubtargetPredicate = isGFX12_10Plus in {
   let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
-    defm V_PERMLANE_BCAST_B32 : VOP3Inst<"v_permlane_bcast_b32", VOP3_PERMLANE_NOOPSEL_Profile>;
-    defm V_PERMLANE_UP_B32    : VOP3Inst<"v_permlane_up_b32",    VOP3_PERMLANE_NOOPSEL_Profile>;
-    defm V_PERMLANE_DOWN_B32  : VOP3Inst<"v_permlane_down_b32",  VOP3_PERMLANE_NOOPSEL_Profile>;
-    defm V_PERMLANE_XOR_B32   : VOP3Inst<"v_permlane_xor_b32",   VOP3_PERMLANE_NOOPSEL_Profile>;
+    defm V_PERMLANE_BCAST_B32   : VOP3Inst<"v_permlane_bcast_b32",   VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+    defm V_PERMLANE_UP_B32      : VOP3Inst<"v_permlane_up_b32",      VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+    defm V_PERMLANE_DOWN_B32    : VOP3Inst<"v_permlane_down_b32",    VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+    defm V_PERMLANE_XOR_B32     : VOP3Inst<"v_permlane_xor_b32",     VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+    defm V_PERMLANE_IDX_GEN_B32 : VOP3Inst<"v_permlane_idx_gen_b32", VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32>>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
-  def : PermlaneNoDppPat<int_amdgcn_permlane_bcast, V_PERMLANE_BCAST_B32_e64>;
-  def : PermlaneNoDppPat<int_amdgcn_permlane_up,    V_PERMLANE_UP_B32_e64>;
-  def : PermlaneNoDppPat<int_amdgcn_permlane_down,  V_PERMLANE_DOWN_B32_e64>;
-  def : PermlaneNoDppPat<int_amdgcn_permlane_xor,   V_PERMLANE_XOR_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
+  def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
 } // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = HasBitOp3Insts in {
@@ -1329,10 +1339,11 @@ defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1210<0x25e>;
 defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1210<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1210<0x260>;
 defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1210<0x261>;
-defm V_PERMLANE_BCAST_B32 : VOP3Only_Real_Base_gfx12<0x270>;
-defm V_PERMLANE_UP_B32    : VOP3Only_Real_Base_gfx12<0x271>;
-defm V_PERMLANE_DOWN_B32  : VOP3Only_Real_Base_gfx12<0x272>;
-defm V_PERMLANE_XOR_B32   : VOP3Only_Real_Base_gfx12<0x273>;
+defm V_PERMLANE_BCAST_B32   : VOP3Only_Real_Base_gfx12<0x270>;
+defm V_PERMLANE_UP_B32      : VOP3Only_Real_Base_gfx12<0x271>;
+defm V_PERMLANE_DOWN_B32    : VOP3Only_Real_Base_gfx12<0x272>;
+defm V_PERMLANE_XOR_B32     : VOP3Only_Real_Base_gfx12<0x273>;
+defm V_PERMLANE_IDX_GEN_B32 : VOP3Only_Real_Base_gfx12<0x314>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
