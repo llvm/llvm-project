@@ -22,52 +22,37 @@
 
 namespace __sanitizer {
 
-// We would like to just use compiler builtin atomic operations
-// for loads and stores, but they are mostly broken in clang:
-// - they lead to vastly inefficient code generation
-// (http://llvm.org/bugs/show_bug.cgi?id=17281)
-// - 64-bit atomic operations are not implemented on x86_32
-// (http://llvm.org/bugs/show_bug.cgi?id=15034)
-// - they are not implemented on ARM
-// error: undefined reference to '__atomic_load_4'
+// We use the compiler builtin atomic operations for loads and stores, which
+// generates correct code for all architectures, but may require libatomic
+// on platforms where e.g. 64-bit atomics are not supported natively.
 
 // See http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
 // for mappings of the memory model to different processors.
 
-inline void atomic_signal_fence(memory_order) {
-  __asm__ __volatile__("" ::: "memory");
+inline void atomic_signal_fence(memory_order mo) { __atomic_signal_fence(mo); }
+
+inline void atomic_thread_fence(memory_order mo) { __atomic_thread_fence(mo); }
+
+template <typename T>
+inline typename T::Type atomic_fetch_add(volatile T *a, typename T::Type v,
+                                         memory_order mo) {
+  DCHECK(!((uptr)a % sizeof(*a)));
+  return __atomic_fetch_add(&a->val_dont_use, v, mo);
 }
 
-inline void atomic_thread_fence(memory_order) {
-  __sync_synchronize();
-}
-
-template<typename T>
-inline typename T::Type atomic_fetch_add(volatile T *a,
-    typename T::Type v, memory_order mo) {
+template <typename T>
+inline typename T::Type atomic_fetch_sub(volatile T *a, typename T::Type v,
+                                         memory_order mo) {
   (void)mo;
   DCHECK(!((uptr)a % sizeof(*a)));
-  return __sync_fetch_and_add(&a->val_dont_use, v);
+  return __atomic_fetch_sub(&a->val_dont_use, v, mo);
 }
 
-template<typename T>
-inline typename T::Type atomic_fetch_sub(volatile T *a,
-    typename T::Type v, memory_order mo) {
-  (void)mo;
+template <typename T>
+inline typename T::Type atomic_exchange(volatile T *a, typename T::Type v,
+                                        memory_order mo) {
   DCHECK(!((uptr)a % sizeof(*a)));
-  return __sync_fetch_and_add(&a->val_dont_use, -v);
-}
-
-template<typename T>
-inline typename T::Type atomic_exchange(volatile T *a,
-    typename T::Type v, memory_order mo) {
-  DCHECK(!((uptr)a % sizeof(*a)));
-  if (mo & (memory_order_release | memory_order_acq_rel | memory_order_seq_cst))
-    __sync_synchronize();
-  v = __sync_lock_test_and_set(&a->val_dont_use, v);
-  if (mo == memory_order_seq_cst)
-    __sync_synchronize();
-  return v;
+  return __atomic_exchange_n(&a->val_dont_use, v, mo);
 }
 
 template <typename T>
