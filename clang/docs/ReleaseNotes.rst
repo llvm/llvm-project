@@ -115,6 +115,10 @@ Resolutions to C++ Defect Reports
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
 
+- Alignment of members is now respected when evaluating layout compatibility
+  of structs.
+  (`CWG2583: Common initial sequence should consider over-alignment <https://cplusplus.github.io/CWG/issues/2583.html>`_).
+
 - ``[[no_unique_address]]`` is now respected when evaluating layout
   compatibility of two types.
   (`CWG2759: [[no_unique_address] and common initial sequence  <https://cplusplus.github.io/CWG/issues/2759.html>`_).
@@ -156,6 +160,11 @@ Non-comprehensive list of changes in this release
 
 - ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
   builtins are now constexpr and may be used in constant expressions.
+
+- Added ``__builtin_popcountg`` as a type-generic alternative to
+  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type. Like
+  the previous builtins, this new builtin is constexpr and may be used in
+  constant expressions.
 
 New Compiler Flags
 ------------------
@@ -241,6 +250,10 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Clang now emits errors for explicit specializations/instatiations of lambda call
+  operator.
+  Fixes (#GH83267).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -319,8 +332,6 @@ Bug Fixes to C++ Support
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 - Fix evaluation of some immediate calls in default arguments.
   Fixes (#GH80630)
-- Fix a crash when an explicit template argument list is used with a name for which lookup
-  finds a non-template function and a dependent using declarator.
 - Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
   calculation. (#GH56556), (#GH82849).
 - Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
@@ -390,6 +401,9 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- PTX is no longer included by default when compiling for CUDA. Using 
+  ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
 ^^^^^^^^^^^^

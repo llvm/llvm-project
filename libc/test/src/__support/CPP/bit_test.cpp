@@ -26,7 +26,7 @@ using UnsignedTypes = testing::TypeList<
     __uint128_t,
 #endif
     unsigned char, unsigned short, unsigned int, unsigned long,
-    unsigned long long, cpp::UInt<128>>;
+    unsigned long long, UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto ZERO = T(0);
@@ -260,9 +260,9 @@ TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(count_ones(T(0)), 0);
+  EXPECT_EQ(popcount(T(0)), 0);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(count_ones<T>(cpp::numeric_limits<T>::max() >> i),
+    EXPECT_EQ(popcount<T>(cpp::numeric_limits<T>::max() >> i),
               cpp::numeric_limits<T>::digits - i);
 }
 
