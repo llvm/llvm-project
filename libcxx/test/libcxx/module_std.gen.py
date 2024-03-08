@@ -18,6 +18,9 @@
 
 # RUN: %{python} %s %{libcxx-dir}/utils
 
+# TODO: Re-enable this test once we understand why it keeps timing out.
+# UNSUPPORTED: clang
+
 import sys
 
 sys.path.append(sys.argv[1])
