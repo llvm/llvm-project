@@ -5976,14 +5976,15 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
     RegOp.setReg(Reg);
     RBI.constrainGenericRegister(DstReg, *RC, MRI);
   } else if (PrevMI) {
-    // We don't need a subregister copy. Save a copy by re-using the
-    // destination register on the final insert.
+    // PrevMI is not nullptr, so we have generated inserts and don't need a
+    // subregister copy. Save a copy by re-using the destination register on the
+    // final insert.
     PrevMI->getOperand(0).setReg(I.getOperand(0).getReg());
     constrainSelectedInstRegOperands(*PrevMI, TII, TRI, RBI);
   } else {
-    // All the operands (other than the first one) to the G_BUILD_VECTOR were
-    // undef, so PrevMI is nullptr. Emit a copy from the vector made from the
-    // first operand to the destination register.
+    // All the operands (except the first one) to the G_BUILD_VECTOR were
+    // undef, so PrevMI is nullptr. Emit a copy to the destination register
+    // from the first operand.
     const TargetRegisterClass *RC =
         getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DstVec, MRI, TRI));
     Register DstReg = I.getOperand(0).getReg();
