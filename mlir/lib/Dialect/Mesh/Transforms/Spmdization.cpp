@@ -24,6 +24,8 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -694,7 +696,7 @@ static LogicalResult spmdizeBlock(Block &block, IRMapping &spmdizationMap,
 }
 
 static LogicalResult
-spmdizeFuncOp(func::FuncOp op, IRMapping &spmdizationMap,
+spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
               SymbolTableCollection &symbolTableCollection) {
   OpBuilder builder(op.getFunctionBody());
 
@@ -717,21 +719,21 @@ spmdizeFuncOp(func::FuncOp op, IRMapping &spmdizationMap,
 
   // Find a return op and change the function results signature to its operands
   // signature.
-  func::ReturnOp returnOp;
-  for (Block &block : op.getBody()) {
+  Operation *returnOp = nullptr;
+  for (Block &block : op.getFunctionBody()) {
     if (block.empty()) {
       continue;
     }
 
-    returnOp = llvm::cast<func::ReturnOp>(block.back());
-    if (returnOp) {
+    if (block.back().hasTrait<OpTrait::ReturnLike>()) {
+      returnOp = &block.back();
       break;
     }
   }
   assert(returnOp);
-  op.setFunctionType(FunctionType::get(op->getContext(),
-                                       op.getBody().front().getArgumentTypes(),
-                                       returnOp->getOperandTypes()));
+  op.setType(FunctionType::get(op->getContext(),
+                               op.getFunctionBody().front().getArgumentTypes(),
+                               returnOp->getOperandTypes()));
 
   return success();
 }
