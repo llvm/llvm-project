@@ -5178,6 +5178,53 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
 }
 
+// Check if the module attribute is present and not zero.
+static bool isModuleAttributeSet(Module &M, const StringRef &ModAttr) {
+  const auto *Attr =
+      mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
+  return Attr && Attr->isOne();
+}
+
+// Check if the function attribute is not present and set it.
+static void SetFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
+                                    StringRef Value) {
+  if (!F.hasFnAttribute(FnAttrName))
+    F.addFnAttr(FnAttrName, Value);
+}
+
+void llvm::CopyModuleAttrToFunctions(Module &M) {
+  Triple T(M.getTargetTriple());
+  if (!T.isThumb() && !T.isARM() && !T.isAArch64())
+    return;
+
+  StringRef SignTypeValue = "none";
+  if (isModuleAttributeSet(M, "sign-return-address-all"))
+    SignTypeValue = "all";
+  else if (isModuleAttributeSet(M, "sign-return-address"))
+    SignTypeValue = "non-leaf";
+
+  StringRef BTEValue =
+      isModuleAttributeSet(M, "branch-target-enforcement") ? "true" : "false";
+  StringRef BPPLValue =
+      isModuleAttributeSet(M, "branch-protection-pauth-lr") ? "true" : "false";
+  StringRef GCSValue =
+      isModuleAttributeSet(M, "guarded-control-stack") ? "true" : "false";
+  StringRef SignKeyValue =
+      isModuleAttributeSet(M, "sign-return-address-with-bkey") ? "b_key"
+                                                               : "a_key";
+
+  for (Function &F : M.getFunctionList()) {
+    if (F.isDeclaration())
+      continue;
+
+    SetFunctionAttrIfNotSet(F, "sign-return-address", SignTypeValue);
+    SetFunctionAttrIfNotSet(F, "branch-target-enforcement", BTEValue);
+    SetFunctionAttrIfNotSet(F, "branch-protection-pauth-lr", BPPLValue);
+    SetFunctionAttrIfNotSet(F, "guarded-control-stack", GCSValue);
+    SetFunctionAttrIfNotSet(F, "sign-return-address-key", SignKeyValue);
+  }
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
