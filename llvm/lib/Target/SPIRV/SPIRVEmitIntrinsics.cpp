@@ -20,6 +20,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/TypedPointerType.h"
 
 #include <queue>
 
@@ -446,7 +447,8 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
 
   for (unsigned OpIdx = 0; OpIdx < CI->arg_size(); OpIdx++) {
     Value *ArgOperand = CI->getArgOperand(OpIdx);
-    if (!isa<PointerType>(ArgOperand->getType()))
+    if (!isa<PointerType>(ArgOperand->getType()) &&
+        !isa<TypedPointerType>(ArgOperand->getType()))
       continue;
 
     // Constants (nulls/undefs) are handled in insertAssignPtrTypeIntrs()
