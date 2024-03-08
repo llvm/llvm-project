@@ -464,8 +464,8 @@ defm TH_VSRA_V : VSHT_IV_V_X_I<"th.vsra", 0b101001>;
 // vector register group (specified by vs2). The destination vector register
 // group cannot overlap the mask register if used, unless LMUL=1.
 let Constraints = "@earlyclobber $vd" in {
-defm TH_VNSRL_W : TH_VNSHT_IV_V_X_I<"th.vnsrl", 0b101100>;
-defm TH_VNSRA_W : TH_VNSHT_IV_V_X_I<"th.vnsra", 0b101101>;
+defm TH_VNSRL_V : TH_VNSHT_IV_V_X_I<"th.vnsrl", 0b101100>;
+defm TH_VNSRA_V : TH_VNSHT_IV_V_X_I<"th.vnsra", 0b101101>;
 } // Constraints = "@earlyclobber $vd"
 
 // Vector Integer Comparison Instructions
@@ -963,5 +963,28 @@ def : InstAlias<"th.vmset.m $vd",
                 (TH_VMXNOR_MM VR:$vd, VR:$vd, VR:$vd)>;
 def : InstAlias<"th.vmnot.m $vd, $vs",
                 (TH_VMNAND_MM VR:$vd, VR:$vs, VR:$vs)>;
+
+// From XTHeadVector spec:
+// https://github.com/T-head-Semi/thead-extension-spec/blob/master/xtheadvector.adoc
+// Beyond the instructions and pseudo instructions in the referenced specification,
+// the following additional pseudo instructions are defined in order to improve compatibility with RVV 1.0:
+//   th.vmmv.m vd,v          => th.vmand.mm vd,vs,vs
+//   th.vneg.v vd,vs         => th.vrsub.vx vd,vs,x0
+//   th.vncvt.x.x.v vd,vs,vm => th.vnsrl.vx vd,vs,x0,vm
+//   th.vfneg.v vd,vs        => th.vfsgnjn.vv vd,vs,vs
+//   th.vfabs.v vd,vs        => th.vfsgnjx.vv vd,vs,vs
+
+// Note: DO NOT "Emit" `th.vmmv.m` (the 0 for the third argument) in printed assembly.
+// As `th.vmcpy.m` also expands to `th.vmand.mm`, we need clarification from T-Head.
+def : InstAlias<"th.vmmv.m $vd, $vs",
+                (TH_VMAND_MM VR:$vd, VR:$vs, VR:$vs), 0>;
+def : InstAlias<"th.vneg.v $vd, $vs",
+                (TH_VRSUB_VX VR:$vd, VR:$vs, X0, zero_reg)>;
+def : InstAlias<"th.vncvt.x.x.v $vd, $vs$vm",
+                (TH_VNSRL_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+def : InstAlias<"th.vfneg.v $vd, $vs",
+                (TH_VFSGNJN_VV VR:$vd, VR:$vs, VR:$vs, zero_reg)>;
+def : InstAlias<"th.vfabs.v $vd, $vs",
+                (TH_VFSGNJX_VV VR:$vd, VR:$vs, VR:$vs, zero_reg)>;
 
 } // Predicates = [HasVendorXTHeadVector]
