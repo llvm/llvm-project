@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
@@ -91,8 +90,8 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   // C library functions are either declared directly within a TU (the common
   // case) or they are accessed through the namespace `std::` (when they are
   // used in C++ via headers like <cstdlib>).
-  if (!FD->getDeclContext()->getRedeclContext()->isTranslationUnit() &&
-          !AnalysisDeclContext::isInStdNamespace(FD))
+  const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
+  if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
     return false;
 
   // If this function is not externally visible, it is not a C library function.
