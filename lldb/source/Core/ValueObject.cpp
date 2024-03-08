@@ -377,7 +377,7 @@ ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
   // We may need to update our value if we are dynamic
   if (IsPossibleDynamicType())
     UpdateValueIfNeeded(false);
-  if (idx < GetNumChildrenIgnoringErrors()) {
+  if (idx < GetNumChildren()) {
     // Check if we have already made the child value object?
     if (can_create && !m_children.HasChildAtIndex(idx)) {
       // No we haven't created the child at this index, so lets have our
@@ -440,7 +440,7 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
   return child_sp;
 }
 
-llvm::Expected<uint32_t> ValueObject::GetNumChildren(uint32_t max) {
+uint32_t ValueObject::GetNumChildren(uint32_t max) {
   UpdateValueIfNeeded();
 
   if (max < UINT32_MAX) {
@@ -452,22 +452,9 @@ llvm::Expected<uint32_t> ValueObject::GetNumChildren(uint32_t max) {
   }
 
   if (!m_flags.m_children_count_valid) {
-    auto num_children_or_err = CalculateNumChildren();
-    if (num_children_or_err)
-      SetNumChildren(*num_children_or_err);
-    else
-      return num_children_or_err;
+    SetNumChildren(CalculateNumChildren());
   }
   return m_children.GetChildrenCount();
-}
-
-uint32_t ValueObject::GetNumChildrenIgnoringErrors(uint32_t max) {
-  auto value_or_err = GetNumChildren(max);
-  if (value_or_err)
-    return *value_or_err;
-  LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), value_or_err.takeError(),
-                  "{0}");
-  return 0;
 }
 
 bool ValueObject::MightHaveChildren() {
@@ -477,7 +464,7 @@ bool ValueObject::MightHaveChildren() {
     if (type_info & (eTypeHasChildren | eTypeIsPointer | eTypeIsReference))
       has_children = true;
   } else {
-    has_children = GetNumChildrenIgnoringErrors() > 0;
+    has_children = GetNumChildren() > 0;
   }
   return has_children;
 }
@@ -1189,7 +1176,7 @@ bool ValueObject::DumpPrintableRepresentation(
       if (flags.Test(eTypeIsArray)) {
         if ((custom_format == eFormatBytes) ||
             (custom_format == eFormatBytesWithASCII)) {
-          const size_t count = GetNumChildrenIgnoringErrors();
+          const size_t count = GetNumChildren();
 
           s << '[';
           for (size_t low = 0; low < count; low++) {
@@ -1228,7 +1215,7 @@ bool ValueObject::DumpPrintableRepresentation(
                                                      // format should be printed
                                                      // directly
         {
-          const size_t count = GetNumChildrenIgnoringErrors();
+          const size_t count = GetNumChildren();
 
           Format format = FormatManager::GetSingleItemFormat(custom_format);
 
@@ -1307,7 +1294,7 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
 
     case eValueObjectRepresentationStyleChildrenCount:
-      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildrenIgnoringErrors());
+      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildren());
       str = strm.GetString();
       break;
 
@@ -2333,9 +2320,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
-                llvm::expectedToStdOptional(
-                    root->GetSyntheticValue()->GetNumChildren())
-                        .value_or(0) > index)
+                root->GetSyntheticValue()->GetNumChildren() > index)
               child_valobj_sp =
                   root->GetSyntheticValue()->GetChildAtIndex(index);
           if (child_valobj_sp) {

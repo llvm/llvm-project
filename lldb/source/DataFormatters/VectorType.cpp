@@ -9,7 +9,6 @@
 #include "lldb/DataFormatters/VectorType.h"
 
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -225,16 +224,10 @@ public:
 
   ~VectorTypeSyntheticFrontEnd() override = default;
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override {
-    return m_num_children;
-  }
+  uint32_t CalculateNumChildren() override { return m_num_children; }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
-    auto num_children_or_err = CalculateNumChildren();
-    if (!num_children_or_err)
-      return ValueObjectConstResult::Create(
-          nullptr, Status(num_children_or_err.takeError()));
-    if (idx >= *num_children_or_err)
+    if (idx >= CalculateNumChildren())
       return {};
     std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
     if (!size)
@@ -273,7 +266,7 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
+    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
       return UINT32_MAX;
     return idx;
   }
@@ -300,8 +293,7 @@ bool lldb_private::formatters::VectorTypeSummaryProvider(
   s.PutChar('(');
   bool first = true;
 
-  size_t idx = 0,
-         len = synthetic_children->CalculateNumChildrenIgnoringErrors();
+  size_t idx = 0, len = synthetic_children->CalculateNumChildren();
 
   for (; idx < len; idx++) {
     auto child_sp = synthetic_children->GetChildAtIndex(idx);
