@@ -187,15 +187,15 @@ static cl::opt<bool>
                               cl::desc("Use selective instrumentation"),
                               cl::Hidden, cl::init(false));
 
-static cl::opt<int> HotPercentileCutoff(
+static cl::opt<int> ClHotPercentileCutoff(
     "hwasan-percentile-cutoff-hot", cl::init(0),
     cl::desc("Alternative hot percentile cuttoff."
              "By default `-profile-summary-cutoff-hot` is used."));
 
 static cl::opt<float>
-    RandomSkipRate("hwasan-random-skip-rate", cl::init(0),
-                   cl::desc("Probability value in the range [0.0, 1.0] "
-                            "to skip instrumentation of a function."));
+    ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+                     cl::desc("Probability value in the range [0.0, 1.0] "
+                              "to skip instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -301,7 +301,7 @@ public:
                               ? ClEnableKhwasan
                               : CompileKernel;
     this->Rng =
-        RandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
+        ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
 
     initializeModule();
   }
@@ -1537,8 +1537,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   NumTotalFuncs++;
   if (CSelectiveInstrumentation) {
-    if (RandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(RandomSkipRate);
+    if (ClRandomSkipRate.getNumOccurrences()) {
+      std::bernoulli_distribution D(ClRandomSkipRate);
       if (D(*Rng))
         return;
     } else {
@@ -1547,10 +1547,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
           MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
       if (PSI && PSI->hasProfileSummary()) {
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-        if ((HotPercentileCutoff.getNumOccurrences() &&
-             HotPercentileCutoff >= 0)
+        if ((ClHotPercentileCutoff.getNumOccurrences() &&
+             ClHotPercentileCutoff >= 0)
                 ? PSI->isFunctionHotInCallGraphNthPercentile(
-                      HotPercentileCutoff, &F, BFI)
+                      ClHotPercentileCutoff, &F, BFI)
                 : PSI->isFunctionHotInCallGraph(&F, BFI))
           return;
       } else {
