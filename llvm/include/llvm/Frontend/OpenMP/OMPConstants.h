@@ -244,6 +244,11 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ OMP_MAP_MEMBER_OF)
 };
 
+/// Type alias for accessing the underlying type of the
+/// OpenMPOffloadMappingFlags enum, simplifies casting back and forth from the
+/// enum.
+using OMPMapFlagType = std::underlying_type_t<OpenMPOffloadMappingFlags>;
+
 enum OpenMPOffloadingReservedDeviceIDs {
   /// Device ID if the device was not defined, runtime should get it
   /// from environment variables in the spec.

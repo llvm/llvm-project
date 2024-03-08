@@ -993,8 +993,7 @@ static void genBodyOfTargetOp(
         mlir::Value mapOp = createMapInfoOp(
             firOpBuilder, copyVal.getLoc(), copyVal, mlir::Value{}, name.str(),
             bounds, llvm::SmallVector<mlir::Value>{},
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            static_cast<llvm::omp::OMPMapFlagType>(
                 llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
             mlir::omp::VariableCaptureKind::ByCopy, copyVal.getType());
         targetOp.getMapOperandsMutable().append(mapOp);
@@ -1127,15 +1126,13 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
 
-        checkAndApplyDeclTargetMapFlags(converter, mapFlag, sym);
+        mapFlag = checkAndApplyDeclTargetMapFlags(converter, mapFlag, sym);
 
-        mlir::Value mapOp = createMapInfoOp(
-            converter.getFirOpBuilder(), baseOp.getLoc(), baseOp, mlir::Value{},
-            name.str(), bounds, {},
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                mapFlag),
-            captureKind, baseOp.getType());
+        mlir::Value mapOp =
+            createMapInfoOp(converter.getFirOpBuilder(), baseOp.getLoc(),
+                            baseOp, mlir::Value{}, name.str(), bounds, {},
+                            static_cast<llvm::omp::OMPMapFlagType>(mapFlag),
+                            captureKind, baseOp.getType());
 
         mapOperands.push_back(mapOp);
         mapSymTypes.push_back(baseOp.getType());

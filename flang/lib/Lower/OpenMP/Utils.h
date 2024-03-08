@@ -54,10 +54,10 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal = false);
 
-void checkAndApplyDeclTargetMapFlags(
-    Fortran::lower::AbstractConverter &converter,
-    llvm::omp::OpenMPOffloadMappingFlags &mapFlags,
-    const Fortran::semantics::Symbol &symbol);
+llvm::omp::OpenMPOffloadMappingFlags
+checkAndApplyDeclTargetMapFlags(Fortran::lower::AbstractConverter &converter,
+                                llvm::omp::OpenMPOffloadMappingFlags mapFlags,
+                                const Fortran::semantics::Symbol &symbol);
 
 void gatherFuncAndVarSyms(
     const Fortran::parser::OmpObjectList &objList,

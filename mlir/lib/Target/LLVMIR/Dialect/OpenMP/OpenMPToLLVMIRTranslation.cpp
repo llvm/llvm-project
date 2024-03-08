@@ -1826,10 +1826,9 @@ uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
 // unfortunately with opaque pointers we lose the ability to easily check if
 // something is a pointer whilst maintaining access to the underlying type.
 static bool checkIfPointerMap(llvm::omp::OpenMPOffloadMappingFlags mapFlag) {
-  return static_cast<
-             std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-             mapFlag &
-             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ) != 0;
+  mapFlag = mapFlag & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+  int hasPtrAndObj = static_cast<llvm::omp::OMPMapFlagType>(mapFlag);
+  return hasPtrAndObj != 0;
 }
 
 // This function calculates the size to be offloaded for a specified type, given
@@ -2046,7 +2045,6 @@ static void processMapMembersWithParent(
     assert(memberDataIdx >= 0 && "could not find mapped member of structure");
 
     // Same MemberOfFlag to indicate its link with parent and other members
-    // of
     auto mapFlag =
         llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType().value());
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;

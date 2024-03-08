@@ -91,9 +91,7 @@ class OMPDescriptorMapInfoGenPass
         baseAddrAddr, mlir::SmallVector<mlir::Value>{}, op.getBounds(),
         builder.getIntegerAttr(
             builder.getIntegerType(64, false),
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                baseAddrMapFlag)),
+            static_cast<llvm::omp::OMPMapFlagType>(baseAddrMapFlag)),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         builder.getStringAttr("") /*name*/);
