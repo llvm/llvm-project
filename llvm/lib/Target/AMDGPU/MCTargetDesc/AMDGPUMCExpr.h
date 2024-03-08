@@ -10,7 +10,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCEXPR_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
@@ -31,7 +30,7 @@ public:
 
 private:
   VariadicKind Kind;
-  SmallVector<const MCExpr *, 2> Args;
+  ArrayRef<const MCExpr *> Args;
 
   AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args)
       : Kind(Kind), Args(Args) {
