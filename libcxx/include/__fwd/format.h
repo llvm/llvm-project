@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_FWD_H
-#define _LIBCPP___FORMAT_FORMAT_FWD_H
+#ifndef _LIBCPP___FWD_FORMAT_H
+#define _LIBCPP___FWD_FORMAT_H
 
 #include <__availability>
 #include <__config>
@@ -36,4 +36,4 @@ struct _LIBCPP_TEMPLATE_VIS formatter;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_FWD_H
+#endif // _LIBCPP___FWD_FORMAT_H
