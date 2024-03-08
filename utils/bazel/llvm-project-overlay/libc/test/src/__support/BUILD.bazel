@@ -86,6 +86,7 @@ libc_test(
     srcs = ["uint_test.cpp"],
     deps = [
         "//libc:__support_cpp_optional",
+        "//libc:__support_macros_properties_types",
         "//libc:__support_uint",
     ],
 )
@@ -111,5 +112,6 @@ libc_test(
     srcs = ["integer_literals_test.cpp"],
     deps = [
         "//libc:__support_integer_literals",
+        "//libc:__support_macros_properties_types",
     ],
 )
