@@ -2294,7 +2294,7 @@ func.func @dim_of_reshape_i32(%arg0: tensor<*xf32>, %arg1: tensor<?xi32>)
 
 // -----
 
-// Test case: tensor.dim(tensor.reshape %v %shp, %idx) is not folded into tensor.extract %shp[%idx]
+// Test case: tensor.dim(tensor.reshape %v %shp, %idx) is folded into tensor.extract %shp[%idx]
 // CHECK-LABEL: func @dim_of_reshape_for(
 //       CHECK: scf.for
 //  CHECK-NEXT: tensor.extract
@@ -2317,7 +2317,7 @@ func.func @dim_of_reshape_for( %arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -> 
 
 // -----
 
-// Test case: tensor.dim(tensor.reshape %v %shp, %idx) is not folded into tensor.extract %shp[%idx]
+// Test case: tensor.dim(tensor.reshape %v %shp, %idx) is folded into tensor.extract %shp[%idx]
 // CHECK-LABEL: func @dim_of_reshape_undominated(
 //       CHECK: arith.muli
 //  CHECK-NEXT: tensor.extract
