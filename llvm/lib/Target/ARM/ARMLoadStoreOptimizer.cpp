@@ -31,7 +31,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -109,7 +109,7 @@ namespace {
     const ARMSubtarget *STI;
     const TargetLowering *TL;
     ARMFunctionInfo *AFI;
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
     RegisterClassInfo RegClassInfo;
     MachineBasicBlock::const_iterator LiveRegPos;
     bool LiveRegsValid;
@@ -567,17 +567,20 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
 
   // End of block was reached.
   if (!MBB.succ_empty()) {
-    // FIXME: Because of a bug, live registers are sometimes missing from
-    // the successor blocks' live-in sets. This means we can't trust that
-    // information and *always* have to reset at the end of a block.
-    // See PR21029.
-    if (MBBI != MBB.end()) --MBBI;
-    BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base)
-        .add(t1CondCodeOp(true))
-        .addReg(Base)
-        .addImm(WordOffset * 4)
-        .addImm(Pred)
-        .addReg(PredReg);
+    bool BaseIsLiveInSuccessor = false;
+    for (MachineBasicBlock *Succ : MBB.successors()) {
+      if (Succ->isLiveIn(Base)) {
+        if (MBBI != MBB.end())
+          --MBBI;
+        BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base)
+            .add(t1CondCodeOp(true))
+            .addReg(Base)
+            .addImm(WordOffset * 4)
+            .addImm(Pred)
+            .addReg(PredReg);
+        return;
+      }
+    }
   }
 }
 
@@ -589,7 +592,7 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   }
 
   for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (LiveRegs.available(MF->getRegInfo(), Reg))
+    if (LiveRegs.available(Reg))
       return Reg;
   return 0;
 }
