@@ -29,7 +29,7 @@ struct test_initialization {
             // trivially default constructible types. This only apply to non-empty arrays,
             // since empty arrays don't hold an element of type T.
 #if TEST_STD_VER < 20
-            if (!TEST_IS_CONSTANT_EVALUATED || !std::is_trivially_default_constructible<T>::value)
+            if (!(TEST_IS_CONSTANT_EVALUATED && std::is_trivially_default_constructible<T>::value))
 #endif
             {
               std::array<T, 1> a1;
