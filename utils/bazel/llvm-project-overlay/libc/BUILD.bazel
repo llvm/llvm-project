@@ -211,6 +211,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":__support_macros_properties_types",
         ":llvm_libc_macros_limits_macros",
     ],
 )
@@ -449,6 +450,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_optimization",
+        ":__support_macros_properties_types",
         ":__support_math_extras",
         ":__support_number_pair",
     ],
@@ -458,6 +460,7 @@ libc_support_library(
     name = "__support_uint128",
     hdrs = ["src/__support/UInt128.h"],
     deps = [
+        ":__support_macros_properties_types",
         ":__support_uint",
     ],
 )
