@@ -910,8 +910,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
       // Run the tool on it.
       if (Format == ScanningOutputFormat::Make) {
-        auto MaybeFile =
-            WorkerTool.getDependencyFile(Input->CommandLine, CWD);
+        auto MaybeFile = WorkerTool.getDependencyFile(Input->CommandLine, CWD);
         if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                            Errs))
           HadErrors = true;
@@ -996,9 +995,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I) {
-      Pool.async([ScanningTask, &WorkerTools, I]() {
-        ScanningTask(WorkerTools[I]);
-      });
+      Pool.async(
+          [ScanningTask, &WorkerTools, I]() { ScanningTask(WorkerTools[I]); });
     }
     Pool.wait();
   }
