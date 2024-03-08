@@ -4144,7 +4144,7 @@ def OMPDeclareVariant : InheritableAttr {
 }
 
 def Assumption : InheritableAttr {
-  let Spellings = [Clang<"assume">];
+  let Spellings = [Clang<"assume">, CXX11<"omp", "assume">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [AssumptionDocs];
