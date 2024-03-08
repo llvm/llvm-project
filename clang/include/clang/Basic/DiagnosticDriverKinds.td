@@ -750,7 +750,8 @@ def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
   "%select{shader model|Vulkan environment|shader stage}0 is required as %select{OS|environment}1 in target '%2' for HLSL code generation">;
-
+def err_drv_hlsl_enable_16bit_types : Error<
+  "enable_16bit_types cannot be applied when shader model is <= 6.2 and hlsl version <= 2018. (SM: %0, HV: %1)">;
 def err_drv_hlsl_bad_shader_unsupported : Error<
   "%select{shader model|Vulkan environment|shader stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "
