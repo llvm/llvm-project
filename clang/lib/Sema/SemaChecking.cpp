@@ -19189,8 +19189,10 @@ static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
 static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
                                FieldDecl *Field2,
                                bool AreUnionMembers = false) {
-  const Type *Field1Parent = Field1->getParent()->getTypeForDecl();
-  const Type *Field2Parent = Field2->getParent()->getTypeForDecl();
+  [[maybe_unused]] const Type *Field1Parent =
+      Field1->getParent()->getTypeForDecl();
+  [[maybe_unused]] const Type *Field2Parent =
+      Field2->getParent()->getTypeForDecl();
   assert(((Field1Parent->isStructureOrClassType() &&
            Field2Parent->isStructureOrClassType()) ||
           (Field1Parent->isUnionType() && Field2Parent->isUnionType())) &&
