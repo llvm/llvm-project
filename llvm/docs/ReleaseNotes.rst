@@ -215,6 +215,17 @@ Changes to the RISC-V Backend
 * ``-mcpu=sifive-p670`` was added.
 * Support for the Zicond extension is no longer experimental.
 
+Changes to the SystemZ Backend
+------------------------------
+
+* Properly support 16 byte atomic int/fp types and ops.
+* Support i128 as legal type in VRs.
+* Add an i128 cost model.
+* Support building individual functions with backchain using the
+  __attribute__((target("backchain"))) syntax.
+* Add exception handling for XPLINK.
+* Add support for llvm-objcopy.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 

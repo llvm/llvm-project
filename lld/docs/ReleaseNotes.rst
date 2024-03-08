@@ -163,5 +163,10 @@ WebAssembly Improvements
   is read from object files within the archive.  This matches the behaviour of
   the ELF linker.
 
+SystemZ
+-------
+
+* Add target support for SystemZ (s390x).
+
 Fixes
 #####
