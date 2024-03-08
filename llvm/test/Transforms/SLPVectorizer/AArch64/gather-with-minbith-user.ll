@@ -5,11 +5,12 @@ define void @h() {
 ; CHECK-LABEL: define void @h() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    [[TMP0:%.*]] = sub <8 x i32> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i32> [[TMP3]] to <8 x i16>
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc <8 x i32> zeroinitializer to <8 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <8 x i1> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = or <8 x i1> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i1> [[TMP5]] to <8 x i16>
 ; CHECK-NEXT:    store <8 x i16> [[TMP4]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void
 ;
