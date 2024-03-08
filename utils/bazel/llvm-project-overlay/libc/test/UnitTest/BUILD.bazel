@@ -128,5 +128,6 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_type_traits",
+        "//libc:__support_uint",
     ],
 )
