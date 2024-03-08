@@ -243,6 +243,20 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   // FIXME: add validation for enable_16bit_types should be after HLSL 2018 and
   // shader model 6.2.
   // See: https://github.com/llvm/llvm-project/issues/57876
+  if (DAL->hasArg(options::OPT_enable_16bit_types)) {
+    llvm::opt::Arg *hvArg = DAL->getLastArg(options::OPT_dxc_hlsl_version);
+    llvm::VersionTuple versionTuple = getTriple().getOSVersion();
+    unsigned int major = versionTuple.getMajor();
+    auto minor = versionTuple.getMinor();
+
+    if (major < 6 || (major == 6 && minor.value() <= 2) ||
+        strcmp(hvArg->getValue(), "2016") == 0 ||
+        strcmp(hvArg->getValue(), "2017") == 0 ||
+        strcmp(hvArg->getValue(), "2018") == 0) {
+      getDriver().Diag(diag::err_drv_hlsl_enable_16bit_types)
+          << versionTuple.getAsString() << hvArg->getValue();
+    }
+  }
   return DAL;
 }
 
