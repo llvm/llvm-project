@@ -1574,9 +1574,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() > 14) {
       if (Record[13])
         Annotations = getMDOrNull(Record[13]);
-
       if (Record[14])
-        PtrAuthData = DIDerivedType::PtrAuthData(Record[14]);
+        PtrAuthData.emplace(Record[14]);
     }
 
     IsDistinct = Record[0];

@@ -1975,9 +1975,9 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
       UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
       DIDerivedType::PtrAuthData(7, true, 0xffff, true, false), Flags,
       ExtraData);
-  EXPECT_EQ(7U, N1->getPtrAuthData()->Key());
-  EXPECT_EQ(true, N1->getPtrAuthData()->IsAddressDiscriminated());
-  EXPECT_EQ(0xffffU, N1->getPtrAuthData()->ExtraDiscriminator());
+  EXPECT_EQ(7U, N1->getPtrAuthData()->key());
+  EXPECT_EQ(true, N1->getPtrAuthData()->isAddressDiscriminated());
+  EXPECT_EQ(0xffffU, N1->getPtrAuthData()->extraDiscriminator());
 }
 
 typedef MetadataTest DICompositeTypeTest;

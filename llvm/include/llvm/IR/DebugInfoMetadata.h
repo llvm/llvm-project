@@ -993,11 +993,11 @@ public:
                 (AuthenticatesNullValues ? (1 << 22) : 0);
     }
 
-    unsigned Key() { return (RawData >> 0) & 0b1111; }
-    bool IsAddressDiscriminated() { return (RawData >> 4) & 1; }
-    unsigned ExtraDiscriminator() { return (RawData >> 5) & 0xffff; }
-    bool IsaPointer() { return (RawData >> 21) & 1; }
-    bool AuthenticatesNullValues() { return (RawData >> 22) & 1; }
+    unsigned key() { return (RawData >> 0) & 0b1111; }
+    bool isAddressDiscriminated() { return (RawData >> 4) & 1; }
+    unsigned extraDiscriminator() { return (RawData >> 5) & 0xffff; }
+    bool isaPointer() { return (RawData >> 21) & 1; }
+    bool authenticatesNullValues() { return (RawData >> 22) & 1; }
   };
 
 private:

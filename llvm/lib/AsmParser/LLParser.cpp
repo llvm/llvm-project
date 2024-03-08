@@ -5163,7 +5163,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
     DWARFAddressSpace = dwarfAddressSpace.Val;
   std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   if (ptrAuthKey.Val)
-    PtrAuthData = DIDerivedType::PtrAuthData(
+    PtrAuthData.emplace(
         (unsigned)ptrAuthKey.Val, ptrAuthIsAddressDiscriminated.Val,
         (unsigned)ptrAuthExtraDiscriminator.Val, ptrAuthIsaPointer.Val,
         ptrAuthAuthenticatesNullValues.Val);
