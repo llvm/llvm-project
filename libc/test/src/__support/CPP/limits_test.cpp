@@ -33,8 +33,7 @@ TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
 
 TEST(LlvmLibcLimitsTest, UInt128Limits) {
   auto umax128 = cpp::numeric_limits<LIBC_NAMESPACE::UInt<128>>::max();
-  auto umax64 =
-      LIBC_NAMESPACE::UInt<128>(cpp::numeric_limits<uint64_t>::max());
+  auto umax64 = LIBC_NAMESPACE::UInt<128>(cpp::numeric_limits<uint64_t>::max());
   EXPECT_GT(umax128, umax64);
   ASSERT_EQ(~LIBC_NAMESPACE::UInt<128>(0), umax128);
 #ifdef __SIZEOF_INT128__

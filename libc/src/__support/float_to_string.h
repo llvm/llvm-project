@@ -180,7 +180,7 @@ LIBC_INLINE constexpr uint32_t length_for_num(uint32_t idx,
 // Currently the table values are generated, which is very slow.
 template <size_t INT_SIZE>
 LIBC_INLINE constexpr UInt<MID_INT_SIZE> get_table_positive(int exponent,
-                                                                 size_t i) {
+                                                            size_t i) {
   // INT_SIZE is the size of int that is used for the internal calculations of
   // this function. It should be large enough to hold 2^(exponent+constant), so
   // ~1000 for double and ~16000 for long double. Be warned that the time
@@ -217,8 +217,7 @@ LIBC_INLINE constexpr UInt<MID_INT_SIZE> get_table_positive(int exponent,
 }
 
 template <size_t INT_SIZE>
-LIBC_INLINE UInt<MID_INT_SIZE> get_table_positive_df(int exponent,
-                                                          size_t i) {
+LIBC_INLINE UInt<MID_INT_SIZE> get_table_positive_df(int exponent, size_t i) {
   static_assert(INT_SIZE == 256,
                 "Only 256 is supported as an int size right now.");
   // This version uses dyadic floats with 256 bit mantissas to perform the same
@@ -327,8 +326,7 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
 }
 
 template <size_t INT_SIZE>
-LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative_df(int exponent,
-                                                          size_t i) {
+LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative_df(int exponent, size_t i) {
   static_assert(INT_SIZE == 256,
                 "Only 256 is supported as an int size right now.");
   // This version uses dyadic floats with 256 bit mantissas to perform the same
