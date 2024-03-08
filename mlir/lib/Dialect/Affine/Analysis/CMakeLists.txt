@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRAffineAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDialectUtils
+  MLIRFuncDialect
   MLIRInferTypeOpInterface
   MLIRSideEffectInterfaces
   MLIRPresburger
