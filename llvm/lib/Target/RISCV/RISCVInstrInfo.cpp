@@ -299,73 +299,8 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        const DebugLoc &DL, MCRegister DstReg,
                                        MCRegister SrcReg, bool KillSrc,
-                                       unsigned Opc, unsigned NF) const {
+                                       RISCVII::VLMUL LMul, unsigned NF) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-
-  RISCVII::VLMUL LMul;
-  unsigned SubRegIdx;
-  unsigned VVOpc, VIOpc;
-  switch (Opc) {
-  default:
-    llvm_unreachable("Impossible LMUL for vector register copy.");
-  case RISCV::VMV1R_V:
-    LMul = RISCVII::LMUL_1;
-    SubRegIdx = RISCV::sub_vrm1_0;
-    VVOpc = RISCV::PseudoVMV_V_V_M1;
-    VIOpc = RISCV::PseudoVMV_V_I_M1;
-    break;
-  case RISCV::VMV2R_V:
-    LMul = RISCVII::LMUL_2;
-    SubRegIdx = RISCV::sub_vrm2_0;
-    VVOpc = RISCV::PseudoVMV_V_V_M2;
-    VIOpc = RISCV::PseudoVMV_V_I_M2;
-    break;
-  case RISCV::VMV4R_V:
-    LMul = RISCVII::LMUL_4;
-    SubRegIdx = RISCV::sub_vrm4_0;
-    VVOpc = RISCV::PseudoVMV_V_V_M4;
-    VIOpc = RISCV::PseudoVMV_V_I_M4;
-    break;
-  case RISCV::VMV8R_V:
-    assert(NF == 1);
-    LMul = RISCVII::LMUL_8;
-    SubRegIdx = RISCV::sub_vrm1_0; // There is no sub_vrm8_0.
-    VVOpc = RISCV::PseudoVMV_V_V_M8;
-    VIOpc = RISCV::PseudoVMV_V_I_M8;
-    break;
-  }
-
-  bool UseVMV_V_V = false;
-  bool UseVMV_V_I = false;
-  MachineBasicBlock::const_iterator DefMBBI;
-  if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
-    UseVMV_V_V = true;
-    Opc = VVOpc;
-
-    if (DefMBBI->getOpcode() == VIOpc) {
-      UseVMV_V_I = true;
-      Opc = VIOpc;
-    }
-  }
-
-  if (NF == 1) {
-    auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
-    if (UseVMV_V_V)
-      MIB.addReg(DstReg, RegState::Undef);
-    if (UseVMV_V_I)
-      MIB = MIB.add(DefMBBI->getOperand(2));
-    else
-      MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
-    if (UseVMV_V_V) {
-      const MCInstrDesc &Desc = DefMBBI->getDesc();
-      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-      MIB.addImm(0);                                            // tu, mu
-      MIB.addReg(RISCV::VL, RegState::Implicit);
-      MIB.addReg(RISCV::VTYPE, RegState::Implicit);
-    }
-    return;
-  }
 
   int I = 0, End = NF, Incr = 1;
   unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
@@ -381,23 +316,82 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
   }
 
   for (; I != End; I += Incr) {
-    auto MIB =
-        BuildMI(MBB, MBBI, DL, get(Opc), TRI->getSubReg(DstReg, SubRegIdx + I));
-    if (UseVMV_V_V)
-      MIB.addReg(TRI->getSubReg(DstReg, SubRegIdx + I), RegState::Undef);
-    if (UseVMV_V_I)
-      MIB = MIB.add(DefMBBI->getOperand(2));
-    else
-      MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
-                       getKillRegState(KillSrc));
-    if (UseVMV_V_V) {
-      const MCInstrDesc &Desc = DefMBBI->getDesc();
-      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-      MIB.addImm(0);                                            // tu, mu
-      MIB.addReg(RISCV::VL, RegState::Implicit);
-      MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+    auto GetCopyInfo =
+        [](RISCVII::VLMUL LMul,unsigned NF) -> std::tuple<unsigned, unsigned, unsigned, unsigned> {
+      unsigned Opc;
+      unsigned SubRegIdx;
+      unsigned VVOpc, VIOpc;
+      switch (LMul) {
+      default:
+        llvm_unreachable("Impossible LMUL for vector register copy.");
+      case RISCVII::LMUL_1:
+        Opc = RISCV::VMV1R_V;
+        SubRegIdx = RISCV::sub_vrm1_0;
+        VVOpc = RISCV::PseudoVMV_V_V_M1;
+        VIOpc = RISCV::PseudoVMV_V_I_M1;
+        break;
+      case RISCVII::LMUL_2:
+        Opc = RISCV::VMV2R_V;
+        SubRegIdx = RISCV::sub_vrm2_0;
+        VVOpc = RISCV::PseudoVMV_V_V_M2;
+        VIOpc = RISCV::PseudoVMV_V_I_M2;
+        break;
+      case RISCVII::LMUL_4:
+        Opc = RISCV::VMV4R_V;
+        SubRegIdx = RISCV::sub_vrm4_0;
+        VVOpc = RISCV::PseudoVMV_V_V_M4;
+        VIOpc = RISCV::PseudoVMV_V_I_M4;
+        break;
+      case RISCVII::LMUL_8:
+        assert(NF == 1);
+        Opc = RISCV::VMV8R_V;
+        SubRegIdx = RISCV::sub_vrm1_0; // There is no sub_vrm8_0.
+        VVOpc = RISCV::PseudoVMV_V_V_M8;
+        VIOpc = RISCV::PseudoVMV_V_I_M8;
+        break;
+      }
+      return {SubRegIdx, Opc, VVOpc, VIOpc};
+    };
+
+    auto [SubRegIdx, Opc, VVOpc, VIOpc] = GetCopyInfo(LMul, NF);
+
+    MachineBasicBlock::const_iterator DefMBBI;
+    if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
+      Opc = VVOpc;
+
+      if (DefMBBI->getOpcode() == VIOpc) {
+        Opc = VIOpc;
+      }
     }
+
+    auto EmitCopy = [&](MCRegister SrcReg, MCRegister DstReg, unsigned Opcode) {
+      auto MIB = BuildMI(MBB, MBBI, DL, get(Opcode), DstReg);
+      bool UseVMV_V_I = RISCV::getRVVMCOpcode(Opcode) == RISCV::VMV_V_I;
+      bool UseVMV =
+          UseVMV_V_I || RISCV::getRVVMCOpcode(Opcode) == RISCV::VMV_V_V;
+      if (UseVMV)
+        MIB.addReg(DstReg, RegState::Undef);
+      if (UseVMV_V_I)
+        MIB = MIB.add(DefMBBI->getOperand(2));
+      else
+        MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
+      if (UseVMV) {
+        const MCInstrDesc &Desc = DefMBBI->getDesc();
+        MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
+        MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+        MIB.addImm(0);                                            // tu, mu
+        MIB.addReg(RISCV::VL, RegState::Implicit);
+        MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+      }
+    };
+
+    if (NF == 1) {
+      EmitCopy(SrcReg, DstReg, Opc);
+      return;
+    }
+
+    EmitCopy(TRI->getSubReg(SrcReg, SubRegIdx + I),
+             TRI->getSubReg(DstReg, SubRegIdx + I), Opc);
   }
 }
 
@@ -505,87 +499,87 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // VR->VR copies.
   if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1);
     return;
   }
 
   if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2);
     return;
   }
 
   if (RISCV::VRM4RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_4);
     return;
   }
 
   if (RISCV::VRM8RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV8R_V);
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_8);
     return;
   }
 
   if (RISCV::VRN2M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/2);
     return;
   }
 
   if (RISCV::VRN2M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2,
                       /*NF=*/2);
     return;
   }
 
   if (RISCV::VRN2M4RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV4R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_4,
                       /*NF=*/2);
     return;
   }
 
   if (RISCV::VRN3M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/3);
     return;
   }
 
   if (RISCV::VRN3M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2,
                       /*NF=*/3);
     return;
   }
 
   if (RISCV::VRN4M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/4);
     return;
   }
 
   if (RISCV::VRN4M2RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV2R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_2,
                       /*NF=*/4);
     return;
   }
 
   if (RISCV::VRN5M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/5);
     return;
   }
 
   if (RISCV::VRN6M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/6);
     return;
   }
 
   if (RISCV::VRN7M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/7);
     return;
   }
 
   if (RISCV::VRN8M1RegClass.contains(DstReg, SrcReg)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V,
+    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCVII::LMUL_1,
                       /*NF=*/8);
     return;
   }
