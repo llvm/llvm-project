@@ -65,14 +65,26 @@ Getting Started with libc++
 
 Current Status
 ==============
-libc++ has become the default C++ Standard Library implementation for many major platforms, including Apple's macOS, iOS,
-watchOS, and tvOS, as well as Google's Android operating system. As a result, libc++ has an estimated user base of
-over 1 billion daily active users, making it one of the most widely-deployed C++ Standard Libraries in the world.
+Current Status
+==============
 
-Since its inception, libc++ has focused on delivering high performance, standards-conformant, and portability.
-It has been extensively tested and optimized, making it one of the most efficient implementations of the C++ Standard
-Library available. libc++ continues to evolve and improve, with more updates and more contributors every day, allowing
-it to maintain its position as a top-tier choice for C++ developers across a wide range of platforms.
+libc++ has become the default C++ Standard Library implementation for many major platforms, including Apple's macOS,
+iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD. As a result, libc++ has an estimated
+user base of over 1 billion daily active users, making it one of the most widely-deployed C++ Standard Libraries in the world.
+
+Since its inception, libc++ has focused on delivering high performance, standards-conformant, and portability. It has
+been extensively tested and optimized, making it one of the most efficient implementations of the C++ Standard Library
+available. libc++ fully implements C++11, C++14, and C++17, with C++20, C++23, and C++26 features being actively
+developed and making steady progress.
+
+libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
+and compatibility across various systems. The library's extensive test suite and rigorous quality assurance process have
+made it a top choice for platform providers looking to offer their users a robust and efficient C++ Standard Library.
+
+As an open-source project, libc++ benefits from a vibrant community of contributors who work tirelessly to improve the
+library and add new features. This ongoing development and support ensure that libc++ remains at the forefront of
+C++ standardization efforts and continues to meet the evolving needs of C++ developers worldwide.
+
 
 History
 -------
