@@ -104,6 +104,8 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case<emitc::MulOp>([&](auto op) { return 13; })
       .Case<emitc::RemOp>([&](auto op) { return 13; })
       .Case<emitc::SubOp>([&](auto op) { return 12; })
+      .Case<emitc::UnaryMinusOp>([&](auto op) { return 15; })
+      .Case<emitc::UnaryPlusOp>([&](auto op) { return 15; })
       .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
 
@@ -650,6 +652,18 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::BitwiseXorOp bitwiseXorOp) {
   Operation *operation = bitwiseXorOp.getOperation();
   return printBinaryOperation(emitter, operation, "^");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::UnaryPlusOp unaryPlusOp) {
+  Operation *operation = unaryPlusOp.getOperation();
+  return printUnaryOperation(emitter, operation, "+");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::UnaryMinusOp unaryMinusOp) {
+  Operation *operation = unaryMinusOp.getOperation();
+  return printUnaryOperation(emitter, operation, "-");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, emitc::CastOp castOp) {
@@ -1371,7 +1385,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
                 emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
-                emitc::SubOp, emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::SubOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
