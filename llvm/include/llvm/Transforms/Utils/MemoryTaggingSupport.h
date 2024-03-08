@@ -78,7 +78,6 @@ private:
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
-bool isLifetimeIntrinsic(Value *V);
 
 } // namespace memtag
 } // namespace llvm

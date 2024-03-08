@@ -375,10 +375,10 @@ add_entrypoint_object(
     lround.cpp
   HDRS
     ../lround.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -387,10 +387,10 @@ add_entrypoint_object(
     lroundf.cpp
   HDRS
     ../lroundf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -399,10 +399,23 @@ add_entrypoint_object(
     lroundl.cpp
   HDRS
     ../lroundl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  lroundf128
+  SRCS
+    lroundf128.cpp
+  HDRS
+    ../lroundf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
 )
 
 add_entrypoint_object(
@@ -411,10 +424,10 @@ add_entrypoint_object(
     llround.cpp
   HDRS
     ../llround.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -423,10 +436,10 @@ add_entrypoint_object(
     llroundf.cpp
   HDRS
     ../llroundf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -435,10 +448,23 @@ add_entrypoint_object(
     llroundl.cpp
   HDRS
     ../llroundl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  llroundf128
+  SRCS
+    llroundf128.cpp
+  HDRS
+    ../llroundf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
 )
 
 add_entrypoint_object(
@@ -447,10 +473,10 @@ add_entrypoint_object(
     rint.cpp
   HDRS
     ../rint.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -459,10 +485,10 @@ add_entrypoint_object(
     rintf.cpp
   HDRS
     ../rintf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -471,10 +497,23 @@ add_entrypoint_object(
     rintl.cpp
   HDRS
     ../rintl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  rintf128
+  SRCS
+    rintf128.cpp
+  HDRS
+    ../rintf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
 )
 
 add_entrypoint_object(
@@ -483,10 +522,10 @@ add_entrypoint_object(
     lrint.cpp
   HDRS
     ../lrint.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -495,10 +534,10 @@ add_entrypoint_object(
     lrintf.cpp
   HDRS
     ../lrintf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -507,10 +546,23 @@ add_entrypoint_object(
     lrintl.cpp
   HDRS
     ../lrintl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  lrintf128
+  SRCS
+    lrintf128.cpp
+  HDRS
+    ../lrintf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
 )
 
 add_entrypoint_object(
@@ -519,10 +571,10 @@ add_entrypoint_object(
     llrint.cpp
   HDRS
     ../llrint.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -531,10 +583,10 @@ add_entrypoint_object(
     llrintf.cpp
   HDRS
     ../llrintf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -543,10 +595,23 @@ add_entrypoint_object(
     llrintl.cpp
   HDRS
     ../llrintl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  llrintf128
+  SRCS
+    llrintf128.cpp
+  HDRS
+    ../llrintf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
 )
 
 add_entrypoint_object(

@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
@@ -15,18 +16,18 @@
 namespace LIBC_NAMESPACE::cpp {
 
 using UnsignedTypesNoBigInt = testing::TypeList<
-#if defined(__SIZEOF_INT128__)
+#if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
-#endif
+#endif // LIBC_TYPES_HAS_INT128
     unsigned char, unsigned short, unsigned int, unsigned long,
     unsigned long long>;
 
 using UnsignedTypes = testing::TypeList<
-#if defined(__SIZEOF_INT128__)
+#if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
-#endif
+#endif // LIBC_TYPES_HAS_INT128
     unsigned char, unsigned short, unsigned int, unsigned long,
-    unsigned long long, cpp::UInt<128>>;
+    unsigned long long, UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto ZERO = T(0);

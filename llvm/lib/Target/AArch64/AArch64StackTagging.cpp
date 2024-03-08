@@ -533,9 +533,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DPValues.
-    Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !memtag::isLifetimeIntrinsic(U.getUser());
-    });
+    Info.AI->replaceNonMetadataUsesWith(TagPCall);
     TagPCall->setOperand(0, Info.AI);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
@@ -552,7 +550,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
-      tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
+      tagAlloca(AI, Start->getNextNode(), Start->getArgOperand(1), Size);
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
