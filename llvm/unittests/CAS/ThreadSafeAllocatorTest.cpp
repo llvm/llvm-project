@@ -15,7 +15,7 @@ using namespace llvm;
 
 TEST(ThreadSafeAllocatorTest, AllocWithAlign) {
   cas::ThreadSafeAllocator<BumpPtrAllocator> Alloc;
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
 
   for (unsigned Index = 1; Index < 100; ++Index)
     Threads.async(
@@ -34,7 +34,7 @@ TEST(ThreadSafeAllocatorTest, AllocWithAlign) {
 
 TEST(ThreadSafeAllocatorTest, SpecificBumpPtrAllocator) {
   cas::ThreadSafeAllocator<SpecificBumpPtrAllocator<int>> Alloc;
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
 
   for (unsigned Index = 1; Index < 100; ++Index)
     Threads.async(
