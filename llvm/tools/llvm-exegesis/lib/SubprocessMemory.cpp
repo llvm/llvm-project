@@ -14,6 +14,7 @@
 #ifdef __linux__
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #endif
 
@@ -22,12 +23,21 @@ namespace exegesis {
 
 #if defined(__linux__) && !defined(__ANDROID__)
 
+long getCurrentTID() {
+  // We're using the raw syscall here rather than the gettid() function provided
+  // by most libcs for compatibility as gettid() was only added to glibc in
+  // version 2.30.
+  return syscall(SYS_gettid);
+}
+
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
   // processes at the same time, they won't interfere with each other.
   // This comes up particularly often when running the exegesis tests with
-  // llvm-lit
-  std::string AuxiliaryMemoryName = "/auxmem" + std::to_string(ProcessID);
+  // llvm-lit. Additionally add the TID so that downstream consumers
+  // using multiple threads don't run into conflicts.
+  std::string AuxiliaryMemoryName = "/" + std::to_string(getCurrentTID()) +
+                                    "auxmem" + std::to_string(ProcessID);
   int AuxiliaryMemoryFD = shm_open(AuxiliaryMemoryName.c_str(),
                                    O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFD == -1)
@@ -47,7 +57,8 @@ Error SubprocessMemory::addMemoryDefinition(
     pid_t ProcessPID) {
   SharedMemoryNames.reserve(MemoryDefinitions.size());
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string SharedMemoryName = "/" + std::to_string(ProcessPID) + "memdef" +
+    std::string SharedMemoryName = "/" + std::to_string(ProcessPID) + "t" +
+                                   std::to_string(getCurrentTID()) + "memdef" +
                                    std::to_string(MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
