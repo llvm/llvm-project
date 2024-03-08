@@ -65,7 +65,17 @@ Getting Started with libc++
 
 Current Status
 ==============
+libc++ has become the default C++ Standard Library implementation for many major platforms, including Apple's macOS, iOS,
+watchOS, and tvOS, as well as Google's Android operating system. As a result, libc++ has an estimated user base of
+over 1 billion daily active users, making it one of the most widely-deployed C++ Standard Libraries in the world.
 
+Since its inception, libc++ has focused on delivering high performance, standards-conformant, and portability.
+It has been extensively tested and optimized, making it one of the most efficient implementations of the C++ Standard
+Library available. libc++ continues to evolve and improve, with more updates and more contributors every day, allowing
+it to maintain its position as a top-tier choice for C++ developers across a wide range of platforms.
+
+History
+-------
 After its initial introduction, many people have asked "why start a new
 library instead of contributing to an existing library?" (like Apache's
 libstdcxx, GNU's libstdc++, STLport, etc).  There are many contributing
