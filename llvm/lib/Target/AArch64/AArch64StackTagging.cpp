@@ -533,7 +533,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DPValues.
-    Info.AI->replaceNonMetadataUsesWith(TagPCall);
+    Info.AI->replaceUsesWithIf(TagPCall, [](const Use &U) {
+      auto *User = U.getUser();
+      return !memtag::isLifetimeIntrinsic(User);
+    });
     TagPCall->setOperand(0, Info.AI);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
