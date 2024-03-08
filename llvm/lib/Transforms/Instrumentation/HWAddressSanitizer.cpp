@@ -47,6 +47,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -318,6 +319,8 @@ private:
   };
   void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
+  bool selectiveInstrumentationShouldSkip(Function &F,
+                                          FunctionAnalysisManager &FAM);
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -1524,6 +1527,30 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
   return true;
 }
 
+bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
+    Function &F, FunctionAnalysisManager &FAM) {
+  if (RandomSkipRate.getNumOccurrences()) {
+    std::bernoulli_distribution D(RandomSkipRate);
+    if (D(*Rng))
+      return true;
+  } else {
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (PSI && PSI->hasProfileSummary()) {
+      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+      if ((HotPercentileCutoff.getNumOccurrences() && HotPercentileCutoff >= 0)
+              ? PSI->isFunctionHotInCallGraphNthPercentile(HotPercentileCutoff,
+                                                           &F, BFI)
+              : PSI->isFunctionHotInCallGraph(&F, BFI))
+        return true;
+    } else {
+      ++NumNoProfileSummaryFuncs;
+    }
+  }
+  return false;
+}
+
 void HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
@@ -1536,28 +1563,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   NumTotalFuncs++;
-  if (CSelectiveInstrumentation) {
-    if (RandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(RandomSkipRate);
-      if (D(*Rng))
-        return;
-    } else {
-      auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-      ProfileSummaryInfo *PSI =
-          MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-      if (PSI && PSI->hasProfileSummary()) {
-        auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-        if ((HotPercentileCutoff.getNumOccurrences() &&
-             HotPercentileCutoff >= 0)
-                ? PSI->isFunctionHotInCallGraphNthPercentile(
-                      HotPercentileCutoff, &F, BFI)
-                : PSI->isFunctionHotInCallGraph(&F, BFI))
-          return;
-      } else {
-        ++NumNoProfileSummaryFuncs;
-      }
-    }
-  }
+
+  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+    return;
+
   NumInstrumentedFuncs++;
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
