@@ -87,7 +87,7 @@ class LibCxxMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibCxxMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -135,7 +135,7 @@ public:
 
   ~LibCxxUnorderedMapIteratorSyntheticFrontEnd() override = default;
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -166,7 +166,7 @@ class LibcxxSharedPtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibcxxSharedPtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -186,7 +186,7 @@ class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
