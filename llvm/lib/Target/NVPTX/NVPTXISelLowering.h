@@ -61,6 +61,7 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+  DYNAMIC_STACKALLOC,
   Dummy,
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
