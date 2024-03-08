@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -70,10 +70,7 @@ module {
   }
 
   // Driver method to call and verify tensor kernel.
-  func.func @entry() {
-    %c0 = arith.constant 0 : index
-    %i0 = arith.constant 0 : i32
-
+  func.func @main() {
     // Setup very sparse 3-d tensors.
     %t1 = arith.constant sparse<
        [ [1,1,3], [2,0,0], [2,2,1], [2,2,2], [2,2,3] ], [ 1, 2, 3, 4, 5 ]
@@ -94,23 +91,23 @@ module {
     //
     // Verify results. Only two entries stored in result. Correct structure.
     //
-    // CHECK: ( 7, 69, 0, 0 )
-    // CHECK-NEXT: ( ( 0, 0, 0 ), ( 0, 7, 0 ), ( 0, 0, 69 ) )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 2
+    // CHECK-NEXT: dim = ( 3, 3 )
+    // CHECK-NEXT: lvl = ( 3, 3 )
+    // CHECK-NEXT: pos[0] : ( 0, 2
+    // CHECK-NEXT: crd[0] : ( 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2
+    // CHECK-NEXT: crd[1] : ( 1, 2
+    // CHECK-NEXT: values : ( 7, 69
+    // CHECK-NEXT: ----
     //
-    %val = sparse_tensor.values %0
-      : tensor<?x?xi32, #SparseMatrix> to memref<?xi32>
-    %vv = vector.transfer_read %val[%c0], %i0: memref<?xi32>, vector<4xi32>
-    vector.print %vv : vector<4xi32>
-    %dm = sparse_tensor.convert %0
-      : tensor<?x?xi32, #SparseMatrix> to tensor<?x?xi32>
-    %vm = vector.transfer_read %dm[%c0, %c0], %i0: tensor<?x?xi32>, vector<3x3xi32>
-    vector.print %vm : vector<3x3xi32>
+    sparse_tensor.print %0 : tensor<?x?xi32, #SparseMatrix>
 
     // Release the resources.
     bufferization.dealloc_tensor %st1 : tensor<?x?x?xi32, #SparseTensor>
     bufferization.dealloc_tensor %st2 : tensor<?x?x?xi32, #SparseTensor>
     bufferization.dealloc_tensor %0 : tensor<?x?xi32, #SparseMatrix>
-    bufferization.dealloc_tensor %dm : tensor<?x?xi32>
 
     return
   }

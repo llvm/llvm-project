@@ -175,9 +175,9 @@ define i32 @PR12375(ptr readnone %arg) {
 ; CHECK-NEXT:    %tmp5 = getelementptr inbounds i32, ptr %tmp2, i64 1
 ; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb1> U: [4,0) S: [4,0) Exits: (8 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12375
-; CHECK-NEXT:  Loop %bb1: backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb1: backedge-taken count is i64 1
 ; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is i64 1
-; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is i64 1
 ; CHECK-NEXT:  Loop %bb1: Trip multiple is 2
 ;
 bb:
@@ -431,9 +431,9 @@ define void @pr66066() {
 ; CHECK-NEXT:    %shl = shl i8 %iv, 7
 ; CHECK-NEXT:    --> {-128,+,-128}<%loop> U: [0,-127) S: [-128,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pr66066
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
 entry:

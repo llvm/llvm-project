@@ -91,11 +91,11 @@ stdc_bit_width_us            |check|
 stdc_bit_width_ui            |check|
 stdc_bit_width_ul            |check|
 stdc_bit_width_ull           |check|
-stdc_bit_floor_uc
-stdc_bit_floor_us
-stdc_bit_floor_ui
-stdc_bit_floor_ul
-stdc_bit_floor_ull
+stdc_bit_floor_uc            |check|
+stdc_bit_floor_us            |check|
+stdc_bit_floor_ui            |check|
+stdc_bit_floor_ul            |check|
+stdc_bit_floor_ull           |check|
 stdc_bit_ceil_uc
 stdc_bit_ceil_us
 stdc_bit_ceil_ui
@@ -126,7 +126,7 @@ stdc_count_zeros           |check|
 stdc_count_ones            |check|
 stdc_has_single_bit        |check|
 stdc_bit_width             |check|
-stdc_bit_floor
+stdc_bit_floor             |check|
 stdc_bit_ceil
 =========================  =========
 

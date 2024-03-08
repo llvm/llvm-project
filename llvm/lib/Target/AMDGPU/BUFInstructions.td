@@ -2902,7 +2902,7 @@ multiclass MTBUF_Real_AllAddr_gfx11_gfx12<bits<4> op>
 multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<bits<4> op, string real_name>
   : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed_Impl<op, real_name> {
   defvar ps = get_BUF_ps<NAME>;
-  def : MnemonicAlias<ps.Mnemonic, real_name>, Requires<[isGFX11Plus]>;
+  def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
 }
 
 defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Real_AllAddr_gfx11_gfx12_Renamed<0x008, "tbuffer_load_d16_format_x">;

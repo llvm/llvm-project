@@ -74,9 +74,9 @@ define void @logical_and_zero(i32 %m) {
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 %cond_i2, i1 false
 ; CHECK-NEXT:    --> (%cond_i umin_seq %cond_i2) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -196,9 +196,9 @@ define void @logical_or_zero(i32 %m) {
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 true, i1 %cond_i2
 ; CHECK-NEXT:    --> (true + ((true + %cond_i) umin_seq (true + %cond_i2))) U: full-set S: full-set Exits: true LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_zero
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

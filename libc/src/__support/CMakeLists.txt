@@ -95,6 +95,7 @@ add_header_library(
   HDRS
     integer_to_string.h
   DEPENDS
+    .uint
     libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
@@ -194,23 +195,10 @@ add_header_library(
 )
 
 add_header_library(
-  integer_utils
-  HDRS
-    integer_utils.h
-  DEPENDS
-    .math_extras
-    .number_pair
-    libc.src.__support.common
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.type_traits
-)
-
-add_header_library(
   uint
   HDRS
     UInt.h
   DEPENDS
-    .integer_utils
     .math_extras
     .number_pair
     libc.src.__support.CPP.array

@@ -22,6 +22,24 @@ class SymbolTableCollection;
 
 namespace mesh {
 
+// Retrieve the mesh axes corresponding to each operation loop iterator based
+// on the provided shardings for the op's operands and results.
+// Assumes that the indexingMaps are projected permutations.
+ShardingArray getMeshAxisAssignmentForLoopIterators(
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings,
+    ArrayRef<utils::IteratorType> loopIteratorTypes,
+    ArrayRef<AffineMap> indexingMaps);
+
+bool isAtLeastOneReductionIteratorSharded(
+    ArrayRef<utils::IteratorType> loopIteratorTypes,
+    ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators);
+
+// Get the set of mesh axes that correspond to reduction loop iterators.
+SmallVector<MeshAxis> getReductionMeshAxes(
+    ArrayRef<utils::IteratorType> loopIteratorTypes,
+    ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators);
+
 // Inserts a clone of the operation that has all ranked tensor
 // arguments/results sharded.
 void spmdizeTriviallyShardableOperation(

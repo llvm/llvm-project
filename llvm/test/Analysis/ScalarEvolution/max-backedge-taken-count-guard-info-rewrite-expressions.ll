@@ -244,9 +244,9 @@ define i32 @rewrite_zext_with_info_from_icmp_ne(i32 %N) {
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 4
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,5) S: [4,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_with_info_from_icmp_ne
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

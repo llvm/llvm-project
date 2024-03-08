@@ -141,18 +141,21 @@ namespace sys {
                                         /// program shall run on.
   );
 
-  /// Similar to ExecuteAndWait, but returns immediately.
-  /// @returns The \see ProcessInfo of the newly launched process.
+  /// Similar to \ref ExecuteAndWait, but returns immediately.
+  /// \returns The \ref ProcessInfo of the newly launched process.
   /// \note On Microsoft Windows systems, users will need to either call
-  /// \see Wait until the process finished execution or win32 CloseHandle() API
-  /// on ProcessInfo.ProcessHandle to avoid memory leaks.
-  ProcessInfo ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
-                            std::optional<ArrayRef<StringRef>> Env,
-                            ArrayRef<std::optional<StringRef>> Redirects = {},
-                            unsigned MemoryLimit = 0,
-                            std::string *ErrMsg = nullptr,
-                            bool *ExecutionFailed = nullptr,
-                            BitVector *AffinityMask = nullptr);
+  /// \ref Wait until the process has finished executing or win32's CloseHandle
+  /// API on ProcessInfo.ProcessHandle to avoid memory leaks.
+  ProcessInfo ExecuteNoWait(
+      StringRef Program, ArrayRef<StringRef> Args,
+      std::optional<ArrayRef<StringRef>> Env,
+      ArrayRef<std::optional<StringRef>> Redirects = {},
+      unsigned MemoryLimit = 0, std::string *ErrMsg = nullptr,
+      bool *ExecutionFailed = nullptr, BitVector *AffinityMask = nullptr,
+      /// If true the executed program detatches from the controlling
+      /// terminal. I/O streams such as llvm::outs, llvm::errs, and stdin will
+      /// be closed until redirected to another output location
+      bool DetachProcess = false);
 
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.

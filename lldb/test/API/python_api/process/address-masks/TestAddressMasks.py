@@ -19,6 +19,7 @@ class AddressMasksTestCase(TestBase):
         self.runCmd("settings set target.process.virtual-addressable-bits 0")
         self.runCmd("settings set target.process.highmem-virtual-addressable-bits 0")
 
+    @skipIf(archs=["arm"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
     def test_address_masks(self):
         self.build()
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
@@ -79,6 +80,7 @@ class AddressMasksTestCase(TestBase):
     # AArch64 can have different address masks for high and low memory, when different
     # page tables are set up.
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
+    @skipIf(archs=["arm"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
     def test_address_masks_target_supports_highmem_tests(self):
         self.build()
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(
@@ -111,6 +113,7 @@ class AddressMasksTestCase(TestBase):
     # On most targets where we have a single mask for all address range, confirm
     # that the high memory masks are ignored.
     @skipIf(archs=["arm64", "arm64e", "aarch64"])
+    @skipIf(archs=["arm"])  # 32-bit arm ABI hardcodes Code mask, is 32-bit
     def test_address_masks_target_no_highmem(self):
         self.build()
         (target, process, t, bp) = lldbutil.run_to_source_breakpoint(

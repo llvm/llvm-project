@@ -18,6 +18,7 @@ libc_support_library(
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_osutil_io",
+        "//libc:__support_uint",
         "//libc:__support_uint128",
     ],
 )
@@ -125,5 +126,6 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_type_traits",
+        "//libc:__support_uint",
     ],
 )
