@@ -211,64 +211,6 @@ static Value createMul(Location loc, Value x, Value y, bool isInt,
 
 namespace {
 
-/// A pattern for ops that implement `MaskableOpInterface` and that _might_ be
-/// masked (i.e. inside `vector.mask` Op region). In particular:
-///   1. It matches `SourceOp` operation, Op.
-///   2. If Op is masked, retrieves the mask and updates the insertion point to
-///   avoid inserting new ops into `vector.mask` Op region (which only allows
-///   one Op). If the Op is not masked, this step is a nop.
-///   3. Invokes `matchAndRewriteMaskableOp` on Op that might be nested (not
-///   required) in the matched `vector.mask` operation from step 2.
-///
-/// It frees the patterns implementing this class from worrying about the
-/// logic to update the insertion point. However, those patterns are still
-/// responsible for providing an updated version of:
-///   * the source Op when mask _is not_ present,
-///   * the source Op *and* the mask Op when mask _is_ present.
-template <class SourceOp>
-struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
-  using OpRewritePattern<SourceOp>::OpRewritePattern;
-
-private:
-  LogicalResult matchAndRewrite(SourceOp sourceOp,
-                                PatternRewriter &rewriter) const final {
-    auto maskableOp = dyn_cast<MaskableOpInterface>(sourceOp.getOperation());
-    if (!maskableOp)
-      return failure();
-
-    // Op to update
-    Operation *rootOp = sourceOp;
-
-    // If this Op is masked:
-    //    * update the insertion point to avoid inserting into the vector.mask
-    //      Op region,
-    //    * update the Op to rewrite so that it's the parent vector.mask Op
-    OpBuilder::InsertionGuard guard(rewriter);
-    MaskingOpInterface maskOp;
-    if (maskableOp.isMasked()) {
-      maskOp = maskableOp.getMaskingOp();
-      rewriter.setInsertionPoint(maskOp);
-      rootOp = maskOp;
-    }
-
-    FailureOr<Value> newOp =
-        matchAndRewriteMaskableOp(sourceOp, maskOp, rewriter);
-    if (failed(newOp))
-      return failure();
-
-    rewriter.replaceOp(rootOp, *newOp);
-    return success();
-  }
-
-public:
-  // Matches SourceOp that can potentially be masked with `maskingOp`. If the
-  // latter is present, returns an updated masking op (with a replacement for
-  // `sourceOp` nested inside). Otherwise, returns an updated `sourceOp`.
-  virtual FailureOr<Value>
-  matchAndRewriteMaskableOp(SourceOp sourceOp, MaskingOpInterface maskingOp,
-                            PatternRewriter &rewriter) const = 0;
-};
-
 /// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to:
 /// ```
@@ -283,7 +225,7 @@ public:
 /// This only kicks in when VectorTransformsOptions is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
-    : public MaskableOpRewritePattern<vector::ContractionOp> {
+    : public vector::MaskableOpRewritePattern<vector::ContractionOp> {
 public:
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 

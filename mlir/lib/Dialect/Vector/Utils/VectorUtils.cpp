@@ -279,6 +279,37 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
 }
 
+// template <class SourceOp>
+// LogicalResult vector::MaskableOpRewritePattern::matchAndRewrite(
+//     SourceOp sourceOp, PatternRewriter &rewriter) const final {
+//   auto maskableOp = dyn_cast<MaskableOpInterface>(sourceOp.getOperation());
+//   if (!maskableOp)
+//     return failure();
+
+//   // Op to update
+//   Operation *rootOp = sourceOp;
+
+//   // If this Op is masked:
+//   //    * update the insertion point to avoid inserting into the vector.mask
+//   //      Op region,
+//   //    * update the Op to rewrite so that it's the parent vector.mask Op
+//   OpBuilder::InsertionGuard guard(rewriter);
+//   MaskingOpInterface maskOp;
+//   if (maskableOp.isMasked()) {
+//     maskOp = maskableOp.getMaskingOp();
+//     rewriter.setInsertionPoint(maskOp);
+//     rootOp = maskOp;
+//   }
+
+//   FailureOr<Value> newOp =
+//       matchAndRewriteMaskableOp(sourceOp, maskOp, rewriter);
+//   if (failed(newOp))
+//     return failure();
+
+//   rewriter.replaceOp(rootOp, *newOp);
+//   return success();
+// }
+
 std::optional<StaticTileOffsetRange>
 vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   if (vType.getRank() <= targetRank)
