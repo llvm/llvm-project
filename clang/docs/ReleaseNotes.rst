@@ -332,8 +332,6 @@ Bug Fixes to C++ Support
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 - Fix evaluation of some immediate calls in default arguments.
   Fixes (#GH80630)
-- Fix a crash when an explicit template argument list is used with a name for which lookup
-  finds a non-template function and a dependent using declarator.
 - Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
   calculation. (#GH56556), (#GH82849).
 - Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
