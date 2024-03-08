@@ -6369,6 +6369,9 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (CondTy != LLT::scalar(1))
     return false;
 
+  if (TrueTy.isPointer())
+    return false;
+
   // Both are scalars.
   std::optional<ValueAndVReg> TrueOpt =
       getIConstantVRegValWithLookThrough(True, MRI);
