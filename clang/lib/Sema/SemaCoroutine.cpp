@@ -596,8 +596,21 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
 
   // Add implicit object parameter.
   if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
-      ExprResult ThisExpr = ActOnCXXThis(Loc);
+    if (MD->isImplicitObjectMemberFunction()) {
+      ExprResult ThisExpr{};
+
+      if (isLambdaCallOperator(MD)) {
+        Qualifiers ThisQuals = MD->getMethodQualifiers();
+        CXXRecordDecl *Record = MD->getParent();
+
+        Sema::CXXThisScopeRAII ThisScope(*this, Record, ThisQuals,
+                                         /*Enabled=*/Record != nullptr);
+
+        ThisExpr = ActOnCXXThis(Loc, /*ThisRefersToClosureObject=*/true);
+      } else {
+        ThisExpr = ActOnCXXThis(Loc);
+      }
+
       if (ThisExpr.isInvalid())
         return nullptr;
       ThisExpr = CreateBuiltinUnaryOp(Loc, UO_Deref, ThisExpr.get());
@@ -1387,7 +1400,7 @@ static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
         CXXRecordDecl *Record = MD->getParent();
 
         Sema::CXXThisScopeRAII ThisScope(S, Record, ThisQuals,
-                                         Record != nullptr);
+                                         /*Enabled=*/Record != nullptr);
 
         ThisExpr = S.ActOnCXXThis(Loc, /*ThisRefersToClosureObject=*/true);
       } else {
