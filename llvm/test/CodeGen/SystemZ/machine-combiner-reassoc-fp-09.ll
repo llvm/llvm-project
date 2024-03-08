@@ -33,14 +33,14 @@ define double @fun_fma8(ptr %x, double %A) {
 ; CHECK-NEXT: %15:vr64bit = VL64 %0:addr64bit, 104, $noreg :: (load (s64) from %ir.arrayidx24)
 ; CHECK-NEXT: %16:vr64bit = VL64 %0:addr64bit, 112, $noreg :: (load (s64) from %ir.arrayidx26)
 ; CHECK-NEXT: %17:vr64bit = VL64 %0:addr64bit, 120, $noreg :: (load (s64) from %ir.arrayidx28)
-; CHECK-NEXT: %18:vr64bit = {{.*}} WFMADB killed %2:vr64bit, killed %3:vr64bit, %1:fp64bit
-; CHECK-NEXT: %19:vr64bit = {{.*}} WFMADB killed %4:vr64bit, killed %5:vr64bit, killed %18:vr64bit
-; CHECK-NEXT: %20:vr64bit = {{.*}} WFMADB killed %6:vr64bit, killed %7:vr64bit, killed %19:vr64bit
-; CHECK-NEXT: %21:vr64bit = {{.*}} WFMADB killed %8:vr64bit, killed %9:vr64bit, killed %20:vr64bit
-; CHECK-NEXT: %22:vr64bit = {{.*}} WFMADB killed %10:vr64bit, killed %11:vr64bit, killed %21:vr64bit
-; CHECK-NEXT: %23:vr64bit = {{.*}} WFMADB killed %12:vr64bit, killed %13:vr64bit, killed %22:vr64bit
-; CHECK-NEXT: %24:vr64bit = {{.*}} WFMADB killed %14:vr64bit, killed %15:vr64bit, killed %23:vr64bit
-; CHECK-NEXT: %25:vr64bit = {{.*}} WFMADB killed %16:vr64bit, killed %17:vr64bit, killed %24:vr64bit
+; CHECK-NEXT: %18:vr64bit = {{.*}} WFMADB_CCPseudo killed %2:vr64bit, killed %3:vr64bit, %1:fp64bit
+; CHECK-NEXT: %19:vr64bit = {{.*}} WFMADB_CCPseudo killed %4:vr64bit, killed %5:vr64bit, killed %18:vr64bit
+; CHECK-NEXT: %20:vr64bit = {{.*}} WFMADB_CCPseudo killed %6:vr64bit, killed %7:vr64bit, killed %19:vr64bit
+; CHECK-NEXT: %21:vr64bit = {{.*}} WFMADB_CCPseudo killed %8:vr64bit, killed %9:vr64bit, killed %20:vr64bit
+; CHECK-NEXT: %22:vr64bit = {{.*}} WFMADB_CCPseudo killed %10:vr64bit, killed %11:vr64bit, killed %21:vr64bit
+; CHECK-NEXT: %23:vr64bit = {{.*}} WFMADB_CCPseudo killed %12:vr64bit, killed %13:vr64bit, killed %22:vr64bit
+; CHECK-NEXT: %24:vr64bit = {{.*}} WFMADB_CCPseudo killed %14:vr64bit, killed %15:vr64bit, killed %23:vr64bit
+; CHECK-NEXT: %25:vr64bit = {{.*}} WFMADB_CCPseudo killed %16:vr64bit, killed %17:vr64bit, killed %24:vr64bit
 ; CHECK-NEXT: $f0d = COPY %25:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
 
@@ -49,7 +49,7 @@ define double @fun_fma8(ptr %x, double %A) {
 ; CHECK-NEXT: add pattern FMA2_P0P1
 ; CHECK-NEXT: add pattern FMA2
 ; CHECK:      reassociating using pattern FMA_P1P0
-; CHECK:        Dependence data for %21:vr64bit = {{.*}} WFMADB
+; CHECK:        Dependence data for %21:vr64bit = {{.*}} WFMADB_CCPseudo
 ; CHECK-NEXT: 	NewRootDepth: 16	RootDepth: 22	It MustReduceDepth 	  and it does it
 ; CHECK-NEXT:  		Resource length before replacement: 16 and after: 16
 ; CHECK-NEXT: 		  As result it IMPROVES/PRESERVES Resource Length
@@ -57,67 +57,67 @@ define double @fun_fma8(ptr %x, double %A) {
 ; CHECK-NEXT: add pattern FMA2_P0P1
 ; CHECK-NEXT: add pattern FMA2
 ; CHECK-NEXT: reassociating using pattern FMA_P1P0
-; CHECK-NEXT:   Dependence data for %23:vr64bit = {{.*}} WFMADB
+; CHECK-NEXT:   Dependence data for %23:vr64bit = {{.*}} WFMADB_CCPseudo
 ; CHECK-NEXT: 	NewRootDepth: 22	RootDepth: 28	It MustReduceDepth 	  and it does it
 ; CHECK:      		Resource length before replacement: 16 and after: 16
 ; CHECK-NEXT: 		  As result it IMPROVES/PRESERVES Resource Length
 ; CHECK-NEXT: add pattern FMA1_Add_L
 ; CHECK-NEXT: add pattern FMA1_Add_R
 ; CHECK-NEXT: reassociating using pattern FMA1_Add_L
-; CHECK-NEXT:   Dependence data for %24:vr64bit = {{.*}} WFMADB
+; CHECK-NEXT:   Dependence data for %24:vr64bit = {{.*}} WFMADB_CCPseudo
 ; CHECK-NEXT: 	NewRootDepth: 28	RootDepth: 28	It MustReduceDepth 	  but it does NOT do it
 ; CHECK-NEXT: reassociating using pattern FMA1_Add_R
-; CHECK-NEXT:   Dependence data for %24:vr64bit = {{.*}} WFMADB
+; CHECK-NEXT:   Dependence data for %24:vr64bit = {{.*}} WFMADB_CCPseudo
 ; CHECK-NEXT: 	NewRootDepth: 22	RootDepth: 28	It MustReduceDepth 	  and it does it
 ; CHECK-NEXT: 		Resource length before replacement: 16 and after: 16
 ; CHECK-NEXT: 		  As result it IMPROVES/PRESERVES Resource Length
 
 ; CHECK:      # *** IR Dump After Machine InstCombiner (machine-combiner) ***:
-; CHECK:      %18:vr64bit = {{.*}} WFMADB killed %2:vr64bit, killed %3:vr64bit, %1:fp64bit
-; CHECK-NEXT: %19:vr64bit = {{.*}} WFMADB killed %4:vr64bit, killed %5:vr64bit, killed %18:vr64bit
+; CHECK:      %18:vr64bit = {{.*}} WFMADB_CCPseudo killed %2:vr64bit, killed %3:vr64bit, %1:fp64bit
+; CHECK-NEXT: %19:vr64bit = {{.*}} WFMADB_CCPseudo killed %4:vr64bit, killed %5:vr64bit, killed %18:vr64bit
 ; CHECK-NEXT: %36:vr64bit = {{.*}} WFMDB killed %6:vr64bit, killed %7:vr64bit
-; CHECK-NEXT: %37:vr64bit = {{.*}} WFMADB killed %8:vr64bit, killed %9:vr64bit, %36:vr64bit
+; CHECK-NEXT: %37:vr64bit = {{.*}} WFMADB_CCPseudo killed %8:vr64bit, killed %9:vr64bit, %36:vr64bit
 ; CHECK-NEXT: %21:vr64bit = {{.*}} WFADB_CCPseudo killed %19:vr64bit, %37:vr64bit
 ; CHECK-NEXT: %40:vr64bit = {{.*}} WFMDB killed %10:vr64bit, killed %11:vr64bit
-; CHECK-NEXT: %41:vr64bit = {{.*}} WFMADB killed %12:vr64bit, killed %13:vr64bit, %40:vr64bit
-; CHECK-NEXT: %43:vr64bit = {{.*}} WFMADB killed %14:vr64bit, killed %15:vr64bit, %41:vr64bit
+; CHECK-NEXT: %41:vr64bit = {{.*}} WFMADB_CCPseudo killed %12:vr64bit, killed %13:vr64bit, %40:vr64bit
+; CHECK-NEXT: %43:vr64bit = {{.*}} WFMADB_CCPseudo killed %14:vr64bit, killed %15:vr64bit, %41:vr64bit
 ; CHECK-NEXT: %24:vr64bit = {{.*}} WFADB_CCPseudo %43:vr64bit, killed %21:vr64bit
-; CHECK-NEXT: %25:vr64bit = {{.*}} WFMADB killed %16:vr64bit, killed %17:vr64bit, killed %24:vr64bit
+; CHECK-NEXT: %25:vr64bit = {{.*}} WFMADB_CCPseudo killed %16:vr64bit, killed %17:vr64bit, killed %24:vr64bit
 
 ; ALT:       Machine InstCombiner: fun_fma8
 ; ALT-NEXT: Combining MBB entry
 ; ALT-NEXT: add pattern FMA3
 ; ALT-NEXT: reassociating using pattern FMA3
-; ALT-NEXT:   Dependence data for %20:vr64bit = {{.*}} WFMADB
+; ALT-NEXT:   Dependence data for %20:vr64bit = {{.*}} WFMADB_CCPseudo
 ; ALT-NEXT: 	NewRootDepth: 16	RootDepth: 16	It MustReduceDepth 	  but it does NOT do it
 ; ALT-NEXT: add pattern FMA3
 ; ALT-NEXT: reassociating using pattern FMA3
-; ALT-NEXT:   Dependence data for %21:vr64bit = {{.*}} WFMADB
+; ALT-NEXT:   Dependence data for %21:vr64bit = {{.*}} WFMADB_CCPseudo
 ; ALT-NEXT: 	NewRootDepth: 16	RootDepth: 22	It MustReduceDepth 	  and it does it
 ; ALT-NEXT: 		Resource length before replacement: 16 and after: 16
 ; ALT-NEXT: 		  As result it IMPROVES/PRESERVES Resource Length
 ; ALT-NEXT: add pattern FMA2_Add
 ; ALT-NEXT: reassociating using pattern FMA2_Add
-; ALT-NEXT:   Dependence data for %23:vr64bit = {{.*}} WFMADB
+; ALT-NEXT:   Dependence data for %23:vr64bit = {{.*}} WFMADB_CCPseudo
 ; ALT-NEXT: 	NewRootDepth: 22	RootDepth: 28	It MustReduceDepth 	  and it does it
 ; ALT-NEXT: 		Resource length before replacement: 16 and after: 16
 ; ALT-NEXT: 		  As result it IMPROVES/PRESERVES Resource Length
 ; ALT-NEXT: add pattern FMA2_Add
 ; ALT-NEXT: reassociating using pattern FMA2_Add
-; ALT-NEXT:   Dependence data for %25:vr64bit = {{.*}} WFMADB
+; ALT-NEXT:   Dependence data for %25:vr64bit = {{.*}} WFMADB_CCPseudo
 ; ALT-NEXT: 	NewRootDepth: 28	RootDepth: 34	It MustReduceDepth 	  and it does it
 ; ALT-NEXT: 		Resource length before replacement: 16 and after: 16
 ; ALT-NEXT: 		  As result it IMPROVES/PRESERVES Resource Length
 
 ; ALT:      # *** IR Dump After Machine InstCombiner (machine-combiner) ***:
-; ALT:      %18:vr64bit = {{.*}} WFMADB killed %2:vr64bit, killed %3:vr64bit, %1:fp64bit
+; ALT:      %18:vr64bit = {{.*}} WFMADB_CCPseudo killed %2:vr64bit, killed %3:vr64bit, %1:fp64bit
 ; ALT-NEXT: %29:vr64bit = {{.*}} WFMDB killed %4:vr64bit, killed %5:vr64bit
-; ALT-NEXT: %30:vr64bit = {{.*}} WFMADB killed %6:vr64bit, killed %7:vr64bit, killed %18:vr64bit
-; ALT-NEXT: %31:vr64bit = {{.*}} WFMADB killed %8:vr64bit, killed %9:vr64bit, %29:vr64bit
-; ALT-NEXT: %32:vr64bit = {{.*}} WFMADB killed %10:vr64bit, killed %11:vr64bit, %30:vr64bit
-; ALT-NEXT: %33:vr64bit = {{.*}} WFMADB killed %12:vr64bit, killed %13:vr64bit, %31:vr64bit
-; ALT-NEXT: %34:vr64bit = {{.*}} WFMADB killed %14:vr64bit, killed %15:vr64bit, %32:vr64bit
-; ALT-NEXT: %35:vr64bit = {{.*}} WFMADB killed %16:vr64bit, killed %17:vr64bit, %33:vr64bit
+; ALT-NEXT: %30:vr64bit = {{.*}} WFMADB_CCPseudo killed %6:vr64bit, killed %7:vr64bit, killed %18:vr64bit
+; ALT-NEXT: %31:vr64bit = {{.*}} WFMADB_CCPseudo killed %8:vr64bit, killed %9:vr64bit, %29:vr64bit
+; ALT-NEXT: %32:vr64bit = {{.*}} WFMADB_CCPseudo killed %10:vr64bit, killed %11:vr64bit, %30:vr64bit
+; ALT-NEXT: %33:vr64bit = {{.*}} WFMADB_CCPseudo killed %12:vr64bit, killed %13:vr64bit, %31:vr64bit
+; ALT-NEXT: %34:vr64bit = {{.*}} WFMADB_CCPseudo killed %14:vr64bit, killed %15:vr64bit, %32:vr64bit
+; ALT-NEXT: %35:vr64bit = {{.*}} WFMADB_CCPseudo killed %16:vr64bit, killed %17:vr64bit, %33:vr64bit
 ; ALT-NEXT: %25:vr64bit = {{.*}} WFADB_CCPseudo %34:vr64bit, %35:vr64bit
 
 entry:

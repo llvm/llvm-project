@@ -654,7 +654,7 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                  : MI.getOpcode() == SystemZ::WFSDB_CCPseudo  ? SystemZ::SDB
                  : MI.getOpcode() == SystemZ::WFMDB           ? SystemZ::MDB
                  : MI.getOpcode() == SystemZ::WFDDB           ? SystemZ::DDB
-                 : MI.getOpcode() == SystemZ::WFMADB          ? SystemZ::MADB
+                 : MI.getOpcode() == SystemZ::WFMADB_CCPseudo ? SystemZ::MADB
                  : MI.getOpcode() == SystemZ::WFMSDB          ? SystemZ::MSDB
                  : MI.getOpcode() == SystemZ::WFSQDB          ? SystemZ::SQDB
                  : MI.getOpcode() == SystemZ::WFCDB           ? SystemZ::CDB
@@ -668,7 +668,7 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                    : MI.getOpcode() == SystemZ::WFSSB_CCPseudo  ? SystemZ::SEB
                    : MI.getOpcode() == SystemZ::WFMSB           ? SystemZ::MEEB
                    : MI.getOpcode() == SystemZ::WFDSB           ? SystemZ::DEB
-                   : MI.getOpcode() == SystemZ::WFMASB          ? SystemZ::MAEB
+                   : MI.getOpcode() == SystemZ::WFMASB_CCPseudo ? SystemZ::MAEB
                    : MI.getOpcode() == SystemZ::WFMSSB          ? SystemZ::MSEB
                    : MI.getOpcode() == SystemZ::WFSQSB          ? SystemZ::SQEB
                    : MI.getOpcode() == SystemZ::WFCSB           ? SystemZ::CEB
@@ -1142,8 +1142,8 @@ bool SystemZInstrInfo::IsReassociableFMA(const MachineInstr *MI) const {
   case SystemZ::VFMADB:
   case SystemZ::VFMASB:
   case SystemZ::WFMAXB:
-  case SystemZ::WFMADB:
-  case SystemZ::WFMASB:
+  case SystemZ::WFMADB_CCPseudo:
+  case SystemZ::WFMASB_CCPseudo:
     return hasReassocFlags(MI);
   default:
     break;
@@ -1352,9 +1352,9 @@ static void getSplitFMAOpcodes(unsigned FMAOpc, unsigned &AddOpc,
   case SystemZ::VFMADB: AddOpc = SystemZ::VFADB; MulOpc = SystemZ::VFMDB; break;
   case SystemZ::VFMASB: AddOpc = SystemZ::VFASB; MulOpc = SystemZ::VFMSB; break;
   case SystemZ::WFMAXB: AddOpc = SystemZ::WFAXB; MulOpc = SystemZ::WFMXB; break;
-  case SystemZ::WFMADB:
+  case SystemZ::WFMADB_CCPseudo:
       AddOpc = SystemZ::WFADB_CCPseudo; MulOpc = SystemZ::WFMDB; break;
-  case SystemZ::WFMASB:
+  case SystemZ::WFMASB_CCPseudo:
       AddOpc = SystemZ::WFASB_CCPseudo; MulOpc = SystemZ::WFMSB; break;
   default:
     llvm_unreachable("Expected FMA opcode.");

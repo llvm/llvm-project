@@ -7,10 +7,10 @@ define void @f0(float %A, ptr %src, ptr %dst) {
 ; CHECK-LABEL: bb.0 (%ir-block.0):
 ; CHECK:       %3:vr32bit = VL32 [[ADDR1:%[0-9]+:addr64bit]], 4, $noreg :: (load (s32) from %ir.arrayidx1)
 ; CHECK-NEXT:  %4:vr32bit = VL32 %1:addr64bit, 8, $noreg :: (load (s32) from %ir.arrayidx2)
-; CHECK-NEXT:  vr32bit = contract nofpexcept WFMASB killed %3:vr32bit, killed %4:vr32bit, %0:fp32bit, implicit $fpc
+; CHECK-NEXT:  vr32bit = contract nofpexcept WFMASB_CCPseudo killed %3:vr32bit, killed %4:vr32bit, %0:fp32bit, implicit-def dead $cc, implicit $fpc
 ; CHECK:       %6:vr32bit = VL32 %1:addr64bit, 12, $noreg :: (load (s32) from %ir.arrayidx3)
 ; CHECK-NEXT:  %7:vr32bit = VL32 %1:addr64bit, 16, $noreg :: (load (s32) from %ir.arrayidx4)
-; CHECK-NEXT:  %8:vr32bit = contract nofpexcept WFMASB %6:vr32bit, %7:vr32bit, %0:fp32bit, implicit $fpc
+; CHECK-NEXT:  %8:vr32bit = contract nofpexcept WFMASB_CCPseudo %6:vr32bit, %7:vr32bit, %0:fp32bit, implicit-def dead $cc, implicit $fpc
 ; CHECK-NEXT:  VST32 killed %8:vr32bit, %2:addr64bit, 0, $noreg :: (volatile store (s32) into %ir.dst)
 ; CHECK-NEXT:  VST32 %6:vr32bit, %2:addr64bit, 0, $noreg :: (volatile store (s32) into %ir.dst)
 ; CHECK-NEXT:  VST32 %7:vr32bit, %2:addr64bit, 0, $noreg :: (volatile store (s32) into %ir.dst)
@@ -19,7 +19,7 @@ define void @f0(float %A, ptr %src, ptr %dst) {
 ; CHECK-NEXT:  # Machine code for function f0: IsSSA, TracksLiveness
 ; CHECK-LABEL: bb.0 (%ir-block.0):
 ; CHECK:       fp32bit = nofpexcept MAEB %0:fp32bit(tied-def 0), killed %4:fp32bit, [[ADDR1]], 4, $noreg, implicit $fpc :: (load (s32) from %ir.arrayidx1)
-; CHECK:       vr32bit = contract nofpexcept WFMASB %6:vr32bit, %7:vr32bit, %0:fp32bit, implicit $fpc
+; CHECK:       vr32bit = contract nofpexcept WFMASB_CCPseudo %6:vr32bit, %7:vr32bit, %0:fp32bit, implicit-def dead $cc, implicit $fpc
 
   %arrayidx1 = getelementptr inbounds float, ptr %src, i64 1
   %arrayidx2 = getelementptr inbounds float, ptr %src, i64 2
@@ -48,10 +48,10 @@ define void @f1(double %A, ptr %src, ptr %dst) {
 ; CHECK-LABEL: bb.0 (%ir-block.0):
 ; CHECK:       %3:vr64bit = VL64 [[ADDR1:%[0-9]+:addr64bit]], 8, $noreg :: (load (s64) from %ir.arrayidx1)
 ; CHECK-NEXT:  %4:vr64bit = VL64 %1:addr64bit, 16, $noreg :: (load (s64) from %ir.arrayidx2)
-; CHECK-NEXT:  vr64bit = contract nofpexcept WFMADB killed %3:vr64bit, killed %4:vr64bit, %0:fp64bit, implicit $fpc
+; CHECK-NEXT:  vr64bit = contract nofpexcept WFMADB_CCPseudo killed %3:vr64bit, killed %4:vr64bit, %0:fp64bit, implicit-def dead $cc, implicit $fpc
 ; CHECK:       %6:vr64bit = VL64 %1:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx3)
 ; CHECK-NEXT:  %7:vr64bit = VL64 %1:addr64bit, 32, $noreg :: (load (s64) from %ir.arrayidx4)
-; CHECK-NEXT:  %8:vr64bit = contract nofpexcept WFMADB %6:vr64bit, %7:vr64bit, %0:fp64bit, implicit $fpc
+; CHECK-NEXT:  %8:vr64bit = contract nofpexcept WFMADB_CCPseudo %6:vr64bit, %7:vr64bit, %0:fp64bit, implicit-def dead $cc, implicit $fpc
 ; CHECK-NEXT:  VST64 killed %8:vr64bit, %2:addr64bit, 0, $noreg :: (volatile store (s64) into %ir.dst)
 ; CHECK-NEXT:  VST64 %6:vr64bit, %2:addr64bit, 0, $noreg :: (volatile store (s64) into %ir.dst)
 ; CHECK-NEXT:  VST64 %7:vr64bit, %2:addr64bit, 0, $noreg :: (volatile store (s64) into %ir.dst)
@@ -60,7 +60,7 @@ define void @f1(double %A, ptr %src, ptr %dst) {
 ; CHECK-NEXT:  # Machine code for function f1: IsSSA, TracksLiveness
 ; CHECK-LABEL: bb.0 (%ir-block.0):
 ; CHECK:       fp64bit = nofpexcept MADB %0:fp64bit(tied-def 0), killed %4:fp64bit, [[ADDR1]], 8, $noreg, implicit $fpc :: (load (s64) from %ir.arrayidx1)
-; CHECK:       vr64bit = contract nofpexcept WFMADB %6:vr64bit, %7:vr64bit, %0:fp64bit, implicit $fpc
+; CHECK:       vr64bit = contract nofpexcept WFMADB_CCPseudo %6:vr64bit, %7:vr64bit, %0:fp64bit, implicit-def dead $cc, implicit $fpc
 
   %arrayidx1 = getelementptr inbounds double, ptr %src, i64 1
   %arrayidx2 = getelementptr inbounds double, ptr %src, i64 2

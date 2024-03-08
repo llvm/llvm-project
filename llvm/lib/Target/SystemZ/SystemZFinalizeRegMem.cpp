@@ -71,6 +71,8 @@ bool SystemZFinalizeRegMem::visitMBB(MachineBasicBlock &MBB) {
       : PseudoOpcode == SystemZ::WFASB_CCPseudo  ? SystemZ::WFASB
       : PseudoOpcode == SystemZ::WFSDB_CCPseudo  ? SystemZ::WFSDB
       : PseudoOpcode == SystemZ::WFSSB_CCPseudo  ? SystemZ::WFSSB
+      : PseudoOpcode == SystemZ::WFMADB_CCPseudo  ? SystemZ::WFMADB
+      : PseudoOpcode == SystemZ::WFMASB_CCPseudo  ? SystemZ::WFMASB
       : 0;
     if (TargetOpcode) {
         MI.setDesc(TII->get(TargetOpcode));

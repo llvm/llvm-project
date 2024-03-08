@@ -1449,9 +1449,9 @@ def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFMSB$")>;
 def : InstRW<[WLat20, VecDF2, NormalGr], (instregex "WFMXB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)DB$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)DB$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)DB(_CCPseudo)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)SB$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)SB$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)SB(_CCPseudo)?$")>;
 def : InstRW<[WLat20, VecDF2, NormalGr], (instregex "WF(N)?M(A|S)XB$")>;
 
 // Divide / square root

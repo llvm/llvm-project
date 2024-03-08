@@ -16,7 +16,7 @@ define double @fun0_fma1add(ptr %x) {
 ; CHECK-NEXT: %3:vr64bit = VL64 %0:addr64bit, 16, $noreg :: (load (s64) from %ir.arrayidx2)
 ; CHECK-NEXT: %4:vr64bit = VL64 %0:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx4)
 ; CHECK-NEXT: %5:vr64bit = {{.*}} WFADB_CCPseudo killed %3:vr64bit, killed %4:vr64bit
-; CHECK-NEXT: %6:vr64bit = {{.*}} WFMADB killed %1:vr64bit, killed %2:vr64bit, killed %5:vr64bit
+; CHECK-NEXT: %6:vr64bit = {{.*}} WFMADB_CCPseudo killed %1:vr64bit, killed %2:vr64bit, killed %5:vr64bit
 ; CHECK-NEXT: $f0d = COPY %6:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
 entry:
@@ -50,13 +50,13 @@ define double @fun1_fma1add_divop(ptr %x) {
 ; CHECK-NEXT: %4:vr64bit = VL64 %0:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx4)
 ; CHECK-NEXT: [[DIV:%5:vr64bit]] = nofpexcept WFDDB [[T1]], killed %4:vr64bit, implicit $fpc
 ; CHECK-NEXT: %6:vr64bit = {{.*}} WFADB_CCPseudo [[T1]], killed [[DIV]]
-; CHECK-NEXT: %7:vr64bit = {{.*}} WFMADB killed [[M21]], killed [[M22]], killed %6:vr64bit
+; CHECK-NEXT: %7:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M21]], killed [[M22]], killed %6:vr64bit
 ; CHECK-NEXT: $f0d = COPY %7:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
 
 ; CHECK:      # *** IR Dump After Machine InstCombiner (machine-combiner) ***:
 ; CHECK-NEXT: # Machine code for function fun1_fma1add_divop: IsSSA, TracksLiveness
-; CHECK:      %8:vr64bit = {{.*}} WFMADB killed [[M21]], killed [[M22]], [[T1]]
+; CHECK:      %8:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M21]], killed [[M22]], [[T1]]
 ; CHECK-NEXT: %7:vr64bit = {{.*}} WFADB_CCPseudo %8:vr64bit, killed [[DIV]]
 entry:
   %arrayidx1 = getelementptr inbounds double, ptr %x, i64 1
@@ -90,11 +90,11 @@ define double @fun2_fma1add_divop(ptr %x) {
 ; CHECK-NEXT: [[T2:%4:vr64bit]] = VL64 %0:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx4)
 ; CHECK-NEXT: [[DIV:%5:vr64bit]] = nofpexcept WFDDB killed %3:vr64bit, %4:vr64bit, implicit $fpc
 ; CHECK-NEXT: %6:vr64bit = {{.*}} WFADB_CCPseudo killed [[DIV]], [[T2]]
-; CHECK-NEXT: %7:vr64bit = {{.*}} WFMADB killed [[M21]], killed [[M22]], killed %6:vr64bit
+; CHECK-NEXT: %7:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M21]], killed [[M22]], killed %6:vr64bit
 
 ; CHECK:      # *** IR Dump After Machine InstCombiner (machine-combiner) ***:
 ; CHECK-NEXT: # Machine code for function fun2_fma1add_divop: IsSSA, TracksLiveness
-; CHECK:      %9:vr64bit = {{.*}} WFMADB killed [[M21]], killed [[M22]], [[T2]]
+; CHECK:      %9:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M21]], killed [[M22]], [[T2]]
 ; CHECK:      %7:vr64bit = {{.*}} WFADB_CCPseudo %9:vr64bit, killed [[DIV]]
 entry:
   %arrayidx1 = getelementptr inbounds double, ptr %x, i64 1

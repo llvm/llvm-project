@@ -1286,17 +1286,20 @@ let Predicates = [FeatureVector] in {
     }
   }
 
-  // Multiply and add.
+  // Multiply and add. 64/32-bit may participate in reassociation during
+  // machine-combining together with additions. Pretend that they clobber CC
+  // so that an Add that gets pulled down to its place can later be folded to
+  // a reg/mem, which clobber CC (while MADB/MAEB do not).
   let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
-    def VFMA   : TernaryVRReFloatGeneric<"vfma", 0xE78F>;
-    def VFMADB : TernaryVRRe<"vfmadb", 0xE78F, any_fma, v128db, v128db, 0, 3>;
-    def WFMADB : TernaryVRRe<"wfmadb", 0xE78F, any_fma, v64db, v64db, 8, 3,
-                             "madbr">;
+    def  VFMA   : TernaryVRReFloatGeneric<"vfma", 0xE78F>;
+    def  VFMADB : TernaryVRRe<"vfmadb", 0xE78F, any_fma, v128db, v128db, 0, 3>;
+    defm WFMADB : TernaryVRReAndCCPseudo<"wfmadb", 0xE78F, any_fma, v64db, v64db,
+                                        8, 3, "madbr">;
     let Predicates = [FeatureVectorEnhancements1] in {
-      def VFMASB : TernaryVRRe<"vfmasb", 0xE78F, any_fma, v128sb, v128sb, 0, 2>;
-      def WFMASB : TernaryVRRe<"wfmasb", 0xE78F, any_fma, v32sb, v32sb, 8, 2,
-                               "maebr">;
-      def WFMAXB : TernaryVRRe<"wfmaxb", 0xE78F, any_fma, v128xb, v128xb, 8, 4>;
+      def  VFMASB : TernaryVRRe<"vfmasb", 0xE78F, any_fma, v128sb, v128sb, 0, 2>;
+      defm WFMASB : TernaryVRReAndCCPseudo<"wfmasb", 0xE78F, any_fma, v32sb, v32sb,
+                                          8, 2, "maebr">;
+      def  WFMAXB : TernaryVRRe<"wfmaxb", 0xE78F, any_fma, v128xb, v128xb, 8, 4>;
     }
   }
 

@@ -17,15 +17,15 @@ define double @fun0_fma2_add(ptr %x, double %A, double %B) {
 ; CHECK-NEXT: %5:vr64bit = VL64 %0:addr64bit, 16, $noreg :: (load (s64) from %ir.arrayidx2)
 ; CHECK-NEXT: %6:vr64bit = VL64 %0:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx4)
 ; CHECK-NEXT: %7:vr64bit = {{.*}} WFADB_CCPseudo [[X]], [[Y]]
-; CHECK-NEXT: %8:vr64bit = {{.*}} WFMADB killed [[M21:%3:vr64bit]], killed [[M22:%4:vr64bit]], killed %7:vr64bit
-; CHECK-NEXT: %9:vr64bit = {{.*}} WFMADB killed [[M31:%5:vr64bit]], killed [[M32:%6:vr64bit]], killed %8:vr64bit
+; CHECK-NEXT: %8:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M21:%3:vr64bit]], killed [[M22:%4:vr64bit]], killed %7:vr64bit
+; CHECK-NEXT: %9:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M31:%5:vr64bit]], killed [[M32:%6:vr64bit]], killed %8:vr64bit
 ; CHECK-NEXT: $f0d = COPY %9:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
 
 ; CHECK:      # *** IR Dump After Machine InstCombiner (machine-combiner) ***:
 ; CHECK-NEXT: # Machine code for function fun0_fma2_add: IsSSA, TracksLiveness
-; CHECK:      %10:vr64bit = {{.*}} WFMADB killed [[M21]], killed [[M22]], [[X]]
-; CHECK-NEXT: %11:vr64bit = {{.*}} WFMADB killed [[M31]], killed [[M32]], [[Y]]
+; CHECK:      %10:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M21]], killed [[M22]], [[X]]
+; CHECK-NEXT: %11:vr64bit = {{.*}} WFMADB_CCPseudo killed [[M31]], killed [[M32]], [[Y]]
 ; CHECK-NEXT: %9:vr64bit = {{.*}} WFADB_CCPseudo %10:vr64bit, %11:vr64bit
 ; CHECK-NEXT: $f0d = COPY %9:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
@@ -65,8 +65,8 @@ define double @fun1_fma2_add_divop(ptr %x, double %A, double %B) {
 ; CHECK-NEXT: %6:vr64bit = VL64 %0:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx4)
 ; CHECK-NEXT: %7:vr64bit = nofpexcept WFDDB %5:vr64bit, killed %6:vr64bit, implicit $fpc
 ; CHECK-NEXT: %8:vr64bit = {{.*}} WFADB_CCPseudo %1:fp64bit, %2:fp64bit
-; CHECK-NEXT: %9:vr64bit = {{.*}} WFMADB killed %3:vr64bit, killed %4:vr64bit, killed %8:vr64bit
-; CHECK-NEXT: %10:vr64bit = {{.*}} WFMADB %5:vr64bit, killed %7:vr64bit, killed %9:vr64bit
+; CHECK-NEXT: %9:vr64bit = {{.*}} WFMADB_CCPseudo killed %3:vr64bit, killed %4:vr64bit, killed %8:vr64bit
+; CHECK-NEXT: %10:vr64bit = {{.*}} WFMADB_CCPseudo %5:vr64bit, killed %7:vr64bit, killed %9:vr64bit
 ; CHECK-NEXT: $f0d = COPY %10:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
 entry:
