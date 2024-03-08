@@ -17941,11 +17941,9 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
-  if (N0.getOpcode() != ISD::AND)
-    return SDValue();
-
   SDValue N1 = N->getOperand(1);
-  if (N1.getOpcode() != ISD::AND)
+  if (!N->getFlags().hasDisjoint() &&
+      (N0.getOpcode() != ISD::AND || N1.getOpcode() != ISD::AND))
     return SDValue();
 
   // InstCombine does (not (neg a)) => (add a -1).
