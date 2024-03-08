@@ -125,7 +125,7 @@ template <typename AllocatorConfig> struct SecondaryConfig {
   }
 #include "allocator_config.def"
   }; // CacheConfig
-}; // SecondaryConfig
+};   // SecondaryConfig
 
 #undef OPTIONAL_TEMPLATE
 #undef OPTIONAL_TEMPLATE_TYPE

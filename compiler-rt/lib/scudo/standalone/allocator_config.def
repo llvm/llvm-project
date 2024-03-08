@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines all the flags and types supported in Scudo.
+// This file defines all the flags and types supported in Scudo. For optional
+// flags and types, only explicitly define them when interested (i.e., unused
+// optional flags or types can be skipped).
 
 #ifndef BASE_REQUIRED_TEMPLATE_TYPE
 #define BASE_REQUIRED_TEMPLATE_TYPE(...)
@@ -67,13 +69,12 @@ PRIMARY_REQUIRED(const uptr, CompactPtrScale)
 // Log2 of the size of a size class region, as used by the Primary.
 PRIMARY_REQUIRED(const uptr, RegionSizeLog)
 
-// Log2 of the size of block group, as used by the Primary. Each group
-// contains a range of memory addresses, blocks in the range will belong
-// to the same group. In general, single region may have 1 or 2MB group
-// size. Multiple regions will have the group size equal to the region
-// size because the region size is usually smaller than 1 MB.
-// Smaller value gives fine-grained control of memory usage but the
-// trade-off is that it may take longer time of deallocation.
+// Conceptually, a region will be divided into groups based on the address range
+// Each allocation consumes blocks in the same group until the exhaustion then
+// it pops out blocks in a new group. Therefore, `GroupSizeLog` is always
+// smaller or equal to `RegionSizeLog`. Note that `GroupSizeLog` needs to be
+// equal to `RegionSizeLog` for SizeClassAllocator32 because of certain
+// constraints.
 PRIMARY_REQUIRED(const uptr, GroupSizeLog)
 
 // Call map for user memory with at least this size. Only used with primary64.
