@@ -898,9 +898,9 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, &isec.relocs().back()});
+          {&isec, isec.relocs().size() - 1});
     else
-      part.relrDyn->relocs.push_back({&isec, &isec.relocs().back()});
+      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(target->relativeRel, isec, offsetInSec,
@@ -1154,17 +1154,12 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         // relative relocation. Use a symbolic relocation instead.
         if (sym.isPreemptible) {
           part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0 &&
-                   isInt<32>(sym.getVA(addend))) {
-          // Implicit addend is below 32-bits so we can use the compressed
-          // relative relocation section. The R_AARCH64_AUTH_RELATIVE has a
-          // smaller addend field as bits [63:32] encode the signing schema.
-          // The final VA might differ from the one calculated now since it
-          // might depend on the final layout. If the final VA does not fit 32
-          // bits, the packed AUTH reloc will be converted to rela in
-          // Writer<ELFT>::finalizeAddressDependentContent().
+        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+          // When symbol values are determined in
+          // finalizeAddressDependentContent, some relrAuthDyn relocations may
+          // be moved to relaDyn.
           sec->addReloc({expr, type, offset, addend, &sym});
-          part.relrAuthDyn->relocs.push_back({sec, &sec->relocs().back()});
+          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
                                   DynamicReloc::AddendOnlyWithTargetVA, sym,

@@ -13,8 +13,8 @@
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
 
 # ERR1:      error: incompatible values of AArch64 PAuth compatibility info found
-# ERR1-NEXT: >>> tag1.o: 0x2A000000000000000{{1|2}}00000000000000
-# ERR1-NEXT: >>> tag2.o: 0x2A000000000000000{{1|2}}00000000000000
+# ERR1-NEXT: >>> tag1.o: 0x2a000000000000000{{1|2}}00000000000000
+# ERR1-NEXT: >>> tag2.o: 0x2a000000000000000{{1|2}}00000000000000
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-errs.s -o errs.o
 # RUN: not ld.lld errs.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR2 %s

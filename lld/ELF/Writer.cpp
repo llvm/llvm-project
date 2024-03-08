@@ -24,6 +24,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
@@ -1755,28 +1756,26 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
-      // We've put relocations in relrAuthDyn during
+      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
+      // encode the signing schema. We've put relocations in relrAuthDyn during
       // RelocationScanner::processAux, but the target VA for some of them might
-      // be wider than 32 bits which does not fit the place for implicit value
-      // of relr AUTH reloc. We can only know the final VA at this point, so
+      // be wider than 32 bits. We can only know the final VA at this point, so
       // move relocations with large values from relr to rela.
       if (part.relrAuthDyn) {
-        for (auto it = part.relrAuthDyn->relocs.begin();
-             it != part.relrAuthDyn->relocs.end();) {
-          if (isInt<32>(it->reloc->sym->getVA(it->reloc->addend))) {
-            ++it;
-            continue;
-          }
-          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, it->inputSec,
-                                  it->reloc->offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA,
-                                  *it->reloc->sym, it->reloc->addend, R_ABS});
-          part.relrAuthDyn->relocs.erase(it);
-          // We keep the relocation in the it->inputSec->relocations so pointers
-          // to them in part.relrAuthDyn->relocs items remain valid. See
-          // corresponding comment AArch64::relocate for details.
-          changed = true;
-        }
+        auto it = llvm::remove_if(
+            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+                return false;
+              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
+                                      reloc.offset,
+                                      DynamicReloc::AddendOnlyWithTargetVA,
+                                      *reloc.sym, reloc.addend, R_ABS});
+              // See also AArch64::relocate
+              return true;
+            });
+        changed |= (it != part.relrAuthDyn->relocs.end());
+        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
       }
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
@@ -1917,7 +1916,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 // To deal with the above problem, this function is called after
 // scanRelocations is called to remove synthetic sections that turn
 // out to be empty.
-template <class ELFT> static void removeUnusedSyntheticSections() {
+static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
   // after a non-synthetic one which will be our starting point.
@@ -1942,7 +1941,7 @@ template <class ELFT> static void removeUnusedSyntheticSections() {
         // .rela.dyn) or empty .rela.dyn (if no rela relocs were there and no
         // packed AUTH relocs were moved to it) in the output binary.
         if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
-          if (auto *relSec = dyn_cast<RelocationSection<ELFT>>(sec))
+          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
             if (relSec->name == ".rela.dyn")
               return false;
         unused.insert(sec);
@@ -2151,7 +2150,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (in.mipsGot)
     in.mipsGot->build();
 
-  removeUnusedSyntheticSections<ELFT>();
+  removeUnusedSyntheticSections();
   script->diagnoseOrphanHandling();
   script->diagnoseMissingSGSectionAddress();
 

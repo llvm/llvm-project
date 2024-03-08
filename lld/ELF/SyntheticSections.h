@@ -603,10 +603,12 @@ private:
 };
 
 struct RelativeReloc {
-  uint64_t getOffset() const { return inputSec->getVA(reloc->offset); }
+  uint64_t getOffset() const {
+    return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
+  }
 
   const InputSectionBase *inputSec;
-  Relocation *reloc;
+  size_t relocIdx;
 };
 
 class RelrBaseSection : public SyntheticSection {

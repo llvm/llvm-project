@@ -46,6 +46,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -65,7 +66,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -2590,9 +2590,9 @@ static void readSecurityNotes() {
 
   StringRef referenceFileName;
   if (config->emachine == EM_AARCH64) {
-    auto it = std::find_if(
-        ctx.objectFiles.begin(), ctx.objectFiles.end(),
-        [](const ELFFileBase *f) { return !f->aarch64PauthAbiTag.empty(); });
+    auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
+      return !f->aarch64PauthAbiTag.empty();
+    });
     if (it != ctx.objectFiles.end()) {
       ctx.aarch64PauthAbiTag = (*it)->aarch64PauthAbiTag;
       referenceFileName = (*it)->getName();
@@ -2652,8 +2652,10 @@ static void readSecurityNotes() {
       errorOrWarn(
           "incompatible values of AArch64 PAuth compatibility info found"
           "\n>>> " +
-          referenceFileName + ": 0x" + toHex(ctx.aarch64PauthAbiTag) +
-          "\n>>> " + toString(f) + ": 0x" + toHex(f->aarch64PauthAbiTag));
+          referenceFileName + ": 0x" +
+          toHex(ctx.aarch64PauthAbiTag, /*LowerCase=*/true) + "\n>>> " +
+          toString(f) + ": 0x" +
+          toHex(f->aarch64PauthAbiTag, /*LowerCase=*/true));
   }
 
   // Force enable Shadow Stack.
