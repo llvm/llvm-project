@@ -5,60 +5,14 @@
 define <8 x half> @add_h(<8 x half> %a, <8 x half> %b) {
 ; CHECK-CVT-LABEL: add_h:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    mov h2, v1.h[1]
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
-; CHECK-CVT-NEXT:    fcvt s4, h1
-; CHECK-CVT-NEXT:    fcvt s5, h0
-; CHECK-CVT-NEXT:    mov h6, v1.h[2]
-; CHECK-CVT-NEXT:    mov h7, v0.h[2]
-; CHECK-CVT-NEXT:    mov h16, v1.h[3]
-; CHECK-CVT-NEXT:    fcvt s2, h2
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fadd s4, s5, s4
-; CHECK-CVT-NEXT:    mov h5, v0.h[3]
-; CHECK-CVT-NEXT:    fcvt s6, h6
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    fadd s3, s3, s2
-; CHECK-CVT-NEXT:    fcvt s5, h5
-; CHECK-CVT-NEXT:    fcvt h2, s4
-; CHECK-CVT-NEXT:    fadd s4, s7, s6
-; CHECK-CVT-NEXT:    mov h6, v1.h[4]
-; CHECK-CVT-NEXT:    mov h7, v0.h[4]
-; CHECK-CVT-NEXT:    fcvt h3, s3
-; CHECK-CVT-NEXT:    fadd s5, s5, s16
-; CHECK-CVT-NEXT:    mov h16, v0.h[5]
-; CHECK-CVT-NEXT:    fcvt h4, s4
-; CHECK-CVT-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-CVT-NEXT:    fcvt s3, h6
-; CHECK-CVT-NEXT:    fcvt s6, h7
-; CHECK-CVT-NEXT:    mov h7, v1.h[5]
-; CHECK-CVT-NEXT:    fcvt h5, s5
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-CVT-NEXT:    mov h4, v1.h[6]
-; CHECK-CVT-NEXT:    fadd s3, s6, s3
-; CHECK-CVT-NEXT:    mov h6, v0.h[6]
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-CVT-NEXT:    fcvt s4, h4
-; CHECK-CVT-NEXT:    fcvt h3, s3
-; CHECK-CVT-NEXT:    fcvt s5, h6
-; CHECK-CVT-NEXT:    fadd s6, s16, s7
-; CHECK-CVT-NEXT:    fcvt s1, h1
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-CVT-NEXT:    fadd s4, s5, s4
-; CHECK-CVT-NEXT:    fcvt h3, s6
-; CHECK-CVT-NEXT:    fadd s0, s0, s1
-; CHECK-CVT-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-CVT-NEXT:    fcvt h3, s4
-; CHECK-CVT-NEXT:    fcvt h0, s0
-; CHECK-CVT-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-CVT-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-CVT-NEXT:    mov v0.16b, v2.16b
+; CHECK-CVT-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-CVT-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fadd v2.4s, v3.4s, v2.4s
+; CHECK-CVT-NEXT:    fadd v1.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-CVT-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: add_h:
@@ -74,60 +28,14 @@ entry:
 define <8 x half> @sub_h(<8 x half> %a, <8 x half> %b) {
 ; CHECK-CVT-LABEL: sub_h:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    mov h2, v1.h[1]
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
-; CHECK-CVT-NEXT:    fcvt s4, h1
-; CHECK-CVT-NEXT:    fcvt s5, h0
-; CHECK-CVT-NEXT:    mov h6, v1.h[2]
-; CHECK-CVT-NEXT:    mov h7, v0.h[2]
-; CHECK-CVT-NEXT:    mov h16, v1.h[3]
-; CHECK-CVT-NEXT:    fcvt s2, h2
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fsub s4, s5, s4
-; CHECK-CVT-NEXT:    mov h5, v0.h[3]
-; CHECK-CVT-NEXT:    fcvt s6, h6
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    fsub s3, s3, s2
-; CHECK-CVT-NEXT:    fcvt s5, h5
-; CHECK-CVT-NEXT:    fcvt h2, s4
-; CHECK-CVT-NEXT:    fsub s4, s7, s6
-; CHECK-CVT-NEXT:    mov h6, v1.h[4]
-; CHECK-CVT-NEXT:    mov h7, v0.h[4]
-; CHECK-CVT-NEXT:    fcvt h3, s3
-; CHECK-CVT-NEXT:    fsub s5, s5, s16
-; CHECK-CVT-NEXT:    mov h16, v0.h[5]
-; CHECK-CVT-NEXT:    fcvt h4, s4
-; CHECK-CVT-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-CVT-NEXT:    fcvt s3, h6
-; CHECK-CVT-NEXT:    fcvt s6, h7
-; CHECK-CVT-NEXT:    mov h7, v1.h[5]
-; CHECK-CVT-NEXT:    fcvt h5, s5
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-CVT-NEXT:    mov h4, v1.h[6]
-; CHECK-CVT-NEXT:    fsub s3, s6, s3
-; CHECK-CVT-NEXT:    mov h6, v0.h[6]
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-CVT-NEXT:    fcvt s4, h4
-; CHECK-CVT-NEXT:    fcvt h3, s3
-; CHECK-CVT-NEXT:    fcvt s5, h6
-; CHECK-CVT-NEXT:    fsub s6, s16, s7
-; CHECK-CVT-NEXT:    fcvt s1, h1
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-CVT-NEXT:    fsub s4, s5, s4
-; CHECK-CVT-NEXT:    fcvt h3, s6
-; CHECK-CVT-NEXT:    fsub s0, s0, s1
-; CHECK-CVT-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-CVT-NEXT:    fcvt h3, s4
-; CHECK-CVT-NEXT:    fcvt h0, s0
-; CHECK-CVT-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-CVT-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-CVT-NEXT:    mov v0.16b, v2.16b
+; CHECK-CVT-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-CVT-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fsub v2.4s, v3.4s, v2.4s
+; CHECK-CVT-NEXT:    fsub v1.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-CVT-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: sub_h:
@@ -143,60 +51,14 @@ entry:
 define <8 x half> @mul_h(<8 x half> %a, <8 x half> %b) {
 ; CHECK-CVT-LABEL: mul_h:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    mov h2, v1.h[1]
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
-; CHECK-CVT-NEXT:    fcvt s4, h1
-; CHECK-CVT-NEXT:    fcvt s5, h0
-; CHECK-CVT-NEXT:    mov h6, v1.h[2]
-; CHECK-CVT-NEXT:    mov h7, v0.h[2]
-; CHECK-CVT-NEXT:    mov h16, v1.h[3]
-; CHECK-CVT-NEXT:    fcvt s2, h2
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fmul s4, s5, s4
-; CHECK-CVT-NEXT:    mov h5, v0.h[3]
-; CHECK-CVT-NEXT:    fcvt s6, h6
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    fmul s3, s3, s2
-; CHECK-CVT-NEXT:    fcvt s5, h5
-; CHECK-CVT-NEXT:    fcvt h2, s4
-; CHECK-CVT-NEXT:    fmul s4, s7, s6
-; CHECK-CVT-NEXT:    mov h6, v1.h[4]
-; CHECK-CVT-NEXT:    mov h7, v0.h[4]
-; CHECK-CVT-NEXT:    fcvt h3, s3
-; CHECK-CVT-NEXT:    fmul s5, s5, s16
-; CHECK-CVT-NEXT:    mov h16, v0.h[5]
-; CHECK-CVT-NEXT:    fcvt h4, s4
-; CHECK-CVT-NEXT:    mov v2.h[1], v3.h[0]
-; CHECK-CVT-NEXT:    fcvt s3, h6
-; CHECK-CVT-NEXT:    fcvt s6, h7
-; CHECK-CVT-NEXT:    mov h7, v1.h[5]
-; CHECK-CVT-NEXT:    fcvt h5, s5
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-CVT-NEXT:    mov h4, v1.h[6]
-; CHECK-CVT-NEXT:    fmul s3, s6, s3
-; CHECK-CVT-NEXT:    mov h6, v0.h[6]
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-NEXT:    mov v2.h[3], v5.h[0]
-; CHECK-CVT-NEXT:    fcvt s4, h4
-; CHECK-CVT-NEXT:    fcvt h3, s3
-; CHECK-CVT-NEXT:    fcvt s5, h6
-; CHECK-CVT-NEXT:    fmul s6, s16, s7
-; CHECK-CVT-NEXT:    fcvt s1, h1
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    mov v2.h[4], v3.h[0]
-; CHECK-CVT-NEXT:    fmul s4, s5, s4
-; CHECK-CVT-NEXT:    fcvt h3, s6
-; CHECK-CVT-NEXT:    fmul s0, s0, s1
-; CHECK-CVT-NEXT:    mov v2.h[5], v3.h[0]
-; CHECK-CVT-NEXT:    fcvt h3, s4
-; CHECK-CVT-NEXT:    fcvt h0, s0
-; CHECK-CVT-NEXT:    mov v2.h[6], v3.h[0]
-; CHECK-CVT-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-CVT-NEXT:    mov v0.16b, v2.16b
+; CHECK-CVT-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-CVT-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fmul v2.4s, v3.4s, v2.4s
+; CHECK-CVT-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-CVT-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: mul_h:
@@ -212,60 +74,14 @@ entry:
 define <8 x half> @div_h(<8 x half> %a, <8 x half> %b) {
 ; CHECK-CVT-LABEL: div_h:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    mov h2, v1.h[1]
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
-; CHECK-CVT-NEXT:    fcvt s4, h0
-; CHECK-CVT-NEXT:    mov h5, v0.h[2]
-; CHECK-CVT-NEXT:    mov h6, v0.h[3]
-; CHECK-CVT-NEXT:    mov h7, v0.h[4]
-; CHECK-CVT-NEXT:    mov h16, v0.h[5]
-; CHECK-CVT-NEXT:    mov h17, v0.h[6]
-; CHECK-CVT-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-NEXT:    fcvt s2, h2
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fcvt s5, h5
-; CHECK-CVT-NEXT:    fcvt s6, h6
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    fcvt s17, h17
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    fdiv s2, s3, s2
-; CHECK-CVT-NEXT:    fcvt s3, h1
-; CHECK-CVT-NEXT:    fdiv s3, s4, s3
-; CHECK-CVT-NEXT:    mov h4, v1.h[2]
-; CHECK-CVT-NEXT:    fcvt h18, s2
-; CHECK-CVT-NEXT:    fcvt s4, h4
-; CHECK-CVT-NEXT:    fdiv s4, s5, s4
-; CHECK-CVT-NEXT:    mov h5, v1.h[3]
-; CHECK-CVT-NEXT:    fcvt h2, s3
-; CHECK-CVT-NEXT:    fcvt s5, h5
-; CHECK-CVT-NEXT:    mov v2.h[1], v18.h[0]
-; CHECK-CVT-NEXT:    fdiv s5, s6, s5
-; CHECK-CVT-NEXT:    mov h6, v1.h[4]
-; CHECK-CVT-NEXT:    fcvt h4, s4
-; CHECK-CVT-NEXT:    fcvt s6, h6
-; CHECK-CVT-NEXT:    mov v2.h[2], v4.h[0]
-; CHECK-CVT-NEXT:    fdiv s6, s7, s6
-; CHECK-CVT-NEXT:    mov h7, v1.h[5]
-; CHECK-CVT-NEXT:    fcvt h4, s5
-; CHECK-CVT-NEXT:    fcvt s7, h7
-; CHECK-CVT-NEXT:    mov v2.h[3], v4.h[0]
-; CHECK-CVT-NEXT:    fdiv s7, s16, s7
-; CHECK-CVT-NEXT:    mov h16, v1.h[6]
-; CHECK-CVT-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-NEXT:    fcvt s16, h16
-; CHECK-CVT-NEXT:    fcvt s1, h1
-; CHECK-CVT-NEXT:    fdiv s3, s17, s16
-; CHECK-CVT-NEXT:    fdiv s0, s0, s1
-; CHECK-CVT-NEXT:    fcvt h1, s6
-; CHECK-CVT-NEXT:    mov v2.h[4], v1.h[0]
-; CHECK-CVT-NEXT:    fcvt h1, s7
-; CHECK-CVT-NEXT:    mov v2.h[5], v1.h[0]
-; CHECK-CVT-NEXT:    fcvt h1, s3
-; CHECK-CVT-NEXT:    mov v2.h[6], v1.h[0]
-; CHECK-CVT-NEXT:    fcvt h0, s0
-; CHECK-CVT-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-CVT-NEXT:    mov v0.16b, v2.16b
+; CHECK-CVT-NEXT:    fcvtl v2.4s, v1.4h
+; CHECK-CVT-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fdiv v2.4s, v3.4s, v2.4s
+; CHECK-CVT-NEXT:    fdiv v1.4s, v0.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-CVT-NEXT:    fcvtn2 v0.8h, v1.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: div_h:
