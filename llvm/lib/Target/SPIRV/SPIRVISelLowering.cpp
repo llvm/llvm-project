@@ -12,6 +12,13 @@
 
 #include "SPIRVISelLowering.h"
 #include "SPIRV.h"
+#include "SPIRVInstrInfo.h"
+#include "SPIRVRegisterBankInfo.h"
+#include "SPIRVRegisterInfo.h"
+#include "SPIRVSubtarget.h"
+#include "SPIRVTargetMachine.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-lower"
@@ -73,4 +80,77 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     break;
   }
   return false;
+}
+
+// Insert a bitcast before the instruction to keep SPIR-V code valid
+// when there is a type mismatch between results and operand types.
+static void validatePtrTypes(const SPIRVSubtarget &STI,
+                             MachineRegisterInfo *MRI, SPIRVGlobalRegistry &GR,
+                             MachineInstr &I, SPIRVType *ResType,
+                             unsigned OpIdx) {
+  Register OpReg = I.getOperand(OpIdx).getReg();
+  SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
+  SPIRVType *OpType = GR.getSPIRVTypeForVReg(
+      TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
+          ? TypeInst->getOperand(1).getReg()
+          : OpReg);
+  if (!ResType || !OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
+    return;
+  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  if (!ElemType || ElemType == ResType)
+    return;
+  // There is a type mismatch between results and operand types
+  // and we insert a bitcast before the instruction to keep SPIR-V code valid
+  SPIRV::StorageClass::StorageClass SC =
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          OpType->getOperand(1).getImm());
+  MachineInstr *PrevI = I.getPrevNode();
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineBasicBlock::iterator InsPt =
+      PrevI ? PrevI->getIterator() : MBB.begin();
+  MachineIRBuilder MIB(MBB, InsPt);
+  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ResType, MIB, SC);
+  if (!GR.isBitcastCompatible(NewPtrType, OpType))
+    report_fatal_error(
+        "insert validation bitcast: incompatible result and operand types");
+  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+  bool Res = MIB.buildInstr(SPIRV::OpBitcast)
+                 .addDef(NewReg)
+                 .addUse(GR.getSPIRVTypeID(NewPtrType))
+                 .addUse(OpReg)
+                 .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                                   *STI.getRegBankInfo());
+  if (!Res)
+    report_fatal_error("insert validation bitcast: cannot constrain all uses");
+  MRI->setRegClass(NewReg, &SPIRV::IDRegClass);
+  GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
+  I.getOperand(OpIdx).setReg(NewReg);
+}
+
+// TODO: the logic of inserting additional bitcast's is to be moved
+// to pre-IRTranslation passes eventually
+void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
+  GR.setCurrentFunc(MF);
+  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
+    MachineBasicBlock *MBB = &*I;
+    for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
+         MBBI != MBBE;) {
+      MachineInstr &MI = *MBBI++;
+      switch (MI.getOpcode()) {
+      case SPIRV::OpLoad:
+        // OpLoad <ResType>, ptr %Op implies that %Op is a pointer to <ResType>
+        validatePtrTypes(STI, MRI, GR, MI,
+                         GR.getSPIRVTypeForVReg(MI.getOperand(0).getReg()), 2);
+        break;
+      case SPIRV::OpStore:
+        // OpStore ptr %Op, <Obj> implies that %Op points to the <Obj>'s type
+        validatePtrTypes(STI, MRI, GR, MI,
+                         GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()), 0);
+        break;
+      }
+    }
+  }
+  TargetLowering::finalizeLowering(MF);
 }

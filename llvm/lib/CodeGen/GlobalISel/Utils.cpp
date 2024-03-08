@@ -355,18 +355,17 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
   if (!MaybeVal)
     return std::nullopt;
   APInt &Val = *MaybeVal;
-  while (!SeenOpcodes.empty()) {
-    std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
-    switch (OpcodeAndSize.first) {
+  for (auto [Opcode, Size] : reverse(SeenOpcodes)) {
+    switch (Opcode) {
     case TargetOpcode::G_TRUNC:
-      Val = Val.trunc(OpcodeAndSize.second);
+      Val = Val.trunc(Size);
       break;
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-      Val = Val.sext(OpcodeAndSize.second);
+      Val = Val.sext(Size);
       break;
     case TargetOpcode::G_ZEXT:
-      Val = Val.zext(OpcodeAndSize.second);
+      Val = Val.zext(Size);
       break;
     }
   }
