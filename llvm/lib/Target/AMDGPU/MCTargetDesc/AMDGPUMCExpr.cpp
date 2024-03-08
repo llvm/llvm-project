@@ -20,10 +20,13 @@ using namespace llvm;
 const AMDGPUVariadicMCExpr *
 AMDGPUVariadicMCExpr::create(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
                              MCContext &Ctx) {
-  // Storage for the argument's 'const MCExpr*' allocated through MCContext new placement which means that AMDGPUVariadicMCExpr objects and all of its contents will now be allocated through MCContext new placement.
+  // Storage for the argument's 'const MCExpr*' allocated through MCContext new
+  // placement which means that AMDGPUVariadicMCExpr objects and all of its
+  // contents will now be allocated through MCContext new placement.
   //
-  // Will result in an asan failure if allocated on the heap (e.g., through SmallVector's grow).
-  const MCExpr **CtxArgs = new (Ctx) const MCExpr*[Args.size()];
+  // Will result in an asan failure if allocated on the heap (e.g., through
+  // SmallVector's grow).
+  const MCExpr **CtxArgs = new (Ctx) const MCExpr *[Args.size()];
   for (size_t i = 0; i < Args.size(); ++i)
     CtxArgs[i] = Args[i];
   return new (Ctx) AMDGPUVariadicMCExpr(Kind, ArrayRef(CtxArgs, Args.size()));
