@@ -2107,6 +2107,20 @@ TEST_P(ASTMatchersTest, IsPure) {
   EXPECT_TRUE(notMatches("class X { int f(); };", cxxMethodDecl(isPure())));
 }
 
+TEST_P(ASTMatchersTest, IsExplicitObjectMemberFunction) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto ExpObjParamFn = cxxMethodDecl(isExplicitObjectMemberFunction());
+  EXPECT_TRUE(
+      notMatches("struct A { static int operator()(int); };", ExpObjParamFn));
+  EXPECT_TRUE(notMatches("struct A { int operator+(int); };", ExpObjParamFn));
+  EXPECT_TRUE(
+      matches("struct A { int operator-(this A, int); };", ExpObjParamFn));
+  EXPECT_TRUE(matches("struct A { void fun(this A &&self); };", ExpObjParamFn));
+}
+
 TEST_P(ASTMatchersTest, IsCopyAssignmentOperator) {
   if (!GetParam().isCXX()) {
     return;
