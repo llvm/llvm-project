@@ -2365,7 +2365,7 @@ multiclass MUBUF_Real_gfx7<bits<8> op> {
 // Base ENC_VBUFFER for GFX12.
 //===----------------------------------------------------------------------===//
 
-class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
+class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   InstSI <ps.OutOperandList, ps.InOperandList, real_name # ps.AsmOperands, []>, Enc96 {
 
   let isPseudo = 0;
@@ -2389,6 +2389,8 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let VALU               = ps.VALU;
   let LGKM_CNT           = ps.LGKM_CNT;
+  let MUBUF              = ps.MUBUF;
+  let MTBUF              = ps.MTBUF;
 
   bits<24> offset;
   bits<8>  vaddr;
@@ -2405,6 +2407,7 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{47-41} = !if(ps.has_srsrc, srsrc, ?);
   let Inst{49-48} = 0b00;
   let Inst{6-0}   = !if(ps.has_soffset, soffset, ?);
+  let Inst{21-14} = op;
   let Inst{22}    = ps.tfe;
   let Inst{62}    = ps.offen;
   let Inst{63}    = ps.idxen;
@@ -2416,33 +2419,27 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{31-26} = 0b110001;
 }
 
+class VBUFFER_Real_gfx12<bits<8> op, BUF_Pseudo ps, string real_name> :
+    VBUFFER_Real<op, ps, real_name>,
+    SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
+  let AssemblerPredicate = isGFX12Only;
+  let DecoderNamespace = "GFX12";
+}
+
 multiclass VBUFFER_MUBUF_Real_gfx12<bits<8> op, string real_name> {
   defvar ps = !cast<MUBUF_Pseudo>(NAME);
-  def _gfx12 : VBUFFER_Real<ps, real_name>,
-               SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let MUBUF = 1;
-
+  def _gfx12 : VBUFFER_Real_gfx12<op, ps, real_name> {
     // Set the last bit of format to 1 to avoid round-trip issues, as some tools
     // print BUF_FMT_INVALID for format 0.
     let Inst{55} = 0b1;
-    let Inst{21-14} = op;
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
   }
 }
 
 multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
   defvar ps = !cast<MTBUF_Pseudo>(NAME);
-  def _gfx12 : VBUFFER_Real<ps, real_name>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let MTBUF = 1;
-
-    bits<7>  format;
-
-    let Inst{17-14} = op;
-    let Inst{21-18} = 0b1000;
+  def _gfx12 : VBUFFER_Real_gfx12<{0b1000, op}, ps, real_name> {
+    bits<7> format;
     let Inst{61-55} = format;
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
   }
 }
 
