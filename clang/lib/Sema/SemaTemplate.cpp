@@ -491,20 +491,18 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     // To keep our behavior consistent, we apply the "finds nothing" part in
     // all language modes, and diagnose the empty lookup in ActOnCallExpr if we
     // successfully form a call to an undeclared template-id.
-    bool AnyFunctions =
-        getLangOpts().CPlusPlus20 && llvm::any_of(Found, [](NamedDecl *ND) {
+    bool AllFunctions =
+        getLangOpts().CPlusPlus20 && llvm::all_of(Found, [](NamedDecl *ND) {
           return isa<FunctionDecl>(ND->getUnderlyingDecl());
         });
-    if (AnyFunctions || (Found.empty() && !IsDependent)) {
+    if (AllFunctions || (Found.empty() && !IsDependent)) {
       // If lookup found any functions, or if this is a name that can only be
       // used for a function, then strongly assume this is a function
       // template-id.
       *ATK = (Found.empty() && Found.getLookupName().isIdentifier())
                  ? AssumedTemplateKind::FoundNothing
                  : AssumedTemplateKind::FoundFunctions;
-      FilterAcceptableTemplateNames(Found,
-                                    /*AllowFunctionTemplates*/ true,
-                                    /*AllowDependent*/ true);
+      Found.clear();
       return false;
     }
   }
