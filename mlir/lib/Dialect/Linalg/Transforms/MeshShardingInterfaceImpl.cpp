@@ -93,7 +93,7 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
   if (!reductionOp) {
     return ReductionKind::Generic;
   }
-  Type resultElementType =
+  [[maybe_unused]] Type resultElementType =
       llvm::cast<RankedTensorType>(op->getResult(0).getType()).getElementType();
   // TODO: handle case when result type of the reduction op does not match the
   // element type of the result tensor.
@@ -119,6 +119,7 @@ static MeshOp getMesh(Operation *op,
   }
 
   assert(false);
+  return nullptr;
 }
 
 // Choose the operand based on the current process index along the reduction
