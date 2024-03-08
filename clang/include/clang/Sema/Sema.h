@@ -9830,6 +9830,12 @@ public:
                           ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
+  TemplateDeductionResult DeduceTemplateArguments(
+      TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
+      ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      bool NumberOfArgumentsMustMatch);
+
   TemplateDeductionResult SubstituteExplicitTemplateArguments(
       FunctionTemplateDecl *FunctionTemplate,
       TemplateArgumentListInfo &ExplicitTemplateArgs,
@@ -10381,6 +10387,9 @@ public:
     InstantiatingTemplate &operator=(const InstantiatingTemplate &) = delete;
   };
 
+  bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             TemplateArgumentLoc &Output);
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -10865,9 +10874,11 @@ public:
                                   ParmVarDecl *Param);
   void InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function);
-  FunctionDecl *InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
-                                               const TemplateArgumentList *Args,
-                                               SourceLocation Loc);
+  FunctionDecl *InstantiateFunctionDeclaration(
+      FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+      SourceLocation Loc,
+      CodeSynthesisContext::SynthesisKind CSC =
+          CodeSynthesisContext::ExplicitTemplateArgumentSubstitution);
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                      FunctionDecl *Function,
                                      bool Recursive = false,
