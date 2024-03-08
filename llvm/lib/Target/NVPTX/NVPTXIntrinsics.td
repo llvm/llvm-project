@@ -1631,11 +1631,11 @@ defm INT_PTX_ATOM_ADD_GEN_64_USE_G : F_ATOMIC_2<i64, Int64Regs, ".global", ".u64
   ".add", atomic_load_add_64_gen, i64imm, imm>;
 
 defm INT_PTX_ATOM_ADD_G_F16 : F_ATOMIC_2<f16, Int16Regs, ".global", ".f16", ".add.noftz",
-  atomic_load_add_g, f16imm, fpimm, [hasSM<70>]>;
+  atomic_load_add_g, f16imm, fpimm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_ADD_S_F16 : F_ATOMIC_2<f16, Int16Regs, ".shared", ".f16", ".add.noftz",
-  atomic_load_add_s, f16imm, fpimm, [hasSM<70>]>;
+  atomic_load_add_s, f16imm, fpimm, [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_ADD_GEN_F16 : F_ATOMIC_2<f16, Int16Regs, "", ".f16", ".add.noftz",
-  atomic_load_add_gen, f16imm, fpimm, [hasSM<70>]>;
+  atomic_load_add_gen, f16imm, fpimm, [hasSM<70>, hasPTX<63>]>;
 
 defm INT_PTX_ATOM_ADD_G_F32 : F_ATOMIC_2<f32, Float32Regs, ".global", ".f32", ".add",
   atomic_load_add_g, f32imm, fpimm>;
@@ -2150,7 +2150,7 @@ multiclass ATOM2_add_impl<string OpStr> {
    defm _u32  : ATOM2S_impl<OpStr, "i", "u32", i32, Int32Regs, i32imm, imm, i32, []>;
    defm _u64  : ATOM2S_impl<OpStr, "i", "u64", i64, Int64Regs, i64imm, imm, i64, []>;
    defm _f16  : ATOM2S_impl<OpStr, "f", "f16", f16, Int16Regs, f16imm, fpimm, f16,
-                            [hasSM<70>]>;
+                            [hasSM<70>, hasPTX<63>]>;
    defm _f32  : ATOM2S_impl<OpStr, "f", "f32", f32, Float32Regs, f32imm, fpimm, f32,
                             []>;
    defm _f64  : ATOM2S_impl<OpStr, "f", "f64", f64, Float64Regs, f64imm, fpimm, f64,
