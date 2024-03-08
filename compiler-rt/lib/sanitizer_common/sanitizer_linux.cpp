@@ -2107,9 +2107,9 @@ bool SignalContext::IsTrueFaultingAddress() const {
 
 void SignalContext::DumpAllRegisters(void *context) {
 #  if SANITIZER_LINUX
-#    if defined(__x86_64__)
    ucontext_t *uc = static_cast<ucontext_t *>(context);
    mcontext_t *mc = &uc->uc_mcontext;
+#    if defined(__x86_64__)
    
    Report(
        "rax: %016lx rbx: %016lx rbp: %016lx rsp: %016lx\n"
@@ -2121,7 +2121,16 @@ void SignalContext::DumpAllRegisters(void *context) {
        mc->gregs[REG_R8], mc->gregs[REG_R9], mc->gregs[REG_R10], mc->gregs[REG_R11],
        mc->gregs[REG_R12], mc->gregs[REG_R13], mc->gregs[REG_R14], mc->gregs[REG_R15]
    );
-#    endif
+#   elif defined(__aarch64__)
+   Report(
+      "x0: %016lx,  x1: %016lx,  x2: %016lx,  x3: %016lx\n"
+      "x4: %016lx,  x5: %016lx,  x6: %016lx,  x7: %016lx\n"
+      "x29: %016lx, x30: %016lx, x16: %016lx, x17: %016lx\n",
+      mc->regs[0], mc->regs[1], mc->regs[2], mc->regs[3],
+      mc->regs[4], mc->regs[5], mc->regs[6], mc->regs[7],
+      mc->regs[29], mc->regs[30], mc->regs[16], mc->regs[17]
+   );
+#   endif
 #  endif
   // FIXME: Implement for other platforms/archs.
 }
