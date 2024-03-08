@@ -1,9 +1,13 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ;; Translate SPIR-V friendly OpLoad and OpStore calls
 
-; CHECK: %[[#CONST:]] = OpConstant %[[#]] 42
-; CHECK: OpStore %[[#PTR:]] %[[#CONST]] Volatile|Aligned 4
-; CHECK: %[[#]] = OpLoad %[[#]] %[[#PTR]]
+; CHECK-DAG: %[[#INT32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#CONST:]] = OpConstant %[[#INT32]] 42
+; CHECK-DAG: %[[#PTRINT32:]] = OpTypePointer CrossWorkgroup %[[#INT32]]
+; CHECK: %[[#BITCASTorPARAMETER:]] = {{OpBitcast|OpFunctionParameter}}{{.*}}%[[#PTRINT32]]{{.*}}
+
+; CHECK: OpStore %[[#BITCASTorPARAMETER]] %[[#CONST]] Volatile|Aligned 4
+; CHECK: %[[#]] = OpLoad %[[#]] %[[#BITCASTorPARAMETER]]
 
 define weak_odr dso_local spir_kernel void @foo(i32 addrspace(1)* %var) {
 entry:
