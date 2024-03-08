@@ -74,7 +74,8 @@ ConstString ValueObjectRegisterSet::GetQualifiedTypeName() {
   return ConstString();
 }
 
-uint32_t ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
   const RegisterSet *reg_set = m_reg_ctx_sp->GetRegisterSet(m_reg_set_idx);
   if (reg_set) {
     auto reg_count = reg_set->num_registers;
@@ -118,7 +119,7 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
     size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
   ValueObject *valobj = nullptr;
   if (m_reg_ctx_sp && m_reg_set) {
-    const size_t num_children = GetNumChildren();
+    uint32_t num_children = GetNumChildrenIgnoringErrors();
     if (idx < num_children)
       valobj = new ValueObjectRegister(
           *this, m_reg_ctx_sp,
@@ -220,10 +221,13 @@ ConstString ValueObjectRegister::GetTypeName() {
   return m_type_name;
 }
 
-uint32_t ValueObjectRegister::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectRegister::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 std::optional<uint64_t> ValueObjectRegister::GetByteSize() {
