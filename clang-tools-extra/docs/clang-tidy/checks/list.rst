@@ -359,6 +359,7 @@ Clang-Tidy Checks
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
+   :doc:`readability-math-missing-parentheses <readability/math-missing-parentheses>`, "Yes"
    :doc:`readability-misleading-indentation <readability/misleading-indentation>`,
    :doc:`readability-misplaced-array-index <readability/misplaced-array-index>`, "Yes"
    :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"

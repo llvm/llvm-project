@@ -31,6 +31,7 @@
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MakeMemberFunctionConstCheck.h"
+#include "MathMissingParenthesesCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
@@ -101,6 +102,8 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<MathMissingParenthesesCheck>(
+        "readability-math-missing-parentheses");
     CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
         "readability-redundant-inline-specifier");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(

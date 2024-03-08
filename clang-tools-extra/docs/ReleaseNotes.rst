@@ -100,6 +100,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check.
+
+  Checks for mathematical expressions that involve operators
+  of different priorities.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
