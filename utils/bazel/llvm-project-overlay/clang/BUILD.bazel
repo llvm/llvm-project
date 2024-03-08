@@ -2092,6 +2092,7 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":frontend",
         ":lex",
         ":sema",
         ":serialization_attr_gen",
