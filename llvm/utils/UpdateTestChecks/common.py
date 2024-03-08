@@ -1332,10 +1332,11 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
     candidates.sort(key=lambda candidate: (candidate[0], -candidate[1]))
 
     backlinks = []
-    table = []
+    table_rhs_idx = []
+    table_candidate_idx = []
     for _, rhs_idx in candidates:
         candidate_idx = len(backlinks)
-        ti = bisect.bisect_left(table, rhs_idx, key=lambda entry: entry[0])
+        ti = bisect.bisect_left(table_rhs_idx, rhs_idx)
 
         # Update the table to record a best chain ending in the current point.
         # There always is one, and if any of the previously visited points had
@@ -1349,18 +1350,20 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
         # previously recorded best chain instead. That would bias the algorithm
         # differently but should have no systematic impact on the quality of the
         # result.
-        if ti < len(table):
-            table[ti] = (rhs_idx, candidate_idx)
+        if ti < len(table_rhs_idx):
+            table_rhs_idx[ti] = rhs_idx
+            table_candidate_idx[ti] = candidate_idx
         else:
-            table.append((rhs_idx, candidate_idx))
+            table_rhs_idx.append(rhs_idx)
+            table_candidate_idx.append(candidate_idx)
         if ti > 0:
-            backlinks.append(table[ti - 1][1])
+            backlinks.append(table_candidate_idx[ti - 1])
         else:
             backlinks.append(None)
 
     # Commit to names in the matching by walking the backlinks. Recursively
     # attempt to fill in more matches in-betweem.
-    match_idx = table[-1][1]
+    match_idx = table_candidate_idx[-1]
     while match_idx is not None:
         current = candidates[match_idx]
         matches.append(current)
@@ -1541,7 +1544,7 @@ def generalize_check_lines_common(
     vars_seen,
     global_vars_seen,
     nameless_values,
-    nameless_value_regex: re.Pattern,
+    nameless_value_regex,
     is_asm,
     preserve_names,
     original_check_lines=None,
