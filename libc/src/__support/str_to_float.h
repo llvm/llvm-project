@@ -524,7 +524,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 
   FPBits result;
   T float_mantissa;
-  if constexpr (cpp::is_same_v<StorageType, cpp::UInt<128>>) {
+  if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
     float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
         Sign::POS, 0,
         fputil::DyadicFloat<128>::MantissaType(

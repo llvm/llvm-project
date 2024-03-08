@@ -158,7 +158,7 @@ struct IntegerWriterUnsigned<T, cpp::enable_if_t<cpp::is_integral_v<T>>> {
 };
 
 template <typename T>
-struct IntegerWriterUnsigned<T, cpp::enable_if_t<cpp::is_big_int_v<T>>> {
+struct IntegerWriterUnsigned<T, cpp::enable_if_t<is_big_int_v<T>>> {
   using type = typename T::unsigned_type;
 };
 
@@ -176,7 +176,7 @@ template <size_t radix> using Custom = details::Fmt<radix>;
 
 // See file header for documentation.
 template <typename T, typename Fmt = radix::Dec> class IntegerToString {
-  static_assert(cpp::is_integral_v<T> || cpp::is_big_int_v<T>);
+  static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
 
   LIBC_INLINE static constexpr size_t compute_buffer_size() {
     constexpr auto MAX_DIGITS = []() -> size_t {
@@ -221,7 +221,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
 
   // An internal stateless structure that handles the number formatting logic.
   struct IntegerWriter {
-    static_assert(cpp::is_integral_v<T> || cpp::is_big_int_v<T>);
+    static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
     using UNSIGNED_T = typename details::IntegerWriterUnsigned<T>::type;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {

@@ -23,16 +23,16 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE {
 
 namespace internal {
 template <typename T> struct half_width;
 
-template <> struct half_width<uint64_t> : type_identity<uint32_t> {};
-template <> struct half_width<uint32_t> : type_identity<uint16_t> {};
-template <> struct half_width<uint16_t> : type_identity<uint8_t> {};
+template <> struct half_width<uint64_t> : cpp::type_identity<uint32_t> {};
+template <> struct half_width<uint32_t> : cpp::type_identity<uint16_t> {};
+template <> struct half_width<uint16_t> : cpp::type_identity<uint8_t> {};
 #ifdef __SIZEOF_INT128__
-template <> struct half_width<__uint128_t> : type_identity<uint64_t> {};
+template <> struct half_width<__uint128_t> : cpp::type_identity<uint64_t> {};
 #endif // __SIZEOF_INT128__
 
 template <typename T> using half_width_t = typename half_width<T>::type;
@@ -40,7 +40,7 @@ template <typename T> using half_width_t = typename half_width<T>::type;
 
 template <size_t Bits, bool Signed, typename WordType = uint64_t>
 struct BigInt {
-  static_assert(is_integral_v<WordType> && is_unsigned_v<WordType>,
+  static_assert(cpp::is_integral_v<WordType> && cpp::is_unsigned_v<WordType>,
                 "WordType must be unsigned integer.");
 
   using word_type = WordType;
@@ -76,7 +76,7 @@ struct BigInt {
       WordType sign = 0;
       if constexpr (Signed && OtherSigned) {
         sign = static_cast<WordType>(
-            -static_cast<make_signed_t<WordType>>(other.is_neg()));
+            -static_cast<cpp::make_signed_t<WordType>>(other.is_neg()));
       }
       for (; i < WORD_COUNT; ++i)
         val[i] = sign;
@@ -84,7 +84,7 @@ struct BigInt {
   }
 
   // Construct a BigInt from a C array.
-  template <size_t N, enable_if_t<N <= WORD_COUNT, int> = 0>
+  template <size_t N, cpp::enable_if_t<N <= WORD_COUNT, int> = 0>
   LIBC_INLINE constexpr BigInt(const WordType (&nums)[N]) {
     size_t min_wordcount = N < WORD_COUNT ? N : WORD_COUNT;
     size_t i = 0;
@@ -97,7 +97,7 @@ struct BigInt {
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<is_integral_v<T>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
   LIBC_INLINE constexpr BigInt(T v) {
     val[0] = static_cast<WordType>(v);
 
@@ -406,7 +406,7 @@ struct BigInt {
 
   // div takes another BigInt of the same size and divides this by it. The value
   // of this will be set to the quotient, and the return value is the remainder.
-  LIBC_INLINE constexpr optional<BigInt> div(const BigInt &other) {
+  LIBC_INLINE constexpr cpp::optional<BigInt> div(const BigInt &other) {
     BigInt remainder(0);
     if (*this < other) {
       remainder = *this;
@@ -417,7 +417,7 @@ struct BigInt {
       return remainder;
     }
     if (other == 0) {
-      return nullopt;
+      return cpp::nullopt;
     }
 
     BigInt quotient(0);
@@ -448,12 +448,12 @@ struct BigInt {
   //   Since the remainder of each division step < x < 2^(WORD_SIZE / 2), the
   // computation of each step is now properly contained within WordType.
   //   And finally we perform some extra alignment steps for the remaining bits.
-  LIBC_INLINE constexpr optional<BigInt>
+  LIBC_INLINE constexpr cpp::optional<BigInt>
   div_uint_half_times_pow_2(internal::half_width_t<WordType> x, size_t e) {
     BigInt remainder(0);
 
     if (x == 0) {
-      return nullopt;
+      return cpp::nullopt;
     }
     if (e >= Bits) {
       remainder = *this;
@@ -463,7 +463,7 @@ struct BigInt {
 
     BigInt quotient(0);
     WordType x_word = static_cast<WordType>(x);
-    constexpr size_t LOG2_WORD_SIZE = bit_width(WORD_SIZE) - 1;
+    constexpr size_t LOG2_WORD_SIZE = cpp::bit_width(WORD_SIZE) - 1;
     constexpr size_t HALF_WORD_SIZE = WORD_SIZE >> 1;
     constexpr WordType HALF_MASK = ((WordType(1) << HALF_WORD_SIZE) - 1);
     // lower = smallest multiple of WORD_SIZE that is >= e.
@@ -592,7 +592,7 @@ struct BigInt {
     int leading_zeroes = 0;
     for (auto i = val.size(); i > 0;) {
       --i;
-      const int zeroes = countl_zero(val[i]);
+      const int zeroes = cpp::countl_zero(val[i]);
       leading_zeroes += zeroes;
       if (zeroes != word_digits)
         break;
@@ -605,7 +605,7 @@ struct BigInt {
     constexpr int word_digits = cpp::numeric_limits<word_type>::digits;
     int trailing_zeroes = 0;
     for (auto word : val) {
-      const int zeroes = countr_zero(word);
+      const int zeroes = cpp::countr_zero(word);
       trailing_zeroes += zeroes;
       if (zeroes != word_digits)
         break;
@@ -913,7 +913,7 @@ template <size_t Bits>
 using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 
 // Provides limits of U/Int<128>.
-template <> class numeric_limits<UInt<128>> {
+template <> class cpp::numeric_limits<UInt<128>> {
 public:
   LIBC_INLINE static constexpr UInt<128> max() {
     return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
@@ -924,7 +924,7 @@ public:
   LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
-template <> class numeric_limits<Int<128>> {
+template <> class cpp::numeric_limits<Int<128>> {
 public:
   LIBC_INLINE static constexpr Int<128> max() {
     return Int<128>({0xffff'ffff'ffff'ffff, 0x7fff'ffff'ffff'ffff});
@@ -937,7 +937,7 @@ public:
   LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
-// type traits to determine whether a T is a cpp::BigInt.
+// type traits to determine whether a T is a BigInt.
 template <typename T> struct is_big_int : cpp::false_type {};
 
 template <size_t Bits, bool Signed, typename T>
@@ -945,6 +945,8 @@ struct is_big_int<BigInt<Bits, Signed, T>> : cpp::true_type {};
 
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_big_int_v = is_big_int<T>::value;
+
+namespace cpp {
 
 // Specialization of cpp::bit_cast ('bit.h') from T to BigInt.
 template <typename To, typename From>
@@ -973,7 +975,7 @@ bit_cast(const UInt<Bits> &from) {
 
 // Specialization of cpp::has_single_bit ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, bool>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, bool>
 has_single_bit(T value) {
   int bits = 0;
   for (auto word : value.val) {
@@ -988,21 +990,21 @@ has_single_bit(T value) {
 
 // Specialization of cpp::countr_zero ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 countr_zero(const T &value) {
   return value.ctz();
 }
 
 // Specialization of cpp::countl_zero ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 countl_zero(const T &value) {
   return value.clz();
 }
 
 // Specialization of cpp::countl_one ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 countl_one(T value) {
   // TODO : Implement a faster version not involving operator~.
   return cpp::countl_zero<T>(~value);
@@ -1010,7 +1012,7 @@ countl_one(T value) {
 
 // Specialization of cpp::countr_one ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 countr_one(T value) {
   // TODO : Implement a faster version not involving operator~.
   return cpp::countr_zero<T>(~value);
@@ -1018,19 +1020,19 @@ countr_one(T value) {
 
 // Specialization of cpp::bit_width ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 bit_width(T value) {
   return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
 }
 
 // Forward-declare rotr so that rotl can use it.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotr(T value, int rotate);
 
 // Specialization of cpp::rotl ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotl(T value, int rotate) {
   constexpr unsigned N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
@@ -1043,7 +1045,7 @@ rotl(T value, int rotate) {
 
 // Specialization of cpp::rotr ('bit.h') for BigInt.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotr(T value, int rotate) {
   constexpr unsigned N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
@@ -1054,13 +1056,11 @@ rotr(T value, int rotate) {
   return (value >> rotate) | (value << (N - rotate));
 }
 
-} // namespace LIBC_NAMESPACE::cpp
-
-namespace LIBC_NAMESPACE {
+} // namespace cpp
 
 // Specialization of mask_trailing_ones ('math_extras.h') for BigInt.
 template <typename T, size_t count>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 mask_trailing_ones() {
   static_assert(!T::SIGNED);
   if (count == 0)
@@ -1086,8 +1086,7 @@ mask_trailing_ones() {
 
 // Specialization of mask_leading_ones ('math_extras.h') for BigInt.
 template <typename T, size_t count>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_big_int_v<T>, T>
-mask_leading_ones() {
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
   static_assert(!T::SIGNED);
   if (count == 0)
     return T();

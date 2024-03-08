@@ -14,19 +14,19 @@
 
 namespace LIBC_NAMESPACE {
 
-using LL_UInt64 = cpp::UInt<64>;
-// We want to test cpp::UInt<128> explicitly. So, for
+using LL_UInt64 = UInt<64>;
+// We want to test UInt<128> explicitly. So, for
 // convenience, we use a sugar which does not conflict with the UInt128 type
 // which can resolve to __uint128_t if the platform has it.
-using LL_UInt128 = cpp::UInt<128>;
-using LL_UInt192 = cpp::UInt<192>;
-using LL_UInt256 = cpp::UInt<256>;
-using LL_UInt320 = cpp::UInt<320>;
-using LL_UInt512 = cpp::UInt<512>;
-using LL_UInt1024 = cpp::UInt<1024>;
+using LL_UInt128 = UInt<128>;
+using LL_UInt192 = UInt<192>;
+using LL_UInt256 = UInt<256>;
+using LL_UInt320 = UInt<320>;
+using LL_UInt512 = UInt<512>;
+using LL_UInt1024 = UInt<1024>;
 
-using LL_Int128 = cpp::Int<128>;
-using LL_Int192 = cpp::Int<192>;
+using LL_Int128 = Int<128>;
+using LL_Int192 = Int<192>;
 
 TEST(LlvmLibcUIntClassTest, BitCastToFromDouble) {
   static_assert(cpp::is_trivially_copyable<LL_UInt64>::value);
@@ -677,8 +677,8 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
 }
 
 TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
-  using LL_UInt256_128 = cpp::BigInt<256, false, __uint128_t>;
-  using LL_UInt128_128 = cpp::BigInt<128, false, __uint128_t>;
+  using LL_UInt256_128 = BigInt<256, false, __uint128_t>;
+  using LL_UInt128_128 = BigInt<128, false, __uint128_t>;
 
   LL_UInt256_128 a(1);
 
@@ -710,7 +710,7 @@ TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
 #endif // __SIZEOF_INT128__
 
 TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
-  using LL_UInt96 = cpp::BigInt<96, false, uint32_t>;
+  using LL_UInt96 = BigInt<96, false, uint32_t>;
 
   LL_UInt96 a(1);
 

@@ -31,7 +31,7 @@ namespace LIBC_NAMESPACE::fputil {
 // To simplify and improve the efficiency, many functions will assume that the
 // inputs are normal.
 template <size_t Bits> struct DyadicFloat {
-  using MantissaType = LIBC_NAMESPACE::cpp::UInt<Bits>;
+  using MantissaType = LIBC_NAMESPACE::UInt<Bits>;
 
   Sign sign = Sign::POS;
   int exponent = 0;

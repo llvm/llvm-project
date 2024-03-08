@@ -26,7 +26,7 @@ using UnsignedTypes = testing::TypeList<
     __uint128_t,
 #endif
     unsigned char, unsigned short, unsigned int, unsigned long,
-    unsigned long long, cpp::UInt<128>>;
+    unsigned long long, UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto ZERO = T(0);
