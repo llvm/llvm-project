@@ -13943,8 +13943,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   SavedContext.pop();
 
   // Recompute the dependency of the lambda so that we can defer the lambda call
-  // construction until after we have sufficient template arguments. For
-  // example, template <class> struct S {
+  // construction until after we have all the necessary template arguments. For
+  // example, given
+  //
+  // template <class> struct S {
   //   template <class U>
   //   using Type = decltype([](U){}(42.0));
   // };
@@ -13952,14 +13954,27 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   //   using T = S<int>::Type<float>;
   //             ^~~~~~
   // }
-  // We would end up here from instantiating the S<int> as we're ensuring the
-  // completeness. That would make us transform the lambda call expression
-  // despite the fact that we don't see the argument for U yet. We have a
-  // mechanism that circumvents the semantic checking if the CallExpr is
-  // dependent. We can harness that by recomputing the lambda dependency from
-  // the instantiation arguments. I'm putting it here rather than the above
-  // since we can see transformed lambda parameters in case that they're
-  // useful for calculation.
+  //
+  // We would end up here from instantiating S<int> when ensuring its
+  // completeness. That would transform the lambda call expression regardless of
+  // the absence of the corresponding argument for U.
+  //
+  // Going ahead with unsubstituted type U makes things worse: we would soon
+  // compare the argument type (which is float) against the parameter U
+  // somewhere in Sema::BuildCallExpr. Then we would quickly run into a bogus
+  // error suggesting unmatched types 'U' and 'float'!
+  //
+  // That said, everything will be fine if we defer that semantic checking.
+  // Fortunately, we have such a mechanism that bypasses it if the CallExpr is
+  // dependent. Since the CallExpr's dependency boils down to the lambda's
+  // dependency in this case, we can harness that by recomputing the dependency
+  // from the instantiation arguments.
+  //
+  // FIXME: Creating the type of a lambda requires us to have a dependency
+  // value, which happens before its substitution. We update its dependency
+  // *after* the substitution in case we can't decide the dependency
+  // so early, e.g. because we want to see if any of the *substituted*
+  // parameters are dependent.
   DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
   Class->setLambdaDependencyKind(DependencyKind);
   // Clean up the type cache created previously. Then, we re-create a type for

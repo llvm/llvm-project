@@ -79,4 +79,15 @@ void bar() {
   using T13 = MeowMeow<char, int, long, unsigned>;
 }
 
+namespace GH82104 {
+
+template <typename, typename...> int Zero = 0;
+
+template <typename T, typename...U>
+using T14 = decltype([]<int V = 0>() { return Zero<T, U...>; }());
+
+template <typename T> using T15 = T14<T, T>;
+
+} // namespace GH82104
+
 } // namespace lambda_calls
