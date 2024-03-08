@@ -447,8 +447,8 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
 define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2) "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: call_to_non_streaming_pass_args:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    sub sp, sp, #128
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill

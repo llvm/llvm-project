@@ -6,14 +6,16 @@ declare void @callee();
 declare void @fixed_callee(<4 x i32>);
 declare void @scalable_callee(<vscale x 2 x i64>);
 
+declare void @streaming_callee() #0;
+
 ; Simple example of a function with one call requiring a streaming mode change
 ;
 define void @vg_unwind_simple() #0 {
 ; CHECK-LABEL: vg_unwind_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
@@ -50,9 +52,9 @@ define void @vg_unwind_simple() #0 {
 ;
 ; FP-CHECK-LABEL: vg_unwind_simple:
 ; FP-CHECK:       // %bb.0:
-; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    .cfi_def_cfa_offset 96
+; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
@@ -102,9 +104,9 @@ define void @vg_unwind_simple() #0 {
 define void @vg_unwind_needs_gap() #0 {
 ; CHECK-LABEL: vg_unwind_needs_gap:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
@@ -147,9 +149,9 @@ define void @vg_unwind_needs_gap() #0 {
 ;
 ; FP-CHECK-LABEL: vg_unwind_needs_gap:
 ; FP-CHECK:       // %bb.0:
-; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    .cfi_def_cfa_offset 96
+; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
@@ -202,9 +204,9 @@ define void @vg_unwind_needs_gap() #0 {
 define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ; CHECK-LABEL: vg_unwind_with_fixed_args:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
@@ -245,9 +247,9 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ;
 ; FP-CHECK-LABEL: vg_unwind_with_fixed_args:
 ; FP-CHECK:       // %bb.0:
-; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    sub sp, sp, #112
 ; FP-CHECK-NEXT:    .cfi_def_cfa_offset 112
+; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
@@ -298,9 +300,9 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; CHECK-LABEL: vg_unwind_with_sve_args:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w28, -8
 ; CHECK-NEXT:    .cfi_offset vg, -16
@@ -403,11 +405,11 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ;
 ; FP-CHECK-LABEL: vg_unwind_with_sve_args:
 ; FP-CHECK:       // %bb.0:
-; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    .cfi_def_cfa_offset 48
-; FP-CHECK-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
 ; FP-CHECK-NEXT:    mov x29, sp
 ; FP-CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; FP-CHECK-NEXT:    .cfi_offset w27, -8
@@ -518,9 +520,9 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 define void @vg_unwind_multiple_scratch_regs(ptr %out) #1 {
 ; CHECK-LABEL: vg_unwind_multiple_scratch_regs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
@@ -574,9 +576,9 @@ define void @vg_unwind_multiple_scratch_regs(ptr %out) #1 {
 ;
 ; FP-CHECK-LABEL: vg_unwind_multiple_scratch_regs:
 ; FP-CHECK:       // %bb.0: // %entry
-; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    .cfi_def_cfa_offset 96
+; FP-CHECK-NEXT:    cntd x9
 ; FP-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
@@ -637,9 +639,128 @@ entry:
   ret void
 }
 
+; Locally streaming functions require storing both the streaming and
+; non-streaming values of VG.
+;
+define void @vg_locally_streaming_fn() #3 {
+; CHECK-LABEL: vg_locally_streaming_fn:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    rdsvl x9, #1
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    lsr x9, x9, #3
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset vg, -16
+; CHECK-NEXT:    .cfi_offset w30, -32
+; CHECK-NEXT:    .cfi_offset b8, -40
+; CHECK-NEXT:    .cfi_offset b9, -48
+; CHECK-NEXT:    .cfi_offset b10, -56
+; CHECK-NEXT:    .cfi_offset b11, -64
+; CHECK-NEXT:    .cfi_offset b12, -72
+; CHECK-NEXT:    .cfi_offset b13, -80
+; CHECK-NEXT:    .cfi_offset b14, -88
+; CHECK-NEXT:    .cfi_offset b15, -96
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    .cfi_offset vg, -24
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    .cfi_restore vg
+; CHECK-NEXT:    bl streaming_callee
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    .cfi_offset vg, -24
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    .cfi_restore vg
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore b8
+; CHECK-NEXT:    .cfi_restore b9
+; CHECK-NEXT:    .cfi_restore b10
+; CHECK-NEXT:    .cfi_restore b11
+; CHECK-NEXT:    .cfi_restore b12
+; CHECK-NEXT:    .cfi_restore b13
+; CHECK-NEXT:    .cfi_restore b14
+; CHECK-NEXT:    .cfi_restore b15
+; CHECK-NEXT:    ret
+;
+; FP-CHECK-LABEL: vg_locally_streaming_fn:
+; FP-CHECK:       // %bb.0:
+; FP-CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; FP-CHECK-NEXT:    .cfi_def_cfa_offset 96
+; FP-CHECK-NEXT:    rdsvl x9, #1
+; FP-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    lsr x9, x9, #3
+; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    cntd x9
+; FP-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #88] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    add x29, sp, #64
+; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
+; FP-CHECK-NEXT:    .cfi_offset vg, -8
+; FP-CHECK-NEXT:    .cfi_offset w30, -24
+; FP-CHECK-NEXT:    .cfi_offset w29, -32
+; FP-CHECK-NEXT:    .cfi_offset b8, -40
+; FP-CHECK-NEXT:    .cfi_offset b9, -48
+; FP-CHECK-NEXT:    .cfi_offset b10, -56
+; FP-CHECK-NEXT:    .cfi_offset b11, -64
+; FP-CHECK-NEXT:    .cfi_offset b12, -72
+; FP-CHECK-NEXT:    .cfi_offset b13, -80
+; FP-CHECK-NEXT:    .cfi_offset b14, -88
+; FP-CHECK-NEXT:    .cfi_offset b15, -96
+; FP-CHECK-NEXT:    smstart sm
+; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    .cfi_offset vg, -16
+; FP-CHECK-NEXT:    bl callee
+; FP-CHECK-NEXT:    smstart sm
+; FP-CHECK-NEXT:    .cfi_restore vg
+; FP-CHECK-NEXT:    bl streaming_callee
+; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    .cfi_offset vg, -16
+; FP-CHECK-NEXT:    bl callee
+; FP-CHECK-NEXT:    smstart sm
+; FP-CHECK-NEXT:    .cfi_restore vg
+; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 96
+; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; FP-CHECK-NEXT:    .cfi_def_cfa_offset 0
+; FP-CHECK-NEXT:    .cfi_restore w30
+; FP-CHECK-NEXT:    .cfi_restore w29
+; FP-CHECK-NEXT:    .cfi_restore b8
+; FP-CHECK-NEXT:    .cfi_restore b9
+; FP-CHECK-NEXT:    .cfi_restore b10
+; FP-CHECK-NEXT:    .cfi_restore b11
+; FP-CHECK-NEXT:    .cfi_restore b12
+; FP-CHECK-NEXT:    .cfi_restore b13
+; FP-CHECK-NEXT:    .cfi_restore b14
+; FP-CHECK-NEXT:    .cfi_restore b15
+; FP-CHECK-NEXT:    ret
+  call void @callee()
+  call void @streaming_callee()
+  call void @callee()
+  ret void
+}
+
 ; Ensure VG is not spilled if nounwind is used
 ;
-define void @vg_nounwind_simple() #2 {
+define void @vg_nounwind_simple() #4 {
 ; CHECK-LABEL: vg_nounwind_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
@@ -680,4 +801,5 @@ define void @vg_nounwind_simple() #2 {
 
 attributes #0 = { "aarch64_pstate_sm_enabled" uwtable(async) }
 attributes #1 = { "probe-stack"="inline-asm" "aarch64_pstate_sm_enabled" uwtable(async) }
-attributes #2 = { "aarch64_pstate_sm_enabled" nounwind }
+attributes #3 = { "aarch64_pstate_sm_body" uwtable(async) }
+attributes #4 = { "aarch64_pstate_sm_enabled" nounwind }
