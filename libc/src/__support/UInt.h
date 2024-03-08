@@ -14,7 +14,6 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/integer_utils.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"         // SumCarry, DiffBorrow
@@ -36,6 +35,52 @@ template <> struct half_width<__uint128_t> : cpp::type_identity<uint64_t> {};
 #endif // __SIZEOF_INT128__
 
 template <typename T> using half_width_t = typename half_width<T>::type;
+
+template <typename T> constexpr NumberPair<T> full_mul(T a, T b) {
+  NumberPair<T> pa = split(a);
+  NumberPair<T> pb = split(b);
+  NumberPair<T> prod;
+
+  prod.lo = pa.lo * pb.lo;                    // exact
+  prod.hi = pa.hi * pb.hi;                    // exact
+  NumberPair<T> lo_hi = split(pa.lo * pb.hi); // exact
+  NumberPair<T> hi_lo = split(pa.hi * pb.lo); // exact
+
+  constexpr size_t HALF_BIT_WIDTH = sizeof(T) * CHAR_BIT / 2;
+
+  auto r1 = add_with_carry(prod.lo, lo_hi.lo << HALF_BIT_WIDTH, T(0));
+  prod.lo = r1.sum;
+  prod.hi = add_with_carry(prod.hi, lo_hi.hi, r1.carry).sum;
+
+  auto r2 = add_with_carry(prod.lo, hi_lo.lo << HALF_BIT_WIDTH, T(0));
+  prod.lo = r2.sum;
+  prod.hi = add_with_carry(prod.hi, hi_lo.hi, r2.carry).sum;
+
+  return prod;
+}
+
+template <>
+LIBC_INLINE constexpr NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a,
+                                                              uint32_t b) {
+  uint64_t prod = uint64_t(a) * uint64_t(b);
+  NumberPair<uint32_t> result;
+  result.lo = uint32_t(prod);
+  result.hi = uint32_t(prod >> 32);
+  return result;
+}
+
+#ifdef __SIZEOF_INT128__
+template <>
+LIBC_INLINE constexpr NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a,
+                                                              uint64_t b) {
+  __uint128_t prod = __uint128_t(a) * __uint128_t(b);
+  NumberPair<uint64_t> result;
+  result.lo = uint64_t(prod);
+  result.hi = uint64_t(prod >> 64);
+  return result;
+}
+#endif // __SIZEOF_INT128__
+
 } // namespace internal
 
 template <size_t Bits, bool Signed, typename WordType = uint64_t>
@@ -263,7 +308,7 @@ struct BigInt {
   LIBC_INLINE constexpr WordType mul(WordType x) {
     BigInt<2 * WORD_SIZE, Signed, WordType> partial_sum(0);
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      NumberPair<WordType> prod = full_mul(val[i], x);
+      NumberPair<WordType> prod = internal::full_mul(val[i], x);
       BigInt<2 * WORD_SIZE, Signed, WordType> tmp({prod.lo, prod.hi});
       const WordType carry = partial_sum.add(tmp);
       val[i] = partial_sum.val[0];
@@ -296,7 +341,8 @@ struct BigInt {
         WordType carry = 0;
         for (size_t i = 0; i < WORD_COUNT; ++i) {
           for (size_t j = 0; j <= i; j++) {
-            NumberPair<WordType> prod = full_mul(val[j], other.val[i - j]);
+            NumberPair<WordType> prod =
+                internal::full_mul(val[j], other.val[i - j]);
             BigInt<2 * WORD_SIZE, Signed, WordType> tmp({prod.lo, prod.hi});
             carry += partial_sum.add(tmp);
           }
@@ -324,7 +370,8 @@ struct BigInt {
           i < OTHER_WORDCOUNT ? 0 : i - OTHER_WORDCOUNT + 1;
       const size_t upper_idx = i < WORD_COUNT ? i : WORD_COUNT - 1;
       for (size_t j = lower_idx; j <= upper_idx; ++j) {
-        NumberPair<WordType> prod = full_mul(val[j], other.val[i - j]);
+        NumberPair<WordType> prod =
+            internal::full_mul(val[j], other.val[i - j]);
         BigInt<2 * WORD_SIZE, Signed, WordType> tmp({prod.lo, prod.hi});
         carry += partial_sum.add(tmp);
       }
@@ -366,7 +413,7 @@ struct BigInt {
     // product.
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       NumberPair<WordType> prod =
-          full_mul(val[i], other.val[WORD_COUNT - 1 - i]);
+          internal::full_mul(val[i], other.val[WORD_COUNT - 1 - i]);
       BigInt<2 * WORD_SIZE, Signed, WordType> tmp({prod.lo, prod.hi});
       carry += partial_sum.add(tmp);
     }
@@ -375,7 +422,8 @@ struct BigInt {
       partial_sum.val[1] = carry;
       carry = 0;
       for (size_t j = i - WORD_COUNT + 1; j < WORD_COUNT; ++j) {
-        NumberPair<WordType> prod = full_mul(val[j], other.val[i - j]);
+        NumberPair<WordType> prod =
+            internal::full_mul(val[j], other.val[i - j]);
         BigInt<2 * WORD_SIZE, Signed, WordType> tmp({prod.lo, prod.hi});
         carry += partial_sum.add(tmp);
       }
