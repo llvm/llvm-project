@@ -55,8 +55,8 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
 }
 
 def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
-    Arguments<(ins TensorOf<[AnyType]>:$values,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels)>,
+    Arguments<(ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
+                   TensorOf<[AnyType]>:$values)>,
     Results<(outs AnySparseTensor: $result)> {
   let summary = "Returns a sparse tensor assembled from the given values and levels";
 
@@ -96,20 +96,20 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
   }];
 
   let assemblyFormat =
-    "$values `,` $levels attr-dict"
-    "`:` type($values) `,` type($levels) `to` type($result)";
+    "` ` `(` $levels `)` `,` $values attr-dict"
+    " `:` `(` type($levels) `)` `,` type($values) `to` type($result)";
 
   let hasVerifier = 1;
 }
 
 def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVariadicResultSize]>,
     Arguments<(ins AnySparseTensor:$tensor,
-                   TensorOf<[AnyType]>:$out_values,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
-    Results<(outs TensorOf<[AnyType]>:$ret_values,
-                  Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  AnyIndexingScalarLike:$val_len,
-                  Variadic<AnyIndexingScalarLike>:$lvl_lens)> {
+                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
+                   TensorOf<[AnyType]>:$out_values)>,
+    Results<(outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
+                  TensorOf<[AnyType]>:$ret_values,
+                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
+                  AnyIndexingScalarLike:$val_len)> {
   let summary = "Returns the (values, coordinates) pair disassembled from the input tensor";
 
   let description = [{
@@ -134,8 +134,9 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
     //                  |0.0, 0.0, 0.0, 0.0|
     %v, %p, %c, %v_len, %p_len, %c_len =
         sparse_tensor.disassemble %sp : tensor<3x4xf64, #COO>
-          outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
-                            -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
+          out_lvls(%op, %oi) : tensor<2xindex>, tensor<3x2xindex>,
+          out_vals(%od) : tensor<3xf64> ->
+          tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
     // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     // %p = arith.constant dense<[ 0,              3 ]> : tensor<2xindex>
     // %c = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
@@ -147,8 +148,10 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
 
   let assemblyFormat =
     "$tensor `:` type($tensor) "
-    "`outs` `(` $out_values `,` $out_levels `:` type($out_values) `,` type($out_levels) `)` attr-dict"
-    "`->` type($ret_values) `,` `(` type($ret_levels) `)` `,` type($val_len) `,` `(` type($lvl_lens) `)`";
+    "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
+    "`out_vals` `(` $out_values `:` type($out_values) `)` attr-dict"
+    "`->` `(` type($ret_levels) `)` `,` type($ret_values) `,` "
+    "`(` type($lvl_lens) `)` `,` type($val_len)";
 
   let hasVerifier = 1;
 }

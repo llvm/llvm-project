@@ -1120,7 +1120,21 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
         if (auto refType = baseOp.getType().dyn_cast<fir::ReferenceType>())
           eleType = refType.getElementType();
 
-        if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+        // If a variable is specified in declare target link and if device
+        // type is not specified as `nohost`, it needs to be mapped tofrom
+        mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+        mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
+        auto declareTargetOp =
+            llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+        if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
+          if (declareTargetOp.getDeclareTargetCaptureClause() ==
+                  mlir::omp::DeclareTargetCaptureClause::link &&
+              declareTargetOp.getDeclareTargetDeviceType() !=
+                  mlir::omp::DeclareTargetDeviceType::nohost) {
+            mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+            mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+          }
+        } else if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
           captureKind = mlir::omp::VariableCaptureKind::ByCopy;
         } else if (!fir::isa_builtin_cptr_type(eleType)) {
           mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;

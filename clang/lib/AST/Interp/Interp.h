@@ -525,8 +525,7 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (Ptr.isDummy())
-    return false;
+  assert(!Ptr.isDummy());
 
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
@@ -585,7 +584,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
@@ -599,7 +598,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
@@ -614,7 +613,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -628,7 +627,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isDummy())
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -1224,7 +1223,8 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (S.inConstantContext() && !CheckNull(S, OpPC, Ptr, CSK_Field))
+  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
+      !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (CheckDummy(S, OpPC, Ptr)) {
@@ -1960,8 +1960,22 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
+
+  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
 
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
   return true;

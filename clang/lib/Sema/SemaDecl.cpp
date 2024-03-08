@@ -1110,9 +1110,7 @@ Corrected:
     //   unqualified-id followed by a < and name lookup finds either one
     //   or more functions or finds nothing.
     if (!IsFilteredTemplateName)
-      FilterAcceptableTemplateNames(Result,
-                                    /*AllowFunctionTemplates=*/true,
-                                    /*AllowDependent=*/true);
+      FilterAcceptableTemplateNames(Result);
 
     bool IsFunctionTemplate;
     bool IsVarTemplate;
@@ -1122,7 +1120,6 @@ Corrected:
       Template = Context.getOverloadedTemplateName(Result.begin(),
                                                    Result.end());
     } else if (!Result.empty()) {
-      assert(!Result.isUnresolvableResult());
       auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
           *Result.begin(), /*AllowFunctionTemplates=*/true,
           /*AllowDependent=*/false));
@@ -11479,6 +11476,16 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
                                              bool &Redeclaration,
                                              NamedDecl *&OldDecl,
                                              LookupResult &Previous) {
+  assert(!OldFD->isMultiVersion() && "Unexpected MultiVersion");
+
+  // The definitions should be allowed in any order. If we have discovered
+  // a new target version and the preceeding was the default, then add the
+  // corresponding attribute to it.
+  if (OldFD->getMultiVersionKind() == MultiVersionKind::None &&
+      NewFD->getMultiVersionKind() == MultiVersionKind::TargetVersion)
+    OldFD->addAttr(TargetVersionAttr::CreateImplicit(S.Context, "default",
+                                                     OldFD->getSourceRange()));
+
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
@@ -11505,9 +11512,8 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   }
 
   // If this is 'default', permit the forward declaration.
-  if (!OldFD->isMultiVersion() &&
-      ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
-       (NewTVA && NewTVA->isDefaultVersion() && !OldTVA))) {
+  if ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
+      (NewTVA && NewTVA->isDefaultVersion() && !OldTVA)) {
     Redeclaration = true;
     OldDecl = OldFD;
     OldFD->setIsMultiVersion();
@@ -15786,10 +15792,19 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // captures during transformation of nested lambdas, it is necessary to
   // have the LSI properly restored.
   if (isGenericLambdaCallOperatorSpecialization(FD)) {
-    assert(inTemplateInstantiation() &&
-           "There should be an active template instantiation on the stack "
-           "when instantiating a generic lambda!");
-    RebuildLambdaScopeInfo(cast<CXXMethodDecl>(D));
+    // C++2c 7.5.5.2p17 A member of a closure type shall not be explicitly
+    // instantiated, explicitly specialized.
+    if (FD->getTemplateSpecializationInfo()
+            ->isExplicitInstantiationOrSpecialization()) {
+      Diag(FD->getLocation(), diag::err_lambda_explicit_spec);
+      FD->setInvalidDecl();
+      PushFunctionScope();
+    } else {
+      assert(inTemplateInstantiation() &&
+             "There should be an active template instantiation on the stack "
+             "when instantiating a generic lambda!");
+      RebuildLambdaScopeInfo(cast<CXXMethodDecl>(D));
+    }
   } else {
     // Enter a new function scope
     PushFunctionScope();
@@ -16308,9 +16323,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         }
       }
 
-      assert(
-          (FD == getCurFunctionDecl() || getCurLambda()->CallOperator == FD) &&
-          "Function parsing confused");
+      assert((FD == getCurFunctionDecl(/*AllowLambdas=*/true)) &&
+             "Function parsing confused");
     } else if (ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(dcl)) {
       assert(MD == getCurMethodDecl() && "Method parsing confused");
       MD->setBody(Body);
@@ -20510,10 +20524,20 @@ Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr,
   return New;
 }
 
-Decl *Sema::ActOnTopLevelStmtDecl(Stmt *Statement) {
-  auto *New = TopLevelStmtDecl::Create(Context, Statement);
-  Context.getTranslationUnitDecl()->addDecl(New);
+TopLevelStmtDecl *Sema::ActOnStartTopLevelStmtDecl(Scope *S) {
+  auto *New = TopLevelStmtDecl::Create(Context, /*Statement=*/nullptr);
+  CurContext->addDecl(New);
+  PushDeclContext(S, New);
+  PushFunctionScope();
+  PushCompoundScope(false);
   return New;
+}
+
+void Sema::ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement) {
+  D->setStmt(Statement);
+  PopCompoundScope();
+  PopFunctionScopeInfo();
+  PopDeclContext();
 }
 
 void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
