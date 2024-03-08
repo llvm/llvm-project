@@ -33,6 +33,9 @@ scripting support.
 * `Python <http://www.python.org/>`_
 * `SWIG <http://swig.org/>`_ 4 or later.
 
+If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
+the test programs. On other platforms ``make`` is used.
+
 .. _Optional Dependencies:
 
 Optional Dependencies
@@ -71,16 +74,16 @@ commands below.
 
   $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
   $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
-  $ pkg install swig python
+  $ pkg install swig python libxml2
   $ pkgin install swig python36 cmake ninja-build
   $ brew install swig cmake ninja
 
-Note that there's an `incompatibility
-<https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
-and swig versions older than 4.0.0 which makes builds of LLDB using debug
-versions of python unusable. This primarily affects Windows, as debug builds of
-LLDB must use debug python as well.
-
+.. note::
+   There is an `incompatibility
+   <https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
+   and swig versions older than 4.0.0 which makes builds of LLDB using debug
+   versions of python unusable. This primarily affects Windows, as debug builds of
+   LLDB must use debug python as well.
 
 Windows
 *******
