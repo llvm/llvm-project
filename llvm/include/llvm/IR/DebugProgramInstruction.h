@@ -643,6 +643,8 @@ getDbgValueRange(DPMarker *DbgMarker) {
   return DbgMarker->getDbgValueRange();
 }
 
+DEFINE_ISA_CONVERSION_FUNCTIONS(DbgRecord, LLVMDbgRecordRef);
+
 } // namespace llvm
 
 #endif // LLVM_IR_DEBUGPROGRAMINSTRUCTION_H

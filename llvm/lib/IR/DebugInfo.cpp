@@ -1659,63 +1659,90 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
       unwrapDI<MDNode>(Decl), nullptr, AlignInBits));
 }
 
-LLVMValueRef
+LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
+    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
+  return wrap(
+      unwrap(Builder)
+          ->insertDeclare(unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+                          unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
+                          unwrap<Instruction>(Instr))
+          .get<Instruction *>());
+}
+LLVMDbgRecordRef
 LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
                                  LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
                                  LLVMMetadataRef DL, LLVMValueRef Instr) {
-  return LLVMValueRef();
-  // FIXME: What to do here?
-  /*
-  return wrap(unwrap(Builder)->insertDeclare(
-                  unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-                  unwrap<Instruction>(Instr)));
-  */
+  return wrap(
+      unwrap(Builder)
+          ->insertDeclare(unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+                          unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
+                          unwrap<Instruction>(Instr))
+          .get<DbgRecord *>());
 }
 
-LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
+LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  return LLVMValueRef();
-  // FIXME: What to do here?
-  /*
-  return wrap(unwrap(Builder)->insertDeclare(
-                  unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-                  unwrap(Block)));
-  */
+  return wrap(unwrap(Builder)
+                  ->insertDeclare(unwrap(Storage),
+                                  unwrap<DILocalVariable>(VarInfo),
+                                  unwrap<DIExpression>(Expr),
+                                  unwrap<DILocation>(DL), unwrap(Block))
+                  .get<Instruction *>());
+}
+LLVMDbgRecordRef
+LLVMDIBuilderInsertDeclareAtEnd(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
+                                LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
+                                LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
+  return wrap(unwrap(Builder)
+                  ->insertDeclare(unwrap(Storage),
+                                  unwrap<DILocalVariable>(VarInfo),
+                                  unwrap<DIExpression>(Expr),
+                                  unwrap<DILocation>(DL), unwrap(Block))
+                  .get<DbgRecord *>());
 }
 
-LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder,
-                                               LLVMValueRef Val,
-                                               LLVMMetadataRef VarInfo,
-                                               LLVMMetadataRef Expr,
-                                               LLVMMetadataRef DebugLoc,
-                                               LLVMValueRef Instr) {
-  return LLVMValueRef();
-  // FIXME: What to do here?
-  /*
-  return wrap(unwrap(Builder)->insertDbgValueIntrinsic(
-                  unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                  unwrap<Instruction>(Instr)));
-   */
+LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
+  return wrap(unwrap(Builder)
+                  ->insertDbgValueIntrinsic(
+                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
+                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
+                      unwrap<Instruction>(Instr))
+                  .get<Instruction *>());
+}
+LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueBefore(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
+  return wrap(unwrap(Builder)
+                  ->insertDbgValueIntrinsic(
+                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
+                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
+                      unwrap<Instruction>(Instr))
+                  .get<DbgRecord *>());
 }
 
-LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
-                                              LLVMValueRef Val,
-                                              LLVMMetadataRef VarInfo,
-                                              LLVMMetadataRef Expr,
-                                              LLVMMetadataRef DebugLoc,
-                                              LLVMBasicBlockRef Block) {
-  return LLVMValueRef();
-  // FIXME: What to do here?
-  /*
-  return wrap(unwrap(Builder)->insertDbgValueIntrinsic(
-                  unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                  unwrap(Block)));
-   */
+LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
+  return wrap(unwrap(Builder)
+                  ->insertDbgValueIntrinsic(
+                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
+                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
+                      unwrap(Block))
+                  .get<Instruction *>());
+}
+LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueAtEnd(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
+  return wrap(unwrap(Builder)
+                  ->insertDbgValueIntrinsic(
+                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
+                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
+                      unwrap(Block))
+                  .get<DbgRecord *>());
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
