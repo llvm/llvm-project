@@ -290,6 +290,9 @@ def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
 def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 
 // Warnings for C code which is not compatible with previous C standards.
+def CPre11Compat : DiagGroup<"pre-c11-compat">;
+def CPre11CompatPedantic : DiagGroup<"pre-c11-compat-pedantic",
+                                     [CPre11Compat]>;
 def CPre23Compat : DiagGroup<"pre-c23-compat">;
 def CPre23CompatPedantic : DiagGroup<"pre-c23-compat-pedantic",
                                      [CPre23Compat]>;
@@ -514,7 +517,15 @@ def MethodSignatures : DiagGroup<"method-signatures">;
 def MismatchedParameterTypes : DiagGroup<"mismatched-parameter-types">;
 def MismatchedReturnTypes : DiagGroup<"mismatched-return-types">;
 def MismatchedTags : DiagGroup<"mismatched-tags">;
-def MissingFieldInitializers : DiagGroup<"missing-field-initializers">;
+def MissingDesignatedFieldInitializers : DiagGroup<"missing-designated-field-initializers">{
+  code Documentation = [{
+Warn about designated initializers with some fields missing (only in C++).
+  }];
+}
+// Default -Wmissing-field-initializers matches gcc behavior,
+// but missing-designated-field-initializers can be turned off to match old clang behavior.
+def MissingFieldInitializers : DiagGroup<"missing-field-initializers",
+                                         [MissingDesignatedFieldInitializers]>;
 def ModuleLock : DiagGroup<"module-lock">;
 def ModuleBuild : DiagGroup<"module-build">;
 def ModuleImport : DiagGroup<"module-import">;

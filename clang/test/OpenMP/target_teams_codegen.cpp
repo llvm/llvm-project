@@ -1897,13 +1897,6 @@ int bar(int n){
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR4]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK1-NEXT:    ret void
-//
-//
 // CHECK3-LABEL: define {{[^@]+}}@_Z3fooi
 // CHECK3-SAME: (i32 noundef [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
@@ -3489,13 +3482,6 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP3]], 1
 // CHECK3-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR4]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK3-NEXT:    ret void
 //
 //

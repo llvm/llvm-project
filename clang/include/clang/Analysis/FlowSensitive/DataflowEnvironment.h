@@ -79,32 +79,6 @@ public:
       return ComparisonResult::Unknown;
     }
 
-    /// DEPRECATED. Override `join` and/or `widen`, instead.
-    ///
-    /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
-    /// be a strict lattice join or a more general widening operation.
-    ///
-    /// If this function returns true, `MergedVal` will be assigned to a storage
-    /// location of type `Type` in `MergedEnv`.
-    ///
-    /// `Env1` and `Env2` can be used to query child values and path condition
-    /// implications of `Val1` and `Val2` respectively.
-    ///
-    /// Requirements:
-    ///
-    ///  `Val1` and `Val2` must be distinct.
-    ///
-    ///  `Val1`, `Val2`, and `MergedVal` must model values of type `Type`.
-    ///
-    ///  `Val1` and `Val2` must be assigned to the same storage location in
-    ///  `Env1` and `Env2` respectively.
-    virtual bool merge(QualType Type, const Value &Val1,
-                       const Environment &Env1, const Value &Val2,
-                       const Environment &Env2, Value &MergedVal,
-                       Environment &MergedEnv) {
-      return true;
-    }
-
     /// Modifies `JoinedVal` to approximate both `Val1` and `Val2`. This should
     /// obey the properties of a lattice join.
     ///
@@ -121,11 +95,7 @@ public:
     ///  `Env1` and `Env2` respectively.
     virtual void join(QualType Type, const Value &Val1, const Environment &Env1,
                       const Value &Val2, const Environment &Env2,
-                      Value &JoinedVal, Environment &JoinedEnv) {
-      [[maybe_unused]] bool ShouldKeep =
-          merge(Type, Val1, Env1, Val2, Env2, JoinedVal, JoinedEnv);
-      assert(ShouldKeep && "dropping merged value is unsupported");
-    }
+                      Value &JoinedVal, Environment &JoinedEnv) {}
 
     /// This function may widen the current value -- replace it with an
     /// approximation that can reach a fixed point more quickly than iterated
@@ -240,6 +210,14 @@ public:
   bool equivalentTo(const Environment &Other,
                     Environment::ValueModel &Model) const;
 
+  /// How to treat expression state (`ExprToLoc` and `ExprToVal`) in a join.
+  /// If the join happens within a full expression, expression state should be
+  /// kept; otherwise, we can discard it.
+  enum ExprJoinBehavior {
+    DiscardExprState,
+    KeepExprState,
+  };
+
   /// Joins two environments by taking the intersection of storage locations and
   /// values that are stored in them. Distinct values that are assigned to the
   /// same storage locations in `EnvA` and `EnvB` are merged using `Model`.
@@ -248,7 +226,8 @@ public:
   ///
   ///  `EnvA` and `EnvB` must use the same `DataflowAnalysisContext`.
   static Environment join(const Environment &EnvA, const Environment &EnvB,
-                          Environment::ValueModel &Model);
+                          Environment::ValueModel &Model,
+                          ExprJoinBehavior ExprBehavior);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
@@ -753,9 +732,12 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
 RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                              const Environment &Env);
 
-/// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
-/// order in which they appear in `InitListExpr::inits()`.
-std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
+/// Returns the fields of a `RecordDecl` that are initialized by an
+/// `InitListExpr`, in the order in which they appear in
+/// `InitListExpr::inits()`.
+/// `Init->getType()` must be a record type.
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList);
 
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);

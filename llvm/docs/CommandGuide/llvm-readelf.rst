@@ -38,6 +38,11 @@ OPTIONS
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
 
+.. option:: --decompress, -z
+
+  Dump decompressed section content when used with ``-x`` or ``-p``.
+  If the section(s) are not compressed, they are displayed as is.
+
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.

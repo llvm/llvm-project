@@ -57,6 +57,7 @@ public:
 
 const uint64_t dtpOffset = 0x800;
 
+namespace {
 enum Op {
   ADDI = 0x13,
   AUIPC = 0x17,
@@ -78,6 +79,7 @@ enum Reg {
   X_A0 = 10,
   X_T3 = 28,
 };
+} // namespace
 
 static uint32_t hi20(uint32_t val) { return (val + 0x800) >> 12; }
 static uint32_t lo12(uint32_t val) { return val & 4095; }

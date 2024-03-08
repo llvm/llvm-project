@@ -28,6 +28,8 @@ if(NOT DEFINED LLVM_VERSION_SUFFIX)
   set(LLVM_VERSION_SUFFIX git)
 endif()
 
+set_directory_properties(PROPERTIES LLVM_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
+
 if (NOT PACKAGE_VERSION)
   set(PACKAGE_VERSION
     "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
@@ -35,7 +37,7 @@ endif()
 
 if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
   # "Symbol version prefix for libLLVM.so"
-  set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}")
+  set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
 if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142) AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
@@ -168,7 +170,20 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   endif()
 endforeach()
 
-if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+set(NEED_LIBC_HDRGEN FALSE)
+if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(NEED_LIBC_HDRGEN TRUE)
+else()
+  foreach(_name ${LLVM_RUNTIME_TARGETS})
+    if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+      set(NEED_LIBC_HDRGEN TRUE)
+      if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
+        set(LLVM_LIBC_GPU_BUILD ON)
+      endif()
+    endif()
+  endforeach()
+endif()
+if(NEED_LIBC_HDRGEN)
   # To build the libc runtime, we need to be able to build few libc build
   # tools from the "libc" project. So, we add it to the list of enabled
   # projects.
@@ -177,6 +192,7 @@ if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
     list(APPEND LLVM_ENABLE_PROJECTS "libc")
   endif()
 endif()
+unset(NEED_LIBC_HDRGEN)
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
@@ -703,6 +719,8 @@ if(LLVM_INDIVIDUAL_TEST_COVERAGE)
    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --per-test-coverage")
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+option(LLVM_PARALLEL_LIT "Enable multiple lit suites to run in parallel" OFF)
 
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
 if( WIN32 AND NOT CYGWIN )

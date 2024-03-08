@@ -316,4 +316,4 @@ attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

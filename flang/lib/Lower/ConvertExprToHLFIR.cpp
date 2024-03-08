@@ -1844,6 +1844,16 @@ private:
       builder.genIfThen(loc, isAlloc).genThen(genAssign).end();
     }
 
+    if (fir::isRecordWithAllocatableMember(recTy)) {
+      // Deallocate allocatable components without calling final subroutines.
+      // The Fortran 2018 section 9.7.3.2 about deallocation is not ruling
+      // about the fate of allocatable components of structure constructors,
+      // and there is no behavior consensus in other compilers.
+      fir::FirOpBuilder *bldr = &builder;
+      getStmtCtx().attachCleanup([=]() {
+        fir::runtime::genDerivedTypeDestroyWithoutFinalization(*bldr, loc, box);
+      });
+    }
     return varOp;
   }
 

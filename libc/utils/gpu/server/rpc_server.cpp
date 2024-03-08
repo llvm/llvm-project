@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "rpc_server.h"
+#include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
 #include "src/stdio/gpu/file.h"

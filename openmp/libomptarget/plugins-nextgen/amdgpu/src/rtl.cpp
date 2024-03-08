@@ -715,16 +715,12 @@ struct AMDGPUQueueTy {
     std::lock_guard<std::mutex> Lock(Mutex);
     assert(Queue && "Interacted with a non-initialized queue!");
 
-    // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
-
     // Add a barrier packet before the kernel packet in case there is a pending
     // preceding operation. The barrier packet will delay the processing of
     // subsequent queue's packets until the barrier input signal are satisfied.
     // No need output signal needed because the dependency is already guaranteed
     // by the queue barrier itself.
-    if (InputSignal)
+    if (InputSignal && InputSignal->load())
       if (auto Err = pushBarrierImpl(nullptr, InputSignal))
         return Err;
 
@@ -1254,12 +1250,8 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
 
-    // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
-
     // Issue the async memory copy.
-    if (InputSignal) {
+    if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
       return utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src, Agent,
                                  CopySize, 1, &InputSignalRaw,
@@ -1293,17 +1285,13 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignals[0]);
 
-    // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
-
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
       return Err;
 
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
-    if (InputSignal) {
+    if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
       if (auto Err = utils::asyncMemCopy(
               UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
@@ -1361,12 +1349,8 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
 
-    // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
-
     // Issue the first step: host to host transfer.
-    if (InputSignal) {
+    if (InputSignal && InputSignal->load()) {
       // The std::memcpy is done asynchronously using an async handler. We store
       // the function's information in the action but it is not actually a
       // post action.
@@ -1428,10 +1412,6 @@ public:
 
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
-
-    // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
 
     // The agents need to have access to the corresponding memory
     // This is presently only true if the pointers were originally

@@ -99,21 +99,31 @@ DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
 }
 
 DILabelAttr DebugImporter::translateImpl(llvm::DILabel *node) {
-  return DILabelAttr::get(context, translate(node->getScope()),
+  // Return nullptr if the scope or type is a cyclic dependency.
+  DIScopeAttr scope = translate(node->getScope());
+  if (node->getScope() && !scope)
+    return nullptr;
+  return DILabelAttr::get(context, scope,
                           getStringAttrOrNull(node->getRawName()),
                           translate(node->getFile()), node->getLine());
 }
 
 DILexicalBlockAttr DebugImporter::translateImpl(llvm::DILexicalBlock *node) {
-  return DILexicalBlockAttr::get(context, translate(node->getScope()),
-                                 translate(node->getFile()), node->getLine(),
-                                 node->getColumn());
+  // Return nullptr if the scope or type is a cyclic dependency.
+  DIScopeAttr scope = translate(node->getScope());
+  if (node->getScope() && !scope)
+    return nullptr;
+  return DILexicalBlockAttr::get(context, scope, translate(node->getFile()),
+                                 node->getLine(), node->getColumn());
 }
 
 DILexicalBlockFileAttr
 DebugImporter::translateImpl(llvm::DILexicalBlockFile *node) {
-  return DILexicalBlockFileAttr::get(context, translate(node->getScope()),
-                                     translate(node->getFile()),
+  // Return nullptr if the scope or type is a cyclic dependency.
+  DIScopeAttr scope = translate(node->getScope());
+  if (node->getScope() && !scope)
+    return nullptr;
+  return DILexicalBlockFileAttr::get(context, scope, translate(node->getFile()),
                                      node->getDiscriminator());
 }
 
@@ -135,11 +145,14 @@ DebugImporter::translateImpl(llvm::DIGlobalVariable *node) {
 }
 
 DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
-  return DILocalVariableAttr::get(context, translate(node->getScope()),
-                                  getStringAttrOrNull(node->getRawName()),
-                                  translate(node->getFile()), node->getLine(),
-                                  node->getArg(), node->getAlignInBits(),
-                                  translate(node->getType()));
+  // Return nullptr if the scope or type is a cyclic dependency.
+  DIScopeAttr scope = translate(node->getScope());
+  if (node->getScope() && !scope)
+    return nullptr;
+  return DILocalVariableAttr::get(
+      context, scope, getStringAttrOrNull(node->getRawName()),
+      translate(node->getFile()), node->getLine(), node->getArg(),
+      node->getAlignInBits(), translate(node->getType()));
 }
 
 DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {

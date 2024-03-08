@@ -716,7 +716,7 @@ def INVPCID64 : I<0x82, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
 
 def INVPCID64_EVEX : I<0xF2, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                        "invpcid\t{$src2, $src1|$src1, $src2}", []>,
-                     EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode]>;
+                     EVEX, NoCD8, T_MAP4, XS, WIG, Requires<[In64BitMode]>;
 } // SchedRW
 
 let Predicates = [HasINVPCID, NoEGPR] in {

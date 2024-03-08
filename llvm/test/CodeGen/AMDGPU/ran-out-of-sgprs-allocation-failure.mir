@@ -96,7 +96,7 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr93 = COPY renamable $sgpr60
   ; CHECK-NEXT:   renamable $sgpr94 = COPY renamable $sgpr60
   ; CHECK-NEXT:   renamable $sgpr95 = COPY renamable $sgpr60
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_1024_align2 = COPY killed renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024_align2 = COPY killed renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.11, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}

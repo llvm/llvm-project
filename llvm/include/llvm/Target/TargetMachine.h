@@ -34,8 +34,6 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
-class MachineFunctionPassManager;
-class MachineFunctionAnalysisManager;
 class MachineModuleInfoWrapperPass;
 class Mangler;
 class MCAsmInfo;
@@ -455,11 +453,9 @@ public:
                       bool DisableVerify = true,
                       MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
 
-  virtual Error buildCodeGenPipeline(ModulePassManager &,
-                                     MachineFunctionPassManager &,
-                                     MachineFunctionAnalysisManager &,
-                                     raw_pwrite_stream &, raw_pwrite_stream *,
-                                     CodeGenFileType, CGPassBuilderOption,
+  virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
+                                     raw_pwrite_stream *, CodeGenFileType,
+                                     CGPassBuilderOption,
                                      PassInstrumentationCallbacks *) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());

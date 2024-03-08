@@ -1,10 +1,10 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
-//#include <type_traits>
 
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
+void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion);
 
 inline void compilerFenceForCrash()
 {
@@ -32,21 +32,19 @@ void isIntegralOrPointerType(T, Types... types)
         CRASH_WITH_INFO(__VA_ARGS__); \
 } while (0)
 
-#if !defined(NOT_TAIL_CALLED)
-#if __has_attribute(not_tail_called)
-#define NOT_TAIL_CALLED __attribute__((not_tail_called))
-#else
-#define NOT_TAIL_CALLED
-#endif
-#endif
-#define NO_RETURN_DUE_TO_CRASH
+#define ASSERT(assertion, ...) do { \
+    if (!(assertion)) { \
+        WTFReportAssertionFailure(__FILE__, __LINE__, __PRETTY_FUNCTION__, #assertion); \
+        CRASH_WITH_INFO(__VA_ARGS__); \
+    } \
+} while (0)
 
 #if !defined(ALWAYS_INLINE)
 #define ALWAYS_INLINE inline
 #endif
 
-NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void WTFCrashWithInfoImpl(int line, const char* file, const char* function, int counter, unsigned long reason);
-NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void WTFCrashWithInfo(int line, const char* file, const char* function, int counter);
+void WTFCrashWithInfoImpl(int line, const char* file, const char* function, int counter, unsigned long reason);
+void WTFCrashWithInfo(int line, const char* file, const char* function, int counter);
 
 template<typename T>
 ALWAYS_INLINE unsigned long wtfCrashArg(T* arg) { return reinterpret_cast<unsigned long>(arg); }
@@ -55,16 +53,91 @@ template<typename T>
 ALWAYS_INLINE unsigned long wtfCrashArg(T arg) { return arg; }
 
 template<typename T>
-NO_RETURN_DUE_TO_CRASH ALWAYS_INLINE void WTFCrashWithInfo(int line, const char* file, const char* function, int counter, T reason)
+void WTFCrashWithInfo(int line, const char* file, const char* function, int counter, T reason)
 {
     WTFCrashWithInfoImpl(line, file, function, counter, wtfCrashArg(reason));
 }
+
+enum class Flags : unsigned short {
+  Flag1 = 1 << 0,
+  Flag2 = 1 << 1,
+  Flag3 = 1 << 2,
+};
+
+template<typename E> class OptionSet {
+public:
+  using StorageType = unsigned short;
+
+  static constexpr OptionSet fromRaw(StorageType rawValue) {
+    return OptionSet(static_cast<E>(rawValue), FromRawValue);
+  }
+
+  constexpr OptionSet() = default;
+
+  constexpr OptionSet(E e)
+    : m_storage(static_cast<StorageType>(e)) {
+  }
+
+  constexpr StorageType toRaw() const { return m_storage; }
+
+  constexpr bool isEmpty() const { return !m_storage; }
+
+  constexpr explicit operator bool() const { return !isEmpty(); }
+
+  constexpr bool contains(E option) const { return containsAny(option); }
+  constexpr bool containsAny(OptionSet optionSet) const {
+    return !!(*this & optionSet);
+  }
+
+  constexpr bool containsAll(OptionSet optionSet) const {
+    return (*this & optionSet) == optionSet;
+  }
+
+  constexpr void add(OptionSet optionSet) { m_storage |= optionSet.m_storage; }
+
+  constexpr void remove(OptionSet optionSet)
+  {
+      m_storage &= ~optionSet.m_storage;
+  }
+
+  constexpr void set(OptionSet optionSet, bool value)
+  {
+    if (value)
+      add(optionSet);
+    else
+      remove(optionSet);
+  }
+
+  constexpr friend OptionSet operator|(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage | rhs.m_storage);
+  }
+
+  constexpr friend OptionSet operator&(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage & rhs.m_storage);
+  }
+
+  constexpr friend OptionSet operator-(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage & ~rhs.m_storage);
+  }
+
+  constexpr friend OptionSet operator^(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage ^ rhs.m_storage);
+  }
+
+private:
+  enum InitializationTag { FromRawValue };
+  constexpr OptionSet(E e, InitializationTag)
+    : m_storage(static_cast<StorageType>(e)) {
+  }
+  StorageType m_storage { 0 };
+};
 
 class Number {
 public:
   Number(int v) : v(v) { }
   Number(double);
   Number operator+(const Number&);
+  const int& value() const { return v; }
 private:
   int v;
 };
@@ -107,10 +180,27 @@ public:
     return 0;
   }
   void *trivial15() { return static_cast<void*>(this); }
-  unsigned long trivial16() { return reinterpret_cast<unsigned long>(this); }
+  unsigned long trivial16() { return *reinterpret_cast<unsigned long*>(this); }
   RefCounted& trivial17() const { return const_cast<RefCounted&>(*this); }
   RefCounted& trivial18() const { RELEASE_ASSERT(this, "this must be not null"); return const_cast<RefCounted&>(*this); }
   void trivial19() const { return; }
+
+  static constexpr unsigned numBits = 4;
+  int trivial20() { return v >> numBits; }
+
+  const int* trivial21() { return number ? &number->value() : nullptr; }
+
+  enum class Enum : unsigned short  {
+      Value1 = 1,
+      Value2 = 2,
+  };
+  bool trivial22() { return enumValue == Enum::Value1; }
+
+  bool trivial23() const { return OptionSet<Flags>::fromRaw(v).contains(Flags::Flag1); }
+  int trivial24() const { ASSERT(v); return v; }
+  unsigned trivial25() const { return __c11_atomic_load((volatile _Atomic(unsigned) *)&v, __ATOMIC_RELAXED); }
+  bool trivial26() { bool hasValue = v; return !hasValue; }
+  bool trivial27(int v) { bool value; value = v ? 1 : 0; return value; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -169,7 +259,23 @@ public:
     }
   }
 
+  static unsigned* another();
+  unsigned nonTrivial10() const {
+    return __c11_atomic_load((volatile _Atomic(unsigned) *)another(), __ATOMIC_RELAXED);
+  }
+
+  void nonTrivial11() {
+    Number num(0.3);
+  }
+
+  bool nonTrivial12() {
+    bool val = otherFunction();
+    return val;
+  }
+
   unsigned v { 0 };
+  Number* number { nullptr };
+  Enum enumValue { Enum::Value1 };
 };
 
 RefCounted* refCountedObj();
@@ -208,6 +314,14 @@ public:
     getFieldTrivial().trivial17(); // no-warning
     getFieldTrivial().trivial18(); // no-warning
     getFieldTrivial().trivial19(); // no-warning
+    getFieldTrivial().trivial20(); // no-warning
+    getFieldTrivial().trivial21(); // no-warning
+    getFieldTrivial().trivial22(); // no-warning
+    getFieldTrivial().trivial23(); // no-warning
+    getFieldTrivial().trivial24(); // no-warning
+    getFieldTrivial().trivial25(); // no-warning
+    getFieldTrivial().trivial26(); // no-warning
+    getFieldTrivial().trivial27(5); // no-warning
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 
@@ -231,6 +345,12 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial9();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial10();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial11();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial12();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
 
@@ -249,3 +369,10 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
+
+RefPtr<RefCounted> object();
+void someFunction(const RefCounted&);
+
+void test2() {
+    someFunction(*object());
+}

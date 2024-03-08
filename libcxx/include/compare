@@ -140,7 +140,6 @@ namespace std {
 }
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__compare/common_comparison_category.h>
 #include <__compare/compare_partial_order_fallback.h>
 #include <__compare/compare_strong_order_fallback.h>

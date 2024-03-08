@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -244,7 +245,7 @@ LogicalResult ExpressionOp::verify() {
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!isCExpression(op))
+    if (!op.hasTrait<OpTrait::emitc::CExpression>())
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
@@ -261,20 +262,20 @@ LogicalResult ExpressionOp::verify() {
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, BodyBuilderFn bodyBuilder) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands({lb, ub, step});
   Type t = lb.getType();
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(t, result.location);
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+  bodyBlock->addArgument(t, result.location);
 
   // Create the default terminator if the builder is not provided.
   if (!bodyBuilder) {
     ForOp::ensureTerminator(*bodyRegion, builder, result.location);
   } else {
     OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock->getArgument(0));
   }
 }
 

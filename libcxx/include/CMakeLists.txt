@@ -291,6 +291,8 @@ set(files
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/time_zone.h
+  __chrono/time_zone_link.h
   __chrono/tzdb.h
   __chrono/tzdb_list.h
   __chrono/weekday.h
@@ -427,8 +429,9 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/complex.h
   __fwd/fstream.h
-  __fwd/hash.h
+  __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -965,6 +968,7 @@ set(files
   mdspan
   memory
   memory_resource
+  module.modulemap
   mutex
   new
   numbers
@@ -1018,18 +1022,10 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
-  if (NOT ${${feature}})
-    set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
-  endif()
-endforeach()
-
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
-configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")

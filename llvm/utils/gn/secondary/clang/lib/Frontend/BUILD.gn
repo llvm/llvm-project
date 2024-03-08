@@ -8,7 +8,6 @@ static_library("Frontend") {
     "//clang/lib/Basic",
     "//clang/lib/Driver",
     "//clang/lib/Edit",
-    "//clang/lib/InstallAPI",
     "//clang/lib/Lex",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
@@ -19,7 +18,6 @@ static_library("Frontend") {
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
-    "//llvm/lib/TextAPI",
   ]
   sources = [
     "ASTConsumers.cpp",
@@ -40,7 +38,6 @@ static_library("Frontend") {
     "InitPreprocessor.cpp",
     "InterfaceStubFunctionsConsumer.cpp",
     "LayoutOverrideSource.cpp",
-    "InstallAPIConsumer.cpp",
     "LogDiagnosticPrinter.cpp",
     "ModuleDependencyCollector.cpp",
     "MultiplexConsumer.cpp",

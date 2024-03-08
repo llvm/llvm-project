@@ -2135,6 +2135,21 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
                              NVPTX::StoreRetvalI8, NVPTX::StoreRetvalI16,
                              NVPTX::StoreRetvalI32, NVPTX::StoreRetvalI64,
                              NVPTX::StoreRetvalF32, NVPTX::StoreRetvalF64);
+    if (Opcode == NVPTX::StoreRetvalI8) {
+      // Fine tune the opcode depending on the size of the operand.
+      // This helps to avoid creating redundant COPY instructions in
+      // InstrEmitter::AddRegisterOperand().
+      switch (Ops[0].getSimpleValueType().SimpleTy) {
+      default:
+        break;
+      case MVT::i32:
+        Opcode = NVPTX::StoreRetvalI8TruncI32;
+        break;
+      case MVT::i64:
+        Opcode = NVPTX::StoreRetvalI8TruncI64;
+        break;
+      }
+    }
     break;
   case 2:
     Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
@@ -2211,6 +2226,21 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
                                NVPTX::StoreParamI8, NVPTX::StoreParamI16,
                                NVPTX::StoreParamI32, NVPTX::StoreParamI64,
                                NVPTX::StoreParamF32, NVPTX::StoreParamF64);
+      if (Opcode == NVPTX::StoreParamI8) {
+        // Fine tune the opcode depending on the size of the operand.
+        // This helps to avoid creating redundant COPY instructions in
+        // InstrEmitter::AddRegisterOperand().
+        switch (Ops[0].getSimpleValueType().SimpleTy) {
+        default:
+          break;
+        case MVT::i32:
+          Opcode = NVPTX::StoreParamI8TruncI32;
+          break;
+        case MVT::i64:
+          Opcode = NVPTX::StoreParamI8TruncI64;
+          break;
+        }
+      }
       break;
     case 2:
       Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,

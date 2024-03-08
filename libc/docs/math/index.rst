@@ -81,7 +81,7 @@ Implementation Status
 
 * To check math functions enabled for Windows:
 
-  - `windows-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_ 
+  - `windows-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/windows/entrypoints.txt>`_
 
   - windows-aarch64 - to be added
 
@@ -93,11 +93,11 @@ Implementation Status
 
 * To check math functions enabled for GPU:
 
-  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_ 
+  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_
 
 * To check math functions enabled for embedded system:
 
-  - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_ 
+  - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
 
   - baremetal-riscv32 - to be added
 
@@ -185,6 +185,8 @@ Basic Operations
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ilogbl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| ilogf128     | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ldexp        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ldexpf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
@@ -192,6 +194,14 @@ Basic Operations
 | ldexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | ldexpf128    | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| llogb        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| llogbf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| llogbl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| llogf128     | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | llrint       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
@@ -210,6 +220,8 @@ Basic Operations
 | logbf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | logbl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| logf128      | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | lrint        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+

@@ -52,6 +52,10 @@ using llvm::Value;
 //                         Scalar Expression Emitter
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+extern cl::opt<bool> EnableSingleByteCoverage;
+} // namespace llvm
+
 namespace {
 
 /// Determine whether the given binary operation may overflow.
@@ -723,7 +727,9 @@ public:
     if (Ops.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
-        return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+        [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul");
@@ -2408,6 +2414,12 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                 CE->getExprLoc());
 
   case CK_IntegralCast: {
+    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      return Builder.CreateIntCast(Visit(E), ConvertType(DestTy),
+                                   SrcElTy->isSignedIntegerOrEnumerationType(),
+                                   "conv");
+    }
     ScalarConversionOpts Opts;
     if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
       if (!ICE->isPartOfExplicitCast())
@@ -2416,9 +2428,44 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc(), Opts);
   }
-  case CK_IntegralToFloating:
-  case CK_FloatingToIntegral:
-  case CK_FloatingCast:
+  case CK_IntegralToFloating: {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      if (SrcElTy->isSignedIntegerOrEnumerationType())
+        return Builder.CreateSIToFP(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateUIToFP(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
+  case CK_FloatingToIntegral: {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
+      if (DstElTy->isSignedIntegerOrEnumerationType())
+        return Builder.CreateFPToSI(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateFPToUI(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
+  case CK_FloatingCast: {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
+      if (DstElTy->castAs<BuiltinType>()->getKind() <
+          SrcElTy->castAs<BuiltinType>()->getKind())
+        return Builder.CreateFPTrunc(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateFPExt(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
@@ -2468,6 +2515,17 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntToOCLSampler:
     return CGF.CGM.createOpenCLIntToSamplerConversion(E, CGF);
 
+  case CK_HLSLVectorTruncation: {
+    assert(DestTy->isVectorType() && "Expected dest type to be vector type");
+    Value *Vec = Visit(const_cast<Expr *>(E));
+    SmallVector<int, 16> Mask;
+    unsigned NumElts = DestTy->castAs<VectorType>()->getNumElements();
+    for (unsigned I = 0; I != NumElts; ++I)
+      Mask.push_back(I);
+
+    return Builder.CreateShuffleVector(Vec, Mask, "trunc");
+  }
+
   } // end of switch
 
   llvm_unreachable("unknown scalar cast");
@@ -2516,7 +2574,9 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   StringRef Name = IsInc ? "inc" : "dec";
   switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
   case LangOptions::SOB_Defined:
-    return Builder.CreateAdd(InVal, Amount, Name);
+    if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      return Builder.CreateAdd(InVal, Amount, Name);
+    [[fallthrough]];
   case LangOptions::SOB_Undefined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
       return Builder.CreateNSWAdd(InVal, Amount, Name);
@@ -3861,7 +3921,9 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
   if (op.Ty->isSignedIntegerOrEnumerationType()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      return Builder.CreateAdd(op.LHS, op.RHS, "add");
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.CreateAdd(op.LHS, op.RHS, "add");
+      [[fallthrough]];
     case LangOptions::SOB_Undefined:
       if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
         return Builder.CreateNSWAdd(op.LHS, op.RHS, "add");
@@ -4015,7 +4077,9 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     if (op.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
-        return Builder.CreateSub(op.LHS, op.RHS, "sub");
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.CreateSub(op.LHS, op.RHS, "sub");
+        [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWSub(op.LHS, op.RHS, "sub");
@@ -4865,8 +4929,13 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
-      if (CondExprBool)
+      if (CondExprBool) {
+        if (llvm::EnableSingleByteCoverage) {
+          CGF.incrementProfileCounter(lhsExpr);
+          CGF.incrementProfileCounter(rhsExpr);
+        }
         CGF.incrementProfileCounter(E);
+      }
       Value *Result = Visit(live);
 
       // If the live part is a throw expression, it acts like it has a void
@@ -4945,7 +5014,12 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
     llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
 
-    CGF.incrementProfileCounter(E, StepV);
+    if (llvm::EnableSingleByteCoverage) {
+      CGF.incrementProfileCounter(lhsExpr);
+      CGF.incrementProfileCounter(rhsExpr);
+      CGF.incrementProfileCounter(E);
+    } else
+      CGF.incrementProfileCounter(E, StepV);
 
     llvm::Value *LHS = Visit(lhsExpr);
     llvm::Value *RHS = Visit(rhsExpr);
@@ -4977,7 +5051,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
 
-  CGF.incrementProfileCounter(E);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(lhsExpr);
+  else
+    CGF.incrementProfileCounter(E);
+
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
   eval.end(CGF);
@@ -4992,6 +5070,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // may also contain a boolean expression.
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(rhsExpr);
 
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
@@ -5010,6 +5091,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   llvm::PHINode *PN = Builder.CreatePHI(LHS->getType(), 2, "cond");
   PN->addIncoming(LHS, LHSBlock);
   PN->addIncoming(RHS, RHSBlock);
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E);
 
   return PN;
 }

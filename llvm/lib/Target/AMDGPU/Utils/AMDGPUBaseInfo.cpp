@@ -164,7 +164,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
   if (auto Ver = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("amdgpu_code_object_version"))) {
+          M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
 
@@ -1060,10 +1060,15 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
                           STI->getFeatureBits().test(AMDGPU::FeatureXNACK));
 }
 
+static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,
+                                               unsigned Granule) {
+  return divideCeil(std::max(1u, NumRegs), Granule);
+}
+
 unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
-  NumSGPRs = alignTo(std::max(1u, NumSGPRs), getSGPREncodingGranule(STI));
   // SGPRBlocks is actual number of SGPR blocks minus 1.
-  return NumSGPRs / getSGPREncodingGranule(STI) - 1;
+  return getGranulatedNumRegisterBlocks(NumSGPRs, getSGPREncodingGranule(STI)) -
+         1;
 }
 
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
@@ -1107,10 +1112,12 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-  return 256;
+  return getAddressableNumArchVGPRs(STI);
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
@@ -1156,14 +1163,19 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
-                          std::optional<bool> EnableWavefrontSize32) {
-  NumVGPRs = alignTo(std::max(1u, NumVGPRs),
-                     getVGPREncodingGranule(STI, EnableWavefrontSize32));
-  // VGPRBlocks is actual number of VGPR blocks minus 1.
-  return NumVGPRs / getVGPREncodingGranule(STI, EnableWavefrontSize32) - 1;
+unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
+                                 std::optional<bool> EnableWavefrontSize32) {
+  return getGranulatedNumRegisterBlocks(
+             NumVGPRs, getVGPREncodingGranule(STI, EnableWavefrontSize32)) -
+         1;
 }
 
+unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
+                                   unsigned NumVGPRs,
+                                   std::optional<bool> EnableWavefrontSize32) {
+  return getGranulatedNumRegisterBlocks(
+      NumVGPRs, getVGPRAllocGranule(STI, EnableWavefrontSize32));
+}
 } // end namespace IsaInfo
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
@@ -1698,33 +1710,9 @@ int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
   return (Idx < 0) ? Idx : Opr[Idx].Encoding;
 }
 
-bool isValidHwreg(int64_t Id) {
-  return 0 <= Id && isUInt<ID_WIDTH_>(Id);
-}
-
-bool isValidHwregOffset(int64_t Offset) {
-  return 0 <= Offset && isUInt<OFFSET_WIDTH_>(Offset);
-}
-
-bool isValidHwregWidth(int64_t Width) {
-  return 0 <= (Width - 1) && isUInt<WIDTH_M1_WIDTH_>(Width - 1);
-}
-
-uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width) {
-  return (Id << ID_SHIFT_) |
-         (Offset << OFFSET_SHIFT_) |
-         ((Width - 1) << WIDTH_M1_SHIFT_);
-}
-
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI) {
   int Idx = getOprIdx<const MCSubtargetInfo &>(Id, Opr, OPR_SIZE, STI);
   return (Idx < 0) ? "" : Opr[Idx].Name;
-}
-
-void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) {
-  Id = (Val & ID_MASK_) >> ID_SHIFT_;
-  Offset = (Val & OFFSET_MASK_) >> OFFSET_SHIFT_;
-  Width = ((Val & WIDTH_M1_MASK_) >> WIDTH_M1_SHIFT_) + 1;
 }
 
 } // namespace Hwreg
@@ -2652,6 +2640,23 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
          (Val == 0x3e22f983 && HasInv2Pi);
 }
 
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
+  if (!HasInv2Pi)
+    return false;
+  if (isInlinableIntLiteral(Literal))
+    return true;
+  uint16_t Val = static_cast<uint16_t>(Literal);
+  return Val == 0x3F00 || // 0.5
+         Val == 0xBF00 || // -0.5
+         Val == 0x3F80 || // 1.0
+         Val == 0xBF80 || // -1.0
+         Val == 0x4000 || // 2.0
+         Val == 0xC000 || // -2.0
+         Val == 0x4080 || // 4.0
+         Val == 0xC080 || // -4.0
+         Val == 0x3E22;   // 1.0 / (2.0 * pi)
+}
+
 bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
   if (!HasInv2Pi)
     return false;
@@ -2730,6 +2735,34 @@ std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal) {
   return getInlineEncodingV216(false, Literal);
 }
 
+// Encoding of the literal as an inline constant for a V_PK_*_BF16 instruction
+// or nullopt.
+std::optional<unsigned> getInlineEncodingV2BF16(uint32_t Literal) {
+  int32_t Signed = static_cast<int32_t>(Literal);
+  if (Signed >= 0 && Signed <= 64)
+    return 128 + Signed;
+
+  if (Signed >= -16 && Signed <= -1)
+    return 192 + std::abs(Signed);
+
+  // clang-format off
+  switch (Literal) {
+  case 0x3F00: return 240; // 0.5
+  case 0xBF00: return 241; // -0.5
+  case 0x3F80: return 242; // 1.0
+  case 0xBF80: return 243; // -1.0
+  case 0x4000: return 244; // 2.0
+  case 0xC000: return 245; // -2.0
+  case 0x4080: return 246; // 4.0
+  case 0xC080: return 247; // -4.0
+  case 0x3E22: return 248; // 1.0 / (2.0 * pi)
+  default: break;
+  }
+  // clang-format on
+
+  return std::nullopt;
+}
+
 // Encoding of the literal as an inline constant for a V_PK_*_F16 instruction
 // or nullopt.
 std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal) {
@@ -2747,6 +2780,10 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
+    return isInlinableLiteralV2BF16(Literal);
   default:
     llvm_unreachable("bad packed operand type");
   }
@@ -2755,6 +2792,11 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
 // Whether the given literal can be inlined for a V_PK_*_IU16 instruction.
 bool isInlinableLiteralV2I16(uint32_t Literal) {
   return getInlineEncodingV2I16(Literal).has_value();
+}
+
+// Whether the given literal can be inlined for a V_PK_*_BF16 instruction.
+bool isInlinableLiteralV2BF16(uint32_t Literal) {
+  return getInlineEncodingV2BF16(Literal).has_value();
 }
 
 // Whether the given literal can be inlined for a V_PK_*_F16 instruction.

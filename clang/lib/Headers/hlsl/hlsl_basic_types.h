@@ -42,7 +42,9 @@ typedef vector<uint16_t, 2> uint16_t2;
 typedef vector<uint16_t, 3> uint16_t3;
 typedef vector<uint16_t, 4> uint16_t4;
 #endif
-
+typedef vector<bool, 2> bool2;
+typedef vector<bool, 3> bool3;
+typedef vector<bool, 4> bool4;
 typedef vector<int, 2> int2;
 typedef vector<int, 3> int3;
 typedef vector<int, 4> int4;
@@ -56,11 +58,9 @@ typedef vector<uint64_t, 2> uint64_t2;
 typedef vector<uint64_t, 3> uint64_t3;
 typedef vector<uint64_t, 4> uint64_t4;
 
-#ifdef __HLSL_ENABLE_16_BIT
 typedef vector<half, 2> half2;
 typedef vector<half, 3> half3;
 typedef vector<half, 4> half4;
-#endif
 
 typedef vector<float, 2> float2;
 typedef vector<float, 3> float3;

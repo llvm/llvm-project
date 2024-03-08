@@ -209,11 +209,10 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 
   Name = std::string(llvm::sys::path::filename(ClangExecutable));
   Dir = std::string(llvm::sys::path::parent_path(ClangExecutable));
-  InstalledDir = Dir; // Provide a sensible default installed dir.
 
   if ((!SysRoot.empty()) && llvm::sys::path::is_relative(SysRoot)) {
     // Prepend InstalledDir if SysRoot is relative
-    SmallString<128> P(InstalledDir);
+    SmallString<128> P(Dir);
     llvm::sys::path::append(P, SysRoot);
     SysRoot = std::string(P);
   }
@@ -1337,7 +1336,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
-    Dir = InstalledDir = A->getValue();
+    Dir = Dir = A->getValue();
   for (const Arg *A : Args.filtered(options::OPT_B)) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
@@ -2000,7 +1999,7 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   OS << '\n';
 
   // Print out the install directory.
-  OS << "InstalledDir: " << InstalledDir << '\n';
+  OS << "InstalledDir: " << Dir << '\n';
 
   // If configuration files were used, print their paths.
   for (auto ConfigFile : ConfigFiles)
@@ -3235,7 +3234,7 @@ class OffloadingActionBuilder final {
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
                       const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
-      DefaultCudaArch = CudaArch::SM_35;
+      DefaultCudaArch = CudaArch::CudaDefault;
     }
 
     StringRef getCanonicalOffloadArch(StringRef ArchStr) override {
@@ -4189,11 +4188,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
       }
 
-      if (auto *IAA = dyn_cast<InstallAPIJobAction>(Current)) {
-        Current = nullptr;
-        break;
-      }
-
       // FIXME: Should we include any prior module file outputs as inputs of
       // later actions in the same command line?
 
@@ -4324,13 +4318,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (!MergerInputs.empty())
       Actions.push_back(
           C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
-  } else if (Args.hasArg(options::OPT_installapi)) {
-    // TODO: Lift restriction once operation can handle multiple inputs.
-    assert(Inputs.size() == 1 && "InstallAPI action can only handle 1 input");
-    const auto [InputType, InputArg] = Inputs.front();
-    Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
-    Actions.push_back(
-        C.MakeAction<InstallAPIJobAction>(Current, types::TY_TextAPI));
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
@@ -4638,7 +4625,15 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       DDeps.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
       OffloadAction::DeviceDependences DDep;
       DDep.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
+
+      // Compiling CUDA in non-RDC mode uses the PTX output if available.
+      for (Action *Input : A->getInputs())
+        if (Kind == Action::OFK_Cuda && A->getType() == types::TY_Object &&
+            !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                          false))
+          DDep.add(*Input, *TCAndArch->first, TCAndArch->second.data(), Kind);
       OffloadActions.push_back(C.MakeAction<OffloadAction>(DDep, A->getType()));
+
       ++TCAndArch;
     }
   }
@@ -4774,8 +4769,6 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
-    if (Args.hasArg(options::OPT_installapi))
-      return C.MakeAction<InstallAPIJobAction>(Input, types::TY_TextAPI);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
@@ -6455,7 +6448,7 @@ bool Driver::ShouldUseClangCompiler(const JobAction &JA) const {
   // And say "no" if this is not a kind of action clang understands.
   if (!isa<PreprocessJobAction>(JA) && !isa<PrecompileJobAction>(JA) &&
       !isa<CompileJobAction>(JA) && !isa<BackendJobAction>(JA) &&
-      !isa<ExtractAPIJobAction>(JA) && !isa<InstallAPIJobAction>(JA))
+      !isa<ExtractAPIJobAction>(JA))
     return false;
 
   return true;

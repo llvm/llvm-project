@@ -24,6 +24,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
@@ -67,7 +68,7 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
   if (LangOpts.Modules) {
     if (HSOpts.VFSOverlayFiles != ExistingHSOpts.VFSOverlayFiles) {
       if (Diags) {
-        Diags->Report(diag::err_pch_vfsoverlay_mismatch);
+        Diags->Report(diag::warn_pch_vfsoverlay_mismatch);
         auto VFSNote = [&](int Type, ArrayRef<std::string> VFSOverlays) {
           if (VFSOverlays.empty()) {
             Diags->Report(diag::note_pch_vfsoverlay_empty) << Type;
@@ -79,7 +80,6 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
         VFSNote(0, HSOpts.VFSOverlayFiles);
         VFSNote(1, ExistingHSOpts.VFSOverlayFiles);
       }
-      return true;
     }
   }
   return false;
@@ -93,10 +93,12 @@ class PrebuiltModuleListener : public ASTReaderListener {
 public:
   PrebuiltModuleListener(PrebuiltModuleFilesT &PrebuiltModuleFiles,
                          llvm::SmallVector<std::string> &NewModuleFiles,
+                         PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
                          const HeaderSearchOptions &HSOpts,
                          const LangOptions &LangOpts, DiagnosticsEngine &Diags)
       : PrebuiltModuleFiles(PrebuiltModuleFiles),
-        NewModuleFiles(NewModuleFiles), ExistingHSOpts(HSOpts),
+        NewModuleFiles(NewModuleFiles),
+        PrebuiltModuleVFSMap(PrebuiltModuleVFSMap), ExistingHSOpts(HSOpts),
         ExistingLangOpts(LangOpts), Diags(Diags) {}
 
   bool needsImportVisitation() const override { return true; }
@@ -106,8 +108,16 @@ public:
       NewModuleFiles.push_back(Filename.str());
   }
 
+  void visitModuleFile(StringRef Filename,
+                       serialization::ModuleKind Kind) override {
+    CurrentFile = Filename;
+  }
+
   bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                              bool Complain) override {
+    std::vector<std::string> VFSOverlayFiles = HSOpts.VFSOverlayFiles;
+    PrebuiltModuleVFSMap.insert(
+        {CurrentFile, llvm::StringSet<>(VFSOverlayFiles)});
     return checkHeaderSearchPaths(
         HSOpts, ExistingHSOpts, Complain ? &Diags : nullptr, ExistingLangOpts);
   }
@@ -115,9 +125,11 @@ public:
 private:
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::SmallVector<std::string> &NewModuleFiles;
+  PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap;
   const HeaderSearchOptions &ExistingHSOpts;
   const LangOptions &ExistingLangOpts;
   DiagnosticsEngine &Diags;
+  std::string CurrentFile;
 };
 
 /// Visit the given prebuilt module and collect all of the modules it
@@ -125,12 +137,16 @@ private:
 static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 CompilerInstance &CI,
                                 PrebuiltModuleFilesT &ModuleFiles,
+                                PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
                                 DiagnosticsEngine &Diags) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist;
-  PrebuiltModuleListener Listener(
-      ModuleFiles, Worklist, CI.getHeaderSearchOpts(), CI.getLangOpts(), Diags);
+  PrebuiltModuleListener Listener(ModuleFiles, Worklist, PrebuiltModuleVFSMap,
+                                  CI.getHeaderSearchOpts(), CI.getLangOpts(),
+                                  Diags);
 
+  Listener.visitModuleFile(PrebuiltModuleFilename,
+                           serialization::MK_ExplicitModule);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
           CI.getPCHContainerReader(),
@@ -139,6 +155,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
     return true;
 
   while (!Worklist.empty()) {
+    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
             CI.getPCHContainerReader(),
@@ -175,8 +192,91 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.ShowCarets = false;
   // Don't write out diagnostic file.
   DiagOpts.DiagnosticSerializationFile.clear();
-  // Don't emit warnings as errors (and all other warnings too).
-  DiagOpts.IgnoreWarnings = true;
+  // Don't emit warnings except for scanning specific warnings.
+  // TODO: It would be useful to add a more principled way to ignore all
+  //       warnings that come from source code. The issue is that we need to
+  //       ignore warnings that could be surpressed by
+  //       `#pragma clang diagnostic`, while still allowing some scanning
+  //       warnings for things we're not ready to turn into errors yet.
+  //       See `test/ClangScanDeps/diagnostic-pragmas.c` for an example.
+  llvm::erase_if(DiagOpts.Warnings, [](StringRef Warning) {
+    return llvm::StringSwitch<bool>(Warning)
+        .Cases("pch-vfs-diff", "error=pch-vfs-diff", false)
+        .StartsWith("no-error=", false)
+        .Default(true);
+  });
+}
+
+// Clang implements -D and -U by splatting text into a predefines buffer. This
+// allows constructs such as `-DFඞ=3 "-D F\u{0D9E} 4 3 2”` to be accepted and
+// define the same macro, or adding C++ style comments before the macro name.
+//
+// This function checks that the first non-space characters in the macro
+// obviously form an identifier that can be uniqued on without lexing. Failing
+// to do this could lead to changing the final definition of a macro.
+//
+// We could set up a preprocessor and actually lex the name, but that's very
+// heavyweight for a situation that will almost never happen in practice.
+static std::optional<StringRef> getSimpleMacroName(StringRef Macro) {
+  StringRef Name = Macro.split("=").first.ltrim(" \t");
+  std::size_t I = 0;
+
+  auto FinishName = [&]() -> std::optional<StringRef> {
+    StringRef SimpleName = Name.slice(0, I);
+    if (SimpleName.empty())
+      return std::nullopt;
+    return SimpleName;
+  };
+
+  for (; I != Name.size(); ++I) {
+    switch (Name[I]) {
+    case '(': // Start of macro parameter list
+    case ' ': // End of macro name
+    case '\t':
+      return FinishName();
+    case '_':
+      continue;
+    default:
+      if (llvm::isAlnum(Name[I]))
+        continue;
+      return std::nullopt;
+    }
+  }
+  return FinishName();
+}
+
+static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
+  using MacroOpt = std::pair<StringRef, std::size_t>;
+  std::vector<MacroOpt> SimpleNames;
+  SimpleNames.reserve(PPOpts.Macros.size());
+  std::size_t Index = 0;
+  for (const auto &M : PPOpts.Macros) {
+    auto SName = getSimpleMacroName(M.first);
+    // Skip optimizing if we can't guarantee we can preserve relative order.
+    if (!SName)
+      return;
+    SimpleNames.emplace_back(*SName, Index);
+    ++Index;
+  }
+
+  llvm::stable_sort(SimpleNames, [](const MacroOpt &A, const MacroOpt &B) {
+    return A.first < B.first;
+  });
+  // Keep the last instance of each macro name by going in reverse
+  auto NewEnd = std::unique(
+      SimpleNames.rbegin(), SimpleNames.rend(),
+      [](const MacroOpt &A, const MacroOpt &B) { return A.first == B.first; });
+  SimpleNames.erase(SimpleNames.begin(), NewEnd.base());
+
+  // Apply permutation.
+  decltype(PPOpts.Macros) NewMacros;
+  NewMacros.reserve(SimpleNames.size());
+  for (std::size_t I = 0, E = SimpleNames.size(); I != E; ++I) {
+    std::size_t OriginalIndex = SimpleNames[I].second;
+    // We still emit undefines here as they may be undefining a predefined macro
+    NewMacros.push_back(std::move(PPOpts.Macros[OriginalIndex]));
+  }
+  std::swap(PPOpts.Macros, NewMacros);
 }
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
@@ -203,6 +303,8 @@ public:
     CompilerInvocation OriginalInvocation(*Invocation);
     // Restore the value of DisableFree, which may be modified by Tooling.
     OriginalInvocation.getFrontendOpts().DisableFree = DisableFree;
+    if (any(OptimizeArgs & ScanningOptimizations::Macros))
+      canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
       // Scanning runs once for the first -cc1 invocation in a chain of driver
@@ -226,6 +328,10 @@ public:
     if (!ScanInstance.hasDiagnostics())
       return false;
 
+    // Some DiagnosticConsumers require that finish() is called.
+    auto DiagConsumerFinisher =
+        llvm::make_scope_exit([DiagConsumer]() { DiagConsumer->finish(); });
+
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
 
@@ -233,7 +339,8 @@ public:
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
-    ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage = true;
+    ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
+        any(OptimizeArgs & ScanningOptimizations::VFS);
 
     ScanInstance.setFileManager(FileMgr);
     // Support for virtual file system overlays.
@@ -246,12 +353,13 @@ public:
     // Store the list of prebuilt module files into header search options. This
     // will prevent the implicit build to create duplicate modules and will
     // force reuse of the existing prebuilt module files instead.
+    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap;
     if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
       if (visitPrebuiltModule(
               ScanInstance.getPreprocessorOpts().ImplicitPCHInclude,
               ScanInstance,
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
-              ScanInstance.getDiagnostics()))
+              PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
 
     // Use the dependency scanning optimized file system if requested to do so.
@@ -295,8 +403,8 @@ public:
     case ScanningOutputFormat::Full:
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, Controller,
-          OriginalInvocation, OptimizeArgs, EagerLoadModules,
-          Format == ScanningOutputFormat::P1689);
+          OriginalInvocation, std::move(PrebuiltModuleVFSMap), OptimizeArgs,
+          EagerLoadModules, Format == ScanningOutputFormat::P1689);
       ScanInstance.addDependencyCollector(MDC);
       break;
     }
@@ -325,6 +433,8 @@ public:
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;
 
+    // Each action is responsible for calling finish.
+    DiagConsumerFinisher.release();
     const bool Result = ScanInstance.ExecuteAction(*Action);
 
     if (Result)

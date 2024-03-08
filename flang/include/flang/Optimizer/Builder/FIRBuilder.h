@@ -688,6 +688,9 @@ fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate Null BoxProc for procedure pointer null initialization.
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxType);
+
+/// Set internal linkage attribute on a function.
+void setInternalLinkage(mlir::func::FuncOp);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

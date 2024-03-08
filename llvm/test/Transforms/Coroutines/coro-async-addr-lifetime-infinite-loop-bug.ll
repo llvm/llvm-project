@@ -22,8 +22,8 @@ declare void @my_other_async_function(ptr %async.ctxt)
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swifttailcc void @my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) alwaysinline {
-  tail call swifttailcc void %fnPtr(ptr %async.ctxt)
+define swiftcc void @my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) {
+  tail call swiftcc void %fnPtr(ptr %async.ctxt)
   ret void
 }
 
@@ -37,12 +37,12 @@ entry:
 
 ; The address of alloca escapes but the analysis based on lifetimes fails to see
 ; that it can't localize this alloca.
-; CHECK: define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt) {
+; CHECK: define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) {
 ; CHECK: entry:
 ; CHECK-NOT: ret
 ; CHECK-NOT:   [[ESCAPED_ADDR:%.*]] = alloca i64, align 8
 ; CHECK: ret
-define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt) {
+define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) {
 entry:
   %escaped_addr = alloca i64
 

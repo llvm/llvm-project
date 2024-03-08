@@ -5,9 +5,18 @@ template <typename T> struct Ref {
   T *t;
 
   Ref() : t{} {};
-  Ref(T *) {}
+  Ref(T &t)
+    : t(t) {
+    if (t)
+      t->ref();
+  }
+  ~Ref() {
+    if (t)
+      t->deref();
+  }
   T *get() { return t; }
   T *ptr() { return t; }
+  T *operator->() { return t; }
   operator const T &() const { return *t; }
   operator T &() { return *t; }
 };
@@ -16,9 +25,18 @@ template <typename T> struct RefPtr {
   T *t;
 
   RefPtr() : t(new T) {}
-  RefPtr(T *t) : t(t) {}
+  RefPtr(T *t)
+    : t(t) {
+    if (t)
+      t->ref();
+  }
+  ~RefPtr() {
+    if (t)
+      t->deref();
+  }
   T *get() { return t; }
   T *operator->() { return t; }
+  const T *operator->() const { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *) { return *this; }
   operator bool() { return t; }
@@ -44,6 +62,8 @@ struct RefCountable {
   static Ref<RefCountable> create();
   void ref() {}
   void deref() {}
+  void method();
+  int trivial() { return 123; }
 };
 
 template <typename T> T *downcast(T *t) { return t; }
