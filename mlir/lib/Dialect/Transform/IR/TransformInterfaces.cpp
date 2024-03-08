@@ -935,8 +935,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     }
     return true;
   };
-  transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
-                                                            config);
+  transform::ErrorCheckingTrackingListener<transform::TrackingListener>
+      trackingListener(*this, transform, config);
   transform::TransformRewriter rewriter(transform->getContext(),
                                         &trackingListener);
 
@@ -1214,11 +1214,10 @@ DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
     Operation *&result, Operation *op, ValueRange newValues) const {
   assert(op->getNumResults() == newValues.size() &&
          "invalid number of replacement values");
-  SmallVector<Value> values(newValues.begin(), newValues.end());
-
   DiagnosedSilenceableFailure diag = emitSilenceableFailure(
       getTransformOp(), "tracking listener failed to find replacement op "
                         "during application of this transform op");
+  SmallVector<Value> values(newValues.begin(), newValues.end());
 
   do {
     // If the replacement values belong to different ops, drop the mapping.
@@ -1349,49 +1348,12 @@ void transform::TrackingListener::notifyOperationReplaced(
   (void)replacePayloadOp(op, replacement);
 }
 
-transform::ErrorCheckingTrackingListener::~ErrorCheckingTrackingListener() {
-  // The state of the ErrorCheckingTrackingListener must be checked and reset
-  // if there was an error. This is to prevent errors from accidentally being
-  // missed.
-  assert(status.succeeded() && "listener state was not checked");
-}
-
-DiagnosedSilenceableFailure
-transform::ErrorCheckingTrackingListener::checkAndResetError() {
-  DiagnosedSilenceableFailure s = std::move(status);
-  status = DiagnosedSilenceableFailure::success();
-  errorCounter = 0;
-  return s;
-}
-
-bool transform::ErrorCheckingTrackingListener::failed() const {
-  return !status.succeeded();
-}
-
-void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
-    Operation *op, ValueRange values, DiagnosedSilenceableFailure &&diag) {
-
-  // Merge potentially existing diags and store the result in the listener.
-  SmallVector<Diagnostic> diags;
-  diag.takeDiagnostics(diags);
-  if (!status.succeeded())
-    status.takeDiagnostics(diags);
-  status = DiagnosedSilenceableFailure::silenceableFailure(std::move(diags));
-
-  // Report more details.
-  status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
-  for (auto &&[index, value] : llvm::enumerate(values))
-    status.attachNote(value.getLoc())
-        << "[" << errorCounter << "] replacement value " << index;
-  ++errorCounter;
-}
-
 //===----------------------------------------------------------------------===//
 // TransformRewriter
 //===----------------------------------------------------------------------===//
 
 transform::TransformRewriter::TransformRewriter(
-    MLIRContext *ctx, ErrorCheckingTrackingListener *listener)
+    MLIRContext *ctx, ErrorCheckingTrackingListener<TrackingListener> *listener)
     : RewriterBase(ctx), listener(listener) {
   setListener(listener);
 }

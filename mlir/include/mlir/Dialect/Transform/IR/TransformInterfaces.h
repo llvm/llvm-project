@@ -1026,7 +1026,7 @@ protected:
   /// Return the transform op in which this TrackingListener is used.
   TransformOpInterface getTransformOp() const { return transformOp; }
 
-private:
+protected:
   friend class TransformRewriter;
 
   void notifyOperationErased(Operation *op) override;
@@ -1034,6 +1034,7 @@ private:
   void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
   using Listener::notifyOperationReplaced;
 
+private:
   /// The transform op in which this TrackingListener is used.
   TransformOpInterface transformOp;
 
@@ -1047,23 +1048,48 @@ private:
 /// A specialized listener that keeps track of cases in which no replacement
 /// payload could be found. The error state of this listener must be checked
 /// before the end of its lifetime.
-class ErrorCheckingTrackingListener : public TrackingListener {
+template <typename TrackingListenerTy>
+class ErrorCheckingTrackingListener : public TrackingListenerTy {
 public:
-  using transform::TrackingListener::TrackingListener;
+  using TrackingListenerTy::TrackingListenerTy;
 
-  ~ErrorCheckingTrackingListener() override;
+  ~ErrorCheckingTrackingListener() override {
+    // The state of the ErrorCheckingTrackingListener must be checked and reset
+    // if there was an error. This is to prevent errors from accidentally being
+    // missed.
+    assert(status.succeeded() && "listener state was not checked");
+  }
 
   /// Check and return the current error state of this listener. Afterwards,
   /// resets the error state to "success".
-  DiagnosedSilenceableFailure checkAndResetError();
+  DiagnosedSilenceableFailure checkAndResetError() {
+    DiagnosedSilenceableFailure s = std::move(status);
+    status = DiagnosedSilenceableFailure::success();
+    errorCounter = 0;
+    return s;
+  }
 
   /// Return "true" if this tracking listener had a failure.
-  bool failed() const;
+  bool failed() const { return !status.succeeded(); }
 
 protected:
-  void
-  notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
-                                   DiagnosedSilenceableFailure &&diag) override;
+  void notifyPayloadReplacementNotFound(
+      Operation *op, ValueRange values,
+      DiagnosedSilenceableFailure &&diag) override {
+    // Merge potentially existing diags and store the result in the listener.
+    SmallVector<Diagnostic> diags;
+    diag.takeDiagnostics(diags);
+    if (!status.succeeded())
+      status.takeDiagnostics(diags);
+    status = DiagnosedSilenceableFailure::silenceableFailure(std::move(diags));
+
+    // Report more details.
+    status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
+    for (auto &&[index, value] : llvm::enumerate(values))
+      status.attachNote(value.getLoc())
+          << "[" << errorCounter << "] replacement value " << index;
+    ++errorCounter;
+  }
 
 private:
   /// The error state of this listener. "Success" indicates that no error
@@ -1082,8 +1108,9 @@ protected:
   friend class TransformState;
 
   /// Create a new TransformRewriter.
-  explicit TransformRewriter(MLIRContext *ctx,
-                             ErrorCheckingTrackingListener *listener);
+  explicit TransformRewriter(
+      MLIRContext *ctx,
+      ErrorCheckingTrackingListener<TrackingListener> *listener);
 
 public:
   /// Return "true" if the tracking listener had failures.
@@ -1106,7 +1133,7 @@ public:
                                                Operation *replacement);
 
 private:
-  ErrorCheckingTrackingListener *const listener;
+  ErrorCheckingTrackingListener<TrackingListener> *const listener;
 };
 
 /// This trait is supposed to be attached to Transform dialect operations that

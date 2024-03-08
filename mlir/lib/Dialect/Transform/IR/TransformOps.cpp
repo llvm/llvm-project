@@ -493,6 +493,125 @@ void transform::ApplyCanonicalizationPatternsOp::populatePatterns(
 // ApplyConversionPatternsOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// A specialized tracking listener for dialect conversions. It can be
+/// configured with a "replacement mapping" that specifies how replacement ops
+/// for replaced tracked operations should be determined.
+class ConversionTrackingListener : public transform::TrackingListener {
+public:
+  ConversionTrackingListener(
+      transform::TransformState &state, transform::TransformOpInterface op,
+      transform::TrackingListenerConfig config,
+      const DenseMap<StringRef, StringRef> *replacementMapping)
+      : transform::TrackingListener(state, op, config),
+        replacementMapping(replacementMapping) {}
+
+  /// Instead of deducing the replacement op from the replacement values, the
+  /// replacement op is chosen among all ops that were created during the
+  /// current pattern application. E.g., a mapping of "arith.mulsi_extended ->
+  /// llvm.mul" indicates that tracked arith.mulsi_extended ops should be
+  /// updated to llvm.mul ops, assuming that an llvm.mul op was created in the
+  /// same pattern that replaced the arith.mulsi_extended op. If no such op or
+  /// multiple such ops were created, "nullptr" replacement op is returned.
+  ///
+  /// If no replacement mapping is set, fall back to the original mechanism of
+  /// `TrackingListener`.
+  DiagnosedSilenceableFailure
+  findReplacementOp(Operation *&result, Operation *op,
+                    ValueRange newValues) const override;
+
+protected:
+  void notifyOperationErased(Operation *op) override;
+
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override;
+
+  void notifyPatternBegin(const Pattern &pattern, Operation *op) override;
+
+  void notifyPatternEnd(const Pattern &pattern, LogicalResult status) override;
+
+  /// The root op of the pattern that is currently being applied or "nullptr" if
+  /// no pattern application is running.
+  Operation *rootOp = nullptr;
+
+  /// All ops that have been created during the current pattern application.
+  /// This set is maintained only if "config.replacementMapping" is set.
+  SmallVector<Operation *> createdOps;
+
+  /// A mapping that specifies how replacement ops should be
+  /// determined when a mapped op is replaced. If set to "nullptr", the default
+  /// lookup mechanism (i.e., op deduced from the replacement values) is used.
+  const DenseMap<StringRef, StringRef> *replacementMapping = nullptr;
+};
+} // namespace
+
+void ConversionTrackingListener::notifyOperationErased(Operation *op) {
+  TrackingListener::notifyOperationErased(op);
+
+  // Remove from created ops.
+  auto it = llvm::find(createdOps, op);
+  if (it != createdOps.end())
+    createdOps.erase(it);
+}
+
+void ConversionTrackingListener::notifyOperationInserted(
+    Operation *op, OpBuilder::InsertPoint previous) {
+  if (replacementMapping)
+    createdOps.push_back(op);
+}
+
+void ConversionTrackingListener::notifyPatternBegin(const Pattern &pattern,
+                                                    Operation *op) {
+  assert(!rootOp && "expected that no other pattern is in progress");
+  rootOp = op;
+}
+
+void ConversionTrackingListener::notifyPatternEnd(const Pattern &pattern,
+                                                  LogicalResult status) {
+  rootOp = nullptr;
+  createdOps.clear();
+}
+
+DiagnosedSilenceableFailure
+ConversionTrackingListener::findReplacementOp(Operation *&result, Operation *op,
+                                              ValueRange newValues) const {
+  if (!replacementMapping)
+    return TrackingListener::findReplacementOp(result, op, newValues);
+
+  DiagnosedSilenceableFailure diag = emitSilenceableFailure(
+      getTransformOp(),
+      "conversion tracking listener failed to find replacement op during "
+      "application of this transform op");
+
+  auto it = replacementMapping->find(op->getName().getStringRef());
+  if (it == replacementMapping->end()) {
+    diag.attachNote(op->getLoc())
+        << "no mapping specified for '" << op->getName().getStringRef() << "'";
+    return diag;
+  }
+  StringRef replacementOpName = it->second;
+  Operation *replacementOp = nullptr;
+  for (Operation *op : createdOps) {
+    if (op->getName().getStringRef() == replacementOpName) {
+      if (replacementOp) {
+        diag.attachNote(op->getLoc()) << "multiple '" << replacementOpName
+                                      << "' replacement candidates found for '"
+                                      << op->getName().getStringRef() << "'";
+        return diag;
+      }
+      replacementOp = op;
+    }
+  }
+  if (!replacementOp) {
+    diag.attachNote(op->getLoc())
+        << "no replacement found for '" << op->getName().getStringRef()
+        << "', expected '" << replacementOpName << "'";
+    return diag;
+  }
+  result = replacementOp;
+  return DiagnosedSilenceableFailure::success();
+}
+
 DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
@@ -522,6 +641,15 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
   if (getIllegalDialects())
     for (Attribute attr : cast<ArrayAttr>(*getIllegalDialects()))
       conversionTarget.addIllegalDialect(cast<StringAttr>(attr).getValue());
+
+  // Extract op replacement rules from attribute.
+  DenseMap<StringRef, StringRef> replacementMapping;
+  if (getFindReplacements()) {
+    DictionaryAttr mappingAttr = cast<DictionaryAttr>(*getFindReplacements());
+    for (auto it : mappingAttr)
+      replacementMapping[it.getName()] =
+          cast<StringAttr>(it.getValue()).getValue();
+  }
 
   // Gather all specified patterns.
   RewritePatternSet patterns(ctx);
@@ -569,7 +697,9 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
   // name.
   TrackingListenerConfig trackingConfig;
   trackingConfig.requireMatchingReplacementOpName = false;
-  ErrorCheckingTrackingListener trackingListener(state, *this, trackingConfig);
+  ErrorCheckingTrackingListener<ConversionTrackingListener> trackingListener(
+      state, *this, trackingConfig,
+      replacementMapping.empty() ? nullptr : &replacementMapping);
   ConversionConfig conversionConfig;
   if (getPreserveHandles())
     conversionConfig.listener = &trackingListener;
@@ -656,6 +786,16 @@ LogicalResult transform::ApplyConversionPatternsOp::verify() {
         if (failed(descriptor.verifyTypeConverter(typeConverterOp)))
           return failure();
       }
+    }
+  }
+  if (getFindReplacements()) {
+    if (!getPreserveHandles())
+      return emitOpError() << "find_replacements requires preserve_handles";
+    auto mapping = cast<DictionaryAttr>(*getFindReplacements());
+    for (auto it : mapping) {
+      if (!isa<StringAttr>(it.getValue()))
+        return emitOpError() << "expected find_replacements to contain only "
+                                "StringAttr values";
     }
   }
   return success();

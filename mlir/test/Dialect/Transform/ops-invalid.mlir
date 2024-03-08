@@ -771,3 +771,25 @@ module attributes { transform.with_named_sequence } {
     transform.yield %arg0 : !transform.any_op
   }
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected find_replacements to contain only StringAttr values}}
+  transform.apply_conversion_patterns to %arg0 {
+  } {legal_dialects = ["func", "llvm"], preserve_handles,
+     find_replacements = {"arith.muli" = 3}} : !transform.any_op
+  transform.yield
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{find_replacements requires preserve_handles}}
+  transform.apply_conversion_patterns to %arg0 {
+  } {legal_dialects = ["func", "llvm"],
+     find_replacements = {"arith.muli" = 3}} : !transform.any_op
+  transform.yield
+}
