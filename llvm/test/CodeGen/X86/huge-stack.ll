@@ -4,10 +4,10 @@
 define void @foo() unnamed_addr #0 {
   %1 = alloca %large, align 1
   %2 = alloca %large, align 1
-  %3 = getelementptr inbounds %large, %large* %1, i64 0, i64 0
-  store i8 42, i8* %3, align 1
-  %4 = getelementptr inbounds %large, %large* %2, i64 0, i64 0
-  store i8 43, i8* %4, align 1
+  %3 = getelementptr inbounds %large, ptr %1, i64 0, i64 0
+  store i8 42, ptr %3, align 1
+  %4 = getelementptr inbounds %large, ptr %2, i64 0, i64 0
+  store i8 43, ptr %4, align 1
   ret void
 }
 
