@@ -888,6 +888,8 @@ R"(All available -march extensions for RISC-V
     xtheadmempair       1.0
     xtheadsync          1.0
     xtheadvdot          1.0
+    xtheadvector        1.0
+    xtheadzvamo         1.0
     xventanacondops     1.0
 
 Experimental extensions
