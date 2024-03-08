@@ -3142,7 +3142,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
-    case Intrinsic::amdgcn_permlane_bcast: {
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_down: {
       // Doing a waterfall loop over these wouldn't make any sense.
       substituteSimpleCopyRegs(OpdMapper, 2);
       substituteSimpleCopyRegs(OpdMapper, 3);
@@ -4776,7 +4777,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
-    case Intrinsic::amdgcn_permlane_bcast: {
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_down: {
       unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
