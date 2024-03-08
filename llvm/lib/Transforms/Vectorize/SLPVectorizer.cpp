@@ -5776,7 +5776,9 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractElement: {
     bool Reuse = canReuseExtract(VL, VL0, CurrentOrder);
     // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
-    if (isPowerOf2_32(VL.size()) && (Reuse || !CurrentOrder.empty()))
+    if (!isPowerOf2_32(VL.size()))
+      return TreeEntry::NeedToGather;
+    if ((Reuse || !CurrentOrder.empty()))
       return TreeEntry::Vectorize;
     LLVM_DEBUG(dbgs() << "SLP: Gather extract sequence.\n");
     return TreeEntry::NeedToGather;
