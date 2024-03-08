@@ -50,6 +50,9 @@ BUILTIN(__builtin_arm_wfi, "v", "")
 BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
 
+// Like __builtin_trap but provide an 16-bit immediate reason code (which goes into `brk #N`).
+BUILTIN(__builtin_arm_trap, "vUIs", "nr")
+
 // CRC32
 TARGET_BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc", "crc")
 TARGET_BUILTIN(__builtin_arm_crc32cb, "UiUiUc", "nc", "crc")
