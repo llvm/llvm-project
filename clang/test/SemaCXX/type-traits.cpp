@@ -1681,6 +1681,16 @@ union UnionLayout3 {
   [[no_unique_address]] CEmptyStruct d;
 };
 
+union UnionNoOveralignedMembers {
+  int a;
+  double b;
+};
+
+union UnionWithOveralignedMembers {
+  int a;
+  alignas(16) double b;
+};
+
 struct StructWithAnonUnion {
   union {
     int a;
@@ -1771,7 +1781,8 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)), "");
   static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)), "");
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
-  static_assert(__is_layout_compatible(CStruct, CStructAlignedMembers), ""); // FIXME: alignment of members impact common initial sequence
+  static_assert(!__is_layout_compatible(CStruct, CStructAlignedMembers), "");
+  static_assert(__is_layout_compatible(UnionNoOveralignedMembers, UnionWithOveralignedMembers), "");
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
   static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
