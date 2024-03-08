@@ -200,6 +200,87 @@ void TestMutationInLambda() {
     [i = 0](this auto){ i++; }();
     [i = 0](this const auto&){ i++; }();
     // expected-error@-1 {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+    // expected-note@-2 {{in instantiation of}}
+
+    int x;
+    const auto l1 = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+    const auto l2 = [=](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+
+    const auto l3 = [&x](this auto&) {
+        const auto l3a = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l3a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l4 = [&x](this auto&) {
+        const auto l4a = [=](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l4a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l5 = [x](this auto&) {
+        const auto l5a = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l5a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l6 = [=](this auto&) {
+        const auto l6a = [=](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l6a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l7 = [x](this auto&) {
+        const auto l7a = [=](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l7a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l8 = [=](this auto&) {
+        const auto l8a = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l8a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l9 = [&](this auto&) {
+        const auto l9a = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l9a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l10 = [&](this auto&) {
+        const auto l10a = [=](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+        l10a(); // expected-note {{in instantiation of}}
+    };
+
+    const auto l11 = [x](this auto&) {
+        const auto l11a = [&x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}} expected-note {{while substituting}}
+        l11a();
+    };
+
+    const auto l12 = [x](this auto&) {
+        const auto l12a = [&](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}} expected-note {{while substituting}}
+        l12a();
+    };
+
+    const auto l13 = [=](this auto&) {
+        const auto l13a = [&x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}} expected-note {{while substituting}}
+        l13a();
+    };
+
+    l1(); // expected-note {{in instantiation of}}
+    l2(); // expected-note {{in instantiation of}}
+    l3(); // expected-note {{in instantiation of}}
+    l4(); // expected-note {{in instantiation of}}
+    l5(); // expected-note {{in instantiation of}}
+    l6(); // expected-note {{in instantiation of}}
+    l7(); // expected-note {{in instantiation of}}
+    l8(); // expected-note {{in instantiation of}}
+    l9(); // expected-note {{in instantiation of}}
+    l10(); // expected-note {{in instantiation of}}
+    l11(); // expected-note {{in instantiation of}}
+    l12(); // expected-note {{in instantiation of}}
+    l13(); // expected-note {{in instantiation of}}
+
+    {
+      const auto l1 = [&x](this auto&) { x = 42; };
+      const auto l2 = [&](this auto&) { x = 42; };
+      l1();
+      l2();
+    }
 }
 
 struct Over_Call_Func_Example {
