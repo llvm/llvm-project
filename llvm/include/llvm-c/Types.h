@@ -173,6 +173,15 @@ typedef struct LLVMOpaqueBinary *LLVMBinaryRef;
  * @}
  */
 
+typedef struct LLVMOpaqueDbgRecord *LLVMDbgRecord;
+typedef struct {
+  union {
+    LLVMValueRef Instr;
+    LLVMDbgRecord Record;
+  } Ptr;
+  int IsInstr;
+} LLVMDbgInstRef;
+
 LLVM_C_EXTERN_C_END
 
 #endif

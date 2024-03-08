@@ -1257,9 +1257,10 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
  * \param DebugLoc    Debug info location.
  * \param Instr       Instruction acting as a location for the new intrinsic.
  */
-LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
-  LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-  LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
+LLVMDbgInstRef
+LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
+                                 LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
+                                 LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 
 /**
  * Insert a new llvm.dbg.declare intrinsic call at the end of the given basic
@@ -1272,7 +1273,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
  * \param DebugLoc    Debug info location.
  * \param Block       Basic block acting as a location for the new intrinsic.
  */
-LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
+LLVMDbgInstRef LLVMDIBuilderInsertDeclareAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 
@@ -1285,12 +1286,10 @@ LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
  * \param DebugLoc    Debug info location.
  * \param Instr       Instruction acting as a location for the new intrinsic.
  */
-LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder,
-                                               LLVMValueRef Val,
-                                               LLVMMetadataRef VarInfo,
-                                               LLVMMetadataRef Expr,
-                                               LLVMMetadataRef DebugLoc,
-                                               LLVMValueRef Instr);
+LLVMDbgInstRef
+LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder, LLVMValueRef Val,
+                                  LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
+                                  LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 
 /**
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
@@ -1303,12 +1302,9 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder,
  * \param DebugLoc    Debug info location.
  * \param Block       Basic block acting as a location for the new intrinsic.
  */
-LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
-                                              LLVMValueRef Val,
-                                              LLVMMetadataRef VarInfo,
-                                              LLVMMetadataRef Expr,
-                                              LLVMMetadataRef DebugLoc,
-                                              LLVMBasicBlockRef Block);
+LLVMDbgInstRef LLVMDIBuilderInsertDbgValueAtEnd(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 
 /**
  * Create a new descriptor for a local auto variable.

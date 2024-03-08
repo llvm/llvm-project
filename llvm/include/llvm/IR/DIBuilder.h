@@ -42,6 +42,30 @@ namespace llvm {
 
   using DbgInstPtr = PointerUnion<Instruction *, DbgRecord *>;
 
+  /* Specialized opaque type conversions.
+   */
+  inline DbgInstPtr unwrapDbgUnion(LLVMDbgInstRef Ref) {
+    DbgInstPtr Unwrapped;
+    if (Ref.IsInstr)
+      Unwrapped = unwrap<Instruction>(Ref.Ptr.Instr);
+    else
+      Unwrapped = reinterpret_cast<DbgRecord *>(Ref.Ptr.Record);
+    return Unwrapped;
+  }
+  inline LLVMDbgInstRef wrapDbgUnion(DbgInstPtr Ref) {
+    LLVMDbgInstRef Wrapped;
+    if (isa<Instruction *>(Ref)) {
+      Wrapped.Ptr.Instr =
+          wrap(reinterpret_cast<Value *>(Ref.get<Instruction *>()));
+      Wrapped.IsInstr = true;
+    } else {
+      Wrapped.Ptr.Record =
+          reinterpret_cast<LLVMDbgRecord>(Ref.get<DbgRecord *>());
+      Wrapped.IsInstr = false;
+    }
+    return Wrapped;
+  }
+
   class DIBuilder {
     Module &M;
     LLVMContext &VMContext;
