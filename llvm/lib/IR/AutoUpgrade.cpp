@@ -5178,11 +5178,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
 }
 
-// Check if the module attribute is present and not zero.
-static bool isModuleAttributeSet(Module &M, const StringRef &ModAttr) {
+// Check if the module attribute is present and set to one.
+static bool isModuleAttributeOne(Module &M, const StringRef &ModAttr) {
   const auto *Attr =
       mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
-  return Attr && !Attr->isZero();
+  return Attr && Attr->isOne();
 }
 
 // Check if the function attribute is not present and set it.
@@ -5197,31 +5197,36 @@ void llvm::CopyModuleAttrToFunctions(Module &M) {
   if (!T.isThumb() && !T.isARM() && !T.isAArch64())
     return;
 
-  StringRef SignTypeValue = "none";
-  if (isModuleAttributeSet(M, "sign-return-address-all"))
-    SignTypeValue = "all";
-  else if (isModuleAttributeSet(M, "sign-return-address"))
-    SignTypeValue = "non-leaf";
+  bool BTE = isModuleAttributeOne(M, "branch-target-enforcement");
+  bool BPPLR = isModuleAttributeOne(M, "branch-protection-pauth-lr");
+  bool GCS = isModuleAttributeOne(M, "guarded-control-stack");
+  bool SRA = isModuleAttributeOne(M, "sign-return-address");
 
-  StringRef BTEValue =
-      isModuleAttributeSet(M, "branch-target-enforcement") ? "true" : "false";
-  StringRef BPPLValue =
-      isModuleAttributeSet(M, "branch-protection-pauth-lr") ? "true" : "false";
-  StringRef GCSValue =
-      isModuleAttributeSet(M, "guarded-control-stack") ? "true" : "false";
-  StringRef SignKeyValue =
-      isModuleAttributeSet(M, "sign-return-address-with-bkey") ? "b_key"
-                                                               : "a_key";
+  if (!BTE && !BPPLR && !GCS && !SRA)
+    return;
+
+  StringRef SignTypeValue = "non-leaf";
+  if (SRA && isModuleAttributeOne(M, "sign-return-address-all"))
+    SignTypeValue = "all";
+
+  StringRef SignKeyValue = "a_key";
+  if (SRA && isModuleAttributeOne(M, "sign-return-address-with-bkey"))
+    SignKeyValue = "b_key";
 
   for (Function &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
 
-    SetFunctionAttrIfNotSet(F, "sign-return-address", SignTypeValue);
-    SetFunctionAttrIfNotSet(F, "branch-target-enforcement", BTEValue);
-    SetFunctionAttrIfNotSet(F, "branch-protection-pauth-lr", BPPLValue);
-    SetFunctionAttrIfNotSet(F, "guarded-control-stack", GCSValue);
-    SetFunctionAttrIfNotSet(F, "sign-return-address-key", SignKeyValue);
+    if (SRA) {
+      SetFunctionAttrIfNotSet(F, "sign-return-address", SignTypeValue);
+      SetFunctionAttrIfNotSet(F, "sign-return-address-key", SignKeyValue);
+    }
+    if (BTE)
+      SetFunctionAttrIfNotSet(F, "branch-target-enforcement", "true");
+    if (BPPLR)
+      SetFunctionAttrIfNotSet(F, "branch-protection-pauth-lr", "true");
+    if (GCS)
+      SetFunctionAttrIfNotSet(F, "guarded-control-stack", "true");
   }
 }
 

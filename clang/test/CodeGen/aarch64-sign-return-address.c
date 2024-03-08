@@ -22,17 +22,17 @@
 // NONE-NOT:  !"branch-target-enforcement"
 // ALL-NOT:   !"branch-target-enforcement"
 // PART-NOT:  !"branch-target-enforcement"
-// BTE:       !{i32 8, !"branch-target-enforcement", i32 1}
+// BTE:       !{i32 8, !"branch-target-enforcement", i32 2}
 // B-KEY-NOT: !"branch-target-enforcement"
 
 // NONE-NOT:  !"sign-return-address"
-// ALL:   !{i32 8, !"sign-return-address", i32 1}
-// PART:  !{i32 8, !"sign-return-address", i32 1}
+// ALL:   !{i32 8, !"sign-return-address", i32 2}
+// PART:  !{i32 8, !"sign-return-address", i32 2}
 // BTE-NOT:   !"sign-return-address"
-// B-KEY: !{i32 8, !"sign-return-address", i32 1}
+// B-KEY: !{i32 8, !"sign-return-address", i32 2}
 
 // NONE-NOT:  !"sign-return-address-all"
-// ALL:   !{i32 8, !"sign-return-address-all", i32 1}
+// ALL:   !{i32 8, !"sign-return-address-all", i32 2}
 // PART-NOT:  !"sign-return-address-all"
 // BTE-NOT:   !"sign-return-address-all"
 // B-KEY-NOT: !"sign-return-address-all"
@@ -41,6 +41,6 @@
 // ALL-NOT:   !"sign-return-address-with-bkey"
 // PART-NOT:  !"sign-return-address-with-bkey"
 // BTE-NOT:   !"sign-return-address-with-bkey"
-// B-KEY: !{i32 8, !"sign-return-address-with-bkey", i32 1}
+// B-KEY: !{i32 8, !"sign-return-address-with-bkey", i32 2}
 
 void foo() {}
