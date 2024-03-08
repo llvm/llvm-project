@@ -97,6 +97,8 @@ TEST(ScudoAllocatorConfigTest, VerifyOptionalFlags) {
   // `ConditionVariableT` is default off.
   EXPECT_FALSE(
       scudo::PrimaryConfig<TestPrimaryConfig>::hasConditionVariableT());
+  EXPECT_TRUE(scudo::PrimaryConfig<
+              TestPrimaryConfigEnableOptionalType>::hasConditionVariableT());
   EXPECT_TRUE((std::is_same_v<
                typename scudo::PrimaryConfig<
                    TestPrimaryConfigEnableOptionalType>::ConditionVariableT,
