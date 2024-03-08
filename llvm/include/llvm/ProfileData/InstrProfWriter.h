@@ -69,7 +69,7 @@ private:
   InstrProfRecordWriterTrait *InfoObj;
 
   // Temporary support for writing the previous version of the format, to enable
-  // some forward compaitibility. Currently this suppresses the writing of the
+  // some forward compatibility. Currently this suppresses the writing of the
   // new vtable names section and header fields.
   // TODO: Consider enabling this with future version changes as well, to ease
   // deployment of newer versions of llvm-profdata.
@@ -79,7 +79,7 @@ public:
   InstrProfWriter(bool Sparse = false,
                   uint64_t TemporalProfTraceReservoirSize = 0,
                   uint64_t MaxTemporalProfTraceLength = 0,
-                  bool WritePrevVersion = true);
+                  bool WritePrevVersion = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }

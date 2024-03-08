@@ -434,9 +434,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
-  Header.Version = IndexedInstrProf::ProfVersion::CurrentVersion;
-  if (WritePrevVersion)
-    Header.Version--;
+  Header.Version = WritePrevVersion
+                       ? IndexedInstrProf::ProfVersion::Version11
+                       : IndexedInstrProf::ProfVersion::CurrentVersion;
+  // The WritePrevVersion handling will either need to be removed or updated
+  // if the version is advanced beyond 12.
+  assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
+         IndexedInstrProf::ProfVersion::Version12);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))

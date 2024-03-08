@@ -292,7 +292,7 @@ cl::opt<bool> DropProfileSymbolList(
              "(only meaningful for -sample)"));
 
 // Temporary support for writing the previous version of the format, to enable
-// some forward compaitibility.
+// some forward compatibility.
 // TODO: Consider enabling this with future version changes as well, to ease
 // deployment of newer versions of llvm-profdata.
 cl::opt<bool> DoWritePrevVersion(
