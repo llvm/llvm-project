@@ -889,9 +889,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Format == ScanningOutputFormat::Full)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
 
-  std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-
-  auto ScanningTask = [&](unsigned I) {
+  auto ScanningTask = [&](DependencyScanningTool &WorkerTool) {
     llvm::DenseSet<ModuleID> AlreadySeenModules;
     while (auto MaybeInputIndex = GetNextInputIndex()) {
       size_t LocalIndex = *MaybeInputIndex;
@@ -913,7 +911,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       // Run the tool on it.
       if (Format == ScanningOutputFormat::Make) {
         auto MaybeFile =
-            WorkerTools[I]->getDependencyFile(Input->CommandLine, CWD);
+            WorkerTool.getDependencyFile(Input->CommandLine, CWD);
         if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                            Errs))
           HadErrors = true;
@@ -925,7 +923,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         std::string MakeformatOutputPath;
         std::string MakeformatOutput;
 
-        auto MaybeRule = WorkerTools[I]->getP1689ModuleDependencyFile(
+        auto MaybeRule = WorkerTool.getP1689ModuleDependencyFile(
             *Input, CWD, MakeformatOutput, MakeformatOutputPath);
 
         if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
@@ -960,14 +958,14 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         }
       } else if (MaybeModuleName) {
-        auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
+        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
             *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
             LookupOutput);
         if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
       } else {
-        auto MaybeTUDeps = WorkerTools[I]->getTranslationUnitDependencies(
+        auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
             Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
         if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
                                         DependencyOS, Errs))
@@ -982,13 +980,14 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::Timer T;
   T.startTimer();
 
-  if (NumThreads == 1) {
-    WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
-    ScanningTask(0);
+  if (Inputs.size() == 1) {
+    DependencyScanningTool WorkerTool(Service);
+    ScanningTask(WorkerTool);
   } else {
     llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+    std::vector<DependencyScanningTool> WorkerTools;
     for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
-      WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
+      WorkerTools.emplace_back(Service);
 
     if (Verbose) {
       llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
@@ -997,7 +996,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I) {
-      Pool.async([I, ScanningTask]() { ScanningTask(I); });
+      Pool.async([ScanningTask, &WorkerTools, I]() {
+        ScanningTask(WorkerTools[I]);
+      });
     }
     Pool.wait();
   }
