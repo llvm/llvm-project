@@ -188,38 +188,38 @@ const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
-    : ExternalSource(nullptr), CurFPFeatures(pp.getLangOpts()),
+    : CollectStats(false), TUKind(TUKind), CurFPFeatures(pp.getLangOpts()),
       LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
       Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
-      APINotes(SourceMgr, LangOpts), CollectStats(false),
-      CodeCompleter(CodeCompleter), CurContext(nullptr),
-      OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
+      APINotes(SourceMgr, LangOpts), AnalysisWarnings(*this),
+      ThreadSafetyDeclCache(nullptr), LateTemplateParser(nullptr),
+      LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr),
+      CurContext(nullptr), ExternalSource(nullptr), CurScope(nullptr),
+      Ident_super(nullptr),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
-      VtorDispStack(LangOpts.getVtorDispMode()),
+      MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
       AlignPackStack(AlignPackInfo(getLangOpts().XLPragmaPack)),
       DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
       CodeSegStack(nullptr), StrictGuardStackCheckStack(false),
       FpPragmaStack(FPOptionsOverride()), CurInitSeg(nullptr),
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
-      IsBuildingRecoveryCallExpr(false), LateTemplateParser(nullptr),
-      LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
-      StdInitializerList(nullptr), StdCoroutineTraitsCache(nullptr),
-      CXXTypeInfoDecl(nullptr), StdSourceLocationImplDecl(nullptr),
+      StdCoroutineTraitsCache(nullptr), IdResolver(pp),
+      OriginalLexicalContext(nullptr), StdInitializerList(nullptr),
+      FullyCheckedComparisonCategories(
+          static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
+      StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),
+      GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
+      TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
+      AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
+      InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
+      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context),
       NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
       StringWithUTF8StringMethod(nullptr),
       ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
       ArrayWithObjectsMethod(nullptr), NSDictionaryDecl(nullptr),
-      DictionaryWithObjectsMethod(nullptr), GlobalNewDeleteDeclared(false),
-      TUKind(TUKind), NumSFINAEErrors(0),
-      FullyCheckedComparisonCategories(
-          static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
-      SatisfactionCache(Context), AccessCheckingSFINAE(false),
-      InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgumentPackSubstitutionIndex(-1), CurrentInstantiationScope(nullptr),
-      DisableTypoCorrection(false), TyposCorrected(0), AnalysisWarnings(*this),
-      ThreadSafetyDeclCache(nullptr), VarDataSharingAttributesStack(nullptr),
-      CurScope(nullptr), Ident_super(nullptr) {
+      DictionaryWithObjectsMethod(nullptr), CodeCompleter(CodeCompleter),
+      VarDataSharingAttributesStack(nullptr) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 

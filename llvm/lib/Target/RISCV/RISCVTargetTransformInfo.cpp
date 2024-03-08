@@ -165,6 +165,14 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
+  case Instruction::Store:
+    // If the address is a constant, use the materialization cost.
+    if (Idx == 1)
+      return getIntImmCost(Imm, Ty, CostKind);
+    return TTI::TCC_Free;
+  case Instruction::Load:
+    // If the address is a constant, use the materialization cost.
+    return getIntImmCost(Imm, Ty, CostKind);
   case Instruction::And:
     // zext.h
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())

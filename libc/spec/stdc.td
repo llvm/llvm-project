@@ -235,6 +235,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
           >,
           FunctionSpec<
+              "memset_explicit",
+              RetValSpec<VoidPtr>,
+              [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
               "strcpy",
               RetValSpec<CharPtr>,
               [ArgSpec<CharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
@@ -465,6 +470,9 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"expm1", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"expm1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
+          FunctionSpec<"exp10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
           FunctionSpec<"remainderf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"remainder", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"remainderl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
@@ -481,22 +489,27 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"lround", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"lroundf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"lroundl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"lroundf128", RetValSpec<LongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"llround", RetValSpec<LongLongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"llroundf", RetValSpec<LongLongType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"llroundl", RetValSpec<LongLongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"llroundf128", RetValSpec<LongLongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"rint", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"rintf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"rintl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"rintf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"lrint", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"lrintf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"lrintl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"lrintf128", RetValSpec<LongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"llrint", RetValSpec<LongLongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"llrintf", RetValSpec<LongLongType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"llrintl", RetValSpec<LongLongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"llrintf128", RetValSpec<LongLongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"sqrt", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sqrtf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -801,7 +814,8 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_count_zeros">,
         Macro<"stdc_count_ones">,
         Macro<"stdc_has_single_bit">,
-        Macro<"std_bit_width">
+        Macro<"std_bit_width">,
+        Macro<"std_bit_floor">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -860,7 +874,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_bit_width_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_bit_width_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_bit_width_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_bit_width_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_bit_width_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_bit_floor_uc", RetValSpec<UnsignedCharType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_bit_floor_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_bit_floor_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_bit_floor_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_bit_floor_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 
@@ -937,7 +956,9 @@ def StdC : StandardSpec<"stdc"> {
 
   HeaderSpec IntTypes = HeaderSpec<
       "inttypes.h",
-      [], // Macros
+      [
+        Macro<"__STDC_VERSION_INTTYPES_H__">,
+      ], // Macros
       [
         IMaxDivTType,
       ], // Types

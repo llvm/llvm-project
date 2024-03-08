@@ -86,11 +86,22 @@ C++20 Feature Support
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
+- Clang now implements [module.import]p7 fully. Clang now will import module
+  units transitively for the module units coming from the same module of the
+  current module units.
+  Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
+
+- Initial support for class template argument deduction (CTAD) for type alias
+  templates (`P1814R0 <https://wg21.link/p1814r0>`_).
+  (#GH54051).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+
+- Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -107,6 +118,10 @@ Resolutions to C++ Defect Reports
 - Type qualifications are now ignored when evaluating layout compatibility
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
+
+- Alignment of members is now respected when evaluating layout compatibility
+  of structs.
+  (`CWG2583: Common initial sequence should consider over-alignment <https://cplusplus.github.io/CWG/issues/2583.html>`_).
 
 - ``[[no_unique_address]]`` is now respected when evaluating layout
   compatibility of two types.
@@ -138,6 +153,9 @@ C23 Feature Support
   macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
   (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
 
+- Clang now supports `N3018 The constexpr specifier for object definitions`
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -146,6 +164,11 @@ Non-comprehensive list of changes in this release
 
 - ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
   builtins are now constexpr and may be used in constant expressions.
+
+- Added ``__builtin_popcountg`` as a type-generic alternative to
+  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type. Like
+  the previous builtins, this new builtin is constexpr and may be used in
+  constant expressions.
 
 New Compiler Flags
 ------------------
@@ -231,6 +254,10 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Clang now emits errors for explicit specializations/instatiations of lambda call
+  operator.
+  Fixes (#GH83267).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -309,8 +336,14 @@ Bug Fixes to C++ Support
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 - Fix evaluation of some immediate calls in default arguments.
   Fixes (#GH80630)
-- Fix a crash when an explicit template argument list is used with a name for which lookup
-  finds a non-template function and a dependent using declarator.
+- Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
+  calculation. (#GH56556), (#GH82849).
+- Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
+  a member-function against a non member function or a member-function with an
+  explicit object parameter against a member function with no explicit object parameter
+  when one of the function had more specialized templates.
+  Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
+  and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -355,6 +388,8 @@ Arm and AArch64 Support
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-A78AE (cortex-a78ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -372,6 +407,9 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- PTX is no longer included by default when compiling for CUDA. Using 
+  ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -401,6 +439,7 @@ AST Matchers
 ------------
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
+- Add ``isExplicitObjectMemberFunction``.
 
 clang-format
 ------------

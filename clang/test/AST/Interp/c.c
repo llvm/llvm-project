@@ -79,6 +79,11 @@ int a2[(intptr_t)&((struct y*)0)->y]; // all-warning {{folded to constant array}
 const struct y *yy = (struct y*)0;
 const intptr_t L = (intptr_t)(&(yy->y)); // all-error {{not a compile-time constant}}
 
+_Static_assert((long)&((struct y*)0)->y > 0, ""); // pedantic-ref-warning {{GNU extension}} \
+                                                  // pedantic-ref-note {{this conversion is not allowed in a constant expression}} \
+                                                  // pedantic-expected-warning {{GNU extension}} \
+                                                  // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
+
 const ptrdiff_t m = &m + 137 - &m;
 _Static_assert(m == 137, ""); // pedantic-ref-warning {{GNU extension}} \
                               // pedantic-expected-warning {{GNU extension}}
