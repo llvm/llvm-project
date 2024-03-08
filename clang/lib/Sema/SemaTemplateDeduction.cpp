@@ -2531,6 +2531,15 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   return TemplateDeductionResult::Success;
 }
 
+TemplateDeductionResult Sema::DeduceTemplateArguments(
+    TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
+    ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+    bool NumberOfArgumentsMustMatch) {
+  return ::DeduceTemplateArguments(*this, TemplateParams, Ps, As, Info, Deduced,
+                                   NumberOfArgumentsMustMatch);
+}
+
 /// Determine whether two template arguments are the same.
 static bool isSameTemplateArg(ASTContext &Context,
                               TemplateArgument X,

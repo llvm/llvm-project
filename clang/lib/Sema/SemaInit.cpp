@@ -10720,13 +10720,40 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   if (TemplateName.isDependent())
     return SubstAutoTypeDependent(TSInfo->getType());
 
-  // We can only perform deduction for class templates.
+  // We can only perform deduction for class templates or alias templates.
   auto *Template =
       dyn_cast_or_null<ClassTemplateDecl>(TemplateName.getAsTemplateDecl());
+  TemplateDecl *LookupTemplateDecl = Template;
+  if (!Template) {
+    if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
+            TemplateName.getAsTemplateDecl())) {
+      Diag(Kind.getLocation(),
+           diag::warn_cxx17_compat_ctad_for_alias_templates);
+      LookupTemplateDecl = AliasTemplate;
+      auto UnderlyingType = AliasTemplate->getTemplatedDecl()
+                                ->getUnderlyingType()
+                                .getCanonicalType();
+      // C++ [over.match.class.deduct#3]: ..., the defining-type-id of A must be
+      // of the form
+      //   [typename] [nested-name-specifier] [template] simple-template-id
+      if (const auto *TST =
+              UnderlyingType->getAs<TemplateSpecializationType>()) {
+        Template = dyn_cast_or_null<ClassTemplateDecl>(
+            TST->getTemplateName().getAsTemplateDecl());
+      } else if (const auto *RT = UnderlyingType->getAs<RecordType>()) {
+        // Cases where template arguments in the RHS of the alias are not
+        // dependent. e.g.
+        //   using AliasFoo = Foo<bool>;
+        if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
+                RT->getAsCXXRecordDecl()))
+          Template = CTSD->getSpecializedTemplate();
+      }
+    }
+  }
   if (!Template) {
     Diag(Kind.getLocation(),
-         diag::err_deduced_non_class_template_specialization_type)
-      << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
+         diag::err_deduced_non_class_or_alias_template_specialization_type)
+        << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
     if (auto *TD = TemplateName.getAsTemplateDecl())
       NoteTemplateLocation(*TD);
     return QualType();
@@ -10753,10 +10780,10 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   //     template-name, a function template [...]
   //  - For each deduction-guide, a function or function template [...]
   DeclarationNameInfo NameInfo(
-      Context.DeclarationNames.getCXXDeductionGuideName(Template),
+      Context.DeclarationNames.getCXXDeductionGuideName(LookupTemplateDecl),
       TSInfo->getTypeLoc().getEndLoc());
   LookupResult Guides(*this, NameInfo, LookupOrdinaryName);
-  LookupQualifiedName(Guides, Template->getDeclContext());
+  LookupQualifiedName(Guides, LookupTemplateDecl->getDeclContext());
 
   // FIXME: Do not diagnose inaccessible deduction guides. The standard isn't
   // clear on this, but they're not found by name so access does not apply.
