@@ -42,7 +42,7 @@ public:
     ///    greater than the specified value.
     /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
     /// (This mode only matches functions that are declared either directly
-    /// within a TU or in the `std::` namespace.)
+    /// within a TU or in the namespace `std`.)
     CLibrary,
 
     /// Matches "simple" functions that are not methods. (Static methods are

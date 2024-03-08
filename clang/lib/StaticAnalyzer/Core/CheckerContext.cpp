@@ -88,8 +88,8 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
     return false;
 
   // C library functions are either declared directly within a TU (the common
-  // case) or they are accessed through the namespace `std::` (when they are
-  // used in C++ via headers like <cstdlib>).
+  // case) or they are accessed through the namespace `std` (when they are used
+  // in C++ via headers like <cstdlib>).
   const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
   if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
     return false;
