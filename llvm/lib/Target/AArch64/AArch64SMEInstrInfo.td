@@ -30,6 +30,8 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
                              [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, []>;
+def AArch64VGUnwind : SDNode<"AArch64ISD::VG_UNWIND", SDTypeProfile<0, 1, []>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -239,6 +241,15 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 ti
           (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
           (MSRpstatePseudo svcr_op:$pstate, 0b0, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
+
+// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
+// the streaming value of VG around streaming-mode changes in locally-streaming
+// functions.
+def VGUnwindInfoPseudo :
+  Pseudo<(outs), (ins timm0_1:$save_restore), []>, Sched<[]>;
+
+def : Pat<(AArch64VGUnwind (i64 timm0_1:$save_restore)),
+          (VGUnwindInfoPseudo timm0_1:$save_restore)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions

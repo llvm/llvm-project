@@ -2380,6 +2380,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::FIRST_NUMBER:
     break;
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
+    MAKE_CASE(AArch64ISD::VG_UNWIND)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
@@ -8034,12 +8035,22 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
   SDValue InGlue;
+  bool IsLocallyStreaming =
+      !CallerAttrs.hasStreamingInterface() && CallerAttrs.hasStreamingBody();
   if (RequiresSMChange) {
     SDValue NewChain =
         changeStreamingMode(DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain,
                             InGlue, PStateSM, true);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
+
+    if (IsLocallyStreaming && MF.getFunction().needsUnwindTableEntry()) {
+      NewChain = DAG.getNode(
+          AArch64ISD::VG_UNWIND, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+          {Chain, DAG.getTargetConstant(/*Save*/ 1, DL, MVT::i64), InGlue});
+      Chain = NewChain.getValue(0);
+      InGlue = NewChain.getValue(1);
+    }
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
@@ -8192,6 +8203,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert(PStateSM && "Expected a PStateSM to be set");
     Result = changeStreamingMode(DAG, DL, !CalleeAttrs.hasStreamingInterface(),
                                  Result, InGlue, PStateSM, false);
+
+    if (IsLocallyStreaming && MF.getFunction().needsUnwindTableEntry())
+      Result = DAG.getNode(
+          AArch64ISD::VG_UNWIND, DL, MVT::Other,
+          {Result, DAG.getTargetConstant(/*Restore*/ 0, DL, MVT::i64)});
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))

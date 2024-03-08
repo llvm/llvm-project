@@ -212,6 +212,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
+  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -222,6 +224,9 @@ public:
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
+
+  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
+  void setStreamingVGIdx(unsigned Idx) { StreamingVGIdx = Idx; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
