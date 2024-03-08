@@ -908,6 +908,42 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   let hasVerifier = 1;
 }
 
+def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", [CExpression]> {
+  let summary = "Unary minus operation";
+  let description = [{
+    With the `unary_minus` operation the unary operator - (minus) can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.unary_plus %arg0 : (i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = -v1;
+    ```
+  }];
+}
+
+def EmitC_UnaryPlusOp : EmitC_UnaryOp<"unary_plus", [CExpression]> {
+  let summary = "Unary plus operation";
+  let description = [{
+    With the `unary_plus` operation the unary operator + (plus) can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.unary_plus %arg0 : (i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = +v1;
+    ```
+  }];
+}
+
 def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let summary = "Variable operation";
   let description = [{
