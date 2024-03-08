@@ -120,7 +120,7 @@ extern void __kmp_validate_locks(void);
 
 struct kmp_base_tas_lock {
   // KMP_LOCK_FREE(tas) => unlocked; locked: (gtid+1) of owning thread
-#if #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) && \
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) && \
     __LP64__
   // Flip the ordering of the high and low 32-bit member to be consistent
   // with the memory layout of the address in 64-bit big-endian.
