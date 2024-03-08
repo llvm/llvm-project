@@ -468,6 +468,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.logbf128
+    libc.src.math.llrintf128
+    libc.src.math.llroundf128
+    libc.src.math.lrintf128
+    libc.src.math.lroundf128
+    libc.src.math.rintf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128

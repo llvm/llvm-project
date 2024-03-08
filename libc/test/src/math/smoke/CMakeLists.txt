@@ -388,6 +388,24 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lroundf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lroundf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   llround_test
   SUITE
     libc-math-smoke-tests
@@ -442,6 +460,24 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  llroundf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llroundf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.errno.errno
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   rint_test
   SUITE
     libc-math-smoke-tests
@@ -482,6 +518,21 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.rintl
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rintf128_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rintf128
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -532,6 +583,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lrintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lrintf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrintf128
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   llrint_test
   SUITE
     libc-math-smoke-tests
@@ -572,6 +638,21 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.llrintl
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llrintf128_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrintf128
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
