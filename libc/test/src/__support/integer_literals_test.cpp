@@ -104,7 +104,7 @@ TEST(LlvmLibcIntegerLiteralTest, u128) {
 }
 
 TEST(LlvmLibcIntegerLiteralTest, u256) {
-  using UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
+  using UInt256 = LIBC_NAMESPACE::UInt<256>;
   const UInt256 ZERO = 0;
   const UInt256 U8_MAX = UINT8_MAX;
   const UInt256 U16_MAX = UINT16_MAX;
