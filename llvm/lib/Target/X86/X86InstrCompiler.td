@@ -1237,28 +1237,6 @@ def : Pat<(i64 (X86Wrapper mcsym:$dst)),
 def : Pat<(i64 (X86Wrapper tblockaddress:$dst)),
           (MOV64ri32 tblockaddress:$dst)>, Requires<[KernelCode]>;
 
-// If we have small model and -static mode, it is safe to store global addresses
-// directly as immediates.  FIXME: This is really a hack, the 'imm' predicate
-// for MOV64mi32 should handle this sort of thing.
-def : Pat<(store (i64 (X86Wrapper tconstpool:$src)), addr:$dst),
-          (MOV64mi32 addr:$dst, tconstpool:$src)>,
-          Requires<[NearData, IsNotPIC]>;
-def : Pat<(store (i64 (X86Wrapper tjumptable:$src)), addr:$dst),
-          (MOV64mi32 addr:$dst, tjumptable:$src)>,
-          Requires<[NearData, IsNotPIC]>;
-def : Pat<(store (i64 (X86Wrapper tglobaladdr:$src)), addr:$dst),
-          (MOV64mi32 addr:$dst, tglobaladdr:$src)>,
-          Requires<[NearData, IsNotPIC]>;
-def : Pat<(store (i64 (X86Wrapper texternalsym:$src)), addr:$dst),
-          (MOV64mi32 addr:$dst, texternalsym:$src)>,
-          Requires<[NearData, IsNotPIC]>;
-def : Pat<(store (i64 (X86Wrapper mcsym:$src)), addr:$dst),
-          (MOV64mi32 addr:$dst, mcsym:$src)>,
-          Requires<[NearData, IsNotPIC]>;
-def : Pat<(store (i64 (X86Wrapper tblockaddress:$src)), addr:$dst),
-          (MOV64mi32 addr:$dst, tblockaddress:$src)>,
-          Requires<[NearData, IsNotPIC]>;
-
 def : Pat<(i32 (X86RecoverFrameAlloc mcsym:$dst)), (MOV32ri mcsym:$dst)>;
 def : Pat<(i64 (X86RecoverFrameAlloc mcsym:$dst)), (MOV64ri mcsym:$dst)>;
 
