@@ -24,7 +24,7 @@ public:
   VectorIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp,
                                   llvm::ArrayRef<ConstString> item_names);
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 

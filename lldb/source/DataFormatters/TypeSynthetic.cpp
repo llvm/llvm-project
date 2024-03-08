@@ -115,17 +115,6 @@ std::string CXXSyntheticChildren::GetDescription() {
   return std::string(sstr.GetString());
 }
 
-uint32_t
-SyntheticChildrenFrontEnd::CalculateNumChildrenIgnoringErrors(uint32_t max) {
-  auto value_or_err = CalculateNumChildren(max);
-  if (value_or_err)
-    return *value_or_err;
-  Log *log = GetLog(LLDBLog::DataFormatters);
-  if (log && log->GetVerbose())
-    LLDB_LOG_ERROR(log, value_or_err.takeError(), "{0}");
-  return 0;
-}
-
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
     llvm::StringRef name, llvm::StringRef expression,
     const ExecutionContext &exe_ctx) {
@@ -189,15 +178,13 @@ bool ScriptedSyntheticChildren::FrontEnd::IsValid() {
   return (m_wrapper_sp && m_wrapper_sp->IsValid() && m_interpreter);
 }
 
-llvm::Expected<uint32_t>
-ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
+uint32_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
   if (!m_wrapper_sp || m_interpreter == nullptr)
     return 0;
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, UINT32_MAX);
 }
 
-llvm::Expected<uint32_t>
-ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
+uint32_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
   if (!m_wrapper_sp || m_interpreter == nullptr)
     return 0;
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, max);

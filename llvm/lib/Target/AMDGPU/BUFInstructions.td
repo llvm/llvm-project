@@ -2373,7 +2373,7 @@ multiclass MUBUF_Real_gfx7<bits<8> op> {
 // Base ENC_VBUFFER for GFX12.
 //===----------------------------------------------------------------------===//
 
-class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
+class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   InstSI <ps.OutOperandList, ps.InOperandList, real_name # ps.AsmOperands, []>, Enc96 {
 
   let isPseudo = 0;
@@ -2397,6 +2397,8 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let VALU               = ps.VALU;
   let LGKM_CNT           = ps.LGKM_CNT;
+  let MUBUF              = ps.MUBUF;
+  let MTBUF              = ps.MTBUF;
 
   bits<24> offset;
   bits<8>  vaddr;
@@ -2413,6 +2415,7 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{47-41} = !if(ps.has_srsrc, srsrc, ?);
   let Inst{49-48} = 0b00;
   let Inst{6-0}   = !if(ps.has_soffset, soffset, ?);
+  let Inst{21-14} = op;
   let Inst{22}    = ps.tfe;
   let Inst{62}    = ps.offen;
   let Inst{63}    = ps.idxen;
@@ -2424,33 +2427,27 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{31-26} = 0b110001;
 }
 
+class VBUFFER_Real_gfx12<bits<8> op, BUF_Pseudo ps, string real_name> :
+    VBUFFER_Real<op, ps, real_name>,
+    SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
+  let AssemblerPredicate = isGFX12Only;
+  let DecoderNamespace = "GFX12";
+}
+
 multiclass VBUFFER_MUBUF_Real_gfx12<bits<8> op, string real_name> {
   defvar ps = !cast<MUBUF_Pseudo>(NAME);
-  def _gfx12 : VBUFFER_Real<ps, real_name>,
-               SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let MUBUF = 1;
-
+  def _gfx12 : VBUFFER_Real_gfx12<op, ps, real_name> {
     // Set the last bit of format to 1 to avoid round-trip issues, as some tools
     // print BUF_FMT_INVALID for format 0.
     let Inst{55} = 0b1;
-    let Inst{21-14} = op;
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
   }
 }
 
 multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
   defvar ps = !cast<MTBUF_Pseudo>(NAME);
-  def _gfx12 : VBUFFER_Real<ps, real_name>, SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-    let MTBUF = 1;
-
-    bits<7>  format;
-
-    let Inst{17-14} = op;
-    let Inst{21-18} = 0b1000;
+  def _gfx12 : VBUFFER_Real_gfx12<{0b1000, op}, ps, real_name> {
+    bits<7> format;
     let Inst{61-55} = format;
-    let AssemblerPredicate = isGFX12Only;
-    let DecoderNamespace = "GFX12";
   }
 }
 
@@ -2492,15 +2489,15 @@ multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<bits<8> op, string real_name> :
   MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>,
   MUBUF_Real_AllAddr_gfx12_Impl2<op, real_name>;
 
-multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, string real_name,
-                                                 bit hasTFE = 1> {
+multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, bit hasTFE,
+                                 string real_name = get_BUF_ps<NAME>.Mnemonic> {
   defm NAME : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
   if hasTFE then
     defm _TFE : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, string real_name,
-                                                 bit hasTFE = 1> {
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, bit hasTFE,
+                                               string real_name> {
   defm NAME : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
   if hasTFE then
     defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
@@ -2508,10 +2505,11 @@ multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, string real_name,
 
 // Non-renamed, non-atomic gfx11/gfx12 mubuf instructions.
 multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op, bit hasTFE = 1> :
-  MUBUF_Real_AllAddr_gfx11_Impl<op, get_BUF_ps<NAME>.Mnemonic, hasTFE>;
+  MUBUF_Real_AllAddr_gfx11_Impl<op, hasTFE>;
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op, string real_name = !tolower(NAME)> :
-  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, real_name> {
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op,
+                                 string real_name = get_BUF_ps<NAME>.Mnemonic> :
+  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, /*hasTFE=*/1, real_name> {
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
     def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
@@ -2527,7 +2525,7 @@ multiclass MUBUF_Real_Atomic_gfx11_impl<bits<8> op, bit is_return,
 }
 
 multiclass MUBUF_Real_Atomic_gfx12_impl<bits<8> op, bit is_return,
-                                                string real_name> {
+                                 string real_name = get_BUF_ps<NAME>.Mnemonic> {
   defvar Rtn = !if(is_return, "_RTN", "");
   defm _VBUFFER_BOTHEN#Rtn : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
   defm _VBUFFER_IDXEN#Rtn  : VBUFFER_MUBUF_Real_gfx12<op, real_name>;
@@ -2541,16 +2539,19 @@ multiclass MUBUF_Real_Atomic_gfx11_gfx12_impl<bits<8> op, bit is_return,
   MUBUF_Real_Atomic_gfx12_impl<op, is_return, real_name>;
 
 multiclass MUBUF_Real_Atomic_gfx12<bits<8> op> :
-  MUBUF_Real_Atomic_gfx12_impl<op, 0, get_BUF_ps<NAME>.Mnemonic>,
-  MUBUF_Real_Atomic_gfx12_impl<op, 1, get_BUF_ps<NAME>.Mnemonic>;
+  MUBUF_Real_Atomic_gfx12_impl<op, 0>,
+  MUBUF_Real_Atomic_gfx12_impl<op, 1>;
 
 multiclass MUBUF_Real_Atomic_gfx11<bits<8> op, string real_name> :
   MUBUF_Real_Atomic_gfx11_impl<op, 0, real_name>,
   MUBUF_Real_Atomic_gfx11_impl<op, 1, real_name> {
-  def : Mnem_gfx11_gfx12<get_BUF_ps<NAME>.Mnemonic, real_name>;
+  defvar ps = get_BUF_ps<NAME>;
+  def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;
 }
 
-multiclass MUBUF_Real_Atomic_gfx11_gfx12<bits<8> op, string gfx12_name = !tolower(NAME), string gfx11_name = gfx12_name> :
+multiclass MUBUF_Real_Atomic_gfx11_gfx12<bits<8> op,
+                                  string gfx12_name = get_BUF_ps<NAME>.Mnemonic,
+                                  string gfx11_name = gfx12_name> :
   MUBUF_Real_Atomic_gfx11_impl<op, 0, gfx11_name>,
   MUBUF_Real_Atomic_gfx11_impl<op, 1, gfx11_name>,
   MUBUF_Real_Atomic_gfx12_impl<op, 0, gfx12_name>,
@@ -2895,7 +2896,8 @@ multiclass MTBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<4> op, string real_name> {
   defm _VBUFFER_OFFSET : VBUFFER_MTBUF_Real_gfx12<op, real_name>;
 }
 
-multiclass MTBUF_Real_AllAddr_gfx11_gfx12<bits<4> op, string real_name = !tolower(NAME)>
+multiclass MTBUF_Real_AllAddr_gfx11_gfx12<bits<4> op,
+                                   string real_name = get_BUF_ps<NAME>.Mnemonic>
   : MTBUF_Real_AllAddr_gfx11_gfx12_Impl<op, real_name> {
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
