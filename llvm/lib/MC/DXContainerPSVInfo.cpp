@@ -81,8 +81,12 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
     BindingSize = sizeof(dxbc::PSV::v0::ResourceBindInfo);
     break;
   case 2:
-  default:
     InfoSize = sizeof(dxbc::PSV::v2::RuntimeInfo);
+    BindingSize = sizeof(dxbc::PSV::v2::ResourceBindInfo);
+    break;
+  case 3:
+  default:
+    InfoSize = sizeof(dxbc::PSV::v3::RuntimeInfo);
     BindingSize = sizeof(dxbc::PSV::v2::ResourceBindInfo);
   }
   // Write the size of the info.

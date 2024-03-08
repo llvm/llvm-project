@@ -74,6 +74,12 @@ DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
   memcpy(&Info, P, sizeof(dxbc::PSV::v2::RuntimeInfo));
 }
 
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P)
+    : Version(3) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v3::RuntimeInfo));
+}
+
 namespace yaml {
 
 void MappingTraits<DXContainerYAML::VersionTuple>::mapping(
@@ -347,6 +353,11 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   IO.mapRequired("NumThreadsX", Info.NumThreadsX);
   IO.mapRequired("NumThreadsY", Info.NumThreadsY);
   IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
+
+  if (Version == 2)
+    return;
+
+  IO.mapRequired("EntryFunctionName", Info.EntryFunctionName);
 }
 
 } // namespace llvm

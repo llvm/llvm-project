@@ -46,7 +46,7 @@ struct PSVSignatureElement {
 // RuntimeInfo.
 struct PSVRuntimeInfo {
   bool IsFinalized = false;
-  dxbc::PSV::v2::RuntimeInfo BaseData;
+  dxbc::PSV::v3::RuntimeInfo BaseData;
   SmallVector<dxbc::PSV::v2::ResourceBindInfo> Resources;
   SmallVector<PSVSignatureElement> InputElements;
   SmallVector<PSVSignatureElement> OutputElements;

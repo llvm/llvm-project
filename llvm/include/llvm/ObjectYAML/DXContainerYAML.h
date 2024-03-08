@@ -107,7 +107,7 @@ struct PSVInfo {
   // the format.
   uint32_t Version;
 
-  dxbc::PSV::v2::RuntimeInfo Info;
+  dxbc::PSV::v3::RuntimeInfo Info;
   uint32_t ResourceStride;
   SmallVector<ResourceBindInfo> Resources;
   SmallVector<SignatureElement> SigInputElements;
@@ -127,6 +127,7 @@ struct PSVInfo {
   PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
   PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
+  PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P);
 };
 
 struct SignatureParameter {
