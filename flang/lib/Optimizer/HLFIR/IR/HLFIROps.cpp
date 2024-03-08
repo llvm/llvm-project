@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -1152,7 +1153,9 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
 
       // but we do need to get rid of the hlfir.destroy for the hlfir.transpose
       // result (which is entirely removed)
-      for (mlir::Operation *user : transposeOp->getResult(0).getUsers())
+      llvm::SmallVector<mlir::Operation *> users(
+          transposeOp->getResult(0).getUsers());
+      for (mlir::Operation *user : users)
         if (auto destroyOp = mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
           rewriter.eraseOp(destroyOp);
       rewriter.eraseOp(transposeOp);
@@ -1864,7 +1867,8 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
       return mlir::failure();
 
   auto insertPt = rewriter.saveInsertionPoint();
-  for (mlir::Operation *user : indexOp->getResult(0).getUsers())
+  llvm::SmallVector<mlir::Operation *> users(indexOp->getResult(0).getUsers());
+  for (mlir::Operation *user : users)
     if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(user)) {
       rewriter.setInsertionPoint(loadOp);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(

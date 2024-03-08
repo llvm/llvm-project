@@ -243,7 +243,7 @@ void SetThreadName(std::thread &thread, const std::string &name) {
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
   proc ThreadNameProc =
       reinterpret_cast<proc>(GetProcAddress(kbase, "SetThreadDescription"));
-  if (proc) {
+  if (ThreadNameProc) {
     std::wstring buf;
     auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
     if (sz > 0) {
