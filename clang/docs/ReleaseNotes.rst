@@ -115,6 +115,10 @@ Resolutions to C++ Defect Reports
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
 
+- Alignment of members is now respected when evaluating layout compatibility
+  of structs.
+  (`CWG2583: Common initial sequence should consider over-alignment <https://cplusplus.github.io/CWG/issues/2583.html>`_).
+
 - ``[[no_unique_address]]`` is now respected when evaluating layout
   compatibility of two types.
   (`CWG2759: [[no_unique_address] and common initial sequence  <https://cplusplus.github.io/CWG/issues/2759.html>`_).
