@@ -540,10 +540,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }
-  if (ErrorOnIncompleteFormat && !Status.FormatComplete)
-    return true;
-
-  return false;
+  return ErrorOnIncompleteFormat && !Status.FormatComplete;
 }
 
 } // namespace format
