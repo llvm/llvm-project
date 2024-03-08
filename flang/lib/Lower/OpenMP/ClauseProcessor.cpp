@@ -20,59 +20,6 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
-// This helper function implements the functionality of "promoting"
-// non-CPTR arguments of use_device_ptr to use_device_addr
-// arguments (automagic conversion of use_device_ptr ->
-// use_device_addr in these cases). The way we do so currently is
-// through the shuffling of operands from the devicePtrOperands to
-// deviceAddrOperands where neccesary and re-organizing the types,
-// locations and symbols to maintain the correct ordering of ptr/addr
-// input -> BlockArg.
-//
-// This effectively implements some deprecated OpenMP functionality
-// that some legacy applications unfortunately depend on
-// (deprecated in specification version 5.2):
-//
-// "If a list item in a use_device_ptr clause is not of type C_PTR,
-//  the behavior is as if the list item appeared in a use_device_addr
-//  clause. Support for such list items in a use_device_ptr clause
-//  is deprecated."
-static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
-    llvm::SmallVectorImpl<mlir::Value> &devicePtrOperands,
-    llvm::SmallVectorImpl<mlir::Value> &deviceAddrOperands,
-    llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-    llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-        &useDeviceSymbols) {
-  auto moveElementToBack = [&](size_t idx, auto &vector) {
-    auto *iter = std::next(vector.begin(), idx);
-    vector.push_back(*iter);
-    vector.erase(iter);
-  };
-
-  // Iterate over our use_device_ptr list and shift all non-cptr arguments into
-  // use_device_addr.
-  for (auto *it = devicePtrOperands.begin(); it != devicePtrOperands.end();) {
-    if (!fir::isa_builtin_cptr_type(fir::unwrapRefType(it->getType()))) {
-      deviceAddrOperands.push_back(*it);
-      // We have to shuffle the symbols around as well, to maintain
-      // the correct Input -> BlockArg for use_device_ptr/use_device_addr.
-      // NOTE: However, as map's do not seem to be included currently
-      // this isn't as pertinent, but we must try to maintain for
-      // future alterations. I believe the reason they are not currently
-      // is that the BlockArg assign/lowering needs to be extended
-      // to a greater set of types.
-      auto idx = std::distance(devicePtrOperands.begin(), it);
-      moveElementToBack(idx, useDeviceTypes);
-      moveElementToBack(idx, useDeviceLocs);
-      moveElementToBack(idx, useDeviceSymbols);
-      it = devicePtrOperands.erase(it);
-      continue;
-    }
-    ++it;
-  }
-}
-
 /// Check for unsupported map operand types.
 static void checkMapType(mlir::Location location, mlir::Type type) {
   if (auto refType = type.dyn_cast<fir::ReferenceType>())
@@ -271,24 +218,16 @@ addUseDeviceClause(Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
                    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                        &useDeviceSymbols) {
-  // To make sure we do not provide additional duplicate symbols, locs and types
-  // when looping over the operands (primarily when arguments have been shifted
-  // into the useDeviceAddr operand vector from the useDevicePtr vector) we use
-  // an intermediate operand list and later append it to the existing list,
-  // rather than appending immediately.
-  llvm::SmallVector<mlir::Value> newOperands;
-  genObjectList(useDeviceClause, converter, newOperands);
-
-  for (auto inArg : llvm::zip(newOperands, useDeviceClause.v)) {
-    mlir::Value &operand = std::get<0>(inArg);
-    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(std::get<1>(inArg));
+  genObjectList(useDeviceClause, converter, operands);
+  for (mlir::Value &operand : operands) {
     checkMapType(operand.getLoc(), operand.getType());
     useDeviceTypes.push_back(operand.getType());
     useDeviceLocs.push_back(operand.getLoc());
+  }
+  for (const Fortran::parser::OmpObject &ompObject : useDeviceClause.v) {
+    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
     useDeviceSymbols.push_back(sym);
   }
-
-  operands.append(newOperands);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1080,34 +1019,17 @@ bool ClauseProcessor::processUseDeviceAddr(
 }
 
 bool ClauseProcessor::processUseDevicePtr(
-    llvm::SmallVectorImpl<mlir::Value> &ptrOperands,
+    llvm::SmallVectorImpl<mlir::Value> &operands,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSymbols,
-    llvm::SmallVectorImpl<mlir::Value> *addrOperands) const {
-  bool success = findRepeatableClause<ClauseTy::UseDevicePtr>(
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSymbols)
+    const {
+  return findRepeatableClause<ClauseTy::UseDevicePtr>(
       [&](const ClauseTy::UseDevicePtr *devPtrClause,
           const Fortran::parser::CharBlock &) {
-        addUseDeviceClause(converter, devPtrClause->v, ptrOperands,
-                           useDeviceTypes, useDeviceLocs, useDeviceSymbols);
+        addUseDeviceClause(converter, devPtrClause->v, operands, useDeviceTypes,
+                           useDeviceLocs, useDeviceSymbols);
       });
-
-  // This function implements the deprecated functionality of use_device_ptr
-  // that allows users to provide non-CPTR arguments to it with the caveat
-  // that the compiler will treat them as use_device_addr. A lot of legacy
-  // code may still depend on this functionality, so we should support it
-  // in some manner. We do so currently by simply shifting non-cptr operands
-  // from the use_device_ptr list into the front of the use_device_addr list
-  // whilst maintaining the ordering of useDeviceLocs, useDeviceSymbols and
-  // useDeviceTypes to use_device_ptr/use_device_addr input for BlockArg
-  // ordering.
-  // TODO: Perhaps create a user providable compiler option that will
-  // re-introduce a hard-error rather than a warning in these cases.
-  if (addrOperands)
-    promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(ptrOperands, *addrOperands,
-                                                  useDeviceTypes, useDeviceLocs,
-                                                  useDeviceSymbols);
-  return success;
 }
 } // namespace omp
 } // namespace lower
