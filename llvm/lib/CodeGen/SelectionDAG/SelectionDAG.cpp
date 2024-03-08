@@ -5106,8 +5106,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
 
     const TargetOptions &Options = getTarget().Options;
     return Options.NoNaNsFPMath || Options.NoInfsFPMath ||
-           (ConsiderFlags && (Op->getFlags().hasNoNaNs() ||
-                              Op->getFlags().hasNoInfs()));
+           (ConsiderFlags &&
+            (Op->getFlags().hasNoNaNs() || Op->getFlags().hasNoInfs()));
   }
 
   // Matches hasPoisonGeneratingFlags().
