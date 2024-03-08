@@ -94,7 +94,8 @@ ConstString ValueObjectVariable::GetQualifiedTypeName() {
   return ConstString();
 }
 
-uint32_t ValueObjectVariable::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   CompilerType type(GetCompilerType());
 
   if (!type.IsValid())
@@ -103,7 +104,9 @@ uint32_t ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;
   auto child_count = type.GetNumChildren(omit_empty_base_classes, &exe_ctx);
-  return child_count <= max ? child_count : max;
+  if (!child_count)
+    return child_count;
+  return *child_count <= max ? *child_count : max;
 }
 
 std::optional<uint64_t> ValueObjectVariable::GetByteSize() {

@@ -76,9 +76,9 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
                     .GetProcessId();
   LLDB_LOG(log, "pid = {0:x}", pid);
   if (status.Fail()) {
-    auto error = CanTrace();
     LLDB_LOG(log, "failed to launch process: {0}", status);
-    if (status.Fail())
+    auto error = CanTrace();
+    if (error.Fail())
       return error.ToError();
     return status.ToError();
   }
