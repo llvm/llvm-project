@@ -265,6 +265,21 @@
 ///     __wasm_longjmp(%env, %val)
 ///   catchret to %setjmp.dispatch
 ///
+/// * Wasm setjmp / longjmp handling (with -experimental-wasm-enable-alt-sjlj)
+///
+/// The translation is basically same as what we do for
+/// "Wasm setjmp / longjmp handling" w/o -experimental-wasm-enable-alt-sjlj.
+///
+/// The differences are:
+///
+/// - We do not use malloc'ed tables.
+///
+/// - On the entry of setjmp-calling functions, we initialize a pointer
+///   to identify the function invocation using alloc().
+///
+/// - We use simpler ABI functions with different names.
+///   (prefixed with "__wasm_sjlj_")
+///
 ///===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
