@@ -197,7 +197,6 @@ add_subdirectory(lib/CAPI)
 
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
-  add_definitions(-DGTEST_NO_LLVM_SUPPORT=0)
   add_custom_target(MLIRUnitTests)
   if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
     add_subdirectory(unittests)
