@@ -1130,6 +1130,8 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     // nothing to do
   }
+  // LocalData is empty and TypeLocBuilder doesn't handle DataSize 1.
+  unsigned getLocalDataSize() const { return 0; }
 };
 
 class CountAttributedTypeLoc final
