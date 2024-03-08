@@ -80,7 +80,6 @@ public:
   unsigned getMaxVLen() const { return 65536; }
   unsigned getMaxELen() const { return MaxELen; }
   unsigned getMaxELenFp() const { return MaxELenFp; }
-  StringRef getProfile() const { return Profile; }
 
   bool hasExtension(StringRef Ext) const;
   std::string toString() const;
@@ -103,7 +102,6 @@ private:
   unsigned FLen;
   unsigned MinVLen;
   unsigned MaxELen, MaxELenFp;
-  std::string Profile;
 
   OrderedExtensionMap Exts;
 
