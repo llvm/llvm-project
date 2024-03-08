@@ -1180,8 +1180,11 @@ void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   case NOUR_Constant: OS << " non_odr_use_constant"; break;
   case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
   }
-  if (Node->refersToEnclosingVariableOrCapture())
+  if (Node->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    OS << " dependent_capture";
+  else if (Node->refersToEnclosingVariableOrCapture())
     OS << " refers_to_enclosing_variable_or_capture";
+
   if (Node->isImmediateEscalating())
     OS << " immediate-escalating";
 }
@@ -1337,6 +1340,8 @@ void TextNodeDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node) {
 void TextNodeDumper::VisitCXXThisExpr(const CXXThisExpr *Node) {
   if (Node->isImplicit())
     OS << " implicit";
+  if (Node->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    OS << " dependent_capture";
   OS << " this";
 }
 

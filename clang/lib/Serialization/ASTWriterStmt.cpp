@@ -1842,6 +1842,7 @@ void ASTStmtWriter::VisitCXXThisExpr(CXXThisExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isImplicit());
+  Record.push_back(E->isCapturedByCopyInLambdaWithExplicitObjectParameter());
 
   Code = serialization::EXPR_CXX_THIS;
 }

@@ -1446,6 +1446,42 @@ Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
 
 void Sema::MarkThisReferenced(CXXThisExpr *This) {
   CheckCXXThisCapture(This->getExprLoc());
+  if (This->isTypeDependent())
+    return;
+
+  // Check if 'this' is captured by value in a lambda with a dependent explicit
+  // object parameter, and mark it as type-dependent as well if so.
+  auto IsDependent = [&]() {
+    for (auto *Scope : llvm::reverse(FunctionScopes)) {
+      auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Scope);
+      if (!LSI)
+        continue;
+
+      if (LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
+          LSI->AfterParameterList)
+        return false;
+
+      // If this lambda captures 'this' by value, then 'this' is dependent iff
+      // this lambda has a dependent explicit object parameter. If we can't
+      // determine whether it does (e.g. because the CXXMethodDecl's type is
+      // null), assume it doesn't.
+      if (LSI->isCXXThisCaptured()) {
+        if (!LSI->getCXXThisCapture().isCopyCapture())
+          continue;
+
+        const auto *MD = LSI->CallOperator;
+        if (MD->getType().isNull())
+          return false;
+
+        const auto *Ty = cast<FunctionProtoType>(MD->getType());
+        return Ty && MD->isExplicitObjectMemberFunction() &&
+               Ty->getParamType(0)->isDependentType();
+      }
+    }
+    return false;
+  }();
+
+  This->setCapturedByCopyInLambdaWithExplicitObjectParameter(IsDependent);
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {

@@ -261,6 +261,36 @@ void TestMutationInLambda() {
         l13a();
     };
 
+    struct S {
+        int x;
+        auto f() {
+            return [*this] (this auto&&) {
+                x = 42; // expected-error {{read-only variable is not assignable}}
+                [*this] () mutable { x = 42; } ();
+                [*this] (this auto&&) { x = 42; } ();
+                [*this] () { x = 42; } (); // expected-error {{read-only variable is not assignable}}
+                const auto l = [*this] (this auto&&) { x = 42; }; // expected-error {{read-only variable is not assignable}}
+                l(); // expected-note {{in instantiation of}}
+
+                struct T {
+                    int x;
+                    auto g() {
+                        return [&] (this auto&&) {
+                            x = 42;
+                            const auto l = [*this] (this auto&&) { x = 42; }; // expected-error {{read-only variable is not assignable}}
+                            l(); // expected-note {{in instantiation of}}
+                        };
+                    }
+                };
+
+                const auto l2 = T{}.g();
+                l2(); // expected-note {{in instantiation of}}
+            };
+        }
+    };
+
+    const auto l14 = S{}.f();
+
     l1(); // expected-note {{in instantiation of}}
     l2(); // expected-note {{in instantiation of}}
     l3(); // expected-note {{in instantiation of}}
@@ -274,6 +304,7 @@ void TestMutationInLambda() {
     l11(); // expected-note {{in instantiation of}}
     l12(); // expected-note {{in instantiation of}}
     l13(); // expected-note {{in instantiation of}}
+    l14(); // expected-note 3 {{in instantiation of}}
 
     {
       const auto l1 = [&x](this auto&) { x = 42; };
@@ -729,5 +760,26 @@ struct S {
 
 int bug() {
   S{}.f(0);
+}
+}
+
+namespace GH84163 {
+struct S {
+  int x;
+
+  auto foo() {
+    return [*this](this auto&&) {
+      x = 10; // expected-error {{read-only variable is not assignable}}
+    };
+  }
+};
+
+int f() {
+  S s{ 5 };
+  const auto l = s.foo();
+  l(); // expected-note {{in instantiation of}}
+
+  const auto g = [x = 10](this auto&& self) { x = 20; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+  g(); // expected-note {{in instantiation of}}
 }
 }
