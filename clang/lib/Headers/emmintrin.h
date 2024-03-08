@@ -1245,8 +1245,7 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomineq_sd(__m128d __a,
 /// Converts the two double-precision floating-point elements of a
 ///    128-bit vector of [2 x double] into two single-precision floating-point
 ///    values, returned in the lower 64 bits of a 128-bit vector of [4 x float].
-///    Rounds inexact results according to the rounding control bits in the
-///    MXCSR register. The upper 64 bits of the result vector are set to zero.
+///    The upper 64 bits of the result vector are set to zero.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1301,13 +1300,13 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtepi32_pd(__m128i __a) {
 }
 
 /// Converts the two double-precision floating-point elements of a
-///    128-bit vector of [2 x double] into two signed 32-bit integer values.
-///    Rounds inexact results according to the rounding control bits in the
-///    MXCSR register.
+///    128-bit vector of [2 x double] into two signed 32-bit integer values,
+///    returned in the lower 64 bits of a 128-bit vector of [4 x i32]. The upper
+///    64 bits of the result vector are set to zero.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1322,12 +1321,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtpd_epi32(__m128d __a) {
 }
 
 /// Converts the low-order element of a 128-bit vector of [2 x double]
-///    into a 32-bit signed integer value. Rounds inexact results according to
-///    the rounding control bits in the MXCSR register.
+///    into a 32-bit signed integer value.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If the converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1343,10 +1341,9 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvtsd_si32(__m128d __a) {
 
 /// Converts the lower double-precision floating-point element of a
 ///    128-bit vector of [2 x double], in the second parameter, into a
-///    single-precision floating-point value, returned in the lower 32 bits of
-///    a 128-bit vector of [4 x float]. Rounds inexact results according to the
-///    rounding control bits in the MXCSR register. The upper 96 bits of the
-///    result vector are copied from the upper 96 bits of the first parameter.
+///    single-precision floating-point value, returned in the lower 32 bits of a
+///    128-bit vector of [4 x float]. The upper 96 bits of the result vector are
+///    copied from the upper 96 bits of the first parameter.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1416,11 +1413,12 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtss_sd(__m128d __a,
 
 /// Converts the two double-precision floating-point elements of a
 ///    128-bit vector of [2 x double] into two signed 32-bit integer values,
+///    returned in the lower 64 bits of a 128-bit vector of [4 x i32],
 ///    truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1438,9 +1436,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvttpd_epi32(__m128d __a) {
 /// Converts the low-order element of a [2 x double] vector into a 32-bit
 ///    signed integer value, truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If the converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1456,13 +1454,12 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvttsd_si32(__m128d __a) {
 }
 
 /// Converts the two double-precision floating-point elements of a
-///    128-bit vector of [2 x double] into two signed 32-bit integer values.
-///    Rounds inexact results according to the rounding control bits in the
-///    MXCSR register.
+///    128-bit vector of [2 x double] into two signed 32-bit integer values,
+///    returned in a 64-bit vector of [2 x i32].
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1477,11 +1474,11 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_cvtpd_pi32(__m128d __a) {
 
 /// Converts the two double-precision floating-point elements of a
 ///    128-bit vector of [2 x double] into two signed 32-bit integer values,
-///    truncating inexact results.
+///    returned in a 64-bit vector of [2 x i32], truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3206,9 +3203,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi32(__m128i __a,
 #ifdef __x86_64__
 /// Converts a 64-bit signed integer value from the second operand into a
 ///    double-precision value and returns it in the lower element of a [2 x
-///    double] vector. Rounds inexact results according to the rounding control
-///    bits in the MXCSR register. The upper element of the returned vector is
-///    copied from the upper element of the first operand.
+///    double] vector; the upper element of the returned vector is copied from
+///    the upper element of the first operand.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3229,12 +3225,11 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtsi64_sd(__m128d __a,
 }
 
 /// Converts the first (lower) element of a vector of [2 x double] into a
-///    64-bit signed integer value. Rounds inexact results according to the
-///    rounding control bits in the MXCSR register.
+///    64-bit signed integer value.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If the converted value does not fit in a 64-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3251,9 +3246,9 @@ static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvtsd_si64(__m128d __a) {
 /// Converts the first (lower) element of a vector of [2 x double] into a
 ///    64-bit signed integer value, truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 64-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3269,8 +3264,7 @@ static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvttsd_si64(__m128d __a) {
 }
 #endif
 
-/// Converts a vector of [4 x i32] into a vector of [4 x float]. Rounds inexact
-///    results according to the rounding control bits in the MXCSR register.
+/// Converts a vector of [4 x i32] into a vector of [4 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3283,12 +3277,11 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtepi32_ps(__m128i __a) {
   return (__m128) __builtin_convertvector((__v4si)__a, __v4sf);
 }
 
-/// Converts a vector of [4 x float] into a vector of [4 x i32]. Rounds inexact
-///    results according to the rounding control bits in the MXCSR register.
+/// Converts a vector of [4 x float] into a vector of [4 x i32].
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3305,9 +3298,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtps_epi32(__m128 __a) {
 /// Converts a vector of [4 x float] into a vector of [4 x i32],
 ///    truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///

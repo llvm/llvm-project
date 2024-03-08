@@ -2180,8 +2180,7 @@ _mm256_cvtepi32_pd(__m128i __a)
   return (__m256d)__builtin_convertvector((__v4si)__a, __v4df);
 }
 
-/// Converts a vector of [8 x i32] into a vector of [8 x float]. Rounds inexact
-///    results according to the rounding control bits in the MXCSR register.
+/// Converts a vector of [8 x i32] into a vector of [8 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2197,8 +2196,7 @@ _mm256_cvtepi32_ps(__m256i __a)
 }
 
 /// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
-///    [4 x float]. Rounds inexact results according to the rounding control
-///    bits in the MXCSR register.
+///    [4 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2213,12 +2211,11 @@ _mm256_cvtpd_ps(__m256d __a)
   return (__m128)__builtin_ia32_cvtpd2ps256((__v4df) __a);
 }
 
-/// Converts a vector of [8 x float] into a vector of [8 x i32]. Rounds inexact
-///    results according to the rounding control bits in the MXCSR register.
+/// Converts a vector of [8 x float] into a vector of [8 x i32].
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2252,9 +2249,9 @@ _mm256_cvtps_pd(__m128 __a)
 /// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
 ///    x i32], truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2270,12 +2267,11 @@ _mm256_cvttpd_epi32(__m256d __a)
 }
 
 /// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
-///    [4 x i32]. Rounds inexact results according to the rounding control bits
-///    in the MXCSR register.
+///    [4 x i32].
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2293,9 +2289,9 @@ _mm256_cvtpd_epi32(__m256d __a)
 /// Converts a vector of [8 x float] into a vector of [8 x i32],
 ///    truncating inexact results.
 ///
-///    If a converted value is larger than the maximum possible result,
-///    raises a floating-point invalid exception. If the exception is
-///    masked, returns the most negative integer.
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
