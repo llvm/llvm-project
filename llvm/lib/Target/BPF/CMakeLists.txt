@@ -24,6 +24,7 @@ add_llvm_target(BPFCodeGen
   BPFAbstractMemberAccess.cpp
   BPFAdjustOpt.cpp
   BPFAsmPrinter.cpp
+  BPFCallingConv.cpp
   BPFCheckAndAdjustIR.cpp
   BPFFrameLowering.cpp
   BPFInstrInfo.cpp
@@ -62,7 +63,7 @@ add_llvm_target(BPFCodeGen
 
   ADD_TO_COMPONENT
   BPF
-  )
+)
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

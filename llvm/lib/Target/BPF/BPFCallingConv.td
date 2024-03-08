@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 // BPF 64-bit C return-value convention.
+let Entry = 1 in
 def RetCC_BPF64 : CallingConv<[CCIfType<[i64], CCAssignToReg<[R0]>>]>;
 
 // BPF 64-bit C Calling convention.
+let Entry = 1 in
 def CC_BPF64 : CallingConv<[
   // Promote i8/i16/i32 args to i64
   CCIfType<[ i8, i16, i32 ], CCPromoteToType<i64>>,
@@ -26,12 +28,14 @@ def CC_BPF64 : CallingConv<[
 ]>;
 
 // Return-value convention when -mattr=+alu32 enabled
+let Entry = 1 in
 def RetCC_BPF32 : CallingConv<[
   CCIfType<[i32], CCAssignToRegWithShadow<[W0], [R0]>>,
   CCIfType<[i64], CCAssignToRegWithShadow<[R0], [W0]>>
 ]>;
 
 // Calling convention when -mattr=+alu32 enabled
+let Entry = 1 in
 def CC_BPF32 : CallingConv<[
   // Promote i8/i16/i32 args to i64
   CCIfType<[i32], CCAssignToRegWithShadow<[W1, W2, W3, W4, W5],
