@@ -1,0 +1,79 @@
+# REQUIRES: asserts
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -O2 -debug-only=pipeliner \
+# RUN: -window-sched=force -o - 2>&1 | FileCheck %s \
+# RUN: --check-prefix=CHECK-SUCCESSIVE-PHI
+
+# CHECK-SUCCESSIVE-PHI: Consecutive phis are not allowed in window scheduling!
+# CHECK-SUCCESSIVE-PHI: The WindowScheduler failed to initialize!
+
+--- |
+  define void @relu(i32 %N, ptr noalias %xPtr, ptr noalias %yPtr) #0 {
+  entry:
+    %isZero = icmp eq i32 %N, 0
+    br i1 %isZero, label %exit, label %for.body.lr.ph
+
+  for.body.lr.ph:                                   ; preds = %entry
+    %zeroVector = tail call <32 x i32> @llvm.hexagon.V6.vd0.128B()
+    br label %for.body
+
+  exit:                                             ; preds = %for.body, %entry
+    ret void
+
+  for.body:                                         ; preds = %for.body, %for.body.lr.ph
+    %lsr.iv1 = phi ptr [ %cgep3, %for.body ], [ %xPtr, %for.body.lr.ph ]
+    %lsr.iv = phi ptr [ %lsr.iv1, %for.body ], [ %yPtr, %for.body.lr.ph ]
+    %i = phi i32 [ 0, %for.body.lr.ph ], [ %nextIndex, %for.body ]
+    %xValues = load <32 x i32>, ptr %lsr.iv1, align 128
+    %reluResult = tail call <32 x i32> @llvm.hexagon.V6.vmaxw.128B(<32 x i32> %xValues, <32 x i32> %zeroVector)
+    store <32 x i32> %reluResult, ptr %lsr.iv, align 128
+    %nextIndex = add nuw i32 %i, 32
+    %loopContinue = icmp ult i32 %nextIndex, %N
+    %cgep = getelementptr i8, ptr %lsr.iv, i32 128
+    %cgep3 = getelementptr i8, ptr %lsr.iv1, i32 128
+    br i1 %loopContinue, label %for.body, label %exit
+  }
+
+  declare <32 x i32> @llvm.hexagon.V6.vd0.128B()
+  declare <32 x i32> @llvm.hexagon.V6.vmaxw.128B(<32 x i32>, <32 x i32>)
+
+  attributes #0 = { "target-features"="+hvx-length128b,+hvxv69,+v66,-long-calls" }
+...
+---
+name:            relu
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %9:intregs = COPY $r2
+    %8:intregs = COPY $r1
+    %7:intregs = COPY $r0
+    %10:predregs = C2_cmpeqi %7, 0
+    J2_jumpt killed %10, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1.for.body.lr.ph:
+    successors: %bb.3(0x80000000)
+
+    %0:hvxvr = V6_vd0
+    %15:intregs = A2_addi %7, 31
+    %16:intregs = S2_lsr_i_r %15, 5
+    %17:intregs = COPY %16
+    J2_loop0r %bb.3, %17, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.2.exit:
+    PS_jmpret $r31, implicit-def dead $pc
+
+  bb.3.for.body (machine-block-address-taken):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+
+    %1:intregs = PHI %8, %bb.1, %6, %bb.3
+    %2:intregs = PHI %9, %bb.1, %1, %bb.3
+    %12:hvxvr, %6:intregs = V6_vL32b_pi %1, 128 :: (load (s1024) from %ir.lsr.iv1)
+    %13:hvxvr = V6_vmaxw killed %12, %0
+    %5:intregs = V6_vS32b_pi %2, 128, killed %13 :: (store (s1024) into %ir.lsr.iv)
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+...
