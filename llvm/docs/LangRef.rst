@@ -26432,6 +26432,7 @@ similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
 
+.. _int_get_fpenv:
 
 '``llvm.get.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26455,6 +26456,7 @@ Semantics:
 The '``llvm.get.fpenv``' intrinsic reads the current floating-point environment
 and returns it as an integer value.
 
+.. _int_set_fpenv:
 
 '``llvm.set.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

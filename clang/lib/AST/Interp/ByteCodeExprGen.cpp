@@ -314,11 +314,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     for (unsigned I = 0; I != 2; ++I) {
       if (!this->emitGetLocal(PT_Ptr, *SubExprOffset, CE))
         return false;
-      if (!this->emitConstUint8(I, CE))
-        return false;
-      if (!this->emitArrayElemPtrPopUint8(CE))
-        return false;
-      if (!this->emitLoadPop(SourceElemT, CE))
+      if (!this->emitArrayElemPop(SourceElemT, I, CE))
         return false;
 
       // Do the cast.
@@ -393,11 +389,15 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isLogicalOp())
     return this->VisitLogicalBinOp(BO);
 
-  if (BO->getType()->isAnyComplexType())
-    return this->VisitComplexBinOp(BO);
-
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
+
+  if (BO->getType()->isAnyComplexType())
+    return this->VisitComplexBinOp(BO);
+  if ((LHS->getType()->isAnyComplexType() ||
+       RHS->getType()->isAnyComplexType()) &&
+      BO->isComparisonOp())
+    return this->emitComplexComparison(LHS, RHS, BO);
 
   if (BO->isPtrMemOp())
     return this->visit(RHS);
@@ -725,11 +725,8 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
     if (IsComplex) {
       if (!this->emitGetLocal(PT_Ptr, Offset, E))
         return false;
-      if (!this->emitConstUint8(ElemIndex, E))
-        return false;
-      if (!this->emitArrayElemPtrPopUint8(E))
-        return false;
-      return this->emitLoadPop(classifyComplexElementType(E->getType()), E);
+      return this->emitArrayElemPop(classifyComplexElementType(E->getType()),
+                                    ElemIndex, E);
     }
     if (ElemIndex == 0)
       return this->emitGetLocal(classifyPrim(E->getType()), Offset, E);
@@ -1649,7 +1646,8 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
             SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true)) {
       if (!this->visit(SubExpr))
         return false;
-      this->emitSetLocal(*SubExprT, *LocalIndex, E);
+      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
+        return false;
       return this->emitGetPtrLocal(*LocalIndex, E);
     }
   } else {
@@ -3123,16 +3121,16 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
     if (!this->visit(SubExpr))
       return false;
-    if (!this->emitConstUint8(1, E))
-      return false;
-    if (!this->emitArrayElemPtrPopUint8(E))
-      return false;
+
+    if (SubExpr->isLValue()) {
+      if (!this->emitConstUint8(1, E))
+        return false;
+      return this->emitArrayElemPtrPopUint8(E);
+    }
 
     // Since our _Complex implementation does not map to a primitive type,
     // we sometimes have to do the lvalue-to-rvalue conversion here manually.
-    if (!SubExpr->isLValue())
-      return this->emitLoadPop(classifyPrim(E->getType()), E);
-    return true;
+    return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
   }
   case UO_Extension:
     return this->delegate(SubExpr);
@@ -3343,17 +3341,15 @@ bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
 
   if (!this->visit(SubExpr))
     return false;
-  if (!this->emitConstUint8(0, SubExpr))
-    return false;
-  if (!this->emitArrayElemPtrPopUint8(SubExpr))
-    return false;
+  if (SubExpr->isLValue()) {
+    if (!this->emitConstUint8(0, SubExpr))
+      return false;
+    return this->emitArrayElemPtrPopUint8(SubExpr);
+  }
 
-  // Since our _Complex implementation does not map to a primitive type,
-  // we sometimes have to do the lvalue-to-rvalue conversion here manually.
-  if (!SubExpr->isLValue())
-    return this->emitLoadPop(classifyComplexElementType(SubExpr->getType()),
-                             SubExpr);
-  return true;
+  // Rvalue, load the actual element.
+  return this->emitArrayElemPop(classifyComplexElementType(SubExpr->getType()),
+                                0, SubExpr);
 }
 
 template <class Emitter>
@@ -3362,11 +3358,7 @@ bool ByteCodeExprGen<Emitter>::emitComplexBoolCast(const Expr *E) {
   PrimType ElemT = classifyComplexElementType(E->getType());
   // We emit the expression (__real(E) != 0 || __imag(E) != 0)
   // for us, that means (bool)E[0] || (bool)E[1]
-  if (!this->emitConstUint8(0, E))
-    return false;
-  if (!this->emitArrayElemPtrUint8(E))
-    return false;
-  if (!this->emitLoadPop(ElemT, E))
+  if (!this->emitArrayElem(ElemT, 0, E))
     return false;
   if (ElemT == PT_Float) {
     if (!this->emitCastFloatingIntegral(PT_Bool, E))
@@ -3381,11 +3373,7 @@ bool ByteCodeExprGen<Emitter>::emitComplexBoolCast(const Expr *E) {
   if (!this->jumpTrue(LabelTrue))
     return false;
 
-  if (!this->emitConstUint8(1, E))
-    return false;
-  if (!this->emitArrayElemPtrPopUint8(E))
-    return false;
-  if (!this->emitLoadPop(ElemT, E))
+  if (!this->emitArrayElemPop(ElemT, 1, E))
     return false;
   if (ElemT == PT_Float) {
     if (!this->emitCastFloatingIntegral(PT_Bool, E))
@@ -3407,6 +3395,102 @@ bool ByteCodeExprGen<Emitter>::emitComplexBoolCast(const Expr *E) {
   this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
 
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitComplexComparison(const Expr *LHS,
+                                                     const Expr *RHS,
+                                                     const BinaryOperator *E) {
+  assert(E->isComparisonOp());
+  assert(!Initializing);
+  assert(!DiscardResult);
+
+  PrimType ElemT;
+  bool LHSIsComplex;
+  unsigned LHSOffset;
+  if (LHS->getType()->isAnyComplexType()) {
+    LHSIsComplex = true;
+    ElemT = classifyComplexElementType(LHS->getType());
+    LHSOffset = allocateLocalPrimitive(LHS, PT_Ptr, /*IsConst=*/true,
+                                       /*IsExtended=*/false);
+    if (!this->visit(LHS))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
+      return false;
+  } else {
+    LHSIsComplex = false;
+    PrimType LHST = classifyPrim(LHS->getType());
+    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, true, false);
+    if (!this->visit(LHS))
+      return false;
+    if (!this->emitSetLocal(LHST, LHSOffset, E))
+      return false;
+  }
+
+  bool RHSIsComplex;
+  unsigned RHSOffset;
+  if (RHS->getType()->isAnyComplexType()) {
+    RHSIsComplex = true;
+    ElemT = classifyComplexElementType(RHS->getType());
+    RHSOffset = allocateLocalPrimitive(RHS, PT_Ptr, /*IsConst=*/true,
+                                       /*IsExtended=*/false);
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
+      return false;
+  } else {
+    RHSIsComplex = false;
+    PrimType RHST = classifyPrim(RHS->getType());
+    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, true, false);
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitSetLocal(RHST, RHSOffset, E))
+      return false;
+  }
+
+  auto getElem = [&](unsigned LocalOffset, unsigned Index,
+                     bool IsComplex) -> bool {
+    if (IsComplex) {
+      if (!this->emitGetLocal(PT_Ptr, LocalOffset, E))
+        return false;
+      return this->emitArrayElemPop(ElemT, Index, E);
+    }
+    return this->emitGetLocal(ElemT, LocalOffset, E);
+  };
+
+  for (unsigned I = 0; I != 2; ++I) {
+    // Get both values.
+    if (!getElem(LHSOffset, I, LHSIsComplex))
+      return false;
+    if (!getElem(RHSOffset, I, RHSIsComplex))
+      return false;
+    // And compare them.
+    if (!this->emitEQ(ElemT, E))
+      return false;
+
+    if (!this->emitCastBoolUint8(E))
+      return false;
+  }
+
+  // We now have two bool values on the stack. Compare those.
+  if (!this->emitAddUint8(E))
+    return false;
+  if (!this->emitConstUint8(2, E))
+    return false;
+
+  if (E->getOpcode() == BO_EQ) {
+    if (!this->emitEQUint8(E))
+      return false;
+  } else if (E->getOpcode() == BO_NE) {
+    if (!this->emitNEUint8(E))
+      return false;
+  } else
+    return false;
+
+  // In C, this returns an int.
+  if (PrimType ResT = classifyPrim(E->getType()); ResT != PT_Bool)
+    return this->emitCast(PT_Bool, ResT, E);
   return true;
 }
 

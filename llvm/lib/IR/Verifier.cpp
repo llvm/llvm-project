@@ -6291,7 +6291,7 @@ void Verifier::visit(DPValue &DPV) {
           Var->getRawType());
 
   auto *DLNode = DPV.getDebugLoc().getAsMDNode();
-  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record location",
+  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
           &DPV, DLNode);
   DILocation *Loc = DPV.getDebugLoc();
 

@@ -19,6 +19,7 @@ libc_support_library(
         "//libc:__support_cpp_string_view",
         "//libc:__support_macros_properties_types",
         "//libc:__support_osutil_io",
+        "//libc:__support_uint",
         "//libc:__support_uint128",
     ],
 )

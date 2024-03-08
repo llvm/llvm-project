@@ -16,8 +16,8 @@
 using UInt128 = __uint128_t;
 using Int128 = __int128_t;
 #else
-using UInt128 = LIBC_NAMESPACE::cpp::UInt<128>;
-using Int128 = LIBC_NAMESPACE::cpp::Int<128>;
-#endif //  LIBC_TYPES_HAS_INT128
+using UInt128 = LIBC_NAMESPACE::UInt<128>;
+using Int128 = LIBC_NAMESPACE::Int<128>;
+#endif // LIBC_TYPES_HAS_INT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT128_H

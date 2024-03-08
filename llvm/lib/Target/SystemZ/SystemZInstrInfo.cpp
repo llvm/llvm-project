@@ -18,7 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1874,9 +1874,9 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
     }
   }
   if (CCLive) {
-    LiveRegUnits LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
+    LivePhysRegs LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
     LiveRegs.addLiveOuts(*MBB);
-    if (!LiveRegs.available(SystemZ::CC))
+    if (LiveRegs.contains(SystemZ::CC))
       return false;
   }
 
