@@ -229,39 +229,14 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     if (A->getOption().getID() == options::OPT_dxc_hlsl_version) {
       // Translate -HV into -std for llvm
       // depending on the value given
-      llvm::StringRef value(A->getValue());
-      llvm::StringRef acceptedValues(
-          Opts.getOptionValues(options::OPT_dxc_hlsl_version));
-      llvm::SmallVector<StringRef, 8> validValues;
-      acceptedValues.split(validValues, ", ");
-      if (value == validValues[0]) {
-        LangStandard l =
-            LangStandard::getLangStandardForKind(LangStandard::lang_hlsl2016);
-        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
-                            l.getName());
-      } else if (value == validValues[1]) {
-        LangStandard l =
-            LangStandard::getLangStandardForKind(LangStandard::lang_hlsl2017);
-        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
-                            l.getName());
-      } else if (value == validValues[2]) {
-        LangStandard l =
-            LangStandard::getLangStandardForKind(LangStandard::lang_hlsl2018);
-        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
-                            l.getName());
-      } else if (value == validValues[3]) {
-        LangStandard l =
-            LangStandard::getLangStandardForKind(LangStandard::lang_hlsl2021);
-        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
-                            l.getName());
-      } else if (value == validValues[4]) {
-        LangStandard l =
-            LangStandard::getLangStandardForKind(LangStandard::lang_hlsl202x);
+      LangStandard::Kind LangStd = LangStandard::getHLSLLangKind(A->getValue());
+      if (LangStd != LangStandard::lang_unspecified) {
+        LangStandard l = LangStandard::getLangStandardForKind(LangStd);
         DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
                             l.getName());
       } else {
         getDriver().Diag(diag::err_drv_hlsl_dxc_bad_argument_value)
-            << "HV" << value;
+            << "HV" << A->getValue();
       }
 
       A->claim();
