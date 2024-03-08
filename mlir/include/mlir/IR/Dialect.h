@@ -216,6 +216,14 @@ public:
         {TypeID::get<ConcreteT>(), InterfaceT::getInterfaceID()});
   }
 
+  // Declare the same interface for multiple types.
+  // Example:
+  // declarePromisedInterfaces<FunctionOpInterface, MyFuncType1, MyFuncType2>()
+  template <typename InterfaceT, typename... ConcreteT>
+  void declarePromisedInterfaces() {
+    (declarePromisedInterface<ConcreteT, InterfaceT>(), ...);
+  }
+
   /// Checks if the given interface, which is attempting to be used, is a
   /// promised interface of this dialect that has yet to be implemented. If so,
   /// emits a fatal error. `interfaceName` is an optional string that contains a
