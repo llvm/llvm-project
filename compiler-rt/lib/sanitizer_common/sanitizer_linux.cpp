@@ -147,6 +147,8 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 
 #  if SANITIZER_FREEBSD
 #    define SANITIZER_USE_GETENTROPY 1
+extern "C" void *__sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
+                            off_t offset);
 #  endif
 
 namespace __sanitizer {
@@ -196,9 +198,6 @@ ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 #  else
 #    include "sanitizer_syscall_generic.inc"
 #  endif
-
-extern "C" void *__sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
-                            off_t offset);
 
 // --------------- sanitizer_libc.h
 #  if !SANITIZER_SOLARIS && !SANITIZER_NETBSD
