@@ -255,6 +255,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasEVEX_L2 = 0;       // Does this inst set the EVEX_L2 field?
   bit hasEVEX_B = 0;        // Does this inst set the EVEX_B field?
   bit hasEVEX_NF = 0;       // Does this inst set the EVEX_NF field?
+  bit hasTwoConditionalOps = 0;   // Does this inst have two conditional operands?
   bits<3> CD8_Form = 0;     // Compressed disp8 form - vector-width.
   // Declare it int rather than bits<4> so that all bits are defined when
   // assigning to bits<7>.
@@ -305,4 +306,5 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{49}    = hasNoTrackPrefix;
   let TSFlags{51-50} = explicitOpPrefixBits;
   let TSFlags{52}    = hasEVEX_NF;
+  let TSFlags{53}    = hasTwoConditionalOps;
 }
