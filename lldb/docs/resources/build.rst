@@ -85,6 +85,13 @@ commands below.
    versions of python unusable. This primarily affects Windows, as debug builds of
    LLDB must use debug python as well.
 
+.. note::
+  Installing multiple versions of Curses, particularly when only one is built with
+  wide character support, can cause lldb to be linked with an incorrect set of
+  libraries. If your system already has Curses, we recommend you use that version.
+  If you do install another one, use a tool like ``ldd`` to ensure only one version
+  of Curses is being used in the final ``lldb`` executable.
+
 Windows
 *******
 
