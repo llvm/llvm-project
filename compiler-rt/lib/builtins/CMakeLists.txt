@@ -917,7 +917,7 @@ cmake_dependent_option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON "COM
 if (COMPILER_RT_BUILD_CRT)
   add_compiler_rt_component(crt)
 
-  option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" OFF)
+  option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" ON)
 
   include(CheckSectionExists)
   check_section_exists(".init_array" COMPILER_RT_HAS_INITFINI_ARRAY
