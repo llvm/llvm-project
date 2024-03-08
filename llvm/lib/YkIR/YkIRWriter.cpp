@@ -76,6 +76,7 @@ enum OperandKind {
   Block,
   Arg,
   Global,
+  Predicate,
   UnimplementedOperand = 255,
 };
 
@@ -86,6 +87,20 @@ enum TypeKind {
   FunctionTy,
   Struct,
   UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
+};
+
+// A predicate used in a numeric comparison.
+enum CmpPredicate {
+  PredEqual = 0,
+  PredNotEqual,
+  PredUnsignedGreater,
+  PredUnsignedGreaterEqual,
+  PredUnsignedLess,
+  PredUnsignedLessEqual,
+  PredSignedGreater,
+  PredSignedGreaterEqual,
+  PredSignedLess,
+  PredSignedLessEqual,
 };
 
 template <class T> string toString(T *X) {
@@ -466,6 +481,71 @@ private:
     InstIdx++;
   }
 
+  // Serialise an LLVM predicate.
+  //
+  // Note that this can't be handled by `serialiseOperand()` as in LLVM a
+  // `Predicate` isn't a `Value`.
+  void serialisePredicateOperand(llvm::CmpInst::Predicate P) {
+    std::optional<CmpPredicate> LP = std::nullopt;
+    switch (P) {
+    case llvm::CmpInst::ICMP_EQ:
+      LP = PredEqual;
+      break;
+    case llvm::CmpInst::ICMP_NE:
+      LP = PredNotEqual;
+      break;
+    case llvm::CmpInst::ICMP_UGT:
+      LP = PredUnsignedGreater;
+      break;
+    case llvm::CmpInst::ICMP_UGE:
+      LP = PredUnsignedGreaterEqual;
+      break;
+    case llvm::CmpInst::ICMP_ULT:
+      LP = PredUnsignedLess;
+      break;
+    case llvm::CmpInst::ICMP_ULE:
+      LP = PredUnsignedLessEqual;
+      break;
+    case llvm::CmpInst::ICMP_SGT:
+      LP = PredSignedGreater;
+      break;
+    case llvm::CmpInst::ICMP_SGE:
+      LP = PredSignedGreaterEqual;
+      break;
+    case llvm::CmpInst::ICMP_SLT:
+      LP = PredSignedLess;
+      break;
+    case llvm::CmpInst::ICMP_SLE:
+      LP = PredSignedLessEqual;
+      break;
+    default:
+      abort(); // TODO: floating point predicates.
+    }
+    OutStreamer.emitInt8(OperandKind::Predicate);
+    OutStreamer.emitInt8(LP.value());
+  }
+
+  // We use a custom lowering for ICmp, as a generic lowering misses
+  // the predicate.
+  void serialiseICmpInst(ICmpInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+                         unsigned &InstIdx) {
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // opcode:
+    serialiseOpcode(OpCode::ICmp);
+    // num_operands:
+    OutStreamer.emitInt32(3);
+    // op1:
+    serialiseOperand(I, VLMap, I->getOperand(0));
+    // predicate:
+    serialisePredicateOperand(I->getPredicate());
+    // op2:
+    serialiseOperand(I, VLMap, I->getOperand(1));
+
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
 // Macros to help dispatch to serialisers.
@@ -484,7 +564,6 @@ private:
 
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
-    GENERIC_INST_SERIALISE(I, ICmpInst, ICmp)
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
     GENERIC_INST_SERIALISE(I, llvm::InsertValueInst, InsertValue)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
@@ -494,6 +573,7 @@ private:
     CUSTOM_INST_SERIALISE(I, BranchInst, serialiseBranchInst)
     CUSTOM_INST_SERIALISE(I, GetElementPtrInst, serialiseGetElementPtr)
     CUSTOM_INST_SERIALISE(I, llvm::BinaryOperator, serialiseBinaryOperation)
+    CUSTOM_INST_SERIALISE(I, ICmpInst, serialiseICmpInst)
 
     // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
     // a match, so if we get here then the instruction wasn't handled.
