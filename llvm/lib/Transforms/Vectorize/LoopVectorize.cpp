@@ -1253,7 +1253,8 @@ public:
     CM_GatherScatter,
     CM_Scalarize,
     CM_VectorCall,
-    CM_IntrinsicCall
+    CM_IntrinsicCall,
+    CM_MonotonicUnit, // For consecutive accesses with monotonic +1
   };
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
@@ -1454,6 +1455,10 @@ public:
   /// access that can be widened.
   bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
 
+  /// Returns true if \p I is a memory instruction with monotonic index(es) that
+  /// can be widened
+  bool memoryInstructionUsesMonotonic(Instruction *I, ElementCount VF);
+
   /// Returns true if \p I is a memory instruction in an interleaved-group
   /// of memory accesses that can be vectorized with wide vector loads/stores
   /// and shuffles.
@@ -1646,6 +1651,10 @@ private:
   /// The cost computation for widening instruction \p I with consecutive
   /// memory access.
   InstructionCost getConsecutiveMemOpCost(Instruction *I, ElementCount VF);
+
+  /// The cost computation for widening memory access \p I which has monotonic
+  /// index.
+  InstructionCost getMonotonicMemoryOpCost(Instruction *I, ElementCount VF);
 
   /// The cost calculation for Load/Store instruction \p I with uniform pointer -
   /// Load: scalar load + broadcast.
@@ -3708,7 +3717,8 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
         return WideningDecision == CM_Scalarize;
     assert(Ptr == getLoadStorePointerOperand(MemAccess) &&
            "Ptr is neither a value or pointer operand");
-    return WideningDecision != CM_GatherScatter;
+    return WideningDecision != CM_GatherScatter &&
+           WideningDecision != CM_MonotonicUnit;
   };
 
   // A helper that returns true if the given value is a bitcast or
@@ -4103,6 +4113,12 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   return true;
 }
 
+bool LoopVectorizationCostModel::memoryInstructionUsesMonotonic(
+    Instruction *I, ElementCount VF) {
+  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
+  return Legal->hasMonotonicOperand(getLoadStorePointerOperand(I));
+}
+
 void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // We should not collect Uniforms more than once per VF. Right now,
   // this function is called from collectUniformsAndScalars(), which
@@ -4189,6 +4205,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
     return (WideningDecision == CM_Widen ||
             WideningDecision == CM_Widen_Reverse ||
+            WideningDecision == CM_MonotonicUnit ||
             WideningDecision == CM_Interleave);
   };
 
@@ -5258,7 +5275,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     return 1;
 
   // We used the distance for the interleave count.
-  if (!Legal->isSafeForAnyVectorWidth())
+  if (!Legal->isSafeForAnyVectorWidth() || !Legal->getMonotonics().empty())
     return 1;
 
   auto BestKnownTC = getSmallBestKnownTC(*PSE.getSE(), TheLoop);
@@ -6056,6 +6073,29 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 }
 
 InstructionCost
+LoopVectorizationCostModel::getMonotonicMemoryOpCost(Instruction *I,
+                                                     ElementCount VF) {
+  Type *ValTy = getLoadStoreType(I);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  Value *Ptr = getLoadStorePointerOperand(I);
+
+  if (!Legal->isConsecutiveMonotonicPtr(Ptr))
+    return InstructionCost::getInvalid();
+  if (isa<LoadInst>(I))
+    return InstructionCost::getInvalid();
+
+  LLVMContext &Ctx = I->getContext();
+  SmallVector<Type *> ParamTys;
+  ParamTys.push_back(VectorTy);
+  ParamTys.push_back(Ptr->getType());
+  ParamTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), VF));
+  IntrinsicCostAttributes CostAttrs(Intrinsic::masked_compressstore,
+                                    Type::getVoidTy(Ctx), ParamTys);
+  return TTI.getIntrinsicInstrCost(CostAttrs,
+                                   TargetTransformInfo::TCK_RecipThroughput);
+}
+
+InstructionCost
 LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                 ElementCount VF) {
   assert(Legal->isUniformMemOp(*I, VF));
@@ -6443,6 +6483,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           if (!foldTailByMasking())
             return true;
 
+          // Load or store with monotonic index in pointer's computation
+          // requires special handling of a mask.
+          if (Legal->hasMonotonicOperand(Ptr))
+            return false;
+
           // For scalable vectors, a uniform memop load is always
           // uniform-by-parts  and we know how to scalarize that.
           if (isa<LoadInst>(I))
@@ -6485,6 +6530,15 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
         setWideningDecision(&I, VF, Decision, Cost);
+        continue;
+      }
+
+      if (memoryInstructionUsesMonotonic(&I, VF)) {
+        assert(
+            Legal->isConsecutiveMonotonicPtr(getLoadStorePointerOperand(&I)) &&
+            "Expected consecutive monotonic pointer");
+        setWideningDecision(&I, VF, CM_MonotonicUnit,
+                            getMonotonicMemoryOpCost(&I, VF));
         continue;
       }
 
@@ -6902,6 +6956,18 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     if (auto RedCost = getReductionPatternCost(I, VF, VectorTy, CostKind))
       return *RedCost;
 
+    if (auto *MD = Legal->getMonotonicDescriptor(I)) {
+      if (VF.isScalable())
+        return InstructionCost::getInvalid();
+      InstructionCost Cost = 0;
+
+      Type *ScalarTy = Type::getIntNTy(I->getContext(), VF.getKnownMinValue());
+      IntrinsicCostAttributes CostAttrs(Intrinsic::ctpop, ScalarTy, {ScalarTy});
+
+      Cost += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+      return Cost;
+    }
+
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
@@ -7035,6 +7101,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       case LoopVectorizationCostModel::CM_VectorCall:
       case LoopVectorizationCostModel::CM_IntrinsicCall:
         llvm_unreachable_internal("Instr has invalid widening decision");
+      case LoopVectorizationCostModel::CM_MonotonicUnit:
+        return TTI::CastContextHint::Masked;
       }
 
       llvm_unreachable("Unhandled case!");
@@ -8062,9 +8130,10 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
+  bool Monotonic = Decision == LoopVectorizationCostModel::CM_MonotonicUnit;
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
-      Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
+      Reverse || Monotonic || Decision == LoopVectorizationCostModel::CM_Widen;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
   if (Consecutive) {
@@ -8082,7 +8151,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenMemoryInstructionRecipe(*Store, Ptr, Operands[0], Mask,
-                                            Consecutive, Reverse);
+                                            Consecutive, Reverse, Monotonic);
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -8425,7 +8494,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
-    assert((Legal->isReductionVariable(Phi) ||
+    assert((Legal->isReductionVariable(Phi) || Legal->isMonotonicPhi(Phi) ||
             Legal->isFixedOrderRecurrence(Phi)) &&
            "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = Operands[0];
@@ -8437,6 +8506,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
       PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
                                            CM.isInLoopReduction(Phi),
                                            CM.useOrderedReductions(RdxDesc));
+    } else if (Legal->isMonotonicPhi(Phi)) {
+      PhiRecipe = new VPMonotonicHeaderPHIRecipe(Phi, StartV);
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8469,6 +8540,16 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
 
   if (auto *CI = dyn_cast<CallInst>(Instr))
     return tryToWidenCall(CI, Operands, Range, Plan);
+
+  if (Legal->isMonotonicUpdate(Instr)) {
+    const MonotonicDescriptor *MD = Legal->getMonotonicDescriptor(Instr);
+    assert(MD && "Monotonic descriptor was not found");
+    assert(Operands.size() == 2 &&
+           "Only binary monotonic updates are supported");
+    VPValue *Mask = getBlockInMask(Instr->getParent());
+    return new VPMonotonicUpdateInstruction(Mask, Operands[0], Operands[1],
+                                            Instr->getDebugLoc(), *MD);
+  }
 
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range, Plan);
@@ -9374,6 +9455,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   assert((LI || SI) && "Invalid Load/Store instruction");
   assert((!SI || StoredValue) && "No stored value provided for widened store");
   assert((!LI || !StoredValue) && "Stored value provided for widened load");
+  assert((!Monotonic || !LI) && "Expand load is not yet supported");
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
 
@@ -9407,6 +9489,13 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         Value *VectorGep = State.get(getAddr(), Part);
         NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
                                             MaskPart);
+      } else if (isMonotonic()) {
+        auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
+        NewSI = Builder.CreateIntrinsic(
+            Builder.getVoidTy(), Intrinsic::masked_compressstore,
+            {StoredVal, VecPtr, BlockInMaskParts[Part]});
+        cast<IntrinsicInst>(NewSI)->addParamAttr(
+            1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
       } else {
         if (isReverse()) {
           // If we store to reverse consecutive memory locations, then we need

@@ -25,6 +25,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 
+#define DEBUG_TYPE "loop-vectorize"
+
 using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
@@ -498,6 +500,65 @@ static void removeDeadRecipes(VPlan &Plan) {
       R.eraseFromParent();
     }
   }
+}
+
+void VPlanTransforms::simplifyMonotonics(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
+    for (VPRecipeBase &R : *VPBB) {
+      auto *MonotonicPhi = dyn_cast<VPMonotonicHeaderPHIRecipe>(&R);
+      if (!MonotonicPhi)
+        continue;
+
+      DenseSet<VPRecipeBase *> ToRemove;
+      SmallVector<VPRecipeBase *> Worklist = {
+          &MonotonicPhi->getBackedgeRecipe()};
+      VPMonotonicUpdateInstruction *VPMUI = nullptr;
+
+      while (!Worklist.empty()) {
+        VPRecipeBase *RR = Worklist.pop_back_val();
+        if (RR->getParent() != MonotonicPhi->getParent()) {
+          LLVM_DEBUG(dbgs() << "LV: Cannot simplify non-flattened HCFG\n");
+          return;
+        }
+        if (ToRemove.contains(RR) || RR == MonotonicPhi)
+          continue;
+
+        if (auto *MU = dyn_cast<VPMonotonicUpdateInstruction>(RR)) {
+          VPMUI = MU;
+          continue;
+        }
+        auto *VPB = dyn_cast<VPBlendRecipe>(RR);
+        if (!VPB) {
+          LLVM_DEBUG(dbgs()
+                     << "LV: Blend recipes are expected to propagate new "
+                        "value of monotonic to a header phi\n");
+          return;
+        }
+        ToRemove.insert(RR);
+        for (unsigned I = 0, E = VPB->getNumIncomingValues(); I != E; ++I) {
+          VPValue *V = VPB->getIncomingValue(I);
+          if (!isa<VPRecipeBase>(V->getDefiningRecipe())) {
+            LLVM_DEBUG(dbgs()
+                       << "LV: Unsupported VPValue in simplifyMonotonics\n");
+            return;
+          }
+          Worklist.push_back(V->getDefiningRecipe());
+        }
+      }
+      assert(VPMUI && "Monotonic update must exist in a VPlan");
+      // Use VPValue of the monotonic update instruction in a header phi
+      // instead
+      MonotonicPhi->setOperand(1, VPMUI);
+      for (auto &PV : Plan.getLiveOuts()) {
+        VPLiveOut *LO = PV.second;
+        if (ToRemove.contains(LO->getOperand(0)->getDefiningRecipe()))
+          LO->setOperand(0, VPMUI);
+      }
+      for (VPRecipeBase *RR : ToRemove)
+        RR->eraseFromParent();
+    }
 }
 
 static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
@@ -1063,6 +1124,7 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
+  simplifyMonotonics(Plan);
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);

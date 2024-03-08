@@ -1093,6 +1093,49 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   VecInd->addIncoming(LastInduction, VectorPH);
 }
 
+/// Generate phi for the monotonic:
+///   %monotonic = phi [%monotonic.update, %vector.latch]
+void VPMonotonicHeaderPHIRecipe::execute(VPTransformState &State) {
+  IRBuilder<>::InsertPointGuard Guard(State.Builder);
+  State.Builder.SetInsertPoint(State.CFG.PrevBB->getFirstNonPHI());
+
+  Value *StartV = State.get(getStartValue(), VPIteration(0, 0));
+  auto *Phi = State.Builder.CreatePHI(StartV->getType(), 2, "monotonic.phi");
+  BasicBlock *PreheaderBB = State.CFG.getPreheaderBBFor(this);
+  Phi->addIncoming(StartV, PreheaderBB);
+
+  // Use the same Phi for all Parts
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    State.set(this, Phi, Part, /*IsScalar=*/true);
+}
+
+/// Generate following sequence to update scalar monotonic variable:
+///   %bcast = bitcast %mask to iVF
+///   %0 = llvm.ctpop(%mask)
+///   %1 = mul %0, %step          // where %step is a step of monotonic
+///   %monotonic.update = add %monotonic, %1
+void VPMonotonicUpdateInstruction::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Unrolling is not supported.");
+  assert(!State.VF.isScalable() &&
+         "Scalable vectorization of monotonics is not yet supported.");
+  auto &Builder = State.Builder;
+  Value *V = State.get(getIncomingValue(), 0, /*NeedsScalar=*/true);
+  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
+  Value *Mask = State.get(getMask(), 0);
+
+  Value *ScalarMask = Builder.CreateBitCast(
+      Mask, Builder.getIntNTy(State.VF.getKnownMinValue()));
+  Value *Popc = Builder.CreateIntrinsic(Intrinsic::ctpop,
+                                        {ScalarMask->getType()}, {ScalarMask});
+  Popc = Builder.CreateZExtOrTrunc(Popc, Step->getType());
+  Step = Builder.CreateMul(Step, Popc, "monotonic.vf.step");
+  const auto *OrigUpdateOp = cast<BinaryOperator>(MD.getUpdateOp());
+  Value *NewV = Builder.CreateBinOp(OrigUpdateOp->getOpcode(), V, Step,
+                                    "monotonic.update");
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    State.set(this, NewV, Part, /*IsScalar=*/true);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
@@ -1107,6 +1150,33 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
   O << ", ";
   getStepValue()->printAsOperand(O, SlotTracker);
+}
+
+void VPMonotonicUpdateInstruction::print(raw_ostream &O, const Twine &Indent,
+                                         VPSlotTracker &SlotTracker) const {
+  O << Indent << "monotonic-update ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  O << MD.getUpdateOp()->getOpcodeName();
+  O << ' ';
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+  O << " @";
+  getMask()->printAsOperand(O, SlotTracker);
+
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
+}
+
+void VPMonotonicHeaderPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                       VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = monotonic-phi ";
+  printOperands(O, SlotTracker);
 }
 #endif
 

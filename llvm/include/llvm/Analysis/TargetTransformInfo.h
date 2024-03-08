@@ -1701,6 +1701,9 @@ public:
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                              Align Alignment) const;
 
+  /// \returns true if vectorization of monotonics is supported by the target.
+  bool enableMonotonicVectorization() const;
+
   struct VPLegalization {
     enum VPTransform {
       // keep the predicating parameter
@@ -2131,6 +2134,7 @@ public:
   virtual bool supportsScalableVectors() const = 0;
   virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                                      Align Alignment) const = 0;
+  virtual bool enableMonotonicVectorization() const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
@@ -2872,6 +2876,10 @@ public:
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                              Align Alignment) const override {
     return Impl.hasActiveVectorLength(Opcode, DataType, Alignment);
+  }
+
+  bool enableMonotonicVectorization() const override {
+    return Impl.enableMonotonicVectorization();
   }
 
   VPLegalization

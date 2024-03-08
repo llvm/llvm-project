@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_IVDESCRIPTORS_H
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -393,6 +394,54 @@ private:
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;
+};
+
+class MonotonicDescriptor {
+public:
+  /// This enum represents the kinds of monotonic that we support.
+  enum MonotonicKind {
+    MK_None,    ///< Not a monotonic variable.
+    MK_Integer, /// < Integer monotonic variable. Step = C
+    MK_Pointer, /// < Pointer monotonic variable. Step = C
+  };
+
+public:
+  MonotonicDescriptor() = default;
+
+  Value *getStartValue() const { return StartValue; }
+  MonotonicKind getKind() const { return MK; }
+  const SCEV *getStep() const { return Step; }
+  const Instruction *getUpdateOp() const { return UpdateOp; }
+  const SetVector<PHINode *> &getPhis() const { return Phis; }
+  bool isHeaderPhi(const PHINode *Phi) const {
+    return !Phis.empty() && Phis[0] == Phi;
+  }
+
+  /// Returns true if \p Phi forms monotonic pattern within a loop \p L.
+  static MonotonicDescriptor isMonotonicPHI(PHINode *Phi, const Loop *L,
+                                            PredicatedScalarEvolution &PSE);
+
+  operator bool() const { return MK != MK_None; }
+
+private:
+  /// Private constructor - used by \c isMonotonicPHI
+  MonotonicDescriptor(Value *Start, MonotonicKind K, const SCEV *Step,
+                      const Instruction *UpdateOp, SetVector<PHINode *> &Phis)
+      : StartValue(Start), MK(K), Step(Step), UpdateOp(UpdateOp),
+        Phis(Phis.begin(), Phis.end()) {}
+
+  /// Start value.
+  TrackingVH<Value> StartValue = nullptr;
+  /// Induction kind.
+  MonotonicKind MK = MK_None;
+  /// Step value.
+  const SCEV *Step = nullptr;
+  // Instruction that advances induction variable.
+  const Instruction *UpdateOp = nullptr;
+
+  /// All phis that are used to update the monotonic variable. It's expected
+  /// that the first PHINode is in the header BB
+  SetVector<PHINode *> Phis;
 };
 
 } // end namespace llvm

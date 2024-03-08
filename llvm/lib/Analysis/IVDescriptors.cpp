@@ -1475,6 +1475,131 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
   return isInductionPHI(Phi, TheLoop, PSE.getSE(), D, AR);
 }
 
+MonotonicDescriptor
+MonotonicDescriptor::isMonotonicPHI(PHINode *Phi, const Loop *L,
+                                    PredicatedScalarEvolution &PSE) {
+  // Monotonic is a special loop carried dependency which is
+  // incremented by a invariant value under some condition and used under the
+  // same or nested condition. That's different to conditional reduction, which
+  // does not allow uses at all.
+
+  // Don't allow multiple updates of the value
+  if (Phi->getNumIncomingValues() != 2)
+    return MonotonicDescriptor();
+
+  Type *Ty = Phi->getType();
+  if (!Ty->isIntegerTy() && !Ty->isPointerTy())
+    return MonotonicDescriptor();
+
+  SetVector<PHINode *> Visited;
+  Visited.insert(Phi);
+  SmallVector<PHINode *> Worklist;
+
+  for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+    if (Phi->getIncomingBlock(I) == L->getLoopPreheader())
+      continue;
+    auto *P = dyn_cast<PHINode>(Phi->getIncomingValue(I));
+    if (!P)
+      return MonotonicDescriptor();
+    Worklist.push_back(P);
+  }
+
+  auto FindSelfUpdate = [&]() -> Instruction * {
+    Instruction *SelfUpdate = nullptr;
+    // Visit use-def chain of the Phi expecting all incoming values as phis
+    // which are used just once, i.e. within that chain.
+    while (!Worklist.empty()) {
+      PHINode *P = Worklist.pop_back_val();
+      if (Visited.contains(P))
+        continue;
+
+      Visited.insert(P);
+      // Expect all phi to be a part of the loop
+      if (!L->contains(P))
+        return nullptr;
+
+      for (unsigned I = 0, E = P->getNumIncomingValues(); I != E; ++I) {
+        Value *V = P->getIncomingValue(I);
+        if (auto *PN = dyn_cast<PHINode>(V)) {
+          Worklist.push_back(PN);
+          continue;
+        }
+        if (SelfUpdate != nullptr)
+          return nullptr;
+
+        if ((Ty->isIntegerTy() && !isa<BinaryOperator>(V)) ||
+            (Ty->isPointerTy() && !isa<GetElementPtrInst>(V)))
+          return nullptr;
+
+        SelfUpdate = cast<Instruction>(V);
+      }
+    }
+    return SelfUpdate;
+  };
+  Instruction *SelfUpdate = FindSelfUpdate();
+
+  // Expect `SelfUpdate` to bey used only once
+  // TODO: Support monotonic with a pre-increment
+  if (!SelfUpdate || SelfUpdate->getNumUses() != 1)
+    return MonotonicDescriptor();
+
+  Value *Step = nullptr;
+  if (auto *GEPUpdate = dyn_cast<GetElementPtrInst>(SelfUpdate)) {
+    if (GEPUpdate->getNumOperands() != 2)
+      return MonotonicDescriptor();
+
+    Step = GEPUpdate->getOperand(1);
+    // TODO: Re-enable update via GEP. This will require changes in VPlan to
+    // correctly print and generate updates
+    return MonotonicDescriptor();
+  }
+  auto *BO = cast<BinaryOperator>(SelfUpdate);
+  // TODO: support other than Add instruction to update monotonic variable
+  if (BO->getOpcode() != Instruction::Add)
+    return MonotonicDescriptor();
+
+  // Either `nsw` or `nuw` should be set, otherwise it's not safe to assume
+  // monotonic won't wrap.
+  if (!BO->hasNoSignedWrap() && !BO->hasNoUnsignedWrap())
+    return MonotonicDescriptor();
+  Step = BO->getOperand(0) == Phi ? BO->getOperand(1) : BO->getOperand(0);
+
+  if (!L->isLoopInvariant(Step))
+    return MonotonicDescriptor();
+
+  auto *StepSCEV = PSE.getSCEV(Step);
+  if (auto *C = dyn_cast<SCEVConstant>(StepSCEV))
+    // TODO: handle step != 1
+    if (!C->isOne())
+      return MonotonicDescriptor();
+
+  // It's important to check all uses of the Phi and make sure they are either
+  // outside of the loop.
+  // TODO: Support uses under nested predicate, which can be supported by
+  // vectorizer
+  for (User *U : Phi->users()) {
+    auto *UI = cast<Instruction>(U);
+    if (!L->contains(UI))
+      continue;
+
+    // Ignore phis that are necessary to represent self-update
+    if (auto *P = dyn_cast<PHINode>(UI))
+      if (Visited.contains(P))
+        continue;
+
+    BasicBlock *UIParent = UI->getParent();
+    if (UIParent != SelfUpdate->getParent())
+      return MonotonicDescriptor();
+  }
+
+  Value *StartValue = Phi->getIncomingValueForBlock(L->getLoopPreheader());
+  // Record all visited Phis in a vector and place Phi at the biginning to
+  // simplify future analysis
+  return MonotonicDescriptor(StartValue,
+                             Ty->isPointerTy() ? MK_Pointer : MK_Integer,
+                             StepSCEV, SelfUpdate, Visited);
+}
+
 bool InductionDescriptor::isInductionPHI(
     PHINode *Phi, const Loop *TheLoop, ScalarEvolution *SE,
     InductionDescriptor &D, const SCEV *Expr,

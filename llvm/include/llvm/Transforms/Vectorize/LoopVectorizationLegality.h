@@ -257,6 +257,9 @@ public:
   /// induction descriptor.
   using InductionList = MapVector<PHINode *, InductionDescriptor>;
 
+  /// MonotonicPhiList contains phi nodes that represent monotonic idiom
+  using MonotonicPhiList = MapVector<const PHINode *, MonotonicDescriptor>;
+
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
   using RecurrenceSet = SmallPtrSet<const PHINode *, 8>;
@@ -306,6 +309,43 @@ public:
   /// Returns True if V is a Phi node of an induction variable in this loop.
   bool isInductionPhi(const Value *V) const;
 
+  /// Returns the Monotonics found in the loop
+  const MonotonicPhiList &getMonotonics() const { return MonotonicPhis; }
+
+  /// Returns the MonotonicDescriptor associated with an \p I instruction
+  /// Returns emtpy descriptor if \p I instruction is non-monotonic.
+  const MonotonicDescriptor *
+  getMonotonicDescriptor(const Instruction *I) const {
+    for (const auto &PMD : getMonotonics()) {
+      if (const auto *Phi = dyn_cast<PHINode>(I))
+        if (PMD.second.getPhis().contains(const_cast<PHINode *>(Phi)))
+          return &PMD.second;
+      if (PMD.second.getUpdateOp() == I)
+        return &PMD.second;
+    }
+    return nullptr;
+  }
+
+  /// Returns true if \p I instruction is a header phi of the monotonic.
+  bool isMonotonicPhi(const Instruction *I) const {
+    const auto *Phi = dyn_cast<PHINode>(I);
+    return Phi && MonotonicPhis.contains(Phi);
+  }
+
+  /// Returns true if \p V value is a header phi of the monotonic.
+  bool isMonotonicPhi(const Value *V) const {
+    const auto *I = dyn_cast<Instruction>(V);
+    return I && isMonotonicPhi(I);
+  }
+
+  /// Returns true of \p I instruction is an update instruction of the
+  /// monotonic.
+  bool isMonotonicUpdate(const Instruction *I) const {
+    return any_of(getMonotonics(), [I](const auto &PMD) {
+      return PMD.second.getUpdateOp() == I;
+    });
+  }
+
   /// Returns a pointer to the induction descriptor, if \p Phi is an integer or
   /// floating point induction.
   const InductionDescriptor *getIntOrFpInductionDescriptor(PHINode *Phi) const;
@@ -345,6 +385,13 @@ public:
   /// NOTE: This method must only be used before modifying the original scalar
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
+
+  /// Returns true if \p Ptr is depends on a monotonic value and ptr diff
+  /// between two iterations is one if monotonic value is updated
+  bool isConsecutiveMonotonicPtr(Value *Ptr) const;
+
+  /// Return true if \p Ptr computation depends on monotonic value.
+  bool hasMonotonicOperand(Value *Ptr) const;
 
   /// Returns true if value V is uniform across \p VF lanes, when \p VF is
   /// provided, and otherwise if \p V is invariant across all loop iterations.
@@ -443,6 +490,11 @@ private:
   /// specific checks for outer loop vectorization.
   bool canVectorizeOuterLoop();
 
+  /// Return true if loop vectorizer can generate correct code for that
+  /// monotonic. The method is needed to gradually enable vectorization of
+  /// monotonics.
+  bool canVectorizeMonotonic(const MonotonicDescriptor &MD);
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
@@ -459,6 +511,9 @@ private:
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
                        SmallPtrSetImpl<Value *> &AllowedExit);
+
+  /// Add MonotonicDescriptor
+  void addMonotonic(const MonotonicDescriptor &MD);
 
   /// The loop that we evaluate.
   Loop *TheLoop;
@@ -509,6 +564,9 @@ private:
   /// runtime guard). These casts can be ignored when creating the vectorized
   /// loop body.
   SmallPtrSet<Instruction *, 4> InductionCastsToIgnore;
+
+  /// Holds the phis of the monotonics
+  MonotonicPhiList MonotonicPhis;
 
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;

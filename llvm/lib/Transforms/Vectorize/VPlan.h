@@ -866,7 +866,9 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
+    case VPRecipeBase::VPMonotonicHeaderPHISC:
     case VPRecipeBase::VPScalarCastSC:
+    case VPRecipeBase::VPMonotonicUpdateSC:
       return true;
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -1155,6 +1157,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    MonotonicUpdate,
   };
 
 private:
@@ -1790,6 +1793,68 @@ public:
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
 };
 
+class VPMonotonicUpdateInstruction : public VPInstruction {
+private:
+  MonotonicDescriptor MD;
+
+public:
+  explicit VPMonotonicUpdateInstruction(VPValue *Mask, VPValue *Op1,
+                                        VPValue *Op2, DebugLoc DL,
+                                        MonotonicDescriptor MD,
+                                        const Twine &Name = "")
+      : VPInstruction(VPInstruction::MonotonicUpdate, {Op1, Op2}, DL, Name),
+        MD(MD) {
+    addOperand(Mask);
+    setUnderlyingValue(
+        cast<Value>(const_cast<Instruction *>(MD.getUpdateOp())));
+  }
+
+  explicit VPMonotonicUpdateInstruction() = delete;
+  ~VPMonotonicUpdateInstruction() override = default;
+
+  const MonotonicDescriptor &getMonotonicDescriptor() const { return MD; }
+
+  // Returns the incoming value from the loop backedge.
+  VPValue *getIncomingValue() const { return getOperand(0); }
+
+  // Returns the step value from the loop backedge.
+  VPValue *getStepValue() const { return getOperand(1); }
+
+  /// Returns the mask value of the instruction
+  VPValue *getMask() const { return getOperand(2); }
+
+  VPRecipeBase *clone() override {
+    return new VPMonotonicUpdateInstruction(getMask(), getIncomingValue(),
+                                            getStepValue(), getDebugLoc(),
+                                            getMonotonicDescriptor());
+  }
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPDef *D) {
+    auto *R = cast<VPRecipeBase>(D);
+    auto *I = dyn_cast<VPInstruction>(R);
+    return I && I->getOpcode() == VPInstruction::MonotonicUpdate;
+  }
+
+  static inline bool classof(const VPRecipeBase *R) {
+    auto *VPInst = dyn_cast<VPInstruction>(R);
+    return VPInst && VPInst->getOpcode() == VPInstruction::MonotonicUpdate;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && VPMonotonicUpdateInstruction::classof(R);
+  }
+
+  void execute(VPTransformState &State) override final;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A recipe for handling first-order recurrence phis. The start value is the
 /// first operand of the recipe and the incoming value from the backedge is the
 /// second operand.
@@ -2185,6 +2250,34 @@ public:
   }
 };
 
+/// VPMonotonicHeaderPHIRecipe represents a phi of the monotonic value
+class VPMonotonicHeaderPHIRecipe final : public VPHeaderPHIRecipe {
+public:
+  VPMonotonicHeaderPHIRecipe(PHINode *Phi, VPValue *StartValue)
+      : VPHeaderPHIRecipe(VPDef::VPMonotonicHeaderPHISC, Phi, StartValue) {}
+
+  ~VPMonotonicHeaderPHIRecipe() override = default;
+
+  void execute(VPTransformState &State) override;
+
+  VPRecipeBase *clone() override {
+    return new VPMonotonicHeaderPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
+                                          getOperand(0));
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPMonotonicHeaderPHISC);
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPDef::VPMonotonicHeaderPHISC;
+  }
+};
+
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when
 /// control converges back from a Branch-on-Mask. The phi nodes are needed in
 /// order to merge values that are set under such a branch and feed their uses.
@@ -2236,6 +2329,9 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
   // Whether the consecutive loaded/stored addresses are in reverse order.
   bool Reverse;
 
+  // Whether monotonic is used as an index in store.
+  bool Monotonic = false;
+
   void setMask(VPValue *Mask) {
     if (!Mask)
       return;
@@ -2258,10 +2354,14 @@ public:
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
+                                 bool Consecutive, bool Reverse,
+                                 bool Monotonic = false)
       : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue}),
-        Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
+        Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse),
+        Monotonic(Monotonic) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert((!Monotonic || Consecutive) &&
+           "Non-consecutive compress store is not supported");
     setMask(Mask);
   }
 
@@ -2300,6 +2400,9 @@ public:
 
   // Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
+
+  // Return whether store uses monotonic in address computation
+  bool isMonotonic() const { return Monotonic; }
 
   // Return whether the consecutive loaded/stored addresses are in reverse
   // order.
@@ -3410,6 +3513,8 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return Rep->isUniform();
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
+  if (isa<VPMonotonicUpdateInstruction, VPMonotonicHeaderPHIRecipe>(Def))
+    return true;
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
     return VPI->getOpcode() == VPInstruction::ComputeReductionResult;
   return false;

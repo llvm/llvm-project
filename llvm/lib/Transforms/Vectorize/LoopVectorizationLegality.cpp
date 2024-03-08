@@ -78,6 +78,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
                 "Scalable vectorization is available and favored when the "
                 "cost is inconclusive.")));
 
+static cl::opt<bool>
+    EnableMonotonics("enable-monotonics", cl::init(true), cl::Hidden,
+                     cl::desc("Control whether vectorization of loops with "
+                              "monotonic variables is enabled"));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -471,6 +476,35 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   return 0;
 }
 
+bool LoopVectorizationLegality::isConsecutiveMonotonicPtr(Value *Ptr) const {
+  assert(hasMonotonicOperand(Ptr) &&
+         "Pointer's computation does not use monotonic values.");
+
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  assert(GEP->getNumOperands() == 2 &&
+         "GetElementPtr with more than 1 indexes is not currently supported "
+         "and should be filtered out before.");
+  Value *Monotonic = GEP->getOperand(1);
+  if (auto *Cast = dyn_cast<CastInst>(Monotonic))
+    Monotonic = Cast->getOperand(0);
+  const MonotonicDescriptor *MD =
+      getMonotonicDescriptor(cast<Instruction>(Monotonic));
+  assert(MD && "The index has no MonotonicDescriptor associated with it.");
+  const SCEVConstant *Step = dyn_cast<SCEVConstant>(MD->getStep());
+  return Step && Step->getAPInt().getZExtValue() == 1;
+}
+
+bool LoopVectorizationLegality::hasMonotonicOperand(Value *Ptr) const {
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  if (!GEP)
+    return false;
+  return any_of(GEP->operands(), [&](Value *V) {
+    if (auto *Cast = dyn_cast<CastInst>(V))
+      return isMonotonicPhi(Cast->getOperand(0));
+    return isMonotonicPhi(V);
+  });
+}
+
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
   return LAI->isInvariant(V);
 }
@@ -678,6 +712,47 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   return Result;
 }
 
+bool LoopVectorizationLegality::canVectorizeMonotonic(const MonotonicDescriptor &MD) {
+  Value *Monotonic = MD.getPhis().front();
+  auto IsUserInLoop = [&](User *U) -> bool {
+    auto *I = dyn_cast<Instruction>(U);
+    return I && TheLoop->contains(I);
+  };
+  auto CanIgnoreUser = [&](User *U) -> bool {
+    if (auto *PN = dyn_cast<PHINode>(U))
+      if (MD.getPhis().contains(PN))
+        return true;
+    return U == MD.getUpdateOp();
+  };
+
+  for (User *U : Monotonic->users()) {
+    if (!IsUserInLoop(U) || CanIgnoreUser(U))
+      continue;
+
+    // For now expect monotonic value to be used by by zext with a single user
+    // or GEP
+    if (U->hasOneUser() && isa<ZExtInst, SExtInst>(U))
+      U = *cast<Instruction>(U)->users().begin();
+
+    if (!isa<GetElementPtrInst>(U))
+      return false;
+
+    // All GEPs should be used as a pointer operand of a store which represents
+    // compressstore.
+    if (any_of(U->users(), [&](User *UI) {
+          if (!IsUserInLoop(UI) || CanIgnoreUser(UI))
+            return false;
+          return UI != MD.getUpdateOp() &&
+                 (!isa<StoreInst>(UI) || getLoadStorePointerOperand(UI) != U);
+        })) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Expand of a monotonic value is not yet supported.\n");
+      return false;
+    }
+  }
+  return true;
+}
+
 void LoopVectorizationLegality::addInductionPhi(
     PHINode *Phi, const InductionDescriptor &ID,
     SmallPtrSetImpl<Value *> &AllowedExit) {
@@ -728,6 +803,11 @@ void LoopVectorizationLegality::addInductionPhi(
   }
 
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
+}
+
+void LoopVectorizationLegality::addMonotonic(const MonotonicDescriptor &MD) {
+  for (PHINode *P : MD.getPhis())
+    MonotonicPhis[P] = MD;
 }
 
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
@@ -880,6 +960,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           addInductionPhi(Phi, ID, AllowedExit);
           continue;
         }
+        if (EnableMonotonics && TTI->enableMonotonicVectorization())
+          if (auto MD = MonotonicDescriptor::isMonotonicPHI(Phi, TheLoop, PSE))
+            if (canVectorizeMonotonic(MD)) {
+              addMonotonic(MD);
+              continue;
+            }
 
         reportVectorizationFailure("Found an unidentified PHI",
             "value that could not be identified as "
