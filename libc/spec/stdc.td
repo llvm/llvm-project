@@ -948,7 +948,9 @@ def StdC : StandardSpec<"stdc"> {
 
   HeaderSpec IntTypes = HeaderSpec<
       "inttypes.h",
-      [], // Macros
+      [
+        Macro<"__STDC_VERSION_INTTYPES_H__">,
+      ], // Macros
       [
         IMaxDivTType,
       ], // Types
