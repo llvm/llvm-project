@@ -3637,6 +3637,107 @@ cc_library(
     ],
 )
 
+##---------------------------------------------------------------------------##
+# XeGPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "XeGPUTdFiles",
+    srcs = glob(["include/mlir/Dialect/XeGPU/IR/*.td"]),
+    includes = ["include"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "XeGPUIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=xegpu",
+            ],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=xegpu",
+            ],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUDialect.cpp.inc",
+        ),
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/XeGPU/IR/XeGPU.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/XeGPU/IR/XeGPU.cpp.inc",
+        ),
+        (
+            ["-gen-op-doc"],
+            "g3doc/Dialects/XeGPU/XeGPU.md",
+        ),
+        (
+            [
+                "-gen-typedef-decls",
+                "-typedefs-dialect=xegpu",
+            ],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUTypes.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "-typedefs-dialect=xegpu",
+            ],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUTypes.cpp.inc",
+        ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUEnums.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=xegpu",
+            ],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=xegpu",
+            ],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/IR/XeGPU.td",
+    deps = [":XeGPUTdFiles"],
+)
+
+cc_library(
+    name = "XeGPUDialect",
+    srcs = [
+        "lib/Dialect/XeGPU/IR/XeGPUDialect.cpp",
+        "lib/Dialect/XeGPU/IR/XeGPUOps.cpp",
+    ],
+    hdrs = ["include/mlir/Dialect/XeGPU/IR/XeGPU.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":XeGPUIncGen",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "FuncTdFiles",
     srcs = [
