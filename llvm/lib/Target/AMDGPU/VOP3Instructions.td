@@ -792,25 +792,34 @@ def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
 def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
 } // End SubtargetPredicate = isGFX9Plus
 
-// FIXME: GlobalISel in general does not handle instructions with 2 results,
-// so it cannot use these patterns.
 multiclass IMAD32_Pats <VOP3_Pseudo inst> {
   def : GCNPat <
         (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, i32:$src2),
-        (EXTRACT_SUBREG (inst $src0, $src1,
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1,
                               (REG_SEQUENCE SReg_64, // Use scalar and let it be legalized
                                             $src2, sub0,
                                             (i32 (IMPLICIT_DEF)), sub1),
                                             0 /* clamp */),
                         sub0)
         >;
+
+  // GISel-specific pattern that avoids creating a SGPR->VGPR copy if
+  // $src2 is a VGPR.
+  def : GCNPat <
+        (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, VGPR_32:$src2),
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1,
+                              (REG_SEQUENCE VReg_64,
+                                            $src2, sub0,
+                                            (i32 (IMPLICIT_DEF)), sub1),
+                                            0 /* clamp */),
+                        sub0)
+        >;
+
   // Immediate src2 in the pattern above will not fold because it would be partially
   // undef. Hence define specialized pattern for this case.
-  // FIXME: GlobalISel pattern exporter fails to export a pattern like this and asserts,
-  // make it SDAG only.
   def : GCNPat <
-        (ThreeOpFragSDAG<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
-        (EXTRACT_SUBREG (inst $src0, $src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
+        (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
         >;
 }
 
@@ -850,6 +859,13 @@ def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped
   let HasExtDPP = 0;
 }
 
+def VOP3_PERMLANE_NOOPSEL_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>> {
+  let Ins64 = (ins VRegSrc_32:$src0, SSrc_b32:$src1, SSrc_b32:$src2, VGPR_32:$vdst_in);
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
+
 def opsel_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(
       N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
@@ -872,6 +888,12 @@ class PermlaneVarPat<SDPatternOperator permlane,
             timm:$fi, timm:$bc),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         VGPR_32:$src1, VGPR_32:$vdst_in)
+>;
+
+class PermlaneNoDppPat<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
 
 class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f> {
@@ -956,6 +978,14 @@ let SubtargetPredicate = isGFX12Plus in {
   def : PermlaneVarPat<int_amdgcn_permlanex16_var, V_PERMLANEX16_VAR_B32_e64>;
 
 } // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = isGFX12_10Plus in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    defm V_PERMLANE_BCAST_B32 : VOP3Inst<"v_permlane_bcast_b32", VOP3_PERMLANE_NOOPSEL_Profile>;
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+
+  def : PermlaneNoDppPat<int_amdgcn_permlane_bcast,  V_PERMLANE_BCAST_B32_e64>;
+} // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = HasBitOp3Insts in {
   let isReMaterializable = 1 in {
@@ -1133,7 +1163,7 @@ let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MINIMUMMAXIMUM_F16 : VOP3Inst<"v_minimummaximum_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
-let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
+let OtherPredicates = [HasDot9Insts], IsDOT=1 in {
   defm V_DOT2_F16_F16 :   VOP3Inst<"v_dot2_f16_f16",   VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>, int_amdgcn_fdot2_f16_f16>;
   defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>, int_amdgcn_fdot2_bf16_bf16>;
 }
@@ -1293,6 +1323,7 @@ defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1210<0x25e>;
 defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1210<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1210<0x260>;
 defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1210<0x261>;
+defm V_PERMLANE_BCAST_B32 : VOP3Only_Real_Base_gfx12<0x270>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

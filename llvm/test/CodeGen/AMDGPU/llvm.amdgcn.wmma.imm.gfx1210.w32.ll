@@ -970,44 +970,39 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16(<16 x bfloat> %A, <16 x bflo
 ; GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; GISEL-NEXT:    v_dual_lshlrev_b32 v20, 16, v23 :: v_dual_lshlrev_b32 v21, 16, v24
 ; GISEL-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
 ; GISEL-NEXT:    v_dual_lshlrev_b32 v22, 16, v25 :: v_dual_bitop2_b32 v3, v18, v3 bitop3:0x54
 ; GISEL-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GISEL-NEXT:    v_and_b32_e32 v6, 0xffff, v6
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v19, 16, v9 :: v_dual_bitop2_b32 v4, v19, v4 bitop3:0x54
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v18, 16, v8 :: v_dual_bitop2_b32 v5, v20, v5 bitop3:0x54
-; GISEL-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v20, 16, v10 :: v_dual_bitop2_b32 v7, v22, v7 bitop3:0x54
-; GISEL-NEXT:    v_dual_lshrrev_b32 v22, 16, v12 :: v_dual_lshlrev_b32 v18, 16, v18
-; GISEL-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GISEL-NEXT:    v_dual_lshlrev_b32 v19, 16, v19 :: v_dual_lshrrev_b32 v23, 16, v13
-; GISEL-NEXT:    v_and_b32_e32 v9, 0xffff, v9
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v21, 16, v11 :: v_dual_bitop2_b32 v6, v21, v6 bitop3:0x54
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GISEL-NEXT:    v_or_b32_e32 v8, v18, v8
-; GISEL-NEXT:    v_dual_lshlrev_b32 v18, 16, v20 :: v_dual_bitop2_b32 v9, v19, v9 bitop3:0x54
+; GISEL-NEXT:    v_dual_lshrrev_b32 v22, 16, v12 :: v_dual_lshrrev_b32 v23, 16, v13
+; GISEL-NEXT:    v_dual_lshlrev_b32 v18, 16, v18 :: v_dual_lshlrev_b32 v19, 16, v19
+; GISEL-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; GISEL-NEXT:    v_and_b32_e32 v9, 0xffff, v9
+; GISEL-NEXT:    v_dual_lshlrev_b32 v20, 16, v20 :: v_dual_lshrrev_b32 v24, 16, v14
 ; GISEL-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GISEL-NEXT:    v_dual_lshrrev_b32 v24, 16, v14 :: v_dual_lshrrev_b32 v25, 16, v15
-; GISEL-NEXT:    v_lshlrev_b32_e32 v19, 16, v21
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GISEL-NEXT:    v_dual_lshrrev_b32 v25, 16, v15 :: v_dual_bitop2_b32 v8, v18, v8 bitop3:0x54
+; GISEL-NEXT:    v_dual_lshlrev_b32 v19, 16, v22 :: v_dual_bitop2_b32 v9, v19, v9 bitop3:0x54
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GISEL-NEXT:    v_dual_lshlrev_b32 v18, 16, v21 :: v_dual_bitop2_b32 v10, v20, v10 bitop3:0x54
 ; GISEL-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GISEL-NEXT:    v_lshlrev_b32_e32 v20, 16, v22
-; GISEL-NEXT:    v_dual_lshlrev_b32 v18, 16, v23 :: v_dual_bitop2_b32 v10, v18, v10 bitop3:0x54
-; GISEL-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GISEL-NEXT:    s_mov_b32 s0, 0x3f803f80
 ; GISEL-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GISEL-NEXT:    v_dual_lshlrev_b32 v19, 16, v24 :: v_dual_bitop2_b32 v11, v19, v11 bitop3:0x54
+; GISEL-NEXT:    v_dual_lshlrev_b32 v20, 16, v23 :: v_dual_lshlrev_b32 v21, 16, v24
+; GISEL-NEXT:    v_and_b32_e32 v13, 0xffff, v13
 ; GISEL-NEXT:    v_and_b32_e32 v14, 0xffff, v14
+; GISEL-NEXT:    v_dual_lshlrev_b32 v22, 16, v25 :: v_dual_bitop2_b32 v11, v18, v11 bitop3:0x54
 ; GISEL-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GISEL-NEXT:    s_mov_b32 s1, s0
-; GISEL-NEXT:    s_mov_b32 s2, s0
-; GISEL-NEXT:    s_mov_b32 s3, s0
-; GISEL-NEXT:    v_or_b32_e32 v13, v18, v13
-; GISEL-NEXT:    v_dual_lshlrev_b32 v18, 16, v25 :: v_dual_bitop2_b32 v12, v20, v12 bitop3:0x54
-; GISEL-NEXT:    v_or_b32_e32 v14, v19, v14
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_dual_mov_b64 v[20:21], s[2:3] :: v_dual_bitop2_b32 v15, v18, v15 bitop3:0x54
-; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[0:1]
-; GISEL-NEXT:    v_wmma_bf16_16x16x32_bf16 v[18:21], v[0:7], v[8:15], v[18:21]
+; GISEL-NEXT:    v_or_b32_e32 v12, v19, v12
+; GISEL-NEXT:    v_or_b32_e32 v13, v20, v13
+; GISEL-NEXT:    v_or_b32_e32 v14, v21, v14
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_or_b32_e32 v15, v22, v15
+; GISEL-NEXT:    v_wmma_bf16_16x16x32_bf16 v[18:21], v[0:7], v[8:15], 1.0
 ; GISEL-NEXT:    global_store_b128 v[16:17], v[18:21], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -2517,14 +2512,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x128_f8f6f4(<16 x i32> %A, <16 x i32>
 ;
 ; GISEL-LABEL: test_wmma_bf16_16x16x128_f8f6f4:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    s_mov_b32 s0, 0x3f803f80
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    s_mov_b32 s2, s0
-; GISEL-NEXT:    s_mov_b32 s3, s0
-; GISEL-NEXT:    s_mov_b32 s1, s0
-; GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[2:3]
-; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
-; GISEL-NEXT:    v_wmma_bf16_16x16x128_f8f6f4 v[34:37], v[0:15], v[16:31], v[34:37]
+; GISEL-NEXT:    v_wmma_bf16_16x16x128_f8f6f4 v[34:37], v[0:15], v[16:31], 1.0
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[34:37], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -2718,14 +2706,7 @@ define amdgpu_ps void @test_wmma_scale_bf16_16x16x128_f8f6f4(<16 x i32> %A, <16 
 ;
 ; GISEL-LABEL: test_wmma_scale_bf16_16x16x128_f8f6f4:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    s_mov_b32 s4, 0x3f803f80
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    s_mov_b32 s6, s4
-; GISEL-NEXT:    s_mov_b32 s7, s4
-; GISEL-NEXT:    s_mov_b32 s5, s4
-; GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[6:7]
-; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[4:5]
-; GISEL-NEXT:    v_wmma_scale_bf16_16x16x128_f8f6f4 v[34:37], v[0:15], v[16:31], v[34:37], s0, s1 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_WORD1
+; GISEL-NEXT:    v_wmma_scale_bf16_16x16x128_f8f6f4 v[34:37], v[0:15], v[16:31], 1.0, s0, s1 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_WORD1
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[34:37], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm

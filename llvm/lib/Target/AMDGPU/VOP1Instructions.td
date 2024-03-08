@@ -879,12 +879,12 @@ multiclass PermlaneSwapPat<SDPatternOperator node,
   >;
 }
 
-let SubtargetPredicate = HasGFX950Insts in {
+let SubtargetPredicate = HasPermlane16Swap in
 defm : PermlaneSwapPat<int_amdgcn_permlane16_swap,
                        "V_PERMLANE16_SWAP_B32">;
+let SubtargetPredicate = HasPermlane32Swap in
 defm : PermlaneSwapPat<int_amdgcn_permlane32_swap,
                        "V_PERMLANE32_SWAP_B32">;
-}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
@@ -1082,6 +1082,13 @@ multiclass VOP1_Real_FULL_t16_gfx1210<bits<9> op> :
   VOP1_Real_FULL_with_name<GFX12_10Gen, op, !subst("_t16", "_fake16", NAME),
                            !cast<VOP1_Pseudo>(!subst("_t16", "", NAME)#"_e32").Mnemonic>;
 
+multiclass VOP1_Real_OpSelIsDPP_gfx1210<bits<9> op> : VOP1_Real_e32<GFX12_10Gen, op> {
+   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+   def _e64_gfx1210 :
+        VOP3_Real_Gen<ps, GFX12_10Gen>,
+        VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
+}
+
 // Define VOP1 instructions using the pseudo instruction with its old profile and
 // VOP3 using the OpSel profile for the pseudo instruction.
 defm V_CVT_F32_FP8      : VOP1_Real_NO_VOP3_with_name_gfx12<0x06c, "V_CVT_F32_FP8", "v_cvt_f32_fp8">;
@@ -1147,6 +1154,7 @@ defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_
 
 defm V_TANH_F32              : VOP1_Real_FULL<GFX12_10Gen, 0x01e>;
 defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210<0x01f>;
+defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1210<0x049>;
 defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 defm V_CVT_F32_BF16_t16      : VOP1_Real_FULL_t16_gfx1210<0x072>;
