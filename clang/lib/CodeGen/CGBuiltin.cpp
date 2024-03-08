@@ -10686,6 +10686,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
   }
 
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_trap) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_break);
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(F, Builder.CreateZExt(Arg, CGM.Int32Ty));
+  }
+
   if (BuiltinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
     // Create call to __arm_sme_state and store the results to the two pointers.
     CallInst *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
