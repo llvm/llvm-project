@@ -20,7 +20,7 @@
 
 /* This fix replaces gettimeofday with clock_gettime for better scalability on
    the Altix.  Requires user code to be linked with -lrt. */
-//#define FIX_SGI_CLOCK
+// #define FIX_SGI_CLOCK
 
 /* Defines for OpenMP 3.0 tasking and auto scheduling */
 
@@ -463,8 +463,9 @@ enum sched_type : kmp_int32 {
 #define SCHEDULE_WITHOUT_MODIFIERS(s)                                          \
   (enum sched_type)(                                                           \
       (s) & ~(kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic))
-#define SCHEDULE_HAS_MONOTONIC(s) (((s)&kmp_sch_modifier_monotonic) != 0)
-#define SCHEDULE_HAS_NONMONOTONIC(s) (((s)&kmp_sch_modifier_nonmonotonic) != 0)
+#define SCHEDULE_HAS_MONOTONIC(s) (((s) & kmp_sch_modifier_monotonic) != 0)
+#define SCHEDULE_HAS_NONMONOTONIC(s)                                           \
+  (((s) & kmp_sch_modifier_nonmonotonic) != 0)
 #define SCHEDULE_HAS_NO_MODIFIERS(s)                                           \
   (((s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)) == 0)
 #define SCHEDULE_GET_MODIFIERS(s)                                              \
@@ -2729,7 +2730,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
 #if OMPX_TASKGRAPH
-  unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
+  unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay
+                         purposes */
   unsigned reserved31 : 6; /* reserved for library use */
 #else
   unsigned reserved31 : 7; /* reserved for library use */
@@ -3881,7 +3883,8 @@ extern void __kmp_check_stack_overlap(kmp_info_t *thr);
 extern void __kmp_expand_host_name(char *buffer, size_t size);
 extern void __kmp_expand_file_name(char *result, size_t rlen, char *pattern);
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM))
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 ||                                         \
+    (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM))
 extern void
 __kmp_initialize_system_tick(void); /* Initialize timer tick value */
 #endif

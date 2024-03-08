@@ -120,7 +120,7 @@ extern void __kmp_validate_locks(void);
 
 struct kmp_base_tas_lock {
   // KMP_LOCK_FREE(tas) => unlocked; locked: (gtid+1) of owning thread
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) &&       \
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) &&     \
     __LP64__
   // Flip the ordering of the high and low 32-bit member to be consistent
   // with the memory layout of the address in 64-bit big-endian.
@@ -661,9 +661,8 @@ extern int (*__kmp_acquire_user_lock_with_checks_)(kmp_user_lock_p lck,
       KMP_INIT_BACKOFF(time);                                                  \
       do {                                                                     \
         KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);                              \
-      } while (                                                                \
-          lck->tas.lk.poll != 0 ||                                             \
-          !__kmp_atomic_compare_store_acq(&lck->tas.lk.poll, 0, gtid + 1));    \
+      } while (lck->tas.lk.poll != 0 || !__kmp_atomic_compare_store_acq(       \
+                                            &lck->tas.lk.poll, 0, gtid + 1));  \
     }                                                                          \
     KMP_FSYNC_ACQUIRED(lck);                                                   \
   } else {                                                                     \
