@@ -3081,8 +3081,8 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                                  MCStreamer &Out) {
-  SmallVector<MCInst, 8> Seq =
-      RISCVMatInt::generateMCInstSeq(Value, getSTI(), DestReg);
+  SmallVector<MCInst, 8> Seq;
+  RISCVMatInt::generateMCInstSeq(Value, getSTI(), DestReg, Seq);
 
   for (MCInst &Inst : Seq) {
     emitToStreamer(Out, Inst);

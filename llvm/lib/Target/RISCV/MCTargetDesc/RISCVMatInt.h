@@ -51,8 +51,8 @@ using InstSeq = SmallVector<Inst, 8>;
 InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI);
 
 // Helper to generate the generateInstSeq instruction sequence using MCInsts
-SmallVector<MCInst, 8>
-generateMCInstSeq(int64_t Val, const MCSubtargetInfo &STI, MCRegister DestReg);
+void generateMCInstSeq(int64_t Val, const MCSubtargetInfo &STI,
+                       MCRegister DestReg, SmallVectorImpl<MCInst> &Insts);
 
 // Helper to generate an instruction sequence that can materialize the given
 // immediate value into a register using an additional temporary register. This
