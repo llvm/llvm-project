@@ -197,3 +197,11 @@
 // RUN: not %clang -### %s --target=wasm32-unknown-unknown --sysroot=%s/no-sysroot-there -fPIC -mno-mutable-globals %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=PIC_NO_MUTABLE_GLOBALS %s
 // PIC_NO_MUTABLE_GLOBALS: error: invalid argument '-fPIC' not allowed with '-mno-mutable-globals'
+
+// Test that `wasm32-wasip2` invokes the `wasm-component-ld` linker by default
+// instead of `wasm-ld`.
+
+// RUN: %clang -### -O2 --target=wasm32-wasip2 %s --sysroot /foo 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP2 %s
+// LINK_WASIP2: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
+// LINK_WASIP2: wasm-component-ld{{.*}}" "-L/foo/lib/wasm32-wasip2" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"

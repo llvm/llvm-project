@@ -221,6 +221,12 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
+const char *WebAssembly::getDefaultLinker() const {
+  if (getOS() == "wasip2")
+    return "wasm-component-ld";
+  return "wasm-ld";
+}
+
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
 
 bool WebAssembly::IsObjCNonFragileABIDefault() const { return true; }
