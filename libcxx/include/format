@@ -199,7 +199,6 @@ namespace std {
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/format_functions.h>
-#include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__format/format_to_n_result.h>
@@ -215,6 +214,7 @@ namespace std {
 #include <__format/range_default_formatter.h>
 #include <__format/range_formatter.h>
 #include <__format/unicode.h>
+#include <__fwd/format.h>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

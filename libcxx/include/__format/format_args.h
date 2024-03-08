@@ -14,7 +14,7 @@
 #include <__config>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
-#include <__format/format_fwd.h>
+#include <__fwd/format.h>
 #include <cstddef>
 #include <cstdint>
 
