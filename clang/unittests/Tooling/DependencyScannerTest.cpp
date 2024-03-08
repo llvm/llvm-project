@@ -355,5 +355,5 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   EXPECT_TRUE(llvm::find(InterceptFS->StatPaths, OtherPath) ==
               InterceptFS->StatPaths.end());
-  EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"/root/test.m"});
+  EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});
 }
