@@ -85,7 +85,7 @@
                            # CHECK-NEXT:                # <MCInst #{{.*}} LH_MM
   lhu $4, 8($2)            # CHECK: lhu $4, 8($2)       # encoding: [0x34,0x82,0x00,0x08]
                            # CHECK-NEXT:                # <MCInst #{{.*}} LHu_MM
-  lsa $2, $3, $4, 3        # CHECK: lsa  $2, $3, $4, 3  # encoding: [0x00,0x43,0x24,0x0f]
+  lsa $2, $3, $4, 3        # CHECK: lsa  $2, $3, $4, 3  # encoding: [0x00,0x83,0x14,0x0f]
   lwpc    $2,268           # CHECK: lwpc $2, 268        # encoding: [0x78,0x48,0x00,0x43]
   lwm $16, $17, $ra, 8($sp)   # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x22]
   lwm16 $16, $17, $ra, 8($sp) # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x22]
@@ -194,7 +194,7 @@
   msubf.d $f3, $f4, $f5    # CHECK: msubf.d $f3, $f4, $f5 # encoding: [0x54,0xa4,0x1b,0xf8]
   mov.s $f6, $f7           # CHECK: mov.s $f6, $f7      # encoding: [0x54,0xc7,0x00,0x7b]
   mov.d $f4, $f6           # CHECK: mov.d $f4, $f6      # encoding: [0x54,0x86,0x20,0x7b]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FMOV_D64_MM
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FMOV_D_MMR6
   neg.s $f6, $f7           # CHECK: neg.s $f6, $f7      # encoding: [0x54,0xc7,0x0b,0x7b]
   neg.d   $f0, $f2         # CHECK: neg.d   $f0, $f2    # encoding: [0x54,0x02,0x2b,0x7b]
                            # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FNEG_D64_MM
