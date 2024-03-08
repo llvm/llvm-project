@@ -1553,7 +1553,7 @@ defm V_WMMA_SCALE_F32_16x16x128_F8F6F4_w32  : WMMAInstGFX12<"v_wmma_scale_f32_16
 defm V_WMMA_SCALE_BF16_16x16x128_F8F6F4_w32 : WMMAInstGFX12<"v_wmma_scale_bf16_16x16x128_f8f6f4", BF16_16x16x128_F8F6F4_SCALE_w32, "_w32">;
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Not12_10 in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot12_10 in {
 defm V_WMMA_F32_16X16X16_F16_w32     : WMMAInstGFX12<"v_wmma_f32_16x16x16_f16",     F32_F16_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X16_BF16_w32    : WMMAInstGFX12<"v_wmma_f32_16x16x16_bf16",    F32_BF16_WMMA_w32, "_w32">;
 defm V_WMMA_F16_16X16X16_F16_w32     : WMMAInstGFX12<"v_wmma_f16_16x16x16_f16",     F16_F16_WMMA_w32, "_w32">;
@@ -1579,7 +1579,7 @@ defm V_SWMMAC_F32_16X16X32_BF8_FP8_w32 : SWMMACInstGFX12<"v_swmmac_f32_16x16x32_
 defm V_SWMMAC_F32_16X16X32_BF8_BF8_w32 : SWMMACInstGFX12<"v_swmmac_f32_16x16x32_bf8_bf8", F32_FP8BF8_SWMMAC_w32, "_w32">;
 }
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_10 in {
 defm V_WMMA_F32_16X16X16_F16_w64     : WMMAInstGFX12<"v_wmma_f32_16x16x16_f16",     F32_F16_WMMA_w64, "_w64">;
 defm V_WMMA_F32_16X16X16_BF16_w64    : WMMAInstGFX12<"v_wmma_f32_16x16x16_bf16",    F32_BF16_WMMA_w64, "_w64">;
 defm V_WMMA_F16_16X16X16_F16_w64     : WMMAInstGFX12<"v_wmma_f16_16x16x16_f16",     F16_F16_WMMA_w64, "_w64">;
@@ -1625,7 +1625,7 @@ class SWMMACPat_w64<Instruction Inst, SDPatternOperator node, VOP3PWMMA_Profile 
             let WaveSizePredicate = isWave64;
           }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Not12_10 in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot12_10 in {
   defm : WMMAPat<"V_WMMA_F32_16X16X16_F16_w32",     int_amdgcn_wmma_f32_16x16x16_f16,     F32_F16_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X16_BF16_w32",    int_amdgcn_wmma_f32_16x16x16_bf16,    F32_BF16_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X16_F16_w32",     int_amdgcn_wmma_f16_16x16x16_f16,     F16_F16_WMMA_w32,1>;
@@ -1652,7 +1652,7 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Not12_10 in {
   def : SWMMACPat<V_SWMMAC_F32_16X16X32_BF8_BF8_w32_twoaddr, int_amdgcn_swmmac_f32_16x16x32_bf8_bf8, F32_FP8BF8_SWMMAC_w32>;
 }
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_10 in {
   defm : WMMAPat<"V_WMMA_F32_16X16X16_F16_w64",     int_amdgcn_wmma_f32_16x16x16_f16,     F32_F16_WMMA_w64>;
   defm : WMMAPat<"V_WMMA_F32_16X16X16_BF16_w64",    int_amdgcn_wmma_f32_16x16x16_bf16,    F32_BF16_WMMA_w64>;
   defm : WMMAPat<"V_WMMA_F16_16X16X16_F16_w64",     int_amdgcn_wmma_f16_16x16x16_f16,     F16_F16_WMMA_w64,1>;

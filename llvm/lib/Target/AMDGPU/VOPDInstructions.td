@@ -205,7 +205,7 @@ defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon
 defvar VOPDYPseudosGFX1210 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1210);
 
 def GFX11GenD : GFXGenD<GFX11Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
-def GFX12GenD : GFXGenD<GFX12Not12_10Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
+def GFX12GenD : GFXGenD<GFX12PlusNot12_10Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
 def GFX1210GenD : GFXGenD<GFX12_10Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1210>;
 
 

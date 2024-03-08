@@ -1102,7 +1102,7 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 } // End SubtargetPredicate = isGFX12Plus
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_10 in {
   defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
   defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
 }
@@ -1835,7 +1835,7 @@ let OtherPredicates = [isGFX12Plus] in {
   }
 }
 
-let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12Not12_10] in {
+let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_10] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr, i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr, v4i16>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr, v4f16>;
@@ -3082,7 +3082,7 @@ defm GLOBAL_ATOMIC_MIN_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_A
 defm GLOBAL_ATOMIC_MAX_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056>;
 
-let SubtargetPredicate = isGFX12Not12_10, DecoderNamespace = "GFX12" in {
+let SubtargetPredicate = isGFX12PlusNot12_10, DecoderNamespace = "GFX12" in {
   defm GLOBAL_LOAD_TR_B128_w32     : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_tr_b128">;
   defm GLOBAL_LOAD_TR_B64_w32      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr_b64">;
 }
