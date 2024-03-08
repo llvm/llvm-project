@@ -984,11 +984,13 @@ let SubtargetPredicate = isGFX12_10Plus in {
     defm V_PERMLANE_BCAST_B32 : VOP3Inst<"v_permlane_bcast_b32", VOP3_PERMLANE_NOOPSEL_Profile>;
     defm V_PERMLANE_UP_B32    : VOP3Inst<"v_permlane_up_b32",    VOP3_PERMLANE_NOOPSEL_Profile>;
     defm V_PERMLANE_DOWN_B32  : VOP3Inst<"v_permlane_down_b32",  VOP3_PERMLANE_NOOPSEL_Profile>;
+    defm V_PERMLANE_XOR_B32   : VOP3Inst<"v_permlane_xor_b32",   VOP3_PERMLANE_NOOPSEL_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
   def : PermlaneNoDppPat<int_amdgcn_permlane_bcast, V_PERMLANE_BCAST_B32_e64>;
   def : PermlaneNoDppPat<int_amdgcn_permlane_up,    V_PERMLANE_UP_B32_e64>;
   def : PermlaneNoDppPat<int_amdgcn_permlane_down,  V_PERMLANE_DOWN_B32_e64>;
+  def : PermlaneNoDppPat<int_amdgcn_permlane_xor,   V_PERMLANE_XOR_B32_e64>;
 } // End SubtargetPredicate = isGFX12_10Plus
 
 let SubtargetPredicate = HasBitOp3Insts in {
@@ -1330,6 +1332,7 @@ defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1210<0x261>;
 defm V_PERMLANE_BCAST_B32 : VOP3Only_Real_Base_gfx12<0x270>;
 defm V_PERMLANE_UP_B32    : VOP3Only_Real_Base_gfx12<0x271>;
 defm V_PERMLANE_DOWN_B32  : VOP3Only_Real_Base_gfx12<0x272>;
+defm V_PERMLANE_XOR_B32   : VOP3Only_Real_Base_gfx12<0x273>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

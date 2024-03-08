@@ -983,6 +983,13 @@ define amdgpu_kernel void @v_permlane_down_b32(ptr addrspace(1) %out, i32 %src0,
   ret void
 }
 
+; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+define amdgpu_kernel void @v_permlane_xor_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
+  %result= call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1) #1
@@ -1092,6 +1099,7 @@ declare i32 @llvm.amdgcn.permlane16.swap(i32, i32, i1 immarg, i1 immarg)
 declare i32 @llvm.amdgcn.permlane.bcast(i32, i32, i32, i32)
 declare i32 @llvm.amdgcn.permlane.up(i32, i32, i32, i32)
 declare i32 @llvm.amdgcn.permlane.down(i32, i32, i32, i32)
+declare i32 @llvm.amdgcn.permlane.xor(i32, i32, i32, i32)
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }

@@ -171,7 +171,8 @@ static bool isPermlane(const MachineInstr &MI) {
          Opcode == AMDGPU::V_PERMLANE16_SWAP_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANE_BCAST_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANE_UP_B32_e64 ||
-         Opcode == AMDGPU::V_PERMLANE_DOWN_B32_e64;
+         Opcode == AMDGPU::V_PERMLANE_DOWN_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE_XOR_B32_e64;
 }
 
 static bool isLdsDma(const MachineInstr &MI) {
