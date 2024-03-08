@@ -465,6 +465,9 @@ public:
 
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
+  // Remove all references or state about Func that OpenMPIRBuilder may
+  // be keeping
+  void dropFunction(Function *Func);
   /// Finalize the underlying module, e.g., by outlining regions.
   /// \param Fn                    The function to be finalized. If not used,
   ///                              all functions are finalized.
@@ -1517,6 +1520,9 @@ public:
 
   /// Add a new region that will be outlined later.
   void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
+
+  // Remove Outlining information if it refers to a certain function
+  void removeFuncFromOutlineInfo(llvm::Function *Func);
 
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +

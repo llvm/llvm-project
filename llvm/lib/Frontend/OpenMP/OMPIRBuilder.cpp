@@ -488,6 +488,14 @@ void OpenMPIRBuilderConfig::setHasRequiresDynamicAllocators(bool Value) {
 // OpenMPIRBuilder
 //===----------------------------------------------------------------------===//
 
+void OpenMPIRBuilder::removeFuncFromOutlineInfo(llvm::Function *Func) {
+  OutlineInfos.erase(std::remove_if(OutlineInfos.begin(), OutlineInfos.end(),
+                                    [&](const OutlineInfo &OI) {
+                                      return OI.getFunction() == Func;
+                                    }),
+                     OutlineInfos.end());
+}
+
 void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
                                           IRBuilderBase &Builder,
                                           SmallVector<Value *> &ArgsVector) {
@@ -792,6 +800,10 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
   if (!OffloadInfoManager.empty())
     createOffloadEntriesAndInfoMetadata(ErrorReportFn);
+}
+
+void OpenMPIRBuilder::dropFunction(Function *Func) {
+  removeFuncFromOutlineInfo(Func);
 }
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
