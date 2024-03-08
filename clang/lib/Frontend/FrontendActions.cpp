@@ -210,7 +210,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
       +CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
-  return std::move(Consumers);
+  return Consumers;
 }
 
 std::unique_ptr<ASTConsumer>
