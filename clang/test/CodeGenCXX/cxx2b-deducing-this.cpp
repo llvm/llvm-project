@@ -109,3 +109,15 @@ void test_temporary() {
 //CHECK:    %ref.tmp = alloca %struct.MaterializedTemporary, align 1
 //CHECK:    call void @_ZN21MaterializedTemporaryC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
 //CHECK     invoke void @_ZNH21MaterializedTemporary3fooEOS_(ptr noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
+
+
+namespace GH84163 {
+// Just check that this doesn't crash.
+template <typename> struct S {};
+
+void a() {
+  int x;
+  const auto l = [&x](this auto&) { S<decltype(x)> q; };
+  l();
+}
+}
