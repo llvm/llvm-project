@@ -11607,12 +11607,14 @@ private:
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
-  /// used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
   /// the case of lambdas) set up the LocalInstantiationScope of the current
   /// function.
-  bool SetupConstraintScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-      MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope);
+  bool
+  SetupConstraintScope(FunctionDecl *FD,
+                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       const MultiLevelTemplateArgumentList &MLTAL,
+                       LocalInstantiationScope &Scope);
 
   /// Used during constraint checking, sets up the constraint template argument
   /// lists, and calls SetupConstraintScope to set up the
