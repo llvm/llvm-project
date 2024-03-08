@@ -53,16 +53,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 
   auto UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
   auto Act = CI.getFrontendOpts().ProgramAction;
-
   auto EmitsCIR = Act == EmitCIR || Act == EmitCIROnly;
-  auto IsImplementedCIROutput = EmitsCIR || Act == EmitLLVM ||
-                                Act == EmitMLIR || Act == EmitAssembly ||
-                                Act == EmitObj;
 
-  if (UseCIR && !IsImplementedCIROutput)
-    llvm::report_fatal_error(
-        "-fclangir currently only works with -emit-cir, -emit-cir-only, "
-        "-emit-mlir, -emit-llvm, -emit-obj, and -S");
   if (!UseCIR && EmitsCIR)
     llvm::report_fatal_error(
         "-emit-cir and -emit-cir-only only valid when using -fclangir");
