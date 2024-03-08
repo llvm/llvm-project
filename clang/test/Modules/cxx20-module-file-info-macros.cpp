@@ -17,6 +17,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/named_module.cppm -emit-module-interface -o %t/M.pcm
 // RUN: %clang_cc1 -module-file-info %t/M.pcm | FileCheck %t/named_module.cppm
 
+// RUN: %clang_cc1 -std=c++20 %t/named_module.cppm -emit-reduced-module-interface -o %t/M.pcm
+// RUN: %clang_cc1 -module-file-info %t/M.pcm | FileCheck %t/named_module.cppm
+
 //--- foo.h
 #pragma once
 #define FOO
