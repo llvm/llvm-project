@@ -34,6 +34,7 @@ class SPIRVGlobalRegistry {
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
 
+  // Map LLVM Type* to <MF, Reg>
   SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
