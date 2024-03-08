@@ -63,7 +63,6 @@ define <3 x float> @fptrunc_v3f64_v3f32(<3 x double> %a) {
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fptrunc <3 x double> %a to <3 x float>
@@ -82,22 +81,14 @@ entry:
 }
 
 define <2 x half> @fptrunc_v2f64_v2f16(<2 x double> %a) {
-; CHECK-SD-LABEL: fptrunc_v2f64_v2f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fptrunc_v2f64_v2f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    fcvt h0, d0
-; CHECK-GI-NEXT:    fcvt h1, d1
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fptrunc_v2f64_v2f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    fcvt h0, d0
+; CHECK-NEXT:    fcvt h1, d1
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %c = fptrunc <2 x double> %a to <2 x half>
   ret <2 x half> %c
@@ -121,7 +112,6 @@ define <3 x half> @fptrunc_v3f64_v3f16(<3 x double> %a) {
 ; CHECK-GI-NEXT:    fcvt h2, d2
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -167,13 +157,9 @@ define <2 x half> @fptrunc_v2f32_v2f16(<2 x float> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:

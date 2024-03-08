@@ -5938,9 +5938,12 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
   for (unsigned i = 2, e = DstSize / EltSize + 1; i < e; ++i) {
     // Note that if we don't do a subregister copy, we can end up making an
     // extra register.
-    PrevMI = &*emitLaneInsert(std::nullopt, DstVec, I.getOperand(i).getReg(),
-                              i - 1, RB, MIB);
-    DstVec = PrevMI->getOperand(0).getReg();
+    Register OpReg = I.getOperand(i).getReg();
+    // Do not emit inserts for undefs
+    if (!getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, OpReg, MRI)) {
+      PrevMI = &*emitLaneInsert(std::nullopt, DstVec, OpReg, i - 1, RB, MIB);
+      DstVec = PrevMI->getOperand(0).getReg();
+    }
   }
 
   // If DstTy's size in bits is less than 128, then emit a subregister copy
@@ -5972,12 +5975,20 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
     MachineOperand &RegOp = I.getOperand(1);
     RegOp.setReg(Reg);
     RBI.constrainGenericRegister(DstReg, *RC, MRI);
-  } else {
+  } else if (PrevMI) {
     // We don't need a subregister copy. Save a copy by re-using the
     // destination register on the final insert.
-    assert(PrevMI && "PrevMI was null?");
     PrevMI->getOperand(0).setReg(I.getOperand(0).getReg());
     constrainSelectedInstRegOperands(*PrevMI, TII, TRI, RBI);
+  } else {
+    // All the operands (other than the first one) to the G_BUILD_VECTOR were
+    // undef, so PrevMI is nullptr. Emit a copy from the vector made from the
+    // first operand to the destination register.
+    const TargetRegisterClass *RC =
+        getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DstVec, MRI, TRI));
+    Register DstReg = I.getOperand(0).getReg();
+    MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {}).addReg(DstVec, 0);
+    RBI.constrainGenericRegister(DstReg, *RC, MRI);
   }
 
   I.eraseFromParent();
