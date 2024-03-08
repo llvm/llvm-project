@@ -290,7 +290,7 @@ is:
 
 .. code-block:: llvm
 
-    #dbg_<kind>([<arg>, ]*, <DILocation>)
+    #dbg_<kind>([<arg>, ]* <DILocation>)
   ; Using the intrinsic model, the above is equivalent to:
   call void llvm.dbg.<kind>([metadata <arg>, ]*), !dbg <DILocation>
 
@@ -311,7 +311,7 @@ For each kind of intrinsic function, there is an equivalent debug record.
 
 .. code-block:: llvm
 
-    #dbg_declare(Value, DILocalVariable, DIExpression, DILocation)
+    #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
 
 Equivalent to the ``llvm.dbg.declare`` intrinsic.
 
@@ -320,7 +320,7 @@ Equivalent to the ``llvm.dbg.declare`` intrinsic.
 
 .. code-block:: llvm
 
-    #dbg_value([Value|DIArgList], DILocalVariable, DIExpression, DILocation)
+    #dbg_value([Value|DIArgList|MDNode], DILocalVariable, DIExpression, DILocation)
 
 Equivalent to the ``llvm.dbg.value`` intrinsic.
 
@@ -329,8 +329,8 @@ Equivalent to the ``llvm.dbg.value`` intrinsic.
 
 .. code-block:: llvm
 
-    #dbg_assign([Value|DIArgList], DILocalVariable, DIExpression, DIAssignID,
-                Value, DIExpression, DILocation)
+    #dbg_assign([Value|DIArgList|MDNode], DILocalVariable, DIExpression,
+                DIAssignID, [Value|MDNode], DIExpression, DILocation)
 
 Equivalent to the ``llvm.dbg.assign`` intrinsic.
 
