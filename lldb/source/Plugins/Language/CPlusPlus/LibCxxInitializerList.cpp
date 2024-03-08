@@ -26,7 +26,7 @@ public:
 
   ~LibcxxInitializerListSyntheticFrontEnd() override;
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  uint32_t CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -59,8 +59,8 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
   // delete m_start;
 }
 
-llvm::Expected<uint32_t> lldb_private::formatters::
-    LibcxxInitializerListSyntheticFrontEnd::CalculateNumChildren() {
+uint32_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
+    CalculateNumChildren() {
   m_num_elements = 0;
   ValueObjectSP size_sp(m_backend.GetChildMemberWithName("__size_"));
   if (size_sp)

@@ -123,7 +123,9 @@ public:
 
   ~NSExceptionSyntheticFrontEnd() override = default;
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override { return 4; }
+  uint32_t CalculateNumChildren() override {
+    return 4;
+  }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     switch (idx) {
