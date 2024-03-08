@@ -3588,8 +3588,16 @@ static FailureOr<Operation *> vectorizeConvolution(
   if (!inputVecSizes.empty()) {
     // Only use the input vector size corresponding to the channel dim. Other
     // vector dims will be inferred from the Ops.
-    vecChDimSize = inputVecSizes[2];
-    vecChDimScalableFlag = inputScalableVecDims[2];
+    assert((isa<linalg::DepthwiseConv1DNwcWcOp>(*op) ||
+            isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) &&
+           "Not a 1D depthwise conv!");
+    size_t chDimIdx =
+        TypeSwitch<Operation *, size_t>(op)
+            .Case<linalg::DepthwiseConv1DNwcWcOp>([](auto conv) { return 2; })
+            .Case<linalg::DepthwiseConv1DNcwCwOp>([](auto conv) { return 1; });
+
+    vecChDimSize = inputVecSizes[chDimIdx];
+    vecChDimScalableFlag = inputScalableVecDims[chDimIdx];
   }
   return e.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
                                flatten1DDepthwiseConv);
