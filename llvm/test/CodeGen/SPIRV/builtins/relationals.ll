@@ -14,28 +14,28 @@ define spir_kernel void @k() {
 entry:
   %arg1 = alloca <4 x float>, align 16
   %ret = alloca <4 x i8>, align 4
-  %0 = load <4 x float>, <4 x float>* %arg1, align 16
-  %call1 = call spir_func <4 x i8> @_Z13__spirv_IsNanIDv4_aDv4_fET_T0_(<4 x float> %0)
+  %loaded = load <4 x float>, <4 x float>* %arg1, align 16
+  %call1 = call spir_func <4 x i8> @_Z13__spirv_IsNanIDv4_aDv4_fET_T0_(<4 x float> %loaded)
 ; CHECK-SPIRV: %[[#IsNanRes:]] = OpIsNan %[[#TBoolVec]]
 ; CHECK-SPIRV: %[[#SelectRes:]] = OpSelect %[[#]] %[[#IsNanRes]]
 ; CHECK-SPIRV: OpStore %[[#]] %[[#SelectRes]]
   store <4 x i8> %call1, <4 x i8>* %ret, align 4
-  %call2 = call spir_func <4 x i8> @_Z13__spirv_IsInfIDv4_aDv4_fET_T0_(<4 x float> %0)
+  %call2 = call spir_func <4 x i8> @_Z13__spirv_IsInfIDv4_aDv4_fET_T0_(<4 x float> %loaded)
 ; CHECK-SPIRV: %[[#IsInfRes:]] = OpIsInf %[[#TBoolVec]]
 ; CHECK-SPIRV: %[[#Select1Res:]] = OpSelect %[[#]] %[[#IsInfRes]]
 ; CHECK-SPIRV: OpStore %[[#]] %[[#Select1Res]]
   store <4 x i8> %call2, <4 x i8>* %ret, align 4
-  %call3 = call spir_func <4 x i8> @_Z16__spirv_IsFiniteIDv4_aDv4_fET_T0_(<4 x float> %0)
+  %call3 = call spir_func <4 x i8> @_Z16__spirv_IsFiniteIDv4_aDv4_fET_T0_(<4 x float> %loaded)
 ; CHECK-SPIRV: %[[#IsFiniteRes:]] = OpIsFinite %[[#TBoolVec]]
 ; CHECK-SPIRV: %[[#Select2Res:]] = OpSelect %[[#]] %[[#IsFiniteRes]]
 ; CHECK-SPIRV: OpStore %[[#]] %[[#Select2Res]]
   store <4 x i8> %call3, <4 x i8>* %ret, align 4
-  %call4 = call spir_func <4 x i8> @_Z16__spirv_IsNormalIDv4_aDv4_fET_T0_(<4 x float> %0)
+  %call4 = call spir_func <4 x i8> @_Z16__spirv_IsNormalIDv4_aDv4_fET_T0_(<4 x float> %loaded)
 ; CHECK-SPIRV: %[[#IsNormalRes:]] = OpIsNormal %[[#TBoolVec]]
 ; CHECK-SPIRV: %[[#Select3Res:]] = OpSelect %[[#]] %[[#IsNormalRes]]
 ; CHECK-SPIRV: OpStore %[[#]] %[[#Select3Res]]
   store <4 x i8> %call4, <4 x i8>* %ret, align 4
-  %call5 = call spir_func <4 x i8> @_Z18__spirv_SignBitSetIDv4_aDv4_fET_T0_(<4 x float> %0)
+  %call5 = call spir_func <4 x i8> @_Z18__spirv_SignBitSetIDv4_aDv4_fET_T0_(<4 x float> %loaded)
 ; CHECK-SPIRV: %[[#SignBitSetRes:]] = OpSignBitSet %[[#TBoolVec]]
 ; CHECK-SPIRV: %[[#Select4Res:]] = OpSelect %[[#]] %[[#SignBitSetRes]]
 ; CHECK-SPIRV: OpStore %[[#]] %[[#Select4Res]]

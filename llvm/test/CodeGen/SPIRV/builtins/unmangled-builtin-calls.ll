@@ -8,8 +8,8 @@
 
 define spir_kernel void @f() {
 entry:
-  %0 = call spir_func i32 @__spirv_BuiltInGlobalLinearId()
-  %1 = call spir_func i64 @__spirv_BuiltInGlobalInvocationId(i32 1)
+  %call1 = call spir_func i32 @__spirv_BuiltInGlobalLinearId()
+  %call2 = call spir_func i64 @__spirv_BuiltInGlobalInvocationId(i32 1)
   ret void
 }
 
