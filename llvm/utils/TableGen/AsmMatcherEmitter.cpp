@@ -648,9 +648,11 @@ struct MatchableInfo {
 
     // Sort by the alphabetical naming of the required features.
     for (unsigned i = 0, e = RequiredFeatures.size(); i != e; ++i) {
-      if (RequiredFeatures[i]->TheDef->getName() < RHS.RequiredFeatures[i]->TheDef->getName())
+      if (RequiredFeatures[i]->TheDef->getName() <
+          RHS.RequiredFeatures[i]->TheDef->getName())
         return true;
-      if (RHS.RequiredFeatures[i]->TheDef->getName() < RequiredFeatures[i]->TheDef->getName())
+      if (RHS.RequiredFeatures[i]->TheDef->getName() <
+          RequiredFeatures[i]->TheDef->getName())
         return false;
     }
 
@@ -697,15 +699,17 @@ struct MatchableInfo {
         HasGT = true;
     }
 
-    if (HasLT != HasGT) 
+    if (HasLT != HasGT)
       return false;
 
     // Check if can distringuish by the alphabetical ordering of features.
     if (RequiredFeatures.size() != RHS.RequiredFeatures.size())
       return false;
     for (unsigned i = 0, e = RequiredFeatures.size(); i != e; ++i) {
-      if (RequiredFeatures[i]->TheDef->getName() < RHS.RequiredFeatures[i]->TheDef->getName()
-       || RHS.RequiredFeatures[i]->TheDef->getName() < RequiredFeatures[i]->TheDef->getName())
+      if (RequiredFeatures[i]->TheDef->getName() <
+              RHS.RequiredFeatures[i]->TheDef->getName() ||
+          RHS.RequiredFeatures[i]->TheDef->getName() <
+              RequiredFeatures[i]->TheDef->getName())
         return false;
     }
 
