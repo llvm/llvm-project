@@ -11,6 +11,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
@@ -157,16 +158,19 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
-  auto MatchedDirectCallExpr =
-      expr(callExpr(callee(functionDecl(
-                        // Don't match void overloads of checked functions.
-                        unless(returns(voidType())),
-                        anyOf(isInstantiatedFrom(matchers::matchesAnyListedName(
-                                  CheckedFunctions)),
-                              returns(hasCanonicalType(hasDeclaration(
-                                  namedDecl(matchers::matchesAnyListedName(
-                                      CheckedReturnTypes)))))))))
-               .bind("match"));
+  auto MatchedDirectCallExpr = expr(
+      callExpr(callee(functionDecl(
+                   // Don't match void overloads of checked functions.
+                   unless(returns(voidType())),
+                   // Don't match copy or move assignment operator.
+                   unless(cxxMethodDecl(anyOf(isCopyAssignmentOperator(),
+                                              isMoveAssignmentOperator()))),
+                   anyOf(isInstantiatedFrom(
+                             matchers::matchesAnyListedName(CheckedFunctions)),
+                         returns(hasCanonicalType(hasDeclaration(
+                             namedDecl(matchers::matchesAnyListedName(
+                                 CheckedReturnTypes)))))))))
+          .bind("match"));
 
   auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();
