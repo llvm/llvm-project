@@ -27,6 +27,11 @@
 # RUN: llvm-bolt %t.exe --print-normalized --keep-nops \
 # RUN:   --alt-inst-feature-size=4 -o %t.out | FileCheck %s
 
+## Check that out-of-bounds read is handled properly.
+
+# RUN: not llvm-bolt %t.exe --print-normalized --keep-nops \
+# RUN:   --alt-inst-feature-size=2 -o %t.out
+
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 alternative instruction entries
 
