@@ -6,9 +6,10 @@ define void @h() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 0, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = or <8 x i32> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i32> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i32> [[TMP0]] to <8 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i1> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <8 x i1> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void
 ;
