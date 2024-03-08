@@ -884,6 +884,10 @@ Error ExegesisX86Target::randomizeTargetMCOperand(
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
+  case X86::OperandType::OPERAND_COND_CODE:
+    AssignedValue =
+        MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
+    return Error::success();
   case X86::OperandType::OPERAND_ROUNDING_CONTROL:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::TO_ZERO));
