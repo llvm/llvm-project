@@ -1603,6 +1603,104 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_BSWAP size must be a multiple of 16 bits", MI);
     break;
   }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    const MachineOperand &Src0Op = MI->getOperand(1);
+    if (!Src0Op.isReg()) {
+      report("G_INSERT_SUBVECTOR first source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &Src1Op = MI->getOperand(2);
+    if (!Src1Op.isReg()) {
+      report("G_INSERT_SUBVECTOR second source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &IndexOp = MI->getOperand(3);
+    if (!IndexOp.isImm()) {
+      report("G_INSERT_SUBVECTOR index must be an immediate", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT Src0Ty = MRI->getType(Src0Op.getReg());
+    LLT Src1Ty = MRI->getType(Src1Op.getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (!Src0Ty.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    if (!Src1Ty.isVector()) {
+      report("Second source must be a vector", MI);
+      break;
+    }
+
+    if (DstTy != Src0Ty) {
+      report("Destination type must match the first source vector type", MI);
+      break;
+    }
+
+    if (Src0Ty.getElementType() != Src1Ty.getElementType()) {
+      report("Element type of source vectors must be the same", MI);
+      break;
+    }
+
+    if (IndexOp.getImm() != 0 &&
+        Src1Ty.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+      report("Index must be a multiple of the second source vector's "
+             "minimum vector length",
+             MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg()) {
+      report("G_EXTRACT_SUBVECTOR first source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &IndexOp = MI->getOperand(2);
+    if (!IndexOp.isImm()) {
+      report("G_EXTRACT_SUBVECTOR index must be an immediate", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(SrcOp.getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (!SrcTy.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    if (DstTy.getElementType() != SrcTy.getElementType()) {
+      report("Element type of vectors must be the same", MI);
+      break;
+    }
+
+    if (IndexOp.getImm() != 0 &&
+        SrcTy.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+      report("Index must be a multiple of the source vector's minimum vector "
+             "length",
+             MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     const MachineOperand &MaskOp = MI->getOperand(3);
     if (!MaskOp.isShuffleMask()) {
