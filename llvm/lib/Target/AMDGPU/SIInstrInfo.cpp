@@ -5981,6 +5981,7 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if (Opc == AMDGPU::V_PERMLANE16_B32_e64 ||
       Opc == AMDGPU::V_PERMLANEX16_B32_e64 ||
       Opc == AMDGPU::V_PERMLANE_BCAST_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_UP_B32_e64 ||
       Opc == AMDGPU::V_PERMLANE_DOWN_B32_e64) {
     // src1 and src2 must be scalar
     MachineOperand &Src1 = MI.getOperand(VOP3Idx[1]);

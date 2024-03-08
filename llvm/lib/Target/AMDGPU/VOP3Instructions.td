@@ -982,10 +982,12 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = isGFX12_10Plus in {
   let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
     defm V_PERMLANE_BCAST_B32 : VOP3Inst<"v_permlane_bcast_b32", VOP3_PERMLANE_NOOPSEL_Profile>;
+    defm V_PERMLANE_UP_B32    : VOP3Inst<"v_permlane_up_b32",    VOP3_PERMLANE_NOOPSEL_Profile>;
     defm V_PERMLANE_DOWN_B32  : VOP3Inst<"v_permlane_down_b32",  VOP3_PERMLANE_NOOPSEL_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
   def : PermlaneNoDppPat<int_amdgcn_permlane_bcast, V_PERMLANE_BCAST_B32_e64>;
+  def : PermlaneNoDppPat<int_amdgcn_permlane_up,    V_PERMLANE_UP_B32_e64>;
   def : PermlaneNoDppPat<int_amdgcn_permlane_down,  V_PERMLANE_DOWN_B32_e64>;
 } // End SubtargetPredicate = isGFX12_10Plus
 
@@ -1326,6 +1328,7 @@ defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1210<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1210<0x260>;
 defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1210<0x261>;
 defm V_PERMLANE_BCAST_B32 : VOP3Only_Real_Base_gfx12<0x270>;
+defm V_PERMLANE_UP_B32    : VOP3Only_Real_Base_gfx12<0x271>;
 defm V_PERMLANE_DOWN_B32  : VOP3Only_Real_Base_gfx12<0x272>;
 
 //===----------------------------------------------------------------------===//

@@ -620,6 +620,7 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sat_pk_i4_i8, "UsUi", "nc", "gfx12-10-insts"
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sat_pk_u4_u8, "UsUi", "nc", "gfx12-10-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_permlane_bcast, "iiiii", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlane_up, "iiiii", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_down, "iiiii", "nc", "gfx12-10-insts")
 
 // GFX1210 WMMA builtins
