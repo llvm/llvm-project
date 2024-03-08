@@ -24,6 +24,21 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace {
+class ArithConstantOpConversionPattern
+    : public OpConversionPattern<arith::ConstantOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ConstantOp arithConst,
+                  arith::ConstantOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<emitc::ConstantOp>(
+        arithConst, arithConst.getType(), adaptor.getValue());
+    return success();
+  }
+};
+
 template <typename ArithOp, typename EmitCOp>
 class ArithOpConversion final : public OpConversionPattern<ArithOp> {
 public:
@@ -51,6 +66,7 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
 
   // clang-format off
   patterns.add<
+    ArithConstantOpConversionPattern,
     ArithOpConversion<arith::AddFOp, emitc::AddOp>,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,

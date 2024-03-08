@@ -1769,7 +1769,6 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Target/Cpp/*.h"]),
     deps = [
-        ":ArithDialect",
         ":ControlFlowDialect",
         ":EmitCDialect",
         ":FuncDialect",
