@@ -2393,12 +2393,6 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   sym->partition = newPart.getNumber();
 }
 
-static Symbol *addUnusedUndefined(StringRef name,
-                                  uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(
-      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
-}
-
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
@@ -2485,15 +2479,15 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *wrap =
-        addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
+        symtab.addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
     if (symtab.find(realName))
-      addUnusedUndefined(name, sym->binding);
+      symtab.addUnusedUndefined(name, sym->binding);
 
-    Symbol *real = addUnusedUndefined(realName);
+    Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -2723,7 +2717,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
-    addUnusedUndefined(name)->referenced = true;
+    symtab.addUnusedUndefined(name)->referenced = true;
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table. This process might
@@ -2748,13 +2742,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   config->hasDynSymTab =
       !ctx.sharedFiles.empty() || config->isPic || config->exportDynamic;
 
-  // Some symbols (such as __ehdr_start) are defined lazily only when there
-  // are undefined symbols for them, so we add these to trigger that logic.
-  for (StringRef name : script->referencedSymbols) {
-    Symbol *sym = addUnusedUndefined(name);
-    sym->isUsedInRegularObj = true;
-    sym->referenced = true;
-  }
+  script->addScriptReferencedSymbolsToSymTable();
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : config->undefined)
