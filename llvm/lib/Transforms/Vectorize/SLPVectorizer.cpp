@@ -10080,30 +10080,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   // tree node for each gathered value - we have just a permutation of the
   // single vector. If we have 2 different sets, we're in situation where we
   // have a permutation of 2 input vectors.
-  // Filter out entries with larger bitwidth of elements.
-  Type *ScalarTy = VL.front()->getType();
-  unsigned BitWidth = 0;
-  if (ScalarTy->isIntegerTy()) {
-    // Check if the used TEs supposed to be resized and choose the best
-    // candidates.
-    BitWidth = DL->getTypeStoreSize(ScalarTy);
-    if (TEUseEI.UserTE->getOpcode() != Instruction::Select ||
-        TEUseEI.EdgeIdx != 0) {
-      auto UserIt = MinBWs.find(TEUseEI.UserTE);
-      if (UserIt != MinBWs.end())
-        BitWidth = UserIt->second.second;
-    }
-  }
-  auto CheckBitwidth = [&](const TreeEntry &TE) {
-    Type *ScalarTy = TE.Scalars.front()->getType();
-    if (!ScalarTy->isIntegerTy())
-      return true;
-    unsigned TEBitWidth = DL->getTypeStoreSize(ScalarTy);
-    auto UserIt = MinBWs.find(TEUseEI.UserTE);
-    if (UserIt != MinBWs.end())
-      TEBitWidth = UserIt->second.second;
-    return BitWidth == TEBitWidth;
-  };
   SmallVector<SmallPtrSet<const TreeEntry *, 4>> UsedTEs;
   DenseMap<Value *, int> UsedValuesEntry;
   for (Value *V : VL) {
@@ -10138,8 +10114,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
       }
 
-      if (!CheckBitwidth(*TEPtr))
-        continue;
       // Check if the user node of the TE comes after user node of TEPtr,
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
@@ -10157,7 +10131,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           VTE = *It->getSecond().begin();
           // Iterate through all vectorized nodes.
           auto *MIt = find_if(It->getSecond(), [&](const TreeEntry *MTE) {
-            return MTE->State == TreeEntry::Vectorize && CheckBitwidth(*MTE);
+            return MTE->State == TreeEntry::Vectorize;
           });
           if (MIt == It->getSecond().end())
             continue;
@@ -10166,8 +10140,6 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
       Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
       if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
-        continue;
-      if (!CheckBitwidth(*VTE))
         continue;
       VToTEs.insert(VTE);
     }
@@ -10214,6 +10186,57 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   if (UsedTEs.empty()) {
     Entries.clear();
     return std::nullopt;
+  }
+
+  // Filter out entries with larger bitwidth of elements.
+  Type *ScalarTy = VL.front()->getType();
+  unsigned BitWidth = 0;
+  if (ScalarTy->isIntegerTy()) {
+    // Check if the used TEs supposed to be resized and choose the best
+    // candidates.
+    BitWidth = DL->getTypeStoreSize(ScalarTy);
+    if (TEUseEI.UserTE->getOpcode() != Instruction::Select ||
+        TEUseEI.EdgeIdx != 0) {
+      auto UserIt = MinBWs.find(TEUseEI.UserTE);
+      if (UserIt != MinBWs.end())
+        BitWidth = UserIt->second.second;
+    }
+    // Check if the used TEs supposed to be resized and choose the best
+    // candidates.
+    unsigned NodesBitWidth = 0;
+    auto CheckBitwidth = [&](const TreeEntry &TE) {
+      unsigned TEBitWidth = BitWidth;
+      auto UserIt = MinBWs.find(TEUseEI.UserTE);
+      if (UserIt != MinBWs.end())
+        TEBitWidth = UserIt->second.second;
+      if (BitWidth <= TEBitWidth) {
+        if (NodesBitWidth == 0)
+          NodesBitWidth = TEBitWidth;
+        return NodesBitWidth == TEBitWidth;
+      }
+      return false;
+    };
+    for (auto [Idx, Set] : enumerate(UsedTEs)) {
+      DenseSet<const TreeEntry *> ForRemoval;
+      for (const TreeEntry *TE : Set) {
+        if (!CheckBitwidth(*TE))
+          ForRemoval.insert(TE);
+      }
+      // All elements must be removed - remove the whole container.
+      if (ForRemoval.size() == Set.size()) {
+        Set.clear();
+        continue;
+      }
+      for (const TreeEntry *TE : ForRemoval)
+        Set.erase(TE);
+    }
+    for (auto *It = UsedTEs.begin(); It != UsedTEs.end();) {
+      if (It->empty()) {
+        UsedTEs.erase(It);
+        continue;
+      }
+      std::advance(It, 1);
+    }
   }
 
   unsigned VF = 0;
@@ -13885,13 +13908,19 @@ bool BoUpSLP::collectValuesToDemote(
     return true;
   }
 
+  if (DL->getTypeSizeInBits(V->getType()) == BitWidth) {
+    MaxDepthLevel = 1;
+    return true;
+  }
+
   // If the value is not a vectorized instruction in the expression and not used
   // by the insertelement instruction and not used in multiple vector nodes, it
   // cannot be demoted.
   // TODO: improve handling of gathered values and others.
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !Visited.insert(I).second || !getTreeEntry(I) ||
-      MultiNodeScalars.contains(I) || all_of(I->users(), [&](User *U) {
+  const TreeEntry *ITE = I ? getTreeEntry(I) : nullptr;
+  if (!ITE || !Visited.insert(I).second || MultiNodeScalars.contains(I) ||
+      all_of(I->users(), [&](User *U) {
         return isa<InsertElementInst>(U) && !getTreeEntry(U);
       }))
     return false;
@@ -13935,30 +13964,47 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
     unsigned Level1, Level2;
-    if (!collectValuesToDemote(I->getOperand(0), IsProfitableToDemoteRoot,
-                               BitWidth, ToDemote, DemotedConsts, Visited,
-                               Level1, IsProfitableToDemote) ||
-        !collectValuesToDemote(I->getOperand(1), IsProfitableToDemoteRoot,
-                               BitWidth, ToDemote, DemotedConsts, Visited,
-                               Level2, IsProfitableToDemote))
-      return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
+    bool Res1 = collectValuesToDemote(
+        I->getOperand(0), IsProfitableToDemoteRoot, BitWidth, ToDemote,
+        DemotedConsts, Visited, Level1, IsProfitableToDemote);
+    bool Res2 = collectValuesToDemote(
+        I->getOperand(1), IsProfitableToDemoteRoot, BitWidth, ToDemote,
+        DemotedConsts, Visited, Level2, IsProfitableToDemote);
+    if (!Res1 || !Res2) {
+      MaxDepthLevel = Res1 ? Level1 : (Res2 ? Level2 : 1);
+      return IsProfitableToDemote && (ITE->UserTreeIndices.size() > 1 ||
+                                      IsPotentiallyTruncated(I, BitWidth));
+    }
     MaxDepthLevel = std::max(Level1, Level2);
     break;
   }
 
   // We can demote selects if we can demote their true and false values.
   case Instruction::Select: {
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
     Start = 1;
     unsigned Level1, Level2;
     SelectInst *SI = cast<SelectInst>(I);
-    if (!collectValuesToDemote(SI->getTrueValue(), IsProfitableToDemoteRoot,
-                               BitWidth, ToDemote, DemotedConsts, Visited,
-                               Level1, IsProfitableToDemote) ||
-        !collectValuesToDemote(SI->getFalseValue(), IsProfitableToDemoteRoot,
-                               BitWidth, ToDemote, DemotedConsts, Visited,
-                               Level2, IsProfitableToDemote))
-      return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
+    bool Res1 = collectValuesToDemote(
+        SI->getTrueValue(), IsProfitableToDemoteRoot, BitWidth, ToDemote,
+        DemotedConsts, Visited, Level1, IsProfitableToDemote);
+    bool Res2 = collectValuesToDemote(
+        SI->getFalseValue(), IsProfitableToDemoteRoot, BitWidth, ToDemote,
+        DemotedConsts, Visited, Level2, IsProfitableToDemote);
+    if (!Res1 || !Res2) {
+      MaxDepthLevel = Res1 ? Level1 : (Res2 ? Level2 : 1);
+      return IsProfitableToDemote && (ITE->UserTreeIndices.size() > 1 ||
+                                      IsPotentiallyTruncated(I, BitWidth));
+    }
+    if (!Res1 || !Res2) {
+      MaxDepthLevel = Res1 ? Level1 : (Res2 ? Level2 : 1);
+      return IsProfitableToDemote && (ITE->UserTreeIndices.size() > 1 ||
+                                      IsPotentiallyTruncated(I, BitWidth));
+    }
     MaxDepthLevel = std::max(Level1, Level2);
     break;
   }
@@ -13967,16 +14013,30 @@ bool BoUpSLP::collectValuesToDemote(
   // we don't need to worry about cycles since we ensure single use above.
   case Instruction::PHI: {
     PHINode *PN = cast<PHINode>(I);
-    for (Value *IncValue : PN->incoming_values())
+    MaxDepthLevel = 0;
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
+    bool NeedToExit = false;
+    for (Value *IncValue : PN->incoming_values()) {
+      unsigned Level;
       if (!collectValuesToDemote(IncValue, IsProfitableToDemoteRoot, BitWidth,
-                                 ToDemote, DemotedConsts, Visited,
-                                 MaxDepthLevel, IsProfitableToDemote))
-        return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
+                                 ToDemote, DemotedConsts, Visited, Level,
+                                 IsProfitableToDemote)) {
+        if (!IsProfitableToDemote || (ITE->UserTreeIndices.size() <= 1 &&
+                                      !IsPotentiallyTruncated(I, BitWidth)))
+          return false;
+        NeedToExit = true;
+      }
+      MaxDepthLevel = std::max(MaxDepthLevel, Level);
+    }
+    if (NeedToExit)
+      return true;
     break;
   }
 
   // Otherwise, conservatively give up.
   default:
+    MaxDepthLevel = 1;
     return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
   }
 
@@ -14113,7 +14173,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     // additional roots that require investigating in Roots.
     for (auto *Root : TreeRoot) {
       DenseSet<Value *> Visited;
-      unsigned MaxDepthLevel;
+      unsigned MaxDepthLevel = 0;
       bool NeedToDemote = IsProfitableToDemote;
 
       if (!collectValuesToDemote(Root, IsProfitableToDemoteRoot, MaxBitWidth,

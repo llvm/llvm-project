@@ -2997,8 +2997,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
 
-    if (IsZExtLoad ||
-        (isa<GLoad>(LdSt) && ValTy == LLT::scalar(64) && MemSizeInBits == 32)) {
+    if (IsZExtLoad || (Opcode == TargetOpcode::G_LOAD &&
+                       ValTy == LLT::scalar(64) && MemSizeInBits == 32)) {
       // The any/zextload from a smaller type to i32 should be handled by the
       // importer.
       if (MRI.getType(LoadStore->getOperand(0).getReg()).getSizeInBits() != 64)
