@@ -28,7 +28,7 @@ public:
   bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<uint32_t> CalculateNumChildren() override {
+  uint32_t CalculateNumChildren() override {
     return m_container_sp ? m_container_sp->GetNumChildren() : 0;
   }
 

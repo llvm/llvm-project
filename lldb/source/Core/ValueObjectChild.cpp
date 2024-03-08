@@ -49,12 +49,10 @@ lldb::ValueType ValueObjectChild::GetValueType() const {
   return m_parent->GetValueType();
 }
 
-llvm::Expected<uint32_t> ValueObjectChild::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectChild::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  if (!children_count)
-    return children_count;
-  return *children_count <= max ? *children_count : max;
+  return children_count <= max ? children_count : max;
 }
 
 static void AdjustForBitfieldness(ConstString &name,
