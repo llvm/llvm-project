@@ -1007,6 +1007,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                !cast<RegisterOperand>("VISrc_"#ArgTy[3].Size#
                                                       !cond(IsC_F32: "_f32",
                                                             IsC_F16: "_f16",
+                                                            IsC_BF16: "_bf16",
                                                             1: "_b32")));
 
   // For f16 and bf16 matrices A and B, each element can be modified by
