@@ -23,10 +23,11 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP0]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr null, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[GETELEMENTPTR6:%.*]] = getelementptr i32, ptr null, i64 [[TMP6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb7:
