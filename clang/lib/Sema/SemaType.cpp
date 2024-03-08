@@ -1018,6 +1018,11 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
       return type;
     }
 
+    // Types that have __attribute__((NSObject)) are permitted.
+    if (typeArg->isObjCNSObjectType()) {
+      continue;
+    }
+
     // Dependent types will be checked at instantiation time.
     if (typeArg->isDependentType()) {
       continue;
