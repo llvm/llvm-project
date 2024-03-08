@@ -4004,7 +4004,14 @@ Register LegalizerHelper::getVectorElementPointer(Register VecPtr, LLT VecTy,
 
   Index = clampVectorIndex(MIRBuilder, Index, VecTy);
 
-  LLT IdxTy = MRI.getType(Index);
+  // Convert index to the correct size for the address space.
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AS = MRI.getType(VecPtr).getAddressSpace();
+  unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
+  LLT IdxTy = MRI.getType(Index).changeElementSize(IndexSizeInBits);
+  if (IdxTy != MRI.getType(Index))
+    Index = MIRBuilder.buildSExtOrTrunc(IdxTy, Index).getReg(0);
+
   auto Mul = MIRBuilder.buildMul(IdxTy, Index,
                                  MIRBuilder.buildConstant(IdxTy, EltSize));
 
