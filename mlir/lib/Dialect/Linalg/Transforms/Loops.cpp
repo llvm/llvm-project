@@ -317,6 +317,7 @@ static void lowerLinalgToLoopsImpl(Operation *enclosingOp) {
   MLIRContext *context = enclosingOp->getContext();
   RewritePatternSet patterns(context);
   patterns.add<LinalgRewritePattern<LoopType>>(context);
+  memref::DimOp::getCanonicalizationPatterns(patterns, context);
   tensor::DimOp::getCanonicalizationPatterns(patterns, context);
   affine::AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldAffineOp>(context);
