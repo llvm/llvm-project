@@ -1293,7 +1293,7 @@ public:
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
 
-  bool hasAddPC64Inst() const { return GFX12_10Insts || GFX13Insts; }
+  bool hasAddPC64Inst() const { return GFX12_10Insts; }
 
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }
