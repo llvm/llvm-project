@@ -61,11 +61,9 @@ struct __atomic_ref_base {
   static constexpr size_t required_alignment = alignof(_Tp);
 
   static constexpr bool is_always_lock_free =
-      __atomic_always_lock_free(sizeof(_Tp), reinterpret_cast<void*>(-required_alignment));
+      __atomic_always_lock_free(sizeof(_Tp), __builtin_align_up(static_cast<_Tp*>(nullptr), required_alignment));
 
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept {
-    return __atomic_is_lock_free(sizeof(_Tp), reinterpret_cast<void*>(-required_alignment));
-  }
+  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return __atomic_is_lock_free(sizeof(_Tp), __ptr_); }
 
   _LIBCPP_HIDE_FROM_ABI void store(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
