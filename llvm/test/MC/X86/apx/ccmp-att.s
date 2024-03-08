@@ -5,1209 +5,1209 @@
 # ERROR-NOT: error:
 ## Condition flags
 
-# CHECK: ccmpoq {dfv=}	%rax, %rbx
+# CHECK: ccmpoq {dfv=} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0x84,0x00,0x39,0xc3]
-         ccmpoq {dfv=}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of}	%rax, %rbx
+         ccmpoq {dfv=} %rax, %rbx
+# CHECK: ccmpoq {dfv=of} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xc4,0x00,0x39,0xc3]
-         ccmpoq {dfv=of}	%rax, %rbx
-# CHECK: ccmpoq {dfv=sf}	%rax, %rbx
+         ccmpoq {dfv=of} %rax, %rbx
+# CHECK: ccmpoq {dfv=sf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xa4,0x00,0x39,0xc3]
-         ccmpoq {dfv=sf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=zf}	%rax, %rbx
+         ccmpoq {dfv=sf} %rax, %rbx
+# CHECK: ccmpoq {dfv=zf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0x94,0x00,0x39,0xc3]
-         ccmpoq {dfv=zf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=cf}	%rax, %rbx
+         ccmpoq {dfv=zf} %rax, %rbx
+# CHECK: ccmpoq {dfv=cf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0x8c,0x00,0x39,0xc3]
-         ccmpoq {dfv=cf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of,sf}	%rax, %rbx
+         ccmpoq {dfv=cf} %rax, %rbx
+# CHECK: ccmpoq {dfv=of,sf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x00,0x39,0xc3]
-         ccmpoq {dfv=of,sf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of,sf}	%rax, %rbx
+         ccmpoq {dfv=of,sf} %rax, %rbx
+# CHECK: ccmpoq {dfv=of,sf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x00,0x39,0xc3]
-         ccmpoq {dfv=sf,of}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of,sf,zf}	%rax, %rbx
+         ccmpoq {dfv=sf,of} %rax, %rbx
+# CHECK: ccmpoq {dfv=of,sf,zf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xf4,0x00,0x39,0xc3]
-         ccmpoq {dfv=of,sf,zf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of,sf,zf}	%rax, %rbx
+         ccmpoq {dfv=of,sf,zf} %rax, %rbx
+# CHECK: ccmpoq {dfv=of,sf,zf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xf4,0x00,0x39,0xc3]
-         ccmpoq {dfv=zf,of,sf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of,sf,zf,cf}	%rax, %rbx
+         ccmpoq {dfv=zf,of,sf} %rax, %rbx
+# CHECK: ccmpoq {dfv=of,sf,zf,cf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xfc,0x00,0x39,0xc3]
-         ccmpoq {dfv=of,sf,zf,cf}	%rax, %rbx
-# CHECK: ccmpoq {dfv=of,sf,zf,cf}	%rax, %rbx
+         ccmpoq {dfv=of,sf,zf,cf} %rax, %rbx
+# CHECK: ccmpoq {dfv=of,sf,zf,cf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xfc,0x00,0x39,0xc3]
-         ccmpoq {dfv=cf,zf,sf,of}	%rax, %rbx
+         ccmpoq {dfv=cf,zf,sf,of} %rax, %rbx
 
 ## Condition code
 
-# CHECK: ccmpbb	{dfv=of}	$123, 123(%r8,%rax,4)
+# CHECK: ccmpbb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpbb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpbw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpbb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x02,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpbw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpbw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpbw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x02,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpbw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpbl	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpbw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpbl {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpbl	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpbl	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpbl {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbl {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpbl	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpbq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpbl {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpbq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x02,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpbq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpbq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpbq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpbq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x02,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpbq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpbb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpbq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpbb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x38,0x5c,0x80,0x7b]
-         ccmpbb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpbw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpbb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpbw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x02,0x39,0x54,0x80,0x7b]
-         ccmpbw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpbl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpbw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpbl {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x39,0x4c,0x80,0x7b]
-         ccmpbl	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpbq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpbl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpbq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x02,0x39,0x4c,0x80,0x7b]
-         ccmpbq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpbb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpbq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpbb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x3a,0x5c,0x80,0x7b]
-         ccmpbb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpbw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpbb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpbw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x02,0x3b,0x54,0x80,0x7b]
-         ccmpbw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpbl	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpbw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpbl {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0x3b,0x4c,0x80,0x7b]
-         ccmpbl	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpbq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpbl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpbq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x02,0x3b,0x4c,0x80,0x7b]
-         ccmpbq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpbb	{dfv=of}	$123, %bl
+         ccmpbq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpbb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0x80,0xfb,0x7b]
-         ccmpbb	{dfv=of}	$123, %bl
-# CHECK: ccmpbw	{dfv=of}	$123, %dx
+         ccmpbb {dfv=of} $123, %bl
+# CHECK: ccmpbw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x02,0x83,0xfa,0x7b]
-         ccmpbw	{dfv=of}	$123, %dx
-# CHECK: ccmpbl	{dfv=of}	$123, %ecx
+         ccmpbw {dfv=of} $123, %dx
+# CHECK: ccmpbl {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0x83,0xf9,0x7b]
-         ccmpbl	{dfv=of}	$123, %ecx
-# CHECK: ccmpbq	{dfv=of}	$123, %r9
+         ccmpbl {dfv=of} $123, %ecx
+# CHECK: ccmpbq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x02,0x83,0xf9,0x7b]
-         ccmpbq	{dfv=of}	$123, %r9
-# CHECK: ccmpbw	{dfv=of}	$1234, %dx
+         ccmpbq {dfv=of} $123, %r9
+# CHECK: ccmpbw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x02,0x81,0xfa,0xd2,0x04]
-         ccmpbw	{dfv=of}	$1234, %dx
-# CHECK: ccmpbl	{dfv=of}	$123456, %ecx
+         ccmpbw {dfv=of} $1234, %dx
+# CHECK: ccmpbl {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpbl	{dfv=of}	$123456, %ecx
-# CHECK: ccmpbq	{dfv=of}	$123456, %r9
+         ccmpbl {dfv=of} $123456, %ecx
+# CHECK: ccmpbq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x02,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpbq	{dfv=of}	$123456, %r9
-# CHECK: ccmpbb	{dfv=of}	%bl, %dl
+         ccmpbq {dfv=of} $123456, %r9
+# CHECK: ccmpbb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0x38,0xda]
-         ccmpbb	{dfv=of}	%bl, %dl
-# CHECK: ccmpbw	{dfv=of}	%dx, %ax
+         ccmpbb {dfv=of} %bl, %dl
+# CHECK: ccmpbw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x02,0x39,0xd0]
-         ccmpbw	{dfv=of}	%dx, %ax
-# CHECK: ccmpbl	{dfv=of}	%ecx, %edx
+         ccmpbw {dfv=of} %dx, %ax
+# CHECK: ccmpbl {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0x39,0xca]
-         ccmpbl	{dfv=of}	%ecx, %edx
-# CHECK: ccmpbq	{dfv=of}	%r9, %r15
+         ccmpbl {dfv=of} %ecx, %edx
+# CHECK: ccmpbq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x02,0x39,0xcf]
-         ccmpbq	{dfv=of}	%r9, %r15
-# CHECK: ccmpfb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpbq {dfv=of} %r9, %r15
+# CHECK: ccmpfb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpfb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpfw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpfb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpfw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0b,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpfw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpfw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpfw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpfw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0b,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpfw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpfl	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpfw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpfl {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpfl	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpfl	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpfl {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpfl {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpfl	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpfq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpfl {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpfq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0b,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpfq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpfq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpfq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpfq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0b,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpfq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpfb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpfq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpfb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x38,0x5c,0x80,0x7b]
-         ccmpfb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpfw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpfb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpfw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0b,0x39,0x54,0x80,0x7b]
-         ccmpfw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpfl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpfw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpfl {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x39,0x4c,0x80,0x7b]
-         ccmpfl	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpfq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpfl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpfq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x0b,0x39,0x4c,0x80,0x7b]
-         ccmpfq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpfb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpfq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpfb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x3a,0x5c,0x80,0x7b]
-         ccmpfb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpfw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpfb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpfw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x0b,0x3b,0x54,0x80,0x7b]
-         ccmpfw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpfl	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpfw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpfl {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x0b,0x3b,0x4c,0x80,0x7b]
-         ccmpfl	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpfq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpfl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpfq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x0b,0x3b,0x4c,0x80,0x7b]
-         ccmpfq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpfb	{dfv=of}	$123, %bl
+         ccmpfq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpfb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0b,0x80,0xfb,0x7b]
-         ccmpfb	{dfv=of}	$123, %bl
-# CHECK: ccmpfw	{dfv=of}	$123, %dx
+         ccmpfb {dfv=of} $123, %bl
+# CHECK: ccmpfw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0b,0x83,0xfa,0x7b]
-         ccmpfw	{dfv=of}	$123, %dx
-# CHECK: ccmpfl	{dfv=of}	$123, %ecx
+         ccmpfw {dfv=of} $123, %dx
+# CHECK: ccmpfl {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0b,0x83,0xf9,0x7b]
-         ccmpfl	{dfv=of}	$123, %ecx
-# CHECK: ccmpfq	{dfv=of}	$123, %r9
+         ccmpfl {dfv=of} $123, %ecx
+# CHECK: ccmpfq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0b,0x83,0xf9,0x7b]
-         ccmpfq	{dfv=of}	$123, %r9
-# CHECK: ccmpfw	{dfv=of}	$1234, %dx
+         ccmpfq {dfv=of} $123, %r9
+# CHECK: ccmpfw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0b,0x81,0xfa,0xd2,0x04]
-         ccmpfw	{dfv=of}	$1234, %dx
-# CHECK: ccmpfl	{dfv=of}	$123456, %ecx
+         ccmpfw {dfv=of} $1234, %dx
+# CHECK: ccmpfl {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0b,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpfl	{dfv=of}	$123456, %ecx
-# CHECK: ccmpfq	{dfv=of}	$123456, %r9
+         ccmpfl {dfv=of} $123456, %ecx
+# CHECK: ccmpfq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0b,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpfq	{dfv=of}	$123456, %r9
-# CHECK: ccmpfb	{dfv=of}	%bl, %dl
+         ccmpfq {dfv=of} $123456, %r9
+# CHECK: ccmpfb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0b,0x38,0xda]
-         ccmpfb	{dfv=of}	%bl, %dl
-# CHECK: ccmpfw	{dfv=of}	%dx, %ax
+         ccmpfb {dfv=of} %bl, %dl
+# CHECK: ccmpfw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x0b,0x39,0xd0]
-         ccmpfw	{dfv=of}	%dx, %ax
-# CHECK: ccmpfl	{dfv=of}	%ecx, %edx
+         ccmpfw {dfv=of} %dx, %ax
+# CHECK: ccmpfl {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0b,0x39,0xca]
-         ccmpfl	{dfv=of}	%ecx, %edx
-# CHECK: ccmpfq	{dfv=of}	%r9, %r15
+         ccmpfl {dfv=of} %ecx, %edx
+# CHECK: ccmpfq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x0b,0x39,0xcf]
-         ccmpfq	{dfv=of}	%r9, %r15
-# CHECK: ccmplb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpfq {dfv=of} %r9, %r15
+# CHECK: ccmplb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmplb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmplw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmplb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmplw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0c,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmplw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmplw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmplw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmplw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0c,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmplw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpll	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmplw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpll {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpll	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpll	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpll {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpll {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpll	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmplq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpll {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmplq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0c,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmplq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmplq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmplq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmplq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0c,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmplq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmplb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmplq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmplb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x38,0x5c,0x80,0x7b]
-         ccmplb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmplw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmplb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmplw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0c,0x39,0x54,0x80,0x7b]
-         ccmplw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpll	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmplw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpll {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x39,0x4c,0x80,0x7b]
-         ccmpll	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmplq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpll {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmplq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x0c,0x39,0x4c,0x80,0x7b]
-         ccmplq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmplb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmplq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmplb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x3a,0x5c,0x80,0x7b]
-         ccmplb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmplw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmplb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmplw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x0c,0x3b,0x54,0x80,0x7b]
-         ccmplw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpll	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmplw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpll {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x0c,0x3b,0x4c,0x80,0x7b]
-         ccmpll	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmplq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpll {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmplq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x0c,0x3b,0x4c,0x80,0x7b]
-         ccmplq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmplb	{dfv=of}	$123, %bl
+         ccmplq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmplb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x80,0xfb,0x7b]
-         ccmplb	{dfv=of}	$123, %bl
-# CHECK: ccmplw	{dfv=of}	$123, %dx
+         ccmplb {dfv=of} $123, %bl
+# CHECK: ccmplw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0c,0x83,0xfa,0x7b]
-         ccmplw	{dfv=of}	$123, %dx
-# CHECK: ccmpll	{dfv=of}	$123, %ecx
+         ccmplw {dfv=of} $123, %dx
+# CHECK: ccmpll {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x83,0xf9,0x7b]
-         ccmpll	{dfv=of}	$123, %ecx
-# CHECK: ccmplq	{dfv=of}	$123, %r9
+         ccmpll {dfv=of} $123, %ecx
+# CHECK: ccmplq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0c,0x83,0xf9,0x7b]
-         ccmplq	{dfv=of}	$123, %r9
-# CHECK: ccmplw	{dfv=of}	$1234, %dx
+         ccmplq {dfv=of} $123, %r9
+# CHECK: ccmplw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0c,0x81,0xfa,0xd2,0x04]
-         ccmplw	{dfv=of}	$1234, %dx
-# CHECK: ccmpll	{dfv=of}	$123456, %ecx
+         ccmplw {dfv=of} $1234, %dx
+# CHECK: ccmpll {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpll	{dfv=of}	$123456, %ecx
-# CHECK: ccmplq	{dfv=of}	$123456, %r9
+         ccmpll {dfv=of} $123456, %ecx
+# CHECK: ccmplq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0c,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmplq	{dfv=of}	$123456, %r9
-# CHECK: ccmplb	{dfv=of}	%bl, %dl
+         ccmplq {dfv=of} $123456, %r9
+# CHECK: ccmplb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x38,0xda]
-         ccmplb	{dfv=of}	%bl, %dl
-# CHECK: ccmplw	{dfv=of}	%dx, %ax
+         ccmplb {dfv=of} %bl, %dl
+# CHECK: ccmplw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x0c,0x39,0xd0]
-         ccmplw	{dfv=of}	%dx, %ax
-# CHECK: ccmpll	{dfv=of}	%ecx, %edx
+         ccmplw {dfv=of} %dx, %ax
+# CHECK: ccmpll {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x39,0xca]
-         ccmpll	{dfv=of}	%ecx, %edx
-# CHECK: ccmplq	{dfv=of}	%r9, %r15
+         ccmpll {dfv=of} %ecx, %edx
+# CHECK: ccmplq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x0c,0x39,0xcf]
-         ccmplq	{dfv=of}	%r9, %r15
-# CHECK: ccmpleb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmplq {dfv=of} %r9, %r15
+# CHECK: ccmpleb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpleb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmplew	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpleb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmplew {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0e,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmplew	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmplew	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmplew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmplew {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0e,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmplew	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmplel	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmplew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmplel {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmplel	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmplel	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmplel {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmplel {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmplel	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpleq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmplel {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpleq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0e,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpleq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpleq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpleq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpleq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0e,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpleq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpleb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpleq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpleb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x38,0x5c,0x80,0x7b]
-         ccmpleb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmplew	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpleb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmplew {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0e,0x39,0x54,0x80,0x7b]
-         ccmplew	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmplel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmplew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmplel {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x39,0x4c,0x80,0x7b]
-         ccmplel	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpleq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmplel {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpleq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x0e,0x39,0x4c,0x80,0x7b]
-         ccmpleq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpleb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpleq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpleb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x3a,0x5c,0x80,0x7b]
-         ccmpleb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmplew	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpleb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmplew {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x0e,0x3b,0x54,0x80,0x7b]
-         ccmplew	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmplel	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmplew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmplel {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x0e,0x3b,0x4c,0x80,0x7b]
-         ccmplel	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpleq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmplel {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpleq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x0e,0x3b,0x4c,0x80,0x7b]
-         ccmpleq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpleb	{dfv=of}	$123, %bl
+         ccmpleq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpleb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x80,0xfb,0x7b]
-         ccmpleb	{dfv=of}	$123, %bl
-# CHECK: ccmplew	{dfv=of}	$123, %dx
+         ccmpleb {dfv=of} $123, %bl
+# CHECK: ccmplew {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0e,0x83,0xfa,0x7b]
-         ccmplew	{dfv=of}	$123, %dx
-# CHECK: ccmplel	{dfv=of}	$123, %ecx
+         ccmplew {dfv=of} $123, %dx
+# CHECK: ccmplel {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x83,0xf9,0x7b]
-         ccmplel	{dfv=of}	$123, %ecx
-# CHECK: ccmpleq	{dfv=of}	$123, %r9
+         ccmplel {dfv=of} $123, %ecx
+# CHECK: ccmpleq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0e,0x83,0xf9,0x7b]
-         ccmpleq	{dfv=of}	$123, %r9
-# CHECK: ccmplew	{dfv=of}	$1234, %dx
+         ccmpleq {dfv=of} $123, %r9
+# CHECK: ccmplew {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0e,0x81,0xfa,0xd2,0x04]
-         ccmplew	{dfv=of}	$1234, %dx
-# CHECK: ccmplel	{dfv=of}	$123456, %ecx
+         ccmplew {dfv=of} $1234, %dx
+# CHECK: ccmplel {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmplel	{dfv=of}	$123456, %ecx
-# CHECK: ccmpleq	{dfv=of}	$123456, %r9
+         ccmplel {dfv=of} $123456, %ecx
+# CHECK: ccmpleq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0e,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpleq	{dfv=of}	$123456, %r9
-# CHECK: ccmpleb	{dfv=of}	%bl, %dl
+         ccmpleq {dfv=of} $123456, %r9
+# CHECK: ccmpleb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x38,0xda]
-         ccmpleb	{dfv=of}	%bl, %dl
-# CHECK: ccmplew	{dfv=of}	%dx, %ax
+         ccmpleb {dfv=of} %bl, %dl
+# CHECK: ccmplew {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x0e,0x39,0xd0]
-         ccmplew	{dfv=of}	%dx, %ax
-# CHECK: ccmplel	{dfv=of}	%ecx, %edx
+         ccmplew {dfv=of} %dx, %ax
+# CHECK: ccmplel {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x39,0xca]
-         ccmplel	{dfv=of}	%ecx, %edx
-# CHECK: ccmpleq	{dfv=of}	%r9, %r15
+         ccmplel {dfv=of} %ecx, %edx
+# CHECK: ccmpleq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x0e,0x39,0xcf]
-         ccmpleq	{dfv=of}	%r9, %r15
-# CHECK: ccmpaeb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpleq {dfv=of} %r9, %r15
+# CHECK: ccmpaeb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpaeb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpaew	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpaeb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpaew {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x03,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpaew	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpaew	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpaew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpaew {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x03,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpaew	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpael	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpaew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpael {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpael	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpael	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpael {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpael {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpael	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpaeq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpael {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpaeq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x03,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpaeq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpaeq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpaeq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpaeq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x03,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpaeq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpaeb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpaeq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpaeb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x38,0x5c,0x80,0x7b]
-         ccmpaeb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpaew	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpaeb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpaew {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x03,0x39,0x54,0x80,0x7b]
-         ccmpaew	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpael	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpaew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpael {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x39,0x4c,0x80,0x7b]
-         ccmpael	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpaeq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpael {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpaeq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x03,0x39,0x4c,0x80,0x7b]
-         ccmpaeq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpaeb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpaeq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpaeb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x3a,0x5c,0x80,0x7b]
-         ccmpaeb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpaew	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpaeb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpaew {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x03,0x3b,0x54,0x80,0x7b]
-         ccmpaew	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpael	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpaew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpael {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x03,0x3b,0x4c,0x80,0x7b]
-         ccmpael	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpaeq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpael {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpaeq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x03,0x3b,0x4c,0x80,0x7b]
-         ccmpaeq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpaeb	{dfv=of}	$123, %bl
+         ccmpaeq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpaeb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x03,0x80,0xfb,0x7b]
-         ccmpaeb	{dfv=of}	$123, %bl
-# CHECK: ccmpaew	{dfv=of}	$123, %dx
+         ccmpaeb {dfv=of} $123, %bl
+# CHECK: ccmpaew {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x03,0x83,0xfa,0x7b]
-         ccmpaew	{dfv=of}	$123, %dx
-# CHECK: ccmpael	{dfv=of}	$123, %ecx
+         ccmpaew {dfv=of} $123, %dx
+# CHECK: ccmpael {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x03,0x83,0xf9,0x7b]
-         ccmpael	{dfv=of}	$123, %ecx
-# CHECK: ccmpaeq	{dfv=of}	$123, %r9
+         ccmpael {dfv=of} $123, %ecx
+# CHECK: ccmpaeq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x03,0x83,0xf9,0x7b]
-         ccmpaeq	{dfv=of}	$123, %r9
-# CHECK: ccmpaew	{dfv=of}	$1234, %dx
+         ccmpaeq {dfv=of} $123, %r9
+# CHECK: ccmpaew {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x03,0x81,0xfa,0xd2,0x04]
-         ccmpaew	{dfv=of}	$1234, %dx
-# CHECK: ccmpael	{dfv=of}	$123456, %ecx
+         ccmpaew {dfv=of} $1234, %dx
+# CHECK: ccmpael {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x03,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpael	{dfv=of}	$123456, %ecx
-# CHECK: ccmpaeq	{dfv=of}	$123456, %r9
+         ccmpael {dfv=of} $123456, %ecx
+# CHECK: ccmpaeq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x03,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpaeq	{dfv=of}	$123456, %r9
-# CHECK: ccmpaeb	{dfv=of}	%bl, %dl
+         ccmpaeq {dfv=of} $123456, %r9
+# CHECK: ccmpaeb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x03,0x38,0xda]
-         ccmpaeb	{dfv=of}	%bl, %dl
-# CHECK: ccmpaew	{dfv=of}	%dx, %ax
+         ccmpaeb {dfv=of} %bl, %dl
+# CHECK: ccmpaew {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x03,0x39,0xd0]
-         ccmpaew	{dfv=of}	%dx, %ax
-# CHECK: ccmpael	{dfv=of}	%ecx, %edx
+         ccmpaew {dfv=of} %dx, %ax
+# CHECK: ccmpael {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x03,0x39,0xca]
-         ccmpael	{dfv=of}	%ecx, %edx
-# CHECK: ccmpaeq	{dfv=of}	%r9, %r15
+         ccmpael {dfv=of} %ecx, %edx
+# CHECK: ccmpaeq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x03,0x39,0xcf]
-         ccmpaeq	{dfv=of}	%r9, %r15
-# CHECK: ccmpab	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpaeq {dfv=of} %r9, %r15
+# CHECK: ccmpab {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpab	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpaw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpab {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpaw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x07,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpaw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpaw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpaw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpaw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x07,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpaw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpal	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpaw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpal {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpal	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpal	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpal {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpal {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpal	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpaq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpal {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpaq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x07,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpaq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpaq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpaq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpaq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x07,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpaq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpab	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpaq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpab {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x38,0x5c,0x80,0x7b]
-         ccmpab	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpaw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpab {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpaw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x07,0x39,0x54,0x80,0x7b]
-         ccmpaw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpal	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpaw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpal {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x39,0x4c,0x80,0x7b]
-         ccmpal	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpaq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpal {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpaq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x07,0x39,0x4c,0x80,0x7b]
-         ccmpaq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpab	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpaq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpab {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x3a,0x5c,0x80,0x7b]
-         ccmpab	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpaw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpab {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpaw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x07,0x3b,0x54,0x80,0x7b]
-         ccmpaw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpal	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpaw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpal {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x07,0x3b,0x4c,0x80,0x7b]
-         ccmpal	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpaq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpal {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpaq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x07,0x3b,0x4c,0x80,0x7b]
-         ccmpaq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpab	{dfv=of}	$123, %bl
+         ccmpaq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpab {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x07,0x80,0xfb,0x7b]
-         ccmpab	{dfv=of}	$123, %bl
-# CHECK: ccmpaw	{dfv=of}	$123, %dx
+         ccmpab {dfv=of} $123, %bl
+# CHECK: ccmpaw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x07,0x83,0xfa,0x7b]
-         ccmpaw	{dfv=of}	$123, %dx
-# CHECK: ccmpal	{dfv=of}	$123, %ecx
+         ccmpaw {dfv=of} $123, %dx
+# CHECK: ccmpal {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x07,0x83,0xf9,0x7b]
-         ccmpal	{dfv=of}	$123, %ecx
-# CHECK: ccmpaq	{dfv=of}	$123, %r9
+         ccmpal {dfv=of} $123, %ecx
+# CHECK: ccmpaq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x07,0x83,0xf9,0x7b]
-         ccmpaq	{dfv=of}	$123, %r9
-# CHECK: ccmpaw	{dfv=of}	$1234, %dx
+         ccmpaq {dfv=of} $123, %r9
+# CHECK: ccmpaw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x07,0x81,0xfa,0xd2,0x04]
-         ccmpaw	{dfv=of}	$1234, %dx
-# CHECK: ccmpal	{dfv=of}	$123456, %ecx
+         ccmpaw {dfv=of} $1234, %dx
+# CHECK: ccmpal {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x07,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpal	{dfv=of}	$123456, %ecx
-# CHECK: ccmpaq	{dfv=of}	$123456, %r9
+         ccmpal {dfv=of} $123456, %ecx
+# CHECK: ccmpaq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x07,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpaq	{dfv=of}	$123456, %r9
-# CHECK: ccmpab	{dfv=of}	%bl, %dl
+         ccmpaq {dfv=of} $123456, %r9
+# CHECK: ccmpab {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x07,0x38,0xda]
-         ccmpab	{dfv=of}	%bl, %dl
-# CHECK: ccmpaw	{dfv=of}	%dx, %ax
+         ccmpab {dfv=of} %bl, %dl
+# CHECK: ccmpaw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x07,0x39,0xd0]
-         ccmpaw	{dfv=of}	%dx, %ax
-# CHECK: ccmpal	{dfv=of}	%ecx, %edx
+         ccmpaw {dfv=of} %dx, %ax
+# CHECK: ccmpal {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x07,0x39,0xca]
-         ccmpal	{dfv=of}	%ecx, %edx
-# CHECK: ccmpaq	{dfv=of}	%r9, %r15
+         ccmpal {dfv=of} %ecx, %edx
+# CHECK: ccmpaq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x07,0x39,0xcf]
-         ccmpaq	{dfv=of}	%r9, %r15
-# CHECK: ccmpgeb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpaq {dfv=of} %r9, %r15
+# CHECK: ccmpgeb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpgeb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgew	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgeb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgew {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0d,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpgew	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgew	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpgew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgew {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0d,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpgew	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpgel	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpgel {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpgel	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgel	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpgel {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgel {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpgel	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpgeq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgel {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpgeq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0d,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpgeq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgeq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpgeq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgeq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0d,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpgeq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpgeb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpgeq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpgeb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x38,0x5c,0x80,0x7b]
-         ccmpgeb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpgew	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpgeb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpgew {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0d,0x39,0x54,0x80,0x7b]
-         ccmpgew	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpgel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpgew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpgel {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x39,0x4c,0x80,0x7b]
-         ccmpgel	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpgeq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpgel {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpgeq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x0d,0x39,0x4c,0x80,0x7b]
-         ccmpgeq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpgeb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpgeq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpgeb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x3a,0x5c,0x80,0x7b]
-         ccmpgeb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpgew	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpgeb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpgew {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x0d,0x3b,0x54,0x80,0x7b]
-         ccmpgew	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpgel	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpgew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpgel {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x0d,0x3b,0x4c,0x80,0x7b]
-         ccmpgel	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpgeq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpgel {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpgeq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x0d,0x3b,0x4c,0x80,0x7b]
-         ccmpgeq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpgeb	{dfv=of}	$123, %bl
+         ccmpgeq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpgeb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x80,0xfb,0x7b]
-         ccmpgeb	{dfv=of}	$123, %bl
-# CHECK: ccmpgew	{dfv=of}	$123, %dx
+         ccmpgeb {dfv=of} $123, %bl
+# CHECK: ccmpgew {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0d,0x83,0xfa,0x7b]
-         ccmpgew	{dfv=of}	$123, %dx
-# CHECK: ccmpgel	{dfv=of}	$123, %ecx
+         ccmpgew {dfv=of} $123, %dx
+# CHECK: ccmpgel {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x83,0xf9,0x7b]
-         ccmpgel	{dfv=of}	$123, %ecx
-# CHECK: ccmpgeq	{dfv=of}	$123, %r9
+         ccmpgel {dfv=of} $123, %ecx
+# CHECK: ccmpgeq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0d,0x83,0xf9,0x7b]
-         ccmpgeq	{dfv=of}	$123, %r9
-# CHECK: ccmpgew	{dfv=of}	$1234, %dx
+         ccmpgeq {dfv=of} $123, %r9
+# CHECK: ccmpgew {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0d,0x81,0xfa,0xd2,0x04]
-         ccmpgew	{dfv=of}	$1234, %dx
-# CHECK: ccmpgel	{dfv=of}	$123456, %ecx
+         ccmpgew {dfv=of} $1234, %dx
+# CHECK: ccmpgel {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpgel	{dfv=of}	$123456, %ecx
-# CHECK: ccmpgeq	{dfv=of}	$123456, %r9
+         ccmpgel {dfv=of} $123456, %ecx
+# CHECK: ccmpgeq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0d,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpgeq	{dfv=of}	$123456, %r9
-# CHECK: ccmpgeb	{dfv=of}	%bl, %dl
+         ccmpgeq {dfv=of} $123456, %r9
+# CHECK: ccmpgeb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x38,0xda]
-         ccmpgeb	{dfv=of}	%bl, %dl
-# CHECK: ccmpgew	{dfv=of}	%dx, %ax
+         ccmpgeb {dfv=of} %bl, %dl
+# CHECK: ccmpgew {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x0d,0x39,0xd0]
-         ccmpgew	{dfv=of}	%dx, %ax
-# CHECK: ccmpgel	{dfv=of}	%ecx, %edx
+         ccmpgew {dfv=of} %dx, %ax
+# CHECK: ccmpgel {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x39,0xca]
-         ccmpgel	{dfv=of}	%ecx, %edx
-# CHECK: ccmpgeq	{dfv=of}	%r9, %r15
+         ccmpgel {dfv=of} %ecx, %edx
+# CHECK: ccmpgeq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x0d,0x39,0xcf]
-         ccmpgeq	{dfv=of}	%r9, %r15
-# CHECK: ccmpgb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgeq {dfv=of} %r9, %r15
+# CHECK: ccmpgb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpgb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0f,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpgw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpgw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0f,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpgw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpgl	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpgl {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpgl	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgl	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpgl {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgl {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpgl	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpgq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgl {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpgq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0f,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpgq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpgq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpgq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpgq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0f,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpgq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpgb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpgq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpgb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x38,0x5c,0x80,0x7b]
-         ccmpgb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpgw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpgb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpgw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0f,0x39,0x54,0x80,0x7b]
-         ccmpgw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpgl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpgw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpgl {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x39,0x4c,0x80,0x7b]
-         ccmpgl	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpgq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpgl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpgq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x0f,0x39,0x4c,0x80,0x7b]
-         ccmpgq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpgb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpgq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpgb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x3a,0x5c,0x80,0x7b]
-         ccmpgb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpgw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpgb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpgw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x0f,0x3b,0x54,0x80,0x7b]
-         ccmpgw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpgl	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpgw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpgl {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x0f,0x3b,0x4c,0x80,0x7b]
-         ccmpgl	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpgq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpgl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpgq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x0f,0x3b,0x4c,0x80,0x7b]
-         ccmpgq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpgb	{dfv=of}	$123, %bl
+         ccmpgq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpgb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x80,0xfb,0x7b]
-         ccmpgb	{dfv=of}	$123, %bl
-# CHECK: ccmpgw	{dfv=of}	$123, %dx
+         ccmpgb {dfv=of} $123, %bl
+# CHECK: ccmpgw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0f,0x83,0xfa,0x7b]
-         ccmpgw	{dfv=of}	$123, %dx
-# CHECK: ccmpgl	{dfv=of}	$123, %ecx
+         ccmpgw {dfv=of} $123, %dx
+# CHECK: ccmpgl {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x83,0xf9,0x7b]
-         ccmpgl	{dfv=of}	$123, %ecx
-# CHECK: ccmpgq	{dfv=of}	$123, %r9
+         ccmpgl {dfv=of} $123, %ecx
+# CHECK: ccmpgq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0f,0x83,0xf9,0x7b]
-         ccmpgq	{dfv=of}	$123, %r9
-# CHECK: ccmpgw	{dfv=of}	$1234, %dx
+         ccmpgq {dfv=of} $123, %r9
+# CHECK: ccmpgw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0f,0x81,0xfa,0xd2,0x04]
-         ccmpgw	{dfv=of}	$1234, %dx
-# CHECK: ccmpgl	{dfv=of}	$123456, %ecx
+         ccmpgw {dfv=of} $1234, %dx
+# CHECK: ccmpgl {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpgl	{dfv=of}	$123456, %ecx
-# CHECK: ccmpgq	{dfv=of}	$123456, %r9
+         ccmpgl {dfv=of} $123456, %ecx
+# CHECK: ccmpgq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0f,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpgq	{dfv=of}	$123456, %r9
-# CHECK: ccmpgb	{dfv=of}	%bl, %dl
+         ccmpgq {dfv=of} $123456, %r9
+# CHECK: ccmpgb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x38,0xda]
-         ccmpgb	{dfv=of}	%bl, %dl
-# CHECK: ccmpgw	{dfv=of}	%dx, %ax
+         ccmpgb {dfv=of} %bl, %dl
+# CHECK: ccmpgw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x0f,0x39,0xd0]
-         ccmpgw	{dfv=of}	%dx, %ax
-# CHECK: ccmpgl	{dfv=of}	%ecx, %edx
+         ccmpgw {dfv=of} %dx, %ax
+# CHECK: ccmpgl {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x39,0xca]
-         ccmpgl	{dfv=of}	%ecx, %edx
-# CHECK: ccmpgq	{dfv=of}	%r9, %r15
+         ccmpgl {dfv=of} %ecx, %edx
+# CHECK: ccmpgq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x0f,0x39,0xcf]
-         ccmpgq	{dfv=of}	%r9, %r15
-# CHECK: ccmpnob	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpgq {dfv=of} %r9, %r15
+# CHECK: ccmpnob {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpnob	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnow	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnob {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnow {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x01,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnow	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnow	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpnow {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnow {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x01,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpnow	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpnol	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnow {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpnol {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnol	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnol	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpnol {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnol {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpnol	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpnoq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnol {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpnoq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x01,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnoq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnoq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpnoq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnoq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x01,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpnoq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpnob	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpnoq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpnob {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x38,0x5c,0x80,0x7b]
-         ccmpnob	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpnow	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpnob {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpnow {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x01,0x39,0x54,0x80,0x7b]
-         ccmpnow	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpnol	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpnow {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpnol {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x39,0x4c,0x80,0x7b]
-         ccmpnol	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpnoq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpnol {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpnoq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x01,0x39,0x4c,0x80,0x7b]
-         ccmpnoq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpnob	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpnoq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpnob {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x3a,0x5c,0x80,0x7b]
-         ccmpnob	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpnow	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpnob {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpnow {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x01,0x3b,0x54,0x80,0x7b]
-         ccmpnow	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpnol	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpnow {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpnol {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x01,0x3b,0x4c,0x80,0x7b]
-         ccmpnol	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpnoq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpnol {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpnoq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x01,0x3b,0x4c,0x80,0x7b]
-         ccmpnoq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpnob	{dfv=of}	$123, %bl
+         ccmpnoq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpnob {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x01,0x80,0xfb,0x7b]
-         ccmpnob	{dfv=of}	$123, %bl
-# CHECK: ccmpnow	{dfv=of}	$123, %dx
+         ccmpnob {dfv=of} $123, %bl
+# CHECK: ccmpnow {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x01,0x83,0xfa,0x7b]
-         ccmpnow	{dfv=of}	$123, %dx
-# CHECK: ccmpnol	{dfv=of}	$123, %ecx
+         ccmpnow {dfv=of} $123, %dx
+# CHECK: ccmpnol {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x01,0x83,0xf9,0x7b]
-         ccmpnol	{dfv=of}	$123, %ecx
-# CHECK: ccmpnoq	{dfv=of}	$123, %r9
+         ccmpnol {dfv=of} $123, %ecx
+# CHECK: ccmpnoq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x01,0x83,0xf9,0x7b]
-         ccmpnoq	{dfv=of}	$123, %r9
-# CHECK: ccmpnow	{dfv=of}	$1234, %dx
+         ccmpnoq {dfv=of} $123, %r9
+# CHECK: ccmpnow {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x01,0x81,0xfa,0xd2,0x04]
-         ccmpnow	{dfv=of}	$1234, %dx
-# CHECK: ccmpnol	{dfv=of}	$123456, %ecx
+         ccmpnow {dfv=of} $1234, %dx
+# CHECK: ccmpnol {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x01,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpnol	{dfv=of}	$123456, %ecx
-# CHECK: ccmpnoq	{dfv=of}	$123456, %r9
+         ccmpnol {dfv=of} $123456, %ecx
+# CHECK: ccmpnoq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x01,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpnoq	{dfv=of}	$123456, %r9
-# CHECK: ccmpnob	{dfv=of}	%bl, %dl
+         ccmpnoq {dfv=of} $123456, %r9
+# CHECK: ccmpnob {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x01,0x38,0xda]
-         ccmpnob	{dfv=of}	%bl, %dl
-# CHECK: ccmpnow	{dfv=of}	%dx, %ax
+         ccmpnob {dfv=of} %bl, %dl
+# CHECK: ccmpnow {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x01,0x39,0xd0]
-         ccmpnow	{dfv=of}	%dx, %ax
-# CHECK: ccmpnol	{dfv=of}	%ecx, %edx
+         ccmpnow {dfv=of} %dx, %ax
+# CHECK: ccmpnol {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x01,0x39,0xca]
-         ccmpnol	{dfv=of}	%ecx, %edx
-# CHECK: ccmpnoq	{dfv=of}	%r9, %r15
+         ccmpnol {dfv=of} %ecx, %edx
+# CHECK: ccmpnoq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x01,0x39,0xcf]
-         ccmpnoq	{dfv=of}	%r9, %r15
-# CHECK: ccmpnsb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnoq {dfv=of} %r9, %r15
+# CHECK: ccmpnsb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpnsb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnsw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnsb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnsw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x09,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnsw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnsw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpnsw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnsw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x09,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpnsw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpnsl	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnsw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpnsl {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnsl	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnsl	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpnsl {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnsl {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpnsl	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpnsq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnsl {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpnsq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x09,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnsq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnsq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpnsq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnsq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x09,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpnsq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpnsb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpnsq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpnsb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x38,0x5c,0x80,0x7b]
-         ccmpnsb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpnsw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpnsb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpnsw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x09,0x39,0x54,0x80,0x7b]
-         ccmpnsw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpnsl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpnsw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpnsl {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x39,0x4c,0x80,0x7b]
-         ccmpnsl	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpnsq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpnsl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpnsq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x09,0x39,0x4c,0x80,0x7b]
-         ccmpnsq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpnsb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpnsq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpnsb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x3a,0x5c,0x80,0x7b]
-         ccmpnsb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpnsw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpnsb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpnsw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x09,0x3b,0x54,0x80,0x7b]
-         ccmpnsw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpnsl	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpnsw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpnsl {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x09,0x3b,0x4c,0x80,0x7b]
-         ccmpnsl	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpnsq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpnsl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpnsq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x09,0x3b,0x4c,0x80,0x7b]
-         ccmpnsq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpnsb	{dfv=of}	$123, %bl
+         ccmpnsq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpnsb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x09,0x80,0xfb,0x7b]
-         ccmpnsb	{dfv=of}	$123, %bl
-# CHECK: ccmpnsw	{dfv=of}	$123, %dx
+         ccmpnsb {dfv=of} $123, %bl
+# CHECK: ccmpnsw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x09,0x83,0xfa,0x7b]
-         ccmpnsw	{dfv=of}	$123, %dx
-# CHECK: ccmpnsl	{dfv=of}	$123, %ecx
+         ccmpnsw {dfv=of} $123, %dx
+# CHECK: ccmpnsl {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x09,0x83,0xf9,0x7b]
-         ccmpnsl	{dfv=of}	$123, %ecx
-# CHECK: ccmpnsq	{dfv=of}	$123, %r9
+         ccmpnsl {dfv=of} $123, %ecx
+# CHECK: ccmpnsq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x09,0x83,0xf9,0x7b]
-         ccmpnsq	{dfv=of}	$123, %r9
-# CHECK: ccmpnsw	{dfv=of}	$1234, %dx
+         ccmpnsq {dfv=of} $123, %r9
+# CHECK: ccmpnsw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x09,0x81,0xfa,0xd2,0x04]
-         ccmpnsw	{dfv=of}	$1234, %dx
-# CHECK: ccmpnsl	{dfv=of}	$123456, %ecx
+         ccmpnsw {dfv=of} $1234, %dx
+# CHECK: ccmpnsl {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x09,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpnsl	{dfv=of}	$123456, %ecx
-# CHECK: ccmpnsq	{dfv=of}	$123456, %r9
+         ccmpnsl {dfv=of} $123456, %ecx
+# CHECK: ccmpnsq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x09,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpnsq	{dfv=of}	$123456, %r9
-# CHECK: ccmpnsb	{dfv=of}	%bl, %dl
+         ccmpnsq {dfv=of} $123456, %r9
+# CHECK: ccmpnsb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x09,0x38,0xda]
-         ccmpnsb	{dfv=of}	%bl, %dl
-# CHECK: ccmpnsw	{dfv=of}	%dx, %ax
+         ccmpnsb {dfv=of} %bl, %dl
+# CHECK: ccmpnsw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x09,0x39,0xd0]
-         ccmpnsw	{dfv=of}	%dx, %ax
-# CHECK: ccmpnsl	{dfv=of}	%ecx, %edx
+         ccmpnsw {dfv=of} %dx, %ax
+# CHECK: ccmpnsl {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x09,0x39,0xca]
-         ccmpnsl	{dfv=of}	%ecx, %edx
-# CHECK: ccmpnsq	{dfv=of}	%r9, %r15
+         ccmpnsl {dfv=of} %ecx, %edx
+# CHECK: ccmpnsq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x09,0x39,0xcf]
-         ccmpnsq	{dfv=of}	%r9, %r15
-# CHECK: ccmpneb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnsq {dfv=of} %r9, %r15
+# CHECK: ccmpneb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpneb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnew	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpneb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnew {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x05,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnew	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnew	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpnew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnew {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x05,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpnew	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpnel	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpnel {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpnel	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpnel	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpnel {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpnel {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpnel	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpneq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpnel {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpneq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x05,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpneq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpneq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpneq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpneq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x05,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpneq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpneb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpneq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpneb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x38,0x5c,0x80,0x7b]
-         ccmpneb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpnew	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpneb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpnew {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x05,0x39,0x54,0x80,0x7b]
-         ccmpnew	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpnel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpnew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpnel {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x39,0x4c,0x80,0x7b]
-         ccmpnel	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpneq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpnel {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpneq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x05,0x39,0x4c,0x80,0x7b]
-         ccmpneq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpneb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpneq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpneb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x3a,0x5c,0x80,0x7b]
-         ccmpneb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpnew	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpneb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpnew {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x05,0x3b,0x54,0x80,0x7b]
-         ccmpnew	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpnel	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpnew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpnel {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x05,0x3b,0x4c,0x80,0x7b]
-         ccmpnel	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpneq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpnel {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpneq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x05,0x3b,0x4c,0x80,0x7b]
-         ccmpneq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpneb	{dfv=of}	$123, %bl
+         ccmpneq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpneb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x05,0x80,0xfb,0x7b]
-         ccmpneb	{dfv=of}	$123, %bl
-# CHECK: ccmpnew	{dfv=of}	$123, %dx
+         ccmpneb {dfv=of} $123, %bl
+# CHECK: ccmpnew {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x05,0x83,0xfa,0x7b]
-         ccmpnew	{dfv=of}	$123, %dx
-# CHECK: ccmpnel	{dfv=of}	$123, %ecx
+         ccmpnew {dfv=of} $123, %dx
+# CHECK: ccmpnel {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x05,0x83,0xf9,0x7b]
-         ccmpnel	{dfv=of}	$123, %ecx
-# CHECK: ccmpneq	{dfv=of}	$123, %r9
+         ccmpnel {dfv=of} $123, %ecx
+# CHECK: ccmpneq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x05,0x83,0xf9,0x7b]
-         ccmpneq	{dfv=of}	$123, %r9
-# CHECK: ccmpnew	{dfv=of}	$1234, %dx
+         ccmpneq {dfv=of} $123, %r9
+# CHECK: ccmpnew {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x05,0x81,0xfa,0xd2,0x04]
-         ccmpnew	{dfv=of}	$1234, %dx
-# CHECK: ccmpnel	{dfv=of}	$123456, %ecx
+         ccmpnew {dfv=of} $1234, %dx
+# CHECK: ccmpnel {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x05,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpnel	{dfv=of}	$123456, %ecx
-# CHECK: ccmpneq	{dfv=of}	$123456, %r9
+         ccmpnel {dfv=of} $123456, %ecx
+# CHECK: ccmpneq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x05,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpneq	{dfv=of}	$123456, %r9
-# CHECK: ccmpneb	{dfv=of}	%bl, %dl
+         ccmpneq {dfv=of} $123456, %r9
+# CHECK: ccmpneb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x05,0x38,0xda]
-         ccmpneb	{dfv=of}	%bl, %dl
-# CHECK: ccmpnew	{dfv=of}	%dx, %ax
+         ccmpneb {dfv=of} %bl, %dl
+# CHECK: ccmpnew {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x05,0x39,0xd0]
-         ccmpnew	{dfv=of}	%dx, %ax
-# CHECK: ccmpnel	{dfv=of}	%ecx, %edx
+         ccmpnew {dfv=of} %dx, %ax
+# CHECK: ccmpnel {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x05,0x39,0xca]
-         ccmpnel	{dfv=of}	%ecx, %edx
-# CHECK: ccmpneq	{dfv=of}	%r9, %r15
+         ccmpnel {dfv=of} %ecx, %edx
+# CHECK: ccmpneq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x05,0x39,0xcf]
-         ccmpneq	{dfv=of}	%r9, %r15
-# CHECK: ccmpob	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpneq {dfv=of} %r9, %r15
+# CHECK: ccmpob {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpob	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpow	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpob {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpow {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x00,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpow	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpow	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpow {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpow {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x00,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpow	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpol	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpow {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpol {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpol	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpol	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpol {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpol {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpol	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpoq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpol {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpoq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x00,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpoq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpoq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpoq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpoq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x00,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpoq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpob	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpoq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpob {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x38,0x5c,0x80,0x7b]
-         ccmpob	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpow	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpob {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpow {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x00,0x39,0x54,0x80,0x7b]
-         ccmpow	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpol	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpow {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpol {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x39,0x4c,0x80,0x7b]
-         ccmpol	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpoq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpol {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpoq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x00,0x39,0x4c,0x80,0x7b]
-         ccmpoq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpob	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpoq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpob {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x3a,0x5c,0x80,0x7b]
-         ccmpob	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpow	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpob {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpow {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x00,0x3b,0x54,0x80,0x7b]
-         ccmpow	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpol	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpow {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpol {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x00,0x3b,0x4c,0x80,0x7b]
-         ccmpol	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpoq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpol {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpoq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x00,0x3b,0x4c,0x80,0x7b]
-         ccmpoq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpob	{dfv=of}	$123, %bl
+         ccmpoq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpob {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x00,0x80,0xfb,0x7b]
-         ccmpob	{dfv=of}	$123, %bl
-# CHECK: ccmpow	{dfv=of}	$123, %dx
+         ccmpob {dfv=of} $123, %bl
+# CHECK: ccmpow {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x00,0x83,0xfa,0x7b]
-         ccmpow	{dfv=of}	$123, %dx
-# CHECK: ccmpol	{dfv=of}	$123, %ecx
+         ccmpow {dfv=of} $123, %dx
+# CHECK: ccmpol {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x00,0x83,0xf9,0x7b]
-         ccmpol	{dfv=of}	$123, %ecx
-# CHECK: ccmpoq	{dfv=of}	$123, %r9
+         ccmpol {dfv=of} $123, %ecx
+# CHECK: ccmpoq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x00,0x83,0xf9,0x7b]
-         ccmpoq	{dfv=of}	$123, %r9
-# CHECK: ccmpow	{dfv=of}	$1234, %dx
+         ccmpoq {dfv=of} $123, %r9
+# CHECK: ccmpow {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x00,0x81,0xfa,0xd2,0x04]
-         ccmpow	{dfv=of}	$1234, %dx
-# CHECK: ccmpol	{dfv=of}	$123456, %ecx
+         ccmpow {dfv=of} $1234, %dx
+# CHECK: ccmpol {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x00,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpol	{dfv=of}	$123456, %ecx
-# CHECK: ccmpoq	{dfv=of}	$123456, %r9
+         ccmpol {dfv=of} $123456, %ecx
+# CHECK: ccmpoq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x00,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpoq	{dfv=of}	$123456, %r9
-# CHECK: ccmpob	{dfv=of}	%bl, %dl
+         ccmpoq {dfv=of} $123456, %r9
+# CHECK: ccmpob {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x00,0x38,0xda]
-         ccmpob	{dfv=of}	%bl, %dl
-# CHECK: ccmpow	{dfv=of}	%dx, %ax
+         ccmpob {dfv=of} %bl, %dl
+# CHECK: ccmpow {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x00,0x39,0xd0]
-         ccmpow	{dfv=of}	%dx, %ax
-# CHECK: ccmpol	{dfv=of}	%ecx, %edx
+         ccmpow {dfv=of} %dx, %ax
+# CHECK: ccmpol {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x00,0x39,0xca]
-         ccmpol	{dfv=of}	%ecx, %edx
-# CHECK: ccmpoq	{dfv=of}	%r9, %r15
+         ccmpol {dfv=of} %ecx, %edx
+# CHECK: ccmpoq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x00,0x39,0xcf]
-         ccmpoq	{dfv=of}	%r9, %r15
-# CHECK: ccmpsb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpoq {dfv=of} %r9, %r15
+# CHECK: ccmpsb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpsb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpsw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpsb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpsw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x08,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpsw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpsw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpsw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpsw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x08,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpsw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpsl	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpsw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpsl {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpsl	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpsl	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpsl {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpsl {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpsl	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpsq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpsl {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpsq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x08,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpsq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpsq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpsq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpsq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x08,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpsq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpsb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpsq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpsb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x38,0x5c,0x80,0x7b]
-         ccmpsb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpsw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpsb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpsw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x08,0x39,0x54,0x80,0x7b]
-         ccmpsw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpsl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpsw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpsl {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x39,0x4c,0x80,0x7b]
-         ccmpsl	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpsq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpsl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpsq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x08,0x39,0x4c,0x80,0x7b]
-         ccmpsq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpsb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpsq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpsb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x3a,0x5c,0x80,0x7b]
-         ccmpsb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpsw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpsb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpsw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x08,0x3b,0x54,0x80,0x7b]
-         ccmpsw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpsl	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpsw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpsl {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x08,0x3b,0x4c,0x80,0x7b]
-         ccmpsl	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpsq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpsl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpsq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x08,0x3b,0x4c,0x80,0x7b]
-         ccmpsq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpsb	{dfv=of}	$123, %bl
+         ccmpsq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpsb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x08,0x80,0xfb,0x7b]
-         ccmpsb	{dfv=of}	$123, %bl
-# CHECK: ccmpsw	{dfv=of}	$123, %dx
+         ccmpsb {dfv=of} $123, %bl
+# CHECK: ccmpsw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x08,0x83,0xfa,0x7b]
-         ccmpsw	{dfv=of}	$123, %dx
-# CHECK: ccmpsl	{dfv=of}	$123, %ecx
+         ccmpsw {dfv=of} $123, %dx
+# CHECK: ccmpsl {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x08,0x83,0xf9,0x7b]
-         ccmpsl	{dfv=of}	$123, %ecx
-# CHECK: ccmpsq	{dfv=of}	$123, %r9
+         ccmpsl {dfv=of} $123, %ecx
+# CHECK: ccmpsq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x08,0x83,0xf9,0x7b]
-         ccmpsq	{dfv=of}	$123, %r9
-# CHECK: ccmpsw	{dfv=of}	$1234, %dx
+         ccmpsq {dfv=of} $123, %r9
+# CHECK: ccmpsw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x08,0x81,0xfa,0xd2,0x04]
-         ccmpsw	{dfv=of}	$1234, %dx
-# CHECK: ccmpsl	{dfv=of}	$123456, %ecx
+         ccmpsw {dfv=of} $1234, %dx
+# CHECK: ccmpsl {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x08,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpsl	{dfv=of}	$123456, %ecx
-# CHECK: ccmpsq	{dfv=of}	$123456, %r9
+         ccmpsl {dfv=of} $123456, %ecx
+# CHECK: ccmpsq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x08,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpsq	{dfv=of}	$123456, %r9
-# CHECK: ccmpsb	{dfv=of}	%bl, %dl
+         ccmpsq {dfv=of} $123456, %r9
+# CHECK: ccmpsb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x08,0x38,0xda]
-         ccmpsb	{dfv=of}	%bl, %dl
-# CHECK: ccmpsw	{dfv=of}	%dx, %ax
+         ccmpsb {dfv=of} %bl, %dl
+# CHECK: ccmpsw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x08,0x39,0xd0]
-         ccmpsw	{dfv=of}	%dx, %ax
-# CHECK: ccmpsl	{dfv=of}	%ecx, %edx
+         ccmpsw {dfv=of} %dx, %ax
+# CHECK: ccmpsl {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x08,0x39,0xca]
-         ccmpsl	{dfv=of}	%ecx, %edx
-# CHECK: ccmpsq	{dfv=of}	%r9, %r15
+         ccmpsl {dfv=of} %ecx, %edx
+# CHECK: ccmpsq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x08,0x39,0xcf]
-         ccmpsq	{dfv=of}	%r9, %r15
-# CHECK: ccmptb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpsq {dfv=of} %r9, %r15
+# CHECK: ccmptb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmptb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmptw	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmptb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmptw {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0a,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmptw	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmptw	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmptw {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmptw {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0a,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmptw	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmptl	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmptw {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmptl {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmptl	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmptl	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmptl {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmptl {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmptl	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmptq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmptl {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmptq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0a,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmptq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmptq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmptq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmptq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0a,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmptq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmptb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmptq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmptb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x38,0x5c,0x80,0x7b]
-         ccmptb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmptw	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmptb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmptw {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x0a,0x39,0x54,0x80,0x7b]
-         ccmptw	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmptl	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmptw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmptl {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x39,0x4c,0x80,0x7b]
-         ccmptl	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmptq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmptl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmptq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x0a,0x39,0x4c,0x80,0x7b]
-         ccmptq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmptb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmptq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmptb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x3a,0x5c,0x80,0x7b]
-         ccmptb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmptw	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmptb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmptw {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x0a,0x3b,0x54,0x80,0x7b]
-         ccmptw	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmptl	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmptw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmptl {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x0a,0x3b,0x4c,0x80,0x7b]
-         ccmptl	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmptq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmptl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmptq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x0a,0x3b,0x4c,0x80,0x7b]
-         ccmptq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmptb	{dfv=of}	$123, %bl
+         ccmptq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmptb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0a,0x80,0xfb,0x7b]
-         ccmptb	{dfv=of}	$123, %bl
-# CHECK: ccmptw	{dfv=of}	$123, %dx
+         ccmptb {dfv=of} $123, %bl
+# CHECK: ccmptw {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0a,0x83,0xfa,0x7b]
-         ccmptw	{dfv=of}	$123, %dx
-# CHECK: ccmptl	{dfv=of}	$123, %ecx
+         ccmptw {dfv=of} $123, %dx
+# CHECK: ccmptl {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0a,0x83,0xf9,0x7b]
-         ccmptl	{dfv=of}	$123, %ecx
-# CHECK: ccmptq	{dfv=of}	$123, %r9
+         ccmptl {dfv=of} $123, %ecx
+# CHECK: ccmptq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0a,0x83,0xf9,0x7b]
-         ccmptq	{dfv=of}	$123, %r9
-# CHECK: ccmptw	{dfv=of}	$1234, %dx
+         ccmptq {dfv=of} $123, %r9
+# CHECK: ccmptw {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x0a,0x81,0xfa,0xd2,0x04]
-         ccmptw	{dfv=of}	$1234, %dx
-# CHECK: ccmptl	{dfv=of}	$123456, %ecx
+         ccmptw {dfv=of} $1234, %dx
+# CHECK: ccmptl {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0a,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmptl	{dfv=of}	$123456, %ecx
-# CHECK: ccmptq	{dfv=of}	$123456, %r9
+         ccmptl {dfv=of} $123456, %ecx
+# CHECK: ccmptq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x0a,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmptq	{dfv=of}	$123456, %r9
-# CHECK: ccmptb	{dfv=of}	%bl, %dl
+         ccmptq {dfv=of} $123456, %r9
+# CHECK: ccmptb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x0a,0x38,0xda]
-         ccmptb	{dfv=of}	%bl, %dl
-# CHECK: ccmptw	{dfv=of}	%dx, %ax
+         ccmptb {dfv=of} %bl, %dl
+# CHECK: ccmptw {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x0a,0x39,0xd0]
-         ccmptw	{dfv=of}	%dx, %ax
-# CHECK: ccmptl	{dfv=of}	%ecx, %edx
+         ccmptw {dfv=of} %dx, %ax
+# CHECK: ccmptl {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x0a,0x39,0xca]
-         ccmptl	{dfv=of}	%ecx, %edx
-# CHECK: ccmptq	{dfv=of}	%r9, %r15
+         ccmptl {dfv=of} %ecx, %edx
+# CHECK: ccmptq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x0a,0x39,0xcf]
-         ccmptq	{dfv=of}	%r9, %r15
-# CHECK: ccmpeb	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmptq {dfv=of} %r9, %r15
+# CHECK: ccmpeb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpeb	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpew	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpeb {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpew {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x04,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpew	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpew	{dfv=of}	$1234, 123(%r8,%rax,4)
+         ccmpew {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpew {dfv=of} $1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x04,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpew	{dfv=of}	$1234, 123(%r8,%rax,4)
-# CHECK: ccmpel	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpew {dfv=of} $1234, 123(%r8,%rax,4)
+# CHECK: ccmpel {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpel	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpel	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpel {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpel {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpel	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpeq	{dfv=of}	$123, 123(%r8,%rax,4)
+         ccmpel {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpeq {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x04,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpeq	{dfv=of}	$123, 123(%r8,%rax,4)
-# CHECK: ccmpeq	{dfv=of}	$123456, 123(%r8,%rax,4)
+         ccmpeq {dfv=of} $123, 123(%r8,%rax,4)
+# CHECK: ccmpeq {dfv=of} $123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xc4,0x04,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpeq	{dfv=of}	$123456, 123(%r8,%rax,4)
-# CHECK: ccmpeb	{dfv=of}	%bl, 123(%r8,%rax,4)
+         ccmpeq {dfv=of} $123456, 123(%r8,%rax,4)
+# CHECK: ccmpeb {dfv=of} %bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x38,0x5c,0x80,0x7b]
-         ccmpeb	{dfv=of}	%bl, 123(%r8,%rax,4)
-# CHECK: ccmpew	{dfv=of}	%dx, 123(%r8,%rax,4)
+         ccmpeb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: ccmpew {dfv=of} %dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x45,0x04,0x39,0x54,0x80,0x7b]
-         ccmpew	{dfv=of}	%dx, 123(%r8,%rax,4)
-# CHECK: ccmpel	{dfv=of}	%ecx, 123(%r8,%rax,4)
+         ccmpew {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: ccmpel {dfv=of} %ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x39,0x4c,0x80,0x7b]
-         ccmpel	{dfv=of}	%ecx, 123(%r8,%rax,4)
-# CHECK: ccmpeq	{dfv=of}	%r9, 123(%r8,%rax,4)
+         ccmpel {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: ccmpeq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x39,0x4c,0x80,0x7b]
-         ccmpeq	{dfv=of}	%r9, 123(%r8,%rax,4)
-# CHECK: ccmpeb	{dfv=of}	123(%r8,%rax,4), %bl
+         ccmpeq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: ccmpeb {dfv=of} 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x3a,0x5c,0x80,0x7b]
-         ccmpeb	{dfv=of}	123(%r8,%rax,4), %bl
-# CHECK: ccmpew	{dfv=of}	123(%r8,%rax,4), %dx
+         ccmpeb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ccmpew {dfv=of} 123(%r8,%rax,4), %dx
 # CHECK: encoding: [0x62,0xd4,0x45,0x04,0x3b,0x54,0x80,0x7b]
-         ccmpew	{dfv=of}	123(%r8,%rax,4), %dx
-# CHECK: ccmpel	{dfv=of}	123(%r8,%rax,4), %ecx
+         ccmpew {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ccmpel {dfv=of} 123(%r8,%rax,4), %ecx
 # CHECK: encoding: [0x62,0xd4,0x44,0x04,0x3b,0x4c,0x80,0x7b]
-         ccmpel	{dfv=of}	123(%r8,%rax,4), %ecx
-# CHECK: ccmpeq	{dfv=of}	123(%r8,%rax,4), %r9
+         ccmpel {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ccmpeq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x3b,0x4c,0x80,0x7b]
-         ccmpeq	{dfv=of}	123(%r8,%rax,4), %r9
-# CHECK: ccmpeb	{dfv=of}	$123, %bl
+         ccmpeq {dfv=of} 123(%r8,%rax,4), %r9
+# CHECK: ccmpeb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x04,0x80,0xfb,0x7b]
-         ccmpeb	{dfv=of}	$123, %bl
-# CHECK: ccmpew	{dfv=of}	$123, %dx
+         ccmpeb {dfv=of} $123, %bl
+# CHECK: ccmpew {dfv=of} $123, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x04,0x83,0xfa,0x7b]
-         ccmpew	{dfv=of}	$123, %dx
-# CHECK: ccmpel	{dfv=of}	$123, %ecx
+         ccmpew {dfv=of} $123, %dx
+# CHECK: ccmpel {dfv=of} $123, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x04,0x83,0xf9,0x7b]
-         ccmpel	{dfv=of}	$123, %ecx
-# CHECK: ccmpeq	{dfv=of}	$123, %r9
+         ccmpel {dfv=of} $123, %ecx
+# CHECK: ccmpeq {dfv=of} $123, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x04,0x83,0xf9,0x7b]
-         ccmpeq	{dfv=of}	$123, %r9
-# CHECK: ccmpew	{dfv=of}	$1234, %dx
+         ccmpeq {dfv=of} $123, %r9
+# CHECK: ccmpew {dfv=of} $1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x45,0x04,0x81,0xfa,0xd2,0x04]
-         ccmpew	{dfv=of}	$1234, %dx
-# CHECK: ccmpel	{dfv=of}	$123456, %ecx
+         ccmpew {dfv=of} $1234, %dx
+# CHECK: ccmpel {dfv=of} $123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x44,0x04,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpel	{dfv=of}	$123456, %ecx
-# CHECK: ccmpeq	{dfv=of}	$123456, %r9
+         ccmpel {dfv=of} $123456, %ecx
+# CHECK: ccmpeq {dfv=of} $123456, %r9
 # CHECK: encoding: [0x62,0xd4,0xc4,0x04,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpeq	{dfv=of}	$123456, %r9
-# CHECK: ccmpeb	{dfv=of}	%bl, %dl
+         ccmpeq {dfv=of} $123456, %r9
+# CHECK: ccmpeb {dfv=of} %bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x44,0x04,0x38,0xda]
-         ccmpeb	{dfv=of}	%bl, %dl
-# CHECK: ccmpew	{dfv=of}	%dx, %ax
+         ccmpeb {dfv=of} %bl, %dl
+# CHECK: ccmpew {dfv=of} %dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x45,0x04,0x39,0xd0]
-         ccmpew	{dfv=of}	%dx, %ax
-# CHECK: ccmpel	{dfv=of}	%ecx, %edx
+         ccmpew {dfv=of} %dx, %ax
+# CHECK: ccmpel {dfv=of} %ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x44,0x04,0x39,0xca]
-         ccmpel	{dfv=of}	%ecx, %edx
-# CHECK: ccmpeq	{dfv=of}	%r9, %r15
+         ccmpel {dfv=of} %ecx, %edx
+# CHECK: ccmpeq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x39,0xcf]
-         ccmpeq	{dfv=of}	%r9, %r15
+         ccmpeq {dfv=of} %r9, %r15
