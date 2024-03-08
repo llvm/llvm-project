@@ -1055,9 +1055,9 @@ Error RISCVISAInfo::checkDependency() {
         "'xtheadzvamo' requires 'a' extension to also be specified");
 
   if (Exts.count("xtheadvector") && HasVector)
-    return createStringError(
-        errc::invalid_argument,
-        "'xtheadvector' extension is incompatible with 'v' or 'zve*' extension");
+    return createStringError(errc::invalid_argument,
+                             "'xtheadvector' extension is incompatible with "
+                             "'v' or 'zve*' extension");
 
   return Error::success();
 }

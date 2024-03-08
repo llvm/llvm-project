@@ -168,7 +168,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
                     SMLoc IDLoc, MCStreamer &Out, bool IsSigned);
 
   // Helper to emit pseudo vmsge{u}.vx instruction for XTHeadV extension.
-  void emitVMSGE_TH(MCInst &Inst, unsigned Opcode, SMLoc IDLoc, MCStreamer &Out);
+  void emitVMSGE_TH(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
+                    MCStreamer &Out);
 
   // Checks that a PseudoAddTPRel is using x4/tp in its second input operand.
   // Enforcing this using a restricted register class for the second input
@@ -1189,7 +1190,8 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createXTHeadVType(unsigned VTypeI, SMLoc S) {
+  static std::unique_ptr<RISCVOperand> createXTHeadVType(unsigned VTypeI,
+                                                         SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::XTHeadVType);
     Op->VType.Val = VTypeI;
     Op->StartLoc = S;
@@ -1623,10 +1625,9 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidXTHeadVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(
-        ErrorLoc,
-        "operand must be "
-        "e[8|16|32|64|128|256|512|1024],m[1|2|4|8],d[1|2|4|8] for XTHeadVector");
+    return Error(ErrorLoc, "operand must be "
+                           "e[8|16|32|64|128|256|512|1024],m[1|2|4|8],d[1|2|4|"
+                           "8] for XTHeadVector");
   }
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -3426,7 +3427,6 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
   }
 }
 
-
 void RISCVAsmParser::emitVMSGE_VI(MCInst &Inst, unsigned Opcode,
                                   unsigned OpcodeImmIs0, SMLoc IDLoc,
                                   MCStreamer &Out, bool IsSigned) {
@@ -3461,7 +3461,7 @@ void RISCVAsmParser::emitVMSGE_VI(MCInst &Inst, unsigned Opcode,
 }
 
 void RISCVAsmParser::emitVMSGE_TH(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
-                                MCStreamer &Out) {
+                                  MCStreamer &Out) {
   // https://github.com/riscv/riscv-v-spec/releases/tag/0.7.1
   if (Inst.getNumOperands() == 3) {
     // unmasked va >= x
@@ -3825,16 +3825,20 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitVMSGE_TH(Inst, RISCV::TH_VMSLT_VX, IDLoc, Out);
     return false;
   case RISCV::PseudoTH_VMSGE_VI:
-    emitVMSGE_VI(Inst, RISCV::TH_VMSGT_VI, RISCV::TH_VMSGT_VI, IDLoc, Out, true);
+    emitVMSGE_VI(Inst, RISCV::TH_VMSGT_VI, RISCV::TH_VMSGT_VI, IDLoc, Out,
+                 true);
     return false;
   case RISCV::PseudoTH_VMSLT_VI:
-    emitVMSGE_VI(Inst, RISCV::TH_VMSLE_VI, RISCV::TH_VMSLE_VI, IDLoc, Out, true);
+    emitVMSGE_VI(Inst, RISCV::TH_VMSLE_VI, RISCV::TH_VMSLE_VI, IDLoc, Out,
+                 true);
     return false;
   case RISCV::PseudoTH_VMSGEU_VI:
-    emitVMSGE_VI(Inst, RISCV::TH_VMSGTU_VI, RISCV::TH_VMSEQ_VV, IDLoc, Out, false);
+    emitVMSGE_VI(Inst, RISCV::TH_VMSGTU_VI, RISCV::TH_VMSEQ_VV, IDLoc, Out,
+                 false);
     return false;
   case RISCV::PseudoTH_VMSLTU_VI:
-    emitVMSGE_VI(Inst, RISCV::TH_VMSLEU_VI, RISCV::TH_VMSNE_VV, IDLoc, Out, false);
+    emitVMSGE_VI(Inst, RISCV::TH_VMSLEU_VI, RISCV::TH_VMSNE_VV, IDLoc, Out,
+                 false);
     return false;
   }
 
