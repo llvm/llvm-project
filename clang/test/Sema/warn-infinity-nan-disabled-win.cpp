@@ -1,16 +1,34 @@
 // Use of NAN macro will trigger a warning "infinity defined in macro" because
 // on Windows the NAN macro is defined using INFINITY. See below.
 
-// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs -menable-no-nans
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
+// RUN: -triple powerpc64le-unknown-unknown %s -menable-no-infs \
+// RUN: -menable-no-nans -std=c++23
 
-// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown %s
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
+// RUN: -triple powerpc64le-unknown-unknown %s -menable-no-infs \
+// RUN: -menable-no-nans -funsafe-math-optimizations -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs
+// RUN: -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -funsafe-math-optimizations -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-nans
+// RUN: -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
+// RUN: -funsafe-math-optimizations -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-nans -std=c++23
 
 // no-fast-no-diagnostics
 
@@ -136,12 +154,40 @@ int compareit(float a, float b) {
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   p = __builtin_isfinite(a);
 
-  // These should NOT warn, since they are not using NaN or infinity.
+// These should NOT warn, since they are not using NaN or infinity.
   j = a > 1.1;
   j = b < 1.1;
   j = a >= 1.1;
   j = b <= 1.1;
   j = isunorderedf(a, b);
+
+#ifndef INFINITY
+  j = a;
+#endif
+#ifndef NAN
+  j = b;
+#endif
+#ifdef INFINITY
+  j = a;
+#endif
+#ifdef NAN
+  j = b;
+#endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(NAN)
+  j = b;
+#endif
+#if defined(NAN)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
 
 // no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point option}}
 // no-inf-no-nan-warning@+3 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
@@ -176,4 +222,4 @@ int compareit(float a, float b) {
   j = numeric_limits<float>::infinity();
   return 0;
 
-}  
+}

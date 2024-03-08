@@ -2,6 +2,7 @@ add_flang_library(FIRCodeGen
   BoxedProcedure.cpp
   CGOps.cpp
   CodeGen.cpp
+  CodeGenOpenMP.cpp
   PreCGRewrite.cpp
   TBAABuilder.cpp
   Target.cpp

@@ -457,6 +457,29 @@ Note that **currently** the compiler doesn't consider inconsistent macro definit
 Currently Clang would accept the above example. But it may produce surprising results if the
 debugging code depends on consistent use of ``NDEBUG`` also in other translation units.
 
+Definitions consistency
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The C++ language defines that same declarations in different translation units should have
+the same definition, as known as ODR (One Definition Rule). Prior to modules, the translation
+units don't dependent on each other and the compiler itself can't perform a strong
+ODR violation check. With the introduction of modules, now the compiler have
+the chance to perform ODR violations with language semantics across translation units.
+
+However, in the practice, we found the existing ODR checking mechanism is not stable
+enough. Many people suffers from the false positive ODR violation diagnostics, AKA,
+the compiler are complaining two identical declarations have different definitions
+incorrectly. Also the true positive ODR violations are rarely reported.
+Also we learned that MSVC don't perform ODR check for declarations in the global module
+fragment.
+
+So in order to get better user experience, save the time checking ODR and keep consistent
+behavior with MSVC, we disabled the ODR check for the declarations in the global module
+fragment by default. Users who want more strict check can still use the
+``-Xclang -fno-skip-odr-check-in-gmf`` flag to get the ODR check enabled. It is also
+encouraged to report issues if users find false positive ODR violations or false negative ODR
+violations with the flag enabled.
+
 ABI Impacts
 -----------
 
@@ -586,6 +609,348 @@ the following style significantly:
   ... // use declarations from module M.
 
 The key part of the tip is to reduce the duplications from the text includes.
+
+Ideas for converting to modules
+-------------------------------
+
+For new libraries, we encourage them to use modules completely from day one if possible.
+This will be pretty helpful to make the whole ecosystems to get ready.
+
+For many existing libraries, it may be a breaking change to refactor themselves
+into modules completely. So that many existing libraries need to provide headers and module
+interfaces for a while to not break existing users.
+Here we provide some ideas to ease the transition process for existing libraries.
+**Note that the this section is only about helping ideas instead of requirement from clang**.
+
+Let's start with the case that there is no dependency or no dependent libraries providing
+modules for your library.
+
+ABI non-breaking styles
+~~~~~~~~~~~~~~~~~~~~~~~
+
+export-using style
+^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c++
+
+  module;
+  #include "header_1.h"
+  #include "header_2.h"
+  ...
+  #include "header_n.h"
+  export module your_library;
+  export namespace your_namespace {
+    using decl_1;
+    using decl_2;
+    ...
+    using decl_n;
+  }
+
+As the example shows, you need to include all the headers containing declarations needs
+to be exported and `using` such declarations in an `export` block. Then, basically,
+we're done.
+
+export extern-C++ style
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c++
+
+  module;
+  #include "third_party/A/headers.h"
+  #include "third_party/B/headers.h"
+  ...
+  #include "third_party/Z/headers.h"
+  export module your_library;
+  #define IN_MODULE_INTERFACE
+  extern "C++" {
+    #include "header_1.h"
+    #include "header_2.h"
+    ...
+    #include "header_n.h"
+  }
+
+Then in your headers (from ``header_1.h`` to ``header_n.h``), you need to define the macro:
+
+.. code-block:: c++
+
+  #ifdef IN_MODULE_INTERFACE
+  #define EXPORT export
+  #else
+  #define EXPORT
+  #endif
+
+And you should put ``EXPORT`` to the beginning of the declarations you want to export.
+
+Also it is suggested to refactor your headers to include thirdparty headers conditionally:
+
+.. code-block:: c++
+
+  #ifndef IN_MODULE_INTERFACE
+  #include "third_party/A/headers.h"
+  #endif
+
+  #include "header_x.h"
+
+  ...
+
+This may be helpful to get better diagnostic messages if you forgot to update your module
+interface unit file during maintaining.
+
+The reasoning for the practice is that the declarations in the language linkage are considered
+to be attached to the global module. So the ABI of your library in the modular version
+wouldn't change.
+
+While this style looks not as convenient as the export-using style, it is easier to convert
+to other styles.
+
+ABI breaking style
+~~~~~~~~~~~~~~~~~~
+
+The term ``ABI breaking`` sounds terrifying generally. But you may want it here if you want
+to force your users to introduce your library in a consistent way. E.g., they either include
+your headers all the way or import your modules all the way.
+The style prevents the users to include your headers and import your modules at the same time
+in the same repo.
+
+The pattern for ABI breaking style is similar with export extern-C++ style.
+
+.. code-block:: c++
+
+  module;
+  #include "third_party/A/headers.h"
+  #include "third_party/B/headers.h"
+  ...
+  #include "third_party/Z/headers.h"
+  export module your_library;
+  #define IN_MODULE_INTERFACE
+  #include "header_1.h"
+  #include "header_2.h"
+  ...
+  #include "header_n.h"
+
+  #if the number of .cpp files in your project are small
+  module :private;
+  #include "source_1.cpp"
+  #include "source_2.cpp"
+  ...
+  #include "source_n.cpp"
+  #else // the number of .cpp files in your project are a lot
+  // Using all the declarations from thirdparty libraries which are
+  // used in the .cpp files.
+  namespace third_party_namespace {
+    using third_party_decl_used_in_cpp_1;
+    using third_party_decl_used_in_cpp_2;
+    ...
+    using third_party_decl_used_in_cpp_n;
+  }
+  #endif
+
+(And add `EXPORT` and conditional include to the headers as suggested in the export
+extern-C++ style section)
+
+Remember that the ABI get changed and we need to compile our source files into the
+new ABI format. This is the job of the additional part of the interface unit:
+
+.. code-block:: c++
+
+  #if the number of .cpp files in your project are small
+  module :private;
+  #include "source_1.cpp"
+  #include "source_2.cpp"
+  ...
+  #include "source_n.cpp"
+  #else // the number of .cpp files in your project are a lot
+  // Using all the declarations from thirdparty libraries which are
+  // used in the .cpp files.
+  namespace third_party_namespace {
+    using third_party_decl_used_in_cpp_1;
+    using third_party_decl_used_in_cpp_2;
+    ...
+    using third_party_decl_used_in_cpp_n;
+  }
+  #endif
+
+In case the number of your source files are small, we may put everything in the private
+module fragment directly. (it is suggested to add conditional include to the source
+files too). But it will make the compilation of the module interface unit to be slow
+when the number of the source files are not small enough.
+
+**Note that the private module fragment can only be in the primary module interface unit
+and the primary module interface unit containing private module fragment should be the only
+module unit of the corresponding module.**
+
+In that case, you need to convert your source files (.cpp files) to module implementation units:
+
+.. code-block:: c++
+
+  #ifndef IN_MODULE_INTERFACE
+  // List all the includes here.
+  #include "third_party/A/headers.h"
+  ...
+  #include "header.h"
+  #endif
+
+  module your_library;
+
+  // Following off should be unchanged.
+  ...
+
+The module implementation unit will import the primary module implicitly.
+We don't include any headers in the module implementation units
+here since we want to avoid duplicated declarations between translation units.
+This is the reason why we add non-exported using declarations from the third
+party libraries in the primary module interface unit.
+
+And if you provide your library as ``libyour_library.so``, you probably need to
+provide a modular one ``libyour_library_modules.so`` since you changed the ABI.
+
+What if there are headers only inclued by the source files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The above practice may be problematic if there are headers only included by the source
+files. If you're using private module fragment, you may solve the issue by including them
+in the private module fragment. While it is OK to solve it by including the implementation
+headers in the module purview if you're using implementation module units, it may be
+suboptimal since the primary module interface units now containing entities not belongs
+to the interface.
+
+If you're a perfectionist, maybe you can improve it by introducing internal module partition unit.
+
+The internal module partition unit is an importable module unit which is internal
+to the module itself. The concept just meets the headers only included by the source files.
+
+We don't show code snippet since it may be too verbose or not good or not general.
+But it may not be too hard if you can understand the points of the section.
+
+Providing a header to skip parsing redundant headers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is a problem for clang to handle redeclarations between translation units.
+Also there is a long standing issue in clang (`problematic include after import <https://github.com/llvm/llvm-project/issues/61465>`_).
+But even if the issue get fixed in clang someday, the users may still get slower compilation speed
+and larger BMI size. So it is suggested to not include headers after importing the corresponding
+library.
+
+However, it is not easy for users if your library are included by other dependencies.
+
+So the users may have to write codes like:
+
+.. code-block:: c++
+
+  #include "third_party/A.h" // #include "your_library/a_header.h"
+  import your_library;
+
+or
+
+.. code-block:: c++
+
+  import your_library;
+  #include "third_party/A.h" // #include "your_library/a_header.h"
+
+For such cases, we suggest the libraries providing modules and the headers at the same time
+to provide a header to skip parsing all the headers in your libraries. So the users can
+import your library as the following style to skip redundant handling:
+
+.. code-block:: c++
+
+  import your_library;
+  #include "your_library_imported.h"
+  #include "third_party/A.h" // #include "your_library/a_header.h" but got skipped
+
+The implementation of ``your_library_imported.h`` can be a set of controlling macros or
+an overall controlling macro if you're using `#pragma once`. So you can convert your
+headers to:
+
+.. code-block:: c++
+
+  #pragma once
+  #ifndef YOUR_LIBRARY_IMPORTED
+  ...
+  #endif
+
+If the modules imported by your library provides such headers too, remember to add them to
+your ``your_library_imported.h`` too.
+
+Importing modules
+~~~~~~~~~~~~~~~~~
+
+When there are dependent libraries providing modules, we suggest you to import that in
+your module.
+
+Most of the existing libraries would fall into this catagory once the std module gets available.
+
+All dependent libraries providing modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Life gets easier if all the dependent libraries providing modules.
+
+You need to convert your headers to include thirdparty headers conditionally.
+
+Then for export-using style:
+
+.. code-block:: c++
+
+  module;
+  import modules_from_third_party;
+  #define IN_MODULE_INTERFACE
+  #include "header_1.h"
+  #include "header_2.h"
+  ...
+  #include "header_n.h"
+  export module your_library;
+  export namespace your_namespace {
+    using decl_1;
+    using decl_2;
+    ...
+    using decl_n;
+  }
+
+For export extern-C++ style:
+
+.. code-block:: c++
+
+  export module your_library;
+  import modules_from_third_party;
+  #define IN_MODULE_INTERFACE
+  extern "C++" {
+    #include "header_1.h"
+    #include "header_2.h"
+    ...
+    #include "header_n.h"
+  }
+
+For ABI breaking style,
+
+.. code-block:: c++
+
+  export module your_library;
+  import modules_from_third_party;
+  #define IN_MODULE_INTERFACE
+  #include "header_1.h"
+  #include "header_2.h"
+  ...
+  #include "header_n.h"
+
+  #if the number of .cpp files in your project are small
+  module :private;
+  #include "source_1.cpp"
+  #include "source_2.cpp"
+  ...
+  #include "source_n.cpp"
+  #endif
+
+We don't need the non-exported using declarations if we're using implementation module
+units now. We can import thirdparty modules directly in the implementation module
+units.
+
+Partial dependent libraries providing modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In this case, we have to mix the use of ``include`` and ``import`` in the module of our
+library. The key point here is still to remove duplicated declarations in translation
+units as much as possible. If the imported modules provide headers to skip parsing their
+headers, we should include that after the including. If the imported modules don't provide
+the headers, we can make it ourselves if we still want to optimize it.
 
 Known Problems
 --------------

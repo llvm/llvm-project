@@ -898,7 +898,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
                 Contexts[0].get());
   } else {
-    ThreadPool Pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
@@ -3231,7 +3231,7 @@ static int order_main(int argc, const char *argv[]) {
         "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
-        getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));
+        getParsedIRPGOName(Reader->getSymtab().getFuncOrVarName(N.Id));
     if (!Filename.empty())
       OS << "# " << Filename << "\n";
     OS << ParsedFuncName << "\n";

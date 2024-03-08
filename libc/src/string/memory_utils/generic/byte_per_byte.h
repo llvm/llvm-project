@@ -56,8 +56,8 @@ inline_bcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
   LIBC_LOOP_NOUNROLL
   for (; offset < count; ++offset)
     if (p1[offset] != p2[offset])
-      return BcmpReturnType::NONZERO();
-  return BcmpReturnType::ZERO();
+      return BcmpReturnType::nonzero();
+  return BcmpReturnType::zero();
 }
 
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
@@ -70,7 +70,7 @@ inline_memcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
     if (diff)
       return diff;
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
 } // namespace LIBC_NAMESPACE

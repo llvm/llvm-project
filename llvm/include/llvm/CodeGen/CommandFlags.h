@@ -98,8 +98,6 @@ bool getUseCtors();
 
 bool getDisableIntegratedAS();
 
-bool getRelaxELFRelocations();
-
 bool getDataSections();
 std::optional<bool> getExplicitDataSections();
 
@@ -158,6 +156,8 @@ bool getXCOFFReadOnlyPointers();
 struct RegisterCodeGenFlags {
   RegisterCodeGenFlags();
 };
+
+bool getEnableBBAddrMap();
 
 llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
 

@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stddef.h>
 
 // WARNING: When building the scalar versions of these functions you need to
 // use the compiler flag "-mllvm -disable-loop-idiom-all" to prevent clang

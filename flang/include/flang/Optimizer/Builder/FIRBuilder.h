@@ -230,12 +230,14 @@ public:
                              llvm::StringRef name,
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
-                             bool isTarget = false);
+                             bool isTarget = false,
+                             fir::CUDADataAttributeAttr cudaAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
-                             mlir::StringAttr linkage = {});
+                             mlir::StringAttr linkage = {},
+                             fir::CUDADataAttributeAttr cudaAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -306,6 +308,10 @@ public:
   /// of \p val to the element type of \p addr is created if needed.
   void createStoreWithConvert(mlir::Location loc, mlir::Value val,
                               mlir::Value addr);
+
+  /// Create a fir.load if \p val is a reference or pointer type. Return the
+  /// result of the load if it was created, otherwise return \p val
+  mlir::Value loadIfRef(mlir::Location loc, mlir::Value val);
 
   /// Create a new FuncOp. If the function may have already been created, use
   /// `addNamedFunction` instead.
@@ -686,6 +692,9 @@ fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate Null BoxProc for procedure pointer null initialization.
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxType);
+
+/// Set internal linkage attribute on a function.
+void setInternalLinkage(mlir::func::FuncOp);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

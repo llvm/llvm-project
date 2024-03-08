@@ -782,21 +782,27 @@ def Arith_XOrIOp : Arith_TotalIntBinaryOp<"xori", [Commutative]> {
 // ShLIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ShLIOp : Arith_TotalIntBinaryOp<"shli"> {
+def Arith_ShLIOp : Arith_IntBinaryOpWithOverflowFlags<"shli"> {
   let summary = "integer left-shift";
   let description = [{
     The `shli` operation shifts the integer value of the first operand to the left 
     by the integer value of the second operand. The second operand is interpreted as 
     unsigned. The low order bits are filled with zeros. If the value of the second 
-    operand is greater than the bitwidth of the first operand, then the 
+    operand is greater or equal than the bitwidth of the first operand, then the
     operation returns poison.
+
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
 
     Example:
 
     ```mlir
-    %1 = arith.constant 5 : i8                 // %1 is 0b00000101
+    %1 = arith.constant 5 : i8  // %1 is 0b00000101
     %2 = arith.constant 3 : i8
-    %3 = arith.shli %1, %2 : (i8, i8) -> i8    // %3 is 0b00101000
+    %3 = arith.shli %1, %2 : i8 // %3 is 0b00101000
+    %4 = arith.shli %1, %2 overflow<nsw, nuw> : i8  
     ```
   }];
   let hasFolder = 1;
@@ -812,8 +818,8 @@ def Arith_ShRUIOp : Arith_TotalIntBinaryOp<"shrui"> {
     The `shrui` operation shifts an integer value of the first operand to the right 
     by the value of the second operand. The first operand is interpreted as unsigned,
     and the second operand is interpreted as unsigned. The high order bits are always 
-    filled with zeros. If the value of the second operand is greater than the bitwidth
-    of the first operand, then the operation returns poison.
+    filled with zeros. If the value of the second operand is greater or equal than the
+    bitwidth of the first operand, then the operation returns poison.
 
     Example:
 
@@ -838,8 +844,8 @@ def Arith_ShRSIOp : Arith_TotalIntBinaryOp<"shrsi"> {
     and the second operand is interpreter as unsigned. The high order bits in the 
     output are filled with copies of the most-significant bit of the shifted value 
     (which means that the sign of the value is preserved). If the value of the second 
-    operand is greater than bitwidth of the first operand, then the operation returns 
-    poison.
+    operand is greater or equal than bitwidth of the first operand, then the operation
+    returns poison.
 
     Example:
 

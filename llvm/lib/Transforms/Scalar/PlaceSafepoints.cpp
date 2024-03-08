@@ -190,7 +190,7 @@ static bool enableBackedgeSafepoints(Function &F);
 static bool enableCallSafepoints(Function &F);
 
 static void
-InsertSafepointPoll(Instruction *InsertBefore,
+InsertSafepointPoll(BasicBlock::iterator InsertBefore,
                     std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
                     const TargetLibraryInfo &TLI);
 
@@ -368,7 +368,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
   // safepoint polls themselves.
   for (Instruction *PollLocation : PollsNeeded) {
     std::vector<CallBase *> RuntimeCalls;
-    InsertSafepointPoll(PollLocation, RuntimeCalls, TLI);
+    InsertSafepointPoll(PollLocation->getIterator(), RuntimeCalls, TLI);
     llvm::append_range(ParsePointNeeded, RuntimeCalls);
   }
 
@@ -619,7 +619,7 @@ static bool enableCallSafepoints(Function &F) { return !NoCall; }
 // not handle the parsability of state at the runtime call, that's the
 // callers job.
 static void
-InsertSafepointPoll(Instruction *InsertBefore,
+InsertSafepointPoll(BasicBlock::iterator InsertBefore,
                     std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
                     const TargetLibraryInfo &TLI) {
   BasicBlock *OrigBB = InsertBefore->getParent();

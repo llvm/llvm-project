@@ -297,6 +297,12 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
   if (Str[0] == '$' || IsPseudo)
     ++I;
 
+  if (I == Str.size())
+    return ErrorDiagnostic::get(SM, Str.slice(I, StringRef::npos),
+                                StringRef("empty ") +
+                                    (IsPseudo ? "pseudo " : "global ") +
+                                    "variable name");
+
   if (!isValidVarNameStart(Str[I++]))
     return ErrorDiagnostic::get(SM, Str, "invalid variable name");
 
@@ -690,9 +696,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
 
   // Parse matching constraint.
   Expr = Expr.ltrim(SpaceChars);
-  bool HasParsedValidConstraint = false;
-  if (Expr.consume_front("=="))
-    HasParsedValidConstraint = true;
+  bool HasParsedValidConstraint = Expr.consume_front("==");
 
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
@@ -766,9 +770,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
 
   if (!(Req.NoCanonicalizeWhiteSpace && Req.MatchFullLines))
     // Ignore trailing whitespace.
-    while (!PatternStr.empty() &&
-           (PatternStr.back() == ' ' || PatternStr.back() == '\t'))
-      PatternStr = PatternStr.substr(0, PatternStr.size() - 1);
+    PatternStr = PatternStr.rtrim(" \t");
 
   // Check that there is something on the line.
   if (PatternStr.empty() && CheckTy != Check::CheckEmpty) {

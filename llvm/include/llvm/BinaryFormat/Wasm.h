@@ -216,6 +216,7 @@ enum WasmSymbolType : unsigned {
 enum WasmSegmentFlag : unsigned {
   WASM_SEG_FLAG_STRINGS = 0x1,
   WASM_SEG_FLAG_TLS = 0x2,
+  WASM_SEG_FLAG_RETAIN = 0x4,
 };
 
 // Kinds of tag attributes.
@@ -350,6 +351,8 @@ struct WasmGlobal {
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
   StringRef SymbolName; // from the "linking" section
+  uint32_t Offset; // Offset of the definition in the binary's Global section
+  uint32_t Size;   // Size of the definition in the binary's Global section
 };
 
 struct WasmTag {
@@ -467,11 +470,15 @@ struct WasmDebugName {
   StringRef Name;
 };
 
+// Info from the linking metadata section of a wasm object file.
 struct WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
-  std::vector<WasmSymbolInfo> SymbolTable;
+  // The linking section also contains a symbol table. This info (represented
+  // in a WasmSymbolInfo struct) is stored inside the WasmSymbol object instead
+  // of in this structure; this allows vectors of WasmSymbols and
+  // WasmLinkingDatas to be reallocated.
 };
 
 struct WasmSignature {

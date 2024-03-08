@@ -1087,10 +1087,41 @@ static void addOpenMPDeviceLibC(const ToolChain &TC, const ArgList &Args,
                           "llvm-libc-decls");
   bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
                  llvm::sys::fs::is_directory(LibCDecls);
-  if (Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC)) {
-    CmdArgs.push_back("-lcgpu");
-    CmdArgs.push_back("-lmgpu");
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
+    return;
+
+  // We don't have access to the offloading toolchains here, so determine from
+  // the arguments if we have any active NVPTX or AMDGPU toolchains.
+  llvm::DenseSet<const char *> Libraries;
+  if (const Arg *Targets = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+    if (llvm::any_of(Targets->getValues(),
+                     [](auto S) { return llvm::Triple(S).isAMDGPU(); })) {
+      Libraries.insert("-lcgpu-amdgpu");
+      Libraries.insert("-lmgpu-amdgpu");
+    }
+    if (llvm::any_of(Targets->getValues(),
+                     [](auto S) { return llvm::Triple(S).isNVPTX(); })) {
+      Libraries.insert("-lcgpu-nvptx");
+      Libraries.insert("-lmgpu-nvptx");
+    }
   }
+
+  for (StringRef Arch : Args.getAllArgValues(options::OPT_offload_arch_EQ)) {
+    if (llvm::any_of(llvm::split(Arch, ","), [](StringRef Str) {
+          return IsAMDGpuArch(StringToCudaArch(Str));
+        })) {
+      Libraries.insert("-lcgpu-amdgpu");
+      Libraries.insert("-lmgpu-amdgpu");
+    }
+    if (llvm::any_of(llvm::split(Arch, ","), [](StringRef Str) {
+          return IsNVIDIAGpuArch(StringToCudaArch(Str));
+        })) {
+      Libraries.insert("-lcgpu-nvptx");
+      Libraries.insert("-lmgpu-nvptx");
+    }
+  }
+
+  llvm::append_range(CmdArgs, Libraries);
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1285,6 +1316,17 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
   // add the correct libraries to link against as dependents in the object
   // file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    StringRef F128LibName = TC.getDriver().getFlangF128MathLibrary();
+    F128LibName.consume_front_insensitive("lib");
+    if (!F128LibName.empty()) {
+      bool AsNeeded = !TC.getTriple().isOSAIX();
+      CmdArgs.push_back("-lFortranFloat128Math");
+      if (AsNeeded)
+        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
+      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
+      if (AsNeeded)
+        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
+    }
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
   }
@@ -2650,7 +2692,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
   const unsigned MinCodeObjVer = 4;
-  const unsigned MaxCodeObjVer = 5;
+  const unsigned MaxCodeObjVer = 6;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==
@@ -2661,6 +2703,12 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
       if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
         D.Diag(diag::err_drv_invalid_int_value)
             << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+
+      // COV6 is only supported by LLVM at the time of writing this, and it's
+      // expected to take some time before all ROCm components fully
+      // support it. In the meantime, make sure users are aware of this.
+      if (CodeObjVer == 6)
+        D.Diag(diag::warn_drv_amdgpu_cov6);
     }
   }
 }
@@ -2715,13 +2763,9 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                                const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args,
                                StringRef BitcodeSuffix,
-                               const llvm::Triple &Triple) {
+                               const llvm::Triple &Triple,
+                               const ToolChain &HostTC) {
   SmallVector<StringRef, 8> LibraryPaths;
-
-  // Add path to clang lib / lib64 folder.
-  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
-  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
-  LibraryPaths.emplace_back(DefaultLibPath.c_str());
 
   // Add user defined library paths from LIBRARY_PATH.
   std::optional<std::string> LibPath =
@@ -2733,6 +2777,10 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     for (StringRef Path : Frags)
       LibraryPaths.emplace_back(Path.trim());
   }
+
+  // Check all of the standard library search paths used by the compiler.
+  for (const auto &LibPath : HostTC.getFilePaths())
+    LibraryPaths.emplace_back(LibPath);
 
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
@@ -2788,5 +2836,30 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
     for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
       Arg->claim();
     }
+  }
+}
+
+void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
+                               options::OPT_mno_outline_atomics)) {
+    // Option -moutline-atomics supported for AArch64 target only.
+    if (!Triple.isAArch64()) {
+      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
+          << Triple.getArchName() << A->getOption().getName();
+    } else {
+      if (A->getOption().matches(options::OPT_moutline_atomics)) {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("+outline-atomics");
+      } else {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("-outline-atomics");
+      }
+    }
+  } else if (Triple.isAArch64() && TC.IsAArch64OutlineAtomicsDefault(Args)) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+outline-atomics");
   }
 }

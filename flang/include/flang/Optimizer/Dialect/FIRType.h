@@ -15,6 +15,7 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Type.h"
 
@@ -320,6 +321,9 @@ bool isBoxNone(mlir::Type ty);
 /// e.g. !fir.box<!fir.type<derived>>
 bool isBoxedRecordType(mlir::Type ty);
 
+/// Return true iff `ty` is a type that contains descriptor information.
+bool isTypeWithDescriptor(mlir::Type ty);
+
 /// Return true iff `ty` is a scalar boxed record type.
 /// e.g. !fir.box<!fir.type<derived>>
 ///      !fir.box<!fir.heap<!fir.type<derived>>>
@@ -464,6 +468,17 @@ inline bool isBoxProcAddressType(mlir::Type t) {
 /// fir.ref<i32> -> prefix_ref_i32
 std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
                             llvm::StringRef prefix = "");
+
+/// Return the size and alignment of FIR types.
+/// TODO: consider moving this to a DataLayoutTypeInterface implementation
+/// for FIR types. It should first be ensured that it is OK to open the gate of
+/// target dependent type size inquiries in lowering. It would also not be
+/// straightforward given the need for a kind map that would need to be
+/// converted in terms of mlir::DataLayoutEntryKey.
+std::pair<std::uint64_t, unsigned short>
+getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                        const mlir::DataLayout &dl,
+                        const fir::KindMapping &kindMap);
 
 } // namespace fir
 

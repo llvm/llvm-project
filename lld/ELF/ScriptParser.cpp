@@ -445,6 +445,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-msp430", {ELF32LEKind, EM_MSP430})
       .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
       .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
+      .Case("elf64-s390", {ELF64BEKind, EM_S390})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -716,9 +717,19 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
 
     StringMatcher SectionMatcher;
     // Break if the next token is ), EXCLUDE_FILE, or SORT*.
-    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE" &&
-           peekSortKind() == SortSectionPolicy::Default)
+    while (!errorCount() && peekSortKind() == SortSectionPolicy::Default) {
+      StringRef s = peek();
+      if (s == ")" || s == "EXCLUDE_FILE")
+        break;
+      // Detect common mistakes when certain non-wildcard meta characters are
+      // used without a closing ')'.
+      if (!s.empty() && strchr("(){}", s[0])) {
+        skip();
+        setError("section pattern is expected");
+        break;
+      }
       SectionMatcher.addPattern(unquote(next()));
+    }
 
     if (!SectionMatcher.empty())
       ret.push_back({std::move(excludeFilePat), std::move(SectionMatcher)});

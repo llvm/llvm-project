@@ -277,8 +277,7 @@ class SM_Pseudo_Atomic<string opName,
                         (ins CPolTy:$cpol)),
                    !if(isRet, " $sdst", " $sdata") #
                      ", $sbase, " # offsets.Asm # "$cpol",
-                   isRet>,
-  AtomicNoRet <opNameWithSuffix, isRet> {
+                   isRet> {
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
   let PseudoInstr = opNameWithSuffix;
@@ -662,8 +661,7 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_vi <0x27>;
 //===----------------------------------------------------------------------===//
 
 class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_vi <op, ps>,
-    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
+  : SMEM_Real_vi <op, ps> {
 
   bits<7> sdata;
 
@@ -1065,10 +1063,22 @@ def : GCNPat <
   (REG_SEQUENCE SReg_64,
     (S_GETREG_B32 getHwRegImm<HWREG.SHADER_CYCLES, 0, -12>.ret), sub0,
     (S_MOV_B32 (i32 0)), sub1)> {
-  // Prefer this to s_memtime because it has lower and more predictable latency.
-  let AddedComplexity = 1;
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
+
+let OtherPredicates = [HasSMemRealTime] in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_MEMREALTIME)
+>;
+} // let OtherPredicates = [HasSMemRealTime]
+
+let SubtargetPredicate = isGFX11Plus in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_SENDMSG_RTN_B64 (i32 /*MSG_RTN_GET_REALTIME=*/0x83))
+>;
+} // let SubtargetPredicate = [isGFX11Plus]
 
 def i32imm_zero : TImmLeaf <i32, [{
   return Imm == 0;
@@ -1210,8 +1220,7 @@ defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26>;
 defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx10 <0x27>;
 
 class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_gfx10 <op, ps>,
-    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
+  : SMEM_Real_gfx10 <op, ps> {
 
   bits<7> sdata;
 

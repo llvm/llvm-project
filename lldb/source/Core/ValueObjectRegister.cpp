@@ -74,7 +74,7 @@ ConstString ValueObjectRegisterSet::GetQualifiedTypeName() {
   return ConstString();
 }
 
-size_t ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
   const RegisterSet *reg_set = m_reg_ctx_sp->GetRegisterSet(m_reg_set_idx);
   if (reg_set) {
     auto reg_count = reg_set->num_registers;
@@ -220,7 +220,7 @@ ConstString ValueObjectRegister::GetTypeName() {
   return m_type_name;
 }
 
-size_t ValueObjectRegister::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectRegister::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
   return children_count <= max ? children_count : max;

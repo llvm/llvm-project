@@ -225,6 +225,11 @@ HANDLE_TARGET_OPCODE(MEMBARRIER)
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
 
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ENTRY)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ANCHOR)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_LOOP)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_GLUE)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
@@ -351,6 +356,9 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUNDEVEN)
 
 /// INTRINSIC readcyclecounter
 HANDLE_TARGET_OPCODE(G_READCYCLECOUNTER)
+
+/// INTRINSIC readsteadycounter
+HANDLE_TARGET_OPCODE(G_READSTEADYCOUNTER)
 
 /// Generic load (including anyext load)
 HANDLE_TARGET_OPCODE(G_LOAD)
@@ -727,6 +735,9 @@ HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
 
 /// Generic shufflevector.
 HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
+
+/// Generic splatvector.
+HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)

@@ -1,13 +1,10 @@
-// RUN: %clang -target s390x-linux-gnu %s -o - -emit-llvm -S \
+// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
 // RUN:    | FileCheck %s -check-prefixes=CHECK,ALIGNED
 
-// RUN: %clang -target s390x-linux-gnu %s -o - -emit-llvm -S \
-// RUN:    -mno-unaligned-symbols | FileCheck %s -check-prefixes=CHECK,ALIGNED
+// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
+// RUN:    -target-feature -unaligned-symbols | FileCheck %s -check-prefixes=CHECK,ALIGNED
 
-// RUN: %clang -target s390x-linux-gnu %s -o - -emit-llvm -S \
-// RUN:    -munaligned-symbols | FileCheck %s -check-prefixes=CHECK,UNALIGN
-
-// RUN: %clang -cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
+// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -emit-llvm \
 // RUN:    -target-feature +unaligned-symbols | FileCheck %s -check-prefixes=CHECK,UNALIGN
 
 

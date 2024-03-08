@@ -210,8 +210,12 @@ struct OneShotBufferizePass
       opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
-      if (mustInferMemorySpace)
-        opt.defaultMemorySpace = std::nullopt;
+      if (mustInferMemorySpace) {
+        opt.defaultMemorySpaceFn =
+            [](TensorType t) -> std::optional<Attribute> {
+          return std::nullopt;
+        };
+      }
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
@@ -365,7 +369,7 @@ public:
   }
 
 protected:
-  void notifyOperationRemoved(Operation *op) override {
+  void notifyOperationErased(Operation *op) override {
     erasedOps.insert(op);
     // Erase if present.
     toMemrefOps.erase(op);
@@ -497,6 +501,10 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
                << *op
                << "\n//===-------------------------------------------===//\n");
   }
+
+  // Return early if the top-level op is entirely gone.
+  if (erasedOps.contains(op))
+    return success();
 
   // Fold all to_memref(to_tensor(x)) pairs.
   for (Operation *op : toMemrefOps) {

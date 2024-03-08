@@ -74,12 +74,12 @@ public:
 
   ~BlockPointerSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  uint32_t CalculateNumChildren() override {
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetNumChildren(omit_empty_base_classes, nullptr);
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (!m_block_struct_type.IsValid()) {
       return lldb::ValueObjectSP();
     }
@@ -136,7 +136,9 @@ public:
 
   // return true if this object is now safe to use forever without ever
   // updating again; the typical (and tested) answer here is 'false'
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   // maybe return false if the block pointer is, say, null
   bool MightHaveChildren() override { return true; }

@@ -508,7 +508,7 @@ define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
 ; GFX12-NEXT:    s_endpgm
   %fmed3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float %z)
   %div2 = fmul float %fmed3, 2.0
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -651,8 +651,8 @@ define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
 ; GFX12-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mul_f32_e32 v1, 4.0, v0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_nop 0
