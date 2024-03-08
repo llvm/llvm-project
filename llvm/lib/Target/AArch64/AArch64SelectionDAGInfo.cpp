@@ -143,7 +143,7 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
       TLI->getLibcallCallingConv(LC), RetTy, Symbol, std::move(Args));
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
-  return CallResult.second;
+  return (isa<PointerType>(RetTy) ? CallResult.second : CallResult.first);
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
