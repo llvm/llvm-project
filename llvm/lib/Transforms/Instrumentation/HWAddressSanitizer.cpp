@@ -628,8 +628,7 @@ void HWAddressSanitizer::initializeModule() {
                    TargetTriple.isOSBinFormatELF() &&
                    !optOr(ClInlineAllChecks, Recover);
 
-  // These platforms may prefer less
-  // inlining to reduce binary size.
+  // These platforms may prefer less inlining to reduce binary size.
   InlineFastPath = optOr(ClInlineFastPathChecks, !(TargetTriple.isAndroid() ||
                                                    TargetTriple.isOSFuchsia()));
 
