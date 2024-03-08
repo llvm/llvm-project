@@ -32,8 +32,10 @@ expand_template(
     name = "mlir_config_h_gen",
     out = "include/mlir/Config/mlir-config.h",
     substitutions = {
+        "#cmakedefine01 MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE": "#define MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE 0",
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
+        "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 0",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
         "#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS": "#define MLIR_ENABLE_ROCM_CONVERSIONS 0",
     } | if_cuda_available(
@@ -540,6 +542,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":LLVMDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -1766,7 +1769,6 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Target/Cpp/*.h"]),
     deps = [
-        ":ArithDialect",
         ":ControlFlowDialect",
         ":EmitCDialect",
         ":FuncDialect",
@@ -4012,6 +4014,7 @@ cc_library(
         ":AffineToStandard",
         ":ArithToAMDGPU",
         ":ArithToArmSME",
+        ":ArithToEmitC",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -7401,11 +7404,13 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterface",
         ":MemorySlotInterfaces",
+        ":Pass",
         ":Rewrite",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
@@ -8153,6 +8158,32 @@ cc_library(
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ArithToEmitC",
+    srcs = glob([
+        "lib/Conversion/ArithToEmitC/*.cpp",
+        "lib/Conversion/ArithToEmitC/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithToEmitC/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/ArithToEmitC",
+    ],
+    deps = [
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -9172,6 +9203,7 @@ cc_binary(
         ":SCFToGPU",
         ":Support",
         ":Transforms",
+        ":config",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Support",
         "//mlir/test:TestAffine",
@@ -10808,6 +10840,7 @@ cc_library(
         ":MemRefDialect",
         ":Parser",
         ":SCFDialect",
+        ":MeshShardingInterface",
         ":SideEffectInterfaces",
         ":SparseTensorDialect",
         ":Support",
@@ -10961,10 +10994,13 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":MemRefTransforms",
+        ":MeshDialect",
+        ":MeshTransforms",
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
         ":SCFUtils",
+        ":MeshShardingInterface",
         ":SparseTensorDialect",
         ":SubsetOpInterface",
         ":Support",

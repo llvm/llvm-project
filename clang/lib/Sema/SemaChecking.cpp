@@ -5321,6 +5321,9 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_get_fpenv:
+  case AMDGPU::BI__builtin_amdgcn_set_fpenv:
+    return false;
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
@@ -11524,7 +11527,7 @@ void CheckFormatHandler::EmitFormatDiagnostic(
   }
 }
 
-//===--- CHECK: Printf format string checking ------------------------------===//
+//===--- CHECK: Printf format string checking -----------------------------===//
 
 namespace {
 
@@ -19090,17 +19093,16 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   RHSExpr = RHSExpr->IgnoreParenImpCasts();
 
-  // Check for a call expression
-  const CallExpr *CE = dyn_cast<CallExpr>(RHSExpr);
-  if (!CE || CE->getNumArgs() != 1)
+  // Check for a call to std::move or for a static_cast<T&&>(..) to an xvalue
+  // which we can treat as an inlined std::move
+  if (const auto *CE = dyn_cast<CallExpr>(RHSExpr);
+      CE && CE->getNumArgs() == 1 && CE->isCallToStdMove())
+    RHSExpr = CE->getArg(0);
+  else if (const auto *CXXSCE = dyn_cast<CXXStaticCastExpr>(RHSExpr);
+           CXXSCE && CXXSCE->isXValue())
+    RHSExpr = CXXSCE->getSubExpr();
+  else
     return;
-
-  // Check for a call to std::move
-  if (!CE->isCallToStdMove())
-    return;
-
-  // Get argument from std::move
-  RHSExpr = CE->getArg(0);
 
   const DeclRefExpr *LHSDeclRef = dyn_cast<DeclRefExpr>(LHSExpr);
   const DeclRefExpr *RHSDeclRef = dyn_cast<DeclRefExpr>(RHSExpr);
@@ -19182,8 +19184,24 @@ static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
 }
 
 /// Check if two fields are layout-compatible.
+/// Can be used on union members, which are exempt from alignment requirement
+/// of common initial sequence.
 static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
-                               FieldDecl *Field2) {
+                               FieldDecl *Field2,
+                               bool AreUnionMembers = false) {
+  [[maybe_unused]] const Type *Field1Parent =
+      Field1->getParent()->getTypeForDecl();
+  [[maybe_unused]] const Type *Field2Parent =
+      Field2->getParent()->getTypeForDecl();
+  assert(((Field1Parent->isStructureOrClassType() &&
+           Field2Parent->isStructureOrClassType()) ||
+          (Field1Parent->isUnionType() && Field2Parent->isUnionType())) &&
+         "Can't evaluate layout compatibility between a struct field and a "
+         "union field.");
+  assert(((!AreUnionMembers && Field1Parent->isStructureOrClassType()) ||
+          (AreUnionMembers && Field1Parent->isUnionType())) &&
+         "AreUnionMembers should be 'true' for union fields (only).");
+
   if (!isLayoutCompatible(C, Field1->getType(), Field2->getType()))
     return false;
 
@@ -19202,6 +19220,11 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
   if (Field1->hasAttr<clang::NoUniqueAddressAttr>() ||
       Field2->hasAttr<clang::NoUniqueAddressAttr>())
     return false;
+
+  if (!AreUnionMembers &&
+      Field1->getMaxAlignment() != Field2->getMaxAlignment())
+    return false;
+
   return true;
 }
 
@@ -19263,7 +19286,7 @@ static bool isLayoutCompatibleUnion(ASTContext &C, RecordDecl *RD1,
         E = UnmatchedFields.end();
 
     for ( ; I != E; ++I) {
-      if (isLayoutCompatible(C, Field1, *I)) {
+      if (isLayoutCompatible(C, Field1, *I, /*IsUnionMember=*/true)) {
         bool Result = UnmatchedFields.erase(*I);
         (void) Result;
         assert(Result);

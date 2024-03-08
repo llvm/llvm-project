@@ -34,6 +34,7 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -420,6 +421,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
+  initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -652,6 +654,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         }
         if (PassName == "amdgpu-lower-module-lds") {
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-lower-buffer-fat-pointers") {
+          PM.addPass(AMDGPULowerBufferFatPointersPass(*this));
           return true;
         }
         if (PassName == "amdgpu-lower-ctor-dtor") {
@@ -1120,6 +1126,29 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
   if (TM->getTargetTriple().getArch() == Triple::amdgcn &&
       EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
+
+  if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
+    // This lowering has been placed after codegenprepare to take advantage of
+    // address mode matching (which is why it isn't put with the LDS lowerings).
+    // It could be placed anywhere before uniformity annotations (an analysis
+    // that it changes by splitting up fat pointers into their components)
+    // but has been put before switch lowering and CFG flattening so that those
+    // passes can run on the more optimized control flow this pass creates in
+    // many cases.
+    //
+    // FIXME: This should ideally be put after the LoadStoreVectorizer.
+    // However, due to some annoying facts about ResourceUsageAnalysis,
+    // (especially as exercised in the resource-usage-dead-function test),
+    // we need all the function passes codegenprepare all the way through
+    // said resource usage analysis to run on the call graph produced
+    // before codegenprepare runs (because codegenprepare will knock some
+    // nodes out of the graph, which leads to function-level passes not
+    // being run on them, which causes crashes in the resource usage analysis).
+    addPass(createAMDGPULowerBufferFatPointersPass());
+    // In accordance with the above FIXME, manually force all the
+    // function-level passes into a CGSCCPassManager.
+    addPass(new DummyCGSCCPass());
+  }
 
   TargetPassConfig::addCodeGenPrepare();
 

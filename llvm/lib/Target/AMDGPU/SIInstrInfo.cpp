@@ -360,7 +360,7 @@ static bool isStride64(unsigned Opc) {
 
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore())
     return false;
@@ -424,7 +424,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
         Width = getOpSize(LdSt, DataOpIdx);
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data1);
-        Width += getOpSize(LdSt, DataOpIdx);
+        Width = Width.getValue() + getOpSize(LdSt, DataOpIdx);
       } else {
         Width = getOpSize(LdSt, DataOpIdx);
       }
@@ -3647,7 +3647,7 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                                const MachineInstr &MIb) const {
   SmallVector<const MachineOperand *, 4> BaseOps0, BaseOps1;
   int64_t Offset0, Offset1;
-  unsigned Dummy0, Dummy1;
+  LocationSize Dummy0 = 0, Dummy1 = 0;
   bool Offset0IsScalable, Offset1IsScalable;
   if (!getMemOperandsWithOffsetWidth(MIa, BaseOps0, Offset0, Offset0IsScalable,
                                      Dummy0, &RI) ||
@@ -4121,29 +4121,10 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
                                         ST.hasInv2PiInlineImm());
   case 16:
     return ST.has16BitInsts() &&
-           AMDGPU::isInlinableLiteralI16(Imm.getSExtValue(),
-                                         ST.hasInv2PiInlineImm());
+           AMDGPU::isInlinableLiteral16(Imm.getSExtValue(),
+                                        ST.hasInv2PiInlineImm());
   default:
     llvm_unreachable("invalid bitwidth");
-  }
-}
-
-bool SIInstrInfo::isInlineConstant(const APFloat &Imm) const {
-  APInt IntImm = Imm.bitcastToAPInt();
-  int64_t IntImmVal = IntImm.getSExtValue();
-  bool HasInv2Pi = ST.hasInv2PiInlineImm();
-  switch (APFloat::SemanticsToEnum(Imm.getSemantics())) {
-  default:
-    llvm_unreachable("invalid fltSemantics");
-  case APFloatBase::S_IEEEsingle:
-  case APFloatBase::S_IEEEdouble:
-    return isInlineConstant(IntImm);
-  case APFloatBase::S_BFloat:
-    return ST.has16BitInsts() &&
-           AMDGPU::isInlinableLiteralBF16(IntImmVal, HasInv2Pi);
-  case APFloatBase::S_IEEEhalf:
-    return ST.has16BitInsts() &&
-           AMDGPU::isInlinableLiteralFP16(IntImmVal, HasInv2Pi);
   }
 }
 
@@ -4219,7 +4200,7 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
       // constants in these cases
       int16_t Trunc = static_cast<int16_t>(Imm);
       return ST.has16BitInsts() &&
-             AMDGPU::isInlinableLiteralFP16(Trunc, ST.hasInv2PiInlineImm());
+             AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
     }
 
     return false;
