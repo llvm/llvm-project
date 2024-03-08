@@ -11,12 +11,12 @@ define noundef signext i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, L..C0(r2) # @b
-; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    andi. r4, r3, 65535
+; CHECK-NEXT:    lwz r4, 0(r3)
+; CHECK-NEXT:    andi. r3, r4, 65535
+; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    bne cr0, L..BB0_4
 ; CHECK-NEXT:  # %bb.1: # %lor.rhs.i.i
-; CHECK-NEXT:    extsw r4, r3
-; CHECK-NEXT:    neg r5, r4
+; CHECK-NEXT:    neg r5, r3
 ; CHECK-NEXT:    rldicl r5, r5, 1, 63
 ; CHECK-NEXT:    xori r5, r5, 1
 ; CHECK-NEXT:    cmpw r4, r5
