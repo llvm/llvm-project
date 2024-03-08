@@ -1306,7 +1306,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       unsigned AS = PtrTy.getAddressSpace();
       unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
       if (OffsetTy.getScalarSizeInBits() != IndexSizeInBits)
-        report("gep offset operand must match index size for address space", MI);
+        report("gep offset operand must match index size for address space",
+               MI);
     }
 
     // TODO: Is the offset allowed to be a scalar with a vector?
