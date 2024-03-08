@@ -718,7 +718,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
                                      SourceLocation TemplateKWLoc,
                                      TypoExpr *&TE) {
-  #if 1
+  #if 0
   DeclContext *DC = SemaRef.computeDeclContext(RTy);
   // If the object expression is dependent and isn't the current instantiation,
   // lookup will not find anything and we must defer until instantiation.
@@ -747,15 +747,18 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
   QualType ObjectType = SS.isSet() ? QualType() : RTy;
   if (HasTemplateArgs || TemplateKWLoc.isValid()) {
     bool MOUS;
-    return SemaRef.LookupTemplateName(R,
+    bool Invalid = SemaRef.LookupTemplateName(R,
                                       /*S=*/nullptr,
                                       SS,
                                       ObjectType,
                                       /*EnteringContext=*/false,
                                       MOUS,
                                       TemplateKWLoc);
+    if (MOUS)
+      R.setNotFoundInCurrentInstantiation();
+    return Invalid;
   }
-  #if 0
+  #if 1
   SemaRef.LookupParsedName(R, /*S=*/nullptr, &SS, ObjectType);
   #else
   if (SS.isSet()) {
@@ -793,7 +796,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
 
   DeclarationName Typo = R.getLookupName();
   SourceLocation TypoLoc = R.getNameLoc();
-  #if 0
+  #if 1
   DeclContext *DC = SS.isSet()
       ? SemaRef.computeDeclContext(SS)
       : SemaRef.computeDeclContext(RTy);
