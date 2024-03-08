@@ -401,6 +401,9 @@ CUDA/HIP Language Changes
   the AMDGPU target at the moment. See the dedicated entry in the `HIP Language
   support document for details <https://clang.llvm.org/docs/HIPSupport.html>`_
 
+- PTX is no longer included by default when compiling for CUDA. Using 
+  ``--cuda-include-ptx=all`` will return the old behavior.
+
 CUDA Support
 ^^^^^^^^^^^^
 
