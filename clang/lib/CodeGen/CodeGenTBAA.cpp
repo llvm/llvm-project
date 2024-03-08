@@ -343,6 +343,9 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
 llvm::MDNode *
 CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
+  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
+    return nullptr;
+
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
 
   if (llvm::MDNode *N = StructMetadataCache[Ty])
