@@ -9,6 +9,7 @@ struct S {
   S(S &&);
   S &operator=(S const &);
   S &operator=(S &&);
+  S &operator+=(S);
 };
 
 S returnValue();
@@ -20,12 +21,10 @@ void bar() {
 
   S a{};
   a = returnValue();
-  // CHECK-NOT: [[@LINE-1]]:3: warning
   a.operator=(returnValue());
-  // CHECK-NOT: [[@LINE-1]]:3: warning
 
   a = returnRef();
-  // CHECK-NOT: [[@LINE-1]]:3: warning
   a.operator=(returnRef());
-  // CHECK-NOT: [[@LINE-1]]:3: warning
+
+  a += returnRef();
 }
