@@ -1015,7 +1015,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       Type *Int32PtrTy = IRB.getPtrTy();
       Type *Int32Ty = IRB.getInt32Ty();
 
-      // Register testSetjmp function
       if (EnableWasmAltSjLj) {
         // Register saveSetjmp function
         FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
@@ -1024,6 +1023,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
             false);
         SaveSetjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_setjmp", &M);
 
+        // Register testSetjmp function
         FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
         TestSetjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_test", &M);
       } else {
@@ -1034,6 +1034,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
             {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy, Int32Ty}, false);
         SaveSetjmpF = getEmscriptenFunction(FTy, "saveSetjmp", &M);
 
+        // Register testSetjmp function
         FTy = FunctionType::get(
             Int32Ty, {getAddrIntType(&M), Int32PtrTy, Int32Ty}, false);
         TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
