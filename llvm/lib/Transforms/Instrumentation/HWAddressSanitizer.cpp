@@ -411,7 +411,7 @@ private:
 
   Type *VoidTy = Type::getVoidTy(M.getContext());
   Type *IntptrTy = M.getDataLayout().getIntPtrType(M.getContext());
-  PointerType *PtrTy = PointerType::get(M.getContext(), /* AddressSpace= */0);
+  PointerType *PtrTy = PointerType::get(M.getContext(), /* AddressSpace= */ 0);
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
