@@ -4998,6 +4998,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return true;
 
   switch (Opcode) {
+  case ISD::CONDCODE:
   case ISD::VALUETYPE:
   case ISD::FrameIndex:
   case ISD::TargetFrameIndex:
@@ -5089,6 +5090,11 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
     return false;
+
+  case ISD::SETCC:
+    // Integer setcc cannot create undef or poison.
+    // FIXME: Support FP.
+    return !Op.getOperand(0).getValueType().isInteger();
 
   // Matches hasPoisonGeneratingFlags().
   case ISD::ZERO_EXTEND:
