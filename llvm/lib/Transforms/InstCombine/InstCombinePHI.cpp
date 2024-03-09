@@ -646,6 +646,7 @@ InstCombinerImpl::foldPHIWithMinMaxHelper(PHINode &PN, Instruction *I, Value *Z,
       if (CmpXZ.has_value() && CmpYZ.has_value())
         continue;
 
+      // swap XZ with YZ so XZ always has value
       if (!CmpXZ.has_value()) {
         std::swap(X, Y);
         std::swap(CmpXZ, CmpYZ);
@@ -656,13 +657,13 @@ InstCombinerImpl::foldPHIWithMinMaxHelper(PHINode &PN, Instruction *I, Value *Z,
       case ICmpInst::ICMP_ULT:
       case ICmpInst::ICMP_SGT:
       case ICmpInst::ICMP_UGT:
-        // if X > Z
+        // if X >= Z
         // %min = llvm.min ( X, Y )
-        // %phi = phi %min ...         =>  %phi = phi X ..
+        // %phi = phi %min ...         =>  %phi = phi Y ..
         // %cmp = icmp lt %phi, Z          %cmp = icmp %phi, Z
-        // if X < Z
+        // if X <= Z
         // %max = llvm.max ( X, Y )
-        // %phi = phi %max ...         =>  %phi = phi X ..
+        // %phi = phi %max ...         =>  %phi = phi Y ..
         // %cmp = icmp gt %phi, Z          %cmp = icmp %phi, Z
         if (CmpXZ.value()) {
           if (MinMax->hasOneUse()) {
@@ -688,12 +689,12 @@ Instruction *InstCombinerImpl::foldPHIWithMinMax(PHINode &PN) {
   // The PHI instruction must only be used by a ICmp Instruction
   if (ICmpInst *ICmp = dyn_cast<ICmpInst>(PN.getUniqueUndroppableUser())) {
     Value *Op0 = ICmp->getOperand(0), *Op1 = ICmp->getOperand(1);
-    // case 1: icmp <op> %phi, %other
+    // case 1: icmp <op> %phi, %intrinsic
     if (isa<PHINode>(Op0))
       return foldPHIWithMinMaxHelper(PN, ICmp, Op1, ICmp->getPredicate());
     // case 2: icmp <op> %intrinsic, %phi
     else if (isa<PHINode>(Op1))
-      return foldPHIWithMinMaxHelper(PN, ICmp, Op0, ICmp->getPredicate());
+      return foldPHIWithMinMaxHelper(PN, ICmp, Op0, ICmp->getSwappedPredicate());
   }
   return nullptr;
 }
