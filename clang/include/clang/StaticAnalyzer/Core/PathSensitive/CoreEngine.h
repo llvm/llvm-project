@@ -59,7 +59,7 @@ class CoreEngine {
   friend class ExprEngine;
   friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
-  friend struct NodeBuilderContext;
+  friend class NodeBuilderContext;
   friend class SwitchNodeBuilder;
 
 public:
@@ -194,7 +194,8 @@ public:
 };
 
 // TODO: Turn into a class.
-struct NodeBuilderContext {
+class NodeBuilderContext {
+public:
   const CoreEngine &Eng;
   const CFGBlock *Block;
   const LocationContext *LC;
