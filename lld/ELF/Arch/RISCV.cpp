@@ -1147,8 +1147,10 @@ static void mergeX3RegUse(DenseMap<unsigned, unsigned> &intAttr,
   auto attr = RISCVAttrs::X3_REG_USAGE;
   if (newTag == X3RegUsage::UNKNOWN)
     return;
-  if (oldTag == X3RegUsage::UNKNOWN)
+  if (oldTag == X3RegUsage::UNKNOWN) {
     intAttr[attr] = newTag;
+    return;
+  }
   if (oldTag != newTag) {
     errorOrWarn(toString(oldSection) + " has x3_reg_usage=" + Twine(oldTag) +
                 " but " + toString(newSection) +
