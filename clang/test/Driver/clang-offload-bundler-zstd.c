@@ -32,7 +32,7 @@
 // RUN: diff %t.tgt2 %t.res.tgt2
 //
 // COMPRESS: Compression method used: zstd
-// COMPRESS: Compression level: 20
+// COMPRESS: Compression level: 3 
 // DECOMPRESS: Decompression method: zstd
 // DECOMPRESS: Hashes match: Yes
 // NOHOST-NOT: host-
