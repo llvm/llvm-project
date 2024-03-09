@@ -413,7 +413,7 @@ class graph_scc_iterator
   NodesIter nodeEndIter;
 
   graph_scc_iterator(const GraphT &g, bool e = false)
-      : currentNode(GT::nodes_begin(&g)), nodeEndIter(GT::nodes_end(&g)) {
+      : currentNode(GT::nodes_begin(g)), nodeEndIter(GT::nodes_end(g)) {
     if (e) {
       currentNode = nodeEndIter;
       return;
@@ -496,9 +496,9 @@ public:
     return graph_scc_iterator(g, true);
   }
 
-  bool operator!=(const graph_scc_iterator &x) const {
-    return currentNode != x.currentNode || currentSCC != x.currentSCC;
-  }
+  template <class T>
+  friend bool operator!=(const graph_scc_iterator<T> &x,
+                         const graph_scc_iterator<T> &y);
 
   graph_scc_iterator &operator++() {
     computeNext();
@@ -515,6 +515,11 @@ template <class T> graph_scc_iterator<T> graph_scc_begin(const T &G) {
 /// Construct the end iterator for a deduced graph type T.
 template <class T> graph_scc_iterator<T> graph_scc_end(const T &G) {
   return graph_scc_iterator<T>::end(G);
+}
+template <class T>
+bool operator!=(const graph_scc_iterator<T> &x,
+                const graph_scc_iterator<T> &y) {
+  return x.currentNode != y.currentNode || x.currentSCC != y.currentSCC;
 }
 
 } // end namespace llvm
