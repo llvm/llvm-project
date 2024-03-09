@@ -1137,33 +1137,11 @@ static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
   };
 }
 
-static void mergeX3RegUse(DenseMap<unsigned, unsigned> &intAttr,
-                          const InputSectionBase *oldSection,
-                          const InputSectionBase *newSection,
-                          unsigned int oldTag, unsigned int newTag) {
-  // X3/GP register usage ar incompatible and cannot be merged, with the
-  // exception of the UNKNOWN or 0 value
-  using RISCVAttrs::RISCVX3RegUse::X3RegUsage;
-  auto attr = RISCVAttrs::X3_REG_USAGE;
-  if (newTag == X3RegUsage::UNKNOWN)
-    return;
-  if (oldTag == X3RegUsage::UNKNOWN)
-    intAttr[attr] = newTag;
-  if (oldTag != newTag) {
-    errorOrWarn(toString(oldSection) + " has x3_reg_usage=" + Twine(oldTag) +
-                " but " + toString(newSection) +
-                " has x3_reg_usage=" + Twine(newTag));
-    return;
-  }
-  // TODO: do we need to check the tags are < 2047?
-}
-
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   RISCVISAInfo::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
   const InputSectionBase *firstAtomicAbi = nullptr;
-  const InputSectionBase *firstX3RegUse = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
