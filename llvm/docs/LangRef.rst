@@ -1635,22 +1635,6 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
-``range(<ty> <a>, <b>)``
-    This attribute expresses the possible range of the parameter or return value.
-    If the value is not in the specified range, it is converted to poison.
-    The arguments passed to ``range`` have the following properties:
-
-    -  The type must match the scalar type of the parameter or return value.
-    -  The pair ``a,b`` represents the range ``[a,b)``.
-    -  Both ``a`` and ``b`` are constants.
-    -  The range is allowed to wrap.
-    -  The range should not represent the full or empty set. That is, ``a!=b``.
-    
-    This attribute may only be applied to parameters or return values with integer 
-    or vector of integer types.
-    
-    For vector-typed parameters, the range is applied element-wise.
-
 .. _gc:
 
 Garbage Collector Strategy Names
