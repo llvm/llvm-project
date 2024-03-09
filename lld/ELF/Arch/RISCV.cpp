@@ -1086,11 +1086,10 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
 
 static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
                         const InputSectionBase *oldSection,
-                        const InputSectionBase *newSection,
-                        unsigned int oldTag,
+                        const InputSectionBase *newSection, unsigned int oldTag,
                         unsigned int newTag) {
   using RISCVAttrs::RISCVAtomicAbiTag::AtomicABI;
-  llvm::errs() << "oldTag=" << oldTag << ", newTag=" << newTag <<"\n";
+  llvm::errs() << "oldTag=" << oldTag << ", newTag=" << newTag << "\n";
   // Same tags stay the same, and UNKNOWN is compatible with anything
   if (oldTag == newTag || newTag == AtomicABI::UNKNOWN)
     return;
@@ -1139,10 +1138,9 @@ static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
 }
 
 static void mergeX3RegUse(DenseMap<unsigned, unsigned> &intAttr,
-                        const InputSectionBase *oldSection,
-                        const InputSectionBase *newSection,
-                        unsigned int oldTag,
-                        unsigned int newTag) {
+                          const InputSectionBase *oldSection,
+                          const InputSectionBase *newSection,
+                          unsigned int oldTag, unsigned int newTag) {
   // X3/GP register usage ar incompatible and cannot be merged, with the
   // exception of the UNKNOWN or 0 value
   using RISCVAttrs::RISCVX3RegUse::X3RegUsage;
@@ -1159,7 +1157,7 @@ static void mergeX3RegUse(DenseMap<unsigned, unsigned> &intAttr,
   }
   // TODO: do we need to check the tags are < 2047?
 }
- 
+
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   RISCVISAInfo::OrderedExtensionMap exts;
@@ -1219,8 +1217,10 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
           if (r.second) {
             firstAtomicAbi = sec;
           } else {
-            mergeAtomic(merged.intAttr, firstAtomicAbi, sec, r.first->getSecond(),  *i);
-            llvm::errs() << "Merged Attr = " <<merged.intAttr[tag.attr] << "\n";
+            mergeAtomic(merged.intAttr, firstAtomicAbi, sec,
+                        r.first->getSecond(), *i);
+            llvm::errs() << "Merged Attr = " << merged.intAttr[tag.attr]
+                         << "\n";
           }
         }
         continue;

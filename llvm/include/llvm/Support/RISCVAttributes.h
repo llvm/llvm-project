@@ -33,7 +33,7 @@ enum AttrType : unsigned {
   PRIV_SPEC_MINOR = 10,
   PRIV_SPEC_REVISION = 12,
   ATOMIC_ABI = 14,
-  X3_REG_USAGE=16,
+  X3_REG_USAGE = 16,
 };
 
 namespace RISCVAtomicAbiTag {
