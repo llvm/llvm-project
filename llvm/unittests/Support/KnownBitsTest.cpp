@@ -537,13 +537,13 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::mulhs(Known1, Known2);
       },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::mulhs(N1, N2); },
+      &APIntOps::mulhs,
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::mulhu(Known1, Known2);
       },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::mulhu(N1, N2); },
+      &APIntOps::mulhu,
       checkCorrectnessOnlyBinary);
 }
 
