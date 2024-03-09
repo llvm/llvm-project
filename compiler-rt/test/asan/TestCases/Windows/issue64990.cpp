@@ -2,6 +2,8 @@
 // RUN: %clang_cl_asan %Od %s -EHsc %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 char buff1[6] = "hello";
 char buff2[6] = "hello";
 
