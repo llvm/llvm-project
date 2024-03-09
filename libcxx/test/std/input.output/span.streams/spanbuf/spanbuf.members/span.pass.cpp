@@ -68,6 +68,13 @@ void test() {
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
+  // Mode: `ate`
+  {
+    SpBuf spBuf(sp, std::ios_base::out | std::ios_base::ate);
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
+  }
 }
 
 int main(int, char**) {

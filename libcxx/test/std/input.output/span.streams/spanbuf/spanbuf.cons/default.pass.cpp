@@ -21,19 +21,25 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
+#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
-  SpBuf spBuf;
-  assert(spBuf.span().data() == nullptr);
-  assert(spBuf.span().empty());
-  assert(spBuf.span().size() == 0);
+  {
+    SpBuf spBuf;
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+  }
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
