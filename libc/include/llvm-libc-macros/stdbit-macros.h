@@ -274,14 +274,14 @@ inline unsigned long long stdc_bit_floor(unsigned long long x) {
       unsigned long long: stdc_has_single_bit_ull)(x)
 #define stdc_bit_width(x)                                                      \
   _Generic((x),                                                                \
-      unsigned char: stdc_bit_width_ui,                                        \
+      unsigned char: stdc_bit_width_uc,                                        \
       unsigned short: stdc_bit_width_us,                                       \
       unsigned: stdc_bit_width_ui,                                             \
       unsigned long: stdc_bit_width_ul,                                        \
       unsigned long long: stdc_bit_width_ull)(x)
 #define stdc_bit_floor(x)                                                      \
   _Generic((x),                                                                \
-      unsigned char: stdc_bit_floor_ui,                                        \
+      unsigned char: stdc_bit_floor_uc,                                        \
       unsigned short: stdc_bit_floor_us,                                       \
       unsigned: stdc_bit_floor_ui,                                             \
       unsigned long: stdc_bit_floor_ul,                                        \
