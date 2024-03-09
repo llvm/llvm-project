@@ -81,7 +81,7 @@ libc++ is continuously integrated and tested on a wide range of platforms and co
 and compatibility across various systems. The library's extensive test suite and rigorous quality assurance process have
 made it a top choice for platform providers looking to offer their users a robust and efficient C++ Standard Library.
 
-As an open-source project, libc++ benefits from a vibrant community of contributors who work tirelessly to improve the
+As an open-source project, libc++ benefits from a vibrant community of contributors who work together to improve the
 library and add new features. This ongoing development and support ensure that libc++ remains at the forefront of
 C++ standardization efforts and continues to meet the evolving needs of C++ developers worldwide.
 
