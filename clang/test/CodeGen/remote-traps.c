@@ -5,11 +5,11 @@ int f(int x) {
   return x + 123;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @_Z1fi(
+// CHECK-LABEL: define dso_local noundef i32 @f(
 // CHECK: call { i32, i1 } @llvm.sadd.with.overflow.i32(
 // CHECK: trap:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 0)
 // CHECK-NEXT: unreachable, !nosanitize !2 
 
-// REMOVE-LABEL: define dso_local noundef i32 @_Z1fi(
+// REMOVE-LABEL: define dso_local noundef i32 @f(
 // REMOVE: call { i32, i1 } @llvm.sadd.with.overflow.i32(
