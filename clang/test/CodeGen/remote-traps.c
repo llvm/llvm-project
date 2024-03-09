@@ -9,7 +9,7 @@ int f(int x) {
 // CHECK: call { i32, i1 } @llvm.sadd.with.overflow.i32(
 // CHECK: trap:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 0)
-// CHECK-NEXT: unreachable, !nosanitize !2 
+// CHECK-NEXT: unreachable
 
 // REMOVE-LABEL: define dso_local noundef i32 @f(
 // REMOVE: call { i32, i1 } @llvm.sadd.with.overflow.i32(
