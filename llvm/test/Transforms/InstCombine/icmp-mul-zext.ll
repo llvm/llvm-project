@@ -128,12 +128,12 @@ define i1 @PR46561(i1 %a, i1 %x, i1 %y, i8 %z) {
 ; CHECK-NEXT:    br i1 [[A:%.*]], label [[COND_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[Z:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[Z:%.*]] to i1
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[MULBOOL]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[TMP2]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[TMP3]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[P]]
 ;
 entry:

@@ -734,15 +734,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   if (DestWidth == 1) {
     Value *Zero = Constant::getNullValue(SrcTy);
-    if (DestTy->isIntegerTy()) {
-      // Canonicalize trunc x to i1 -> icmp ne (and x, 1), 0 (scalar only).
-      // TODO: We canonicalize to more instructions here because we are probably
-      // lacking equivalent analysis for trunc relative to icmp. There may also
-      // be codegen concerns. If those trunc limitations were removed, we could
-      // remove this transform.
-      Value *And = Builder.CreateAnd(Src, ConstantInt::get(SrcTy, 1));
-      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
-    }
 
     // For vectors, we do not canonicalize all truncs to icmp, so optimize
     // patterns that would be covered within visitICmpInst.

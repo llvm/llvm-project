@@ -116,7 +116,7 @@ define i32 @test6(i16 %A, i1 %b) {
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[B]] = zext i16 [[A:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
 BB0:
@@ -232,7 +232,7 @@ define ptr @test8(ptr %A, i1 %b) {
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[B]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
 BB0:
@@ -489,9 +489,8 @@ define i64 @test15b(i64 %A, i1 %b) {
 ; CHECK-NEXT:    [[Y_OFF0:%.*]] = phi i64 [ [[A]], [[ENTRY]] ], [ [[C]], [[ONE]] ]
 ; CHECK-NEXT:    [[Y_OFF64]] = phi i64 [ [[A]], [[ENTRY]] ], [ 0, [[ONE]] ]
 ; CHECK-NEXT:    [[D:%.*]] = call i64 @test15a(i64 [[Y_OFF64]])
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[D]], 1
-; CHECK-NEXT:    [[D1_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[D1_NOT]], label [[END:%.*]], label [[ONE]]
+; CHECK-NEXT:    [[D1:%.*]] = trunc i64 [[D]] to i1
+; CHECK-NEXT:    br i1 [[D1]], label [[ONE]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i64 [[Y_OFF0]]
 ;
