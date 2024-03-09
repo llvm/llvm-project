@@ -65,8 +65,6 @@ Getting Started with libc++
 
 Current Status
 ==============
-Current Status
-==============
 
 libc++ has become the default C++ Standard Library implementation for many major platforms, including Apple's macOS,
 iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD. As a result, libc++ has an estimated
