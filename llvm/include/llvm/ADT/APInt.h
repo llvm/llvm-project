@@ -2193,14 +2193,14 @@ inline const APInt absdiff(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
 
-/// Compute the higher order bits of unsigned multiplication of two APInts
+/// Compute the higher order bits of unsigned multiplication of two APInts.
 /// Mathematically, this computes the value: `(C1 * C2) >> C2.getBitWidth()`
 /// where `(C1 * C2)` has double the bit width of the original values.
 APInt mulhu(const APInt &C1, const APInt &C2);
 
-/// Compute the higher order bits of signed multiplication of two APInts
-/// Mathematically, this is similar to mulhu but for signed values.
-/// Example: `mulhs(-2097152, 524288) == -256`
+/// Compute the higher order bits of signed multiplication of two APInts.
+/// Mathematically, this is `(C1 * C2) >> C2.getBitWidth()` while preserving
+/// the signed bit. Example: `mulhs(-2097152, 524288) == -256`
 APInt mulhs(const APInt &C1, const APInt &C2);
 
 /// Compute GCD of two unsigned APInt values.

@@ -433,7 +433,8 @@ arith::MulSIExtendedOp::fold(FoldAdaptor adaptor,
           [](const APInt &a, const APInt &b) { return a * b; })) {
     // Invoke the constant fold helper again to calculate the 'high' result.
     Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
-        adaptor.getOperands(), &llvm::APIntOps::mulhs(a, b));
+        adaptor.getOperands(),
+        [](const APInt &a, const APInt &b) { return llvm::APIntOps::mulhs(a, b); });
     assert(highAttr && "Unexpected constant-folding failure");
 
     results.push_back(lowAttr);
@@ -486,7 +487,8 @@ arith::MulUIExtendedOp::fold(FoldAdaptor adaptor,
           [](const APInt &a, const APInt &b) { return a * b; })) {
     // Invoke the constant fold helper again to calculate the 'high' result.
     Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
-        adaptor.getOperands(), &llvm::APIntOps::mulhu(a, b));
+        adaptor.getOperands(),
+        [](const APInt &a, const APInt &b) { return llvm::APIntOps::mulhu(a, b); });
     assert(highAttr && "Unexpected constant-folding failure");
 
     results.push_back(lowAttr);
