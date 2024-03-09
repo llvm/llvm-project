@@ -499,9 +499,9 @@ DEFAULT_FEATURES += [
               DeleteFileA(symlinkFilePath);
               return 0;
             }
-            """
-        )
-    )
+            """,
+        ),
+    ),
 ]
 
 # Add features representing the build host platform name.
