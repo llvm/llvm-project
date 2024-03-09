@@ -1319,6 +1319,31 @@ public:
   }
 };
 
+class CIRVectorTernaryLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecTernaryOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecTernaryOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecTernaryOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    assert(op.getType().isa<mlir::cir::VectorType>() &&
+           op.getCond().getType().isa<mlir::cir::VectorType>() &&
+           op.getVec1().getType().isa<mlir::cir::VectorType>() &&
+           op.getVec2().getType().isa<mlir::cir::VectorType>() &&
+           "Vector ternary op with non-vector type");
+    // Convert `cond` into a vector of i1, then use that in a `select` op.
+    mlir::Value bitVec = rewriter.create<mlir::LLVM::ICmpOp>(
+        op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
+        rewriter.create<mlir::LLVM::ZeroOp>(
+            op.getCond().getLoc(),
+            typeConverter->convertType(op.getCond().getType())));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
+        op, bitVec, adaptor.getVec1(), adaptor.getVec2());
+    return mlir::success();
+  }
+};
+
 class CIRVAStartLowering
     : public mlir::OpConversionPattern<mlir::cir::VAStartOp> {
 public:
@@ -2338,9 +2363,10 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
-      CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRStackSaveLowering,
-      CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
-      CIRInlineAsmOpLowering>(converter, patterns.getContext());
+      CIRVectorExtractLowering, CIRVectorCmpOpLowering,
+      CIRVectorTernaryLowering, CIRStackSaveLowering, CIRStackRestoreLowering,
+      CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {

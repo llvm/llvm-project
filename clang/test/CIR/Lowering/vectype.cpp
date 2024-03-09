@@ -132,6 +132,12 @@ void vector_int_test(int x) {
   // CHECK: %[[#T104:]] = llvm.xor %[[#T103]], %[[#T93]]  : vector<4xi32>
   // CHECK: llvm.store %[[#T104]], %[[#T29:]] : vector<4xi32>, !llvm.ptr
 
+  // Ternary conditional operator
+  vi4 tc = a ? b : d;
+  // CHECK: %[[#Zero:]] = llvm.mlir.zero : vector<4xi32>
+  // CHECK: %[[#BitVec:]] = llvm.icmp "ne" %[[#A:]], %[[#Zero]] : vector<4xi32>
+  // CHECK: %[[#Res:]] = llvm.select %[[#BitVec]], %[[#B:]], %[[#D:]] : vector<4xi1>, vector<4xi32>
+
   // Comparisons
   vi4 o = a == b;
   // CHECK: %[[#T105:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>

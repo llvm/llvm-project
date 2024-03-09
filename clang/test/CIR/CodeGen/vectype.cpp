@@ -67,6 +67,10 @@ void vector_int_test(int x) {
   vi4 n = ~a;
   // CHECK: %{{[0-9]+}} = cir.unary(not, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
 
+  // Ternary conditional operator
+  vi4 tc = a ? b : d;
+  // CHECK: %{{[0-9]+}} = cir.vec.ternary(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
+
   // Comparisons
   vi4 o = a == b;
   // CHECK: %{{[0-9]+}} = cir.vec.cmp(eq, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>

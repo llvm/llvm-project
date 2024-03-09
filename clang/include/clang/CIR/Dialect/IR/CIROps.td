@@ -2087,6 +2087,36 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecTernary
+//===----------------------------------------------------------------------===//
+
+def VecTernaryOp : CIR_Op<"vec.ternary",
+                   [Pure, AllTypesMatch<["result", "vec1", "vec2"]>]> {
+  let summary = "The `cond ? a : b` ternary operator for vector types";
+  let description = [{
+    The `cir.vec.ternary` operation represents the C/C++ ternary operator,
+    `?:`, for vector types, which does a `select` on individual elements of the
+    vectors. Unlike a regular `?:` operator, there is no short circuiting. All
+    three arguments are always evaluated.  Because there is no short
+    circuiting, there are no regions in this operation, unlike cir.ternary.
+
+    The first argument is a vector of integral type. The second and third
+    arguments are vectors of the same type and have the same number of elements
+    as the first argument.
+
+    The result is a vector of the same type as the second and third arguments.
+    Each element of the result is `(bool)a[n] ? b[n] : c[n]`.
+  }];
+  let arguments = (ins CIR_VectorType:$cond, CIR_VectorType:$vec1,
+		       CIR_VectorType:$vec2);
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $cond `,` $vec1 `,` $vec2 `)` `:` type($cond) `,` type($vec1) attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BaseClassAddr
 //===----------------------------------------------------------------------===//
 

@@ -2059,7 +2059,12 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
   if (condExpr->getType()->isVectorType() ||
       condExpr->getType()->isSveVLSBuiltinType()) {
-    llvm_unreachable("NYI");
+    assert(condExpr->getType()->isVectorType() && "?: op for SVE vector NYI");
+    mlir::Value condValue = Visit(condExpr);
+    mlir::Value lhsValue = Visit(lhsExpr);
+    mlir::Value rhsValue = Visit(rhsExpr);
+    return builder.create<mlir::cir::VecTernaryOp>(loc, condValue, lhsValue,
+                                                   rhsValue);
   }
 
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
