@@ -926,7 +926,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   ErrorOr<SmallString<128>> PathToOrErr = canonicalizePath(To);
   ErrorOr<SmallString<128>> DirFromOrErr = canonicalizePath(From);
   if (!PathToOrErr || !DirFromOrErr)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   const SmallString<128> &PathTo = *PathToOrErr;
   const SmallString<128> &DirFrom = sys::path::parent_path(*DirFromOrErr);
