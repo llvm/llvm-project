@@ -99,12 +99,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_spanbuf() : basic_spanbuf(ios_base::in | ios_base::out) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_spanbuf(ios_base::openmode __which)
-      : basic_streambuf<_CharT, _Traits>{}, __mode_{__which} {}
+      : basic_spanbuf(std::span<_CharT>(), __which) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_spanbuf(std::span<_CharT> __s,
                                                ios_base::openmode __which = ios_base::in | ios_base::out)
-      : basic_streambuf<_CharT, _Traits>{}, __mode_{__which} {
-    this->span(__s);
+      : basic_streambuf<_CharT, _Traits>{}, __mode_(__which) {
+    span(__s);
   }
 
   basic_spanbuf(const basic_spanbuf&) = delete;
@@ -113,6 +113,7 @@ public:
       : basic_streambuf<_CharT, _Traits>{std::move(__rhs)},
         __mode_{std::move(__rhs.__mode_)},
         __buf_{std::move(__rhs.__buf_)} {}
+  // __buf_{std::exchange(__rhs.__buf_, {})} {}
 
   // [spanbuf.assign], assignment and swap
 
@@ -120,7 +121,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI basic_spanbuf& operator=(basic_spanbuf&& __rhs) {
     basic_spanbuf __tmp{std::move(__rhs)};
-    this->swap(__tmp);
+    swap(__tmp);
     return *this;
   }
 
@@ -134,7 +135,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI std::span<_CharT> span() const noexcept {
     if (__mode_ & ios_base::out) {
-      return std::span<_CharT>(this->pbase(), this->pptr());
+      return std::span<_CharT>{this->pbase(), this->pptr()};
     }
     return __buf_;
   }
@@ -158,38 +159,38 @@ protected:
   // [spanbuf.virtuals], overridden virtual functions
 
   _LIBCPP_HIDE_FROM_ABI basic_streambuf<_CharT, _Traits>* setbuf(_CharT* __s, streamsize __n) override {
-    this->span(std::span<_CharT>(__s, __n));
+    span(std::span<_CharT>(__s, __n));
     return this;
   }
 
   _LIBCPP_HIDE_FROM_ABI pos_type
   seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmode __which = ios_base::in | ios_base::out) override {
-    const pos_type __error(off_type(-1));
+    const auto __error = static_cast<pos_type>(off_type{-1});
 
     if ((__which & ios_base::in) && (__which & ios_base::out) && (ios_base::cur == __way))
       return __error;
 
     // Calculate __baseoff
 
-    off_type __baseoff;
+    std::size_t __baseoff;
 
     switch (__way) {
     case ios_base::beg:
-      __baseoff = off_type(0);
+      __baseoff = 0Z;
       break;
 
     case ios_base::cur:
       if (__which & ios_base::out)
-        __baseoff = off_type(this->pptr() - this->pbase());
+        __baseoff = this->pptr() - this->pbase();
       else
-        __baseoff = off_type(this->gptr() - this->eback());
+        __baseoff = this->gptr() - this->eback();
       break;
 
     case ios_base::end:
       if ((__which & ios_base::out) && !(__which & ios_base::in))
-        __baseoff = off_type(this->pptr() - this->pbase());
+        __baseoff = this->pptr() - this->pbase();
       else
-        __baseoff = off_type(__buf_.size());
+        __baseoff = __buf_.size();
       break;
 
     default:
@@ -200,29 +201,29 @@ protected:
 
     off_type __newoff;
 
-    if (__builtin_add_overflow(__baseoff, __off, &__newoff) || (__newoff < off_type(0)) ||
-        (std::cmp_greater(__newoff, __buf_.size())))
+    if (__builtin_add_overflow(__baseoff, __off, &__newoff) || (__newoff < off_type{0}) ||
+        std::cmp_greater(__newoff, __buf_.size()))
       return __error;
 
     if (__which & ios_base::in) {
-      if ((this->gptr() == nullptr) && (__newoff != off_type(0)))
+      if ((this->gptr() == nullptr) && (__newoff != off_type{0}))
         return __error;
       this->setg(this->eback(), this->eback() + __newoff, this->egptr());
     }
 
     if (__which & ios_base::out) {
-      if ((this->pptr() == nullptr) && (__newoff != off_type(0)))
+      if ((this->pptr() == nullptr) && (__newoff != off_type{0}))
         return __error;
       this->setp(this->pbase(), this->epptr());
       this->pbump(__newoff);
     }
 
-    return pos_type(__newoff);
+    return static_cast<pos_type>(__newoff);
   }
 
   _LIBCPP_HIDE_FROM_ABI pos_type seekpos(pos_type __sp,
                                          ios_base::openmode __which = ios_base::in | ios_base::out) override {
-    return seekoff(off_type(__sp), ios_base::beg, __which);
+    return seekoff(static_cast<off_type>(__sp), ios_base::beg, __which);
   }
 
 private:
