@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned long long, stdc_bit_ceil_ull,
-		   (unsigned long long value)) {
+                   (unsigned long long value)) {
   return cpp::bit_ceil(value);
 }
 

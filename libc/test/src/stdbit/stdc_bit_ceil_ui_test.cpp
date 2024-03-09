@@ -16,18 +16,15 @@ TEST(LlvmLibcStdcBitceilUiTest, Zero) {
 
 TEST(LlvmLibcStdcBitceilUiTest, Ones) {
   for (unsigned i = 0U; i != UINT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_ui(1U << i),
-              1U << i);
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_ui(1U << i), 1U << i);
 }
 
 TEST(LlvmLibcStdcBitceilUiTest, OneLessThanPowsTwo) {
   for (unsigned i = 2U; i != UINT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_ui((1U << i) - 1),
-              1U << i);
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_ui((1U << i) - 1), 1U << i);
 }
 
 TEST(LlvmLibcStdcBitceilUiTest, OneMoreThanPowsTwo) {
   for (unsigned i = 2U; i != UINT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_ui((1U << i) + 1),
-              1U << (i + 1));
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_ui((1U << i) + 1), 1U << (i + 1));
 }

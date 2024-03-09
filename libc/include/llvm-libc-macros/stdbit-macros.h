@@ -200,9 +200,7 @@ inline unsigned char stdc_bit_ceil(unsigned char x) {
 inline unsigned short stdc_bit_ceil(unsigned short x) {
   return stdc_bit_ceil_us(x);
 }
-inline unsigned stdc_bit_ceil(unsigned x) {
-  return stdc_bit_ceil_ui(x);
-}
+inline unsigned stdc_bit_ceil(unsigned x) { return stdc_bit_ceil_ui(x); }
 inline unsigned long stdc_bit_ceil(unsigned long x) {
   return stdc_bit_ceil_ul(x);
 }
@@ -301,12 +299,12 @@ inline unsigned long long stdc_bit_ceil(unsigned long long x) {
       unsigned: stdc_bit_floor_ui,                                             \
       unsigned long: stdc_bit_floor_ul,                                        \
       unsigned long long: stdc_bit_floor_ull)(x)
-#define stdc_bit_ceil(x)
-  _Generic((x),                                                                \
-      unsigned char: stdc_bit_ceil_ui,                                         \
-      unsigned short: stdc_bit_ceil_us,                                        \
-      unsigned: stdc_bit_ceil_ui,                                              \
-      unsigned long: stdc_bit_ceil_ul,                                         \
+#define stdc_bit_ceil(x)                                                      \
+  _Generic((x),                                                               \
+      unsigned char: stdc_bit_ceil_uc,                                        \
+      unsigned short: stdc_bit_ceil_us,                                       \
+      unsigned: stdc_bit_ceil_ui,                                             \
+      unsigned long: stdc_bit_ceil_ul,                                        \
       unsigned long long: stdc_bit_ceil_ull)(x)
 #endif // __cplusplus
 
