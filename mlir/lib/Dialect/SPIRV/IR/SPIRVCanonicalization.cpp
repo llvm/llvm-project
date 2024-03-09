@@ -251,9 +251,9 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
     auto highBits = constFoldBinaryOp<IntegerAttr>(
         {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
           if (IsSigned) {
-            return APIntOps::mulhs(a,b);
+            return APIntOps::mulhs(a, b);
           } else {
-            return APIntOps::mulhu(a,b);
+            return APIntOps::mulhu(a, b);
           }
         });
 
