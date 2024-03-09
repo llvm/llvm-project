@@ -432,6 +432,45 @@ cir.func @vec_insert_non_vector() {
 
 // -----
 
+!s32i = !cir.int<s, 32>
+cir.func @vec_ternary_non_vector1() {
+  %0 = cir.const(#cir.int<0> : !s32i) : !s32i
+  %1 = cir.vec.create(%0, %0 : !s32i, !s32i) : <!s32i x 2>
+  %2 = cir.vec.ternary(%0, %1, %1) : !s32i, <!s32i x 2> // expected-error {{custom op 'cir.vec.ternary' invalid kind of Type specified}}
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+cir.func @vec_ternary_non_vector2() {
+  %0 = cir.const(#cir.int<0> : !s32i) : !s32i
+  %1 = cir.vec.create(%0, %0 : !s32i, !s32i) : <!s32i x 2>
+  %2 = cir.vec.ternary(%1, %0, %0) : <!s32i x 2>, !s32i // expected-error {{custom op 'cir.vec.ternary' invalid kind of Type specified}}
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+cir.func @vec_ternary_different_size() {
+  %0 = cir.const(#cir.int<0> : !s32i) : !s32i
+  %1 = cir.vec.create(%0, %0 : !s32i, !s32i) : <!s32i x 2>
+  %2 = cir.vec.create(%0, %0, %0, %0 : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
+  %3 = cir.vec.ternary(%1, %2, %2) : <!s32i x 2>, <!s32i x 4> // expected-error {{'cir.vec.ternary' op the number of elements in '!cir.vector<!cir.int<s, 32> x 2>' and '!cir.vector<!cir.int<s, 32> x 4>' don't match}}
+  cir.return
+}
+
+// -----
+
+cir.func @vec_ternary_not_int(%p : !cir.float) {
+  %0 = cir.vec.create(%p, %p : !cir.float, !cir.float) : <!cir.float x 2>
+  %1 = cir.vec.ternary(%0, %0, %0) : <!cir.float x 2>, <!cir.float x 2> // expected-error {{'cir.vec.ternary' op condition operand of type '!cir.vector<!cir.float x 2>' must be a vector type of !cir.int}}
+  cir.return
+}
+
+// -----
+
 cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at least one cir.await op}}
   cir.return
 }

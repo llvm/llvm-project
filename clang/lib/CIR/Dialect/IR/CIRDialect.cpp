@@ -522,6 +522,28 @@ LogicalResult VecCreateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// VecTernaryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult VecTernaryOp::verify() {
+  // Verify that the condition operand is a vector of integral type.
+  if (!getCond().getType().getEltType().isa<mlir::cir::IntType>()) {
+    return emitOpError() << "condition operand of type " << getCond().getType()
+                         << " must be a vector type of !cir.int";
+  }
+
+  // Verify that the condition operand has the same number of elements as the
+  // other operands.  (The automatic verification already checked that all
+  // operands are vector types and that the second and third operands are the
+  // same type.)
+  if (getCond().getType().getSize() != getVec1().getType().getSize()) {
+    return emitOpError() << "the number of elements in " << getCond().getType()
+                         << " and " << getVec1().getType() << " don't match";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
