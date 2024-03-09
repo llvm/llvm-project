@@ -36,7 +36,23 @@ const RISCVAttributeParser::DisplayHandler
         {
             RISCVAttrs::UNALIGNED_ACCESS,
             &RISCVAttributeParser::unalignedAccess,
-        }};
+        },
+        {
+            RISCVAttrs::ATOMIC_ABI,
+            &RISCVAttributeParser::atomicAbi,
+        },
+        {
+            RISCVAttrs::X3_REG_USAGE,
+            &RISCVAttributeParser::x3RegUsage,
+        },
+};
+
+Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
+  uint64_t Value = de.getULEB128(cursor);
+  std::string Description = "Atomic ABI is " + utostr(Value);
+  printAttribute(Tag, Value, Description);
+  return Error::success();
+}
 
 Error RISCVAttributeParser::unalignedAccess(unsigned tag) {
   static const char *strings[] = {"No unaligned access", "Unaligned access"};

@@ -75,6 +75,13 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
     auto &ISAInfo = *ParseResult;
     emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
   }
+
+  if (STI.hasFeature(RISCV::FeatureStdExtA)) {
+    unsigned AtomicABITag = STI.hasFeature(RISCV::FeatureTrailingSeqCstFence)
+                             ? RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6S
+                             : RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6C;
+    emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
+  }
 }
 
 // This part is for ascii assembly output

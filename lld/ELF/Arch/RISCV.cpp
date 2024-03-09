@@ -1084,10 +1084,88 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
   }
 }
 
+static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
+                        const InputSectionBase *oldSection,
+                        const InputSectionBase *newSection,
+                        unsigned int oldTag,
+                        unsigned int newTag) {
+  using RISCVAttrs::RISCVAtomicAbiTag::AtomicABI;
+  llvm::errs() << "oldTag=" << oldTag << ", newTag=" << newTag <<"\n";
+  // Same tags stay the same, and UNKNOWN is compatible with anything
+  if (oldTag == newTag || newTag == AtomicABI::UNKNOWN)
+    return;
+
+  auto attr = RISCVAttrs::ATOMIC_ABI;
+  switch (oldTag) {
+  case AtomicABI::UNKNOWN:
+    intAttr[attr] = newTag;
+    return;
+  case AtomicABI::A6C:
+    switch (newTag) {
+    case AtomicABI::A6S:
+      intAttr[attr] = AtomicABI::A6C;
+      return;
+    case AtomicABI::A7:
+      errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
+                  " but " + toString(newSection) +
+                  " has atomic_abi=" + Twine(newTag));
+      return;
+    };
+
+  case AtomicABI::A6S:
+    switch (newTag) {
+    case AtomicABI::A6C:
+      intAttr[attr] = AtomicABI::A6C;
+      return;
+    case AtomicABI::A7:
+      intAttr[attr] = AtomicABI::A7;
+      return;
+    };
+
+  case AtomicABI::A7:
+    switch (newTag) {
+    case AtomicABI::A6S:
+      intAttr[attr] = AtomicABI::A7;
+      return;
+    case AtomicABI::A6C:
+      errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
+                  " but " + toString(newSection) +
+                  " has atomic_abi=" + Twine(newTag));
+      return;
+    };
+  default:
+    llvm_unreachable("unknown AtomicABI");
+  };
+}
+
+static void mergeX3RegUse(DenseMap<unsigned, unsigned> &intAttr,
+                        const InputSectionBase *oldSection,
+                        const InputSectionBase *newSection,
+                        unsigned int oldTag,
+                        unsigned int newTag) {
+  // X3/GP register usage ar incompatible and cannot be merged, with the
+  // exception of the UNKNOWN or 0 value
+  using RISCVAttrs::RISCVX3RegUse::X3RegUsage;
+  auto attr = RISCVAttrs::X3_REG_USAGE;
+  if (newTag == X3RegUsage::UNKNOWN)
+    return;
+  if (oldTag == X3RegUsage::UNKNOWN)
+    intAttr[attr] = newTag;
+  if (oldTag != newTag) {
+    errorOrWarn(toString(oldSection) + " has x3_reg_usage=" + Twine(oldTag) +
+                " but " + toString(newSection) +
+                " has x3_reg_usage=" + Twine(newTag));
+    return;
+  }
+  // TODO: do we need to check the tags are < 2047?
+}
+ 
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   RISCVISAInfo::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
+  const InputSectionBase *firstAtomicAbi = nullptr;
+  const InputSectionBase *firstX3RegUse = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
@@ -1134,6 +1212,18 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_MINOR:
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
+
+      case llvm::RISCVAttrs::AttrType::ATOMIC_ABI:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (r.second) {
+            firstAtomicAbi = sec;
+          } else {
+            mergeAtomic(merged.intAttr, firstAtomicAbi, sec, r.first->getSecond(),  *i);
+            llvm::errs() << "Merged Attr = " <<merged.intAttr[tag.attr] << "\n";
+          }
+        }
+        continue;
       }
 
       // Fallback for deprecated priv_spec* and other unknown attributes: retain
