@@ -251,7 +251,20 @@ typedef enum {
   LLVMAMDGPUHSCallConv = 93,
   LLVMMSP430BUILTINCallConv = 94,
   LLVMAMDGPULSCallConv = 95,
-  LLVMAMDGPUESCallConv = 96
+  LLVMAMDGPUESCallConv = 96,
+  LLVMAArch64VectorCall = 97,
+  LLVMAAArch64SVEVectorCall = 98,
+  LLVMWASMEmscriptenInvoke = 99,
+  LLVMAMDGPUGfx = 100,
+  LLVMM68kINTR = 101,
+  LLVMAArch64SMEABISupportRoutinesPreserveMostFromX0 = 102,
+  LLVMAArch64SMEABISupportRoutinesPreserveMostFromX2 = 103,
+  LLVMAMDGPUCSChain = 104,
+  LLVMAMDGPUCSChainPreserve = 105,
+  LLVMM68kRTD = 106,
+  LLVMGRAAL = 107,
+  LLVMARM64ECThunkX64 = 108,
+  LLVMARM64ECThunkNative = 109
 } LLVMCallConv;
 
 typedef enum {
