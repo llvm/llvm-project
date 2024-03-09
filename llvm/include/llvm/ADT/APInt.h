@@ -2194,8 +2194,8 @@ inline const APInt absdiff(const APInt &A, const APInt &B) {
 }
 
 /// Compute the higher order bits of unsigned multiplication of two APInts
-/// Mathematically, this computes the value: (C1 * C2) >> C2.getBitWidth()
-/// where (C1 * C2) has double the bit width of the original values.
+/// Mathematically, this computes the value: `(C1 * C2) >> C2.getBitWidth()`
+/// where `(C1 * C2)` has double the bit width of the original values.
 APInt mulhu(const APInt &C1, const APInt &C2);
 
 /// Compute the higher order bits of signed multiplication of two APInts
