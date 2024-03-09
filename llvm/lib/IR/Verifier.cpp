@@ -2039,6 +2039,11 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     Check((Val & ~static_cast<unsigned>(fcAllFlags)) == 0,
           "Invalid value for 'nofpclass' test mask", V);
   }
+  if (Attrs.hasAttribute(Attribute::Range)) {
+    auto CR = Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
+    Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
+          "Range bit width must match type bit width!", V);
+  }
 }
 
 void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
@@ -6291,7 +6296,7 @@ void Verifier::visit(DPValue &DPV) {
           Var->getRawType());
 
   auto *DLNode = DPV.getDebugLoc().getAsMDNode();
-  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record location",
+  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
           &DPV, DLNode);
   DILocation *Loc = DPV.getDebugLoc();
 

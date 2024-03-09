@@ -234,12 +234,12 @@ define i32 @test_mixup_constant_symbolic(i32 %end, i32 %len) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_mixup_constant_symbolic
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: %end
-; CHECK-NEXT:    exit count for range_check_block: 1000
+; CHECK-NEXT:    exit count for range_check_block: i32 1000
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1000
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1000 umin %end)
 ; CHECK-NEXT:    symbolic max exit count for loop: %end
-; CHECK-NEXT:    symbolic max exit count for range_check_block: 1000
+; CHECK-NEXT:    symbolic max exit count for range_check_block: i32 1000
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
 ;
 entry:

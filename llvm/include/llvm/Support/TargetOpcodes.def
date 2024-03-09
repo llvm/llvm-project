@@ -736,6 +736,9 @@ HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
 /// Generic shufflevector.
 HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 
+/// Generic splatvector.
+HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
+
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)
 

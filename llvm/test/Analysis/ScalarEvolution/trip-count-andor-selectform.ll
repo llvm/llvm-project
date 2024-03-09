@@ -51,9 +51,9 @@ leave:
 define void @unsimplified_and3(i32 %n) {
 ; CHECK-LABEL: 'unsimplified_and3'
 ; CHECK-NEXT:  Determining loop execution counts for: @unsimplified_and3
-; CHECK-NEXT:  Loop %loop: backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -73,9 +73,9 @@ leave:
 define void @unsimplified_and4(i32 %n) {
 ; CHECK-LABEL: 'unsimplified_and4'
 ; CHECK-NEXT:  Determining loop execution counts for: @unsimplified_and4
-; CHECK-NEXT:  Loop %loop: backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -267,9 +267,9 @@ leave:
 define void @reversed_or1(i32 %n) {
 ; CHECK-LABEL: 'reversed_or1'
 ; CHECK-NEXT:  Determining loop execution counts for: @reversed_or1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -289,9 +289,9 @@ leave:
 define void @reversed_or2(i32 %n) {
 ; CHECK-LABEL: 'reversed_or2'
 ; CHECK-NEXT:  Determining loop execution counts for: @reversed_or2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
