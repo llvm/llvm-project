@@ -24,7 +24,7 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "test_convertible.h"
+#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT>
@@ -47,173 +47,314 @@ struct TestSpanBuf : std::basic_spanbuf<CharT, TraitsT> {
 };
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
-void test() {
+void test_postconditions() {
   using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
+  // Empty `span`
   {
-    // Empty `span`
+    // Mode: default
     {
-      // Mode: default
-      {
-        SpBuf rhsSpBuf;
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == nullptr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
-      // Mode: `ios_base::in`
-      {
-        SpBuf rhsSpBuf{std::ios_base::in};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == nullptr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
-      // Mode: `ios_base::out`
-      {
-        SpBuf rhsSpBuf{std::ios_base::out};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == nullptr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
-      // Mode: multiple
-      {
-        SpBuf rhsSpBuf{std::ios_base::out | std::ios_base::in};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == nullptr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
+      std::span<CharT> sp;
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(spBuf.span().data() == nullptr);
+      spBuf.check_postconditions(rhsSpBuf);
     }
-
-    // Non-empty `span`
+    // Mode: `in`
     {
-      CharT arr[4];
-      std::span<CharT> sp{arr};
-
-      // Mode: default
-      {
-        SpBuf rhsSpBuf{sp};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == arr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
-      // Mode: `ios_base::in`
-      {
-        SpBuf rhsSpBuf{sp, std::ios_base::in};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == arr);
-        assert(!spBuf.span().empty());
-        assert(spBuf.span().size() == 4);
-      }
-      // Mode `ios_base::out`
-      {
-        SpBuf rhsSpBuf{sp, std::ios_base::out};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == arr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
-      // Mode: multiple
-      {
-        SpBuf rhsSpBuf{sp, std::ios_base::out | std::ios_base::in | std::ios_base::binary};
-        SpBuf spBuf(std::move(rhsSpBuf));
-        assert(spBuf.span().data() == arr);
-        assert(spBuf.span().empty());
-        assert(spBuf.span().size() == 0);
-      }
+      std::span<CharT> sp;
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(spBuf.span().data() == nullptr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+    // Mode: `out`
+    {
+      std::span<CharT> sp;
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(spBuf.span().data() == nullptr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+    // Mode: multiple
+    {
+      std::span<CharT> sp;
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(spBuf.span().data() == nullptr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+    // Mode: `ate`
+    {
+      std::span<CharT> sp;
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out | std::ios_base::ate);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(spBuf.span().data() == nullptr);
+      spBuf.check_postconditions(rhsSpBuf);
     }
   }
 
-  // Check post-conditions
+  // Non-empty `span`
   {
-    // Empty `span`
+    CharT arr[4];
+
+    // Mode: default
     {
-      // Mode: default
-      {
-        std::span<CharT> sp;
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == nullptr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
-      // Mode: `ios_base::in`
-      {
-        std::span<CharT> sp;
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == nullptr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
-      // Mode: `ios_base::out`
-      {
-        std::span<CharT> sp;
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == nullptr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
-      // Mode: multiple
-      {
-        std::span<CharT> sp;
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == nullptr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
+      std::span<CharT> sp{arr};
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == arr);
+      assert(spBuf.span().data() == arr);
+      spBuf.check_postconditions(rhsSpBuf);
     }
-
-    // Non-empty `span`
+    // Mode: `in`
     {
-      CharT arr[4];
+      std::span<CharT> sp{arr};
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == arr);
+      assert(spBuf.span().data() == arr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+    // Mode: `out`
+    {
+      std::span<CharT> sp{arr};
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == arr);
+      assert(spBuf.span().data() == arr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+    // Mode: multiple
+    {
+      std::span<CharT> sp{arr};
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == arr);
+      assert(spBuf.span().data() == arr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+    // Mode: `ate`
+    {
+      std::span<CharT> sp{arr};
+      TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out | std::ios_base::ate);
+      TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
+      assert(rhsSpBuf.span().data() == arr);
+      assert(spBuf.span().data() == arr);
+      spBuf.check_postconditions(rhsSpBuf);
+    }
+  }
+}
 
-      // Mode: default
-      {
-        std::span<CharT> sp{arr};
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == arr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
-      // Mode: `ios_base::in`
-      {
-        std::span<CharT> sp{arr};
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(!rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == arr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
-      // Mode: `ios_base::out`
-      {
-        std::span<CharT> sp{arr};
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::out);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == arr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
-      // Mode: multiple
-      {
-        std::span<CharT> sp{arr};
-        TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        TestSpanBuf<CharT, TraitsT> spBuf(std::move(static_cast<SpBuf&>(rhsSpBuf)));
-        assert(rhsSpBuf.span().empty());
-        assert(spBuf.span().data() == arr);
-        spBuf.check_postconditions(rhsSpBuf);
-      }
+template <typename CharT, typename TraitsT = std::char_traits<CharT>>
+void test() {
+  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+
+  // Empty `span`
+  {
+    // Mode: default (`in` | `out`)
+    {
+      SpBuf rhsSpBuf;
+      assert(rhsSpBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: `in`
+    {
+      SpBuf rhsSpBuf{std::ios_base::in};
+      assert(rhsSpBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == nullptr);
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: `out`
+    {
+      SpBuf rhsSpBuf{std::ios_base::out};
+      assert(rhsSpBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: multiple
+    {
+      SpBuf rhsSpBuf{std::ios_base::out | std::ios_base::in | std::ios_base::binary};
+      assert(rhsSpBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == nullptr);
+      // Mode `out` counts read characters
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: `ate`
+    {
+      SpBuf rhsSpBuf{std::ios_base::ate};
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == nullptr);
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == nullptr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+  }
+
+  // Non-empty `span`
+  {
+    CharT arr[4];
+    std::span<CharT> sp{arr};
+
+    // Mode: default (`in` | `out`)
+    {
+      SpBuf rhsSpBuf{sp};
+      assert(rhsSpBuf.span().data() == arr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == arr);
+      // Mode `out` counts read characters
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == arr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: `in`
+    {
+      SpBuf rhsSpBuf{sp, std::ios_base::in};
+      assert(rhsSpBuf.span().data() == arr);
+      assert(!rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 4);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == arr);
+      assert(!spBuf.span().empty());
+      assert(spBuf.span().size() == 4);
+    }
+    // Mode `out`
+    {
+      SpBuf rhsSpBuf{sp, std::ios_base::out};
+      assert(rhsSpBuf.span().data() == arr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == arr);
+      // Mode `out` counts read characters
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == arr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: multiple
+    {
+      SpBuf rhsSpBuf{sp, std::ios_base::out | std::ios_base::in | std::ios_base::binary};
+      assert(rhsSpBuf.span().data() == arr);
+      // Mode `out` counts read characters
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == arr);
+      // Mode `out` counts read characters
+      assert(spBuf.span().empty());
+      assert(spBuf.span().size() == 0);
+
+      // After move
+      assert(rhsSpBuf.span().data() == arr);
+      assert(rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 0);
+    }
+    // Mode: `ate`
+    {
+      SpBuf rhsSpBuf{sp, std::ios_base::ate};
+      assert(rhsSpBuf.span().data() == arr);
+      assert(!rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 4);
+
+      SpBuf spBuf(std::move(rhsSpBuf));
+      assert(spBuf.span().data() == arr);
+      assert(!spBuf.span().empty());
+      assert(spBuf.span().size() == 4);
+
+      // After move
+      assert(rhsSpBuf.span().data() == arr);
+      assert(!rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 4);
     }
   }
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test_postconditions<nasty_char, nasty_char_traits>();
+#endif
+  test_postconditions<char>();
+  test_postconditions<char, constexpr_char_traits<char>>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test_postconditions<wchar_t>();
+  test_postconditions<wchar_t, constexpr_char_traits<wchar_t>>();
+#endif
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
