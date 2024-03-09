@@ -23,5 +23,5 @@ class BacktraceLimitSettingTest(TestBase):
         interp.HandleCommand(
             "settings set target.process.thread.max-backtrace-depth 30", result
         )
-        self.assertEqual(True, result.Succeeded())
+        self.assertTrue(result.Succeeded())
         self.assertEqual(30, thread.GetNumFrames())

@@ -1392,6 +1392,24 @@ define <8 x i8> @sextmask3v8i8(<8 x i16> %src1, <8 x i8> %src2) {
   ret <8 x i8> %result
 }
 
+define <4 x i16> @ext_via_i19(<4 x i16> %a) {
+; CHECK-LABEL: ext_via_i19:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi.4s v1, #1
+; CHECK-NEXT:    uaddw.4s v0, v1, v0
+; CHECK-NEXT:    uhadd.4s v0, v0, v1
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    ret
+  %t3 = zext <4 x i16> %a to <4 x i32>
+  %t4 = add <4 x i32> %t3, <i32 1, i32 1, i32 1, i32 1>
+  %t5 = trunc <4 x i32> %t4 to <4 x i19>
+  %new0 = add <4 x i19> %t5, <i19 1, i19 1, i19 1, i19 1>
+  %new1 = lshr <4 x i19> %new0, <i19 1, i19 1, i19 1, i19 1>
+  %last = zext <4 x i19> %new1 to <4 x i32>
+  %t6 = trunc <4 x i32> %last to <4 x i16>
+  ret <4 x i16> %t6
+}
+
 declare <8 x i8> @llvm.aarch64.neon.srhadd.v8i8(<8 x i8>, <8 x i8>)
 declare <4 x i16> @llvm.aarch64.neon.srhadd.v4i16(<4 x i16>, <4 x i16>)
 declare <2 x i32> @llvm.aarch64.neon.srhadd.v2i32(<2 x i32>, <2 x i32>)

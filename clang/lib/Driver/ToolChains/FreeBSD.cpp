@@ -133,6 +133,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
   const auto &ToolChain = static_cast<const FreeBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple &Triple = ToolChain.getTriple();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool IsPIE =
       !Args.hasArg(options::OPT_shared) &&
@@ -165,8 +166,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/libexec/ld-elf.so.1");
     }
-    const llvm::Triple &T = ToolChain.getTriple();
-    if (Arch == llvm::Triple::arm || T.isX86())
+    if (Arch == llvm::Triple::arm || Triple.isX86())
       CmdArgs.push_back("--hash-style=both");
     CmdArgs.push_back("--enable-new-dtags");
   }
@@ -212,10 +212,15 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::riscv64:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
-    CmdArgs.push_back("-X");
     break;
   default:
     break;
+  }
+
+  if (Triple.isRISCV64()) {
+    CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_G)) {
@@ -261,8 +266,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
-                            options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_T_Group, options::OPT_s, options::OPT_t});
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
@@ -310,7 +315,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else
@@ -398,13 +403,6 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib32"));
   else
     getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
-}
-
-unsigned FreeBSD::GetDefaultDwarfVersion() const {
-  unsigned Major = getTriple().getOSMajorVersion();
-  if (Major >= 12 || Major == 0)
-    return 4;
-  return 2;
 }
 
 void FreeBSD::AddClangSystemIncludeArgs(
@@ -509,14 +507,4 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Memory;
   }
   return Res;
-}
-
-void FreeBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args,
-                                    Action::OffloadKind) const {
-  unsigned Major = getTriple().getOSMajorVersion();
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array,
-                          (Major >= 12 || Major == 0)))
-    CC1Args.push_back("-fno-use-init-array");
 }

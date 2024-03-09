@@ -15,7 +15,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SSE-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; SSE-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 1
-; SSE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 8
+; SSE-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 8
 ; SSE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
 ; SSE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
 ; SSE-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
@@ -27,8 +27,8 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[STRIDED_VEC3]], [[STRIDED_VEC]]
 ; SSE-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC2]]
 ; SSE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 16
 ; SSE-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP7]], align 4
-; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 4
 ; SSE-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
 ; SSE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; SSE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -51,11 +51,11 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX1-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; AVX1-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 1
-; AVX1-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 8
+; AVX1-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 8
 ; AVX1-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 1
-; AVX1-NEXT:    [[TMP4:%.*]] = or i64 [[TMP3]], 16
+; AVX1-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP3]], 16
 ; AVX1-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 1
-; AVX1-NEXT:    [[TMP6:%.*]] = or i64 [[TMP5]], 24
+; AVX1-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP5]], 24
 ; AVX1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
 ; AVX1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
 ; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP4]]
@@ -77,12 +77,12 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[STRIDED_VEC9]], [[STRIDED_VEC5]]
 ; AVX1-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC6]]
 ; AVX1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 16
+; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 32
+; AVX1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 48
 ; AVX1-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP15]], align 4
-; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 4
 ; AVX1-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP16]], align 4
-; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 8
 ; AVX1-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP17]], align 4
-; AVX1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 12
 ; AVX1-NEXT:    store <4 x i32> [[TMP14]], ptr [[TMP18]], align 4
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; AVX1-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -105,11 +105,11 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; AVX2-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 16
+; AVX2-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 16
 ; AVX2-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP4:%.*]] = or i64 [[TMP3]], 32
+; AVX2-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP3]], 32
 ; AVX2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 1
-; AVX2-NEXT:    [[TMP6:%.*]] = or i64 [[TMP5]], 48
+; AVX2-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP5]], 48
 ; AVX2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
 ; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
 ; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP4]]
@@ -131,12 +131,12 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[TMP13:%.*]] = add nsw <8 x i32> [[STRIDED_VEC9]], [[STRIDED_VEC5]]
 ; AVX2-NEXT:    [[TMP14:%.*]] = add nsw <8 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC6]]
 ; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 32
+; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 64
+; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 96
 ; AVX2-NEXT:    store <8 x i32> [[TMP11]], ptr [[TMP15]], align 4
-; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 8
 ; AVX2-NEXT:    store <8 x i32> [[TMP12]], ptr [[TMP16]], align 4
-; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 16
 ; AVX2-NEXT:    store <8 x i32> [[TMP13]], ptr [[TMP17]], align 4
-; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 24
 ; AVX2-NEXT:    store <8 x i32> [[TMP14]], ptr [[TMP18]], align 4
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; AVX2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -160,7 +160,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; ATOM-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
 ; ATOM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
 ; ATOM-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; ATOM-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
+; ATOM-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP0]], 1
 ; ATOM-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
 ; ATOM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; ATOM-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP3]], [[TMP1]]
@@ -181,7 +181,7 @@ for.body:                                         ; preds = %for.body, %entry
   %0 = shl nsw i64 %indvars.iv, 1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %0
   %1 = load i32, ptr %arrayidx, align 4
-  %2 = or i64 %0, 1
+  %2 = or disjoint i64 %0, 1
   %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %2
   %3 = load i32, ptr %arrayidx3, align 4
   %add4 = add nsw i32 %3, %1

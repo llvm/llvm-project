@@ -33,7 +33,7 @@
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
+#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -83,7 +83,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
     if (genericOp.getNumParallelLoops() != genericOp.getNumLoops())
       return failure();
@@ -132,12 +132,10 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
         newIndexingMaps, genericOp.getIteratorTypesArray(),
         /*bodyBuild=*/nullptr, linalg::getPrunedAttributeList(genericOp));
 
-    Region &region = newOp.getRegion();
-    Block *block = new Block();
-    region.push_back(block);
-    IRMapping mapper;
     OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(block);
+    Region &region = newOp.getRegion();
+    Block *block = rewriter.createBlock(&region);
+    IRMapping mapper;
     for (auto bbarg : genericOp.getRegionInputArgs())
       mapper.map(bbarg, block->addArgument(bbarg.getType(), loc));
 
@@ -457,8 +455,8 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
     Type operandType = operand.get().getType();
     if (auto memrefOperandType = dyn_cast_or_null<MemRefType>(operandType)) {
       return memrefOperandType.getLayout().isIdentity();
-    } else if (auto tensorOperandType =
-                   dyn_cast<RankedTensorType>(operandType)) {
+    }
+    if (auto tensorOperandType = dyn_cast<RankedTensorType>(operandType)) {
       return tensorOperandType.getEncoding() == nullptr;
     }
     return false;
@@ -572,13 +570,17 @@ struct RankReducedExtractSliceOp
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
     RankedTensorType resultType = sliceOp.getType();
-    SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
-    auto reassociation = getReassociationMapForFoldingUnitDims(sizes);
+    SmallVector<OpFoldResult> targetShape;
+    for (auto size : resultType.getShape())
+      targetShape.push_back(rewriter.getIndexAttr(size));
+    auto reassociation = getReassociationMapForFoldingUnitDims(targetShape);
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(resultType.getRank()))
       return failure();
+
+    SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
+    SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
     auto rankReducedType = cast<RankedTensorType>(
         tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
             reassociation->size(), sliceOp.getSourceType(), offsets, sizes,
@@ -602,13 +604,14 @@ struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
   LogicalResult matchAndRewrite(InsertOpTy insertSliceOp,
                                 PatternRewriter &rewriter) const override {
     RankedTensorType sourceType = insertSliceOp.getSourceType();
-    SmallVector<OpFoldResult> offsets = insertSliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = insertSliceOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = insertSliceOp.getMixedStrides();
-    auto reassociation = getReassociationMapForFoldingUnitDims(sizes);
+    SmallVector<OpFoldResult> targetShape;
+    for (auto size : sourceType.getShape())
+      targetShape.push_back(rewriter.getIndexAttr(size));
+    auto reassociation = getReassociationMapForFoldingUnitDims(targetShape);
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(sourceType.getRank()))
       return failure();
+
     Location loc = insertSliceOp.getLoc();
     tensor::CollapseShapeOp reshapedSource;
     {
@@ -686,7 +689,10 @@ void mlir::linalg::populateMoveInitOperandsToInputPattern(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
-    : public impl::LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
+    : public impl::LinalgFoldUnitExtentDimsPassBase<
+          LinalgFoldUnitExtentDimsPass> {
+  using impl::LinalgFoldUnitExtentDimsPassBase<
+      LinalgFoldUnitExtentDimsPass>::LinalgFoldUnitExtentDimsPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
@@ -702,7 +708,3 @@ struct LinalgFoldUnitExtentDimsPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgFoldUnitExtentDimsPass() {
-  return std::make_unique<LinalgFoldUnitExtentDimsPass>();
-}

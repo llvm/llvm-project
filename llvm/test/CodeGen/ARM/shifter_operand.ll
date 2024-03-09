@@ -508,14 +508,14 @@ for.cond:                                         ; preds = %for.cond1.for.cond.
 
 for.cond2.preheader:                              ; preds = %for.cond2.preheader.2, %for.cond
   %indvar24 = phi i32 [ 0, %for.cond ], [ %indvar.next25.3, %for.cond2.preheader.2 ]
-  %indvar.next25 = or i32 %indvar24, 1
+  %indvar.next25 = or disjoint i32 %indvar24, 1
   %l5 = mul i32 %2, %indvar.next25
   %scevgep.1 = getelementptr [15 x [25 x [18 x i8]]], ptr @arr_9, i32 -217196, i32 %4, i32 %0, i32 %l5
   store i32 0, ptr %scevgep.1, align 1
   br i1 %cc, label %for.cond1.for.cond.cleanup_crit_edge, label %for.cond2.preheader.2
 
 for.cond2.preheader.2:                            ; preds = %for.cond2.preheader
-  %indvar.next25.1 = or i32 %indvar24, 2
+  %indvar.next25.1 = or disjoint i32 %indvar24, 2
   %l8 = mul i32 %2, %indvar.next25.1
   %scevgep.2 = getelementptr [15 x [25 x [18 x i8]]], ptr @arr_9, i32 -217196, i32 %4, i32 %0, i32 %l8
   store i32 0, ptr %scevgep.2, align 1

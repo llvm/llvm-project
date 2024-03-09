@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
 
       StringRef Line(LineStr);
       Line = Line.trim();
-      if (Line.empty() || Line.startswith("#") || Line.startswith(";"))
+      if (Line.empty() || Line.starts_with("#") || Line.starts_with(";"))
         continue;
 
       // If the user is manually typing in these decorated names, don't echo

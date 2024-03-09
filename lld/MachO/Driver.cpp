@@ -90,6 +90,10 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     return entry->second;
 
   auto doFind = [&] {
+    // Special case for Csu support files required for Mac OS X 10.7 and older
+    // (crt1.o)
+    if (name.ends_with(".o"))
+      return findPathCombination(name, config->librarySearchPaths, {""});
     if (config->searchDylibsFirst) {
       if (std::optional<StringRef> path =
               findPathCombination("lib" + name, config->librarySearchPaths,
@@ -336,7 +340,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().starts_with(objc::klass))
+        if (sym.getName().starts_with(objc::symbol_names::klass))
           file->fetch(sym);
 
       // TODO: no need to look for ObjC sections for a given archive member if
@@ -391,7 +395,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
     if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
         config->forceLoadObjC) {
       for (Symbol *sym : newFile->symbols)
-        if (sym && sym->getName().starts_with(objc::klass)) {
+        if (sym && sym->getName().starts_with(objc::symbol_names::klass)) {
           extract(*newFile, "-ObjC");
           break;
         }
@@ -687,6 +691,8 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
           .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
           .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
           .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
+          .Cases("xros", "11", PLATFORM_XROS)
+          .Cases("xros-simulator", "12", PLATFORM_XROS_SIMULATOR)
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
@@ -823,9 +829,13 @@ static ObjCStubsMode getObjCStubsMode(const ArgList &args) {
   if (!arg)
     return ObjCStubsMode::fast;
 
-  if (arg->getOption().getID() == OPT_objc_stubs_small)
-    warn("-objc_stubs_small is not yet implemented, defaulting to "
-         "-objc_stubs_fast");
+  if (arg->getOption().getID() == OPT_objc_stubs_small) {
+    if (is_contained({AK_arm64e, AK_arm64}, config->arch()))
+      return ObjCStubsMode::small;
+    else
+      warn("-objc_stubs_small is not yet implemented, defaulting to "
+           "-objc_stubs_fast");
+  }
   return ObjCStubsMode::fast;
 }
 
@@ -952,8 +962,7 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef alignStr = arg->getValue(2);
-    if (alignStr.starts_with("0x") || alignStr.starts_with("0X"))
-      alignStr = alignStr.drop_front(2);
+    alignStr.consume_front_insensitive("0x");
     uint32_t align;
     if (alignStr.getAsInteger(16, align)) {
       error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +
@@ -978,6 +987,8 @@ PlatformType macho::removeSimulator(PlatformType platform) {
     return PLATFORM_TVOS;
   case PLATFORM_WATCHOSSIMULATOR:
     return PLATFORM_WATCHOS;
+  case PLATFORM_XROS_SIMULATOR:
+    return PLATFORM_XROS;
   default:
     return platform;
   }
@@ -994,15 +1005,17 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
 
   return platform == PLATFORM_MACOS || platform == PLATFORM_IOSSIMULATOR ||
          platform == PLATFORM_TVOSSIMULATOR ||
-         platform == PLATFORM_WATCHOSSIMULATOR;
+         platform == PLATFORM_WATCHOSSIMULATOR ||
+         platform == PLATFORM_XROS_SIMULATOR;
 }
 
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
+  static const std::array<std::pair<PlatformType, VersionTuple>, 6> minVersion =
       {{{PLATFORM_MACOS, VersionTuple(10, 15)},
         {PLATFORM_IOS, VersionTuple(13, 0)},
         {PLATFORM_TVOS, VersionTuple(13, 0)},
         {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+        {PLATFORM_XROS, VersionTuple(1, 0)},
         {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
   PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
@@ -1038,11 +1051,12 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   bool isRequested = arg != nullptr;
 
   // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 4> minVersion =
+  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
       {{{PLATFORM_MACOS, VersionTuple(11, 0)},
         {PLATFORM_IOS, VersionTuple(13, 4)},
         {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)}}};
+        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+        {PLATFORM_XROS, VersionTuple(1, 0)}}};
   PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
                           [&](const auto &p) { return p.first == platform; });
@@ -1268,11 +1282,10 @@ static void foldIdenticalLiterals() {
 static void addSynthenticMethnames() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
-      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
-        os << sym->getName().drop_front(prefixLength) << '\0';
+      if (ObjCStubsSection::isObjCStubSymbol(sym))
+        os << ObjCStubsSection::getMethname(sym) << '\0';
 
   if (data.empty())
     return;
@@ -1682,8 +1695,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (args.getLastArg(OPT_reproducible))
     config->zeroModTime = true;
 
-  std::array<PlatformType, 3> encryptablePlatforms{
-      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
+  std::array<PlatformType, 4> encryptablePlatforms{
+      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS, PLATFORM_XROS};
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));

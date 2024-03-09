@@ -213,29 +213,10 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
+      New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
 
       replaceAllDbgUsesWith(AI, *New, *New, DT);
-
-      // Scan to the end of the allocation instructions, to skip over a block of
-      // allocas if possible...also skip interleaved debug info
-      //
-      BasicBlock::iterator It(New);
-      while (isa<AllocaInst>(*It) || isa<DbgInfoIntrinsic>(*It))
-        ++It;
-
-      // Now that I is pointing to the first non-allocation-inst in the block,
-      // insert our getelementptr instruction...
-      //
-      Type *IdxTy = IC.getDataLayout().getIndexType(AI.getType());
-      Value *NullIdx = Constant::getNullValue(IdxTy);
-      Value *Idx[2] = {NullIdx, NullIdx};
-      Instruction *GEP = GetElementPtrInst::CreateInBounds(
-          NewTy, New, Idx, New->getName() + ".sub");
-      IC.InsertNewInstBefore(GEP, It);
-
-      // Now make everything use the getelementptr instead of the original
-      // allocation.
-      return IC.replaceInstUsesWith(AI, GEP);
+      return IC.replaceInstUsesWith(AI, New);
     }
   }
 
@@ -393,7 +374,7 @@ void PointerReplacer::replace(Instruction *I) {
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
     Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
     auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),
-                                   PHI->getName(), PHI);
+                                   PHI->getName(), PHI->getIterator());
     for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I)
       NewPHI->addIncoming(getReplacement(PHI->getIncomingValue(I)),
                           PHI->getIncomingBlock(I));
@@ -796,7 +777,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     auto *Zero = ConstantInt::get(IdxType, 0);
 
     Value *V = PoisonValue::get(T);
-    TypeSize Offset = TypeSize::get(0, ET->isScalableTy());
+    TypeSize Offset = TypeSize::getZero();
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,
@@ -1051,7 +1032,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   // where there are several consecutive memory accesses to the same location,
   // separated by a few arithmetic operations.
   bool IsLoadCSE = false;
-  if (Value *AvailableVal = FindAvailableLoadedValue(&LI, *AA, &IsLoadCSE)) {
+  BatchAAResults BatchAA(*AA);
+  if (Value *AvailableVal = FindAvailableLoadedValue(&LI, BatchAA, &IsLoadCSE)) {
     if (IsLoadCSE)
       combineMetadataForCSE(cast<LoadInst>(AvailableVal), &LI, false);
 
@@ -1321,7 +1303,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     auto *IdxType = Type::getInt64Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
 
-    TypeSize Offset = TypeSize::get(0, AT->getElementType()->isScalableTy());
+    TypeSize Offset = TypeSize::getZero();
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,

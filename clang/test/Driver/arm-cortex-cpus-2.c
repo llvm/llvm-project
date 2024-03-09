@@ -537,6 +537,13 @@
 // CHECK-CORTEX-A78C-MFPU: "-target-feature" "+sha2"
 // CHECK-CORTEX-A78C-MFPU: "-target-feature" "+aes"
 
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78ae -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78AE %s
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78ae -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78AE-MFPU %s
+// CHECK-CORTEX-A78AE: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a78ae"
+// CHECK-CORTEX-A78AE-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
+// CHECK-CORTEX-A78AE-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A78AE-MFPU: "-target-feature" "+aes"
+
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a710 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A710 %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a710 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A710-MFPU %s
 // CHECK-CORTEX-A710: "-cc1"{{.*}} "-triple" "armv9a-{{.*}} "-target-cpu" "cortex-a710"
@@ -562,8 +569,11 @@
 // RUN: %clang -target arm -mcpu=cortex-m85 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M85 %s
 // CHECK-CORTEX-M85:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m85"
 
+// RUN: %clang -target arm -mcpu=cortex-m52 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M52 %s
+// CHECK-CORTEX-M52:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m52"
+
 // RUN: %clang -target arm -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEOVERSE-N2 %s
-// CHECK-NEOVERSE-N2: "-cc1"{{.*}} "-triple" "armv8.5a-{{.*}}" "-target-cpu" "neoverse-n2"
+// CHECK-NEOVERSE-N2: "-cc1"{{.*}} "-triple" "armv9a-{{.*}}" "-target-cpu" "neoverse-n2"
 
 // ================== Check whether -mcpu accepts mixed-case values.
 // RUN: %clang -target arm-linux-gnueabi -mcpu=Cortex-a5 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-CPUV7A %s

@@ -1,5 +1,6 @@
 add_mlir_unittest(MLIRIRTests
   AdaptorTest.cpp
+  AffineMapTest.cpp
   AttributeTest.cpp
   DialectTest.cpp
   InterfaceTest.cpp
@@ -10,6 +11,7 @@ add_mlir_unittest(MLIRIRTests
   ShapedTypeTest.cpp
   SymbolTableTest.cpp
   TypeTest.cpp
+  TypeAttrNamesTest.cpp
   OpPropertiesTest.cpp
 
   DEPENDS

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1150 %s | FileCheck --check-prefix=GFX1150 %s
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1151 %s | FileCheck --check-prefix=GFX1150 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1150 %s | FileCheck --check-prefix=GFX1150 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1151 %s | FileCheck --check-prefix=GFX1150 %s
 
 //
 // Subtargets allow src1 of VOP3 DPP instructions to be SGPR or inlinable
@@ -17,3 +17,9 @@ v_add3_u32_e64_dpp v5, v1, s2, v0 dpp8:[7,6,5,4,3,2,1,0]
 
 v_add3_u32_e64_dpp v5, v1, 42, v0 dpp8:[7,6,5,4,3,2,1,0]
 // GFX1150: encoding: [0x05,0x00,0x55,0xd6,0xe9,0x54,0x01,0x04,0x01,0x77,0x39,0x05]
+
+v_add3_u32_e64_dpp v5, v1, s2, s3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1150: encoding: [0x05,0x00,0x55,0xd6,0xe9,0x04,0x0c,0x00,0x01,0x77,0x39,0x05]
+
+v_cmp_ne_i32_e64_dpp vcc_lo, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1150: encoding: [0x6a,0x00,0x45,0xd4,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]

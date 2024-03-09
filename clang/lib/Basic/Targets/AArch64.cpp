@@ -225,6 +225,8 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
+  BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
 }
 
@@ -256,7 +258,6 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
   Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
-  Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
   // Also include the Armv8.2 defines
   getTargetDefinesARMV82A(Opts, Builder);
 }
@@ -385,6 +386,11 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__ARM_ALIGN_MAX_STACK_PWR", "4");
 
+  // These macros are set when Clang can parse declarations with these
+  // attributes.
+  Builder.defineMacro("__ARM_STATE_ZA", "1");
+  Builder.defineMacro("__ARM_STATE_ZT0", "1");
+
   // 0xe implies support for half, single and double precision operations.
   if (FPU & FPUMode)
     Builder.defineMacro("__ARM_FP", "0xE");
@@ -429,6 +435,17 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVE2SM4)
     Builder.defineMacro("__ARM_FEATURE_SVE2_SM4", "1");
 
+  if (HasSME) {
+    Builder.defineMacro("__ARM_FEATURE_SME");
+    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
+  }
+
+  if (HasSME2) {
+    Builder.defineMacro("__ARM_FEATURE_SME");
+    Builder.defineMacro("__ARM_FEATURE_SME2");
+    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
+  }
+
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
@@ -463,6 +480,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasPAuth)
     Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
+
+  if (HasPAuthLR)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
 
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
@@ -515,6 +535,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     // 0: Protection using the A key
     // 1: Protection using the B key
     // 2: Protection including leaf functions
+    // 3: Protection using PC as a diversifier
     unsigned Value = 0;
 
     if (Opts.isSignReturnAddressWithAKey())
@@ -525,11 +546,17 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     if (Opts.isSignReturnAddressScopeAll())
       Value |= (1 << 2);
 
+    if (Opts.BranchProtectionPAuthLR)
+      Value |= (1 << 3);
+
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
   }
 
   if (Opts.BranchTargetEnforcement)
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
+
+  if (Opts.GuardedControlStack)
+    Builder.defineMacro("__ARM_FEATURE_GCS_DEFAULT", "1");
 
   if (HasLS64)
     Builder.defineMacro("__ARM_FEATURE_LS64", "1");
@@ -542,6 +569,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasD128)
     Builder.defineMacro("__ARM_FEATURE_SYSREG128", "1");
+
+  if (HasGCS)
+    Builder.defineMacro("__ARM_FEATURE_GCS", "1");
 
   if (*ArchInfo == llvm::AArch64::ARMV8_1A)
     getTargetDefinesARMV81A(Opts, Builder);
@@ -574,11 +604,12 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
 
-  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
+  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16");
 
   // Allow detection of fast FMA support.
   Builder.defineMacro("__FP_FAST_FMA", "1");
@@ -613,9 +644,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (Name == E.Name)
-      return E.FmvPriority;
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->FmvPriority;
   return 0;
 }
 
@@ -625,24 +655,25 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
-    return Name == E.Name && !E.DependentFeatures.empty();
-  });
-  return F != std::end(llvm::AArch64::Extensions);
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return !Ext->DependentFeatures.empty();
+  return false;
 }
 
 StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions,
-                         [&](const auto &E) { return Name == E.Name; });
-  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
-                                                  : StringRef();
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->DependentFeatures;
+  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (FeatureStr == E.Name)
-      return true;
-  return false;
+  // CPU features might be separated by '+', extract them and check
+  llvm::SmallVector<StringRef, 8> Features;
+  FeatureStr.split(Features, "+");
+  for (auto &Feature : Features)
+    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+      return false;
+  return true;
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -683,6 +714,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sme", HasSME)
+      .Case("sme2", HasSME2)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
@@ -800,6 +832,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+sme") {
       HasSME = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sme2") {
+      HasSME = true;
+      HasSME2 = true;
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
@@ -963,6 +1001,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGCS = true;
     if (Feature == "+rcpc3")
       HasRCPC3 = true;
+    if (Feature == "+pauth-lr") {
+      HasPAuthLR = true;
+      HasPAuth = true;
+    }
   }
 
   // Check features that are manually disabled by command line options.
@@ -1061,7 +1103,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         // Pushing the original feature string to give a sema error later on
         // when they get checked.
-        if (Feature.startswith("no"))
+        if (Feature.starts_with("no"))
           Features.push_back("-" + Feature.drop_front(2).str());
         else
           Features.push_back("+" + Feature.str());
@@ -1070,22 +1112,21 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const std::optional<llvm::AArch64::ArchInfo> AI =
-          llvm::AArch64::parseArch(Split.first);
+      const llvm::AArch64::ArchInfo *AI = llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
@@ -1094,7 +1135,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
       else {
@@ -1105,14 +1146,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.CPU = Split.first;
         SplitAndAddFeatures(Split.second, Ret.Features);
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("+")) {
+    } else if (Feature.starts_with("+")) {
       SplitAndAddFeatures(Feature, Ret.Features);
-    } else if (Feature.startswith("no-")) {
+    } else if (Feature.starts_with("no-")) {
       StringRef FeatureName =
           llvm::AArch64::getArchExtFeature(Feature.split("-").second);
       if (!FeatureName.empty())
@@ -1162,6 +1203,8 @@ TargetInfo::BuiltinVaListKind AArch64TargetInfo::getBuiltinVaListKind() const {
 }
 
 const char *const AArch64TargetInfo::GCCRegNames[] = {
+    // clang-format off
+
     // 32-bit Integer registers
     "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8", "w9", "w10", "w11",
     "w12", "w13", "w14", "w15", "w16", "w17", "w18", "w19", "w20", "w21", "w22",
@@ -1198,7 +1241,12 @@ const char *const AArch64TargetInfo::GCCRegNames[] = {
 
     // SVE predicate-as-counter registers
     "pn0",  "pn1",  "pn2",  "pn3",  "pn4",  "pn5",  "pn6",  "pn7",  "pn8",
-    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15"
+    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15",
+
+    // SME registers
+    "za", "zt0",
+
+    // clang-format on
 };
 
 ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
@@ -1363,8 +1411,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
     StringRef Constraint, char Modifier, unsigned Size,
     std::string &SuggestedModifier) const {
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   switch (Constraint[0]) {
   default:
@@ -1516,8 +1563,10 @@ MicrosoftARM64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_MicrosoftWin64;
 }
 
-unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize) const {
-  unsigned Align = WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize);
+unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                                     bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
   // MSVC does size based alignment for arm64 based on alignment section in
   // below document, replicate that to keep alignment consistent with object

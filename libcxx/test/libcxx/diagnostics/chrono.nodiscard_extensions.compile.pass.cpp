@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Check that format functions aren't marked [[nodiscard]] when
-// _LIBCPP_DISBALE_NODISCARD_EXT is defined
+// _LIBCPP_DISABLE_NODISCARD_EXT is defined
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
@@ -23,6 +23,10 @@
 
 #include "test_macros.h"
 
+// These types have "private" constructors.
+extern std::chrono::time_zone tz;
+extern std::chrono::time_zone_link link;
+
 void test() {
   std::chrono::tzdb_list& list = std::chrono::get_tzdb_list();
   list.front();
@@ -34,4 +38,17 @@ void test() {
   std::chrono::get_tzdb_list();
   std::chrono::get_tzdb();
   std::chrono::remote_version();
+
+  {
+    tz.name();
+    operator==(tz, tz);
+    operator<=>(tz, tz);
+  }
+
+  {
+    link.name();
+    link.target();
+    operator==(link, link);
+    operator<=>(link, link);
+  }
 }

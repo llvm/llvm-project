@@ -125,12 +125,9 @@ public:
       for (auto &Inst : *BB)
         updateInstruction(Inst, DetailedHash);
 
-      const Instruction *Term = BB->getTerminator();
-      for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
-        if (!VisitedBBs.insert(Term->getSuccessor(i)).second)
-          continue;
-        BBs.push_back(Term->getSuccessor(i));
-      }
+      for (const BasicBlock *Succ : successors(BB))
+        if (VisitedBBs.insert(Succ).second)
+          BBs.push_back(Succ);
     }
   }
 

@@ -289,6 +289,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
   case CortexA710:
   case CortexR4:
@@ -298,6 +299,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexM3:
   case CortexM7:
   case CortexR52:
+  case CortexM52:
   case CortexX1:
   case CortexX1C:
     break;
@@ -365,8 +367,7 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() &&
-         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {

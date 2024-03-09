@@ -451,7 +451,7 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV32-NEXT:  .LBB10_4:
 ; RV32-NEXT:    neg s1, a2
 ; RV32-NEXT:    and s1, s1, a3
-; RV32-NEXT:    call use@plt
+; RV32-NEXT:    call use
 ; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -474,7 +474,7 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li s0, 42
 ; RV64-NEXT:  .LBB10_2:
-; RV64-NEXT:    call use@plt
+; RV64-NEXT:    call use
 ; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -1091,7 +1091,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    sltu s6, s4, s1
 ; RV32-NEXT:  .LBB32_4: # %t
 ; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    call call@plt
+; RV32-NEXT:    call call
 ; RV32-NEXT:    beqz s6, .LBB32_8
 ; RV32-NEXT:  # %bb.5: # %end
 ; RV32-NEXT:    sltu a1, s4, s1
@@ -1145,7 +1145,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV64-NEXT:    mv s3, a0
 ; RV64-NEXT:    sltu s4, a0, a1
 ; RV64-NEXT:    mv a0, s4
-; RV64-NEXT:    call call@plt
+; RV64-NEXT:    call call
 ; RV64-NEXT:    bgeu s3, s2, .LBB32_3
 ; RV64-NEXT:  # %bb.2: # %end
 ; RV64-NEXT:    sub a0, s3, s2

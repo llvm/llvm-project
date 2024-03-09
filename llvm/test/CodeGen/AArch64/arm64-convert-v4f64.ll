@@ -54,6 +54,30 @@ define <4 x half> @uitofp_v4i64_to_v4f16(ptr %ptr) {
   ret <4 x half> %tmp2
 }
 
+define <4 x bfloat> @uitofp_v4i64_to_v4bf16(ptr %ptr) {
+; CHECK-LABEL: uitofp_v4i64_to_v4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    fcmeq v2.4s, v0.4s, v0.4s
+; CHECK-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i64>, ptr %ptr
+  %tmp2 = uitofp <4 x i64> %tmp1 to <4 x bfloat>
+  ret <4 x bfloat> %tmp2
+}
+
 define <4 x i16> @trunc_v4i64_to_v4i16(ptr %ptr) {
 ; CHECK-LABEL: trunc_v4i64_to_v4i16:
 ; CHECK:       // %bb.0:

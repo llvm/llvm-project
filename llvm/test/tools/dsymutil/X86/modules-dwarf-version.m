@@ -11,7 +11,7 @@
 // RUN: dsymutil -verify -f -oso-prepend-path=%t.dir \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
-// RUN: dsymutil --linker llvm -verify -f -oso-prepend-path=%t.dir \
+// RUN: dsymutil --linker parallel -verify -f -oso-prepend-path=%t.dir \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
 

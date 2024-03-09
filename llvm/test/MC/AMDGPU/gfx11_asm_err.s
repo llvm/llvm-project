@@ -36,6 +36,11 @@ v_interp_p2_f32 v0, -v1, v2, v3 wait_exp
 global_atomic_cmpswap_x2 v[1:4], v3, v[5:8], off offset:2047 glc
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
+// s_waitcnt_depctr is called s_wait_alu on GFX12, but its semantics and
+// encoding are identical. Even so, the new name should be rejected on GFX11
+s_wait_alu 0xfffe
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 v_cubesc_f32_e64_dpp v5, v1, v2, 12345678 row_shr:4 row_mask:0xf bank_mask:0xf
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
@@ -151,4 +156,34 @@ v_fmac_f32_e64_dpp v5, v2, 0x1234 quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 s_load_dword s1, s[2:3], s0 0x1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+scratch_store_b128 off, v[2:5], s0 offset:8000000
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 13-bit signed offset
+
+flat_atomic_add_f32 v1, v[0:1], v2 offset:-1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 12-bit unsigned offset
+
+s_load_b96 s[20:22], s[2:3], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_buffer_load_b96 s[20:22], s[4:7], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mov_b16 v0.l, s0.h
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_mov_b16 v0.l, ttmp0.h
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_mov_b16 v0.l, a0.h
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_mov_b16 v0.l, s0.h
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_mov_b16 v0.l, ttmp0.h
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_mov_b16 v0.l, a0.h
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

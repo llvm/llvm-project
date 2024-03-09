@@ -11,25 +11,39 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @induction_i7(ptr %dst) #0 {
 ; CHECK-LABEL: @induction_i7(
 ; CHECK:       vector.ph:
-; CHECK:         [[TMP4:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
-; CHECK:         [[TMP5:%.*]] = trunc <vscale x 2 x i8> [[TMP4]] to <vscale x 2 x i7>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i7> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i7> [[TMP6]], shufflevector (<vscale x 2 x i7> insertelement (<vscale x 2 x i7> poison, i7 1, i64 0), <vscale x 2 x i7> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i7> zeroinitializer, [[TMP7]]
+; CHECK:         %ind.end = trunc i64 %n.vec to i7
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i7>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i7> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i7> [[TMP8]], shufflevector (<vscale x 2 x i7> insertelement (<vscale x 2 x i7> poison, i7 1, i64 0), <vscale x 2 x i7> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i7> zeroinitializer, [[TMP9]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i7> [ [[INDUCTION]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[TMP10]]
-; CHECK-NEXT:    [[EXT:%.+]]  = zext <vscale x 2 x i7> [[TMP11]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i64> [[EXT]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i7> [[VEC_IND]],
-;
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], [[DOTSPLAT:%.*]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 2 x i7> [[STEP_ADD]], zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP23:%.*]] = zext <vscale x 2 x i7> [[TMP19]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP24:%.*]] = zext <vscale x 2 x i7> [[TMP20]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP27:%.*]] = mul i64 [[TMP26]], 2
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i64 [[TMP27]]
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP23]], ptr [[TMP25]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP24]], ptr [[TMP28]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i7> [[STEP_ADD]], [[DOTSPLAT]]
+
 entry:
   br label %for.body
 
@@ -57,24 +71,35 @@ for.end:                                          ; preds = %for.body
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: @induction_i3_zext(
 ; CHECK:       vector.ph:
-; CHECK:         [[TMP4:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
-; CHECK:         [[TMP5:%.*]] = trunc <vscale x 2 x i8> [[TMP4]] to <vscale x 2 x i3>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i3> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i3> [[TMP6]], shufflevector (<vscale x 2 x i3> insertelement (<vscale x 2 x i3> poison, i3 1, i64 0), <vscale x 2 x i3> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i3> zeroinitializer, [[TMP7]]
+; CHECK:         %ind.end = trunc i64 %n.vec to i3
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i3>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i3> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i3> [[TMP8]], shufflevector (<vscale x 2 x i3> insertelement (<vscale x 2 x i3> poison, i3 1, i64 0), <vscale x 2 x i3> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i3> [ [[INDUCTION]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <vscale x 2 x i3> [[VEC_IND]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP10]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i3> [[VEC_IND]],
-;
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i3> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i3> [[VEC_IND]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = zext <vscale x 2 x i3> [[STEP_ADD]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP24]], 2
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i64 [[TMP25]]
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP19]], ptr [[TMP23]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP20]], ptr [[TMP26]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i3> [[STEP_ADD]], [[DOTSPLAT]]
 entry:
   br label %for.body
 

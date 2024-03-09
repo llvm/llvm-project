@@ -37,7 +37,6 @@
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
@@ -55,6 +54,7 @@
 using namespace llvm;
 using namespace llvm::dsymutil;
 using namespace object;
+using namespace llvm::dwarf_linker;
 
 namespace {
 enum ID {
@@ -232,18 +232,18 @@ static Expected<DsymutilDWARFLinkerType>
 getDWARFLinkerType(opt::InputArgList &Args) {
   if (opt::Arg *LinkerType = Args.getLastArg(OPT_linker)) {
     StringRef S = LinkerType->getValue();
-    if (S == "apple")
-      return DsymutilDWARFLinkerType::Apple;
-    if (S == "llvm")
-      return DsymutilDWARFLinkerType::LLVM;
+    if (S == "classic")
+      return DsymutilDWARFLinkerType::Classic;
+    if (S == "parallel")
+      return DsymutilDWARFLinkerType::Parallel;
     return make_error<StringError>("invalid DWARF linker type specified: '" +
                                        S +
-                                       "'. Supported values are 'apple', "
-                                       "'llvm'.",
+                                       "'. Supported values are 'classic', "
+                                       "'parallel'.",
                                    inconvertibleErrorCode());
   }
 
-  return DsymutilDWARFLinkerType::Apple;
+  return DsymutilDWARFLinkerType::Classic;
 }
 
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
@@ -373,7 +373,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOpts.FileType = DWARFLinker::OutputFileType::Assembly;
+    Options.LinkOpts.FileType = DWARFLinkerBase::OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());
@@ -601,14 +601,12 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   }
 
   sys::path::append(Path, "Contents", "Resources");
-  std::string ResourceDir = std::string(Path.str());
+  std::string ResourceDir = std::string(Path);
   sys::path::append(Path, "DWARF", sys::path::filename(DwarfFile));
-  return OutputLocation(std::string(Path.str()), ResourceDir);
+  return OutputLocation(std::string(Path), ResourceDir);
 }
 
 int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
-
   // Parse arguments.
   DsymutilOptTable T;
   unsigned MAI;
@@ -736,7 +734,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       S.ThreadsRequested = DebugMapPtrsOrErr->size();
       S.Limit = true;
     }
-    ThreadPool Threads(S);
+    DefaultThreadPool Threads(S);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.

@@ -16,13 +16,16 @@
 #include "CoroutineStmtBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -772,6 +775,9 @@ bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
 
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
+  // Ignore previous expr evaluation contexts.
+  EnterExpressionEvaluationContext PotentiallyEvaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
   auto *ScopeInfo = getCurFunction();
@@ -1373,8 +1379,21 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
 static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
                                  SmallVectorImpl<Expr *> &PlacementArgs) {
   if (auto *MD = dyn_cast<CXXMethodDecl>(&FD)) {
-    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
-      ExprResult ThisExpr = S.ActOnCXXThis(Loc);
+    if (MD->isImplicitObjectMemberFunction()) {
+      ExprResult ThisExpr{};
+
+      if (isLambdaCallOperator(MD) && !MD->isStatic()) {
+        Qualifiers ThisQuals = MD->getMethodQualifiers();
+        CXXRecordDecl *Record = MD->getParent();
+
+        Sema::CXXThisScopeRAII ThisScope(S, Record, ThisQuals,
+                                         Record != nullptr);
+
+        ThisExpr = S.ActOnCXXThis(Loc, /*ThisRefersToClosureObject=*/true);
+      } else {
+        ThisExpr = S.ActOnCXXThis(Loc);
+      }
+
       if (ThisExpr.isInvalid())
         return false;
       ThisExpr = S.CreateBuiltinUnaryOp(Loc, UO_Deref, ThisExpr.get());
@@ -1743,7 +1762,7 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
       return false;
   } else if (HasRVoid) {
     Fallthrough = S.BuildCoreturnStmt(FD.getLocation(), nullptr,
-                                      /*IsImplicit*/false);
+                                      /*IsImplicit=*/true);
     Fallthrough = S.ActOnFinishFullStmt(Fallthrough.get());
     if (Fallthrough.isInvalid())
       return false;

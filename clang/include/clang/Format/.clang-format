@@ -3,3 +3,4 @@ InsertBraces: true
 InsertNewlineAtEOF: true
 LineEnding: LF
 RemoveBracesLLVM: true
+RemoveParentheses: ReturnStatement

@@ -34,7 +34,7 @@ __riscv_ctz_32(uint32_t __x) {
 
 static __inline__ unsigned __attribute__((__always_inline__, __nodebug__))
 __riscv_cpop_32(uint32_t __x) {
-  return __builtin_riscv_cpop_32(__x);
+  return __builtin_popcount(__x);
 }
 
 #if __riscv_xlen == 64
@@ -55,7 +55,7 @@ __riscv_ctz_64(uint64_t __x) {
 
 static __inline__ unsigned __attribute__((__always_inline__, __nodebug__))
 __riscv_cpop_64(uint64_t __x) {
-  return __builtin_riscv_cpop_64(__x);
+  return __builtin_popcountll(__x);
 }
 #endif
 #endif // defined(__riscv_zbb)
@@ -120,7 +120,23 @@ __riscv_zip_32(uint32_t __x) {
 #endif
 #endif // defined(__riscv_zbkb)
 
-#if defined(__riscv_zbkc)
+#if defined(__riscv_zbc)
+#if __riscv_xlen == 32
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_clmulr_32(uint32_t __x, uint32_t __y) {
+  return __builtin_riscv_clmulr_32(__x, __y);
+}
+#endif
+
+#if __riscv_xlen == 64
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_clmulr_64(uint64_t __x, uint64_t __y) {
+  return __builtin_riscv_clmulr_64(__x, __y);
+}
+#endif
+#endif // defined(__riscv_zbc)
+
+#if defined(__riscv_zbkc) || defined(__riscv_zbc)
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_clmul_32(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_clmul_32(__x, __y);
@@ -144,7 +160,7 @@ __riscv_clmulh_64(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_clmulh_64(__x, __y);
 }
 #endif
-#endif // defined(__riscv_zbkc)
+#endif // defined(__riscv_zbkc) || defined(__riscv_zbc)
 
 #if defined(__riscv_zbkx)
 #if __riscv_xlen == 32

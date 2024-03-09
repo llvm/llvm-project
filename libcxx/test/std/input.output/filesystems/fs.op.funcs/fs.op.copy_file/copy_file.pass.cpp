@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -25,7 +25,7 @@
 // bool copy_file(const path& from, const path& to, copy_options options);
 // bool copy_file(const path& from, const path& to, copy_options options, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <chrono>
 #include <cassert>
@@ -33,7 +33,7 @@
 #include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 using CO = fs::copy_options;

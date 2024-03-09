@@ -237,7 +237,6 @@ struct SmallRegionsConfig {
 // For the 32-bit one, it requires actually exhausting memory, so we skip it.
 TEST(ScudoPrimaryTest, Primary64OOM) {
   using Primary = scudo::SizeClassAllocator64<SmallRegionsConfig>;
-  using TransferBatch = Primary::TransferBatchT;
   Primary Allocator;
   Allocator.init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
@@ -245,29 +244,26 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   Stats.init();
   Cache.init(&Stats, &Allocator);
   bool AllocationFailed = false;
-  std::vector<TransferBatch *> Batches;
+  std::vector<void *> Blocks;
   const scudo::uptr ClassId = Primary::SizeClassMap::LargestClassId;
   const scudo::uptr Size = Primary::getSizeByClassId(ClassId);
-  typename Primary::CacheT::CompactPtrT Blocks[TransferBatch::MaxNumCached];
+  const scudo::u16 MaxCachedBlockCount = Primary::CacheT::getMaxCached(Size);
 
   for (scudo::uptr I = 0; I < 10000U; I++) {
-    TransferBatch *B = Allocator.popBatch(&Cache, ClassId);
-    if (!B) {
-      AllocationFailed = true;
-      break;
+    for (scudo::uptr J = 0; J < MaxCachedBlockCount; ++J) {
+      void *Ptr = Cache.allocate(ClassId);
+      if (Ptr == nullptr) {
+        AllocationFailed = true;
+        break;
+      }
+      memset(Ptr, 'B', Size);
+      Blocks.push_back(Ptr);
     }
-    for (scudo::u16 J = 0; J < B->getCount(); J++)
-      memset(Allocator.decompactPtr(ClassId, B->get(J)), 'B', Size);
-    Batches.push_back(B);
   }
-  while (!Batches.empty()) {
-    TransferBatch *B = Batches.back();
-    Batches.pop_back();
-    const scudo::u16 Count = B->getCount();
-    B->moveToArray(Blocks);
-    Allocator.pushBlocks(&Cache, ClassId, Blocks, Count);
-    Cache.deallocate(Primary::SizeClassMap::BatchClassId, B);
-  }
+
+  for (auto *Ptr : Blocks)
+    Cache.deallocate(ClassId, Ptr);
+
   Cache.destroy(nullptr);
   Allocator.releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
@@ -342,7 +338,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
           V.push_back(std::make_pair(ClassId, P));
       }
 
-      // Try to interleave pushBlocks(), popBatch() and releaseToOS().
+      // Try to interleave pushBlocks(), popBlocks() and releaseToOS().
       Allocator->releaseToOS(scudo::ReleaseToOS::Force);
 
       while (!V.empty()) {

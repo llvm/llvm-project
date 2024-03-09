@@ -181,8 +181,10 @@ static uint64_t getSectionLMA(const ELFFile<ELFT> &Obj,
   // Search for a PT_LOAD segment containing the requested section. Use this
   // segment's p_addr to calculate the section's LMA.
   for (const typename ELFT::Phdr &Phdr : *PhdrRangeOrErr)
-    if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_vaddr <= Sec.getAddress()) &&
-        (Phdr.p_vaddr + Phdr.p_memsz > Sec.getAddress()))
+    if ((Phdr.p_type == ELF::PT_LOAD) &&
+        (isSectionInSegment<ELFT>(
+            Phdr, *cast<const ELFObjectFile<ELFT>>(Sec.getObject())
+                       ->getSection(Sec.getRawDataRefImpl()))))
       return Sec.getAddress() - Phdr.p_vaddr + Phdr.p_paddr;
 
   // Return section's VMA if it isn't in a PT_LOAD segment.
@@ -288,6 +290,9 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       break;
     case ELF::PT_OPENBSD_RANDOMIZE:
       outs() << "OPENBSD_RANDOMIZE ";
+      break;
+    case ELF::PT_OPENBSD_SYSCALLS:
+      outs() << "OPENBSD_SYSCALLS ";
       break;
     case ELF::PT_OPENBSD_WXNEEDED:
       outs() << "OPENBSD_WXNEEDED ";

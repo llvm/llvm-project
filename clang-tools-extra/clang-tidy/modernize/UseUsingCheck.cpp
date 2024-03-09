@@ -11,26 +11,39 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+namespace {
+
+AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
+  return Node.getLanguage() == clang::LinkageSpecLanguageIDs::C;
+}
+} // namespace
 
 namespace clang::tidy::modernize {
 
+static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
 static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
 static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
 static constexpr llvm::StringLiteral TypedefName = "typedef";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreExternC(Options.get("IgnoreExternC", false)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "IgnoreExternC", IgnoreExternC);
 }
 
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(typedefDecl(unless(isInstantiated()),
-                                 hasParent(decl().bind(ParentDeclName)))
-                         .bind(TypedefName),
-                     this);
+  Finder->addMatcher(
+      typedefDecl(
+          unless(isInstantiated()),
+          optionally(hasAncestor(
+              linkageSpecDecl(isExternCLinkage()).bind(ExternCDeclName))),
+          hasParent(decl().bind(ParentDeclName)))
+          .bind(TypedefName),
+      this);
 
   // This matcher is used to find tag declarations in source code within
   // typedefs. They appear in the AST just *prior* to the typedefs.
@@ -68,6 +81,11 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *MatchedDecl = Result.Nodes.getNodeAs<TypedefDecl>(TypedefName);
   if (MatchedDecl->getLocation().isInvalid())
+    return;
+
+  const auto *ExternCDecl =
+      Result.Nodes.getNodeAs<LinkageSpecDecl>(ExternCDeclName);
+  if (ExternCDecl && IgnoreExternC)
     return;
 
   SourceLocation StartLoc = MatchedDecl->getBeginLoc();
@@ -122,7 +140,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       Type = FirstTypedefName + Type.substr(FirstTypedefType.size() + 1);
   }
   if (!ReplaceRange.getEnd().isMacroID()) {
-    const SourceLocation::IntTy Offset = MatchedDecl->getFunctionType() ? 0 : Name.size();
+    const SourceLocation::IntTy Offset =
+        MatchedDecl->getFunctionType() ? 0 : Name.size();
     LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
   }
 

@@ -12,6 +12,7 @@
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>
+#include <sys/stat.h>    // For S_* flags.
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 
@@ -26,10 +27,10 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 // because the macro generates a call to the actual internal function
 // (__llvm_libc_syscall) which is inside the namespace.
 TEST(LlvmLibcSyscallTest, TrivialCall) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_gettid), 0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
@@ -44,7 +45,7 @@ TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
 #else
 #error "symlink and symlinkat syscalls not available."
 #endif
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   char buf[sizeof(LINK_VAL)];
 
@@ -55,7 +56,7 @@ TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
       LIBC_NAMESPACE::syscall(SYS_readlinkat, AT_FDCWD, LINK, buf, sizeof(buf)),
       0l);
 #endif
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
 #ifdef SYS_unlink
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_unlink, LINK), 0l);
@@ -64,7 +65,7 @@ TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
 #else
 #error "unlink and unlinkat syscalls not available."
 #endif
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST(LlvmLibcSyscallTest, FileReadWrite) {
@@ -83,17 +84,17 @@ TEST(LlvmLibcSyscallTest, FileReadWrite) {
 #error "open and openat syscalls not available."
 #endif
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_pwrite64, fd, HELLO, HELLO_SIZE, 0),
             0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_fsync, fd), 0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_close, fd), 0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
@@ -120,10 +121,10 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
 #error "open and openat syscalls not available."
 #endif
   ASSERT_GT(write_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_close, write_fd), 0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
 #ifdef SYS_open
   int dir_fd = LIBC_NAMESPACE::syscall(SYS_open, TEST_DIR, O_DIRECTORY, 0);
@@ -134,12 +135,12 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
 #error "open and openat syscalls not available."
 #endif
   ASSERT_GT(dir_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_linkat, dir_fd, TEST_FILE, dir_fd,
                                     TEST_FILE_LINK, 0),
             0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 #ifdef SYS_open
   int link_fd =
       LIBC_NAMESPACE::syscall(SYS_open, TEST_FILE_LINK_PATH, O_PATH, 0);
@@ -150,7 +151,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
 #error "open and openat syscalls not available."
 #endif
   ASSERT_GT(link_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
 #ifdef SYS_unlink
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_unlink, TEST_FILE_PATH), 0l);
@@ -160,7 +161,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
 #else
 #error "unlink and unlinkat syscalls not available."
 #endif
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
 #ifdef SYS_unlink
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_unlink, TEST_FILE_LINK_PATH), 0l);
@@ -171,8 +172,8 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
 #else
 #error "unlink and unlinkat syscalls not available."
 #endif
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_close, dir_fd), 0l);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 }

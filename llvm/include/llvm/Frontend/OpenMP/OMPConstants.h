@@ -15,9 +15,8 @@
 #define LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Frontend/OpenMP/OMP.h.inc"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 namespace llvm {
 namespace omp {
@@ -275,6 +274,16 @@ enum class RTLDependenceKindTy {
   DepMutexInOutSet = 0x4,
   DepInOutSet = 0x8,
   DepOmpAllMem = 0x80,
+};
+
+/// A type of worksharing loop construct
+enum class WorksharingLoopType {
+  // Worksharing `for`-loop
+  ForStaticLoop,
+  // Worksharing `distrbute`-loop
+  DistributeStaticLoop,
+  // Worksharing `distrbute parallel for`-loop
+  DistributeForStaticLoop
 };
 
 } // end namespace omp

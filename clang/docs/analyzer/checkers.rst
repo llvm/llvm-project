@@ -213,9 +213,8 @@ Check for undefined results of binary operators.
 
 core.VLASize (C)
 """"""""""""""""
-Check for declarations of Variable Length Arrays of undefined or zero size.
-
- Check for declarations of VLA of undefined or zero size.
+Check for declarations of Variable Length Arrays (VLA) of undefined, zero or negative
+size.
 
 .. code-block:: c
 
@@ -228,6 +227,28 @@ Check for declarations of Variable Length Arrays of undefined or zero size.
    int x = 0;
    int vla2[x]; // warn: zero size
  }
+
+
+The checker also gives warning if the `TaintPropagation` checker is switched on
+and an unbound, attacker controlled (tainted) value is used to define
+the size of the VLA.
+
+.. code-block:: c
+
+ void taintedVLA(void) {
+   int x;
+   scanf("%d", &x);
+   int vla[x]; // Declared variable-length array (VLA) has tainted (attacker controlled) size, that can be 0 or negative
+ }
+
+ void taintedVerfieidVLA(void) {
+   int x;
+   scanf("%d", &x);
+   if (x<1)
+     return;
+   int vla[x]; // no-warning. The analyzer can prove that x must be positive.
+ }
+
 
 .. _core-uninitialized-ArraySubscript:
 
@@ -534,6 +555,52 @@ optin
 ^^^^^
 
 Checkers for portability, performance or coding style specific rules.
+
+.. _optin-core-EnumCastOutOfRange:
+
+optin.core.EnumCastOutOfRange (C, C++)
+""""""""""""""""""""""""""""""""""""""
+Check for integer to enumeration casts that would produce a value with no
+corresponding enumerator. This is not necessarily undefined behavior, but can
+lead to nasty surprises, so projects may decide to use a coding standard that
+disallows these "unusual" conversions.
+
+Note that no warnings are produced when the enum type (e.g. `std::byte`) has no
+enumerators at all.
+
+.. code-block:: cpp
+
+ enum WidgetKind { A=1, B, C, X=99 };
+
+ void foo() {
+   WidgetKind c = static_cast<WidgetKind>(3);  // OK
+   WidgetKind x = static_cast<WidgetKind>(99); // OK
+   WidgetKind d = static_cast<WidgetKind>(4);  // warn
+ }
+
+**Limitations**
+
+This checker does not accept the coding pattern where an enum type is used to
+store combinations of flag values:
+
+.. code-block:: cpp
+
+ enum AnimalFlags
+ {
+     HasClaws   = 1,
+     CanFly     = 2,
+     EatsFish   = 4,
+     Endangered = 8
+ };
+
+ AnimalFlags operator|(AnimalFlags a, AnimalFlags b)
+ {
+     return static_cast<AnimalFlags>(static_cast<int>(a) | static_cast<int>(b));
+ }
+
+ auto flags = HasClaws | CanFly;
+
+Projects that use this pattern should not enable this optin checker.
 
 .. _optin-cplusplus-UninitializedObject:
 
@@ -979,7 +1046,7 @@ security.insecureAPI.vfork (C)
 
 security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
- Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
+ Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, fprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
 
 .. code-block:: c
 
@@ -1253,10 +1320,23 @@ range of the argument.
 
 **Parameters**
 
-The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
-additional functions that are defined in the POSIX standard. This option is
-disabled by default.
+The ``ModelPOSIX`` option controls if functions from the POSIX standard are
+recognized by the checker.
+
+With ``ModelPOSIX=true``, many POSIX functions are modeled according to the
+`POSIX standard`_. This includes ranges of parameters and possible return
+values. Furthermore the behavior related to ``errno`` in the POSIX case is
+often that ``errno`` is set only if a function call fails, and it becomes
+undefined after a successful function call.
+
+With ``ModelPOSIX=false``, this checker follows the C99 language standard and
+only models the functions that are described there. It is possible that the
+same functions are modeled differently in the two cases because differences in
+the standards. The C standard specifies less aspects of the functions, for
+example exact ``errno`` behavior is often unspecified (and not modeled by the
+checker).
+
+Default value of the option is ``true``.
 
 .. _osx-checkers:
 
@@ -1844,28 +1924,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CallAndMessageUnInitRefArg:
-
-alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""""
-Check for logical errors for function calls and Objective-C
-message expressions (e.g., uninitialized arguments, null function pointers, and pointer to undefined variables).
-
-.. code-block:: c
-
- void test(void) {
-   int t;
-   int &p = t;
-   int &s = p;
-   int &q = s;
-   foo(q); // warn
- }
-
- void test(void) {
-   int x;
-   foo(&x); // warn
- }
-
 .. _alpha-core-CastSize:
 
 alpha.core.CastSize (C)
@@ -2049,6 +2107,21 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
                  //       returned block
  }
 
+.. _alpha-core-StdVariant:
+
+alpha.core.StdVariant (C++)
+"""""""""""""""""""""""""""
+Check if a value of active type is retrieved from an ``std::variant`` instance with ``std::get``.
+In case of bad variant type access (the accessed type differs from the active type)
+a warning is emitted. Currently, this checker does not take exception handling into account.
+
+.. code-block:: cpp
+
+ void test() {
+   std::variant<int, char> v = 25;
+   char c = stg::get<char>(v); // warn: "int" is the active alternative
+ }
+
 .. _alpha-core-TestAfterDivZero:
 
 alpha.core.TestAfterDivZero (C)
@@ -2112,23 +2185,6 @@ Reports destructions of polymorphic objects with a non-virtual destructor in the
    delete x; // warn: destruction of a polymorphic object with no virtual
              //       destructor
  }
-
-.. _alpha-cplusplus-EnumCastOutOfRange:
-
-alpha.cplusplus.EnumCastOutOfRange (C++)
-""""""""""""""""""""""""""""""""""""""""
-Check for integer to enumeration casts that could result in undefined values.
-
-.. code-block:: cpp
-
- enum TestEnum {
-   A = 0
- };
-
- void foo() {
-   TestEnum t = static_cast(-1);
-       // warn: the value provided to the cast expression is not in
-       //       the valid range of values for the enum
 
 .. _alpha-cplusplus-InvalidatedIterator:
 

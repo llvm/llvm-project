@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -24,6 +25,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -106,7 +108,7 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
   }
 
   LogicalResult upgradeFromVersion(Operation *topLevelOp,
-                                   const DialectVersion &version_) const final {
+                                   const DialectVersion &version) const final {
     return success();
   }
 };
@@ -452,12 +454,12 @@ static void
 buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                               Type outputType, Value input,
                               DenseArrayAttr kernel, DenseArrayAttr stride,
-                              DenseArrayAttr pad, TypeAttr acc_type) {
+                              DenseArrayAttr pad, TypeAttr accType) {
   result.addOperands(input);
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
-  result.addAttribute("acc_type", acc_type);
+  result.addAttribute("acc_type", accType);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);
@@ -983,6 +985,10 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   ShapeAdaptor permsShape(adaptor.getPerms().getType());
 
+  // We cannot infer anything from a rank-0 "permutation" tensor.
+  if (permsShape.hasRank() && permsShape.getRank() == 0)
+    return failure();
+
   // If input rank and permutation length is unknown, the output rank is
   // unknown.
   if (!inputShape.hasRank() || !permsShape.hasRank() ||
@@ -997,15 +1003,7 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     return failure();
   }
 
-  // Without the input dims we cannot determine the output dim sizes but we
-  // can determine the output rank.
   SmallVector<int64_t> outputShape;
-  if (!inputShape.hasRank()) {
-    outputShape.resize(permsShape.getDimSize(0), ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
-    return success();
-  }
-
   // Rank-0 means no permutations matter.
   if (inputShape.getRank() == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
@@ -1055,6 +1053,46 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult tosa::TransposeOp::verify() {
+  TensorType inputType = getInput1().getType();
+  TensorType permType = getPerms().getType();
+  TensorType outputType = getOutput().getType();
+
+  if (permType.hasRank() && permType.getRank() != 1)
+    return emitOpError()
+           << "expected permutation tensor to be rank 1 but got rank "
+           << permType.getRank();
+  if (inputType.hasRank() && permType.hasRank())
+    if (!permType.isDynamicDim(0) &&
+        permType.getDimSize(0) != inputType.getRank())
+      return emitOpError() << "expected permutation tensor dim 0 to have size "
+                           << inputType.getRank()
+                           << " (input rank) but got size "
+                           << permType.getDimSize(0);
+  if (inputType.hasRank() && outputType.hasRank() &&
+      inputType.getRank() != outputType.getRank())
+    return emitOpError()
+           << "expected input tensor rank to equal result tensor rank";
+  if (outputType.hasRank() && permType.hasRank())
+    if (!permType.isDynamicDim(0) &&
+        permType.getDimSize(0) != outputType.getRank())
+      return emitOpError() << "expected permutation tensor dim 0 to have size "
+                           << outputType.getRank()
+                           << " (output rank) but got size "
+                           << permType.getDimSize(0);
+
+  SmallVector<int64_t> constantPerms;
+  if (succeeded(getConstantPerms(constantPerms))) {
+    // Assert that the permutation tensor has a rank, which means that the rank
+    // has been verified above.
+    assert(permType.hasRank() &&
+           "Unexpectedly found permutation tensor without rank");
+    if (!isPermutationVector(constantPerms))
+      return emitOpError() << "expected valid permutation tensor";
+  }
   return success();
 }
 
@@ -1292,6 +1330,7 @@ NARY_SHAPE_INFER(tosa::CastOp)
 NARY_SHAPE_INFER(tosa::CeilOp)
 NARY_SHAPE_INFER(tosa::ClampOp)
 NARY_SHAPE_INFER(tosa::ClzOp)
+NARY_SHAPE_INFER(tosa::CosOp)
 NARY_SHAPE_INFER(tosa::DivOp)
 NARY_SHAPE_INFER(tosa::ExpOp)
 NARY_SHAPE_INFER(tosa::FloorOp)
@@ -1314,6 +1353,7 @@ NARY_SHAPE_INFER(tosa::ReciprocalOp)
 NARY_SHAPE_INFER(tosa::RescaleOp)
 NARY_SHAPE_INFER(tosa::ReverseOp)
 NARY_SHAPE_INFER(tosa::RsqrtOp)
+NARY_SHAPE_INFER(tosa::SinOp)
 NARY_SHAPE_INFER(tosa::SelectOp)
 NARY_SHAPE_INFER(tosa::SubOp)
 NARY_SHAPE_INFER(tosa::TanhOp)

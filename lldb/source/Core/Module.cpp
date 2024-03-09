@@ -855,6 +855,23 @@ void Module::FindFunctions(ConstString name,
   }
 }
 
+void Module::FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
+                           FunctionNameType name_type_mask,
+                           const ModuleFunctionSearchOptions &options,
+                           SymbolContextList &sc_list) {
+  if (compiler_ctx.empty() ||
+      compiler_ctx.back().kind != CompilerContextKind::Function)
+    return;
+  ConstString name = compiler_ctx.back().name;
+  SymbolContextList unfiltered;
+  FindFunctions(name, CompilerDeclContext(), name_type_mask, options,
+                unfiltered);
+  // Filter by context.
+  for (auto &sc : unfiltered)
+    if (sc.function && compiler_ctx.equals(sc.function->GetCompilerContext()))
+      sc_list.Append(sc);
+}
+
 void Module::FindFunctions(const RegularExpression &regex,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
@@ -949,109 +966,19 @@ void Module::FindAddressesForLine(const lldb::TargetSP target_sp,
   }
 }
 
-void Module::FindTypes_Impl(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    size_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
+void Module::FindTypes(const TypeQuery &query, TypeResults &results) {
   if (SymbolFile *symbols = GetSymbolFile())
-    symbols->FindTypes(name, parent_decl_ctx, max_matches,
-                       searched_symbol_files, types);
+    symbols->FindTypes(query, results);
 }
 
-void Module::FindTypesInNamespace(ConstString type_name,
-                                  const CompilerDeclContext &parent_decl_ctx,
-                                  size_t max_matches, TypeList &type_list) {
-  TypeMap types_map;
-  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  FindTypes_Impl(type_name, parent_decl_ctx, max_matches, searched_symbol_files,
-                 types_map);
-  if (types_map.GetSize()) {
-    SymbolContext sc;
-    sc.module_sp = shared_from_this();
-    sc.SortTypeList(types_map, type_list);
-  }
-}
-
-lldb::TypeSP Module::FindFirstType(const SymbolContext &sc, ConstString name,
-                                   bool exact_match) {
-  TypeList type_list;
-  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  FindTypes(name, exact_match, 1, searched_symbol_files, type_list);
-  if (type_list.GetSize())
-    return type_list.GetTypeAtIndex(0);
-  return TypeSP();
-}
-
-void Module::FindTypes(
-    ConstString name, bool exact_match, size_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeList &types) {
-  const char *type_name_cstr = name.GetCString();
-  llvm::StringRef type_scope;
-  llvm::StringRef type_basename;
-  TypeClass type_class = eTypeClassAny;
-  TypeMap typesmap;
-
-  if (Type::GetTypeScopeAndBasename(type_name_cstr, type_scope, type_basename,
-                                    type_class)) {
-    // Check if "name" starts with "::" which means the qualified type starts
-    // from the root namespace and implies and exact match. The typenames we
-    // get back from clang do not start with "::" so we need to strip this off
-    // in order to get the qualified names to match
-    exact_match = type_scope.consume_front("::");
-
-    ConstString type_basename_const_str(type_basename);
-    FindTypes_Impl(type_basename_const_str, CompilerDeclContext(), max_matches,
-                   searched_symbol_files, typesmap);
-    if (typesmap.GetSize())
-      typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
-                                     exact_match);
-  } else {
-    // The type is not in a namespace/class scope, just search for it by
-    // basename
-    if (type_class != eTypeClassAny && !type_basename.empty()) {
-      // The "type_name_cstr" will have been modified if we have a valid type
-      // class prefix (like "struct", "class", "union", "typedef" etc).
-      FindTypes_Impl(ConstString(type_basename), CompilerDeclContext(),
-                     UINT_MAX, searched_symbol_files, typesmap);
-      typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
-                                     exact_match);
-    } else {
-      FindTypes_Impl(name, CompilerDeclContext(), UINT_MAX,
-                     searched_symbol_files, typesmap);
-      if (exact_match) {
-        typesmap.RemoveMismatchedTypes(type_scope, name, type_class,
-                                       exact_match);
-      }
-    }
-  }
-  if (typesmap.GetSize()) {
-    SymbolContext sc;
-    sc.module_sp = shared_from_this();
-    sc.SortTypeList(typesmap, types);
-  }
-}
-
-void Module::FindTypes(
-    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
-  // If a scoped timer is needed, place it in a SymbolFile::FindTypes override.
-  // A timer here is too high volume for some cases, for example when calling
-  // FindTypes on each object file.
-  if (SymbolFile *symbols = GetSymbolFile())
-    symbols->FindTypes(pattern, languages, searched_symbol_files, types);
-}
-
-static Debugger::DebuggerList 
+static Debugger::DebuggerList
 DebuggersOwningModuleRequestingInterruption(Module &module) {
-  Debugger::DebuggerList requestors 
-      = Debugger::DebuggersRequestingInterruption();
+  Debugger::DebuggerList requestors =
+      Debugger::DebuggersRequestingInterruption();
   Debugger::DebuggerList interruptors;
   if (requestors.empty())
     return interruptors;
-    
+
   for (auto debugger_sp : requestors) {
     if (!debugger_sp->InterruptRequested())
       continue;
@@ -1066,12 +993,12 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_symfile.load() && can_create) {
-      Debugger::DebuggerList interruptors 
-          = DebuggersOwningModuleRequestingInterruption(*this);
+      Debugger::DebuggerList interruptors =
+          DebuggersOwningModuleRequestingInterruption(*this);
       if (!interruptors.empty()) {
         for (auto debugger_sp : interruptors) {
-          REPORT_INTERRUPTION(*(debugger_sp.get()), 
-                              "Interrupted fetching symbols for module {0}", 
+          REPORT_INTERRUPTION(*(debugger_sp.get()),
+                              "Interrupted fetching symbols for module {0}",
                               this->GetFileSpec());
         }
         return nullptr;
@@ -1444,7 +1371,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         if (FileSystem::Instance().IsDirectory(file)) {
           std::string new_path(file.GetPath());
           std::string old_path(obj_file->GetFileSpec().GetPath());
-          if (llvm::StringRef(old_path).startswith(new_path)) {
+          if (llvm::StringRef(old_path).starts_with(new_path)) {
             // We specified the same bundle as the symbol file that we already
             // have
             return;

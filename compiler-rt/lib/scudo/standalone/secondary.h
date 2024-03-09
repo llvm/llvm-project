@@ -122,7 +122,29 @@ bool mapSecondary(const Options &Options, uptr CommitBase, uptr CommitSize,
   Flags |= MAP_RESIZABLE;
   Flags |= MAP_ALLOWNOMEM;
 
-  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
+  const uptr PageSize = getPageSizeCached();
+  if (SCUDO_TRUSTY) {
+    /*
+     * On Trusty we need AllocPos to be usable for shared memory, which cannot
+     * cross multiple mappings. This means we need to split around AllocPos
+     * and not over it. We can only do this if the address is page-aligned.
+     */
+    const uptr TaggedSize = AllocPos - CommitBase;
+    if (useMemoryTagging<Config>(Options) && isAligned(TaggedSize, PageSize)) {
+      DCHECK_GT(TaggedSize, 0);
+      return MemMap.remap(CommitBase, TaggedSize, "scudo:secondary",
+                          MAP_MEMTAG | Flags) &&
+             MemMap.remap(AllocPos, CommitSize - TaggedSize, "scudo:secondary",
+                          Flags);
+    } else {
+      const uptr RemapFlags =
+          (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0) | Flags;
+      return MemMap.remap(CommitBase, CommitSize, "scudo:secondary",
+                          RemapFlags);
+    }
+  }
+
+  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * PageSize;
   if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
     const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
     return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
@@ -155,20 +177,16 @@ public:
 
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
-    u32 Integral = 0;
-    u32 Fractional = 0;
-    if (CallsToRetrieve != 0) {
-      Integral = SuccessfulRetrieves * 100 / CallsToRetrieve;
-      Fractional = (((SuccessfulRetrieves * 100) % CallsToRetrieve) * 100 +
-                    CallsToRetrieve / 2) /
-                   CallsToRetrieve;
-    }
+    uptr Integral;
+    uptr Fractional;
+    computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
+                      &Fractional);
     Str->append("Stats: MapAllocatorCache: EntriesCount: %d, "
                 "MaxEntriesCount: %u, MaxEntrySize: %zu\n",
                 EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
                 atomic_load_relaxed(&MaxEntrySize));
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
-                "(%u.%02u%%)\n",
+                "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
     for (CachedBlock Entry : Entries) {
       if (!Entry.isValid())

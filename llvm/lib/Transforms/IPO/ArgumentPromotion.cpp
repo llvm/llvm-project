@@ -100,7 +100,7 @@ static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
   if (Offset != 0) {
     APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(APOffset));
+    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
 }
@@ -266,9 +266,10 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     CallBase *NewCS = nullptr;
     if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
       NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                                 Args, OpBundles, "", &CB);
+                                 Args, OpBundles, "", CB.getIterator());
     } else {
-      auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", &CB);
+      auto *NewCall =
+          CallInst::Create(NF, Args, OpBundles, "", CB.getIterator());
       NewCall->setTailCallKind(cast<CallInst>(&CB)->getTailCallKind());
       NewCS = NewCall;
     }

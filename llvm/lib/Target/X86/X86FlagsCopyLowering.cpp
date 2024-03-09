@@ -24,7 +24,6 @@
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -166,31 +165,34 @@ static FlagArithMnemonic getMnemonicFromOpcode(unsigned Opcode) {
     report_fatal_error("No support for lowering a copy into EFLAGS when used "
                        "by this instruction!");
 
+#define CASE_ND(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_ND:
+
 #define LLVM_EXPAND_INSTR_SIZES(MNEMONIC, SUFFIX)                              \
-  case X86::MNEMONIC##8##SUFFIX:                                               \
-  case X86::MNEMONIC##16##SUFFIX:                                              \
-  case X86::MNEMONIC##32##SUFFIX:                                              \
-  case X86::MNEMONIC##64##SUFFIX:
+  CASE_ND(MNEMONIC##8##SUFFIX)                                                 \
+  CASE_ND(MNEMONIC##16##SUFFIX)                                                \
+  CASE_ND(MNEMONIC##32##SUFFIX)                                                \
+  CASE_ND(MNEMONIC##64##SUFFIX)
 
 #define LLVM_EXPAND_ADC_SBB_INSTR(MNEMONIC)                                    \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rr)                                        \
-  LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rr_REV)                                    \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rm)                                        \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, mr)                                        \
-  case X86::MNEMONIC##8ri:                                                     \
-  case X86::MNEMONIC##16ri8:                                                   \
-  case X86::MNEMONIC##32ri8:                                                   \
-  case X86::MNEMONIC##64ri8:                                                   \
-  case X86::MNEMONIC##16ri:                                                    \
-  case X86::MNEMONIC##32ri:                                                    \
-  case X86::MNEMONIC##64ri32:                                                  \
-  case X86::MNEMONIC##8mi:                                                     \
-  case X86::MNEMONIC##16mi8:                                                   \
-  case X86::MNEMONIC##32mi8:                                                   \
-  case X86::MNEMONIC##64mi8:                                                   \
-  case X86::MNEMONIC##16mi:                                                    \
-  case X86::MNEMONIC##32mi:                                                    \
-  case X86::MNEMONIC##64mi32:                                                  \
+  CASE_ND(MNEMONIC##8ri)                                                       \
+  CASE_ND(MNEMONIC##16ri8)                                                     \
+  CASE_ND(MNEMONIC##32ri8)                                                     \
+  CASE_ND(MNEMONIC##64ri8)                                                     \
+  CASE_ND(MNEMONIC##16ri)                                                      \
+  CASE_ND(MNEMONIC##32ri)                                                      \
+  CASE_ND(MNEMONIC##64ri32)                                                    \
+  CASE_ND(MNEMONIC##8mi)                                                       \
+  CASE_ND(MNEMONIC##16mi8)                                                     \
+  CASE_ND(MNEMONIC##32mi8)                                                     \
+  CASE_ND(MNEMONIC##64mi8)                                                     \
+  CASE_ND(MNEMONIC##16mi)                                                      \
+  CASE_ND(MNEMONIC##32mi)                                                      \
+  CASE_ND(MNEMONIC##64mi32)                                                    \
   case X86::MNEMONIC##8i8:                                                     \
   case X86::MNEMONIC##16i16:                                                   \
   case X86::MNEMONIC##32i32:                                                   \
@@ -215,6 +217,7 @@ static FlagArithMnemonic getMnemonicFromOpcode(unsigned Opcode) {
     return FlagArithMnemonic::RCR;
 
 #undef LLVM_EXPAND_INSTR_SIZES
+#undef CASE_ND
 
   case X86::SETB_C32r:
   case X86::SETB_C64r:
@@ -808,7 +811,8 @@ void X86FlagsCopyLoweringPass::rewriteArithmetic(
   // Insert an instruction that will set the flag back to the desired value.
   Register TmpReg = MRI->createVirtualRegister(PromoteRC);
   auto AddI =
-      BuildMI(MBB, MI.getIterator(), MI.getDebugLoc(), TII->get(X86::ADD8ri))
+      BuildMI(MBB, MI.getIterator(), MI.getDebugLoc(),
+              TII->get(Subtarget->hasNDD() ? X86::ADD8ri_ND : X86::ADD8ri))
           .addDef(TmpReg, RegState::Dead)
           .addReg(CondReg)
           .addImm(Addend);

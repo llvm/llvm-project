@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
-#include "SparseTensorDescriptor.h"
+#include "Utils/CodegenUtils.h"
+#include "Utils/SparseTensorDescriptor.h"
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -130,7 +130,7 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
       createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, lvl,
                      /*value=*/posZero, /*repeat=*/linear);
       return;
-    } else if (isSingletonLT(lt) || is2OutOf4LT(lt)) {
+    } else if (isSingletonLT(lt) || isNOutOfMLT(lt)) {
       return; // nothing to do
     }
     // Keep compounding the size, but nothing needs to be initialized
@@ -194,7 +194,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       valHeuristic =
           builder.create<arith::MulIOp>(loc, valHeuristic, lvlSizesValues[lvl]);
   } else if (sizeHint) {
-    if (getCOOStart(stt.getEncoding()) == 0) {
+    if (stt.getAoSCOOStart() == 0) {
       posHeuristic = constantIndex(builder, loc, 2);
       crdHeuristic = builder.create<arith::MulIOp>(
           loc, constantIndex(builder, loc, lvlRank), sizeHint); // AOS
@@ -216,7 +216,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       stt,
       [&builder, &fields, stt, loc, posHeuristic, crdHeuristic, valHeuristic,
        enableInit](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-                   Level /*lvl*/, DimLevelType /*lt*/) -> bool {
+                   Level /*lvl*/, LevelType /*lt*/) -> bool {
         assert(fields.size() == fIdx);
         Value field;
         switch (fKind) {
@@ -409,7 +409,7 @@ static void genEndInsert(OpBuilder &builder, Location loc,
       }
     } else {
       assert(isDenseLT(lt) || isLooseCompressedLT(lt) || isSingletonLT(lt) ||
-             is2OutOf4LT(lt));
+             isNOutOfMLT(lt));
     }
   }
 }
@@ -429,11 +429,18 @@ static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
 }
 
 /// Creates the reassociation array.
-static ReassociationIndices getReassociationForFlattening(ShapedType srcTp) {
-  ReassociationIndices reassociation;
-  for (int i = 0, e = srcTp.getRank(); i < e; i++)
-    reassociation.push_back(i);
-  return reassociation;
+static SmallVector<ReassociationIndices>
+getReassociationForFlattening(ShapedType srcTp, unsigned batchLvls) {
+  SmallVector<ReassociationIndices> ret(batchLvls + 1, {});
+  // Create reassociation in the form:
+  // {0}, {1}, ..., {batchLvl - 1}, {batchLvl, ..., rank}
+  for (unsigned i = 0; i < batchLvls; i++)
+    ret[i].push_back(i);
+
+  for (int i = batchLvls, e = srcTp.getRank(); i < e; i++)
+    ret.back().push_back(i);
+
+  return ret;
 }
 
 //===----------------------------------------------------------------------===//
@@ -488,7 +495,7 @@ public:
         }
         parentPos =
             genCompressed(builder, loc, desc, coords, value, parentPos, lvl);
-      } else if (isSingletonLT(lt) || is2OutOf4LT(lt)) {
+      } else if (isSingletonLT(lt) || isNOutOfMLT(lt)) {
         // Create:
         //   coordinates[lvl].push_back(coords[lvl])
         //   positions[lvl] = positions[lvl-1]
@@ -657,8 +664,7 @@ struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
 
     // Should have been verified.
     assert(dstStt.isAllOrdered() && !srcStt.isAllOrdered() &&
-           isUniqueCOOType(srcStt.getRankedTensorType()) &&
-           isUniqueCOOType(dstStt.getRankedTensorType()));
+           dstStt.isCOOType() && srcStt.isCOOType());
     assert(dstStt.hasSameDimToLvl(srcStt));
 
     // We don't need a mutable descriptor here as we perform sorting in-place.
@@ -1059,17 +1065,9 @@ public:
     // Replace the requested coordinates access with corresponding field.
     // The cast_op is inserted by type converter to intermix 1:N type
     // conversion.
-    Location loc = op.getLoc();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
-    Value field = desc.getCrdMemRefOrView(rewriter, loc, op.getLevel());
-
-    // Insert a cast to bridge the actual type to the user expected type. If the
-    // actual type and the user expected type aren't compatible, the compiler or
-    // the runtime will issue an error.
-    Type resType = op.getResult().getType();
-    if (resType != field.getType())
-      field = rewriter.create<memref::CastOp>(loc, resType, field);
-    rewriter.replaceOp(op, field);
+    rewriter.replaceOp(
+        op, desc.getCrdMemRefOrView(rewriter, op.getLoc(), op.getLevel()));
 
     return success();
   }
@@ -1155,7 +1153,7 @@ public:
         SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,
          loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
-              DimLevelType /*lt*/) -> bool {
+              LevelType /*lt*/) -> bool {
           // Simply reuses the storage specifier as it is an SSA value.
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(srcDesc.getSpecifier());
@@ -1284,7 +1282,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         stt,
         [&rewriter, &fields, &op, &stt,
          loc](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-              Level /*lvl*/, DimLevelType lt) -> bool {
+              Level /*lvl*/, LevelType lt) -> bool {
           assert(fields.size() == fIdx);
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(
@@ -1294,11 +1292,12 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
             Value tensor = fKind == SparseTensorFieldKind::ValMemRef
                                ? op.getValues()
                                : op.getLevels()[fIdx];
-
+            // TODO: handle batch.
             TypedValue<BaseMemRefType> mem = genToMemref(rewriter, loc, tensor);
-            if (mem.getType().getRank() > 1) {
-              // Flattens the buffer to rank 1.
-              auto reassoc = getReassociationForFlattening(mem.getType());
+            if (mem.getType().getRank() > stt.getBatchLvlRank() + 1) {
+              // Flattens the buffer to batchLvlRank.
+              auto reassoc = getReassociationForFlattening(
+                  mem.getType(), stt.getBatchLvlRank());
               mem = rewriter.create<memref::CastOp>(
                   loc, fType,
                   rewriter.create<memref::CollapseShapeOp>(loc, mem, reassoc));
@@ -1317,15 +1316,14 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Value posBack = c0; // index to the last value in the position array
     Value memSize = c1; // memory size for current array
 
-    Level trailCOOStart = getCOOStart(stt.getEncoding());
+    Level trailCOOStart = stt.getAoSCOOStart();
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
       assert(!ShapedType::isDynamic(stt.getDimShape()[lvl]));
 
-      // FIXME: dim/lvl confusion!
       // Sets up the level size.
-      auto lvlSize = constantIndex(rewriter, loc, stt.getDimShape()[lvl]);
+      auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);
       desc.setLvlSize(rewriter, loc, lvl, lvlSize);
       // We use a single AOS array to store the trailing COO, so there is only
       // one memory size to set for the entire COO section.
@@ -1333,11 +1331,17 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         continue;
 
       // Sets up the memory size by reading the last value in position array.
-      DimLevelType lt = stt.getLvlType(lvl);
+      LevelType lt = stt.getLvlType(lvl);
       // Simply forwards the position index when this is a dense level.
-      if (isDenseLT(lt)) {
+      if (lt.isa<LevelFormat::Dense>()) {
         memSize = rewriter.create<arith::MulIOp>(loc, lvlSize, memSize);
         posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
+        continue;
+      }
+      if (lt.isa<LevelFormat::Batch>()) {
+        // Skips batch levels as it is not linearized.
+        // FIXME: this assumes that every batch has the same number of nse, need
+        // to be generalized to handle varied-size batches.
         continue;
       }
 
@@ -1353,7 +1357,12 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         }
         desc.setPosMemSize(rewriter, loc, lvl, memSize);
         // The last value in position array is the memory size for next level.
-        memSize = genIndexLoad(rewriter, loc, desc.getPosMemRef(lvl), posBack);
+        // FIXME: this assumes that every batch has the same number of nse, need
+        // to be generalized to handle varied-size batches.
+        SmallVector<Value> batched(stt.getBatchLvlRank(),
+                                   constantIndex(rewriter, loc, 0));
+        batched.push_back(posBack);
+        memSize = genIndexLoad(rewriter, loc, desc.getPosMemRef(lvl), batched);
         posBack = rewriter.create<arith::SubIOp>(loc, posBack, c1);
       }
       assert(isWithCrdLT(lt) && lvl <= trailCOOStart);
@@ -1387,10 +1396,10 @@ struct SparseDisassembleOpConverter
     Location loc = op.getLoc();
     SmallVector<Value> retMem;
     SmallVector<Value> retLen;
-    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem, &retLen](
-                                      FieldIndex fid,
-                                      SparseTensorFieldKind fKind, Level lvl,
-                                      DimLevelType lt) -> bool {
+    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem,
+                                   &retLen](FieldIndex fid,
+                                            SparseTensorFieldKind fKind,
+                                            Level lvl, LevelType lt) -> bool {
       if (fKind == SparseTensorFieldKind::StorageSpec)
         return true;
       SparseTensorType stt(desc.getRankedTensorType());
@@ -1400,14 +1409,10 @@ struct SparseDisassembleOpConverter
         sz = desc.getValMemSize(rewriter, loc);
         src = desc.getValMemRef();
         dst = genToMemref(rewriter, loc, op.getOutValues());
-        // Values is the last field in descriptor, but it is the first
-        // operand in unpack operation.
-        // TODO: maybe change unpack/pack operation instead to be
-        // consistent.
-        retMem.insert(retMem.begin(), dst);
+
+        retMem.push_back(dst);
         Type valLenTp = op.getValLen().getType();
-        retLen.insert(retLen.begin(),
-                      genScalarToTensor(rewriter, loc, sz, valLenTp));
+        retLen.push_back(genScalarToTensor(rewriter, loc, sz, valLenTp));
       } else {
         assert(fKind == SparseTensorFieldKind::PosMemRef ||
                fKind == SparseTensorFieldKind::CrdMemRef);
@@ -1423,8 +1428,9 @@ struct SparseDisassembleOpConverter
         retLen.push_back(genScalarToTensor(rewriter, loc, sz, lvlLenTp));
       }
       Value flatOut = dst;
-      if (dst.getType().getRank() != 1) {
-        auto reassoc = getReassociationForFlattening(dst.getType());
+      if (dst.getType().getRank() > stt.getBatchLvlRank() + 1) {
+        auto reassoc =
+            getReassociationForFlattening(dst.getType(), stt.getBatchLvlRank());
         flatOut = rewriter.create<memref::CollapseShapeOp>(loc, dst, reassoc);
       }
       Value dstMem = genSliceToSize(rewriter, loc, flatOut, sz);
@@ -1454,7 +1460,7 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     const auto dstTp = getSparseTensorType(op.getResult());
     // Creating COO with NewOp is handled by direct IR codegen. All other cases
     // are handled by rewriting.
-    if (!dstTp.hasEncoding() || getCOOStart(dstTp.getEncoding()) != 0)
+    if (!dstTp.hasEncoding() || dstTp.getAoSCOOStart() != 0)
       return failure();
 
     // Implement as follows:

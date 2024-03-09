@@ -62,7 +62,9 @@ getRUsageTimes() {
   ::getrusage(RUSAGE_SELF, &RU);
   return {toDuration(RU.ru_utime), toDuration(RU.ru_stime)};
 #else
+#ifndef __MVS__ // Exclude for MVS in case -pedantic is used
 #warning Cannot get usage times on this platform
+#endif
   return {std::chrono::microseconds::zero(), std::chrono::microseconds::zero()};
 #endif
 }
@@ -117,7 +119,9 @@ size_t Process::GetMallocUsage() {
     return EndOfMemory - StartOfMemory;
   return 0;
 #else
+#ifndef __MVS__ // Exclude for MVS in case -pedantic is used
 #warning Cannot get malloc info on this platform
+#endif
   return 0;
 #endif
 }
@@ -413,7 +417,7 @@ bool Process::ColorNeedsFlush() {
 }
 
 const char *Process::OutputColor(char code, bool bold, bool bg) {
-  return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 7];
+  return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 15];
 }
 
 const char *Process::OutputBold(bool bg) { return "\033[1m"; }

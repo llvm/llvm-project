@@ -10,11 +10,12 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 
-#include <experimental/__simd/abi_tag.h>
+#include <__type_traits/is_same.h>
+#include <cstddef>
+#include <experimental/__config>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
-#include <experimental/__simd/scalar.h>
-#include <experimental/__simd/vec_ext.h>
+#include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -51,10 +52,19 @@ public:
     }
   }
 
+  // load constructor
+  template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI simd_mask(const value_type* __mem, _Flags) {
+    _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
   // scalar access [simd.mask.subscr]
   _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
 };
+
+template <class _Tp, class _Abi>
+inline constexpr bool is_simd_mask_v<simd_mask<_Tp, _Abi>> = true;
 
 template <class _Tp>
 using native_simd_mask = simd_mask<_Tp, simd_abi::native<_Tp>>;

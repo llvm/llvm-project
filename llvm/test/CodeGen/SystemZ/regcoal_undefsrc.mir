@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -O3 -start-before=livevars %s -o /dev/null 2>&1
+# Test that coalesing of an empty live range (undef) does not cause failure.
+
+--- |
+  define dso_local void @fun(ptr %src, ptr %dst) #0 {
+    %1 = sdiv i64 poison, poison
+    %2 = load i32, ptr %src, align 4
+    br i1 poison, label %6, label %3
+  
+  3:                                                ; preds = %0
+    %4 = trunc i64 %1 to i32
+    %5 = udiv i32 %4, %2
+    br label %6
+  
+  6:                                                ; preds = %3, %0
+    %7 = phi i32 [ %5, %3 ], [ 1, %0 ]
+    store i32 %7, ptr %dst, align 4
+    ret void
+  }
+
+...
+---
+name:            fun
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64bit }
+  - { id: 1, class: gr32bit }
+  - { id: 2, class: grx32bit }
+  - { id: 3, class: grx32bit }
+  - { id: 4, class: addr64bit }
+  - { id: 5, class: addr64bit }
+  - { id: 6, class: grx32bit }
+  - { id: 7, class: grx32bit }
+  - { id: 8, class: grx32bit }
+  - { id: 9, class: gr64bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: gr128bit }
+  - { id: 12, class: gr128bit }
+  - { id: 13, class: gr128bit }
+  - { id: 14, class: gr128bit }
+  - { id: 15, class: gr64bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%4' }
+  - { reg: '$r3d', virtual-reg: '%5' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $r2d, $r3d
+  
+    %5:addr64bit = COPY $r3d
+    %4:addr64bit = COPY $r2d
+    %6:grx32bit = LHIMux 1
+    %7:grx32bit = LHIMux 0
+    CHIMux killed %7, 0, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit $cc
+    J %bb.1
+  
+  bb.1 (%ir-block.3):
+    %1:gr32bit = LMux %4, 0, $noreg :: (load (s32) from %ir.src)
+    %15:gr64bit = LLILL 0
+    %14:gr128bit = INSERT_SUBREG undef %13:gr128bit, %15, %subreg.subreg_h64
+    %11:gr128bit = INSERT_SUBREG %14, undef %9:gr64bit, %subreg.subreg_l64
+    %12:gr128bit = DLR %11, %1
+    %2:grx32bit = COPY %12.subreg_ll32
+  
+  bb.2 (%ir-block.6):
+    %3:grx32bit = PHI %6, %bb.0, %2, %bb.1
+    STMux %3, %5, 0, $noreg :: (store (s32) into %ir.dst)
+    Return
+
+...

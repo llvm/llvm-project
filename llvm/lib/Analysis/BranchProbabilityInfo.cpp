@@ -1188,8 +1188,11 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
                                             const BasicBlock *Src,
                                             const BasicBlock *Dst) const {
   const BranchProbability Prob = getEdgeProbability(Src, Dst);
-  OS << "edge " << Src->getName() << " -> " << Dst->getName()
-     << " probability is " << Prob
+  OS << "edge ";
+  Src->printAsOperand(OS, false, Src->getModule());
+  OS << " -> ";
+  Dst->printAsOperand(OS, false, Dst->getModule());
+  OS << " probability is " << Prob
      << (isEdgeHot(Src, Dst) ? " [HOT edge]\n" : "\n");
 
   return OS;

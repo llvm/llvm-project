@@ -1151,8 +1151,9 @@ TYPE_PARSER(construct<PartRef>(name,
 
 // R913 structure-component -> data-ref
 // The final part-ref in the data-ref is not allowed to have subscripts.
-TYPE_PARSER(construct<StructureComponent>(
-    construct<DataRef>(some(Parser<PartRef>{} / percentOrDot)), name))
+TYPE_CONTEXT_PARSER("component"_en_US,
+    construct<StructureComponent>(
+        construct<DataRef>(some(Parser<PartRef>{} / percentOrDot)), name))
 
 // R919 subscript -> scalar-int-expr
 constexpr auto subscript{scalarIntExpr};
@@ -1267,9 +1268,13 @@ constexpr auto ignore_tkr{
 constexpr auto loopCount{
     "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
                              parenthesized(nonemptyList(digitString64)))};
+constexpr auto assumeAligned{"DIR$ ASSUME_ALIGNED" >>
+    optionalList(construct<CompilerDirective::AssumeAligned>(
+        indirect(designator), ":"_tok >> digitString64))};
 TYPE_PARSER(beginDirective >>
     sourced(construct<CompilerDirective>(ignore_tkr) ||
         construct<CompilerDirective>(loopCount) ||
+        construct<CompilerDirective>(assumeAligned) ||
         construct<CompilerDirective>(
             "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
                           maybe(("="_tok || ":"_tok) >> digitString64))))) /

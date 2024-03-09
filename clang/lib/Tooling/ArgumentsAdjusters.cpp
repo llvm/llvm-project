@@ -45,12 +45,12 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
       StringRef Arg = Args[i];
       // Skip output commands.
       if (llvm::any_of(OutputCommands, [&Arg](llvm::StringRef OutputCommand) {
-            return Arg.startswith(OutputCommand);
+            return Arg.starts_with(OutputCommand);
           }))
         continue;
 
-      if (!Arg.startswith("-fcolor-diagnostics") &&
-          !Arg.startswith("-fdiagnostics-color"))
+      if (!Arg.starts_with("-fcolor-diagnostics") &&
+          !Arg.starts_with("-fdiagnostics-color"))
         AdjustedArgs.push_back(Args[i]);
       // If we strip a color option, make sure we strip any preceeding `-Xclang`
       // option as well.
@@ -73,7 +73,7 @@ ArgumentsAdjuster getClangStripOutputAdjuster() {
     CommandLineArguments AdjustedArgs;
     for (size_t i = 0, e = Args.size(); i < e; ++i) {
       StringRef Arg = Args[i];
-      if (!Arg.startswith("-o"))
+      if (!Arg.starts_with("-o"))
         AdjustedArgs.push_back(Args[i]);
 
       if (Arg == "-o") {
@@ -102,11 +102,11 @@ ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
       // When not using the cl driver mode, dependency file generation options
       // begin with -M. These include -MM, -MF, -MG, -MP, -MT, -MQ, -MD, and
       // -MMD.
-      if (!UsingClDriver && Arg.startswith("-M"))
+      if (!UsingClDriver && Arg.starts_with("-M"))
         continue;
       // Under MSVC's cl driver mode, dependency file generation is controlled
       // using /showIncludes
-      if (Arg.startswith("/showIncludes") || Arg.startswith("-showIncludes"))
+      if (Arg.starts_with("/showIncludes") || Arg.starts_with("-showIncludes"))
         continue;
 
       AdjustedArgs.push_back(Args[i]);
@@ -159,7 +159,7 @@ ArgumentsAdjuster getStripPluginsAdjuster() {
       // -Xclang <arbitrary-argument>
       if (I + 4 < E && Args[I] == "-Xclang" &&
           (Args[I + 1] == "-load" || Args[I + 1] == "-plugin" ||
-           llvm::StringRef(Args[I + 1]).startswith("-plugin-arg-") ||
+           llvm::StringRef(Args[I + 1]).starts_with("-plugin-arg-") ||
            Args[I + 1] == "-add-plugin") &&
           Args[I + 2] == "-Xclang") {
         I += 3;

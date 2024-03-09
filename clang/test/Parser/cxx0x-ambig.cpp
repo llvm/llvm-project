@@ -122,9 +122,8 @@ namespace ellipsis {
     void f(S(...args[sizeof(T)])); // expected-note {{here}} expected-note {{here}}
     void f(S(...args)[sizeof(T)]); // expected-error {{redeclared}}
     void f(S ...args[sizeof(T)]); // expected-error {{redeclared}}
-    void g(S(...[sizeof(T)])); // expected-note {{here}} expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
+    void g(S(...[sizeof(T)])); // expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
     void g(S(...)[sizeof(T)]); // expected-error {{function cannot return array type}}
-    void g(S ...[sizeof(T)]); // expected-error {{redeclared}}
     void h(T(...)); // function type, expected-error {{unexpanded parameter pack}}
     void h(T...); // pack expansion, ok
     void i(int(T...)); // expected-note {{here}}

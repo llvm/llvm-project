@@ -34,6 +34,9 @@ private:
   // Whether this is assigning args for a return.
   bool IsRet;
 
+  // true if assignArg has been called for a mask argument, false otherwise.
+  bool AssignedFirstMaskArg = false;
+
 public:
   RISCVOutgoingValueAssigner(
       RISCVTargetLowering::RISCVCCAssignFn *RISCVAssignFn_, bool IsRet)
@@ -48,10 +51,16 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+    std::optional<unsigned> FirstMaskArgument;
+    if (Subtarget.hasVInstructions() && !AssignedFirstMaskArg &&
+        ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1) {
+      FirstMaskArgument = ValNo;
+      AssignedFirstMaskArg = true;
+    }
+
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, Info.IsFixed, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering(),
-                      /*FirstMaskArgument=*/std::nullopt))
+                      *Subtarget.getTargetLowering(), FirstMaskArgument))
       return true;
 
     StackSize = State.getStackSize();
@@ -146,11 +155,11 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
     if (Thunk) {
       *Thunk = assignFunc;
-      return 1;
+      return 2;
     }
 
     assignFunc();
-    return 1;
+    return 2;
   }
 
 private:
@@ -172,6 +181,9 @@ private:
   // Whether this is assigning args from a return.
   bool IsRet;
 
+  // true if assignArg has been called for a mask argument, false otherwise.
+  bool AssignedFirstMaskArg = false;
+
 public:
   RISCVIncomingValueAssigner(
       RISCVTargetLowering::RISCVCCAssignFn *RISCVAssignFn_, bool IsRet)
@@ -189,10 +201,16 @@ public:
     if (LocVT.isScalableVector())
       MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
+    std::optional<unsigned> FirstMaskArgument;
+    if (Subtarget.hasVInstructions() && !AssignedFirstMaskArg &&
+        ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1) {
+      FirstMaskArgument = ValNo;
+      AssignedFirstMaskArg = true;
+    }
+
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering(),
-                      /*FirstMaskArgument=*/std::nullopt))
+                      *Subtarget.getTargetLowering(), FirstMaskArgument))
       return true;
 
     StackSize = State.getStackSize();
@@ -266,7 +284,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
     MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
-    return 1;
+    return 2;
   }
 
   /// How the physical register gets marked varies between formal
@@ -423,17 +441,82 @@ bool RISCVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
+/// If there are varargs that were passed in a0-a7, the data in those registers
+/// must be copied to the varargs save area on the stack.
+void RISCVCallLowering::saveVarArgRegisters(
+    MachineIRBuilder &MIRBuilder, CallLowering::IncomingValueHandler &Handler,
+    IncomingValueAssigner &Assigner, CCState &CCInfo) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  unsigned XLenInBytes = Subtarget.getXLen() / 8;
+  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget.getTargetABI());
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  // Size of the vararg save area. For now, the varargs save area is either
+  // zero or large enough to hold a0-a7.
+  int VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
+  int FI;
+
+  // If all registers are allocated, then all varargs must be passed on the
+  // stack and we don't need to save any argregs.
+  if (VarArgsSaveSize == 0) {
+    int VaArgOffset = Assigner.StackSize;
+    FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
+  } else {
+    int VaArgOffset = -VarArgsSaveSize;
+    FI = MFI.CreateFixedObject(VarArgsSaveSize, VaArgOffset, true);
+
+    // If saving an odd number of registers then create an extra stack slot to
+    // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
+    // offsets to even-numbered registered remain 2*XLEN-aligned.
+    if (Idx % 2) {
+      MFI.CreateFixedObject(XLenInBytes,
+                            VaArgOffset - static_cast<int>(XLenInBytes), true);
+      VarArgsSaveSize += XLenInBytes;
+    }
+
+    const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
+                                Subtarget.getXLen());
+    const LLT sXLen = LLT::scalar(Subtarget.getXLen());
+
+    auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
+    auto Offset = MIRBuilder.buildConstant(
+        MRI.createGenericVirtualRegister(sXLen), XLenInBytes);
+
+    // Copy the integer registers that may have been used for passing varargs
+    // to the vararg save area.
+    const MVT XLenVT = Subtarget.getXLenVT();
+    for (unsigned I = Idx; I < ArgRegs.size(); ++I) {
+      const Register VReg = MRI.createGenericVirtualRegister(sXLen);
+      Handler.assignValueToReg(
+          VReg, ArgRegs[I],
+          CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,
+                              ArgRegs[I], XLenVT, CCValAssign::Full));
+      auto MPO =
+          MachinePointerInfo::getFixedStack(MF, FI, (I - Idx) * XLenInBytes);
+      MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+      FIN = MIRBuilder.buildPtrAdd(MRI.createGenericVirtualRegister(p0),
+                                   FIN.getReg(0), Offset);
+    }
+  }
+
+  // Record the frame index of the first variable argument which is a value
+  // necessary to G_VASTART.
+  RVFI->setVarArgsFrameIndex(FI);
+  RVFI->setVarArgsSaveSize(VarArgsSaveSize);
+}
+
 bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
                                              FunctionLoweringInfo &FLI) const {
-  // Early exit if there are no arguments.
-  if (F.arg_empty())
+  // Early exit if there are no arguments. varargs are not part of F.args() but
+  // must be lowered.
+  if (F.arg_empty() && !F.isVarArg())
     return true;
-
-  // TODO: Support vararg functions.
-  if (F.isVarArg())
-    return false;
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
@@ -467,8 +550,16 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       /*IsRet=*/false);
   RISCVFormalArgHandler Handler(MIRBuilder, MF.getRegInfo());
 
-  return determineAndHandleAssignments(Handler, Assigner, SplitArgInfos,
-                                       MIRBuilder, CC, F.isVarArg());
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CC, F.isVarArg(), MIRBuilder.getMF(), ArgLocs, F.getContext());
+  if (!determineAssignments(Assigner, SplitArgInfos, CCInfo) ||
+      !handleAssignments(Handler, SplitArgInfos, CCInfo, ArgLocs, MIRBuilder))
+    return false;
+
+  if (F.isVarArg())
+    saveVarArgRegisters(MIRBuilder, Handler, Assigner, CCInfo);
+
+  return true;
 }
 
 bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
@@ -505,14 +596,15 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   Info.IsTailCall = false;
 
   // Select the recommended relocation type R_RISCV_CALL_PLT.
-  Info.Callee.setTargetFlags(RISCVII::MO_PLT);
+  if (!Info.Callee.isReg())
+    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
 
   MachineInstrBuilder Call =
       MIRBuilder
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   RISCVOutgoingValueAssigner ArgAssigner(
@@ -529,6 +621,15 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildInstr(RISCV::ADJCALLSTACKUP)
       .addImm(ArgAssigner.StackSize)
       .addImm(0);
+
+  // If Callee is a reg, since it is used by a target specific
+  // instruction, it must have a register class matching the
+  // constraint of that instruction.
+  if (Call->getOperand(0).isReg())
+    constrainOperandRegClass(MF, *TRI, MF.getRegInfo(),
+                             *Subtarget.getInstrInfo(),
+                             *Subtarget.getRegBankInfo(), *Call,
+                             Call->getDesc(), Call->getOperand(0), 0);
 
   if (Info.OrigRet.Ty->isVoidTy())
     return true;

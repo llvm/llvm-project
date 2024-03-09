@@ -7,16 +7,8 @@ from lldbsuite.test import lldbutil
 
 
 class LocationListLookupTestCase(TestBase):
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
-    @skipIf(oslist=["linux"], archs=["arm"])
-    def test_loclist(self):
-        self.build()
+    def launch(self) -> lldb.SBProcess:
         exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         self.dbg.SetAsync(False)
@@ -27,12 +19,33 @@ class LocationListLookupTestCase(TestBase):
         self.assertTrue(process.IsValid())
         self.assertTrue(process.is_stopped)
 
-        # Find `main` on the stack, then
-        # find `argv` local variable, then
-        # check that we can read the c-string in argv[0]
+        return process
+
+    def check_local_vars(self, process: lldb.SBProcess, check_expr: bool):
+        # Find `bar` on the stack, then
+        # make sure we can read out the local
+        # variables (with both `frame var` and `expr`)
         for f in process.GetSelectedThread().frames:
-            if f.GetDisplayFunctionName() == "main":
+            frame_name = f.GetDisplayFunctionName()
+            if frame_name is not None and frame_name.startswith("Foo::bar"):
                 argv = f.GetValueForVariablePath("argv").GetChildAtIndex(0)
                 strm = lldb.SBStream()
                 argv.GetDescription(strm)
                 self.assertNotEqual(strm.GetData().find("a.out"), -1)
+
+                if check_expr:
+                    process.GetSelectedThread().SetSelectedFrame(f.idx)
+                    self.expect_expr("this", result_type="Foo *")
+
+    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIfDarwin
+    def test_loclist_frame_var(self):
+        self.build()
+        self.check_local_vars(self.launch(), check_expr=False)
+
+    @skipIf(dwarf_version=["<", "3"])
+    @skipIf(compiler="clang", compiler_version=["<", "12.0"])
+    @skipUnlessDarwin
+    def test_loclist_expr(self):
+        self.build()
+        self.check_local_vars(self.launch(), check_expr=True)

@@ -87,9 +87,6 @@ private:
                               Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
-  // sqrt
-  bool fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
-
   /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
   /// of cos, sincos call).
   std::tuple<Value *, Value *, Value *> insertSinCos(Value *Arg,
@@ -562,11 +559,10 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!F)
     return false;
 
-  auto *BCast = B.CreatePointerCast(PtrArg, PtrTy);
   SmallVector<Value *, 6> Args;
   for (unsigned I = 0; I != PtrArgLoc; ++I)
     Args.push_back(CI->getArgOperand(I));
-  Args.push_back(BCast);
+  Args.push_back(PtrArg);
 
   auto *NCI = B.CreateCall(F, Args);
   NCI->setAttributes(CI->getAttributes());
@@ -611,7 +607,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
 
     // Need to check int size cannot produce infinity, which computeKnownFPClass
     // knows how to do already.
-    return isKnownNeverInfinity(I, DL);
+    return isKnownNeverInfinity(I, /*Depth=*/0, SimplifyQuery(DL));
   case Instruction::Call: {
     const CallInst *CI = cast<CallInst>(I);
     switch (CI->getIntrinsicID()) {
@@ -623,7 +619,7 @@ static bool isKnownIntegral(const Value *V, const DataLayout &DL,
     case Intrinsic::round:
     case Intrinsic::roundeven:
       return (FMF.noInfs() && FMF.noNaNs()) ||
-             isKnownNeverInfOrNaN(I, DL, nullptr);
+             isKnownNeverInfOrNaN(I, /*Depth=*/0, SimplifyQuery(DL));
     default:
       break;
     }
@@ -672,8 +668,6 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     B.setFastMathFlags(FMF);
 
     // Specialized optimizations for each function call.
-    //
-    // TODO: Handle other simple intrinsic wrappers. Sqrt.
     //
     // TODO: Handle native functions
     switch (FInfo.getId()) {
@@ -760,8 +754,9 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       // pow(x, y) -> powr(x, y) for x >= -0.0
       // TODO: Account for flags on current call
       if (PowrFunc &&
-          cannotBeOrderedLessThanZero(FPOp->getOperand(0), M->getDataLayout(),
-                                      TLInfo, 0, AC, Call, DT)) {
+          cannotBeOrderedLessThanZero(
+              FPOp->getOperand(0), /*Depth=*/0,
+              SimplifyQuery(M->getDataLayout(), TLInfo, DT, AC, Call))) {
         Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;
       }
@@ -795,7 +790,9 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     case AMDGPULibFunc::EI_ROOTN:
       return fold_rootn(FPOp, B, FInfo);
     case AMDGPULibFunc::EI_SQRT:
-      return fold_sqrt(FPOp, B, FInfo);
+      // TODO: Allow with strictfp + constrained intrinsic
+      return tryReplaceLibcallWithSimpleIntrinsic(
+          B, CI, Intrinsic::sqrt, true, true, /*AllowStrictFP=*/false);
     case AMDGPULibFunc::EI_COS:
     case AMDGPULibFunc::EI_SIN:
       return fold_sincos(FPOp, B, FInfo);
@@ -1051,8 +1048,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                      CF->isNegative();
     } else {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
-                               (!CF || CF->isNegative());
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
     }
   } else {
     ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr0);
@@ -1273,29 +1269,6 @@ bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(
     return false;
   replaceLibCallWithSimpleIntrinsic(B, CI, IntrID);
   return true;
-}
-
-// fold sqrt -> native_sqrt (x)
-bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
-                               const FuncInfo &FInfo) {
-  if (!isUnsafeMath(FPOp))
-    return false;
-
-  if (getArgType(FInfo) == AMDGPULibFunc::F32 && (getVecSize(FInfo) == 1) &&
-      (FInfo.getPrefix() != AMDGPULibFunc::NATIVE)) {
-    Module *M = B.GetInsertBlock()->getModule();
-
-    if (FunctionCallee FPExpr = getNativeFunction(
-            M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      Value *opr0 = FPOp->getOperand(0);
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> "
-                        << "sqrt(" << *opr0 << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__sqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
-  }
-  return false;
 }
 
 std::tuple<Value *, Value *, Value *>

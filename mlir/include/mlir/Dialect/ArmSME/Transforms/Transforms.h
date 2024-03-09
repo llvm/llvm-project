@@ -16,8 +16,7 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 
 namespace arm_sme {
-void populateVectorTransferLoweringPatterns(LLVMTypeConverter &converter,
-                                            RewritePatternSet &patterns);
+void populateOuterProductFusionPatterns(RewritePatternSet &patterns);
 } // namespace arm_sme
 
 } // namespace mlir

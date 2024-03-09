@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H
 
 // Definitions from linux/stat.h
-#define S_IFMT  00170000
+#define S_IFMT 0170000
 #define S_IFSOCK 0140000
 #define S_IFLNK  0120000
 #define S_IFREG  0100000
@@ -45,4 +45,4 @@
 #define S_IWOTH 00002
 #define S_IXOTH 00001
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H

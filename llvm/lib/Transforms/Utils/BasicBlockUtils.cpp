@@ -386,17 +386,44 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallVector<DPValue *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
-    for (DPValue &DPV : reverse(I.getDbgValueRange())) {
+    for (DbgRecord &DR : reverse(I.getDbgValueRange())) {
+      if (isa<DPLabel>(DR)) {
+        // Emulate existing behaviour (see comment below for dbg.declares).
+        // FIXME: Don't do this.
+        VariableSet.clear();
+        continue;
+      }
+
+      DPValue &DPV = cast<DPValue>(DR);
+      // Skip declare-type records, as the debug intrinsic method only works
+      // on dbg.value intrinsics.
+      if (DPV.getType() == DPValue::LocationType::Declare) {
+        // The debug intrinsic method treats dbg.declares are "non-debug"
+        // instructions (i.e., a break in a consecutive range of debug
+        // intrinsics). Emulate that to create identical outputs. See
+        // "Possible improvements" above.
+        // FIXME: Delete the line below.
+        VariableSet.clear();
+        continue;
+      }
+
       DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                         DPV.getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
       // If the same variable fragment is described more than once it is enough
       // to keep the last one (i.e. the first found since we for reverse
       // iteration).
-      // FIXME: add assignment tracking support (see parallel implementation
-      // below).
-      if (!R.second)
-        ToBeRemoved.push_back(&DPV);
+      if (R.second)
+        continue;
+
+      if (DPV.isDbgAssign()) {
+        // Don't delete dbg.assign intrinsics that are linked to instructions.
+        if (!at::getAssignmentInsts(&DPV).empty())
+          continue;
+        // Unlinked dbg.assign intrinsics can be treated like dbg.values.
+      }
+
+      ToBeRemoved.push_back(&DPV);
       continue;
     }
     // Sequence with consecutive dbg.value instrs ended. Clear the map to
@@ -477,24 +504,73 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
       VariableMap;
   for (auto &I : *BB) {
-    for (DPValue &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      if (DPV.getType() == DPValue::LocationType::Declare)
+        continue;
       DebugVariable Key(DPV.getVariable(), std::nullopt,
                         DPV.getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Key);
+      // A dbg.assign with no linked instructions can be treated like a
+      // dbg.value (i.e. can be deleted).
+      bool IsDbgValueKind =
+          (!DPV.isDbgAssign() || at::getAssignmentInsts(&DPV).empty());
+
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
       SmallVector<Value *, 4> Values(DPV.location_ops());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DPV.getExpression()) {
-        VariableMap[Key] = {Values, DPV.getExpression()};
+        if (IsDbgValueKind)
+          VariableMap[Key] = {Values, DPV.getExpression()};
+        else
+          VariableMap[Key] = {Values, nullptr};
         continue;
       }
+      // Don't delete dbg.assign intrinsics that are linked to instructions.
+      if (!IsDbgValueKind)
+        continue;
       // Found an identical mapping. Remember the instruction for later removal.
       ToBeRemoved.push_back(&DPV);
     }
   }
 
   for (auto *DPV : ToBeRemoved)
+    DPV->eraseFromParent();
+
+  return !ToBeRemoved.empty();
+}
+
+static bool DPValuesRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+  assert(BB->isEntryBlock() && "expected entry block");
+  SmallVector<DPValue *, 8> ToBeRemoved;
+  DenseSet<DebugVariable> SeenDefForAggregate;
+  // Returns the DebugVariable for DVI with no fragment info.
+  auto GetAggregateVariable = [](const DPValue &DPV) {
+    return DebugVariable(DPV.getVariable(), std::nullopt,
+                         DPV.getDebugLoc().getInlinedAt());
+  };
+
+  // Remove undef dbg.assign intrinsics that are encountered before
+  // any non-undef intrinsics from the entry block.
+  for (auto &I : *BB) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      if (!DPV.isDbgValue() && !DPV.isDbgAssign())
+        continue;
+      bool IsDbgValueKind =
+          (DPV.isDbgValue() || at::getAssignmentInsts(&DPV).empty());
+      DebugVariable Aggregate = GetAggregateVariable(DPV);
+      if (!SeenDefForAggregate.contains(Aggregate)) {
+        bool IsKill = DPV.isKillLocation() && IsDbgValueKind;
+        if (!IsKill) {
+          SeenDefForAggregate.insert(Aggregate);
+        } else if (DPV.isDbgAssign()) {
+          ToBeRemoved.push_back(&DPV);
+        }
+      }
+    }
+  }
+
+  for (DPValue *DPV : ToBeRemoved)
     DPV->eraseFromParent();
 
   return !ToBeRemoved.empty();
@@ -522,7 +598,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       SmallVector<Value *, 4> Values(DVI->getValues());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
-        // Use a sentinal value (nullptr) for the DIExpression when we see a
+        // Use a sentinel value (nullptr) for the DIExpression when we see a
         // linked dbg.assign so that the next debug intrinsic will never match
         // it (i.e. always treat linked dbg.assigns as if they're unique).
         if (IsDbgValueKind)
@@ -564,7 +640,10 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
 /// then (only) the instruction marked with (*) can be removed.
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
-static bool remomveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+static bool removeUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+  if (BB->IsNewDbgInfoFormat)
+    return DPValuesRemoveUndefDbgAssignsFromEntryBlock(BB);
+
   assert(BB->isEntryBlock() && "expected entry block");
   SmallVector<DbgAssignIntrinsic *, 8> ToBeRemoved;
   DenseSet<DebugVariable> SeenDefForAggregate;
@@ -615,7 +694,7 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
   if (BB->isEntryBlock() &&
       isAssignmentTrackingEnabled(*BB->getParent()->getParent()))
-    MadeChanges |= remomveUndefDbgAssignsFromEntryBlock(BB);
+    MadeChanges |= removeUndefDbgAssignsFromEntryBlock(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
 
   if (MadeChanges)
@@ -1218,7 +1297,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
     // PHI.
     // Create the new PHI node, insert it into NewBB at the end of the block
     PHINode *NewPHI =
-        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI);
+        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI->getIterator());
 
     // NOTE! This loop walks backwards for a reason! First off, this minimizes
     // the cost of removal if we end up removing a large number of values, and
@@ -1438,7 +1517,7 @@ static void SplitLandingPadPredecessorsImpl(
       assert(!LPad->getType()->isTokenTy() &&
              "Split cannot be applied if LPad is token type. Otherwise an "
              "invalid PHINode of token type would be created.");
-      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad);
+      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad->getIterator());
       PN->addIncoming(Clone1, NewBB1);
       PN->addIncoming(Clone2, NewBB2);
       LPad->replaceAllUsesWith(PN);
@@ -1452,17 +1531,6 @@ static void SplitLandingPadPredecessorsImpl(
   }
 }
 
-void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                       ArrayRef<BasicBlock *> Preds,
-                                       const char *Suffix1, const char *Suffix2,
-                                       SmallVectorImpl<BasicBlock *> &NewBBs,
-                                       DominatorTree *DT, LoopInfo *LI,
-                                       MemorySSAUpdater *MSSAU,
-                                       bool PreserveLCSSA) {
-  return SplitLandingPadPredecessorsImpl(
-      OrigBB, Preds, Suffix1, Suffix2, NewBBs,
-      /*DTU=*/nullptr, DT, LI, MSSAU, PreserveLCSSA);
-}
 void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                        ArrayRef<BasicBlock *> Preds,
                                        const char *Suffix1, const char *Suffix2,
@@ -1836,7 +1904,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto Phi = cast<PHINode>(I);
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
-                        Phi->getName() + ".moved", &FirstGuardBlock->front());
+                        Phi->getName() + ".moved", FirstGuardBlock->begin());
     for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
@@ -1955,7 +2023,7 @@ static void calcPredicateUsingInteger(
       Value *Id1 = ConstantInt::get(Type::getInt32Ty(Context),
                                     std::distance(Outgoing.begin(), Succ1Iter));
       IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
-                                      In->getTerminator());
+                                      In->getTerminator()->getIterator());
     } else {
       // Get the index of the non-null successor.
       auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);
@@ -2148,4 +2216,16 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
+}
+
+bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                         const BasicBlock &Dest) {
+  assert(Src.getParent() == Dest.getParent());
+  if (!Src.getParent()->isPresplitCoroutine())
+    return false;
+  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
+    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
+      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
+             SW->getDefaultDest() == &Dest;
+  return false;
 }

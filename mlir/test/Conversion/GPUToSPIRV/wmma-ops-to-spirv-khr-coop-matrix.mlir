@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-gpu-to-spirv="use-coop-matrix-nv=false" --cse \
+// RUN: mlir-opt --convert-gpu-to-spirv --cse \
 // RUN:   --split-input-file --verify-diagnostics %s | FileCheck %s
 
 module attributes {

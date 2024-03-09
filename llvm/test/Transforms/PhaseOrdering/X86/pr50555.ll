@@ -11,7 +11,7 @@ define void @trunc_through_one_add(ptr noalias %0, ptr noalias readonly %1) {
 ; SSE-NEXT:    [[TMP7:%.*]] = lshr <8 x i16> [[TMP6]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
 ; SSE-NEXT:    store <8 x i16> [[TMP7]], ptr [[TMP0:%.*]], align 2
 ; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
-; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 8
+; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP10:%.*]] = load <8 x i8>, ptr [[TMP8]], align 1
 ; SSE-NEXT:    [[TMP11:%.*]] = zext <8 x i8> [[TMP10]] to <8 x i16>
 ; SSE-NEXT:    [[TMP12:%.*]] = lshr <8 x i16> [[TMP11]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -187,7 +187,7 @@ define void @trunc_through_two_adds(ptr noalias %0, ptr noalias readonly %1, ptr
 ; SSE-NEXT:    store <8 x i16> [[TMP11]], ptr [[TMP0:%.*]], align 2
 ; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
-; SSE-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 8
+; SSE-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP15:%.*]] = load <8 x i8>, ptr [[TMP12]], align 1
 ; SSE-NEXT:    [[TMP16:%.*]] = zext <8 x i8> [[TMP15]] to <8 x i16>
 ; SSE-NEXT:    [[TMP17:%.*]] = load <8 x i8>, ptr [[TMP13]], align 1

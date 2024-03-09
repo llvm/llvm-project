@@ -43,13 +43,13 @@ define void @test1_no(ptr %p) nounwind {
 ; This is unusual, since the function is memcpy, but as above, this
 ; isn't necessarily invalid.
 
-; CHECK: define void @test2_yes(ptr nocapture %p, ptr nocapture %q, i64 %n) #4 {
+; CHECK: define void @test2_yes(ptr nocapture %p, ptr nocapture %q, i64 %n) #0 {
 define void @test2_yes(ptr %p, ptr %q, i64 %n) nounwind {
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 %n, i1 false), !tbaa !1
   ret void
 }
 
-; CHECK: define void @test2_no(ptr nocapture writeonly %p, ptr nocapture readonly %q, i64 %n) #5 {
+; CHECK: define void @test2_no(ptr nocapture writeonly %p, ptr nocapture readonly %q, i64 %n) #4 {
 define void @test2_no(ptr %p, ptr %q, i64 %n) nounwind {
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 %n, i1 false), !tbaa !2
   ret void
@@ -63,7 +63,7 @@ define i32 @test3_yes(ptr %p) nounwind {
   ret i32 %t
 }
 
-; CHECK: define i32 @test3_no(ptr nocapture %p) #6 {
+; CHECK: define i32 @test3_no(ptr nocapture %p) #4 {
 define i32 @test3_no(ptr %p) nounwind {
   %t = va_arg ptr %p, i32, !tbaa !2
   ret i32 %t
@@ -76,10 +76,8 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1) nounwind
 ; CHECK: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #2 = { nofree nosync nounwind memory(none) }
 ; CHECK: attributes #3 = { nounwind }
-; CHECK: attributes #4 = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #5 = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #6 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #7 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #4 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #5 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
 ; Root note.
 !0 = !{ }

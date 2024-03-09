@@ -24,6 +24,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -294,8 +295,9 @@ public:
   /// Build DeclarationFragments for a field declaration FieldDecl.
   static DeclarationFragments getFragmentsForField(const FieldDecl *);
 
-  /// Build DeclarationFragments for a struct record declaration RecordDecl.
-  static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
+  /// Build DeclarationFragments for a struct/union record declaration
+  /// RecordDecl.
+  static DeclarationFragments getFragmentsForRecordDecl(const RecordDecl *);
 
   static DeclarationFragments getFragmentsForCXXClass(const CXXRecordDecl *);
 
@@ -410,6 +412,11 @@ private:
   /// Build DeclarationFragments for a parameter variable declaration
   /// ParmVarDecl.
   static DeclarationFragments getFragmentsForParam(const ParmVarDecl *);
+
+  static DeclarationFragments
+  getFragmentsForBlock(const NamedDecl *BlockDecl, FunctionTypeLoc &Block,
+                       FunctionProtoTypeLoc &BlockProto,
+                       DeclarationFragments &After);
 };
 
 template <typename FunctionT>
@@ -422,8 +429,7 @@ DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
                                    Function->getASTContext(), After);
   if (isa<FunctionDecl>(Function) &&
       dyn_cast<FunctionDecl>(Function)->getDescribedFunctionTemplate() &&
-      ReturnType.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
-          0) {
+      StringRef(ReturnType.begin()->Spelling).starts_with("type-parameter")) {
     std::string ProperArgName =
         getNameForTemplateArgument(dyn_cast<FunctionDecl>(Function)
                                        ->getDescribedFunctionTemplate()

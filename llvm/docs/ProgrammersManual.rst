@@ -2747,24 +2747,6 @@ pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
   Instruction* pinst = &*i; // Grab pointer to instruction reference
   const Instruction& inst = *j;
 
-However, the iterators you'll be working with in the LLVM framework are special:
-they will automatically convert to a ptr-to-instance type whenever they need to.
-Instead of dereferencing the iterator and then taking the address of the result,
-you can simply assign the iterator to the proper pointer type and you get the
-dereference and address-of operation as a result of the assignment (behind the
-scenes, this is a result of overloading casting mechanisms).  Thus the second
-line of the last example,
-
-.. code-block:: c++
-
-  Instruction *pinst = &*i;
-
-is semantically equivalent to
-
-.. code-block:: c++
-
-  Instruction *pinst = i;
-
 It's also possible to turn a class pointer into the corresponding iterator, and
 this is a constant time operation (very efficient).  The following code snippet
 illustrates use of the conversion constructors provided by LLVM iterators.  By
@@ -2778,18 +2760,6 @@ obtaining it via iteration over some structure:
     ++it; // After this line, it refers to the instruction after *inst
     if (it != inst->getParent()->end()) errs() << *it << "\n";
   }
-
-Unfortunately, these implicit conversions come at a cost; they prevent these
-iterators from conforming to standard iterator conventions, and thus from being
-usable with standard algorithms and containers.  For example, they prevent the
-following code, where ``B`` is a ``BasicBlock``, from compiling:
-
-.. code-block:: c++
-
-  llvm::SmallVector<llvm::Instruction *, 16>(B->begin(), B->end());
-
-Because of this, these implicit conversions may be removed some day, and
-``operator*`` changed to return a pointer instead of a reference.
 
 .. _iterate_complex:
 

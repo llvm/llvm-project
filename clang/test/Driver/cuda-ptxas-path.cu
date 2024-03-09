@@ -8,4 +8,4 @@
 
 // CHECK-NOT: "ptxas"
 // CHECK: "/some/path/to/ptxas"
-// CHECK-SAME: "--gpu-name" "sm_35"
+// CHECK-SAME: "--gpu-name" "sm_52"

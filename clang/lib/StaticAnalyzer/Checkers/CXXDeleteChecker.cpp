@@ -31,6 +31,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -65,7 +66,8 @@ public:
 };
 
 class DeleteWithNonVirtualDtorChecker : public CXXDeleteChecker {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{
+      this, "Destruction of a polymorphic object with no virtual destructor"};
 
   void
   checkTypedDeleteExpr(const CXXDeleteExpr *DE, CheckerContext &C,
@@ -74,7 +76,8 @@ class DeleteWithNonVirtualDtorChecker : public CXXDeleteChecker {
 };
 
 class CXXArrayDeleteChecker : public CXXDeleteChecker {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this,
+                   "Deleting an array of polymorphic objects is undefined"};
 
   void
   checkTypedDeleteExpr(const CXXDeleteExpr *DE, CheckerContext &C,
@@ -123,17 +126,10 @@ void DeleteWithNonVirtualDtorChecker::checkTypedDeleteExpr(
   if (!DerivedClass->isDerivedFrom(BaseClass))
     return;
 
-  if (!BT)
-    BT.reset(new BugType(this,
-                         "Destruction of a polymorphic object with no "
-                         "virtual destructor",
-                         "Logic error"));
-
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
-  auto R =
-      std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
@@ -160,12 +156,6 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
   if (!DerivedClass->isDerivedFrom(BaseClass))
     return;
 
-  if (!BT)
-    BT.reset(new BugType(this,
-                         "Deleting an array of polymorphic objects "
-                         "is undefined",
-                         "Logic error"));
-
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
@@ -182,7 +172,7 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
      << SourceType.getAsString(C.getASTContext().getPrintingPolicy())
      << "' is undefined";
 
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);

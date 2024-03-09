@@ -201,8 +201,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -226,7 +225,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // these dependencies need to be listed before the C runtime below.
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-      addFortranRuntimeLibs(getToolChain(), CmdArgs);
+      addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
     if (Args.hasArg(options::OPT_fstack_protector) ||
@@ -295,13 +294,12 @@ static StringRef getSolarisLibSuffix(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   case llvm::Triple::x86:
   case llvm::Triple::sparc:
+  default:
     break;
   case llvm::Triple::x86_64:
     return "/amd64";
   case llvm::Triple::sparcv9:
     return "/sparcv9";
-  default:
-    llvm_unreachable("Unsupported architecture");
   }
   return "";
 }
@@ -328,7 +326,7 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 
   // If we are currently running Clang inside of the requested system root,
   // add its parent library path to those searched.
-  if (StringRef(D.Dir).startswith(D.SysRoot))
+  if (StringRef(D.Dir).starts_with(D.SysRoot))
     addPathIfExists(D, D.Dir + "/../lib", Paths);
 
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);

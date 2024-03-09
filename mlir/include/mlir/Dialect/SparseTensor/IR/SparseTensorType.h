@@ -18,6 +18,19 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// A simple structure that encodes a range of levels in the sparse tensors that
+/// forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isAoS() const { return !isSoA; }
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// A wrapper around `RankedTensorType`, which has three goals:
 ///
@@ -60,22 +73,24 @@ public:
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
 
+  // TODO: remove?
+  SparseTensorType(SparseTensorEncodingAttr enc)
+      : SparseTensorType(RankedTensorType::get(
+            SmallVector<Size>(enc.getDimRank(), ShapedType::kDynamic),
+            Float32Type::get(enc.getContext()), enc)) {}
+
   SparseTensorType &operator=(const SparseTensorType &) = delete;
   SparseTensorType(const SparseTensorType &) = default;
 
   //
-  // Factory methods.
+  // Factory methods to construct a new `SparseTensorType`
+  // with the same dimension-shape and element type.
   //
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by the given encoding.
   SparseTensorType withEncoding(SparseTensorEncodingAttr newEnc) const {
     return SparseTensorType(rtp, newEnc);
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withDimToLvl(dimToLvl)`.
   SparseTensorType withDimToLvl(AffineMap dimToLvl) const {
     return withEncoding(enc.withDimToLvl(dimToLvl));
   }
@@ -88,23 +103,14 @@ public:
     return withDimToLvl(dimToLvlSTT.getEncoding());
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withoutDimToLvl()`.
   SparseTensorType withoutDimToLvl() const {
     return withEncoding(enc.withoutDimToLvl());
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withBitWidths(posWidth, crdWidth)`.
   SparseTensorType withBitWidths(unsigned posWidth, unsigned crdWidth) const {
     return withEncoding(enc.withBitWidths(posWidth, crdWidth));
   }
 
-  /// Constructs a new `SparseTensorType` with the same dimension-shape
-  /// and element type, but with the encoding replaced by
-  /// `getEncoding().withoutBitWidths()`.
   SparseTensorType withoutBitWidths() const {
     return withEncoding(enc.withoutBitWidths());
   }
@@ -117,10 +123,6 @@ public:
   SparseTensorType withoutDimSlices() const {
     return withEncoding(enc.withoutDimSlices());
   }
-
-  //
-  // Other methods.
-  //
 
   /// Allow implicit conversion to `RankedTensorType`, `ShapedType`,
   /// and `Type`.  These are implicit to help alleviate the impedance
@@ -170,7 +172,6 @@ public:
 
   Type getElementType() const { return rtp.getElementType(); }
 
-  /// Returns the encoding (or the null-attribute for dense-tensors).
   SparseTensorEncodingAttr getEncoding() const { return enc; }
 
   //
@@ -203,6 +204,10 @@ public:
   /// Returns true if the dimToLvl mapping is the identity.
   /// (This is always true for dense-tensors.)
   bool isIdentity() const { return enc.isIdentity(); }
+
+  //
+  // Other methods.
+  //
 
   /// Returns the dimToLvl mapping (or the null-map for the identity).
   /// If you intend to compare the results of this method for equality,
@@ -242,15 +247,26 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
-  /// Returns the Level-shape.
+  /// Returns the level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
   }
 
+  /// Returns the batched level-rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched level-shape.
+  SmallVector<Size> getBatchLvlShape() const {
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
+    lvlShape.truncate(getEncoding().getBatchLvlRank());
+    return lvlShape;
+  }
+
+  /// Returns the type with an identity mapping.
   RankedTensorType getDemappedType() const {
-    auto lvlShape = getLvlShape();
-    return RankedTensorType::get(lvlShape, rtp.getElementType(),
+    return RankedTensorType::get(getLvlShape(), getElementType(),
                                  enc.withoutDimToLvl());
   }
 
@@ -282,8 +298,8 @@ public:
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
   int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
-  ArrayRef<DimLevelType> getLvlTypes() const { return enc.getLvlTypes(); }
-  DimLevelType getLvlType(Level l) const {
+  ArrayRef<LevelType> getLvlTypes() const { return enc.getLvlTypes(); }
+  LevelType getLvlType(Level l) const {
     // This OOB check is for dense-tensors, since this class knows
     // their lvlRank (whereas STEA::getLvlType will/can only check
     // OOB for sparse-tensors).
@@ -299,7 +315,7 @@ public:
     return isLooseCompressedLT(getLvlType(l));
   }
   bool isSingletonLvl(Level l) const { return isSingletonLT(getLvlType(l)); }
-  bool is2OutOf4Lvl(Level l) const { return is2OutOf4LT(getLvlType(l)); }
+  bool isNOutOfMLvl(Level l) const { return isNOutOfMLT(getLvlType(l)); }
   bool isOrderedLvl(Level l) const { return isOrderedLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueLT(getLvlType(l)); }
   bool isWithPos(Level l) const { return isWithPosLT(getLvlType(l)); }
@@ -324,6 +340,24 @@ public:
       return IntegerType::get(getContext(), getPosWidth());
     return IndexType::get(getContext());
   }
+
+  /// Returns true iff this sparse tensor type has a trailing
+  /// COO region starting at the given level. By default, it
+  /// tests for a unique COO type at top level.
+  bool isCOOType(Level startLvl = 0, bool isUnique = true) const;
+
+  /// Returns the starting level of this sparse tensor type for a
+  /// trailing COO region that spans **at least** two levels. If
+  /// no such COO region is found, then returns the level-rank.
+  ///
+  /// DEPRECATED: use getCOOSegment instead;
+  Level getAoSCOOStart() const;
+
+  /// Returns [un]ordered COO type for this sparse tensor type.
+  RankedTensorType getCOOType(bool ordered) const;
+
+  /// Returns a list of COO segments in the sparse tensor types.
+  SmallVector<COOSegment> getCOOSegments() const;
 
 private:
   // These two must be const, to ensure coherence of the memoized fields.

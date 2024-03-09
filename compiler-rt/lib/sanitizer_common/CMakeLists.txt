@@ -88,6 +88,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_libcdep.cpp
   sanitizer_symbolizer_mac.cpp
   sanitizer_symbolizer_markup.cpp
+  sanitizer_symbolizer_markup_fuchsia.cpp
   sanitizer_symbolizer_posix_libcdep.cpp
   sanitizer_symbolizer_report.cpp
   sanitizer_symbolizer_report_fuchsia.cpp
@@ -150,7 +151,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_flags.h
   sanitizer_flags.inc
   sanitizer_flat_map.h
-  sanitizer_freebsd.h
   sanitizer_fuchsia.h
   sanitizer_getauxval.h
   sanitizer_hash.h
@@ -195,6 +195,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h
   sanitizer_symbolizer_mac.h
+  sanitizer_symbolizer_markup.h
   sanitizer_syscall_generic.inc
   sanitizer_syscall_linux_aarch64.inc
   sanitizer_syscall_linux_arm.inc

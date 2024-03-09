@@ -28,13 +28,20 @@ let TargetPrefix = "spv" in {
   def int_spv_insertelt : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_any_ty, llvm_anyint_ty]>;
   def int_spv_const_composite : Intrinsic<[llvm_i32_ty], [llvm_vararg_ty]>;
   def int_spv_bitcast : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
+  def int_spv_ptrcast : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_metadata_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
   def int_spv_switch : Intrinsic<[], [llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_cmpxchg : Intrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_unreachable : Intrinsic<[], []>;
   def int_spv_alloca : Intrinsic<[llvm_any_ty], []>;
+  def int_spv_alloca_array : Intrinsic<[llvm_any_ty], [llvm_anyint_ty]>;
   def int_spv_undef : Intrinsic<[llvm_i32_ty], []>;
 
   // Expect, Assume Intrinsics
   def int_spv_assume : Intrinsic<[], [llvm_i1_ty]>;
   def int_spv_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
+
+  // The following intrinsic(s) are mirrored from IntrinsicsDirectX.td for HLSL support.
+  def int_spv_thread_id : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+  def int_spv_create_handle : ClangBuiltin<"__builtin_hlsl_create_handle">,
+      Intrinsic<[ llvm_ptr_ty ], [llvm_i8_ty], [IntrWillReturn]>;
 }

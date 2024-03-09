@@ -17,6 +17,8 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
+    MLIRArmNeonTestPasses
+    MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
     MLIRDLTITestPasses
@@ -25,7 +27,9 @@ if(MLIR_INCLUDE_TESTS)
     MLIRLinalgTestPasses
     MLIRLoopLikeInterfaceTestPasses
     MLIRMathTestPasses
+    MLIRTestMathToVCIX
     MLIRMemRefTestPasses
+    MLIRMeshTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
@@ -37,16 +41,24 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestOneToNTypeConversionPass
     MLIRTestPass
-    MLIRTestPDLL
     MLIRTestReducer
-    MLIRTestRewrite
-    MLIRTestTransformDialect
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
+  set(test_libs ${test_libs}
+    MLIRTestPDLL
+    MLIRTestTransformDialect
+    )
+
+  if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+    set(test_libs ${test_libs}
+      MLIRTestPDLL
+      MLIRTestRewrite
+      )
+  endif()
 endif()
 
 set(LIBS
@@ -66,6 +78,10 @@ set(LIBS
   MLIRTransformUtils
   MLIRSupport
   MLIRIR
+
+  # TODO: Remove when registerAllGPUToLLVMIRTranslations is no longer
+  # registered directly in mlir-opt.cpp.
+  MLIRToLLVMIRTranslationRegistration
   )
 
 # Exclude from libMLIR.so because this has static options intended for
@@ -91,11 +107,3 @@ llvm_update_compile_flags(mlir-opt)
 
 mlir_check_all_link_libraries(mlir-opt)
 export_executable_symbols_for_plugins(mlir-opt)
-
-if(MLIR_ENABLE_DEPRECATED_GPU_SERIALIZATION)
-  # Enable deprecated serialization passes.
-  target_compile_definitions(mlir-opt
-    PRIVATE
-    MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE=1
-  )
-endif()

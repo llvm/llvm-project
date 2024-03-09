@@ -358,8 +358,7 @@ placeScalarValueInMemory(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value val = builder.createConvert(loc, storageType, valBase);
   mlir::Value temp = builder.createTemporary(
       loc, storageType,
-      llvm::ArrayRef<mlir::NamedAttribute>{
-          Fortran::lower::getAdaptToByRefAttr(builder)});
+      llvm::ArrayRef<mlir::NamedAttribute>{fir::getAdaptToByRefAttr(builder)});
   builder.create<fir::StoreOp>(loc, val, temp);
   return fir::substBase(exv, temp);
 }
@@ -2401,19 +2400,18 @@ public:
       mlir::Value len = charBox->getLen();
       mlir::Value zero = builder.createIntegerConstant(loc, len.getType(), 0);
       len = builder.create<mlir::arith::SelectOp>(loc, isPresent, len, zero);
-      mlir::Value temp = builder.createTemporary(
-          loc, type, /*name=*/{},
-          /*shape=*/{}, mlir::ValueRange{len},
-          llvm::ArrayRef<mlir::NamedAttribute>{
-              Fortran::lower::getAdaptToByRefAttr(builder)});
+      mlir::Value temp =
+          builder.createTemporary(loc, type, /*name=*/{},
+                                  /*shape=*/{}, mlir::ValueRange{len},
+                                  llvm::ArrayRef<mlir::NamedAttribute>{
+                                      fir::getAdaptToByRefAttr(builder)});
       return fir::CharBoxValue{temp, len};
     }
     assert((fir::isa_trivial(type) || type.isa<fir::RecordType>()) &&
            "must be simple scalar");
-    return builder.createTemporary(
-        loc, type,
-        llvm::ArrayRef<mlir::NamedAttribute>{
-            Fortran::lower::getAdaptToByRefAttr(builder)});
+    return builder.createTemporary(loc, type,
+                                   llvm::ArrayRef<mlir::NamedAttribute>{
+                                       fir::getAdaptToByRefAttr(builder)});
   }
 
   template <typename A>
@@ -2848,8 +2846,10 @@ public:
       }
     }
 
-    ExtValue result = Fortran::lower::genCallOpAndResult(
-        loc, converter, symMap, stmtCtx, caller, callSiteType, resultType);
+    ExtValue result =
+        Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
+                                           caller, callSiteType, resultType)
+            .first;
 
     // Sync pointers and allocatables that may have been modified during the
     // call.
@@ -4752,10 +4752,10 @@ private:
         } else {
           // Store scalar value in a temp to fulfill VALUE attribute.
           mlir::Value val = fir::getBase(asScalar(*expr));
-          mlir::Value temp = builder.createTemporary(
-              loc, val.getType(),
-              llvm::ArrayRef<mlir::NamedAttribute>{
-                  Fortran::lower::getAdaptToByRefAttr(builder)});
+          mlir::Value temp =
+              builder.createTemporary(loc, val.getType(),
+                                      llvm::ArrayRef<mlir::NamedAttribute>{
+                                          fir::getAdaptToByRefAttr(builder)});
           builder.create<fir::StoreOp>(loc, val, temp);
           operands.emplace_back(
               [=](IterSpace iters) -> ExtValue { return temp; });
@@ -4851,7 +4851,7 @@ private:
       }
     }
 
-    if (caller.getIfIndirectCallSymbol())
+    if (caller.getIfIndirectCall())
       fir::emitFatalError(loc, "cannot be indirect call");
 
     // The lambda is mutable so that `caller` copy can be modified inside it.
@@ -4868,8 +4868,10 @@ private:
             [&](const auto &) { return fir::getBase(exv); });
         caller.placeInput(argIface, arg);
       }
-      return Fortran::lower::genCallOpAndResult(
-          loc, converter, symMap, getElementCtx(), caller, callSiteType, retTy);
+      return Fortran::lower::genCallOpAndResult(loc, converter, symMap,
+                                                getElementCtx(), caller,
+                                                callSiteType, retTy)
+          .first;
     };
   }
 
@@ -5843,10 +5845,10 @@ private:
           base = builder.create<fir::ArrayFetchOp>(
               loc, eleTy, arrLd, iters.iterVec(), arrLdTypeParams);
         }
-        mlir::Value temp = builder.createTemporary(
-            loc, base.getType(),
-            llvm::ArrayRef<mlir::NamedAttribute>{
-                Fortran::lower::getAdaptToByRefAttr(builder)});
+        mlir::Value temp =
+            builder.createTemporary(loc, base.getType(),
+                                    llvm::ArrayRef<mlir::NamedAttribute>{
+                                        fir::getAdaptToByRefAttr(builder)});
         builder.create<fir::StoreOp>(loc, base, temp);
         return fir::factory::arraySectionElementToExtendedValue(
             builder, loc, extMemref, temp, slice);

@@ -202,9 +202,12 @@ public:
                    itr != SrcCopy->second.DefRegs.end(); itr++) {
                 if (*itr == Def) {
                   SrcCopy->second.DefRegs.erase(itr);
-                  // If DefReg becomes empty after removal, we can directly
-                  // remove SrcCopy from the tracker's copy maps.
-                  if (SrcCopy->second.DefRegs.empty()) {
+                  // If DefReg becomes empty after removal, we can remove the
+                  // SrcCopy from the tracker's copy maps. We only remove those
+                  // entries solely record the Def is defined by Src. If an
+                  // entry also contains the definition record of other Def'
+                  // registers, it cannot be cleared.
+                  if (SrcCopy->second.DefRegs.empty() && !SrcCopy->second.MI) {
                     Copies.erase(SrcCopy);
                   }
                   break;
@@ -820,7 +823,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // ...
         // %xmm2 = copy %xmm9
         Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr);
-
         for (const MachineOperand &MO : MI.implicit_operands()) {
           if (!MO.isReg() || !MO.isDef())
             continue;
@@ -831,6 +833,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         }
 
         Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
+
         continue;
       }
     }
@@ -850,7 +853,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     forwardUses(MI);
 
     // Not a copy.
-    SmallVector<Register, 2> Defs;
+    SmallVector<Register, 4> Defs;
     const MachineOperand *RegMask = nullptr;
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isRegMask())

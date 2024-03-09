@@ -29,27 +29,52 @@ using namespace llvm;
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
-  bool Flavor = MI->getOpcode() == X86::CMPCCXADDmr32 ||
-                MI->getOpcode() == X86::CMPCCXADDmr64;
+  unsigned Opc = MI->getOpcode();
+  bool IsCMPCCXADD = X86::isCMPCCXADD(Opc);
+  bool IsCCMPOrCTEST = X86::isCCMPCC(Opc) || X86::isCTESTCC(Opc);
+
+  // clang-format off
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;
   case    1: O << "no"; break;
   case    2: O << "b";  break;
-  case    3: O << (Flavor ? "nb" : "ae"); break;
-  case    4: O << (Flavor ?  "z" :  "e"); break;
-  case    5: O << (Flavor ? "nz" : "ne"); break;
+  case    3: O << (IsCMPCCXADD ? "nb" : "ae"); break;
+  case    4: O << (IsCMPCCXADD ?  "z" :  "e"); break;
+  case    5: O << (IsCMPCCXADD ? "nz" : "ne"); break;
   case    6: O << "be"; break;
-  case    7: O << (Flavor ? "nbe" : "a"); break;
+  case    7: O << (IsCMPCCXADD ? "nbe" : "a"); break;
   case    8: O << "s";  break;
   case    9: O << "ns"; break;
-  case  0xa: O << "p";  break;
-  case  0xb: O << "np"; break;
+  case  0xa: O << (IsCCMPOrCTEST ? "t" : "p");  break;
+  case  0xb: O << (IsCCMPOrCTEST ? "f" : "np"); break;
   case  0xc: O << "l";  break;
-  case  0xd: O << (Flavor ? "nl" : "ge"); break;
+  case  0xd: O << (IsCMPCCXADD ? "nl" : "ge"); break;
   case  0xe: O << "le"; break;
-  case  0xf: O << (Flavor ? "nle" : "g"); break;
+  case  0xf: O << (IsCMPCCXADD ? "nle" : "g"); break;
   }
+  // clang-format on
+}
+
+void X86InstPrinterCommon::printCondFlags(const MCInst *MI, unsigned Op,
+                                          raw_ostream &O) {
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  int64_t Imm = MI->getOperand(Op).getImm();
+  assert(Imm >= 0 && Imm < 16 && "Invalid condition flags");
+  O << "{dfv=";
+  std::string Flags;
+  if (Imm & 0x8)
+    Flags += "of,";
+  if (Imm & 0x4)
+    Flags += "sf,";
+  if (Imm & 0x2)
+    Flags += "zf,";
+  if (Imm & 0x1)
+    Flags += "cf,";
+  StringRef SimplifiedFlags = StringRef(Flags).rtrim(",");
+  O << SimplifiedFlags << "}";
 }
 
 void X86InstPrinterCommon::printSSEAVXCC(const MCInst *MI, unsigned Op,
@@ -369,14 +394,19 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 
+  if (TSFlags & X86II::EVEX_NF)
+    O << "\t{nf}";
+
   // These all require a pseudo prefix
-  if ((Flags & X86::IP_USE_VEX) || (TSFlags & X86II::ExplicitVEXPrefix))
+  if ((Flags & X86::IP_USE_VEX) ||
+      (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix)
     O << "\t{vex}";
   else if (Flags & X86::IP_USE_VEX2)
     O << "\t{vex2}";
   else if (Flags & X86::IP_USE_VEX3)
     O << "\t{vex3}";
-  else if (Flags & X86::IP_USE_EVEX)
+  else if ((Flags & X86::IP_USE_EVEX) ||
+           (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitEVEXPrefix)
     O << "\t{evex}";
 
   if (Flags & X86::IP_USE_DISP8)

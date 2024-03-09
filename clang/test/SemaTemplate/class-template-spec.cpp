@@ -74,14 +74,14 @@ namespace N {
 // Diagnose specialization errors
 struct A<double> { }; // expected-error{{template specialization requires 'template<>'}}
 
-template<> struct ::A<double>;
+template<> struct ::A<double>; // expected-warning {{extra qualification on member}}
 
 namespace N {
   template<typename T> struct B; // expected-note {{explicitly specialized}}
 
-  template<> struct ::N::B<char>; // okay
-  template<> struct ::N::B<short>; // okay
-  template<> struct ::N::B<int>; // okay
+  template<> struct ::N::B<char>; // expected-warning {{extra qualification on member}}
+  template<> struct ::N::B<short>; // expected-warning {{extra qualification on member}}
+  template<> struct ::N::B<int>; // expected-warning {{extra qualification on member}}
 
   int f(int);
 }

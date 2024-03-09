@@ -19,6 +19,7 @@
 
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 
 #include "almost_satisfies_types.h"
@@ -87,7 +88,7 @@ constexpr void test_iterators() {
     }
   }
 
-  { // check that it's partitoned if the predicate is true for all elements
+  { // check that it's partitioned if the predicate is true for all elements
     {
       int a[] = {1, 2, 3, 4};
       auto ret = std::ranges::is_partitioned(Iter(a), Sent(Iter(a + 4)), [](int) { return true; });
@@ -131,13 +132,13 @@ constexpr void test_iterators() {
 
   { // check that an empty range is partitioned
     {
-      int a[] = {};
-      auto ret = std::ranges::is_partitioned(Iter(a), Sent(Iter(a)), [](int i) { return i < 3; });
+      std::array<int, 0> a = {};
+      auto ret = std::ranges::is_partitioned(Iter(a.data()), Sent(Iter(a.data())), [](int i) { return i < 3; });
       assert(ret);
     }
     {
-      int a[] = {};
-      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a)));
+      std::array<int, 0> a = {};
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       auto ret = std::ranges::is_partitioned(range, [](int i) { return i < 3; });
       assert(ret);
     }

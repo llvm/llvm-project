@@ -86,12 +86,12 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
   while (true) {
     E = E->IgnoreParens();
 
-    if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
+    if (const auto *CE = dyn_cast<CastExpr>(E)) {
       if ((CE->getCastKind() == CK_DerivedToBase ||
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        auto *Derived =
+        const auto *Derived =
             cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
@@ -101,10 +101,10 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
         E = CE->getSubExpr();
         continue;
       }
-    } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+    } else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
         assert(ME->getBase()->getType()->isRecordType());
-        if (FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+        if (const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();
             Adjustments.push_back(SubobjectAdjustment(Field));
@@ -112,12 +112,11 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
           }
         }
       }
-    } else if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
+    } else if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
       if (BO->getOpcode() == BO_PtrMemD) {
         assert(BO->getRHS()->isPRValue());
         E = BO->getLHS();
-        const MemberPointerType *MPT =
-          BO->getRHS()->getType()->getAs<MemberPointerType>();
+        const auto *MPT = BO->getRHS()->getType()->getAs<MemberPointerType>();
         Adjustments.push_back(SubobjectAdjustment(MPT, BO->getRHS()));
         continue;
       }
@@ -262,6 +261,14 @@ namespace {
                                 SourceLocation (Expr::*v)() const) {
     return static_cast<const E *>(expr)->getBeginLoc();
   }
+}
+
+QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
+  if (isa<EnumType>(this->getType()))
+    return this->getType();
+  else if (const auto *ECD = this->getEnumConstantDecl())
+    return Ctx.getTypeDeclType(cast<EnumDecl>(ECD->getDeclContext()));
+  return this->getType();
 }
 
 SourceLocation Expr::getExprLoc() const {
@@ -690,7 +697,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
 
         if (!Buffer.empty() && Buffer.front() == '\01')
           return std::string(Buffer.substr(1));
-        return std::string(Buffer.str());
+        return std::string(Buffer);
       }
       return std::string(ND->getIdentifier()->getName());
     }
@@ -986,7 +993,7 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   SmallString<64> S;
   FixedPointValueToString(
       S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
-  return std::string(S.str());
+  return std::string(S);
 }
 
 void CharacterLiteral::print(unsigned Val, CharacterLiteralKind Kind,
@@ -1898,6 +1905,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -2219,7 +2227,10 @@ SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
     : Expr(SourceLocExprClass, ResultTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
   SourceLocExprBits.Kind = llvm::to_underlying(Kind);
-  setDependence(ExprDependence::None);
+  // In dependent contexts, function names may change.
+  setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext()
+                    ? ExprDependence::Value
+                    : ExprDependence::None);
 }
 
 StringRef SourceLocExpr::getBuiltinStr() const {
@@ -3326,6 +3337,12 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
            DIUE->getUpdater()->isConstantInitializer(Ctx, false, Culprit);
   }
   case InitListExprClass: {
+    // C++ [dcl.init.aggr]p2:
+    //   The elements of an aggregate are:
+    //   - for an array, the array elements in increasing subscript order, or
+    //   - for a class, the direct base classes in declaration order, followed
+    //     by the direct non-static data members (11.4) that are not members of
+    //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
     if (ILE->getType()->isArrayType()) {
@@ -3340,6 +3357,19 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
       RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+
+      // In C++17, bases were added to the list of members used by aggregate
+      // initialization.
+      if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (unsigned i = 0, e = CXXRD->getNumBases(); i < e; i++) {
+          if (ElementNo < ILE->getNumInits()) {
+            const Expr *Elt = ILE->getInit(ElementNo++);
+            if (!Elt->isConstantInitializer(Ctx, false, Culprit))
+              return false;
+          }
+        }
+      }
+
       for (const auto *Field : RD->fields()) {
         // If this is a union, skip all the fields that aren't being initialized.
         if (RD->isUnion() && ILE->getInitializedFieldInUnion() != Field)
@@ -3393,6 +3423,11 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     if (Exp->getOpcode() == UO_Extension)
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
+  }
+  case PackIndexingExprClass: {
+    return cast<PackIndexingExpr>(this)
+        ->getSelectedExpr()
+        ->isConstantInitializer(Ctx, false, Culprit);
   }
   case CXXFunctionalCastExprClass:
   case CXXStaticCastExprClass:
@@ -3569,6 +3604,9 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     // These never have a side-effect.
     return false;
 
+  case PackIndexingExprClass:
+    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(
@@ -4065,6 +4103,13 @@ FieldDecl *Expr::getSourceBitField() {
     if (UnOp->isPrefix() && UnOp->isIncrementDecrementOp())
       return UnOp->getSubExpr()->getSourceBitField();
 
+  return nullptr;
+}
+
+EnumConstantDecl *Expr::getEnumConstantDecl() {
+  Expr *E = this->IgnoreParenImpCasts();
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<EnumConstantDecl>(DRE->getDecl());
   return nullptr;
 }
 
@@ -4887,6 +4932,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_load_n:
     return 2;
 
+  case AO__scoped_atomic_load_n:
   case AO__opencl_atomic_load:
   case AO__hip_atomic_load:
   case AO__c11_atomic_store:
@@ -4921,6 +4967,26 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_fetch_max:
     return 3;
 
+  case AO__scoped_atomic_load:
+  case AO__scoped_atomic_store:
+  case AO__scoped_atomic_store_n:
+  case AO__scoped_atomic_fetch_add:
+  case AO__scoped_atomic_fetch_sub:
+  case AO__scoped_atomic_fetch_and:
+  case AO__scoped_atomic_fetch_or:
+  case AO__scoped_atomic_fetch_xor:
+  case AO__scoped_atomic_fetch_nand:
+  case AO__scoped_atomic_add_fetch:
+  case AO__scoped_atomic_sub_fetch:
+  case AO__scoped_atomic_and_fetch:
+  case AO__scoped_atomic_or_fetch:
+  case AO__scoped_atomic_xor_fetch:
+  case AO__scoped_atomic_nand_fetch:
+  case AO__scoped_atomic_min_fetch:
+  case AO__scoped_atomic_max_fetch:
+  case AO__scoped_atomic_fetch_min:
+  case AO__scoped_atomic_fetch_max:
+  case AO__scoped_atomic_exchange_n:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:
@@ -4942,6 +5008,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_exchange:
     return 4;
 
+  case AO__scoped_atomic_exchange:
   case AO__c11_atomic_compare_exchange_strong:
   case AO__c11_atomic_compare_exchange_weak:
     return 5;
@@ -4952,6 +5019,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_compare_exchange:
   case AO__atomic_compare_exchange_n:
     return 6;
+
+  case AO__scoped_atomic_compare_exchange:
+  case AO__scoped_atomic_compare_exchange_n:
+    return 7;
   }
   llvm_unreachable("unknown atomic op");
 }

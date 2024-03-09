@@ -15,12 +15,10 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -100,14 +98,22 @@ protected:
       : Quantity(Quantity), Scalable(Scalable) {}
 
   friend constexpr LeafTy &operator+=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity += RHS.Quantity;
+    if (!RHS.isZero())
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
   friend constexpr LeafTy &operator-=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity -= RHS.Quantity;
+    if (!RHS.isZero())
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
@@ -327,6 +333,7 @@ public:
   static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
+  static constexpr TypeSize getZero() { return TypeSize(0, false); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

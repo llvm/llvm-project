@@ -132,7 +132,8 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 } // anonymous namespace
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
+IncrementalCompilerBuilder::create(std::string TT,
+                                   std::vector<const char *> &ClangArgv) {
 
   // If we don't know ClangArgv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
@@ -162,8 +163,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
-  driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
-                        llvm::sys::getProcessTriple(), Diags);
+  driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
   llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
@@ -185,7 +185,8 @@ IncrementalCompilerBuilder::CreateCpp() {
   Argv.push_back("-xc++");
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
-  return IncrementalCompilerBuilder::create(Argv);
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+  return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -213,7 +214,8 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
-  return IncrementalCompilerBuilder::create(Argv);
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+  return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -248,7 +250,7 @@ Interpreter::~Interpreter() {
 // can't find the precise resource directory in unittests so we have to hard
 // code them.
 const char *const Runtimes = R"(
-    void* operator new(__SIZE_TYPE__, void* __p) noexcept;
+#ifdef __cplusplus
     void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*);
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, void*);
@@ -256,15 +258,18 @@ const char *const Runtimes = R"(
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, double);
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, long double);
     void __clang_Interpreter_SetValueNoAlloc(void*,void*,void*,unsigned long long);
+    struct __clang_Interpreter_NewTag{} __ci_newtag;
+    void* operator new(__SIZE_TYPE__, void* __p, __clang_Interpreter_NewTag) noexcept;
     template <class T, class = T (*)() /*disable for arrays*/>
     void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size) {
       for (auto Idx = 0; Idx < Size; ++Idx)
-        new ((void*)(((T*)Placement) + Idx)) T(Src[Idx]);
+        new ((void*)(((T*)Placement) + Idx), __ci_newtag) T(Src[Idx]);
     }
     template <class T, unsigned long N>
     void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size) {
       __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
     }
+#endif // __cplusplus
 )";
 
 llvm::Expected<std::unique_ptr<Interpreter>>
@@ -279,7 +284,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
   if (!PTU)
     return PTU.takeError();
 
-  Interp->ValuePrintingInfo.resize(3);
+  Interp->ValuePrintingInfo.resize(4);
   // FIXME: This is a ugly hack. Undo command checks its availability by looking
   // at the size of the PTU list. However we have parsed something in the
   // beginning of the REPL so we have to mark them as 'Irrevocable'.
@@ -316,6 +321,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 }
 
 const CompilerInstance *Interpreter::getCompilerInstance() const {
+  return IncrParser->getCI();
+}
+
+CompilerInstance *Interpreter::getCompilerInstance() {
   return IncrParser->getCI();
 }
 
@@ -496,7 +505,7 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) {
 static constexpr llvm::StringRef MagicRuntimeInterface[] = {
     "__clang_Interpreter_SetValueNoAlloc",
     "__clang_Interpreter_SetValueWithAlloc",
-    "__clang_Interpreter_SetValueCopyArr"};
+    "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
 
 bool Interpreter::FindRuntimeInterface() {
   if (llvm::all_of(ValuePrintingInfo, [](Expr *E) { return E != nullptr; }))
@@ -525,6 +534,9 @@ bool Interpreter::FindRuntimeInterface() {
     return false;
   if (!LookupInterface(ValuePrintingInfo[CopyArray],
                        MagicRuntimeInterface[CopyArray]))
+    return false;
+  if (!LookupInterface(ValuePrintingInfo[NewTag],
+                       MagicRuntimeInterface[NewTag]))
     return false;
   return true;
 }
@@ -603,7 +615,9 @@ public:
                 .getValuePrintingInfo()[Interpreter::InterfaceKind::CopyArray],
             SourceLocation(), Args, SourceLocation());
       }
-      Expr *Args[] = {AllocCall.get()};
+      Expr *Args[] = {
+          AllocCall.get(),
+          Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NewTag]};
       ExprResult CXXNewCall = S.BuildCXXNew(
           E->getSourceRange(),
           /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(), Args,
@@ -624,8 +638,9 @@ public:
           Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NoAlloc],
           E->getBeginLoc(), Args, E->getEndLoc());
     }
+    default:
+      llvm_unreachable("Unhandled Interpreter::InterfaceKind");
     }
-    llvm_unreachable("Unhandled Interpreter::InterfaceKind");
   }
 
   Interpreter::InterfaceKind VisitRecordType(const RecordType *Ty) {
@@ -809,4 +824,16 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
   Value &VRef = *(Value *)OutVal;
   VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
   VRef.setLongDouble(Val);
+}
+
+// A trampoline to work around the fact that operator placement new cannot
+// really be forward declared due to libc++ and libstdc++ declaration mismatch.
+// FIXME: __clang_Interpreter_NewTag is ODR violation because we get the same
+// definition in the interpreter runtime. We should move it in a runtime header
+// which gets included by the interpreter and here.
+struct __clang_Interpreter_NewTag {};
+REPL_EXTERNAL_VISIBILITY void *
+operator new(size_t __sz, void *__p, __clang_Interpreter_NewTag) noexcept {
+  // Just forward to the standard operator placement new.
+  return operator new(__sz, __p);
 }

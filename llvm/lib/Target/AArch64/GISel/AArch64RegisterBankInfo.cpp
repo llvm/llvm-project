@@ -273,7 +273,9 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::GPR64common_and_GPR64noipRegClassID:
   case AArch64::GPR64noip_and_tcGPR64RegClassID:
   case AArch64::tcGPR64RegClassID:
-  case AArch64::rtcGPR64RegClassID:
+  case AArch64::tcGPRx16x17RegClassID:
+  case AArch64::tcGPRx17RegClassID:
+  case AArch64::tcGPRnotx16RegClassID:
   case AArch64::WSeqPairsClassRegClassID:
   case AArch64::XSeqPairsClassRegClassID:
   case AArch64::MatrixIndexGPR32_8_11RegClassID:
@@ -621,6 +623,13 @@ bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
   Type *EltTy = nullptr;
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(LdVal)) {
     EltTy = GV->getValueType();
+    // Look at the first element of the struct to determine the type we are
+    // loading
+    while (StructType *StructEltTy = dyn_cast<StructType>(EltTy))
+      EltTy = StructEltTy->getTypeAtIndex(0U);
+    // Look at the first element of the array to determine its type
+    if (isa<ArrayType>(EltTy))
+      EltTy = EltTy->getArrayElementType();
   } else {
     // FIXME: grubbing around uses is pretty ugly, but with no more
     // `getPointerElementType` there's not much else we can do.

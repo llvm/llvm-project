@@ -35,10 +35,13 @@ class MDNode;
 class Module;
 struct AAMDNodes;
 class DPMarker;
+class DbgRecord;
 
 template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
+
+iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange(DPMarker *);
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
@@ -70,22 +73,35 @@ public:
   /// \p InsertAtHead Whether the cloned DPValues should be placed at the end
   ///    or the beginning of existing DPValues attached to this.
   /// \returns A range over the newly cloned DPValues.
-  iterator_range<simple_ilist<DPValue>::iterator> cloneDebugInfoFrom(
+  iterator_range<simple_ilist<DbgRecord>::iterator> cloneDebugInfoFrom(
       const Instruction *From,
-      std::optional<simple_ilist<DPValue>::iterator> FromHere = std::nullopt,
+      std::optional<simple_ilist<DbgRecord>::iterator> FromHere = std::nullopt,
       bool InsertAtHead = false);
 
   /// Return a range over the DPValues attached to this instruction.
-  iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const;
+  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange() const {
+    return llvm::getDbgValueRange(DbgMarker);
+  }
+
+  /// Return an iterator to the position of the "Next" DPValue after this
+  /// instruction, or std::nullopt. This is the position to pass to
+  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
+  std::optional<simple_ilist<DbgRecord>::iterator> getDbgReinsertionPosition();
 
   /// Returns true if any DPValues are attached to this instruction.
   bool hasDbgValues() const;
+
+  /// Transfer any DPValues on the position \p It onto this instruction,
+  /// by simply adopting the sequence of DPValues (which is efficient) if
+  /// possible, by merging two sequences otherwise.
+  void adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
+                      bool InsertAtHead);
 
   /// Erase any DPValues attached to this instruction.
   void dropDbgValues();
 
   /// Erase a single DPValue \p I that is attached to this instruction.
-  void dropOneDbgValue(DPValue *I);
+  void dropOneDbgValue(DbgRecord *I);
 
   /// Handle the debug-info implications of this instruction being removed. Any
   /// attached DPValues need to "fall" down onto the next instruction.
@@ -224,7 +240,7 @@ public:
   /// of cases, e.g. phi nodes or terminators that return values. This function
   /// may return null if the insertion after the definition is not possible,
   /// e.g. due to a catchswitch terminator.
-  Instruction *getInsertionPointAfterDef();
+  std::optional<InstListType::iterator> getInsertionPointAfterDef();
 
   //===--------------------------------------------------------------------===//
   // Subclass classification.
@@ -378,6 +394,9 @@ public:
   /// empty, all meta data will be copied.
   void copyMetadata(const Instruction &SrcInst,
                     ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Erase all metadata that matches the predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
 
   /// If the instruction has "branch_weights" MD_prof metadata and the MDNode
   /// has three operands (including name string), swap the order of the
@@ -988,6 +1007,8 @@ protected:
     setValueSubclassData(Storage);
   }
 
+  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
+              InstListType::iterator InsertBefore);
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
               Instruction *InsertBefore = nullptr);
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,

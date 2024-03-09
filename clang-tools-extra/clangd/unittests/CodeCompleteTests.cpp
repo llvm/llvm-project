@@ -59,7 +59,7 @@ MATCHER_P(named, Name, "") { return arg.Name == Name; }
 MATCHER_P(mainFileRefs, Refs, "") { return arg.MainFileRefs == Refs; }
 MATCHER_P(scopeRefs, Refs, "") { return arg.ScopeRefsInFile == Refs; }
 MATCHER_P(nameStartsWith, Prefix, "") {
-  return llvm::StringRef(arg.Name).startswith(Prefix);
+  return llvm::StringRef(arg.Name).starts_with(Prefix);
 }
 MATCHER_P(filterText, F, "") { return arg.FilterText == F; }
 MATCHER_P(scope, S, "") { return arg.Scope == S; }
@@ -1462,6 +1462,23 @@ TEST(SignatureHelpTest, FunctionPointers) {
     typedef void (__stdcall *fn)(int x, int y);
     fn foo;
     int main() { foo(^); }
+  )cpp",
+      // Field of function pointer type
+      R"cpp(
+    struct S {
+      void (*foo)(int x, int y);
+    };
+    S s;
+    int main() { s.foo(^); }
+  )cpp",
+      // Field of function pointer typedef type
+      R"cpp(
+    typedef void (*fn)(int x, int y);
+    struct S {
+      fn foo;
+    };
+    S s;
+    int main() { s.foo(^); }
   )cpp"};
   for (auto Test : Tests)
     EXPECT_THAT(signatures(Test).signatures,

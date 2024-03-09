@@ -62,6 +62,8 @@ struct ContractionDimensions {
 /// `k`, indices are returned in sorted order.
 /// Returns a failure if any of `m`, `n` or `k` is empty.
 FailureOr<ContractionDimensions> inferContractionDims(LinalgOp linalgOp);
+FailureOr<ContractionDimensions>
+inferContractionDims(ArrayRef<AffineMap> indexingMaps);
 
 /// Checks whether `linalgOp` conforms to ContractionOpInterface.
 // TODO: embed within `isa<ContractionOpInterface>` if possible / natural.

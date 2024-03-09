@@ -698,7 +698,7 @@ declare <vscale x 16 x double> @llvm.experimental.vp.strided.load.nxv16f64.p0.i6
 ; NOTE: We can't return <vscale x 17 x double> as that introduces a vector
 ; store that can't yet be legalized through widening. In order to test purely
 ; the vp.strided.load legalization, we manually split it.
-define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vscale x 17 x i1> %mask, i32 zeroext %evl, <vscale x 1 x double>* %hi_ptr) {
+define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vscale x 17 x i1> %mask, i32 zeroext %evl, ptr %hi_ptr) {
 ; CHECK-RV32-LABEL: strided_load_nxv17f64:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    csrr a2, vlenb
@@ -795,7 +795,7 @@ define <vscale x 16 x double> @strided_load_nxv17f64(ptr %ptr, i64 %stride, <vsc
   %v = call <vscale x 17 x double> @llvm.experimental.vp.strided.load.nxv17f64.p0.i64(ptr %ptr, i64 %stride, <vscale x 17 x i1> %mask, i32 %evl)
   %lo = call <vscale x 16 x double> @llvm.experimental.vector.extract.nxv16f64(<vscale x 17 x double> %v, i64 0)
   %hi = call <vscale x 1 x double> @llvm.experimental.vector.extract.nxv1f64(<vscale x 17 x double> %v, i64 16)
-  store <vscale x 1 x double> %hi, <vscale x 1 x double>* %hi_ptr
+  store <vscale x 1 x double> %hi, ptr %hi_ptr
   ret <vscale x 16 x double> %lo
 }
 

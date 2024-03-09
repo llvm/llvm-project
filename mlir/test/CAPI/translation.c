@@ -55,6 +55,7 @@ static void testToLLVMIR(MlirContext ctx) {
 
   LLVMDisposeModule(llvmModule);
   mlirModuleDestroy(module);
+  LLVMContextDispose(llvmCtx);
 }
 
 int main(void) {

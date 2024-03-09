@@ -159,51 +159,6 @@ static std::string getDeviceLibraryFileName(StringRef BundleFileName,
   return Result;
 }
 
-/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
-/// target \p TargetInfo.
-/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
-bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
-                            const OffloadTargetInfo &TargetInfo) {
-
-  // Compatible in case of exact match.
-  if (CodeObjectInfo == TargetInfo) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-    return true;
-  }
-
-  // Incompatible if Kinds or Triples mismatch.
-  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
-      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
-    DEBUG_WITH_TYPE(
-        "CodeObjectCompatibility",
-        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
-               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-               << "]\n");
-    return false;
-  }
-
-  // Incompatible if target IDs are incompatible.
-  if (!clang::isCompatibleTargetID(CodeObjectInfo.TargetID,
-                                   TargetInfo.TargetID)) {
-    DEBUG_WITH_TYPE(
-        "CodeObjectCompatibility",
-        dbgs() << "Incompatible: target IDs are incompatible \t[CodeObject: "
-               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-               << "]\n");
-    return false;
-  }
-
-  DEBUG_WITH_TYPE(
-      "CodeObjectCompatibility",
-      dbgs() << "Compatible: Code Objects are compatible \t[CodeObject: "
-             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-             << "]\n");
-  return true;
-}
-
 namespace {
 /// Generic file handler interface.
 class FileHandler {
@@ -257,6 +212,20 @@ public:
       return Err;
     return forEachBundle(Input, [&](const BundleInfo &Info) -> Error {
       llvm::outs() << Info.BundleID << '\n';
+      Error Err = listBundleIDsCallback(Input, Info);
+      if (Err)
+        return Err;
+      return Error::success();
+    });
+  }
+
+  /// Get bundle IDs in \a Input in \a BundleIds.
+  virtual Error getBundleIDs(MemoryBuffer &Input,
+                             std::set<StringRef> &BundleIds) {
+    if (Error Err = ReadHeader(Input))
+      return Err;
+    return forEachBundle(Input, [&](const BundleInfo &Info) -> Error {
+      BundleIds.insert(Info.BundleID);
       Error Err = listBundleIDsCallback(Input, Info);
       if (Err)
         return Err;
@@ -619,8 +588,16 @@ public:
     StringRef Content = *ContentOrErr;
 
     // Copy fat object contents to the output when extracting host bundle.
-    if (Content.size() == 1u && Content.front() == 0)
-      Content = StringRef(Input.getBufferStart(), Input.getBufferSize());
+    std::string ModifiedContent;
+    if (Content.size() == 1u && Content.front() == 0) {
+      auto HostBundleOrErr = getHostBundle(
+          StringRef(Input.getBufferStart(), Input.getBufferSize()));
+      if (!HostBundleOrErr)
+        return HostBundleOrErr.takeError();
+
+      ModifiedContent = std::move(*HostBundleOrErr);
+      Content = ModifiedContent;
+    }
 
     OS.write(Content.data(), Content.size());
     return Error::success();
@@ -722,6 +699,52 @@ private:
                                  "'llvm-objcopy' tool failed");
     }
     return Error::success();
+  }
+
+  Expected<std::string> getHostBundle(StringRef Input) {
+    TempFileHandlerRAII TempFiles;
+
+    auto ModifiedObjPathOrErr = TempFiles.Create(std::nullopt);
+    if (!ModifiedObjPathOrErr)
+      return ModifiedObjPathOrErr.takeError();
+    StringRef ModifiedObjPath = *ModifiedObjPathOrErr;
+
+    BumpPtrAllocator Alloc;
+    StringSaver SS{Alloc};
+    SmallVector<StringRef, 16> ObjcopyArgs{"llvm-objcopy"};
+
+    ObjcopyArgs.push_back("--regex");
+    ObjcopyArgs.push_back("--remove-section=__CLANG_OFFLOAD_BUNDLE__.*");
+    ObjcopyArgs.push_back("--");
+
+    StringRef ObjcopyInputFileName;
+    // When unbundling an archive, the content of each object file in the
+    // archive is passed to this function by parameter Input, which is different
+    // from the content of the original input archive file, therefore it needs
+    // to be saved to a temporary file before passed to llvm-objcopy. Otherwise,
+    // Input is the same as the content of the original input file, therefore
+    // temporary file is not needed.
+    if (StringRef(BundlerConfig.FilesType).starts_with("a")) {
+      auto InputFileOrErr =
+          TempFiles.Create(ArrayRef<char>(Input.data(), Input.size()));
+      if (!InputFileOrErr)
+        return InputFileOrErr.takeError();
+      ObjcopyInputFileName = *InputFileOrErr;
+    } else
+      ObjcopyInputFileName = BundlerConfig.InputFileNames.front();
+
+    ObjcopyArgs.push_back(ObjcopyInputFileName);
+    ObjcopyArgs.push_back(ModifiedObjPath);
+
+    if (Error Err = executeObjcopy(BundlerConfig.ObjcopyPath, ObjcopyArgs))
+      return std::move(Err);
+
+    auto BufOrErr = MemoryBuffer::getFile(ModifiedObjPath);
+    if (!BufOrErr)
+      return createStringError(BufOrErr.getError(),
+                               "Failed to read back the modified object file");
+
+    return BufOrErr->get()->getBuffer().str();
   }
 };
 
@@ -1112,6 +1135,99 @@ Error OffloadBundler::ListBundleIDsInFile(
   return FH->listBundleIDs(DecompressedInput);
 }
 
+/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
+/// target \p TargetInfo.
+/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
+bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
+                            const OffloadTargetInfo &TargetInfo) {
+
+  // Compatible in case of exact match.
+  if (CodeObjectInfo == TargetInfo) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return true;
+  }
+
+  // Incompatible if Kinds or Triples mismatch.
+  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
+      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
+               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+               << "]\n");
+    return false;
+  }
+
+  // Incompatible if Processors mismatch.
+  llvm::StringMap<bool> CodeObjectFeatureMap, TargetFeatureMap;
+  std::optional<StringRef> CodeObjectProc = clang::parseTargetID(
+      CodeObjectInfo.Triple, CodeObjectInfo.TargetID, &CodeObjectFeatureMap);
+  std::optional<StringRef> TargetProc = clang::parseTargetID(
+      TargetInfo.Triple, TargetInfo.TargetID, &TargetFeatureMap);
+
+  // Both TargetProc and CodeObjectProc can't be empty here.
+  if (!TargetProc || !CodeObjectProc ||
+      CodeObjectProc.value() != TargetProc.value()) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Incompatible: Processor mismatch \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return false;
+  }
+
+  // Incompatible if CodeObject has more features than Target, irrespective of
+  // type or sign of features.
+  if (CodeObjectFeatureMap.getNumItems() > TargetFeatureMap.getNumItems()) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Incompatible: CodeObject has more features "
+                              "than target \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return false;
+  }
+
+  // Compatible if each target feature specified by target is compatible with
+  // target feature of code object. The target feature is compatible if the
+  // code object does not specify it (meaning Any), or if it specifies it
+  // with the same value (meaning On or Off).
+  for (const auto &CodeObjectFeature : CodeObjectFeatureMap) {
+    auto TargetFeature = TargetFeatureMap.find(CodeObjectFeature.getKey());
+    if (TargetFeature == TargetFeatureMap.end()) {
+      DEBUG_WITH_TYPE(
+          "CodeObjectCompatibility",
+          dbgs()
+              << "Incompatible: Value of CodeObject's non-ANY feature is "
+                 "not matching with Target feature's ANY value \t[CodeObject: "
+              << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+              << "]\n");
+      return false;
+    } else if (TargetFeature->getValue() != CodeObjectFeature.getValue()) {
+      DEBUG_WITH_TYPE(
+          "CodeObjectCompatibility",
+          dbgs() << "Incompatible: Value of CodeObject's non-ANY feature is "
+                    "not matching with Target feature's non-ANY value "
+                    "\t[CodeObject: "
+                 << CodeObjectInfo.str()
+                 << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+      return false;
+    }
+  }
+
+  // CodeObject is compatible if all features of Target are:
+  //   - either, present in the Code Object's features map with the same sign,
+  //   - or, the feature is missing from CodeObjects's features map i.e. it is
+  //   set to ANY
+  DEBUG_WITH_TYPE(
+      "CodeObjectCompatibility",
+      dbgs() << "Compatible: Target IDs are compatible \t[CodeObject: "
+             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+             << "]\n");
+  return true;
+}
+
 /// Bundle the files. Return true if an error was found.
 Error OffloadBundler::BundleFiles() {
   std::error_code EC;
@@ -1353,13 +1469,81 @@ getCompatibleOffloadTargets(OffloadTargetInfo &CodeObjectInfo,
   return !CompatibleTargets.empty();
 }
 
+// Check that each code object file in the input archive conforms to following
+// rule: for a specific processor, a feature either shows up in all target IDs,
+// or does not show up in any target IDs. Otherwise the target ID combination is
+// invalid.
+static Error
+CheckHeterogeneousArchive(StringRef ArchiveName,
+                          const OffloadBundlerConfig &BundlerConfig) {
+  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(ArchiveName, true, false);
+  if (std::error_code EC = BufOrErr.getError())
+    return createFileError(ArchiveName, EC);
+
+  ArchiveBuffers.push_back(std::move(*BufOrErr));
+  Expected<std::unique_ptr<llvm::object::Archive>> LibOrErr =
+      Archive::create(ArchiveBuffers.back()->getMemBufferRef());
+  if (!LibOrErr)
+    return LibOrErr.takeError();
+
+  auto Archive = std::move(*LibOrErr);
+
+  Error ArchiveErr = Error::success();
+  auto ChildEnd = Archive->child_end();
+
+  /// Iterate over all bundled code object files in the input archive.
+  for (auto ArchiveIter = Archive->child_begin(ArchiveErr);
+       ArchiveIter != ChildEnd; ++ArchiveIter) {
+    if (ArchiveErr)
+      return ArchiveErr;
+    auto ArchiveChildNameOrErr = (*ArchiveIter).getName();
+    if (!ArchiveChildNameOrErr)
+      return ArchiveChildNameOrErr.takeError();
+
+    auto CodeObjectBufferRefOrErr = (*ArchiveIter).getMemoryBufferRef();
+    if (!CodeObjectBufferRefOrErr)
+      return CodeObjectBufferRefOrErr.takeError();
+
+    auto CodeObjectBuffer =
+        MemoryBuffer::getMemBuffer(*CodeObjectBufferRefOrErr, false);
+
+    Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+        CreateFileHandler(*CodeObjectBuffer, BundlerConfig);
+    if (!FileHandlerOrErr)
+      return FileHandlerOrErr.takeError();
+
+    std::unique_ptr<FileHandler> &FileHandler = *FileHandlerOrErr;
+    assert(FileHandler);
+
+    std::set<StringRef> BundleIds;
+    auto CodeObjectFileError =
+        FileHandler->getBundleIDs(*CodeObjectBuffer, BundleIds);
+    if (CodeObjectFileError)
+      return CodeObjectFileError;
+
+    auto &&ConflictingArchs = clang::getConflictTargetIDCombination(BundleIds);
+    if (ConflictingArchs) {
+      std::string ErrMsg =
+          Twine("conflicting TargetIDs [" + ConflictingArchs.value().first +
+                ", " + ConflictingArchs.value().second + "] found in " +
+                ArchiveChildNameOrErr.get() + " of " + ArchiveName)
+              .str();
+      return createStringError(inconvertibleErrorCode(), ErrMsg);
+    }
+  }
+
+  return ArchiveErr;
+}
+
 /// UnbundleArchive takes an archive file (".a") as input containing bundled
 /// code object files, and a list of offload targets (not host), and extracts
 /// the code objects into a new archive file for each offload target. Each
 /// resulting archive file contains all code object files corresponding to that
 /// particular offload target. The created archive file does not
 /// contain an index of the symbols and code object files are named as
-/// <<Parent Bundle Name>-<CodeObject's GPUArch>>, with ':' replaced with '_'.
+/// <<Parent Bundle Name>-<CodeObject's TargetID>>, with ':' replaced with '_'.
 Error OffloadBundler::UnbundleArchive() {
   std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 
@@ -1377,6 +1561,16 @@ Error OffloadBundler::UnbundleArchive() {
   }
 
   StringRef IFName = BundlerConfig.InputFileNames.front();
+
+  if (BundlerConfig.CheckInputArchive) {
+    // For a specific processor, a feature either shows up in all target IDs, or
+    // does not show up in any target IDs. Otherwise the target ID combination
+    // is invalid.
+    auto ArchiveError = CheckHeterogeneousArchive(IFName, BundlerConfig);
+    if (ArchiveError) {
+      return ArchiveError;
+    }
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getFileOrSTDIN(IFName, true, false);
@@ -1452,10 +1646,8 @@ Error OffloadBundler::UnbundleArchive() {
     while (!CodeObject.empty()) {
       SmallVector<StringRef> CompatibleTargets;
       auto CodeObjectInfo = OffloadTargetInfo(CodeObject, BundlerConfig);
-      if (CodeObjectInfo.hasHostKind()) {
-        // Do nothing, we don't extract host code yet.
-      } else if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
-                                             BundlerConfig)) {
+      if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
+                                      BundlerConfig)) {
         std::string BundleData;
         raw_string_ostream DataStream(BundleData);
         if (Error Err = FileHandler->ReadBundle(DataStream, CodeObjectBuffer))

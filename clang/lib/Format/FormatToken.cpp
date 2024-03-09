@@ -100,8 +100,7 @@ bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
          (is(tok::l_brace) &&
           (getBlockKind() == BK_Block || is(TT_DictLiteral) ||
            (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
-         (is(tok::less) && (Style.Language == FormatStyle::LK_Proto ||
-                            Style.Language == FormatStyle::LK_TextProto));
+         (is(tok::less) && Style.isProto());
 }
 
 TokenRole::~TokenRole() {}
@@ -114,8 +113,8 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   if (!State.NextToken || !State.NextToken->Previous)
     return 0;
 
-  if (Formats.size() == 1)
-    return 0; // Handled by formatFromToken
+  if (Formats.size() <= 1)
+    return 0; // Handled by formatFromToken (1) or avoid severe penalty (0).
 
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
@@ -138,7 +137,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // bin-packed. Add a severe penalty to this so that column layouts are
   // preferred if possible.
   if (!Format)
-    return 10000;
+    return 10'000;
 
   // Format the entire list.
   unsigned Penalty = 0;

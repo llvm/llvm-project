@@ -25,7 +25,6 @@
 //
 // Do the same run, but now with direct IR generation and vectorization.
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
-
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -249,6 +248,9 @@ func.func @entry() {
 
   bufferization.dealloc_tensor %CCCCC_ret : tensor<?x?x?x?x?xf32, #CCCCC>
   bufferization.dealloc_tensor %CDCDC_ret : tensor<?x?x?x?x?xf32, #CDCDC>
+
+  bufferization.dealloc_tensor %1 : tensor<?x?x?x?x?xf32>
+  bufferization.dealloc_tensor %2 : tensor<?x?x?x?x?xf32>
 
   return
 }

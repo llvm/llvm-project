@@ -158,9 +158,11 @@ public:
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
   // Process Watchpoints
-  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
+                          bool notify = true) override;
 
-  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                           bool notify = true) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
 
@@ -299,7 +301,8 @@ protected:
   using FlashRange = FlashRangeVector::Entry;
   FlashRangeVector m_erased_flash_ranges;
 
-  bool m_vfork_in_progress;
+  // Number of vfork() operations being handled.
+  uint32_t m_vfork_in_progress_count;
 
   // Accessors
   bool IsRunning(lldb::StateType state) {

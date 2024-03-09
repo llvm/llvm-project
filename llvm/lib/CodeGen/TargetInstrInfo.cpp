@@ -567,39 +567,27 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
 
 static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
                                     const TargetInstrInfo &TII) {
-  MachineOperand &MO = MI->getOperand(OpNo);
-  const VirtRegInfo &RI = AnalyzeVirtRegInBundle(*MI, MO.getReg());
-
   // If the machine operand is tied, untie it first.
-  if (MO.isTied()) {
+  if (MI->getOperand(OpNo).isTied()) {
     unsigned TiedTo = MI->findTiedOperandIdx(OpNo);
     MI->untieRegOperand(OpNo);
     // Intentional recursion!
     foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
   }
 
-  // Change the operand from a register to a frame index.
-  MO.ChangeToFrameIndex(FI, MO.getTargetFlags());
-
-  SmallVector<MachineOperand, 4> NewOps;
-  TII.getFrameIndexOperands(NewOps);
+  SmallVector<MachineOperand, 5> NewOps;
+  TII.getFrameIndexOperands(NewOps, FI);
   assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
-  MI->insert(MI->operands_begin() + OpNo + 1, NewOps);
+  MI->removeOperand(OpNo);
+  MI->insert(MI->operands_begin() + OpNo, NewOps);
 
   // Change the previous operand to a MemKind InlineAsm::Flag. The second param
   // is the per-target number of operands that represent the memory operand
   // excluding this one (MD). This includes MO.
-  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size() + 1);
+  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
   F.setMemConstraint(InlineAsm::ConstraintCode::m);
   MachineOperand &MD = MI->getOperand(OpNo - 1);
   MD.setImm(F);
-
-  // Update mayload/maystore metadata.
-  MachineOperand &ExtraMO = MI->getOperand(InlineAsm::MIOp_ExtraInfo);
-  if (RI.Reads)
-    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
-  if (RI.Writes)
-    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
 }
 
 // Returns nullptr if not possible to fold.
@@ -619,6 +607,26 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
 
   foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
+
+  // Update mayload/maystore metadata, and memoperands.
+  const VirtRegInfo &RI =
+      AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
+  MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  if (RI.Reads) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
+    Flags |= MachineMemOperand::MOLoad;
+  }
+  if (RI.Writes) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
+    Flags |= MachineMemOperand::MOStore;
+  }
+  MachineFunction *MF = NewMI.getMF();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
+      MFI.getObjectAlign(FI));
+  NewMI.addMemOperand(*MF, MMO);
 
   return &NewMI;
 }
@@ -671,7 +679,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     if (NewMI)
       MBB->insert(MI, NewMI);
   } else if (MI.isInlineAsm()) {
-    NewMI = foldInlineAsmMemOperand(MI, Ops, FI, *this);
+    return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
@@ -744,7 +752,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     if (NewMI)
       NewMI = &*MBB.insert(MI, NewMI);
   } else if (MI.isInlineAsm() && isLoadFromStackSlot(LoadMI, FrameIndex)) {
-    NewMI = foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
+    return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
@@ -1357,7 +1365,7 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  unsigned Width;
+  LocationSize Width = 0;
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
                                      Width, TRI) ||
       BaseOps.size() != 1)
@@ -1370,15 +1378,15 @@ bool TargetInstrInfo::getMemOperandWithOffset(
 //  SelectionDAG latency interface.
 //===----------------------------------------------------------------------===//
 
-int
+std::optional<unsigned>
 TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
                                    SDNode *DefNode, unsigned DefIdx,
                                    SDNode *UseNode, unsigned UseIdx) const {
   if (!ItinData || ItinData->isEmpty())
-    return -1;
+    return std::nullopt;
 
   if (!DefNode->isMachineOpcode())
-    return -1;
+    return std::nullopt;
 
   unsigned DefClass = get(DefNode->getMachineOpcode()).getSchedClass();
   if (!UseNode->isMachineOpcode())
@@ -1387,8 +1395,8 @@ TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
 }
 
-int TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
-                                     SDNode *N) const {
+unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
+                                          SDNode *N) const {
   if (!ItinData || ItinData->isEmpty())
     return 1;
 
@@ -1452,8 +1460,9 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     return false;
 
   unsigned DefClass = DefMI.getDesc().getSchedClass();
-  int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
-  return (DefCycle != -1 && DefCycle <= 1);
+  std::optional<unsigned> DefCycle =
+      ItinData->getOperandCycle(DefClass, DefIdx);
+  return DefCycle && DefCycle <= 1U;
 }
 
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
@@ -1571,11 +1580,9 @@ unsigned TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the
 /// itinerary. This may be overriden by the target.
-int TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                       const MachineInstr &DefMI,
-                                       unsigned DefIdx,
-                                       const MachineInstr &UseMI,
-                                       unsigned UseIdx) const {
+std::optional<unsigned> TargetInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   unsigned UseClass = UseMI.getDesc().getSchedClass();
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);

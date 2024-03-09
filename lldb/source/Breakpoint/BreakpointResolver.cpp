@@ -113,23 +113,23 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   switch (resolver_type) {
   case FileLineResolver:
     result_sp = BreakpointResolverFileLine::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case AddressResolver:
     result_sp = BreakpointResolverAddress::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case NameResolver:
     result_sp = BreakpointResolverName::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case FileRegexResolver:
     result_sp = BreakpointResolverFileRegex::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case PythonResolver:
     result_sp = BreakpointResolverScripted::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case ExceptionResolver:
     error.SetErrorString("Exception resolvers are hard.");
@@ -214,7 +214,8 @@ void BreakpointResolver::SetSCMatchesByLine(
     auto worklist_begin = std::partition(
         all_scs.begin(), all_scs.end(), [&](const SymbolContext &sc) {
           if (sc.line_entry.file == match.line_entry.file ||
-              sc.line_entry.original_file == match.line_entry.original_file) {
+              *sc.line_entry.original_file_sp ==
+                  *match.line_entry.original_file_sp) {
             // When a match is found, keep track of the smallest line number.
             closest_line = std::min(closest_line, sc.line_entry.line);
             return false;

@@ -43,6 +43,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -197,7 +198,7 @@ void Target::DeleteCurrentProcess() {
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
-    m_process_sp->Finalize();
+    m_process_sp->Finalize(false /* not destructing */);
 
     CleanupProcess();
 
@@ -892,6 +893,18 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   if (ABISP abi = m_process_sp->GetABI())
     addr = abi->FixDataAddress(addr);
 
+  // LWP_TODO this sequence is looking for an existing watchpoint
+  // at the exact same user-specified address, disables the new one
+  // if addr/size/type match.  If type/size differ, disable old one.
+  // This isn't correct, we need both watchpoints to use a shared
+  // WatchpointResource in the target, and expand the WatchpointResource
+  // to handle the needs of both Watchpoints.
+  // Also, even if the addresses don't match, they may need to be
+  // supported by the same WatchpointResource, e.g. a watchpoint
+  // watching 1 byte at 0x102 and a watchpoint watching 1 byte at 0x103.
+  // They're in the same word and must be watched by a single hardware
+  // watchpoint register.
+
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
   WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
@@ -907,7 +920,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
       wp_sp->SetEnabled(false, notify);
     } else {
       // Nil the matched watchpoint; we will be creating a new one.
-      m_process_sp->DisableWatchpoint(matched_sp.get(), notify);
+      m_process_sp->DisableWatchpoint(matched_sp, notify);
       m_watchpoint_list.Remove(matched_sp->GetID(), true);
     }
   }
@@ -918,7 +931,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     m_watchpoint_list.Add(wp_sp, true);
   }
 
-  error = m_process_sp->EnableWatchpoint(wp_sp.get(), notify);
+  error = m_process_sp->EnableWatchpoint(wp_sp, notify);
   LLDB_LOGF(log, "Target::%s (creation of watchpoint %s with id = %u)\n",
             __FUNCTION__, error.Success() ? "succeeded" : "failed",
             wp_sp->GetID());
@@ -927,11 +940,6 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     // Enabling the watchpoint on the device side failed. Remove the said
     // watchpoint from the list maintained by the target instance.
     m_watchpoint_list.Remove(wp_sp->GetID(), true);
-    // See if we could provide more helpful error message.
-    if (!OptionGroupWatchpoint::IsWatchSizeSupported(size))
-      error.SetErrorStringWithFormat(
-          "watch size of %" PRIu64 " is not supported", (uint64_t)size);
-
     wp_sp.reset();
   } else
     m_last_created_watchpoint = wp_sp;
@@ -1231,7 +1239,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1260,7 +1268,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1287,7 +1295,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1350,7 +1358,7 @@ bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1369,7 +1377,7 @@ bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1561,14 +1569,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
 
       if (m_arch.GetSpec().IsCompatibleMatch(other)) {
         compatible_local_arch = true;
-        bool arch_changed, vendor_changed, os_changed, os_ver_changed,
-            env_changed;
 
-        m_arch.GetSpec().PiecewiseTripleCompare(other, arch_changed,
-                                                vendor_changed, os_changed,
-                                                os_ver_changed, env_changed);
-
-        if (!arch_changed && !vendor_changed && !os_changed && !env_changed)
+        if (m_arch.GetSpec().GetTriple() == other.GetTriple())
           replace_local_arch = false;
       }
     }
@@ -1697,8 +1699,9 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
-    BroadcastEvent(eBroadcastBitModulesLoaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitModulesLoaded, data_sp);
   }
 }
 
@@ -1712,16 +1715,18 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
 
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
-    BroadcastEvent(eBroadcastBitSymbolsLoaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitSymbolsLoaded, data_sp);
   }
 }
 
 void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
   if (m_valid && module_list.GetSize()) {
     UnloadModuleSections(module_list);
-    BroadcastEvent(eBroadcastBitModulesUnloaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitModulesUnloaded, data_sp);
     m_breakpoint_list.UpdateBreakpoints(module_list, false, delete_locations);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, false,
                                                  delete_locations);
@@ -4223,28 +4228,21 @@ void TargetProperties::UpdateLaunchInfoFromProperties() {
   DisableSTDIOValueChangedCallback();
 }
 
-bool TargetProperties::GetInjectLocalVariables(
-    ExecutionContext *exe_ctx) const {
+std::optional<bool> TargetProperties::GetExperimentalPropertyValue(
+    size_t prop_idx, ExecutionContext *exe_ctx) const {
   const Property *exp_property =
       m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values
-        ->GetPropertyAtIndexAs<bool>(ePropertyInjectLocalVars, exe_ctx)
-        .value_or(true);
-  else
-    return true;
+    return exp_values->GetPropertyAtIndexAs<bool>(prop_idx, exe_ctx);
+  return std::nullopt;
 }
 
-void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
-                                               bool b) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    exp_values->SetPropertyAtIndex(ePropertyInjectLocalVars, true, exe_ctx);
+bool TargetProperties::GetInjectLocalVariables(
+    ExecutionContext *exe_ctx) const {
+  return GetExperimentalPropertyValue(ePropertyInjectLocalVars, exe_ctx)
+      .value_or(true);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
@@ -4952,4 +4950,7 @@ std::recursive_mutex &Target::GetAPIMutex() {
 }
 
 /// Get metrics associated with this target in JSON format.
-llvm::json::Value Target::ReportStatistics() { return m_stats.ToJSON(*this); }
+llvm::json::Value
+Target::ReportStatistics(const lldb_private::StatisticsOptions &options) {
+  return m_stats.ToJSON(*this, options);
+}

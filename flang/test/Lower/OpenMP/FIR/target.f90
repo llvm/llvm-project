@@ -134,6 +134,100 @@ subroutine omp_target_exit_device
 end subroutine omp_target_exit_device
 
 !===============================================================================
+! Target_Update `to` clause
+!===============================================================================
+
+subroutine omp_target_update_to
+   integer :: a(1024)
+
+   !CHECK-DAG: %[[A_ALLOC:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_update_toEa"}
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+
+   !CHECK: %[[TO_MAP:.*]] = omp.map_info var_ptr(%[[A_ALLOC]] : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)
+   !CHECK-SAME: map_clauses(to) capture(ByRef)
+   !CHECK-SAME: bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+
+   !CHECK: omp.target_update_data
+   !CHECK-SAME: motion_entries(%[[TO_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update to(a)
+end subroutine omp_target_update_to
+
+!===============================================================================
+! Target_Update `from` clause
+!===============================================================================
+
+subroutine omp_target_update_from
+   integer :: a(1024)
+
+   !CHECK-DAG: %[[A_ALLOC:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_update_fromEa"}
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+
+   !CHECK: %[[FROM_MAP:.*]] = omp.map_info var_ptr(%[[A_ALLOC]] : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)
+   !CHECK-SAME: map_clauses(from) capture(ByRef)
+   !CHECK-SAME: bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+
+   !CHECK: omp.target_update_data
+   !CHECK-SAME: motion_entries(%[[FROM_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update from(a)
+end subroutine omp_target_update_from
+
+!===============================================================================
+! Target_Update `if` clause
+!===============================================================================
+
+subroutine omp_target_update_if
+   integer :: a(1024)
+   logical :: i
+
+   !CHECK-DAG: %[[A_ALLOC:.*]] = fir.alloca
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+   !CHECK-DAG: %[[COND:.*]] = fir.convert %{{.*}} : (!fir.logical<4>) -> i1
+
+   !CHECK: %[[TO_MAP:.*]] = omp.map_info
+
+   !CHECK: omp.target_update_data if(%[[COND]] : i1)
+   !CHECK-SAME: motion_entries(%[[TO_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update to(a) if(i)
+end subroutine omp_target_update_if
+
+!===============================================================================
+! Target_Update `device` clause
+!===============================================================================
+
+subroutine omp_target_update_device
+   integer :: a(1024)
+
+   !CHECK-DAG: %[[A_ALLOC:.*]] = fir.alloca
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+   !CHECK-DAG: %[[DEVICE:.*]] = arith.constant 1 : i32
+
+   !CHECK: %[[TO_MAP:.*]] = omp.map_info
+
+   !CHECK: omp.target_update_data
+   !CHECK-SAME: device(%[[DEVICE]] : i32)
+   !CHECK-SAME: motion_entries(%[[TO_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update to(a) device(1)
+end subroutine omp_target_update_device
+
+!===============================================================================
+! Target_Update `nowait` clause
+!===============================================================================
+
+subroutine omp_target_update_nowait
+   integer :: a(1024)
+
+   !CHECK-DAG: %[[A_ALLOC:.*]] = fir.alloca
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+
+   !CHECK: %[[TO_MAP:.*]] = omp.map_info
+
+   !CHECK: omp.target_update_data
+   !CHECK-SAME: nowait
+   !CHECK-SAME: motion_entries(%[[TO_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update to(a) nowait
+end subroutine omp_target_update_nowait
+
+!===============================================================================
 ! Target_Data with region
 !===============================================================================
 
@@ -356,8 +450,9 @@ end subroutine omp_target_device_ptr
  subroutine omp_target_device_addr
    integer, pointer :: a
    !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}
-   !CHECK: %[[MAP:.*]] = omp.map_info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
-   !CHECK: omp.target_data map_entries(%[[MAP]] : {{.*}}) use_device_addr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
+   !CHECK: %[[MAP_MEMBERS:.*]] = omp.map_info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, i32) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>) map_clauses(tofrom) capture(ByRef) -> !fir.llvm_ptr<!fir.ref<i32>> {name = ""}
+   !CHECK: %[[MAP:.*]] = omp.map_info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBERS]] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "a"}
+   !CHECK: omp.target_data map_entries(%[[MAP_MEMBERS]], %[[MAP]] : {{.*}}) use_device_addr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
    !$omp target data map(tofrom: a) use_device_addr(a)
    !CHECK: ^bb0(%[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
    !CHECK: {{.*}} = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>

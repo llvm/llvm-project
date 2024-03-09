@@ -33,7 +33,7 @@ bb12:
 }
 
 define i32 @using_alloca() {
-; CHECK-LABEL: define i32 @using_alloca
+; CHECK-LABEL: define noundef i32 @using_alloca
 ; CHECK-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    ret i32 6
@@ -51,7 +51,7 @@ bb:
 }
 
 define i32 @using_malloc() {
-; CHECK-LABEL: define i32 @using_malloc
+; CHECK-LABEL: define noundef i32 @using_malloc
 ; CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    ret i32 6
