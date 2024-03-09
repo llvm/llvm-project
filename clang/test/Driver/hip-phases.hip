@@ -10,14 +10,14 @@
 // Test single gpu architecture with complete compilation.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NRD,OLD %s
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --offload-new-driver --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NRD %s
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 -fgpu-rdc %s 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 -fgpu-rdc %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,RDC %s
 //
 // BIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
@@ -50,7 +50,7 @@
 // Test single gpu architecture up to the assemble phase.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s -S 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM %s
 // ASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // ASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -65,11 +65,11 @@
 // Test two gpu architectures with complete compilation with -fno-gpu-rdc.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=NRD2,NCL2 %s
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -c 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -c 2>&1 \
 // RUN: | FileCheck -check-prefixes=NRD2 %s
 
 // NRD2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
@@ -101,11 +101,11 @@
 // Test two gpu architectures with complete compilation with -fgpu-rdc.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc 2>&1 \
 // RUN: | FileCheck -check-prefixes=RDC2,RCL2 %s
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc -c 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc -c 2>&1 \
 // RUN: | FileCheck -check-prefixes=RDC2,RC2 %s
 
 // RCL2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
@@ -145,7 +145,7 @@
 // Test two gpu architecturess up to the assemble phase.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -S 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM2 %s
 // ASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH1:gfx803]])
 // ASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
@@ -163,7 +163,7 @@
 // compilation mode.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s --cuda-host-only 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN %s
 // HBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // HBIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -177,7 +177,7 @@
 // compilation mode.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s --cuda-host-only -S 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s --cuda-host-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=HASM %s
 // HASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // HASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -190,7 +190,7 @@
 // compilation mode.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-host-only 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN2 %s
 // HBIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // HBIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -205,7 +205,7 @@
 // compilation mode.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-host-only -S \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-host-only -S \
 // RUN: 2>&1 | FileCheck -check-prefixes=HASM2 %s
 // HASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // HASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -218,14 +218,14 @@
 // compilation mode.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN %s
 //
 // Test single gpu architecture with complete compilation in device-only
 // compilation mode with an unused host linker flag.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -Wl,--disable-new-dtags 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s --cuda-device-only -Wl,--disable-new-dtags 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN %s
 
 // DBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
@@ -243,7 +243,7 @@
 // Test single gpu architecture up to the assemble phase in device-only
 // compilation mode.
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -S --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM %s
 // DASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
@@ -258,11 +258,11 @@
 // Test single gpu architecture with compile to relocatable in device-only
 // compilation mode.
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -fhip-emit-relocatable 2>&1 \
 // RUN: | FileCheck -check-prefixes=RELOC %s
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -fhip-emit-relocatable -Wl,--disable-new-dtags \
 // RUN: 2>&1 | FileCheck -check-prefixes=RELOC %s
 //
@@ -279,11 +279,11 @@
 // Test two gpu architectures with compile to relocatable in device-only
 // compilation mode.
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-device-only -fhip-emit-relocatable 2>&1 \
 // RUN: | FileCheck -check-prefixes=RELOC2 %s
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-device-only -fhip-emit-relocatable \
 // RUN: -Wl,--disable-new-dtags 2>&1 | FileCheck -check-prefixes=RELOC2 %s
 //
@@ -307,14 +307,14 @@
 // Test two gpu architectures with complete compilation in device-only
 // compilation mode.
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-device-only \
 // RUN: 2>&1 | FileCheck -check-prefixes=DBIN2 %s
 //
 // Test two gpu architectures with complete compilation in device-only
 // compilation mode with an unused host linker flag.
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-device-only \
 // RUN: -Wl,--disable-new-dtags 2>&1 | FileCheck -check-prefixes=DBIN2 %s
 
@@ -340,19 +340,19 @@
 // Test two gpu architectures up to the assemble phase in device-only
 // compilation mode.
 //
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -S -o %t.s 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM2,DASM2-NOBUNDLE %s
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -S -o %t.s --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM2,DASM2-NOBUNDLE %s
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM2,DASM2-NOBUNDLE %s
-// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -S --gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM2,DASM2-BUNDLE %s
@@ -377,29 +377,29 @@
 // RUN: touch %t/obj1.o %t/obj2.o
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o 2>&1 \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,NL2 %s
 //
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-EM %s
 //
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-DEV %s
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only -Wl,--disable-new-dtags 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,RL2,RL2-DEV %s
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,RL2,RL2-NB %s
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
+// RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only --no-gpu-bundle-output -Wl,--disable-new-dtags 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,RL2,RL2-NB %s
 
@@ -429,12 +429,12 @@
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
-// RUN: --cuda-device-only -E 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -E 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPE,PPEN %s
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
-// RUN: --cuda-device-only -E --no-gpu-bundle-output 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -E --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPE,PPEN %s
 
 // Test one gpu architectures up to the preprocessor expansion output phase in device-only
@@ -442,7 +442,7 @@
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
-// RUN: --cuda-device-only -E --gpu-bundle-output 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -E --gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPE,PPEB %s
 
 // Test two gpu architectures up to the preprocessor expansion output phase in device-only
@@ -450,12 +450,12 @@
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: --cuda-device-only -E 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -E 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPE2,PPE2N %s
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: --cuda-device-only -E --no-gpu-bundle-output 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -E --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPE2,PPE2N %s
 
 // Test two gpu architectures up to the preprocessor expansion output phase in device-only
@@ -463,7 +463,7 @@
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: --cuda-device-only -E --gpu-bundle-output 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -E --gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPE2,PPE2B %s
 
 // Test one gpu architectures up to the LLVM IR output phase in device-only
@@ -471,7 +471,7 @@
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
-// RUN: --cuda-device-only -c -emit-llvm 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -c -emit-llvm 2>&1 \
 // RUN: | FileCheck -check-prefixes=LLVM %s
 
 // Test two gpu architectures up to the LLVM IR output phase in device-only
@@ -479,7 +479,7 @@
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=LLVM2 %s
 
 // Test two gpu architectures up to the LLVM IR output phase in device-only
@@ -487,7 +487,7 @@
 //
 // RUN: %clang -x hip-cpp-output --target=x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
+// RUN: --no-offload-new-driver --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=PPELLVM2 %s
 
 // PPE-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
@@ -542,50 +542,50 @@
 // C++ program should have no offload kind.
 
 // Test compile empty.hip and empty.cpp.
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -c %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -c %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
 
 // Test compile and link empty.hip and empty.cpp.
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
 
 // Test compile and link empty.hip and empty.cpp with --hip-link -fgpu-rdc.
-// RUN: %clang --target=x86_64-unknown-linux-gnu --hip-link -fgpu-rdc \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --hip-link -fgpu-rdc --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu --hip-link -fgpu-rdc \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --hip-link -fgpu-rdc --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
 
 // Test compile and link -x hip empty.hip and -x c++ empty.cpp.
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -x hip %S/Inputs/empty.hip -x c++ %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -x hip %S/Inputs/empty.hip -x c++ %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED-NEG %s
 
 // Test compile and link -x hip empty.hip and empty.cpp.
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2 %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2-NEG %s
 
 // Test compile and link empty.hip and -x hip empty.cpp.
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: %S/Inputs/empty.hip -x hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2 %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN: -x hip %S/Inputs/empty.hip %S/Inputs/empty.cpp 2>&1 | FileCheck -check-prefixes=MIXED2-NEG %s
 
@@ -610,7 +610,7 @@
 // RUN: touch %t/bitcodeA.bc
 // RUN: touch %t/bitcodeB.bc
 // RUN: %clang -ccc-print-phases --hip-link -emit-llvm --cuda-device-only \
-// RUN: --offload-arch=gfx906 %t/bitcodeA.bc %t/bitcodeB.bc 2>&1 \
+// RUN: --no-offload-new-driver --offload-arch=gfx906 %t/bitcodeA.bc %t/bitcodeB.bc 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK %s
 
 // CHECK: [[A0:[0-9]+]]: input, "{{.*}}bitcodeA.bc", ir

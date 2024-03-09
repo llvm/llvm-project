@@ -10,65 +10,65 @@
 // RUN: mkdir -p hipBundled
 // RUN: llvm-ar cr %t/libhipBundled.a %t/dummy.bc
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t -lhipBundled \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -lhipBundled \
 // RUN:   2>&1 | FileCheck -check-prefixes=GNU,GNU1,GNU-L %s
 // RUN: rm -rf hipBundled
 
-// RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t -l:libhipBundled.a \
+// RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 -nogpuinc \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -l:libhipBundled.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=GNU,GNU1,GNU-LA %s
 
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc %t/libhipBundled.a \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc %t/libhipBundled.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=GNU,GNU1,GNU-A %s
 
 // RUN: llvm-ar cr %t/libhipBundled.a.5.2 %t/dummy.bc
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc %t/libhipBundled.a.5.2 \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc %t/libhipBundled.a.5.2 \
 // RUN:   2>&1 | FileCheck -check-prefixes=GNU,GNU2,GNU-A %s
 
 // Check if a file is not an archive, it is not unbundled.
 
 // RUN: touch %t/libNonArchive.a
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t -lNonArchive \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -lNonArchive \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t -l:libNonArchive.a \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -l:libNonArchive.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
 // RUN: not %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc -L%t libNonArchive.a \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t libNonArchive.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
 
 // Check if a file does not exist, it is not unbundled.
 
 // RUN: not %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib -nogpuinc %s -fgpu-rdc %t/NoneExist.a \
+// RUN:   --no-offload-new-driver --target=x86_64-unknown-linux-gnu \
+// RUN:   -nogpuinc -nogpulib %s -fgpu-rdc %t/NoneExist.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONE %s
 
 // Check unbundling archive for MSVC.
 
 // RUN: llvm-ar cr %t/hipBundled2.lib %t/dummy.bc
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-pc-windows-msvc -fuse-ld= \
+// RUN:   --no-offload-new-driver --target=x86_64-pc-windows-msvc -fuse-ld= \
 // RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -lhipBundled2 \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-pc-windows-msvc -fuse-ld= \
+// RUN:   --no-offload-new-driver --target=x86_64-pc-windows-msvc -fuse-ld= \
 // RUN:   -nogpuinc -nogpulib %s -fgpu-rdc -L%t -l:hipBundled2.lib \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   --target=x86_64-pc-windows-msvc -fuse-ld= \
+// RUN:   --no-offload-new-driver --target=x86_64-pc-windows-msvc -fuse-ld= \
 // RUN:   -nogpuinc -nogpulib %s -fgpu-rdc %t/hipBundled2.lib \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
