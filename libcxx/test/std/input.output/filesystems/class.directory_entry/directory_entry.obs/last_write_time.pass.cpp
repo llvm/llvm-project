@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: host-can-create-symlinks
+// REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 
 // The string reported on errors changed, which makes those tests fail when run

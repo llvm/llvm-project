@@ -503,7 +503,7 @@ def check_unprivileged_symlinks(cfg):
 
 DEFAULT_FEATURES += [
     Feature(
-        name="host-can-create-symlinks",
+        name="can-create-symlinks",
         when=check_unprivileged_symlinks,
     )
 ]

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: host-can-create-symlinks
+// REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
