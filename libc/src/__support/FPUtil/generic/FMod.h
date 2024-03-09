@@ -117,10 +117,57 @@ namespace generic {
 // be implemented in another handler.
 // Signaling NaN converted to quiet NaN with FE_INVALID exception.
 //    https://www.open-std.org/JTC1/SC22/WG14/www/docs/n1011.htm
-template <typename T> struct FModExceptionalInputHandler {
+template <typename T> struct FModDivisionSimpleHelper {
+  LIBC_INLINE constexpr static T execute(int exp_diff, int sides_zeroes_count,
+                                         T m_x, T m_y) {
+    while (exp_diff > sides_zeroes_count) {
+      exp_diff -= sides_zeroes_count;
+      m_x <<= sides_zeroes_count;
+      m_x %= m_y;
+    }
+    m_x <<= exp_diff;
+    m_x %= m_y;
+    return m_x;
+  }
+};
 
-  static_assert(cpp::is_floating_point_v<T>,
-                "FModCStandardWrapper instantiated with invalid type.");
+template <typename T> struct FModDivisionInvMultHelper {
+  LIBC_INLINE constexpr static T execute(int exp_diff, int sides_zeroes_count,
+                                         T m_x, T m_y) {
+    constexpr int LENGTH = sizeof(T) * CHAR_BIT;
+    if (exp_diff > sides_zeroes_count) {
+      T inv_hy = (cpp::numeric_limits<T>::max() / m_y);
+      while (exp_diff > sides_zeroes_count) {
+        exp_diff -= sides_zeroes_count;
+        T hd = (m_x * inv_hy) >> (LENGTH - sides_zeroes_count);
+        m_x <<= sides_zeroes_count;
+        m_x -= hd * m_y;
+        while (LIBC_UNLIKELY(m_x > m_y))
+          m_x -= m_y;
+      }
+      T hd = (m_x * inv_hy) >> (LENGTH - exp_diff);
+      m_x <<= exp_diff;
+      m_x -= hd * m_y;
+      while (LIBC_UNLIKELY(m_x > m_y))
+        m_x -= m_y;
+    } else {
+      m_x <<= exp_diff;
+      m_x %= m_y;
+    }
+    return m_x;
+  }
+};
+
+template <typename T, typename U = typename FPBits<T>::StorageType,
+          typename DivisionHelper = FModDivisionSimpleHelper<U>>
+class FMod {
+  static_assert(cpp::is_floating_point_v<T> && cpp::is_unsigned_v<U> &&
+                    (sizeof(U) * CHAR_BIT > FPBits<T>::FRACTION_LEN),
+                "FMod instantiated with invalid type.");
+
+private:
+  using FPB = FPBits<T>;
+  using StorageType = typename FPB::StorageType;
 
   LIBC_INLINE static bool pre_check(T x, T y, T &out) {
     using FPB = fputil::FPBits<T>;
@@ -155,86 +202,13 @@ template <typename T> struct FModExceptionalInputHandler {
     out = x;
     return true;
   }
-};
-
-template <typename T> struct FModFastMathWrapper {
-
-  static_assert(cpp::is_floating_point_v<T>,
-                "FModFastMathWrapper instantiated with invalid type.");
-
-  static bool pre_check(T, T, T &) { return false; }
-};
-
-template <typename T> class FModDivisionSimpleHelper {
-private:
-  using StorageType = typename FPBits<T>::StorageType;
-
-public:
-  LIBC_INLINE constexpr static StorageType execute(int exp_diff,
-                                                   int sides_zeroes_count,
-                                                   StorageType m_x,
-                                                   StorageType m_y) {
-    while (exp_diff > sides_zeroes_count) {
-      exp_diff -= sides_zeroes_count;
-      m_x <<= sides_zeroes_count;
-      m_x %= m_y;
-    }
-    m_x <<= exp_diff;
-    m_x %= m_y;
-    return m_x;
-  }
-};
-
-template <typename T> class FModDivisionInvMultHelper {
-private:
-  using FPB = FPBits<T>;
-  using StorageType = typename FPB::StorageType;
-
-public:
-  LIBC_INLINE constexpr static StorageType execute(int exp_diff,
-                                                   int sides_zeroes_count,
-                                                   StorageType m_x,
-                                                   StorageType m_y) {
-    if (exp_diff > sides_zeroes_count) {
-      StorageType inv_hy = (cpp::numeric_limits<StorageType>::max() / m_y);
-      while (exp_diff > sides_zeroes_count) {
-        exp_diff -= sides_zeroes_count;
-        StorageType hd =
-            (m_x * inv_hy) >> (FPB::TOTAL_LEN - sides_zeroes_count);
-        m_x <<= sides_zeroes_count;
-        m_x -= hd * m_y;
-        while (LIBC_UNLIKELY(m_x > m_y))
-          m_x -= m_y;
-      }
-      StorageType hd = (m_x * inv_hy) >> (FPB::TOTAL_LEN - exp_diff);
-      m_x <<= exp_diff;
-      m_x -= hd * m_y;
-      while (LIBC_UNLIKELY(m_x > m_y))
-        m_x -= m_y;
-    } else {
-      m_x <<= exp_diff;
-      m_x %= m_y;
-    }
-    return m_x;
-  }
-};
-
-template <typename T, class Wrapper = FModExceptionalInputHandler<T>,
-          class DivisionHelper = FModDivisionSimpleHelper<T>>
-class FMod {
-  static_assert(cpp::is_floating_point_v<T>,
-                "FMod instantiated with invalid type.");
-
-private:
-  using FPB = FPBits<T>;
-  using StorageType = typename FPB::StorageType;
 
   LIBC_INLINE static constexpr FPB eval_internal(FPB sx, FPB sy) {
 
     if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
         return sx;             // |x|<|y| return x
-      return FPB(FPB::zero()); // |x|=|y| return 0.0
+      return FPB::zero();      // |x|=|y| return 0.0
     }
 
     int e_x = sx.get_biased_exponent();
@@ -247,11 +221,11 @@ private:
       StorageType m_y = sy.get_explicit_mantissa();
       StorageType d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
       if (d == 0)
-        return FPB(FPB::zero());
+        return FPB::zero();
       // iy - 1 because of "zero power" for number with power 1
       return FPB::make_value(d, e_y - 1);
     }
-    /* Both subnormal special case. */
+    // Both subnormal special case.
     if (LIBC_UNLIKELY(e_x == 0 && e_y == 0)) {
       FPB d;
       d.set_mantissa(sx.uintval() % sy.uintval());
@@ -259,15 +233,17 @@ private:
     }
 
     // Note that hx is not subnormal by conditions above.
-    StorageType m_x = sx.get_explicit_mantissa();
+    U m_x = static_cast<U>(sx.get_explicit_mantissa());
     e_x--;
 
-    StorageType m_y = sy.get_explicit_mantissa();
-    int lead_zeros_m_y = FPB::EXP_LEN;
+    U m_y = static_cast<U>(sy.get_explicit_mantissa());
+    constexpr int DEFAULT_LEAD_ZEROS =
+        sizeof(U) * CHAR_BIT - FPB::FRACTION_LEN - 1;
+    int lead_zeros_m_y = DEFAULT_LEAD_ZEROS;
     if (LIBC_LIKELY(e_y > 0)) {
       e_y--;
     } else {
-      m_y = sy.get_mantissa();
+      m_y = static_cast<U>(sy.get_mantissa());
       lead_zeros_m_y = cpp::countl_zero(m_y);
     }
 
@@ -286,26 +262,27 @@ private:
 
     {
       // Shift hx left until the end or n = 0
-      int left_shift = exp_diff < int(FPB::EXP_LEN) ? exp_diff : FPB::EXP_LEN;
+      int left_shift =
+          exp_diff < DEFAULT_LEAD_ZEROS ? exp_diff : DEFAULT_LEAD_ZEROS;
       m_x <<= left_shift;
       exp_diff -= left_shift;
     }
 
     m_x %= m_y;
     if (LIBC_UNLIKELY(m_x == 0))
-      return FPB(FPB::zero());
+      return FPB::zero();
 
     if (exp_diff == 0)
-      return FPB::make_value(m_x, e_y);
+      return FPB::make_value(static_cast<StorageType>(m_x), e_y);
 
-    /* hx next can't be 0, because hx < hy, hy % 2 == 1 hx * 2^i % hy != 0 */
+    // hx next can't be 0, because hx < hy, hy % 2 == 1 hx * 2^i % hy != 0
     m_x = DivisionHelper::execute(exp_diff, sides_zeroes_count, m_x, m_y);
-    return FPB::make_value(m_x, e_y);
+    return FPB::make_value(static_cast<StorageType>(m_x), e_y);
   }
 
 public:
   LIBC_INLINE static T eval(T x, T y) {
-    if (T out; Wrapper::pre_check(x, y, out))
+    if (T out; LIBC_UNLIKELY(pre_check(x, y, out)))
       return out;
     FPB sx(x), sy(y);
     Sign sign = sx.sign();
