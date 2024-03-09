@@ -100,6 +100,7 @@ C++23 Feature Support
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+- Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
@@ -414,7 +415,7 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- PTX is no longer included by default when compiling for CUDA. Using 
+- PTX is no longer included by default when compiling for CUDA. Using
   ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
