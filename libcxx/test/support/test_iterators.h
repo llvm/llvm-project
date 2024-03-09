@@ -843,16 +843,13 @@ public:
         return base(x) - base(y);
     }
 
-    constexpr void record_equality_comparison() const
-    {
-        ++equals_count_;
-    }
+    constexpr void record_equality_comparison() const { ++equals_count_; }
 
     constexpr bool operator==(stride_counting_iterator const& other) const
         requires std::sentinel_for<It, It>
     {
-        record_equality_comparison();
-        return It(base_) == It(other.base_);
+      record_equality_comparison();
+      return It(base_) == It(other.base_);
     }
 
     friend constexpr bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
