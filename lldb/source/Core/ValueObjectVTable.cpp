@@ -33,9 +33,7 @@ public:
 
   std::optional<uint64_t> GetByteSize() override { return m_addr_size; };
 
-  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override {
-    return 0;
-  };
+  uint32_t CalculateNumChildren(uint32_t max) override { return 0; };
 
   ValueType GetValueType() const override { return eValueTypeVTableEntry; };
 
@@ -161,7 +159,7 @@ std::optional<uint64_t> ValueObjectVTable::GetByteSize() {
   return std::nullopt;
 }
 
-llvm::Expected<uint32_t> ValueObjectVTable::CalculateNumChildren(uint32_t max) {
+uint32_t ValueObjectVTable::CalculateNumChildren(uint32_t max) {
   if (UpdateValueIfNeeded(false))
     return m_num_vtable_entries <= max ? m_num_vtable_entries : max;
   return 0;
