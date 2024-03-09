@@ -54,6 +54,12 @@ func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
+// expected-error@+1 {{Batch lvlType can only be leading levels}}
+#a = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : batch, d1 : compressed, d2: batch)}>
+func.func private @non_leading_batch(%arg0: tensor<?x?x?i32, #a>) -> ()
+
+// -----
+
 // expected-error@+1 {{use of undeclared identifier}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
@@ -231,6 +237,22 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 func.func private @too_many_lvl_decl(%arg0: tensor<?x?xf64, #TooManyLvlDecl>) {
   return
 }
+
+// -----
+
+// expected-error@+1{{expected all singleton lvlTypes stored in the same memory layout (SoA vs AoS).}}
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(soa, nonunique), d2 : singleton)
+}>
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
+
+// -----
+
+// expected-error@+1{{SoA is only applicable to singleton lvlTypes.}}
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique, soa), d1 : singleton(soa))
+}>
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
 
 // -----
 

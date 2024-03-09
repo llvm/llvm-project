@@ -1,0 +1,98 @@
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-types-debug-names-main.s   -o %tmain.o
+; RUN: %clang %cflags -gdwarf-5 %tmain.o -o %tmain.exe
+; RUN: llvm-bolt %tmain.exe -o %tmain.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-info --debug-names %tmain.exe.bolt > %tlog.txt
+; RUN: cat %tlog.txt | FileCheck -check-prefix=BOLT %s
+
+;; Tests that BOLT correctly generates .debug_names section with one CU and a local TU.
+
+; BOLT: [[OFFSET:0x[0-9a-f]*]]: Type Unit
+; BOLT: [[OFFSET1:0x[0-9a-f]*]]: Compile Unit
+
+; BOLT:Name Index @ 0x0 {
+; BOLT-NEXT:  Header {
+; BOLT-NEXT:    Length: 0xA3
+; BOLT-NEXT:    Format: DWARF32
+; BOLT-NEXT:    Version: 5
+; BOLT-NEXT:    CU count: 1
+; BOLT-NEXT:    Local TU count: 1
+; BOLT-NEXT:    Foreign TU count: 0
+; BOLT-NEXT:    Bucket count: 4
+; BOLT-NEXT:    Name count: 4
+; BOLT-NEXT:    Abbreviations table size: 0x1D
+; BOLT-NEXT:    Augmentation: 'BOLT'
+; BOLT-NEXT:  }
+; BOLT-NEXT:  Compilation Unit offsets [
+; BOLT-NEXT:    CU[0]: [[OFFSET1]]
+; BOLT-NEXT:  ]
+; BOLT-NEXT:  Local Type Unit offsets [
+; BOLT-NEXT:    LocalTU[0]: [[OFFSET]]
+; BOLT-NEXT:  ]
+; BOLT-NEXT:  Abbreviations [
+; BOLT-NEXT:    Abbreviation [[ABBREV:0x[0-9a-f]*]] {
+; BOLT-NEXT:      Tag: DW_TAG_base_type
+; BOLT-NEXT:      DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:    }
+; BOLT-NEXT:    Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+; BOLT-NEXT:      Tag: DW_TAG_structure_type
+; BOLT-NEXT:      DW_IDX_type_unit: DW_FORM_data1
+; BOLT-NEXT:      DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:    }
+; BOLT-NEXT:    Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
+; BOLT-NEXT:      Tag: DW_TAG_subprogram
+; BOLT-NEXT:      DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:    }
+; BOLT-NEXT:    Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
+; BOLT-NEXT:      Tag: DW_TAG_base_type
+; BOLT-NEXT:      DW_IDX_type_unit: DW_FORM_data1
+; BOLT-NEXT:      DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:    }
+; BOLT-NEXT:  ]
+; BOLT-NEXT:  Bucket 0 [
+; BOLT-NEXT:    Name 1 {
+; BOLT-NEXT:      Hash: 0xB888030
+; BOLT-NEXT:      String: {{.+}} "int"
+; BOLT-NEXT:      Entry @ {{.+}} {
+; BOLT-NEXT:        Abbrev: [[ABBREV]]
+; BOLT-NEXT:        Tag: DW_TAG_base_type
+; BOLT-NEXT:        DW_IDX_die_offset: 0x0000003f
+; BOLT-NEXT:      }
+; BOLT-NEXT:    }
+; BOLT-NEXT:    Name 2 {
+; BOLT-NEXT:      Hash: 0xF73809C
+; BOLT-NEXT:      String: {{.+}} "Foo2a"
+; BOLT-NEXT:      Entry @ {{.+}} {
+; BOLT-NEXT:        Abbrev: [[ABBREV1]]
+; BOLT-NEXT:        Tag: DW_TAG_structure_type
+; BOLT-NEXT:        DW_IDX_type_unit: 0x00
+; BOLT-NEXT:        DW_IDX_die_offset: 0x00000023
+; BOLT-NEXT:      }
+; BOLT-NEXT:    }
+; BOLT-NEXT:  ]
+; BOLT-NEXT:  Bucket 1 [
+; BOLT-NEXT:    EMPTY
+; BOLT-NEXT:  ]
+; BOLT-NEXT:  Bucket 2 [
+; BOLT-NEXT:    Name 3 {
+; BOLT-NEXT:      Hash: 0x7C9A7F6A
+; BOLT-NEXT:      String: {{.+}} "main"
+; BOLT-NEXT:      Entry @ {{.+}} {
+; BOLT-NEXT:        Abbrev: [[ABBREV2]]
+; BOLT-NEXT:        Tag: DW_TAG_subprogram
+; BOLT-NEXT:        DW_IDX_die_offset: 0x00000024
+; BOLT-NEXT:      }
+; BOLT-NEXT:    }
+; BOLT-NEXT:  ]
+; BOLT-NEXT:  Bucket 3 [
+; BOLT-NEXT:    Name 4 {
+; BOLT-NEXT:      Hash: 0x7C952063
+; BOLT-NEXT:      String: {{.+}} "char"
+; BOLT-NEXT:      Entry @ {{.+}} {
+; BOLT-NEXT:        Abbrev: [[ABBREV3]]
+; BOLT-NEXT:        Tag: DW_TAG_base_type
+; BOLT-NEXT:        DW_IDX_type_unit: 0x00
+; BOLT-NEXT:        DW_IDX_die_offset: 0x00000038
+; BOLT-NEXT:      }
+; BOLT-NEXT:    }
+; BOLT-NEXT:  ]
+; BOLT-NEXT:}

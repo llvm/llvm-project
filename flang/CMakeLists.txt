@@ -33,6 +33,17 @@ endif()
 
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
 
+# The out of tree builds of the compiler and the Fortran runtime
+# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
+# to be composable. Failure to synchronize this setting may result
+# in linking errors or fatal failures in F128 runtime functions.
+set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
+  "Specifies the target library used for implementing IEEE-754 128-bit float \
+  math in F18 runtime, e.g. it might be libquadmath for targets where \
+  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
+  is mapped to long double, etc."
+  )
+
 # Check for a standalone build and configure as appropriate from
 # there.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -319,6 +330,12 @@ set(FLANG_REPOSITORY_STRING "" CACHE STRING
   "Vendor-specific text for showing the repository the source is taken from.")
 if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
+endif()
+
+if (FLANG_RUNTIME_F128_MATH_LIB)
+  add_compile_definitions(
+    -DFLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
+    )
 endif()
 
 include(TestBigEndian)

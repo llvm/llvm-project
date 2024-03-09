@@ -517,35 +517,46 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
       std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  if (Error E = addFuncName(PGOFuncName))
-    return E;
-  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // In ThinLTO, local function may have been promoted to global and have
   // suffix ".llvm." added to the function name. We need to add the
   // stripped function name to the symbol table so that we can find a match
   // from profile.
   //
-  // We may have other suffixes similar as ".llvm." which are needed to
-  // be stripped before the matching, but ".__uniq." suffix which is used
-  // to differentiate internal linkage functions in different modules
-  // should be kept. Now this is the only suffix with the pattern ".xxx"
-  // which is kept before matching.
+  // ".__uniq." suffix is used to differentiate internal linkage functions in
+  // different modules and should be kept. This is the only suffix with the
+  // pattern ".xxx" which is kept before matching, other suffixes similar as
+  // ".llvm." will be stripped.
   const std::string UniqSuffix = ".__uniq.";
-  auto pos = PGOFuncName.find(UniqSuffix);
-  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
-  // search '.' from the beginning.
-  if (pos != std::string::npos)
+  size_t pos = PGOName.find(UniqSuffix);
+  if (pos != StringRef::npos)
     pos += UniqSuffix.length();
   else
     pos = 0;
-  pos = PGOFuncName.find('.', pos);
-  if (pos != std::string::npos && pos != 0) {
-    StringRef OtherFuncName = PGOFuncName.substr(0, pos);
-    if (Error E = addFuncName(OtherFuncName))
+
+  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
+  // the beginning.
+  pos = PGOName.find('.', pos);
+  if (pos != StringRef::npos && pos != 0)
+    return PGOName.substr(0, pos);
+
+  return PGOName;
+}
+
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
-  }
+    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    return Error::success();
+  };
+  if (Error E = mapName(PGOFuncName))
+    return E;
+
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName != PGOFuncName)
+    return mapName(CanonicalFuncName);
+
   return Error::success();
 }
 
@@ -1522,9 +1533,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 12ull:
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
@@ -1550,10 +1564,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 12ull:
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
   case 11ull:
     [[fallthrough]];
   case 10ull:

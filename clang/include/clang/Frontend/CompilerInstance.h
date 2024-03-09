@@ -225,6 +225,9 @@ public:
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
 
+  /// At the end of a compilation, print the number of warnings/errors.
+  void printDiagnosticStats();
+
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
@@ -311,6 +314,9 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
+  std::shared_ptr<LangOptions> getLangOptsPtr() const {
+    return Invocation->getLangOptsPtr();
+  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();

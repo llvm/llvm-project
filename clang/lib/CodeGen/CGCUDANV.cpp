@@ -760,10 +760,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       // to contain the fat binary but will be populated somewhere else,
       // e.g. by lld through link script.
       FatBinStr = new llvm::GlobalVariable(
-        CGM.getModule(), CGM.Int8Ty,
-        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr,
-        "__hip_fatbin", nullptr,
-        llvm::GlobalVariable::NotThreadLocal);
+          CGM.getModule(), CGM.Int8Ty,
+          /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr,
+          "__hip_fatbin_" + CGM.getContext().getCUIDHash(), nullptr,
+          llvm::GlobalVariable::NotThreadLocal);
       cast<llvm::GlobalVariable>(FatBinStr)->setSection(FatbinConstantName);
     }
 
@@ -816,8 +816,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // thread safety of the loaded program. Therefore we can assume sequential
   // execution of constructor functions here.
   if (IsHIP) {
-    auto Linkage = CudaGpuBinary ? llvm::GlobalValue::InternalLinkage :
-        llvm::GlobalValue::LinkOnceAnyLinkage;
+    auto Linkage = CudaGpuBinary ? llvm::GlobalValue::InternalLinkage
+                                 : llvm::GlobalValue::ExternalLinkage;
     llvm::BasicBlock *IfBlock =
         llvm::BasicBlock::Create(Context, "if", ModuleCtorFunc);
     llvm::BasicBlock *ExitBlock =
@@ -826,11 +826,11 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     // of HIP ABI.
     GpuBinaryHandle = new llvm::GlobalVariable(
         TheModule, PtrTy, /*isConstant=*/false, Linkage,
-        /*Initializer=*/llvm::ConstantPointerNull::get(PtrTy),
-        "__hip_gpubin_handle");
-    if (Linkage == llvm::GlobalValue::LinkOnceAnyLinkage)
-      GpuBinaryHandle->setComdat(
-          CGM.getModule().getOrInsertComdat(GpuBinaryHandle->getName()));
+        /*Initializer=*/
+        CudaGpuBinary ? llvm::ConstantPointerNull::get(PtrTy) : nullptr,
+        CudaGpuBinary
+            ? "__hip_gpubin_handle"
+            : "__hip_gpubin_handle_" + CGM.getContext().getCUIDHash());
     GpuBinaryHandle->setAlignment(CGM.getPointerAlign().getAsAlign());
     // Prevent the weak symbol in different shared libraries being merged.
     if (Linkage != llvm::GlobalValue::InternalLinkage)

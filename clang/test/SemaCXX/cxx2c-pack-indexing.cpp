@@ -135,3 +135,22 @@ using Splice = typename SpliceImpl<Tl, Il>::type;
 using type = Splice<TL<char, short, long, double>, IL<1, 2>>;
 static_assert(is_same<type, TL<short, long>>);
 }
+
+
+namespace GH81697 {
+
+template<class... Ts> struct tuple {
+    int __x0;
+};
+
+template<auto I, class... Ts>
+Ts...[I]& get(tuple<Ts...>& t) {
+  return t.__x0;
+}
+
+void f() {
+  tuple<int> x;
+  get<0>(x);
+}
+
+}

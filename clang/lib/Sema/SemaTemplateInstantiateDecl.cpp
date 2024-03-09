@@ -1407,11 +1407,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
     if (!InstTy)
       return nullptr;
 
-    FriendDecl *FD = SemaRef.CheckFriendTypeDecl(D->getBeginLoc(),
-                                                 D->getFriendLoc(), InstTy);
-    if (!FD)
-      return nullptr;
-
+    FriendDecl *FD = FriendDecl::Create(
+        SemaRef.Context, Owner, D->getLocation(), InstTy, D->getFriendLoc());
     FD->setAccess(AS_public);
     FD->setUnsupportedFriend(D->isUnsupportedFriend());
     Owner->addDecl(FD);
@@ -2222,7 +2219,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       FunctionTemplate->setInstantiatedFromMemberTemplate(
                                            D->getDescribedFunctionTemplate());
     }
-  } else if (FunctionTemplate) {
+  } else if (FunctionTemplate &&
+             SemaRef.CodeSynthesisContexts.back().Kind !=
+                 Sema::CodeSynthesisContext::BuildingDeductionGuides) {
     // Record this function template specialization.
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
     Function->setFunctionTemplateSpecialization(FunctionTemplate,
@@ -4856,16 +4855,13 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
 ///
 /// Usually this should not be used, and template argument deduction should be
 /// used in its place.
-FunctionDecl *
-Sema::InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
-                                     const TemplateArgumentList *Args,
-                                     SourceLocation Loc) {
+FunctionDecl *Sema::InstantiateFunctionDeclaration(
+    FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+    SourceLocation Loc, CodeSynthesisContext::SynthesisKind CSC) {
   FunctionDecl *FD = FTD->getTemplatedDecl();
 
   sema::TemplateDeductionInfo Info(Loc);
-  InstantiatingTemplate Inst(
-      *this, Loc, FTD, Args->asArray(),
-      CodeSynthesisContext::ExplicitTemplateArgumentSubstitution, Info);
+  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asArray(), CSC, Info);
   if (Inst.isInvalid())
     return nullptr;
 
@@ -6289,8 +6285,18 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
           if (T.isNull())
             return nullptr;
-          auto *SubstRecord = T->getAsCXXRecordDecl();
-          assert(SubstRecord && "class template id not a class type?");
+          CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
+
+          if (!SubstRecord) {
+            // T can be a dependent TemplateSpecializationType when performing a
+            // substitution for building a deduction guide.
+            assert(CodeSynthesisContexts.back().Kind ==
+                   CodeSynthesisContext::BuildingDeductionGuides);
+            // Return a nullptr as a sentinel value, we handle it properly in
+            // the TemplateInstantiator::TransformInjectedClassNameType
+            // override, which we transform it to a TemplateSpecializationType.
+            return nullptr;
+          }
           // Check that this template-id names the primary template and not a
           // partial or explicit specialization. (In the latter cases, it's
           // meaningless to attempt to find an instantiation of D within the

@@ -715,7 +715,8 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (Type == XCOFF::RelocationType::R_POS ||
       Type == XCOFF::RelocationType::R_TLS ||
       Type == XCOFF::RelocationType::R_TLS_LE ||
-      Type == XCOFF::RelocationType::R_TLS_IE)
+      Type == XCOFF::RelocationType::R_TLS_IE ||
+      Type == XCOFF::RelocationType::R_TLS_LD)
     // The FixedValue should be symbol's virtual address in this object file
     // plus any constant value that we might get.
     FixedValue = getVirtualAddress(SymA, SymASec) + Target.getConstant();

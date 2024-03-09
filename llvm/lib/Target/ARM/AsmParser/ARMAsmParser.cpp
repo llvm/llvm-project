@@ -506,9 +506,10 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   bool isMnemonicVPTPredicable(StringRef Mnemonic, StringRef ExtraToken);
   StringRef splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
-                          unsigned &PredicationCode,
-                          unsigned &VPTPredicationCode, bool &CarrySetting,
-                          unsigned &ProcessorIMod, StringRef &ITMask);
+                          ARMCC::CondCodes &PredicationCode,
+                          ARMVCC::VPTCodes &VPTPredicationCode,
+                          bool &CarrySetting, unsigned &ProcessorIMod,
+                          StringRef &ITMask);
   void getMnemonicAcceptInfo(StringRef Mnemonic, StringRef ExtraToken,
                              StringRef FullInst, bool &CanAcceptCarrySet,
                              bool &CanAcceptPredicationCode,
@@ -736,6 +737,9 @@ public:
                         SMLoc IDLoc, OperandVector &Operands);
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
+
+  MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const override;
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
@@ -4045,7 +4049,7 @@ void ARMOperand::print(raw_ostream &OS) const {
 /// @name Auto-generated Match Functions
 /// {
 
-static unsigned MatchRegisterName(StringRef Name);
+static MCRegister MatchRegisterName(StringRef Name);
 
 /// }
 
@@ -6280,10 +6284,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
 //
 // FIXME: Would be nice to autogen this.
 // FIXME: This is a bit of a maze of special cases.
-StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
-                                      StringRef ExtraToken,
-                                      unsigned &PredicationCode,
-                                      unsigned &VPTPredicationCode,
+StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
+                                      ARMCC::CondCodes &PredicationCode,
+                                      ARMVCC::VPTCodes &VPTPredicationCode,
                                       bool &CarrySetting,
                                       unsigned &ProcessorIMod,
                                       StringRef &ITMask) {
@@ -6337,7 +6340,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);
-      PredicationCode = CC;
+      PredicationCode = static_cast<ARMCC::CondCodes>(CC);
     }
   }
 
@@ -6381,10 +6384,11 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
       Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
       Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
-    unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
-    if (CC != ~0U) {
+    unsigned VCC =
+        ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
+    if (VCC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
-      VPTPredicationCode = CC;
+      VPTPredicationCode = static_cast<ARMVCC::VPTCodes>(VCC);
     }
     return Mnemonic;
   }
@@ -6963,8 +6967,8 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   StringRef ExtraToken = Name.slice(Next, Name.find(' ', Next + 1));
 
   // Split out the predication code and carry setting flag from the mnemonic.
-  unsigned PredicationCode;
-  unsigned VPTPredicationCode;
+  ARMCC::CondCodes PredicationCode;
+  ARMVCC::VPTCodes VPTPredicationCode;
   unsigned ProcessorIMod;
   bool CarrySetting;
   StringRef ITMask;
@@ -11356,6 +11360,37 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
   getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
   return false;
+}
+
+MCSymbolRefExpr::VariantKind
+ARMAsmParser::getVariantKindForName(StringRef Name) const {
+  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
+      .Case("funcdesc", MCSymbolRefExpr::VK_FUNCDESC)
+      .Case("got", MCSymbolRefExpr::VK_GOT)
+      .Case("got_prel", MCSymbolRefExpr::VK_ARM_GOT_PREL)
+      .Case("gotfuncdesc", MCSymbolRefExpr::VK_GOTFUNCDESC)
+      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
+      .Case("gotofffuncdesc", MCSymbolRefExpr::VK_GOTOFFFUNCDESC)
+      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
+      .Case("gottpoff_fdpic", MCSymbolRefExpr::VK_GOTTPOFF_FDPIC)
+      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
+      .Case("none", MCSymbolRefExpr::VK_ARM_NONE)
+      .Case("plt", MCSymbolRefExpr::VK_PLT)
+      .Case("prel31", MCSymbolRefExpr::VK_ARM_PREL31)
+      .Case("sbrel", MCSymbolRefExpr::VK_ARM_SBREL)
+      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
+      .Case("target1", MCSymbolRefExpr::VK_ARM_TARGET1)
+      .Case("target2", MCSymbolRefExpr::VK_ARM_TARGET2)
+      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
+      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
+      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
+      .Case("tlsgd_fdpic", MCSymbolRefExpr::VK_TLSGD_FDPIC)
+      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
+      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
+      .Case("tlsldm_fdpic", MCSymbolRefExpr::VK_TLSLDM_FDPIC)
+      .Case("tlsldo", MCSymbolRefExpr::VK_ARM_TLSLDO)
+      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
+      .Default(MCSymbolRefExpr::VK_Invalid);
 }
 
 void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {

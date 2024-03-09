@@ -73,12 +73,6 @@ protected:
   // for multiple underlying IRs (Polly?) by providing a new VPlan front-end,
   // back-end and analysis information for the new IR.
 
-  // Set \p Val as the underlying Value of this VPValue.
-  void setUnderlyingValue(Value *Val) {
-    assert(!UnderlyingVal && "Underlying Value is already set.");
-    UnderlyingVal = Val;
-  }
-
 public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() { return UnderlyingVal; }
@@ -207,6 +201,12 @@ public:
   /// will be empty afterwards. The VPValue must have a defining recipe inserted
   /// in a VPlan.
   void takeName(const VPValue *Src);
+
+  // Set \p Val as the underlying Value of this VPValue.
+  void setUnderlyingValue(Value *Val) {
+    assert(!UnderlyingVal && "Underlying Value is already set.");
+    UnderlyingVal = Val;
+  }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -377,13 +377,13 @@ public:
     VPWidenSelectSC,
     // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPWidenPHISC,
     VPPredInstPHISC,
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
-    VPWidenPHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,

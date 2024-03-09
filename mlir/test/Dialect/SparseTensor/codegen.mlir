@@ -34,6 +34,10 @@
   map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
+#BCSR = #sparse_tensor.encoding<{
+  map = (d0, d1, d2, d3) -> (d0: batch, d1: batch, d2 : dense, d3 : compressed)
+}>
+
 #DCSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed, d1 : compressed),
   crdWidth = 64,
@@ -46,6 +50,10 @@
 
 #Coo = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
+}>
+
+#SoACOO = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
 }>
 
 #CooPNo = #sparse_tensor.encoding<{
@@ -66,6 +74,28 @@
 func.func @sparse_nop(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
   return %arg0 : tensor<?xf64, #SparseVector>
 }
+
+// CHECK-LABEL: func @sparse_nop_aos_coo(
+//  CHECK-SAME: %[[POS:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[AoS_CRD:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[VAL:.*]]: memref<?xf64>,
+//  CHECK-SAME: %[[A3:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[POS]], %[[AoS_CRD]], %[[VAL]], %[[A3]]
+func.func @sparse_nop_aos_coo(%arg0: tensor<?x?xf64, #Coo>) -> tensor<?x?xf64, #Coo> {
+  return %arg0 : tensor<?x?xf64, #Coo>
+}
+
+// CHECK-LABEL: func @sparse_nop_soa_coo(
+//  CHECK-SAME: %[[POS:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[SoA_CRD_0:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[SoA_CRD_1:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[VAL:.*]]: memref<?xf64>,
+//  CHECK-SAME: %[[A3:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[POS]], %[[SoA_CRD_0]], %[[SoA_CRD_1]], %[[VAL]], %[[A3]]
+func.func @sparse_nop_soa_coo(%arg0: tensor<?x?xf64, #SoACOO>) -> tensor<?x?xf64, #SoACOO> {
+  return %arg0 : tensor<?x?xf64, #SoACOO>
+}
+
 
 // CHECK-LABEL: func @sparse_nop_multi_ret(
 //  CHECK-SAME: %[[A0:.*0]]: memref<?xi32>,
@@ -153,6 +183,36 @@ func.func @sparse_row(%arg0: tensor<?x?xf64, #Row>) {
 //  CHECK-SAME: %[[A3:.*]]: !sparse_tensor.storage_specifier
 //       CHECK: return
 func.func @sparse_csr(%arg0: tensor<?x?xf64, #CSR>) {
+  return
+}
+
+// CHECK-LABEL: func @sparse_bcsr_0(
+//  CHECK-SAME: %[[A1:.*0]]: memref<?x2x?xindex>,
+//  CHECK-SAME: %[[A2:.*1]]: memref<?x2x?xindex>,
+//  CHECK-SAME: %[[A3:.*]]: memref<?x2x?xf64>,
+//  CHECK-SAME: %[[A4:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return
+func.func @sparse_bcsr_0(%arg0: tensor<?x2x?x?xf64, #BCSR>) {
+  return
+}
+
+// CHECK-LABEL: func @sparse_bcsr_1(
+//  CHECK-SAME: %[[A1:.*0]]: memref<?x?x?xindex>,
+//  CHECK-SAME: %[[A2:.*1]]: memref<?x?x?xindex>,
+//  CHECK-SAME: %[[A3:.*]]: memref<?x?x?xf64>,
+//  CHECK-SAME: %[[A4:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return
+func.func @sparse_bcsr_1(%arg0: tensor<?x?x?x?xf64, #BCSR>) {
+  return
+}
+
+// CHECK-LABEL: func @sparse_bcsr_2(
+//  CHECK-SAME: %[[A1:.*0]]: memref<18x6x?xindex>,
+//  CHECK-SAME: %[[A2:.*1]]: memref<18x6x?xindex>,
+//  CHECK-SAME: %[[A3:.*]]: memref<18x6x?xf64>,
+//  CHECK-SAME: %[[A4:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return
+func.func @sparse_bcsr_2(%arg0: tensor<18x6x4x2xf64, #BCSR>) {
   return
 }
 

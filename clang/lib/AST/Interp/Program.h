@@ -34,7 +34,6 @@ class VarDecl;
 
 namespace interp {
 class Context;
-class Record;
 
 /// The program contains and links the bytecode for all functions.
 class Program final {
@@ -67,7 +66,7 @@ public:
   unsigned createGlobalString(const StringLiteral *S);
 
   /// Returns a pointer to a global.
-  Pointer getPtrGlobal(unsigned Idx);
+  Pointer getPtrGlobal(unsigned Idx) const;
 
   /// Returns the value of a global.
   Block *getGlobal(unsigned Idx) {
@@ -86,7 +85,7 @@ public:
   std::optional<unsigned> getOrCreateDummy(const ValueDecl *VD);
 
   /// Creates a global and returns its index.
-  std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *E);
+  std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
 
   /// Creates a global from a lifetime-extended temporary.
   std::optional<unsigned> createGlobal(const Expr *E);
@@ -190,6 +189,7 @@ private:
     std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
+    const Block *block() const { return &B; }
 
   private:
     /// Required metadata - does not actually track pointers.

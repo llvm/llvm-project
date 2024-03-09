@@ -1813,6 +1813,8 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result,
          "upper bound operand count does not match the affine map");
   assert(step > 0 && "step has to be a positive integer constant");
 
+  OpBuilder::InsertionGuard guard(builder);
+
   // Set variadic segment sizes.
   result.addAttribute(
       getOperandSegmentSizeAttr(),
@@ -1841,12 +1843,11 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result,
   // Create a region and a block for the body.  The argument of the region is
   // the loop induction variable.
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
+  Block *bodyBlock = builder.createBlock(bodyRegion);
   Value inductionVar =
-      bodyBlock.addArgument(builder.getIndexType(), result.location);
+      bodyBlock->addArgument(builder.getIndexType(), result.location);
   for (Value val : iterArgs)
-    bodyBlock.addArgument(val.getType(), val.getLoc());
+    bodyBlock->addArgument(val.getType(), val.getLoc());
 
   // Create the default terminator if the builder is not provided and if the
   // iteration arguments are not provided. Otherwise, leave this to the caller
@@ -1855,9 +1856,9 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result,
     ensureTerminator(*bodyRegion, builder, result.location);
   } else if (bodyBuilder) {
     OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
+    builder.setInsertionPointToStart(bodyBlock);
     bodyBuilder(builder, result.location, inductionVar,
-                bodyBlock.getArguments().drop_front());
+                bodyBlock->getArguments().drop_front());
   }
 }
 
@@ -2895,18 +2896,20 @@ void AffineIfOp::build(OpBuilder &builder, OperationState &result,
                        TypeRange resultTypes, IntegerSet set, ValueRange args,
                        bool withElseRegion) {
   assert(resultTypes.empty() || withElseRegion);
+  OpBuilder::InsertionGuard guard(builder);
+
   result.addTypes(resultTypes);
   result.addOperands(args);
   result.addAttribute(getConditionAttrStrName(), IntegerSetAttr::get(set));
 
   Region *thenRegion = result.addRegion();
-  thenRegion->push_back(new Block());
+  builder.createBlock(thenRegion);
   if (resultTypes.empty())
     AffineIfOp::ensureTerminator(*thenRegion, builder, result.location);
 
   Region *elseRegion = result.addRegion();
   if (withElseRegion) {
-    elseRegion->push_back(new Block());
+    builder.createBlock(elseRegion);
     if (resultTypes.empty())
       AffineIfOp::ensureTerminator(*elseRegion, builder, result.location);
   }
@@ -3693,6 +3696,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
          "expected upper bound maps to have as many inputs as upper bound "
          "operands");
 
+  OpBuilder::InsertionGuard guard(builder);
   result.addTypes(resultTypes);
 
   // Convert the reductions to integer attributes.
@@ -3738,11 +3742,11 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 
   // Create a region and a block for the body.
   auto *bodyRegion = result.addRegion();
-  auto *body = new Block();
+  Block *body = builder.createBlock(bodyRegion);
+
   // Add all the block arguments.
   for (unsigned i = 0, e = steps.size(); i < e; ++i)
     body->addArgument(IndexType::get(builder.getContext()), result.location);
-  bodyRegion->push_back(body);
   if (resultTypes.empty())
     ensureTerminator(*bodyRegion, builder, result.location);
 }

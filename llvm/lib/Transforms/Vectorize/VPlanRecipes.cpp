@@ -281,11 +281,12 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   std::string Name = getParent()->getPlan()->getName(this);
 
   if (Instruction::isBinaryOp(getOpcode())) {
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0);
+      return State.get(this, 0, OnlyFirstLaneUsed);
 
-    Value *A = State.get(getOperand(0), Part);
-    Value *B = State.get(getOperand(1), Part);
+    Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
+    Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
@@ -314,6 +315,12 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
     // Get the original loop tripcount.
     Value *ScalarTC = State.get(getOperand(1), VPIteration(Part, 0));
+
+    // If this part of the active lane mask is scalar, generate the CMP directly
+    // to avoid unnecessary extracts.
+    if (State.VF.isScalar())
+      return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
+                               Name);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = VectorType::get(Int1Ty, State.VF);
@@ -387,8 +394,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     if (Part != 0)
       return nullptr;
     // First create the compare.
-    Value *IV = State.get(getOperand(0), Part);
-    Value *TC = State.get(getOperand(1), Part);
+    Value *IV = State.get(getOperand(0), Part, /*IsScalar*/ true);
+    Value *TC = State.get(getOperand(1), Part, /*IsScalar*/ true);
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
 
     // Now create the branch.
@@ -409,7 +416,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   }
   case VPInstruction::ComputeReductionResult: {
     if (Part != 0)
-      return State.get(this, 0);
+      return State.get(this, 0, /*IsScalar*/ true);
 
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -426,7 +433,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Type *PhiTy = OrigPhi->getType();
     VectorParts RdxParts(State.UF);
     for (unsigned Part = 0; Part < State.UF; ++Part)
-      RdxParts[Part] = State.get(LoopExitingDef, Part);
+      RdxParts[Part] = State.get(LoopExitingDef, Part, PhiR->isInLoop());
 
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -514,9 +521,15 @@ void VPInstruction::execute(VPTransformState &State) {
     if (!hasResult())
       continue;
     assert(GeneratedValue && "generateInstruction must produce a value");
-    State.set(this, GeneratedValue, Part);
+
+    bool IsVector = GeneratedValue->getType()->isVectorTy();
+    State.set(this, GeneratedValue, Part, !IsVector);
+    assert((IsVector || getOpcode() == VPInstruction::ComputeReductionResult ||
+            State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+           "scalar value but not only first lane used");
   }
 }
+
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()))
@@ -532,8 +545,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
-    // TODO: Cover additional operands.
-    return getOperand(0) == Op;
+    return true;
   };
   llvm_unreachable("switch should return");
 }
@@ -657,7 +669,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     if (isa<FPMathOperator>(V))
       V->copyFastMathFlags(&CI);
 
-    State.set(this, V, Part);
+    if (!V->getType()->isVoidTy())
+      State.set(this, V, Part);
     State.addMetadata(V, &CI);
   }
 }
@@ -1345,7 +1358,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
       PartPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
     }
 
-    State.set(this, PartPtr, Part);
+    State.set(this, PartPtr, Part, /*IsScalar*/ true);
   }
 }
 
@@ -1641,7 +1654,7 @@ void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
   EntryPart->addIncoming(Start, VectorPH);
   EntryPart->setDebugLoc(getDebugLoc());
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(this, EntryPart, Part);
+    State.set(this, EntryPart, Part, /*IsScalar*/ true);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1712,7 +1725,7 @@ void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getOperand(0), 0);
+  Value *CanonicalIV = State.get(getOperand(0), 0, /*IsScalar*/ true);
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
@@ -1802,7 +1815,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
     Instruction *EntryPart = PHINode::Create(VecTy, 2, "vec.phi");
     EntryPart->insertBefore(HeaderBB->getFirstInsertionPt());
-    State.set(this, EntryPart, Part);
+    State.set(this, EntryPart, Part, IsInLoop);
   }
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
@@ -1834,7 +1847,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   }
 
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *EntryPart = State.get(this, Part);
+    Value *EntryPart = State.get(this, Part, IsInLoop);
     // Make sure to add the reduction start value only to the
     // first unroll part.
     Value *StartVal = (Part == 0) ? StartV : Iden;

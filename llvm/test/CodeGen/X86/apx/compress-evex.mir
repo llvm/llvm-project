@@ -52,6 +52,15 @@ body:             |
     RET64 $rax
 ...
 ---
+name:            ndd_2_non_ndd_mem
+body:             |
+  bb.0.entry:
+    ; CHECK: addq    $123456, (%rax), %rax           # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x00,0x40,0xe2,0x01,0x00]
+    renamable $rax = MOV64rm $noreg, 1, $noreg, 0, $fs
+    renamable $rax = nsw ADD64mi32_ND killed renamable $rax, 1, $noreg, 0, $noreg, 123456, implicit-def dead $eflags
+    RET64 $rax
+...
+---
 name:            ndd_2_non_ndd_egpr
 body:             |
   bb.0.entry:

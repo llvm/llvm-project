@@ -291,6 +291,15 @@ cl::opt<bool> DropProfileSymbolList(
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
 
+// Temporary support for writing the previous version of the format, to enable
+// some forward compatibility.
+// TODO: Consider enabling this with future version changes as well, to ease
+// deployment of newer versions of llvm-profdata.
+cl::opt<bool> DoWritePrevVersion(
+    "write-prev-version", cl::init(false), cl::Hidden,
+    cl::desc("Write the previous version of indexed format, to enable "
+             "some forward compatibility."));
+
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
                                   cl::desc("<base profile file>"),
@@ -579,8 +588,8 @@ struct WriterContext {
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
-      : Writer(IsSparse, ReservoirSize, MaxTraceLength), ErrLock(ErrLock),
-        WriterErrorCodes(WriterErrorCodes) {}
+      : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion),
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -898,7 +907,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
                 Contexts[0].get());
   } else {
-    ThreadPool Pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;

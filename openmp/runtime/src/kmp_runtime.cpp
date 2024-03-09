@@ -5376,7 +5376,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           __kmp_reinitialize_team(team, new_icvs, NULL);
         }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD) && KMP_AFFINITY_SUPPORTED
         /* Temporarily set full mask for primary thread before creation of
            workers. The reason is that workers inherit the affinity from the
            primary thread, so if a lot of workers are created on the single
@@ -5412,7 +5412,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           }
         }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD) && KMP_AFFINITY_SUPPORTED
         /* Restore initial primary thread's affinity mask */
         new_temp_affinity.restore();
 #endif
@@ -5708,9 +5708,8 @@ void __kmp_free_team(kmp_root_t *root,
           }
 #endif
           // first check if thread is sleeping
-          kmp_flag_64<> fl(&th->th.th_bar[bs_forkjoin_barrier].bb.b_go, th);
-          if (fl.is_sleeping())
-            fl.resume(__kmp_gtid_from_thread(th));
+          if (th->th.th_sleep_loc)
+            __kmp_null_resume_wrapper(th);
           KMP_CPU_PAUSE();
         }
       }

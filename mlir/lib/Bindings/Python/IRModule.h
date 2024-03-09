@@ -223,6 +223,7 @@ public:
   /// Clears all operations nested inside the given op using
   /// `clearOperation(MlirOperation)`.
   void clearOperationsInside(PyOperationBase &op);
+  void clearOperationsInside(MlirOperation op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.

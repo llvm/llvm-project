@@ -232,7 +232,11 @@ def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
 ]>;
 
 def AArch64asrd_m1 : SDNode<"AArch64ISD::SRAD_MERGE_OP1", SDT_AArch64Arith_Imm>;
-def AArch64urshri_p : SDNode<"AArch64ISD::URSHR_I_PRED", SDT_AArch64Arith_Imm>;
+def AArch64urshri_p_node : SDNode<"AArch64ISD::URSHR_I_PRED", SDT_AArch64Arith_Imm>;
+
+def AArch64urshri_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                           [(int_aarch64_sve_urshr node:$op1, node:$op2, node:$op3),
+                            (AArch64urshri_p_node node:$op1, node:$op2, node:$op3)]>;
 
 def SDT_AArch64IntExtend : SDTypeProfile<1, 4, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3, OtherVT>, SDTCisVec<4>,
@@ -484,11 +488,11 @@ def AArch64fmin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmin, AAr
 def AArch64fmax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmax, AArch64fmax_p>;
 
 let Predicates = [HasSVE] in {
-  defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
-  def  RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
-  defm RDFFR_P    : sve_int_rdffr_unpred<"rdffr", int_aarch64_sve_rdffr>;
-  def  SETFFR     : sve_int_setffr<"setffr", int_aarch64_sve_setffr>;
-  def  WRFFR      : sve_int_wrffr<"wrffr", int_aarch64_sve_wrffr>;
+  def RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
+  def RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
+  def RDFFR_P    : sve_int_rdffr_unpred<"rdffr", int_aarch64_sve_rdffr>;
+  def SETFFR     : sve_int_setffr<"setffr", int_aarch64_sve_setffr>;
+  def WRFFR      : sve_int_wrffr<"wrffr", int_aarch64_sve_wrffr>;
 } // End HasSVE
 
 let Predicates = [HasSVEorSME] in {
@@ -4097,7 +4101,7 @@ defm FMINNMQV : sve2p1_fp_reduction_q<0b101, "fminnmqv", int_aarch64_sve_fminnmq
 defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv", int_aarch64_sve_fmaxqv>;
 defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv", int_aarch64_sve_fminqv>;
 
-defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
+defm DUPQ_ZZI : sve2p1_dupq<"dupq", int_aarch64_sve_dup_laneq>;
 defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq>;
 
 defm PMOV_PZI : sve2p1_vector_to_pred<"pmov", int_aarch64_sve_pmov_to_pred_lane, int_aarch64_sve_pmov_to_pred_lane_zero>;
