@@ -757,8 +757,8 @@ static void addSanitizers(const Triple &TargetTriple,
     // from `buildInlinerPipeline`, which called after profile matching.
     PB.registerScalarOptimizerLateEPCallback(
         [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          // RemoveTrapsPass expects trap blocks precedded by conditional
-          // branches, which often is not the case without SimplifyCFG.
+          // RemoveTrapsPass expects trap blocks preceded by conditional
+          // branches, which usually is not the case without SimplifyCFG.
           FPM.addPass(SimplifyCFGPass());
           FPM.addPass(RemoveTrapsPass());
         });
