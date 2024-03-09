@@ -28,6 +28,21 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
+    AltInstHasPadLen("alt-inst-has-padlen",
+                     cl::desc("specify that .altinstructions has padlen field"),
+                     cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<uint32_t>
+    AltInstFeatureSize("alt-inst-feature-size",
+                       cl::desc("size of feature field in .altinstructions"),
+                       cl::init(2), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    DumpAltInstructions("dump-alt-instructions",
+                        cl::desc("dump Linux alternative instructions info"),
+                        cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<bool>
     DumpExceptions("dump-linux-exceptions",
                    cl::desc("dump Linux kernel exception table"),
                    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
@@ -35,6 +50,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     DumpORC("dump-orc", cl::desc("dump raw ORC unwind information (sorted)"),
             cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<bool> DumpParavirtualPatchSites(
+    "dump-para-sites", cl::desc("dump Linux kernel paravitual patch sites"),
+    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool> DumpStaticCalls("dump-static-calls",
                                      cl::desc("dump Linux kernel static calls"),
@@ -147,6 +166,21 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Functions with exception handling code.
   DenseSet<BinaryFunction *> FunctionsWithExceptions;
 
+  /// Section with paravirtual patch sites.
+  ErrorOr<BinarySection &> ParavirtualPatchSection = std::errc::bad_address;
+
+  /// Alignment of paravirtual patch structures.
+  static constexpr size_t PARA_PATCH_ALIGN = 8;
+
+  /// .altinstructions section.
+  ErrorOr<BinarySection &> AltInstrSection = std::errc::bad_address;
+
+  /// Section containing Linux bug table.
+  ErrorOr<BinarySection &> BugTableSection = std::errc::bad_address;
+
+  /// Size of bug_entry struct.
+  static constexpr size_t BUG_TABLE_ENTRY_SIZE = 12;
+
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
   void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
@@ -161,9 +195,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Process __ksymtab and __ksymtab_gpl.
   void processLKKSymtab(bool IsGPL = false);
-
-  /// Process special linux kernel section, __bug_table.
-  void processLKBugTable();
 
   /// Process special linux kernel section, .smp_locks.
   void processLKSMPLocks();
@@ -187,6 +218,14 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error readExceptionTable();
   Error rewriteExceptionTable();
 
+  /// Paravirtual instruction patch sites.
+  Error readParaInstructions();
+
+  Error readBugTable();
+
+  /// Read alternative instruction info from .altinstructions.
+  Error readAltInstructions();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -206,6 +245,15 @@ public:
       return E;
 
     if (Error E = readExceptionTable())
+      return E;
+
+    if (Error E = readParaInstructions())
+      return E;
+
+    if (Error E = readBugTable())
+      return E;
+
+    if (Error E = readAltInstructions())
       return E;
 
     return Error::success();
@@ -273,7 +321,6 @@ void LinuxKernelRewriter::processLKSections() {
   processLKPCIFixup();
   processLKKSymtab();
   processLKKSymtab(true);
-  processLKBugTable();
   processLKSMPLocks();
 }
 
@@ -337,37 +384,6 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
     BC.addRelocation(EntryAddress, BF->getSymbol(), Relocation::getPC32(), 0,
                      *Offset);
-  }
-}
-
-/// Process __bug_table section.
-/// This section contains information useful for kernel debugging.
-/// Each entry in the section is a struct bug_entry that contains a pointer to
-/// the ud2 instruction corresponding to the bug, corresponding file name (both
-/// pointers use PC relative offset addressing), line number, and flags.
-/// The definition of the struct bug_entry can be found in
-/// `include/asm-generic/bug.h`
-void LinuxKernelRewriter::processLKBugTable() {
-  ErrorOr<BinarySection &> SectionOrError =
-      BC.getUniqueSectionByName("__bug_table");
-  if (!SectionOrError)
-    return;
-
-  const uint64_t SectionSize = SectionOrError->getSize();
-  const uint64_t SectionAddress = SectionOrError->getAddress();
-  assert((SectionSize % 12) == 0 &&
-         "The size of the __bug_table section should be a multiple of 12");
-  for (uint64_t I = 0; I < SectionSize; I += 12) {
-    const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
-    assert(Offset &&
-           "Reading valid PC-relative offset for a __bug_table entry");
-    const int32_t SignedOffset = *Offset;
-    const uint64_t RefAddress = EntryAddress + SignedOffset;
-    assert(BC.getBinaryFunctionContainingAddress(RefAddress) &&
-           "__bug_table entries should point to a function");
-
-    insertLKMarker(RefAddress, I, SignedOffset, true, "__bug_table");
   }
 }
 
@@ -484,7 +500,8 @@ Error LinuxKernelRewriter::readORCTables() {
     // Consume the status of the cursor.
     if (!IPCursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading ORC IP table");
+                               "out of bounds while reading ORC IP table: %s",
+                               toString(IPCursor.takeError()).c_str());
 
     if (IP < PrevIP && opts::Verbosity)
       BC.errs() << "BOLT-WARNING: out of order IP 0x" << Twine::utohexstr(IP)
@@ -506,7 +523,8 @@ Error LinuxKernelRewriter::readORCTables() {
     // Consume the status of the cursor.
     if (!ORCCursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading ORC");
+                               "out of bounds while reading ORC: %s",
+                               toString(ORCCursor.takeError()).c_str());
 
     if (Entry.ORC == NullORC)
       continue;
@@ -827,7 +845,8 @@ Error LinuxKernelRewriter::readStaticCalls() {
     // Consume the status of the cursor.
     if (!Cursor)
       return createStringError(errc::executable_format_error,
-                               "out of bounds while reading static calls");
+                               "out of bounds while reading static calls: %s",
+                               toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
@@ -938,8 +957,10 @@ Error LinuxKernelRewriter::readExceptionTable() {
 
     // Consume the status of the cursor.
     if (!Cursor)
-      return createStringError(errc::executable_format_error,
-                               "out of bounds while reading exception table");
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading exception table: %s",
+          toString(Cursor.takeError()).c_str());
 
     ++EntryID;
 
@@ -1009,6 +1030,255 @@ Error LinuxKernelRewriter::rewriteExceptionTable() {
   // added.
   for (BinaryFunction *BF : FunctionsWithExceptions)
     BF->setSimple(false);
+
+  return Error::success();
+}
+
+/// .parainsrtuctions section contains information for patching parvirtual call
+/// instructions during runtime. The entries in the section are in the form:
+///
+///    struct paravirt_patch_site {
+///      u8 *instr;    /* original instructions */
+///      u8 type;      /* type of this instruction */
+///      u8 len;       /* length of original instruction */
+///    };
+///
+/// Note that the structures are aligned at 8-byte boundary.
+Error LinuxKernelRewriter::readParaInstructions() {
+  ParavirtualPatchSection = BC.getUniqueSectionByName(".parainstructions");
+  if (!ParavirtualPatchSection)
+    return Error::success();
+
+  DataExtractor DE = DataExtractor(ParavirtualPatchSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  uint32_t EntryID = 0;
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && !DE.eof(Cursor)) {
+    const uint64_t NextOffset = alignTo(Cursor.tell(), Align(PARA_PATCH_ALIGN));
+    if (!DE.isValidOffset(NextOffset))
+      break;
+
+    Cursor.seek(NextOffset);
+
+    const uint64_t InstrLocation = DE.getU64(Cursor);
+    const uint8_t Type = DE.getU8(Cursor);
+    const uint8_t Len = DE.getU8(Cursor);
+
+    if (!Cursor)
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading .parainstructions: %s",
+          toString(Cursor.takeError()).c_str());
+
+    ++EntryID;
+
+    if (opts::DumpParavirtualPatchSites) {
+      BC.outs() << "Paravirtual patch site: " << EntryID << '\n';
+      BC.outs() << "\tInstr: 0x" << Twine::utohexstr(InstrLocation)
+                << "\n\tType:  0x" << Twine::utohexstr(Type) << "\n\tLen:   0x"
+                << Twine::utohexstr(Len) << '\n';
+    }
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(InstrLocation);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(InstrLocation)
+                << " referenced by paravirutal patch site\n";
+    }
+
+    if (BF && BC.shouldEmit(*BF)) {
+      MCInst *Inst =
+          BF->getInstructionAtOffset(InstrLocation - BF->getAddress());
+      if (!Inst)
+        return createStringError(errc::executable_format_error,
+                                 "no instruction at address 0x%" PRIx64
+                                 " in paravirtual call site %d",
+                                 InstrLocation, EntryID);
+      BC.MIB->addAnnotation(*Inst, "ParaSite", EntryID);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID << " paravirtual patch sites\n";
+
+  return Error::success();
+}
+
+/// Process __bug_table section.
+/// This section contains information useful for kernel debugging.
+/// Each entry in the section is a struct bug_entry that contains a pointer to
+/// the ud2 instruction corresponding to the bug, corresponding file name (both
+/// pointers use PC relative offset addressing), line number, and flags.
+/// The definition of the struct bug_entry can be found in
+/// `include/asm-generic/bug.h`
+///
+/// NB: find_bug() uses linear search to match an address to an entry in the bug
+///     table. Hence there is no need to sort entries when rewriting the table.
+Error LinuxKernelRewriter::readBugTable() {
+  BugTableSection = BC.getUniqueSectionByName("__bug_table");
+  if (!BugTableSection)
+    return Error::success();
+
+  if (BugTableSection->getSize() % BUG_TABLE_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "bug table size error");
+
+  const uint64_t SectionAddress = BugTableSection->getAddress();
+  DataExtractor DE(BugTableSection->getContents(), BC.AsmInfo->isLittleEndian(),
+                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor Cursor(0);
+  uint32_t EntryID = 0;
+  while (Cursor && Cursor.tell() < BugTableSection->getSize()) {
+    const uint64_t Pos = Cursor.tell();
+    const uint64_t InstAddress =
+        SectionAddress + Pos + (int32_t)DE.getU32(Cursor);
+    Cursor.seek(Pos + BUG_TABLE_ENTRY_SIZE);
+
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading __bug_table: %s",
+                               toString(Cursor.takeError()).c_str());
+
+    ++EntryID;
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(InstAddress);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(InstAddress)
+                << " referenced by bug table\n";
+    }
+
+    if (BF && BC.shouldEmit(*BF)) {
+      MCInst *Inst = BF->getInstructionAtOffset(InstAddress - BF->getAddress());
+      if (!Inst)
+        return createStringError(errc::executable_format_error,
+                                 "no instruction at address 0x%" PRIx64
+                                 " referenced by bug table entry %d",
+                                 InstAddress, EntryID);
+      BC.MIB->addAnnotation(*Inst, "BugEntry", EntryID);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID << " bug table entries\n";
+
+  return Error::success();
+}
+
+/// The kernel can replace certain instruction sequences depending on hardware
+/// it is running on and features specified during boot time. The information
+/// about alternative instruction sequences is stored in .altinstructions
+/// section. The format of entries in this section is defined in
+/// arch/x86/include/asm/alternative.h:
+///
+///   struct alt_instr {
+///     s32 instr_offset;
+///     s32 repl_offset;
+///     uXX feature;
+///     u8  instrlen;
+///     u8  replacementlen;
+///	    u8  padlen;         // present in older kernels
+///   } __packed;
+///
+/// Note the structures is packed.
+Error LinuxKernelRewriter::readAltInstructions() {
+  AltInstrSection = BC.getUniqueSectionByName(".altinstructions");
+  if (!AltInstrSection)
+    return Error::success();
+
+  const uint64_t Address = AltInstrSection->getAddress();
+  DataExtractor DE = DataExtractor(AltInstrSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  uint64_t EntryID = 0;
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && !DE.eof(Cursor)) {
+    const uint64_t OrgInstAddress =
+        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t AltInstAddress =
+        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t Feature = DE.getUnsigned(Cursor, opts::AltInstFeatureSize);
+    const uint8_t OrgSize = DE.getU8(Cursor);
+    const uint8_t AltSize = DE.getU8(Cursor);
+
+    // Older kernels may have the padlen field.
+    const uint8_t PadLen = opts::AltInstHasPadLen ? DE.getU8(Cursor) : 0;
+
+    if (!Cursor)
+      return createStringError(
+          errc::executable_format_error,
+          "out of bounds while reading .altinstructions: %s",
+          toString(Cursor.takeError()).c_str());
+
+    ++EntryID;
+
+    if (opts::DumpAltInstructions) {
+      BC.outs() << "Alternative instruction entry: " << EntryID
+                << "\n\tOrg:     0x" << Twine::utohexstr(OrgInstAddress)
+                << "\n\tAlt:     0x" << Twine::utohexstr(AltInstAddress)
+                << "\n\tFeature: 0x" << Twine::utohexstr(Feature)
+                << "\n\tOrgSize: " << (int)OrgSize
+                << "\n\tAltSize: " << (int)AltSize << '\n';
+      if (opts::AltInstHasPadLen)
+        BC.outs() << "\tPadLen:  " << (int)PadLen << '\n';
+    }
+
+    if (AltSize > OrgSize)
+      return createStringError(errc::executable_format_error,
+                               "error reading .altinstructions");
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(OrgInstAddress);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(OrgInstAddress)
+                << " of instruction from .altinstructions\n";
+    }
+
+    BinaryFunction *AltBF =
+        BC.getBinaryFunctionContainingAddress(AltInstAddress);
+    if (AltBF && BC.shouldEmit(*AltBF)) {
+      BC.errs()
+          << "BOLT-WARNING: alternative instruction sequence found in function "
+          << *AltBF << '\n';
+      AltBF->setIgnored();
+    }
+
+    if (!BF || !BC.shouldEmit(*BF))
+      continue;
+
+    if (OrgInstAddress + OrgSize > BF->getAddress() + BF->getSize())
+      return createStringError(errc::executable_format_error,
+                               "error reading .altinstructions");
+
+    MCInst *Inst =
+        BF->getInstructionAtOffset(OrgInstAddress - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction at address 0x%" PRIx64
+                               " referenced by .altinstructions entry %d",
+                               OrgInstAddress, EntryID);
+
+    // There could be more than one alternative instruction sequences for the
+    // same original instruction. Annotate each alternative separately.
+    std::string AnnotationName = "AltInst";
+    unsigned N = 2;
+    while (BC.MIB->hasAnnotation(*Inst, AnnotationName))
+      AnnotationName = "AltInst" + std::to_string(N++);
+
+    BC.MIB->addAnnotation(*Inst, AnnotationName, EntryID);
+
+    // Annotate all instructions from the original sequence. Note that it's not
+    // the most efficient way to look for instructions in the address range,
+    // but since alternative instructions are uncommon, it will do for now.
+    for (uint32_t Offset = 1; Offset < OrgSize; ++Offset) {
+      Inst = BF->getInstructionAtOffset(OrgInstAddress + Offset -
+                                        BF->getAddress());
+      if (Inst)
+        BC.MIB->addAnnotation(*Inst, AnnotationName, EntryID);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID
+            << " alternative instruction entries\n";
 
   return Error::success();
 }

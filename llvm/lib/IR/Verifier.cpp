@@ -3381,7 +3381,7 @@ void Verifier::visitPHINode(PHINode &PN) {
   Check(!PN.getType()->isTokenTy(), "PHI nodes cannot have token type!");
 
   // Check that all of the values of the PHI node have the same type as the
-  // result, and that the incoming blocks are really basic blocks.
+  // result.
   for (Value *IncValue : PN.incoming_values()) {
     Check(PN.getType() == IncValue->getType(),
           "PHI node operands are not the same type as the result!", &PN);
@@ -6291,7 +6291,7 @@ void Verifier::visit(DPValue &DPV) {
           Var->getRawType());
 
   auto *DLNode = DPV.getDebugLoc().getAsMDNode();
-  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record location",
+  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
           &DPV, DLNode);
   DILocation *Loc = DPV.getDebugLoc();
 

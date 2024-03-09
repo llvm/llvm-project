@@ -43,7 +43,7 @@ define i64 @log2_ceil_idiom_zext(i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i32 32, [[TMP2]]
-; CHECK-NEXT:    [[RET:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[RET:%.*]] = zext nneg i32 [[TMP3]] to i64
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)

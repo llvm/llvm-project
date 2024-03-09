@@ -1313,7 +1313,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
             ++InsertPos;
           // This instruction may contain multiple uses of V, update them all.
           CurUser->replaceUsesOfWith(
-              V, new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
+              V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
         } else {
           CurUser->replaceUsesOfWith(
               V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),

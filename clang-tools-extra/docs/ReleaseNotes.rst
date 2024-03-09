@@ -128,6 +128,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-assert-side-effect
+  <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
+  effect from calling a method with non-const reference parameters.
+
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
@@ -148,7 +152,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unused-return-value
   <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
-  parameter `CheckedFunctions` to support regexp.
+  parameter `CheckedFunctions` to support regexp and avoiding false postive for
+  function with the same prefix as the default argument, e.g. ``std::unique_ptr``
+  and ``std::unique``.
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
@@ -156,7 +162,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions.
+  giving false positives for deleted functions and fix false negative when some
+  parameters are forwarded, but other aren't.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
@@ -228,7 +235,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
-  mode by resolving symbolic links to header files.
+  mode by resolving symbolic links to header files. Fixed handling of Hungarian
+  Prefix when configured to `LowerCase`.
 
 Removed checks
 ^^^^^^^^^^^^^^

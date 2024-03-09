@@ -172,6 +172,28 @@ inline bool stdc_has_single_bit(unsigned long x) {
 inline bool stdc_has_single_bit(unsigned long long x) {
   return stdc_has_single_bit_ull(x);
 }
+inline unsigned stdc_bit_width(unsigned char x) { return stdc_bit_width_uc(x); }
+inline unsigned stdc_bit_width(unsigned short x) {
+  return stdc_bit_width_us(x);
+}
+inline unsigned stdc_bit_width(unsigned x) { return stdc_bit_width_ui(x); }
+inline unsigned stdc_bit_width(unsigned long x) { return stdc_bit_width_ul(x); }
+inline unsigned stdc_bit_width(unsigned long long x) {
+  return stdc_bit_width_ull(x);
+}
+inline unsigned char stdc_bit_floor(unsigned char x) {
+  return stdc_bit_floor_uc(x);
+}
+inline unsigned short stdc_bit_floor(unsigned short x) {
+  return stdc_bit_floor_us(x);
+}
+inline unsigned stdc_bit_floor(unsigned x) { return stdc_bit_floor_ui(x); }
+inline unsigned long stdc_bit_floor(unsigned long x) {
+  return stdc_bit_floor_ul(x);
+}
+inline unsigned long long stdc_bit_floor(unsigned long long x) {
+  return stdc_bit_floor_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -250,6 +272,20 @@ inline bool stdc_has_single_bit(unsigned long long x) {
       unsigned: stdc_has_single_bit_ui,                                        \
       unsigned long: stdc_has_single_bit_ul,                                   \
       unsigned long long: stdc_has_single_bit_ull)(x)
+#define stdc_bit_width(x)                                                      \
+  _Generic((x),                                                                \
+      unsigned char: stdc_bit_width_ui,                                        \
+      unsigned short: stdc_bit_width_us,                                       \
+      unsigned: stdc_bit_width_ui,                                             \
+      unsigned long: stdc_bit_width_ul,                                        \
+      unsigned long long: stdc_bit_width_ull)(x)
+#define stdc_bit_floor(x)                                                      \
+  _Generic((x),                                                                \
+      unsigned char: stdc_bit_floor_ui,                                        \
+      unsigned short: stdc_bit_floor_us,                                       \
+      unsigned: stdc_bit_floor_ui,                                             \
+      unsigned long: stdc_bit_floor_ul,                                        \
+      unsigned long long: stdc_bit_floor_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H

@@ -1386,6 +1386,15 @@ enum NodeType {
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
 
+  // The `llvm.experimental.convergence.*` intrinsics.
+  CONVERGENCECTRL_ANCHOR,
+  CONVERGENCECTRL_ENTRY,
+  CONVERGENCECTRL_LOOP,
+  // This does not correspond to any convergence control intrinsic. It is used
+  // to glue a convergence control token to a convergent operation in the DAG,
+  // which is later translated to an implicit use in the MIR.
+  CONVERGENCECTRL_GLUE,
+
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
