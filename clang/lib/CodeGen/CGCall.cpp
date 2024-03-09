@@ -1797,14 +1797,14 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_inout_zt0");
 }
 
-static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,
-                                     const Decl *Callee) {
+static void AddAttributesFromOMPAssumes(llvm::AttrBuilder &FuncAttrs,
+                                        const Decl *Callee) {
   if (!Callee)
     return;
 
   SmallVector<StringRef, 4> Attrs;
 
-  for (const AssumptionAttr *AA : Callee->specific_attrs<AssumptionAttr>())
+  for (const OMPAssumeAttr *AA : Callee->specific_attrs<OMPAssumeAttr>())
     AA->getAssumption().split(Attrs, ",");
 
   if (!Attrs.empty())
@@ -2345,7 +2345,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   // Attach assumption attributes to the declaration. If this is a call
   // site, attach assumptions from the caller to the call as well.
-  AddAttributesFromAssumes(FuncAttrs, TargetDecl);
+  AddAttributesFromOMPAssumes(FuncAttrs, TargetDecl);
 
   bool HasOptnone = false;
   // The NoBuiltinAttr attached to the target FunctionDecl.
