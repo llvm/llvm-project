@@ -6015,12 +6015,8 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     if (!C2.getBoolValue())
       break;
     return C1.srem(C2);
-  case ISD::MULHU: {
-    return APIntOps::mulhu(C1, C2);
-  }
-  case ISD::MULHS: {
-    return APIntOps::mulhs(C1, C2);
-  }
+  case ISD::MULHU: return APIntOps::mulhu(C1, C2);
+  case ISD::MULHS: return APIntOps::mulhs(C1, C2);
   case ISD::AVGFLOORS: {
     unsigned FullWidth = C1.getBitWidth() + 1;
     APInt C1Ext = C1.sext(FullWidth);
