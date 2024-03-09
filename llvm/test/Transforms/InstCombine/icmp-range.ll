@@ -173,8 +173,7 @@ define i1 @test_two_ranges2(ptr nocapture readonly %arg1, ptr nocapture readonly
 ; Values' ranges do not overlap each other, so it can simplified to false.
 define i1 @test_two_argument_ranges(i32 range(i32 1, 6) %arg1, i32 range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_argument_ranges(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG2:%.*]], [[ARG1:%.*]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %rval = icmp ult i32 %arg2, %arg1
   ret i1 %rval
@@ -183,9 +182,7 @@ define i1 @test_two_argument_ranges(i32 range(i32 1, 6) %arg1, i32 range(i32 8, 
 ; Values' ranges do not overlap each other, so it can simplified to false.
 define i1 @test_one_range_and_one_argument_range(ptr nocapture readonly %arg1, i32 range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_one_range_and_one_argument_range(
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[ARG1:%.*]], align 4, !range [[RNG2]]
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ugt i32 [[VAL1]], [[ARG2:%.*]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %val1 = load i32, ptr %arg1, !range !0
   %rval = icmp ult i32 %arg2, %val1
@@ -195,9 +192,7 @@ define i1 @test_one_range_and_one_argument_range(ptr nocapture readonly %arg1, i
 ; Values' ranges do not overlap each other, so it can simplified to false.
 define i1 @test_one_argument_range_and_one_range(i32 range(i32 1, 6) %arg1, ptr nocapture readonly %arg2) {
 ; CHECK-LABEL: @test_one_argument_range_and_one_range(
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[ARG2:%.*]], align 4, !range [[RNG5]]
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[VAL1]], [[ARG1:%.*]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %val1 = load i32, ptr %arg2, !range !6
   %rval = icmp ult i32 %val1, %arg1
@@ -264,8 +259,7 @@ define <2 x i1> @test_two_argument_ranges_vec(<2 x i32> range(i32 5, 10) %arg1, 
 ; Values' ranges do not overlap each other, so it can simplified to false.
 define <2 x i1> @test_two_argument_ranges_vec_false(<2 x i32> range(i32 1, 6) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_argument_ranges_vec_false(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult <2 x i32> [[ARG2:%.*]], [[ARG1:%.*]]
-; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %rval = icmp ult <2 x i32> %arg2, %arg1
   ret <2 x i1> %rval
@@ -274,8 +268,7 @@ define <2 x i1> @test_two_argument_ranges_vec_false(<2 x i32> range(i32 1, 6) %a
 ; Values' ranges do not overlap each other, so it can simplified to true.
 define <2 x i1> @test_two_argument_ranges_vec_true(<2 x i32> range(i32 1, 6) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_argument_ranges_vec_true(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ugt <2 x i32> [[ARG2:%.*]], [[ARG1:%.*]]
-; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %rval = icmp ugt <2 x i32> %arg2, %arg1
   ret <2 x i1> %rval
@@ -304,8 +297,7 @@ define i1 @test_two_return_attribute_ranges_one_in_call() {
 ; CHECK-LABEL: @test_two_return_attribute_ranges_one_in_call(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call range(i32 1, 6) i32 @create_range1()
 ; CHECK-NEXT:    [[ARG1:%.*]] = call i32 @create_range2()
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG1]], [[VAL1]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %val1 = call range(i32 1, 6) i32 @create_range1()
   %val2 = call i32 @create_range2()
@@ -318,8 +310,7 @@ define i1 @test_two_return_attribute_ranges() {
 ; CHECK-LABEL: @test_two_return_attribute_ranges(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
 ; CHECK-NEXT:    [[ARG1:%.*]] = call i32 @create_range2()
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG1]], [[VAL1]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %val1 = call i32 @create_range3()
   %val2 = call i32 @create_range2()
@@ -331,8 +322,7 @@ define i1 @test_two_return_attribute_ranges() {
 define i1 @test_one_return_argument_and_one_argument_range(i32 range(i32 8, 16) %arg1) {
 ; CHECK-LABEL: @test_one_return_argument_and_one_argument_range(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ugt i32 [[VAL1]], [[ARG1:%.*]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %val1 = call i32 @create_range3()
   %rval = icmp ult i32 %arg1, %val1
@@ -343,9 +333,7 @@ define i1 @test_one_return_argument_and_one_argument_range(i32 range(i32 8, 16) 
 define i1 @test_one_range_and_one_return_argument(ptr nocapture readonly %arg1) {
 ; CHECK-LABEL: @test_one_range_and_one_return_argument(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
-; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[ARG1:%.*]], align 4, !range [[RNG5]]
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    ret i1 false
 ;
   %val1 = call i32 @create_range3()
   %val2 = load i32, ptr %arg1, !range !6
