@@ -1567,9 +1567,10 @@ bool CXXRecordDecl::isGenericLambda() const {
 
 #ifndef NDEBUG
 static bool allLookupResultsAreTheSame(const DeclContext::lookup_result &R) {
-  return llvm::all_of(R, [&](NamedDecl *D) {
-    return D->isInvalidDecl() || declaresSameEntity(D, R.front());
-  });
+  for (auto *D : R)
+    if (!declaresSameEntity(D, R.front()))
+      return false;
+  return true;
 }
 #endif
 
