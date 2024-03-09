@@ -100,6 +100,7 @@ C++23 Feature Support
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+- Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
