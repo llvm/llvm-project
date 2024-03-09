@@ -409,7 +409,7 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- PTX is no longer included by default when compiling for CUDA. Using 
+- PTX is no longer included by default when compiling for CUDA. Using
   ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
