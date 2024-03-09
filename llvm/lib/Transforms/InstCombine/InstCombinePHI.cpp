@@ -694,7 +694,8 @@ Instruction *InstCombinerImpl::foldPHIWithMinMax(PHINode &PN) {
       return foldPHIWithMinMaxHelper(PN, ICmp, Op1, ICmp->getPredicate());
     // case 2: icmp <op> %intrinsic, %phi
     else if (isa<PHINode>(Op1))
-      return foldPHIWithMinMaxHelper(PN, ICmp, Op0, ICmp->getSwappedPredicate());
+      return foldPHIWithMinMaxHelper(PN, ICmp, Op0,
+                                     ICmp->getSwappedPredicate());
   }
   return nullptr;
 }
