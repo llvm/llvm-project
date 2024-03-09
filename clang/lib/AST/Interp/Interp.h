@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERP_H
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
+#include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
@@ -368,6 +369,62 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status);
 }
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool Mulc(InterpState &S, CodePtr OpPC) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
+    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+
+    APFloat ResR(A.getSemantics());
+    APFloat ResI(A.getSemantics());
+    HandleComplexComplexMul(A, B, C, D, ResR, ResI);
+
+    // Copy into the result.
+    Result.atIndex(0).deref<Floating>() = Floating(ResR);
+    Result.atIndex(0).initialize();
+    Result.atIndex(1).deref<Floating>() = Floating(ResI);
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  } else {
+    // Integer element type.
+    const T &LHSR = LHS.atIndex(0).deref<T>();
+    const T &LHSI = LHS.atIndex(1).deref<T>();
+    const T &RHSR = RHS.atIndex(0).deref<T>();
+    const T &RHSI = RHS.atIndex(1).deref<T>();
+    unsigned Bits = LHSR.bitWidth();
+
+    // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
+    T A;
+    if (T::mul(LHSR, RHSR, Bits, &A))
+      return false;
+    T B;
+    if (T::mul(LHSI, RHSI, Bits, &B))
+      return false;
+    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+      return false;
+    Result.atIndex(0).initialize();
+
+    // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
+    if (T::mul(LHSR, RHSI, Bits, &A))
+      return false;
+    if (T::mul(LHSI, RHSR, Bits, &B))
+      return false;
+    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+      return false;
+    Result.atIndex(1).initialize();
+    Result.initialize();
+  }
+
+  return true;
+}
+
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
