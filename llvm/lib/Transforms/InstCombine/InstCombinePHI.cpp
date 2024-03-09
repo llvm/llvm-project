@@ -611,6 +611,93 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   return NewGEP;
 }
 
+/// helper function for foldPHIWithMinMax
+Instruction *
+InstCombinerImpl::foldPHIWithMinMaxHelper(PHINode &PN, Instruction *I, Value *Z,
+                                          ICmpInst::Predicate Pred) {
+
+  auto IsCondKnownTrue = [](Value *Val) -> std::optional<bool> {
+    if (!Val)
+      return std::nullopt;
+    if (match(Val, m_One()))
+      return true;
+    if (match(Val, m_Zero()))
+      return false;
+    return std::nullopt;
+  };
+
+  ICmpInst::Predicate SwappedPred =
+      ICmpInst::getNonStrictPredicate(ICmpInst::getSwappedPredicate(Pred));
+  for (unsigned OpNum = 0; OpNum != PN.getNumIncomingValues(); ++OpNum) {
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(PN.getIncomingValue(OpNum))) {
+      if (Pred != MinMax->getPredicate())
+        continue;
+
+      Value *X = MinMax->getLHS();
+      Value *Y = MinMax->getRHS();
+
+      SimplifyQuery Q = SQ.getWithInstruction(I);
+
+      auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(SwappedPred, X, Z, Q));
+      auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(SwappedPred, Y, Z, Q));
+
+      if (!CmpXZ.has_value() && !CmpYZ.has_value())
+        continue;
+      if (CmpXZ.has_value() && CmpYZ.has_value())
+        continue;
+
+      if (!CmpXZ.has_value()) {
+        std::swap(X, Y);
+        std::swap(CmpXZ, CmpYZ);
+      }
+
+      switch (Pred) {
+      case ICmpInst::ICMP_SLT:
+      case ICmpInst::ICMP_ULT:
+      case ICmpInst::ICMP_SGT:
+      case ICmpInst::ICMP_UGT:
+        // if X > Z
+        // %min = llvm.min ( X, Y )
+        // %phi = phi %min ...         =>  %phi = phi X ..
+        // %cmp = icmp lt %phi, Z          %cmp = icmp %phi, Z
+        // if X < Z
+        // %max = llvm.max ( X, Y )
+        // %phi = phi %max ...         =>  %phi = phi X ..
+        // %cmp = icmp gt %phi, Z          %cmp = icmp %phi, Z
+        if (CmpXZ.value()) {
+          if (MinMax->hasOneUse()) {
+            MinMax->eraseFromParent();
+          }
+          PN.setIncomingValue(OpNum, Y);
+        }
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  return nullptr;
+}
+
+/// Fold max min intrinsic into PHI instruction
+Instruction *InstCombinerImpl::foldPHIWithMinMax(PHINode &PN) {
+
+  if (!PN.hasOneUse())
+    return nullptr;
+
+  // The PHI instruction must only be used by a ICmp Instruction
+  if (ICmpInst *ICmp = dyn_cast<ICmpInst>(PN.getUniqueUndroppableUser())) {
+    Value *Op0 = ICmp->getOperand(0), *Op1 = ICmp->getOperand(1);
+    // case 1: icmp <op> %phi, %other
+    if (isa<PHINode>(Op0))
+      return foldPHIWithMinMaxHelper(PN, ICmp, Op1, ICmp->getPredicate());
+    // case 2: icmp <op> %intrinsic, %phi
+    else if (isa<PHINode>(Op1))
+      return foldPHIWithMinMaxHelper(PN, ICmp, Op0, ICmp->getPredicate());
+  }
+  return nullptr;
+}
+
 /// Return true if we know that it is safe to sink the load out of the block
 /// that defines it. This means that it must be obvious the value of the load is
 /// not changed from the point of the load to the end of the block it is in.
@@ -1650,6 +1737,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
 
   if (Value *Res = foldDependentIVs(PN, Builder))
     return replaceInstUsesWith(PN, Res);
+
+  if (Instruction *Result = foldPHIWithMinMax(PN))
+    return Result;
 
   return nullptr;
 }

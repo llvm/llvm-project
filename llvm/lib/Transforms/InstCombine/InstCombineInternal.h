@@ -624,6 +624,9 @@ public:
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
+  Instruction *foldPHIWithMinMax(PHINode &PN);
+  Instruction *foldPHIWithMinMaxHelper(PHINode &PN, Instruction *I, Value *Z,
+                                       ICmpInst::Predicate Pred);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
