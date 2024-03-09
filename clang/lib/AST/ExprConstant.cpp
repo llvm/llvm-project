@@ -2778,7 +2778,9 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
-          << toString(Result, 10) << E->getType() << E->getSourceRange();
+          << toString(Result, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+                      /*UpperCase=*/true, /*InsertSeparators=*/true)
+          << E->getType() << E->getSourceRange();
     return HandleOverflow(Info, E, Value, E->getType());
   }
   return true;
@@ -4131,6 +4133,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
 
     bool IsConstant = BaseType.isConstant(Info.Ctx);
+    bool ConstexprVar = false;
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(
+            Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
+      ConstexprVar = VD->isConstexpr();
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
@@ -4150,6 +4156,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
+      } else if (Info.getLangOpts().C23 && ConstexprVar) {
+        Info.FFDiag(E);
+        return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
         if (!IsConstant) {
           if (!IsAccess)
@@ -12474,6 +12483,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64: {
@@ -13910,7 +13920,9 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
-            << toString(Value, 10) << E->getType() << E->getSourceRange();
+            << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true)
+            << E->getType() << E->getSourceRange();
 
       if (!HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
                           E->getType()))
@@ -15822,7 +15834,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   EStatus.Diag = &Notes;
 
   EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+                (IsConstantInitialization &&
+                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
                     : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);

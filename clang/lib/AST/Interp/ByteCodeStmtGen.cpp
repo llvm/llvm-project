@@ -8,7 +8,6 @@
 
 #include "ByteCodeStmtGen.h"
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"

@@ -5364,9 +5364,6 @@ def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
-def print_std_module_manifest_path : Flag<["-", "--"], "print-library-module-manifest-path">,
-  HelpText<"Print the path for the C++ Standard library module manifest">,
-  Visibility<[ClangOption, CLOption]>;
 def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">,
   Visibility<[ClangOption, CLOption]>;
@@ -7417,7 +7414,9 @@ def ast_view : Flag<["-"], "ast-view">,
 def emit_module : Flag<["-"], "emit-module">,
   HelpText<"Generate pre-compiled module file from a module map">;
 def emit_module_interface : Flag<["-"], "emit-module-interface">,
-  HelpText<"Generate pre-compiled module file from a C++ module interface">;
+  HelpText<"Generate pre-compiled module file from a standard C++ module interface unit">;
+def emit_reduced_module_interface : Flag<["-"], "emit-reduced-module-interface">,
+  HelpText<"Generate reduced prebuilt module interface from a standard C++ module interface unit">;
 def emit_header_unit : Flag<["-"], "emit-header-unit">,
   HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,

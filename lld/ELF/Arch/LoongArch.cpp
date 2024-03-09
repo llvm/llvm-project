@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -153,6 +154,17 @@ static uint32_t setK16(uint32_t insn, uint32_t imm) {
 
 static bool isJirl(uint32_t insn) {
   return (insn & 0xfc000000) == JIRL;
+}
+
+static void handleUleb128(uint8_t *loc, uint64_t val) {
+  const uint32_t maxcount = 1 + 64 / 7;
+  uint32_t count;
+  const char *error = nullptr;
+  uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
+  if (count > maxcount || (count == maxcount && error))
+    errorOrWarn(getErrorLocation(loc) + "extra space for uleb128");
+  uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
+  encodeULEB128((orig + val) & mask, loc, count);
 }
 
 LoongArch::LoongArch() {
@@ -396,11 +408,13 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_ADD16:
   case R_LARCH_ADD32:
   case R_LARCH_ADD64:
+  case R_LARCH_ADD_ULEB128:
   case R_LARCH_SUB6:
   case R_LARCH_SUB8:
   case R_LARCH_SUB16:
   case R_LARCH_SUB32:
   case R_LARCH_SUB64:
+  case R_LARCH_SUB_ULEB128:
     // The LoongArch add/sub relocs behave like the RISCV counterparts; reuse
     // the RelExpr to avoid code duplication.
     return R_RISCV_ADD;
@@ -635,6 +649,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_ADD64:
     write64le(loc, read64le(loc) + val);
     return;
+  case R_LARCH_ADD_ULEB128:
+    handleUleb128(loc, val);
+    return;
   case R_LARCH_SUB6:
     *loc = (*loc & 0xc0) | ((*loc - val) & 0x3f);
     return;
@@ -649,6 +666,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     return;
   case R_LARCH_SUB64:
     write64le(loc, read64le(loc) - val);
+    return;
+  case R_LARCH_SUB_ULEB128:
+    handleUleb128(loc, -val);
     return;
 
   case R_LARCH_MARK_LA:

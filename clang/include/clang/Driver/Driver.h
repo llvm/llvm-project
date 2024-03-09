@@ -160,9 +160,6 @@ public:
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
 
-  /// TODO: Remove this in favor of Dir.
-  std::string InstalledDir;
-
   /// The path to the compiler resource directory.
   std::string ResourceDir;
 
@@ -429,8 +426,6 @@ public:
 
   /// Get the path to where the clang executable was installed.
   const char *getInstalledDir() const {
-    if (!InstalledDir.empty())
-      return InstalledDir.c_str();
     return Dir.c_str();
   }
 
@@ -619,16 +614,6 @@ public:
   //
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
-
-  /// Lookup the path to the Standard library module manifest.
-  ///
-  /// \param C - The compilation.
-  /// \param TC - The tool chain for additional information on
-  /// directories to search.
-  //
-  // FIXME: This should be in CompilationInfo.
-  std::string GetStdModuleManifestPath(const Compilation &C,
-                                       const ToolChain &TC) const;
 
   /// HandleAutocompletions - Handle --autocomplete by searching and printing
   /// possible flags, descriptions, and its arguments.
