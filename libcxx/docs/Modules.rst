@@ -114,12 +114,12 @@ installation of modules and install the modules into ``<install_prefix>``.
 
 .. code-block:: bash
 
-  $ git clone https://github.com/llvm/llvm-project.git --depth 1
+  $ git clone https://github.com/llvm/llvm-project.git
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S runtimes -B build -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
-  $ cmake --build build -- -j $(nproc)
-  $ cmake --install build --prefix <install_prefix>
+  $ cmake -G Ninja -S runtimes -B build -DCMAKE_INSTALL_PREFIX=<install_prefix> -DLIBCXX_INSTALL_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+  $ ninja -C build
+  $ ninja install -C build
 
 The above ``build`` directory will be referred to as ``<build>`` in the
 rest of these instructions.
@@ -134,7 +134,7 @@ directory. It consists of a ``CMakeLists.txt`` and a ``main.cpp`` file.
   import std.compat;
 
   int main() {
-    std::println("Hello modular world");
+    std::cout << "Hello modular world\n";
     ::printf("Hello compat modular world\n");
   }
 
@@ -174,82 +174,51 @@ directory. It consists of a ``CMakeLists.txt`` and a ``main.cpp`` file.
   #
   # Import the modules from libc++
   #
-  include(std.cmake)
 
-  add_executable(main main.cpp)
-
-.. code-block:: cmake
-
-  # std.cmake
   include(FetchContent)
   FetchContent_Declare(
-    std_module
-    URL "file://${LIBCXX_INSTALLED_DIR}/share/libc++/v1"
+    std
+    URL "file://${LIBCXX_BUILD}/modules/c++/v1/"
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     SYSTEM
   )
-
-  if (NOT std_module_POPULATED)
-    FetchContent_Populate(std_module)
-  endif()
-
-  #
-  # Add std static library
-  #
-
-  add_library(std)
-
-  target_sources(std
-    PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
-      ${std_module_SOURCE_DIR}/std.cppm
-      ${std_module_SOURCE_DIR}/std.compat.cppm
-  )
-
-  #
-  # Adjust project include directories
-  #
-
-  target_include_directories(std SYSTEM PUBLIC ${LIBCXX_INSTALLED_DIR}/include/c++/v1)
+  FetchContent_MakeAvailable(std)
 
   #
   # Adjust project compiler flags
   #
 
-  target_compile_options(std
-    PRIVATE
-      -Wno-reserved-module-identifier
-      -Wno-reserved-user-defined-literal
-  )
-
-  target_compile_options(std
-    PUBLIC
-      -nostdinc++
-  )
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+  # The include path needs to be set to be able to use macros from headers.
+  # For example from, the headers <cassert> and <version>.
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-isystem>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_BUILD}/include/c++/v1>)
 
   #
   # Adjust project linker flags
   #
 
-  target_link_options(std
-    INTERFACE
-      -nostdlib++
-      -L${LIBCXX_INSTALLED_DIR}/lib
-      -Wl,-rpath,${LIBCXX_INSTALLED_DIR}/lib
-  )
+  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-nostdlib++>)
+  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-L${LIBCXX_BUILD}/lib>)
+  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-Wl,-rpath,${LIBCXX_BUILD}/lib>)
+  # Linking against the standard c++ library is required for CMake to get the proper dependencies.
+  link_libraries(std c++)
+  link_libraries(std.compat c++)
 
-  target_link_libraries(std
-    INTERFACE
-      c++
-  )
-  
   #
-  # Link to the std modules by default
+  # Add the project
   #
 
-  link_libraries(std)
+  add_executable(main)
+  target_sources(main
+    PRIVATE
+      main.cpp
+  )
 
 Building this project is done with the following steps, assuming the files
-``main.cpp``, ``CMakeLists.txt``, and ``std.cmake`` are copied in the current directory.
+``main.cpp`` and ``CMakeLists.txt`` are copied in the current directory.
 
 .. code-block:: bash
 
@@ -384,8 +353,8 @@ Building this project is done with the following steps, assuming the files
 
   $ mkdir build
   $ cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_INSTALLED_DIR=<install_prefix>
-  $ cmake --build build
-  $ ./build/main
+  $ ninja -C build
+  $ build/main
 
 .. warning:: You need more than clang itself to build a project using modules.
              Specifically, you will need ``clang-scan-deps``. For example, in Ubuntu, you
