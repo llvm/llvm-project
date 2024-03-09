@@ -8,12 +8,10 @@
 
 from libcxx.test.dsl import *
 from lit.BooleanExpression import BooleanExpression
-import os
 import re
 import shutil
 import subprocess
 import sys
-import tempfile
 
 _isAnyClang = lambda cfg: "__clang__" in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
@@ -454,6 +452,56 @@ DEFAULT_FEATURES += [
           """,
         ),
     ),
+    Feature(
+        name="can-create-symlinks",
+        when=lambda cfg: "_WIN32" not in compilerMacros(cfg)
+        or programSucceeds(
+            cfg,
+            # Creation of symlinks require elevated privileges on Windows unless
+            # Windows developer mode is enabled.
+            """
+            #include <stdio.h>
+            #include <windows.h>
+            int main() {
+              CHAR tempDirPath[MAX_PATH];
+              DWORD tempPathRet = GetTempPathA(MAX_PATH, tempDirPath);
+              if (tempPathRet == 0 || tempPathRet > MAX_PATH) {
+                return 1;
+              }
+
+              CHAR tempFilePath[MAX_PATH];
+              UINT uRetVal = GetTempFileNameA(
+                tempDirPath,
+                "cxx", // Prefix
+                0, // Unique=0 also implies file creation.
+                tempFilePath);
+              if (uRetVal == 0) {
+                return 1;
+              }
+
+              CHAR symlinkFilePath[MAX_PATH];
+              int ret = sprintf_s(symlinkFilePath, MAX_PATH, "%s_symlink", tempFilePath);
+              if (ret == -1) {
+                DeleteFileA(tempFilePath);
+                return 1;
+              }
+
+              // Requires either administrator, or developer mode enabled.
+              BOOL bCreatedSymlink = CreateSymbolicLinkA(symlinkFilePath,
+                tempFilePath,
+                SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE);
+              if (!bCreatedSymlink) {
+                DeleteFileA(tempFilePath);
+                return 1;
+              }
+
+              DeleteFileA(tempFilePath);
+              DeleteFileA(symlinkFilePath);
+              return 0;
+            }
+            """
+        )
+    )
 ]
 
 # Add features representing the build host platform name.
@@ -475,39 +523,6 @@ DEFAULT_FEATURES += [
         when=lambda cfg: platform.system().lower().startswith("aix"),
     ),
 ]
-
-
-# Creation of symlinks require elevated privileges on Windows unless
-# Windows developer mode is enabled.
-def check_unprivileged_symlinks(cfg):
-    if not platform.system().lower().startswith("windows"):
-        return True
-
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    temp_file_path = temp_file.name
-
-    # Close the file to ensure it can be linked.
-    temp_file.close()
-
-    symlink_file_path = temp_file_path + "_symlink"
-    try:
-        os.symlink(temp_file_path, symlink_file_path)
-        return True
-    except OSError as e:
-        return False
-    finally:
-        os.remove(temp_file_path)
-        if os.path.exists(symlink_file_path):
-            os.remove(symlink_file_path)
-
-
-DEFAULT_FEATURES += [
-    Feature(
-        name="can-create-symlinks",
-        when=check_unprivileged_symlinks,
-    )
-]
-
 
 # Detect whether GDB is on the system, has Python scripting and supports
 # adding breakpoint commands. If so add a substitution to access it.
