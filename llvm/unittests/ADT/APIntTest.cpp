@@ -2805,6 +2805,26 @@ TEST(APIntTest, multiply) {
   EXPECT_EQ(64U, i96.countr_zero());
 }
 
+TEST(APIntTest, Hmultiply) {
+  APInt i1048576(32, 1048576);
+
+  EXPECT_EQ(APInt(32, 256), APIntOps::mulhu(i1048576, i1048576));
+
+  APInt i16777216(32, 16777216);
+  APInt i32768(32, 32768);
+
+  EXPECT_EQ(APInt(32, 128), APIntOps::mulhu(i16777216, i32768));
+  EXPECT_EQ(APInt(32, 128), APIntOps::mulhu(i32768, i16777216));
+
+  APInt i2097152(32, -2097152);
+  APInt i524288(32, 524288);
+
+  EXPECT_EQ(APInt(32, 1024), APIntOps::mulhs(i2097152, i2097152));
+
+  EXPECT_EQ(APInt(32, -256), APIntOps::mulhs(i2097152, i524288));
+  EXPECT_EQ(APInt(32, -256), APIntOps::mulhs(i524288, i2097152));
+}
+
 TEST(APIntTest, RoundingUDiv) {
   for (uint64_t Ai = 1; Ai <= 255; Ai++) {
     APInt A(8, Ai);

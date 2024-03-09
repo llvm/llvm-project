@@ -21,12 +21,6 @@ template <typename Fn> static void EnumerateAPInts(unsigned Bits, Fn TestFn) {
   } while (++N != 0);
 }
 
-APInt MULHS(APInt X, APInt Y) {
-  unsigned Bits = X.getBitWidth();
-  unsigned WideBits = 2 * Bits;
-  return (X.sext(WideBits) * Y.sext(WideBits)).lshr(Bits).trunc(Bits);
-}
-
 APInt SignedDivideUsingMagic(APInt Numerator, APInt Divisor,
                              SignedDivisionByConstantInfo Magics) {
   unsigned Bits = Numerator.getBitWidth();
@@ -48,7 +42,7 @@ APInt SignedDivideUsingMagic(APInt Numerator, APInt Divisor,
   }
 
   // Multiply the numerator by the magic value.
-  APInt Q = MULHS(Numerator, Magics.Magic);
+  APInt Q = APIntOps::mulhs(Numerator, Magics.Magic);
 
   // (Optionally) Add/subtract the numerator using Factor.
   Factor = Numerator * Factor;
@@ -89,12 +83,6 @@ TEST(SignedDivisionByConstantTest, Test) {
   }
 }
 
-APInt MULHU(APInt X, APInt Y) {
-  unsigned Bits = X.getBitWidth();
-  unsigned WideBits = 2 * Bits;
-  return (X.zext(WideBits) * Y.zext(WideBits)).lshr(Bits).trunc(Bits);
-}
-
 APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
                                bool LZOptimization,
                                bool AllowEvenDivisorOptimization, bool ForceNPQ,
@@ -129,16 +117,16 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
   APInt Q = Numerator.lshr(PreShift);
 
   // Multiply the numerator by the magic value.
-  Q = MULHU(Q, Magics.Magic);
+  Q = APIntOps::mulhu(Q, Magics.Magic);
 
   if (UseNPQ || ForceNPQ) {
     APInt NPQ = Numerator - Q;
 
     // For vectors we might have a mix of non-NPQ/NPQ paths, so use
-    // MULHU to act as a SRL-by-1 for NPQ, else multiply by zero.
+    // mulhu to act as a SRL-by-1 for NPQ, else multiply by zero.
     APInt NPQ_Scalar = NPQ.lshr(1);
     (void)NPQ_Scalar;
-    NPQ = MULHU(NPQ, NPQFactor);
+    NPQ = APIntOps::mulhu(NPQ, NPQFactor);
     assert(!UseNPQ || NPQ == NPQ_Scalar);
 
     Q = NPQ + Q;
