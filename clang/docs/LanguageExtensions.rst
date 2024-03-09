@@ -434,6 +434,114 @@ __datasizeof
 ``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
 type ignoring tail padding.
 
+_BitInt, _ExtInt
+----------------
+
+Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
+and in C++. This type was previously implemented in Clang with the same
+semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
+favor of the standard type.
+
+Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
+so this type should not yet be used in interfaces that require ABI stability.
+
+C keywords supported in all language modes
+------------------------------------------
+
+Clang supports ``_Alignas``, ``_Alignof``, ``_Atomic``, ``_Complex``,
+``_Generic``, ``_Imaginary``, ``_Noreturn``, ``_Static_assert``,
+``_Thread_local``, and ``_Float16`` in all language modes with the C semantics.
+
+__alignof, __alignof__
+----------------------
+
+``__alignof`` and ``__alignof__`` return, in contrast to ``_Alignof`` and
+``alignof``, the preferred alignment of a type. This may be larger than the
+required alignment for improved performance.
+
+__extension__
+-------------
+
+``__extension__`` suppresses extension diagnostics in the statement it is
+prepended to.
+
+__auto_type
+-----------
+
+``__auto_type`` behaves the same as ``auto`` in C++11 but is available in all
+language modes.
+
+__imag, __imag__
+----------------
+
+``__imag`` and ``__imag__`` can be used to get the imaginary part of a complex
+value.
+
+__real, __real__
+----------------
+
+``__real`` and ``__real__`` can be used to get the real part of a complex value.
+
+__asm, __asm__
+--------------
+
+``__asm`` and ``__asm__`` are alternate spellings for ``asm``, but available in
+all language modes.
+
+__complex, __complex__
+----------------------
+
+``__complex`` and ``__complex__`` are alternate spellings for ``_Complex``.
+
+__const, __const__, __volatile, __volatile__, __restrict, __restrict__
+----------------------------------------------------------------------
+
+These are alternate spellings for their non-underscore counterparts, but are
+available in all langauge modes.
+
+__decltype
+----------
+
+``__decltype`` is an alternate spelling for ``decltype``, but is also available
+in C++ modes before C++11.
+
+__inline, __inline__
+--------------------
+
+``__inline`` and ``__inline__`` are alternate spellings for ``inline``, but are
+available in all language modes.
+
+__nullptr
+---------
+
+``__nullptr`` is an alternate spelling for ``nullptr``, but is also available in
+C++ modes prior to C++11. Note that it's currently not availbale in C despite
+C23 having support for ``nullptr``.
+
+__signed, __signed__
+--------------------
+
+``__signed`` and ``__signed__`` are alternate spellings for ``signed``.
+``__unsigned`` and ``__unsigned__`` are **not** supported.
+
+__typeof, __typeof__, __typeof_unqual, __typeof_unqual__
+--------------------------------------------------------
+
+``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
+available in all langauge modes. These spellings result in the operand,
+retaining all qualifiers.
+
+``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
+C23 ``typeof_unqual`` type specifier, but are available in all language modes.
+These spellings result in the type of the operand, stripping all qualifiers.
+
+__char16_t, __char32_t
+----------------------
+
+``__char16_t`` and ``__char32_t`` are alternate spellings for ``char16_t`` and
+``char32_t`` respectively, but are also available in C++ modes before C++11.
+They are only supported in C++. ``__char8_t`` is not available.
+
 ..
   FIXME: This should list all the keyword extensions
 
@@ -5784,17 +5892,6 @@ Examples are:
    # 1 "/usr/include/stdio.h" 1 3 // Enter a system header
    # 60 "" 2 // return to "main.c"
    # 1 "/usr/ancient/header.h" 1 4 // Enter an implicit extern "C" header
-
-Extended Integer Types
-======================
-
-Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
-and in C++. This type was previously implemented in Clang with the same
-semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
-favor of the standard type.
-
-Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
-so this type should not yet be used in interfaces that require ABI stability.
 
 Intrinsics Support within Constant Expressions
 ==============================================
