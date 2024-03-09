@@ -1722,91 +1722,91 @@ struct StructWithAnonUnion3 {
 
 void is_layout_compatible(int n)
 {
-  static_assert(__is_layout_compatible(void, void), "");
-  static_assert(!__is_layout_compatible(void, int), "");
-  static_assert(__is_layout_compatible(void, const void), "");
-  static_assert(__is_layout_compatible(void, volatile void), "");
-  static_assert(__is_layout_compatible(const int, volatile int), "");
-  static_assert(__is_layout_compatible(int, int), "");
-  static_assert(__is_layout_compatible(int, const int), "");
-  static_assert(__is_layout_compatible(int, volatile int), "");
-  static_assert(__is_layout_compatible(const int, volatile int), "");
-  static_assert(__is_layout_compatible(int *, int * __restrict), "");
+  static_assert(__is_layout_compatible(void, void));
+  static_assert(!__is_layout_compatible(void, int));
+  static_assert(__is_layout_compatible(void, const void));
+  static_assert(__is_layout_compatible(void, volatile void));
+  static_assert(__is_layout_compatible(const int, volatile int));
+  static_assert(__is_layout_compatible(int, int));
+  static_assert(__is_layout_compatible(int, const int));
+  static_assert(__is_layout_compatible(int, volatile int));
+  static_assert(__is_layout_compatible(const int, volatile int));
+  static_assert(__is_layout_compatible(int *, int * __restrict));
   // Note: atomic qualification matters for layout compatibility.
-  static_assert(!__is_layout_compatible(int, _Atomic int), "");
-  static_assert(__is_layout_compatible(_Atomic(int), _Atomic int), "");
-  static_assert(!__is_layout_compatible(int, unsigned int), "");
-  static_assert(!__is_layout_compatible(char, unsigned char), "");
-  static_assert(!__is_layout_compatible(char, signed char), "");
-  static_assert(!__is_layout_compatible(unsigned char, signed char), "");
-  static_assert(__is_layout_compatible(int[], int[]), "");
-  static_assert(__is_layout_compatible(int[2], int[2]), "");
-  static_assert(!__is_layout_compatible(int[n], int[2]), ""); // FIXME: VLAs should be rejected
-  static_assert(!__is_layout_compatible(int[n], int[n]), ""); // FIXME: VLAs should be rejected
-  static_assert(__is_layout_compatible(int&, int&), "");
-  static_assert(!__is_layout_compatible(int&, char&), "");
-  static_assert(__is_layout_compatible(void(int), void(int)), "");
-  static_assert(!__is_layout_compatible(void(int), void(char)), "");
-  static_assert(__is_layout_compatible(void(&)(int), void(&)(int)), "");
-  static_assert(!__is_layout_compatible(void(&)(int), void(&)(char)), "");
-  static_assert(__is_layout_compatible(void(*)(int), void(*)(int)), "");
-  static_assert(!__is_layout_compatible(void(*)(int), void(*)(char)), "");
+  static_assert(!__is_layout_compatible(int, _Atomic int));
+  static_assert(__is_layout_compatible(_Atomic(int), _Atomic int));
+  static_assert(!__is_layout_compatible(int, unsigned int));
+  static_assert(!__is_layout_compatible(char, unsigned char));
+  static_assert(!__is_layout_compatible(char, signed char));
+  static_assert(!__is_layout_compatible(unsigned char, signed char));
+  static_assert(__is_layout_compatible(int[], int[]));
+  static_assert(__is_layout_compatible(int[2], int[2]));
+  static_assert(!__is_layout_compatible(int[n], int[2])); // FIXME: VLAs should be rejected
+  static_assert(!__is_layout_compatible(int[n], int[n])); // FIXME: VLAs should be rejected
+  static_assert(__is_layout_compatible(int&, int&));
+  static_assert(!__is_layout_compatible(int&, char&));
+  static_assert(__is_layout_compatible(void(int), void(int)));
+  static_assert(!__is_layout_compatible(void(int), void(char)));
+  static_assert(__is_layout_compatible(void(&)(int), void(&)(int)));
+  static_assert(!__is_layout_compatible(void(&)(int), void(&)(char)));
+  static_assert(__is_layout_compatible(void(*)(int), void(*)(int)));
+  static_assert(!__is_layout_compatible(void(*)(int), void(*)(char)));
   using function_type = void();
   using function_type2 = void(char);
-  static_assert(__is_layout_compatible(const function_type, const function_type), "");
+  static_assert(__is_layout_compatible(const function_type, const function_type));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   // expected-warning@-2 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
-  static_assert(__is_layout_compatible(function_type, const function_type), "");
+  static_assert(__is_layout_compatible(function_type, const function_type));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
-  static_assert(!__is_layout_compatible(const function_type, const function_type2), "");
+  static_assert(!__is_layout_compatible(const function_type, const function_type2));
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
-  static_assert(__is_layout_compatible(CStruct, CStruct2), "");
-  static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
-  static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
-  static_assert(__is_layout_compatible(const CStruct, volatile CStruct2), "");
-  static_assert(__is_layout_compatible(CEmptyStruct, CEmptyStruct2), "");
-  static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2), "");
-  static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByBase, CppStructNonStandardByBase2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByVirt, CppStructNonStandardByVirt2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByMemb, CppStructNonStandardByMemb2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByProt, CppStructNonStandardByProt2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2), "");
-  static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2), "");
-  static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers), "");
-  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)), "");
-  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)), "");
-  static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
-  static_assert(!__is_layout_compatible(CStruct, CStructAlignedMembers), "");
-  static_assert(__is_layout_compatible(UnionNoOveralignedMembers, UnionWithOveralignedMembers), "");
-  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
-  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
-  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
-  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds4), "");
-  static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*), "");
-  static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*), "");
-  static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)), "");
-  static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)), "");
-  static_assert(__is_layout_compatible(CStructNested, CStructNested2), "");
-  static_assert(__is_layout_compatible(UnionLayout, UnionLayout), "");
-  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout2), "");
-  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
-  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
-  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
-  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
-  static_assert(__is_layout_compatible(EnumForward, EnumForward), "");
-  static_assert(__is_layout_compatible(EnumForward, EnumClassForward), "");
+  static_assert(__is_layout_compatible(CStruct, CStruct2));
+  static_assert(__is_layout_compatible(CStruct, const CStruct2));
+  static_assert(__is_layout_compatible(CStruct, volatile CStruct2));
+  static_assert(__is_layout_compatible(const CStruct, volatile CStruct2));
+  static_assert(__is_layout_compatible(CEmptyStruct, CEmptyStruct2));
+  static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2));
+  static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByBase, CppStructNonStandardByBase2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByVirt, CppStructNonStandardByVirt2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByMemb, CppStructNonStandardByMemb2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByProt, CppStructNonStandardByProt2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2));
+  static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2));
+  static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers));
+  static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) != bool(__has_cpp_attribute(no_unique_address)));
+  static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) != bool(__has_cpp_attribute(no_unique_address)));
+  static_assert(__is_layout_compatible(CStruct, CStructAlignment));
+  static_assert(!__is_layout_compatible(CStruct, CStructAlignedMembers));
+  static_assert(__is_layout_compatible(UnionNoOveralignedMembers, UnionWithOveralignedMembers));
+  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds));
+  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2));
+  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3));
+  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds4));
+  static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*));
+  static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*));
+  static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)));
+  static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)));
+  static_assert(__is_layout_compatible(CStructNested, CStructNested2));
+  static_assert(__is_layout_compatible(UnionLayout, UnionLayout));
+  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout2));
+  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3));
+  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2));
+  static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3));
+  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout));
+  static_assert(__is_layout_compatible(EnumForward, EnumForward));
+  static_assert(__is_layout_compatible(EnumForward, EnumClassForward));
   // Layout compatibility for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
-  static_assert(!__is_layout_compatible(EnumLayout, int), "");
-  static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
-  static_assert(!__is_layout_compatible(EnumForward, int), "");
-  static_assert(!__is_layout_compatible(EnumClassForward, int), "");
+  static_assert(!__is_layout_compatible(EnumLayout, int));
+  static_assert(!__is_layout_compatible(EnumClassLayout, int));
+  static_assert(!__is_layout_compatible(EnumForward, int));
+  static_assert(!__is_layout_compatible(EnumClassForward, int));
   // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
-  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), ""); 
-  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
-  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]), "");
+  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete)); 
+  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete));
+  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]));
 }
 
 void is_signed()
