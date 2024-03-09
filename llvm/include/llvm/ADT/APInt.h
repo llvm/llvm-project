@@ -2200,7 +2200,7 @@ APInt mulhu(const APInt &C1, const APInt &C2);
 
 /// Compute the higher order bits of signed multiplication of two APInts
 /// Mathematically, this is similar to mulhu but for signed values.
-/// Example: mulhs(-2097152,524288) == -256
+/// Example: `mulhs(-2097152, 524288) == -256`
 APInt mulhs(const APInt &C1, const APInt &C2);
 
 /// Compute GCD of two unsigned APInt values.
