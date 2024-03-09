@@ -753,17 +753,15 @@ static void addSanitizers(const Triple &TargetTriple,
 
   if (ClRemoveTraps) {
     // We can optimize after inliner, and PGO profile matching. The hook below
-    // is called from `buildModuleOptimizationPipeline` just after profile use,
-    // and inliner is a part of `buildModuleSimplificationPipeline`, which is
-    // before `buildModuleOptimizationPipeline`.
-    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
-                                           OptimizationLevel Level) {
-      FunctionPassManager FPM;
-      FPM.addPass(RemoveTrapsPass());
-      FPM.addPass(
-          SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
-      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    });
+    // is called at the end `buildFunctionSimplificationPipeline`, which called
+    // from `buildInlinerPipeline`, which called after profile matching.
+    PB.registerScalarOptimizerLateEPCallback(
+        [](FunctionPassManager &FPM, OptimizationLevel Level) {
+          // RemoveTrapsPass expects trap blocks precedded by conditional
+          // branches, which often is not the case without SimplifyCFG.
+          FPM.addPass(SimplifyCFGPass());
+          FPM.addPass(RemoveTrapsPass());
+        });
   }
 }
 
