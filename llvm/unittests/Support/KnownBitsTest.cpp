@@ -538,8 +538,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return KnownBits::mulhs(Known1, Known2);
       },
       [](const APInt &N1, const APInt &N2) {
-        unsigned Bits = N1.getBitWidth();
-        return (N1.sext(2 * Bits) * N2.sext(2 * Bits)).extractBits(Bits, Bits);
+        return APIntOps::mulhs(N1, N2);
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
@@ -547,8 +546,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return KnownBits::mulhu(Known1, Known2);
       },
       [](const APInt &N1, const APInt &N2) {
-        unsigned Bits = N1.getBitWidth();
-        return (N1.zext(2 * Bits) * N2.zext(2 * Bits)).extractBits(Bits, Bits);
+        return APIntOps::mulhu(N1, N2);
       },
       checkCorrectnessOnlyBinary);
 }
