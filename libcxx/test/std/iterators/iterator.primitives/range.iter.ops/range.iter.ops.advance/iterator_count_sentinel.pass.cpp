@@ -225,10 +225,10 @@ constexpr bool test() {
   // `bidirectional_iterator` that doesn't model `sized_sentinel_for`.
   {
     static_assert(std::bidirectional_iterator<bidirectional_iterator<iota_iterator>>);
-    static_assert(!std::sized_sentinel_for<bidirectional_iterator<iota_iterator>,
-                                           bidirectional_iterator<iota_iterator>>);
+    static_assert(
+        !std::sized_sentinel_for<bidirectional_iterator<iota_iterator>, bidirectional_iterator<iota_iterator>>);
 
-    auto it = stride_counting_iterator(bidirectional_iterator(iota_iterator{+1}));
+    auto it   = stride_counting_iterator(bidirectional_iterator(iota_iterator{+1}));
     auto sent = stride_counting_iterator(bidirectional_iterator(iota_iterator{-2}));
     assert(std::ranges::advance(it, -3, sent) == 0);
     assert(base(base(it)) == iota_iterator{-2});
