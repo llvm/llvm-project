@@ -1315,7 +1315,7 @@ module std_private_format_format_functions                [system] {
   header "__format/format_functions.h"
   export std_string
 }
-module std_private_format_format_fwd                      [system] { header "__format/format_fwd.h" }
+module std_private_format_fwd                             [system] { header "__fwd/format.h" }
 module std_private_format_format_parse_context            [system] { header "__format/format_parse_context.h" }
 module std_private_format_format_string                   [system] { header "__format/format_string.h" }
 module std_private_format_format_to_n_result              [system] {

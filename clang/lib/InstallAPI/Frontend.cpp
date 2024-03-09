@@ -19,9 +19,10 @@ namespace clang::installapi {
 GlobalRecord *FrontendRecordsSlice::addGlobal(
     StringRef Name, RecordLinkage Linkage, GlobalRecord::Kind GV,
     const clang::AvailabilityInfo Avail, const Decl *D, const HeaderType Access,
-    SymbolFlags Flags) {
+    SymbolFlags Flags, bool Inlined) {
 
-  auto *GR = llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags);
+  auto *GR =
+      llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
   FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
   return GR;
 }
