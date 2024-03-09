@@ -2091,7 +2091,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   case AArch64::G_DUP: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
-    if (!DstTy.getElementType().isPointer())
+    if (!DstTy.isPointerVector())
       return false;
     auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(1).getReg());
     MRI.setType(I.getOperand(0).getReg(),
@@ -2804,11 +2804,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_GLOBAL_VALUE: {
-    auto GV = I.getOperand(1).getGlobal();
-    if (GV->isThreadLocal())
-      return selectTLSGlobalValue(I, MRI);
+    const GlobalValue *GV = nullptr;
+    unsigned OpFlags;
+    if (I.getOperand(1).isSymbol()) {
+      OpFlags = I.getOperand(1).getTargetFlags();
+      // Currently only used by "RtLibUseGOT".
+      assert(OpFlags == AArch64II::MO_GOT);
+    } else {
+      GV = I.getOperand(1).getGlobal();
+      if (GV->isThreadLocal())
+        return selectTLSGlobalValue(I, MRI);
+      OpFlags = STI.ClassifyGlobalReference(GV, TM);
+    }
 
-    unsigned OpFlags = STI.ClassifyGlobalReference(GV, TM);
     if (OpFlags & AArch64II::MO_GOT) {
       I.setDesc(TII.get(AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
@@ -2989,13 +2997,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
 
-    if (IsZExtLoad) {
-      // The zextload from a smaller type to i32 should be handled by the
+    if (IsZExtLoad || (Opcode == TargetOpcode::G_LOAD &&
+                       ValTy == LLT::scalar(64) && MemSizeInBits == 32)) {
+      // The any/zextload from a smaller type to i32 should be handled by the
       // importer.
       if (MRI.getType(LoadStore->getOperand(0).getReg()).getSizeInBits() != 64)
         return false;
-      // If we have a ZEXTLOAD then change the load's type to be a narrower reg
-      // and zero_extend with SUBREG_TO_REG.
+      // If we have an extending load then change the load's type to be a
+      // narrower reg and zero_extend with SUBREG_TO_REG.
       Register LdReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
       Register DstReg = LoadStore->getOperand(0).getReg();
       LoadStore->getOperand(0).setReg(LdReg);
@@ -5758,24 +5767,60 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
 
   if (CV->getSplatValue()) {
     APInt DefBits = APInt::getSplat(DstSize, CV->getUniqueInteger());
-    MachineInstr *NewOp;
-    bool Inv = false;
-    if ((NewOp = tryAdvSIMDModImm64(Dst, DstSize, DefBits, MIRBuilder)) ||
-        (NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp =
-             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp = tryAdvSIMDModImm8(Dst, DstSize, DefBits, MIRBuilder)) ||
-        (NewOp = tryAdvSIMDModImmFP(Dst, DstSize, DefBits, MIRBuilder)))
+    auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
+      MachineInstr *NewOp;
+      bool Inv = false;
+      if ((NewOp = tryAdvSIMDModImm64(Dst, DstSize, DefBits, MIRBuilder)) ||
+          (NewOp =
+               tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp =
+               tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp =
+               tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp = tryAdvSIMDModImm8(Dst, DstSize, DefBits, MIRBuilder)) ||
+          (NewOp = tryAdvSIMDModImmFP(Dst, DstSize, DefBits, MIRBuilder)))
+        return NewOp;
+
+      DefBits = ~DefBits;
+      Inv = true;
+      if ((NewOp =
+               tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp =
+               tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)))
+        return NewOp;
+      return nullptr;
+    };
+
+    if (auto *NewOp = TryMOVIWithBits(DefBits))
       return NewOp;
 
-    DefBits = ~DefBits;
-    Inv = true;
-    if ((NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp =
-             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)))
-      return NewOp;
+    // See if a fneg of the constant can be materialized with a MOVI, etc
+    auto TryWithFNeg = [&](APInt DefBits, int NumBits,
+                           unsigned NegOpc) -> MachineInstr * {
+      // FNegate each sub-element of the constant
+      APInt Neg = APInt::getHighBitsSet(NumBits, 1).zext(DstSize);
+      APInt NegBits(DstSize, 0);
+      unsigned NumElts = DstSize / NumBits;
+      for (unsigned i = 0; i < NumElts; i++)
+        NegBits |= Neg << (NumBits * i);
+      NegBits = DefBits ^ NegBits;
+
+      // Try to create the new constants with MOVI, and if so generate a fneg
+      // for it.
+      if (auto *NewOp = TryMOVIWithBits(NegBits)) {
+        Register NewDst = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
+        NewOp->getOperand(0).setReg(NewDst);
+        return MIRBuilder.buildInstr(NegOpc, {Dst}, {NewDst});
+      }
+      return nullptr;
+    };
+    MachineInstr *R;
+    if ((R = TryWithFNeg(DefBits, 32, AArch64::FNEGv4f32)) ||
+        (R = TryWithFNeg(DefBits, 64, AArch64::FNEGv2f64)) ||
+        (STI.hasFullFP16() &&
+         (R = TryWithFNeg(DefBits, 16, AArch64::FNEGv8f16))))
+      return R;
   }
 
   auto *CPLoad = emitLoadFromConstantPool(CV, MIRBuilder);

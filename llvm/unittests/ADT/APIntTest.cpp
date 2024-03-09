@@ -1379,6 +1379,23 @@ TEST(APIntTest, toString) {
   EXPECT_EQ(std::string(S), "0");
   S.clear();
 
+  // with separators
+  APInt(64, 140).toString(S, 2, false, true, false, true);
+  EXPECT_EQ(std::string(S), "0b1000'1100");
+  S.clear();
+  APInt(64, 1024).toString(S, 8, false, true, false, true);
+  EXPECT_EQ(std::string(S), "02'000");
+  S.clear();
+  APInt(64, 1000000).toString(S, 10, false, true, false, true);
+  EXPECT_EQ(std::string(S), "1'000'000");
+  S.clear();
+  APInt(64, 1000000).toString(S, 16, false, true, true, true);
+  EXPECT_EQ(std::string(S), "0xF'4240");
+  S.clear();
+  APInt(64, 1'000'000'000).toString(S, 36, false, false, false, true);
+  EXPECT_EQ(std::string(S), "gj'dgxs");
+  S.clear();
+
   isSigned = false;
   APInt(8, 255, isSigned).toString(S, 2, isSigned, true);
   EXPECT_EQ(std::string(S), "0b11111111");
@@ -1414,6 +1431,24 @@ TEST(APIntTest, toString) {
   S.clear();
   APInt(8, 255, isSigned).toString(S, 36, isSigned, false);
   EXPECT_EQ(std::string(S), "-1");
+  S.clear();
+
+  // negative with separators
+  APInt(64, -140, isSigned).toString(S, 2, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-0b1000'1100");
+  S.clear();
+  APInt(64, -1024, isSigned).toString(S, 8, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-02'000");
+  S.clear();
+  APInt(64, -1000000, isSigned).toString(S, 10, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-1'000'000");
+  S.clear();
+  APInt(64, -1000000, isSigned).toString(S, 16, isSigned, true, true, true);
+  EXPECT_EQ(std::string(S), "-0xF'4240");
+  S.clear();
+  APInt(64, -1'000'000'000, isSigned)
+      .toString(S, 36, isSigned, false, false, true);
+  EXPECT_EQ(std::string(S), "-gj'dgxs");
   S.clear();
 }
 
@@ -2495,6 +2530,40 @@ TEST(APIntTest, clearLowBits) {
   EXPECT_EQ(16u, i32hi16.countr_zero());
   EXPECT_EQ(0u, i32hi16.countr_one());
   EXPECT_EQ(16u, i32hi16.popcount());
+}
+
+TEST(APIntTest, AbsDiff) {
+  using APIntOps::absdiff;
+
+  APInt MaxU1(1, 1, false);
+  APInt MinU1(1, 0, false);
+  EXPECT_EQ(1u, absdiff(MaxU1, MinU1).getZExtValue());
+  EXPECT_EQ(1u, absdiff(MinU1, MaxU1).getZExtValue());
+
+  APInt MaxU4(4, 15, false);
+  APInt MinU4(4, 0, false);
+  EXPECT_EQ(15u, absdiff(MaxU4, MinU4).getZExtValue());
+  EXPECT_EQ(15u, absdiff(MinU4, MaxU4).getZExtValue());
+
+  APInt MaxS8(8, 127, true);
+  APInt MinS8(8, -128, true);
+  EXPECT_EQ(1u, absdiff(MaxS8, MinS8).getZExtValue());
+  EXPECT_EQ(1u, absdiff(MinS8, MaxS8).getZExtValue());
+
+  APInt MaxU16(16, 65535, false);
+  APInt MinU16(16, 0, false);
+  EXPECT_EQ(65535u, absdiff(MaxU16, MinU16).getZExtValue());
+  EXPECT_EQ(65535u, absdiff(MinU16, MaxU16).getZExtValue());
+
+  APInt MaxS16(16, 32767, true);
+  APInt MinS16(16, -32768, true);
+  APInt ZeroS16(16, 0, true);
+  EXPECT_EQ(1u, absdiff(MaxS16, MinS16).getZExtValue());
+  EXPECT_EQ(1u, absdiff(MinS16, MaxS16).getZExtValue());
+  EXPECT_EQ(32768u, absdiff(ZeroS16, MinS16));
+  EXPECT_EQ(32768u, absdiff(MinS16, ZeroS16));
+  EXPECT_EQ(32767u, absdiff(ZeroS16, MaxS16));
+  EXPECT_EQ(32767u, absdiff(MaxS16, ZeroS16));
 }
 
 TEST(APIntTest, GCD) {

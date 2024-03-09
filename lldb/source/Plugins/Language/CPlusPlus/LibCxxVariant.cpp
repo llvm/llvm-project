@@ -205,8 +205,8 @@ public:
 
   bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
-  size_t CalculateNumChildren() override { return m_size; }
-  ValueObjectSP GetChildAtIndex(size_t idx) override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
 private:
   size_t m_size = 0;
@@ -233,7 +233,7 @@ lldb::ChildCacheState VariantFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= m_size)
     return {};
 

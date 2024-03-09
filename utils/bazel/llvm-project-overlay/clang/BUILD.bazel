@@ -1862,6 +1862,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TextAPI",
         "//llvm:config",
     ],
 )
@@ -2053,11 +2054,32 @@ cc_library(
 )
 
 cc_library(
+    name = "install_api",
+    srcs = glob([
+        "lib/InstallAPI/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/InstallAPI/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":support",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TextAPI",
+    ],
+)
+
+cc_library(
     name = "serialization",
     srcs = [
         "include/clang/Serialization/AttrPCHRead.inc",
         "include/clang/Serialization/AttrPCHWrite.inc",
     ] + glob([
+        "include/clang/Frontend/*.h",
         "lib/Serialization/*.cpp",
         "lib/Serialization/*.h",
     ]),
@@ -2069,11 +2091,14 @@ cc_library(
         "include/clang/Serialization/*.def",
     ]),
     deps = [
+        ":apinotes",
         ":ast",
         ":basic",
+        ":driver",
         ":lex",
         ":sema",
         ":serialization_attr_gen",
+        ":static_analyzer_core_options",
         ":type_nodes_gen",
         "//llvm:BitReader",
         "//llvm:BitWriter",
@@ -2649,6 +2674,7 @@ cc_library(
         ":basic",
         ":frontend",
         ":index",
+        ":install_api",
         ":lex",
         "//llvm:Option",
         "//llvm:Support",

@@ -47,7 +47,6 @@
 #include "hwasan_allocator.h"
 #include "hwasan_flags.h"
 #include "hwasan_thread.h"
-#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_thread_arg_retval.h"
 
 namespace __hwasan {

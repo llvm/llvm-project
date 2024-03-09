@@ -837,6 +837,7 @@ include "AArch64SchedA64FX.td"
 include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
 include "AArch64SchedAmpere1.td"
+include "AArch64SchedAmpere1B.td"
 include "AArch64SchedNeoverseN1.td"
 include "AArch64SchedNeoverseN2.td"
 include "AArch64SchedNeoverseV1.td"
@@ -942,6 +943,18 @@ def TuneA78 : SubtargetFeature<"a78", "ARMProcFamily", "CortexA78",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeaturePredictableSelectIsExpensive]>;
+
+def TuneA78AE : SubtargetFeature<"a78ae", "ARMProcFamily",
+                                 "CortexA78AE",
+                                 "Cortex-A78AE ARM processors", [
+                                 FeatureCmpBccFusion,
+                                 FeatureFuseAES,
+                                 FeatureFuseAdrpAdd,
+                                 FeatureAddrLSLFast,
+                                 FeatureALULSLFast,
+                                 FeaturePostRAScheduler,
+                                 FeatureEnableSelectOptimize,
+                                 FeaturePredictableSelectIsExpensive]>;
 
 def TuneA78C : SubtargetFeature<"a78c", "ARMProcFamily",
                                 "CortexA78C",
@@ -1424,6 +1437,10 @@ def ProcessorFeatures {
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeaturePerfMon, FeatureSPE,
                                  FeatureSSBS];
+  list<SubtargetFeature> A78AE = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                  FeatureRCPC, FeaturePerfMon, FeatureSPE,
+                                  FeatureSSBS];
   list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureFlagM, FeaturePAuth,
@@ -1513,7 +1530,7 @@ def ProcessorFeatures {
                                        FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
                                        FeatureRCPC, FeatureSPE, FeatureSSBS,
                                        FeaturePerfMon];
-  list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE,
+  list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE, FeatureFP16FML,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
                                        FeatureSVE2BitPerm, FeatureTRBE,
                                        FeaturePerfMon];
@@ -1555,7 +1572,7 @@ def ProcessorFeatures {
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES, FeatureCSSC,
-                                     FeatureWFxT];
+                                     FeatureWFxT, FeatureFullFP16];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1601,6 +1618,8 @@ def : ProcessorModel<"cortex-a77", CortexA57Model, ProcessorFeatures.A77,
                      [TuneA77]>;
 def : ProcessorModel<"cortex-a78", CortexA57Model, ProcessorFeatures.A78,
                      [TuneA78]>;
+def : ProcessorModel<"cortex-a78ae", CortexA57Model, ProcessorFeatures.A78AE,
+                     [TuneA78AE]>;
 def : ProcessorModel<"cortex-a78c", CortexA57Model, ProcessorFeatures.A78C,
                      [TuneA78C]>;
 def : ProcessorModel<"cortex-a710", NeoverseN2Model, ProcessorFeatures.A710,
@@ -1723,7 +1742,7 @@ def : ProcessorModel<"ampere1", Ampere1Model, ProcessorFeatures.Ampere1,
 def : ProcessorModel<"ampere1a", Ampere1Model, ProcessorFeatures.Ampere1A,
                      [TuneAmpere1A]>;
 
-def : ProcessorModel<"ampere1b", Ampere1Model, ProcessorFeatures.Ampere1B,
+def : ProcessorModel<"ampere1b", Ampere1BModel, ProcessorFeatures.Ampere1B,
                      [TuneAmpere1B]>;
 
 //===----------------------------------------------------------------------===//

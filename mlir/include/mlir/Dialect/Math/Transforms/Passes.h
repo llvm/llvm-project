@@ -45,6 +45,9 @@ struct MathPolynomialApproximationOptions {
   bool enableAvx2 = false;
 };
 
+void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
+void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
+
 void populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options = {});

@@ -34,6 +34,10 @@
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
+#SortedCOOSoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
+}>
+
 #CSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
@@ -50,7 +54,7 @@
 
 module {
   func.func @add_coo_csr(%arga: tensor<8x8xf32, #CSR>,
-                         %argb: tensor<8x8xf32, #SortedCOO>)
+                         %argb: tensor<8x8xf32, #SortedCOOSoA>)
 		         -> tensor<8x8xf32> {
     %empty = tensor.empty() : tensor<8x8xf32>
     %zero = arith.constant 0.000000e+00 : f32
@@ -59,7 +63,7 @@ module {
         outs(%empty : tensor<8x8xf32>) -> tensor<8x8xf32>
     %0 = linalg.generic #trait
       ins(%arga, %argb: tensor<8x8xf32, #CSR>,
-                        tensor<8x8xf32, #SortedCOO>)
+                        tensor<8x8xf32, #SortedCOOSoA>)
       outs(%init: tensor<8x8xf32>) {
         ^bb(%a: f32, %b: f32, %x: f32):
           %0 = arith.addf %a, %b : f32
@@ -69,7 +73,7 @@ module {
   }
 
   func.func @add_coo_coo(%arga: tensor<8x8xf32, #SortedCOO>,
-                         %argb: tensor<8x8xf32, #SortedCOO>)
+                         %argb: tensor<8x8xf32, #SortedCOOSoA>)
 		         -> tensor<8x8xf32> {
     %empty = tensor.empty() : tensor<8x8xf32>
     %zero = arith.constant 0.000000e+00 : f32
@@ -78,7 +82,7 @@ module {
         outs(%empty : tensor<8x8xf32>) -> tensor<8x8xf32>
     %0 = linalg.generic #trait
       ins(%arga, %argb: tensor<8x8xf32, #SortedCOO>,
-                        tensor<8x8xf32, #SortedCOO>)
+                        tensor<8x8xf32, #SortedCOOSoA>)
       outs(%init: tensor<8x8xf32>) {
         ^bb(%a: f32, %b: f32, %x: f32):
           %0 = arith.addf %a, %b : f32
@@ -88,12 +92,12 @@ module {
   }
 
   func.func @add_coo_coo_out_coo(%arga: tensor<8x8xf32, #SortedCOO>,
-                                 %argb: tensor<8x8xf32, #SortedCOO>)
+                                 %argb: tensor<8x8xf32, #SortedCOOSoA>)
 		                 -> tensor<8x8xf32, #SortedCOO> {
     %init = tensor.empty() : tensor<8x8xf32, #SortedCOO>
     %0 = linalg.generic #trait
       ins(%arga, %argb: tensor<8x8xf32, #SortedCOO>,
-                        tensor<8x8xf32, #SortedCOO>)
+                        tensor<8x8xf32, #SortedCOOSoA>)
       outs(%init: tensor<8x8xf32, #SortedCOO>) {
         ^bb(%a: f32, %b: f32, %x: f32):
           %0 = arith.addf %a, %b : f32
@@ -104,7 +108,7 @@ module {
 
 
   func.func @add_coo_dense(%arga: tensor<8x8xf32>,
-                           %argb: tensor<8x8xf32, #SortedCOO>)
+                           %argb: tensor<8x8xf32, #SortedCOOSoA>)
   	    	         -> tensor<8x8xf32> {
     %empty = tensor.empty() : tensor<8x8xf32>
     %zero = arith.constant 0.000000e+00 : f32
@@ -113,7 +117,7 @@ module {
         outs(%empty : tensor<8x8xf32>) -> tensor<8x8xf32>
     %0 = linalg.generic #trait
       ins(%arga, %argb: tensor<8x8xf32>,
-                        tensor<8x8xf32, #SortedCOO>)
+                        tensor<8x8xf32, #SortedCOOSoA>)
       outs(%init: tensor<8x8xf32>) {
         ^bb(%a: f32, %b: f32, %x: f32):
           %0 = arith.addf %a, %b : f32
@@ -154,19 +158,19 @@ module {
     %COO_A = sparse_tensor.convert %A
       : tensor<8x8xf32> to tensor<8x8xf32, #SortedCOO>
     %COO_B = sparse_tensor.convert %B
-      : tensor<8x8xf32> to tensor<8x8xf32, #SortedCOO>
+      : tensor<8x8xf32> to tensor<8x8xf32, #SortedCOOSoA>
 
     %C1 = call @add_coo_dense(%A, %COO_B) : (tensor<8x8xf32>,
-                                             tensor<8x8xf32, #SortedCOO>)
+                                             tensor<8x8xf32, #SortedCOOSoA>)
                                           -> tensor<8x8xf32>
     %C2 = call @add_coo_csr(%CSR_A, %COO_B) : (tensor<8x8xf32, #CSR>,
-                                               tensor<8x8xf32, #SortedCOO>)
+                                               tensor<8x8xf32, #SortedCOOSoA>)
                                             -> tensor<8x8xf32>
     %C3 = call @add_coo_coo(%COO_A, %COO_B) : (tensor<8x8xf32, #SortedCOO>,
-                                               tensor<8x8xf32, #SortedCOO>)
+                                               tensor<8x8xf32, #SortedCOOSoA>)
                                             -> tensor<8x8xf32>
     %COO_RET = call @add_coo_coo_out_coo(%COO_A, %COO_B) : (tensor<8x8xf32, #SortedCOO>,
-                                                            tensor<8x8xf32, #SortedCOO>)
+                                                            tensor<8x8xf32, #SortedCOOSoA>)
                                                          -> tensor<8x8xf32, #SortedCOO>
     %C4 = sparse_tensor.convert %COO_RET : tensor<8x8xf32, #SortedCOO> to tensor<8x8xf32>
     //
@@ -201,9 +205,10 @@ module {
     bufferization.dealloc_tensor %C1 : tensor<8x8xf32>
     bufferization.dealloc_tensor %C2 : tensor<8x8xf32>
     bufferization.dealloc_tensor %C3 : tensor<8x8xf32>
+    bufferization.dealloc_tensor %C4 : tensor<8x8xf32>
     bufferization.dealloc_tensor %CSR_A : tensor<8x8xf32, #CSR>
     bufferization.dealloc_tensor %COO_A : tensor<8x8xf32, #SortedCOO>
-    bufferization.dealloc_tensor %COO_B : tensor<8x8xf32, #SortedCOO>
+    bufferization.dealloc_tensor %COO_B : tensor<8x8xf32, #SortedCOOSoA>
     bufferization.dealloc_tensor %COO_RET : tensor<8x8xf32, #SortedCOO>
 
 

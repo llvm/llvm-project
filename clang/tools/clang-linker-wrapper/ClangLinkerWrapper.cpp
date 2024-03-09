@@ -405,12 +405,19 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back("-type=o");
   CmdArgs.push_back("-bundle-align=4096");
 
+  if (Args.hasArg(OPT_compress))
+    CmdArgs.push_back("-compress");
+
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux"};
   for (const auto &[File, Arch] : InputFiles)
     Targets.push_back(Saver.save("hipv4-amdgcn-amd-amdhsa--" + Arch));
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
+#ifdef _WIN32
+  CmdArgs.push_back("-input=NUL");
+#else
   CmdArgs.push_back("-input=/dev/null");
+#endif
   for (const auto &[File, Arch] : InputFiles)
     CmdArgs.push_back(Saver.save("-input=" + File));
 
@@ -454,8 +461,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
       Triple.isAMDGPU() ? Args.MakeArgString("-mcpu=" + Arch)
                         : Args.MakeArgString("-march=" + Arch),
       Args.MakeArgString("-" + OptLevel),
-      "-Wl,--no-undefined",
   };
+
+  if (!Triple.isNVPTX())
+    CmdArgs.push_back("-Wl,--no-undefined");
 
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);

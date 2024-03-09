@@ -10,6 +10,7 @@
 #define SCUDO_STACK_DEPOT_H_
 
 #include "atomic_helpers.h"
+#include "common.h"
 #include "mutex.h"
 
 namespace scudo {
@@ -38,7 +39,7 @@ public:
   }
 };
 
-class StackDepot {
+class alignas(atomic_u64) StackDepot {
   HybridMutex RingEndMu;
   u32 RingEnd = 0;
 
@@ -62,28 +63,77 @@ class StackDepot {
   // This is achieved by re-checking the hash of the stack trace before
   // returning the trace.
 
-#if SCUDO_SMALL_STACK_DEPOT
-  static const uptr TabBits = 4;
-#else
-  static const uptr TabBits = 16;
-#endif
-  static const uptr TabSize = 1 << TabBits;
-  static const uptr TabMask = TabSize - 1;
-  atomic_u32 Tab[TabSize] = {};
+  u32 RingSize = 0;
+  u32 RingMask = 0;
+  u32 TabMask = 0;
+  // This is immediately followed by RingSize atomic_u64 and
+  // (TabMask + 1) atomic_u32.
 
-#if SCUDO_SMALL_STACK_DEPOT
-  static const uptr RingBits = 4;
-#else
-  static const uptr RingBits = 19;
-#endif
-  static const uptr RingSize = 1 << RingBits;
-  static const uptr RingMask = RingSize - 1;
-  atomic_u64 Ring[RingSize] = {};
+  atomic_u64 *getRing() {
+    return reinterpret_cast<atomic_u64 *>(reinterpret_cast<char *>(this) +
+                                          sizeof(StackDepot));
+  }
+
+  atomic_u32 *getTab() {
+    return reinterpret_cast<atomic_u32 *>(reinterpret_cast<char *>(this) +
+                                          sizeof(StackDepot) +
+                                          sizeof(atomic_u64) * RingSize);
+  }
+
+  const atomic_u64 *getRing() const {
+    return reinterpret_cast<const atomic_u64 *>(
+        reinterpret_cast<const char *>(this) + sizeof(StackDepot));
+  }
+
+  const atomic_u32 *getTab() const {
+    return reinterpret_cast<const atomic_u32 *>(
+        reinterpret_cast<const char *>(this) + sizeof(StackDepot) +
+        sizeof(atomic_u64) * RingSize);
+  }
 
 public:
+  void init(u32 RingSz, u32 TabSz) {
+    DCHECK(isPowerOfTwo(RingSz));
+    DCHECK(isPowerOfTwo(TabSz));
+    RingSize = RingSz;
+    RingMask = RingSz - 1;
+    TabMask = TabSz - 1;
+  }
+
+  // Ensure that RingSize, RingMask and TabMask are set up in a way that
+  // all accesses are within range of BufSize.
+  bool isValid(uptr BufSize) const {
+    if (RingSize == 0 || !isPowerOfTwo(RingSize))
+      return false;
+    uptr RingBytes = sizeof(atomic_u64) * RingSize;
+    if (RingMask + 1 != RingSize)
+      return false;
+
+    if (TabMask == 0)
+      return false;
+    uptr TabSize = TabMask + 1;
+    if (!isPowerOfTwo(TabSize))
+      return false;
+    uptr TabBytes = sizeof(atomic_u32) * TabSize;
+
+    // Subtract and detect underflow.
+    if (BufSize < sizeof(StackDepot))
+      return false;
+    BufSize -= sizeof(StackDepot);
+    if (BufSize < TabBytes)
+      return false;
+    BufSize -= TabBytes;
+    if (BufSize < RingBytes)
+      return false;
+    return BufSize == RingBytes;
+  }
+
   // Insert hash of the stack trace [Begin, End) into the stack depot, and
   // return the hash.
   u32 insert(uptr *Begin, uptr *End) {
+    auto *Tab = getTab();
+    auto *Ring = getRing();
+
     MurMur2HashBuilder B;
     for (uptr *I = Begin; I != End; ++I)
       B.add(u32(*I) >> 2);
@@ -112,6 +162,9 @@ public:
   // accessed via operator[] passing indexes between *RingPosPtr and
   // *RingPosPtr + *SizePtr.
   bool find(u32 Hash, uptr *RingPosPtr, uptr *SizePtr) const {
+    auto *Tab = getTab();
+    auto *Ring = getRing();
+
     u32 Pos = Hash & TabMask;
     u32 RingPos = atomic_load_relaxed(&Tab[Pos]);
     if (RingPos >= RingSize)
@@ -133,7 +186,8 @@ public:
     return B.get() == Hash;
   }
 
-  u64 operator[](uptr RingPos) const {
+  u64 at(uptr RingPos) const {
+    auto *Ring = getRing();
     return atomic_load_relaxed(&Ring[RingPos & RingMask]);
   }
 

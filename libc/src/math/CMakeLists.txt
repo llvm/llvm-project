@@ -18,20 +18,6 @@ function(add_math_entrypoint_object name)
     return()
   endif()
 
-  # The GPU optionally depends on vendor libraries. If we emitted one of these
-  # entrypoints it means the user requested it and we should use it instead.
-  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.vendor.${name}" fq_vendor_specific_target_name)
-  if(TARGET ${fq_vendor_specific_target_name})
-    add_entrypoint_object(
-      ${name}
-      ALIAS
-      DEPENDS
-        .${LIBC_TARGET_ARCHITECTURE}.vendor.${name}
-      VENDOR
-    )
-    return()
-  endif()
-
   get_fq_target_name("generic.${name}" fq_generic_target_name)
   if(TARGET ${fq_generic_target_name})
     add_entrypoint_object(
@@ -145,10 +131,17 @@ add_math_entrypoint_object(hypotf)
 add_math_entrypoint_object(ilogb)
 add_math_entrypoint_object(ilogbf)
 add_math_entrypoint_object(ilogbl)
+add_math_entrypoint_object(ilogbf128)
+
+add_math_entrypoint_object(llogb)
+add_math_entrypoint_object(llogbf)
+add_math_entrypoint_object(llogbl)
+add_math_entrypoint_object(llogbf128)
 
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
@@ -165,22 +158,27 @@ add_math_entrypoint_object(logf)
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)
 add_math_entrypoint_object(logbl)
+add_math_entrypoint_object(logbf128)
 
 add_math_entrypoint_object(llrint)
 add_math_entrypoint_object(llrintf)
 add_math_entrypoint_object(llrintl)
+add_math_entrypoint_object(llrintf128)
 
 add_math_entrypoint_object(llround)
 add_math_entrypoint_object(llroundf)
 add_math_entrypoint_object(llroundl)
+add_math_entrypoint_object(llroundf128)
 
 add_math_entrypoint_object(lrint)
 add_math_entrypoint_object(lrintf)
 add_math_entrypoint_object(lrintl)
+add_math_entrypoint_object(lrintf128)
 
 add_math_entrypoint_object(lround)
 add_math_entrypoint_object(lroundf)
 add_math_entrypoint_object(lroundl)
+add_math_entrypoint_object(lroundf128)
 
 add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
@@ -216,6 +214,7 @@ add_math_entrypoint_object(remquol)
 add_math_entrypoint_object(rint)
 add_math_entrypoint_object(rintf)
 add_math_entrypoint_object(rintl)
+add_math_entrypoint_object(rintf128)
 
 add_math_entrypoint_object(round)
 add_math_entrypoint_object(roundf)

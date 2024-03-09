@@ -1078,14 +1078,12 @@ def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32", "s_cmp_ge_i32", 1>;
 def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32", "s_cmp_lt_i32", 1>;
 def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32", "s_cmp_le_i32", 1>;
 
-let SOPKZext = 1 in {
 def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32", "s_cmp_eq_u32", 0>;
 def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32", "s_cmp_lg_u32", 0>;
 def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32", "s_cmp_gt_u32", 0>;
 def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32", "s_cmp_ge_u32", 0>;
 def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32", 0>;
 def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
-} // End SOPKZext = 1
 } // End isCompare = 1
 
 let isCommutable = 1, DisableEncoding = "$src0",
@@ -1111,7 +1109,6 @@ def S_GETREG_B32 : SOPK_Pseudo <
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
   "$sdst, $simm16",
   [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
-  let SOPKZext = 1;
   let hasSideEffects = 1;
 }
 
@@ -1601,9 +1598,12 @@ def S_WAITCNT_VSCNT_soft : SOPK_WAITCNT<"s_soft_waitcnt_vscnt">;
 let SubtargetPredicate = isGFX12Plus in {
   def S_WAIT_LOADCNT_soft : SOPP_Pseudo <"s_soft_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+} // End OtherPredicates = [HasImageInsts].
   def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
@@ -1705,6 +1705,7 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
+let OtherPredicates = [HasExportInsts] in
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
                                  "$simm16"> {
                                    let hasSideEffects = 1;
@@ -1729,12 +1730,15 @@ let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_storecnt timm:$simm16)]>;
   def S_WAIT_STORECNT_DSCNT :
     SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
+let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT :
     SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
   def S_WAIT_BVHCNT :
     SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
+} // End OtherPredicates = [HasImageInsts].
+let OtherPredicates = [HasExportInsts] in
   def S_WAIT_EXPCNT :
     SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_expcnt timm:$simm16)]>;
@@ -2574,11 +2578,13 @@ multiclass SOPP_Real_32_gfx11_Renamed_gfx12<bits<7> op, string gfx12_name> :
 
 multiclass SOPP_Real_With_Relaxation_gfx12<bits<7> op> {
   defm "" : SOPP_Real_32_gfx12<op>;
+  let isCodeGenOnly = 1 in
   defm _pad_s_nop : SOPP_Real_64_gfx12<op>;
 }
 
 multiclass SOPP_Real_With_Relaxation_gfx11<bits<7> op> {
   defm "" : SOPP_Real_32_gfx11<op>;
+  let isCodeGenOnly = 1 in
   defm _pad_s_nop : SOPP_Real_64_gfx11<op>;
 }
 
@@ -2700,6 +2706,7 @@ multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> :
 //relaxation for insts with no operands not implemented
 multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
   defm "" : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<op>;
+  let isCodeGenOnly = 1 in
   defm _pad_s_nop : SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<op>;
 }
 

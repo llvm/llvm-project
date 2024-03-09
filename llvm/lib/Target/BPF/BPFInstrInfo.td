@@ -622,9 +622,9 @@ class CALLX<string OpcodeStr>
                    (ins GPR:$BrDst),
                    !strconcat(OpcodeStr, " $BrDst"),
                    []> {
-  bits<32> BrDst;
+  bits<4> BrDst;
 
-  let Inst{31-0} = BrDst;
+  let Inst{51-48} = BrDst;
   let BPFClass = BPF_JMP;
 }
 
@@ -727,6 +727,7 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
 
 // load 64-bit global addr into register
 def : Pat<(BPFWrapper tglobaladdr:$in), (LD_imm64 tglobaladdr:$in)>;
+def : Pat<(BPFWrapper tconstpool:$in), (LD_imm64 tconstpool:$in)>;
 
 // 0xffffFFFF doesn't fit into simm32, optimize common case
 def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),

@@ -2778,7 +2778,9 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
-          << toString(Result, 10) << E->getType() << E->getSourceRange();
+          << toString(Result, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+                      /*UpperCase=*/true, /*InsertSeparators=*/true)
+          << E->getType() << E->getSourceRange();
     return HandleOverflow(Info, E, Value, E->getType());
   }
   return true;
@@ -4131,6 +4133,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
 
     bool IsConstant = BaseType.isConstant(Info.Ctx);
+    bool ConstexprVar = false;
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(
+            Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
+      ConstexprVar = VD->isConstexpr();
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
@@ -4150,6 +4156,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
+      } else if (Info.getLangOpts().C23 && ConstexprVar) {
+        Info.FFDiag(E);
+        return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
         if (!IsConstant) {
           if (!IsAccess)
@@ -12474,6 +12483,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64: {
@@ -12695,6 +12705,59 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return BuiltinOp == Builtin::BI__atomic_always_lock_free ?
         Success(0, E) : Error(E);
+  }
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll: {
+    LValue CarryOutLValue;
+    APSInt LHS, RHS, CarryIn, CarryOut, Result;
+    QualType ResultType = E->getArg(0)->getType();
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), CarryIn, Info) ||
+        !EvaluatePointer(E->getArg(3), CarryOutLValue, Info))
+      return false;
+    // Copy the number of bits and sign.
+    Result = LHS;
+    CarryOut = LHS;
+
+    bool FirstOverflowed = false;
+    bool SecondOverflowed = false;
+    switch (BuiltinOp) {
+    default:
+      llvm_unreachable("Invalid value for BuiltinOp");
+    case Builtin::BI__builtin_addcb:
+    case Builtin::BI__builtin_addcs:
+    case Builtin::BI__builtin_addc:
+    case Builtin::BI__builtin_addcl:
+    case Builtin::BI__builtin_addcll:
+      Result =
+          LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+      break;
+    case Builtin::BI__builtin_subcb:
+    case Builtin::BI__builtin_subcs:
+    case Builtin::BI__builtin_subc:
+    case Builtin::BI__builtin_subcl:
+    case Builtin::BI__builtin_subcll:
+      Result =
+          LHS.usub_ov(RHS, FirstOverflowed).usub_ov(CarryIn, SecondOverflowed);
+      break;
+    }
+
+    // It is possible for both overflows to happen but CGBuiltin uses an OR so
+    // this is consistent.
+    CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
+    APValue APV{CarryOut};
+    if (!handleAssignment(Info, E, CarryOutLValue, ResultType, APV))
+      return false;
+    return Success(Result, E);
   }
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
@@ -13857,7 +13920,9 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
-            << toString(Value, 10) << E->getType() << E->getSourceRange();
+            << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true)
+            << E->getType() << E->getSourceRange();
 
       if (!HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
                           E->getType()))
@@ -13927,6 +13992,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -14765,6 +14831,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
@@ -15767,7 +15834,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   EStatus.Diag = &Notes;
 
   EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+                (IsConstantInitialization &&
+                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvalInfo::EM_ConstantExpression
                     : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);

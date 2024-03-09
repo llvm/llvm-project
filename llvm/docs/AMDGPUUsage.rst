@@ -567,7 +567,7 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx10.1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
+     ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
                                          - ``gfx1012``     - cumode                               and ``gfx1012``
                                          - ``gfx1013``
@@ -586,7 +586,7 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                   ``gfx1013``
 
 
-     ``gfx10.3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
+     ``gfx10-3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
                                          - ``gfx1031``     - cumode             scratch
                                          - ``gfx1032``
                                          - ``gfx1033``
@@ -1151,6 +1151,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
+  :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
+                                                   This stores information related to the current rounding mode,
+                                                   denormalization mode, enabled traps, and floating point exceptions.
+                                                   The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
+
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand
@@ -1298,6 +1305,21 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+LLVM IR Metadata
+------------------
+
+The AMDGPU backend implements the following LLVM IR metadata.
+
+.. table:: AMDGPU LLVM IR Metadata
+  :name: amdgpu-llvm-ir-metadata-table
+
+  ==============================================   ==========================================================
+  LLVM IR Metadata                                   Description
+  ==============================================   ==========================================================
+  !amdgpu.last.use                                 Sets TH_LOAD_LU temporal hint on load instructions that support it.
+                                                   Takes priority over nontemporal hint (TH_LOAD_NT).
+  ==============================================   ==========================================================
 
 LLVM IR Attributes
 ------------------
@@ -1860,8 +1882,8 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x04f      Reserved.
      *reserved*                                 0x050      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10.1-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10.3-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      *reserved*                                 0x055      Reserved.
      ========================================== ========== =============================
@@ -5515,7 +5537,10 @@ additional 256 bytes to the kernel_code_entry_byte_offset. This addition
 facilitates the incorporation of a prologue to the kernel entry to handle cases
 where code designed for kernarg preloading is executed on hardware equipped with
 incompatible firmware. If hardware has compatible firmware the 256 bytes at the
-start of the kernel entry will be skipped.
+start of the kernel entry will be skipped. Additionally, the compiler backend
+may insert a trap instruction at the start of the kernel prologue to manage
+situations where kernarg preloading is attempted on hardware with incompatible
+firmware.
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
@@ -12288,8 +12313,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12318,8 +12343,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12425,8 +12450,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12456,8 +12481,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12652,8 +12677,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              the
                                                              fence-paired-atomic.
 
-                                                         2. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         2. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before any
                                                              following global/generic
@@ -13366,8 +13391,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         4. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -13441,8 +13466,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         4. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -13669,8 +13694,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              requirements of
                                                              release.
 
-                                                         2. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         2. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
