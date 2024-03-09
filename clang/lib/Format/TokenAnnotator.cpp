@@ -4091,12 +4091,35 @@ void TokenAnnotator::walkLine2(AnnotatedLine& Line) {
                 bool isDT = true;
 
                 while (Next != nullptr && Next->isNot (tok::semi)) {
+                    if (Next->is(tok::less)) { // this might be template variable declaration
+                        Next = Next->Next;
+                        isDT = false;
+                        while (Next != nullptr && Next->isNot (tok::semi)) {
+                            if (Next->is(tok::greater)) {
+                                // Possible a data type
+                                isDT = true;
+                            }
+                            else if (Next->is(tok::r_paren) && isDT) {
+                                // Handling case like tempalte function invocation, say SomeFun<RetType>();
+                                isDT = false;
+                            }
+                            Next = Next->Next;
+                        }
+                        if (!isDT && (Next != nullptr && Next->is (tok::semi))) {
+                            // not a data type
+                            Next = nullptr;
+                            break;
+                        }
+                        else
+                            break;
+                    }
                     if (Next->isOneOf(tok::l_paren, tok::r_paren, tok::less, tok::lessless, tok::lesslessequal,
                                       tok::greater, tok::greatergreater, tok::greatergreaterequal, tok::kw_return,
                                       tok::period, tok::periodstar, tok::arrow, tok::arrowstar, tok::kw_goto,
                                       tok::pipe, tok::pipeequal,tok::pipepipe, tok::caret, tok::caretequal,
                                       tok::ampamp, tok::ampequal, tok::starequal, tok::plusequal, tok::plusplus,
-                                      tok::minusequal, tok::minusminus, tok::percentequal, tok::slashequal)) {
+                                      tok::minusequal, tok::minusminus, tok::percentequal, tok::slashequal,
+                                      tok::kw_continue, tok::kw_break)) {
                         isDT = false;
                         Next = nullptr;
                         break;
