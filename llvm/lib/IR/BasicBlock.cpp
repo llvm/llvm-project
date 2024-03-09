@@ -752,14 +752,13 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
   // occur when a block is optimised away and the terminator has been moved
   // somewhere else.
   if (Src->empty()) {
-    assert(Dest != end() &&
-           "Transferring trailing DPValues to another trailing position");
     DPMarker *SrcTrailingDPValues = Src->getTrailingDPValues();
     if (!SrcTrailingDPValues)
       return;
 
-    Dest->adoptDbgValues(Src, Src->end(), InsertAtHead);
-    // adoptDbgValues should have released the trailing DPValues.
+    DPMarker *DestMarker = getMarker(Dest);
+    DestMarker->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
+    SrcTrailingDPValues->eraseFromParent();
     assert(!Src->getTrailingDPValues());
     return;
   }
