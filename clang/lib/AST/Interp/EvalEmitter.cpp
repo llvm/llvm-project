@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvalEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"

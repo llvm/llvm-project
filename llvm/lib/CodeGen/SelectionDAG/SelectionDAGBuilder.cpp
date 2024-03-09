@@ -2450,11 +2450,10 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
 
 // Collect dependencies on V recursively. This is used for the cost analysis in
 // `shouldKeepJumpConditionsTogether`.
-static bool
-collectInstructionDeps(SmallPtrSet<const Instruction *, 8> *Deps,
-                       const Value *V,
-                       SmallPtrSet<const Instruction *, 8> *Necessary = nullptr,
-                       unsigned Depth = 0) {
+static bool collectInstructionDeps(
+    SmallMapVector<const Instruction *, bool, 8> *Deps, const Value *V,
+    SmallMapVector<const Instruction *, bool, 8> *Necessary = nullptr,
+    unsigned Depth = 0) {
   // Return false if we have an incomplete count.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return false;
@@ -2471,7 +2470,7 @@ collectInstructionDeps(SmallPtrSet<const Instruction *, 8> *Deps,
   }
 
   // Already added this dep.
-  if (!Deps->insert(I).second)
+  if (!Deps->try_emplace(I, false).second)
     return true;
 
   for (unsigned OpIdx = 0, E = I->getNumOperands(); OpIdx < E; ++OpIdx)
@@ -2486,6 +2485,9 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
     TargetLoweringBase::CondMergingParams Params) const {
   if (I.getNumSuccessors() != 2)
+    return false;
+
+  if (!I.isConditional())
     return false;
 
   if (Params.BaseCost < 0)
@@ -2526,7 +2528,9 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     return false;
 
   // Collect "all" instructions that lhs condition is dependent on.
-  SmallPtrSet<const Instruction *, 8> LhsDeps, RhsDeps;
+  // Use map for stable iteration (to avoid non-determanism of iteration of
+  // SmallPtrSet). The `bool` value is just a dummy.
+  SmallMapVector<const Instruction *, bool, 8> LhsDeps, RhsDeps;
   collectInstructionDeps(&LhsDeps, Lhs);
   // Collect "all" instructions that rhs condition is dependent on AND are
   // dependencies of lhs. This gives us an estimate on which instructions we
@@ -2536,7 +2540,7 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // Add the compare instruction itself unless its a dependency on the LHS.
   if (const auto *RhsI = dyn_cast<Instruction>(Rhs))
     if (!LhsDeps.contains(RhsI))
-      RhsDeps.insert(RhsI);
+      RhsDeps.try_emplace(RhsI, false);
 
   const auto &TLI = DAG.getTargetLoweringInfo();
   const auto &TTI =
@@ -2545,11 +2549,12 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   InstructionCost CostOfIncluding = 0;
   // See if this instruction will need to computed independently of whether RHS
   // is.
-  auto ShouldCountInsn = [&RhsDeps](const Instruction *Ins) {
+  Value *BrCond = I.getCondition();
+  auto ShouldCountInsn = [&RhsDeps, &BrCond](const Instruction *Ins) {
     for (const auto *U : Ins->users()) {
       // If user is independent of RHS calculation we don't need to count it.
       if (auto *UIns = dyn_cast<Instruction>(U))
-        if (!RhsDeps.contains(UIns))
+        if (UIns != BrCond && !RhsDeps.contains(UIns))
           return false;
     }
     return true;
@@ -2564,9 +2569,9 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // instructions.
   for (unsigned PruneIters = 0; PruneIters < MaxPruneIters; ++PruneIters) {
     const Instruction *ToDrop = nullptr;
-    for (const auto *Ins : RhsDeps) {
-      if (!ShouldCountInsn(Ins)) {
-        ToDrop = Ins;
+    for (const auto &InsPair : RhsDeps) {
+      if (!ShouldCountInsn(InsPair.first)) {
+        ToDrop = InsPair.first;
         break;
       }
     }
@@ -2575,13 +2580,13 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     RhsDeps.erase(ToDrop);
   }
 
-  for (const auto *Ins : RhsDeps) {
+  for (const auto &InsPair : RhsDeps) {
     // Finally accumulate latency that we can only attribute to computing the
     // RHS condition. Use latency because we are essentially trying to calculate
     // the cost of the dependency chain.
     // Possible TODO: We could try to estimate ILP and make this more precise.
     CostOfIncluding +=
-        TTI.getInstructionCost(Ins, TargetTransformInfo::TCK_Latency);
+        TTI.getInstructionCost(InsPair.first, TargetTransformInfo::TCK_Latency);
 
     if (CostOfIncluding > CostThresh)
       return false;
@@ -4716,24 +4721,24 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   SDLoc sdl = getCurSDLoc();
 
   auto getMaskedStoreOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
-                               MaybeAlign &Alignment) {
+                               Align &Alignment) {
     // llvm.masked.store.*(Src0, Ptr, alignment, Mask)
     Src0 = I.getArgOperand(0);
     Ptr = I.getArgOperand(1);
-    Alignment = cast<ConstantInt>(I.getArgOperand(2))->getMaybeAlignValue();
+    Alignment = cast<ConstantInt>(I.getArgOperand(2))->getAlignValue();
     Mask = I.getArgOperand(3);
   };
   auto getCompressingStoreOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
-                                    MaybeAlign &Alignment) {
+                                    Align &Alignment) {
     // llvm.masked.compressstore.*(Src0, Ptr, Mask)
     Src0 = I.getArgOperand(0);
     Ptr = I.getArgOperand(1);
     Mask = I.getArgOperand(2);
-    Alignment = std::nullopt;
+    Alignment = I.getParamAlign(1).valueOrOne();
   };
 
   Value  *PtrOperand, *MaskOperand, *Src0Operand;
-  MaybeAlign Alignment;
+  Align Alignment;
   if (IsCompressing)
     getCompressingStoreOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
   else
@@ -4745,12 +4750,10 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
 
   EVT VT = Src0.getValueType();
-  if (!Alignment)
-    Alignment = DAG.getEVTAlign(VT);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, I.getAAMetadata());
+      MemoryLocation::UnknownSize, Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
@@ -4882,24 +4885,24 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDLoc sdl = getCurSDLoc();
 
   auto getMaskedLoadOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
-                              MaybeAlign &Alignment) {
+                              Align &Alignment) {
     // @llvm.masked.load.*(Ptr, alignment, Mask, Src0)
     Ptr = I.getArgOperand(0);
-    Alignment = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
+    Alignment = cast<ConstantInt>(I.getArgOperand(1))->getAlignValue();
     Mask = I.getArgOperand(2);
     Src0 = I.getArgOperand(3);
   };
   auto getExpandingLoadOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
-                                 MaybeAlign &Alignment) {
+                                 Align &Alignment) {
     // @llvm.masked.expandload.*(Ptr, Mask, Src0)
     Ptr = I.getArgOperand(0);
-    Alignment = std::nullopt;
+    Alignment = I.getParamAlign(0).valueOrOne();
     Mask = I.getArgOperand(1);
     Src0 = I.getArgOperand(2);
   };
 
   Value  *PtrOperand, *MaskOperand, *Src0Operand;
-  MaybeAlign Alignment;
+  Align Alignment;
   if (IsExpanding)
     getExpandingLoadOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
   else
@@ -4911,9 +4914,6 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
 
   EVT VT = Src0.getValueType();
-  if (!Alignment)
-    Alignment = DAG.getEVTAlign(VT);
-
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
 
@@ -4925,7 +4925,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      MemoryLocation::UnknownSize, Alignment, AAInfo, Ranges);
 
   SDValue Load =
       DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,
@@ -5226,6 +5226,17 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // Create the node.
   SDValue Result;
+
+  if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    SDValue ConvControlToken = getValue(Token);
+    assert(Ops.back().getValueType() != MVT::Glue &&
+           "Did not expected another glue node here.");
+    ConvControlToken =
+        DAG.getNode(ISD::CONVERGENCECTRL_GLUE, {}, MVT::Glue, ConvControlToken);
+    Ops.push_back(ConvControlToken);
+  }
+
   // In some cases, custom collection of operands from CallInst I may be needed.
   TLI.CollectTargetIntrinsicOperands(I, Ops, DAG);
   if (IsTgtIntrinsic) {
@@ -6224,6 +6235,27 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(
   LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
                        "couldn't find a physical register\n");
   return true;
+}
+
+/// Lower the call to the specified intrinsic function.
+void SelectionDAGBuilder::visitConvergenceControl(const CallInst &I,
+                                                  unsigned Intrinsic) {
+  SDLoc sdl = getCurSDLoc();
+  switch (Intrinsic) {
+  case Intrinsic::experimental_convergence_anchor:
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_ANCHOR, sdl, MVT::Untyped));
+    break;
+  case Intrinsic::experimental_convergence_entry:
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_ENTRY, sdl, MVT::Untyped));
+    break;
+  case Intrinsic::experimental_convergence_loop: {
+    auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl);
+    auto *Token = Bundle->Inputs[0].get();
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_LOOP, sdl, MVT::Untyped,
+                             getValue(Token)));
+    break;
+  }
+  }
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -7885,6 +7917,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_deinterleave2:
     visitVectorDeinterleave(I);
     return;
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    visitConvergenceControl(I, Intrinsic);
   }
 }
 
@@ -8561,6 +8597,14 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     }
   }
 
+  SDValue ConvControlToken;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    ConvControlToken = getValue(Token);
+  } else {
+    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
+  }
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -8569,7 +8613,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setConvergent(CB.isConvergent())
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
-      .setCFIType(CFIType);
+      .setCFIType(CFIType)
+      .setConvergenceControlToken(ConvControlToken);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
@@ -9121,7 +9166,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+              LLVMContext::OB_convergencectrl}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());

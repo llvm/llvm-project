@@ -2515,10 +2515,11 @@ def err_deduced_class_template_compound_type : Error<
   "cannot %select{form pointer to|form reference to|form array of|"
   "form function returning|use parentheses when declaring variable with}0 "
   "deduced class template specialization type">;
-def err_deduced_non_class_template_specialization_type : Error<
+def err_deduced_non_class_or_alias_template_specialization_type : Error<
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
-  "arguments; argument deduction only allowed for class templates">;
+  "arguments; argument deduction only allowed for class templates or alias "
+  "templates">;
 def err_deduced_class_template_ctor_ambiguous : Error<
   "ambiguous deduction for template arguments of %0">;
 def err_deduced_class_template_ctor_no_viable : Error<
@@ -2945,6 +2946,18 @@ def warn_private_extern : Warning<
   "private to the linkage unit and is deprecated">, InGroup<PrivateExtern>;
 def note_private_extern : Note<
   "use __attribute__((visibility(\"hidden\"))) attribute instead">;
+
+// C23 constexpr
+def err_c23_constexpr_not_variable : Error<
+  "'constexpr' can only be used in variable declarations">;
+def err_c23_constexpr_invalid_type : Error<
+  "constexpr variable cannot have type %0">;
+def err_c23_constexpr_init_not_representable : Error<
+  "constexpr initializer evaluates to %0 which is not exactly representable in type %1">;
+def err_c23_constexpr_init_type_mismatch : Error<
+  "constexpr initializer for type %0 is of type %1">;
+def err_c23_constexpr_pointer_not_null : Error<
+  "constexpr pointer initializer is not null">;
 
 // C++ Concepts
 def err_concept_decls_may_only_appear_in_global_namespace_scope : Error<
@@ -4977,6 +4990,9 @@ def err_template_param_shadow : Error<
   "declaration of %0 shadows template parameter">;
 def ext_template_param_shadow : ExtWarn<
   err_template_param_shadow.Summary>, InGroup<MicrosoftTemplateShadow>;
+def ext_compat_template_param_shadow : ExtWarn<
+  err_template_param_shadow.Summary>, InGroup<
+  DiagGroup<"strict-primary-template-shadow">>, DefaultError;
 def note_template_param_here : Note<"template parameter is declared here">;
 def note_template_param_external : Note<
   "template parameter from hidden source: %0">;
@@ -6167,6 +6183,10 @@ def ext_initializer_string_for_char_array_too_long : ExtWarn<
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
+// The same warning, but another group is needed to disable it separately.
+def warn_missing_designated_field_initializers : Warning<
+  warn_missing_field_initializers.Summary>,
+  InGroup<MissingDesignatedFieldInitializers>, DefaultIgnore;
 def warn_braces_around_init : Warning<
   "braces around %select{scalar |}0initializer">,
   InGroup<DiagGroup<"braced-scalar-init">>;
@@ -8151,6 +8171,8 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx11_compat_generic_lambda : Warning<
     "generic lambdas are incompatible with C++11">,
     InGroup<CXXPre14Compat>, DefaultIgnore;
+  def err_lambda_explicit_spec : Error<
+    "lambda call operator should not be explicitly specialized or instantiated">;
 
   // C++17 '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
@@ -8180,6 +8202,11 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+
+  // C++20 class template argument deduction for alias templates.
+  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
+  "class template argument deduction for alias templates is incompatible with "
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -9588,13 +9615,10 @@ def err_defaulted_copy_assign_not_ref : Error<
   "the parameter for an explicitly-defaulted copy assignment operator must be an "
   "lvalue reference type">;
 def err_incorrect_defaulted_constexpr : Error<
-  "defaulted definition of %sub{select_special_member_kind}0 "
-  "is not constexpr">;
+  "defaulted definition of %sub{select_special_member_kind}0 cannot be marked %select{constexpr|consteval}1 "
+  "before C++23">;
 def err_incorrect_defaulted_constexpr_with_vb: Error<
   "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
-def err_incorrect_defaulted_consteval : Error<
-  "defaulted declaration of %sub{select_special_member_kind}0 "
-  "cannot be consteval because implicit definition is not constexpr">;
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
   "deleted">, InGroup<DefaultedFunctionDeleted>;
@@ -9705,21 +9729,12 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
-def ext_defaulted_comparison_constexpr_mismatch : Extension<
+def err_defaulted_comparison_constexpr_mismatch : Error<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 that is "
-  "declared %select{constexpr|consteval}2 but"
-  "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is a C++23 extension">,
-  InGroup<DiagGroup<"c++23-default-comp-relaxed-constexpr">>;
-def warn_cxx23_compat_defaulted_comparison_constexpr_mismatch : Warning<
-  "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 that is "
-  "declared %select{constexpr|consteval}2 but"
-  "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is incompatible with C++ "
-  "standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
+  "three-way comparison operator}0 cannot be "
+  "declared %select{constexpr|consteval}2 because "
+  "%select{it|for which the corresponding implicit 'operator==' }0 "
+  "invokes a non-constexpr comparison function ">;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
@@ -9898,7 +9913,7 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 returned">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
@@ -11333,6 +11348,8 @@ def err_omp_device_type_mismatch : Error<
 def err_omp_wrong_device_function_call : Error<
   "function with 'device_type(%0)' is not available on %select{device|host}1">;
 def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def err_omp_declare_target_has_local_vars : Error<
+  "local variable '%0' should not be used in 'declare target' directive; ">;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;

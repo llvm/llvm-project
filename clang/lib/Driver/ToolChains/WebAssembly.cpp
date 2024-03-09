@@ -198,7 +198,7 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 
   assert(Triple.isArch32Bit() != Triple.isArch64Bit());
 
-  getProgramPaths().push_back(getDriver().getInstalledDir());
+  getProgramPaths().push_back(getDriver().Dir);
 
   auto SysRoot = getDriver().SysRoot;
   if (getTriple().getOS() == llvm::Triple::UnknownOS) {

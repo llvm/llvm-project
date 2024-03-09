@@ -494,6 +494,8 @@ defm : vinsert_for_size_lowering<"VINSERTI32x4Z256", v16i8x_info, v32i8x_info,
               vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX]>;
 defm : vinsert_for_size_lowering<"VINSERTF32x4Z256", v8f16x_info, v16f16x_info,
               vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX]>;
+defm : vinsert_for_size_lowering<"VINSERTF32x4Z256", v8bf16x_info, v16bf16x_info,
+              vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX]>;
 // Codegen pattern with the alternative types insert VEC128 into VEC512
 defm : vinsert_for_size_lowering<"VINSERTI32x4Z", v8i16x_info, v32i16_info,
               vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512]>;
@@ -501,12 +503,16 @@ defm : vinsert_for_size_lowering<"VINSERTI32x4Z", v16i8x_info, v64i8_info,
                vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512]>;
 defm : vinsert_for_size_lowering<"VINSERTF32x4Z", v8f16x_info, v32f16_info,
               vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512]>;
+defm : vinsert_for_size_lowering<"VINSERTF32x4Z", v8bf16x_info, v32bf16_info,
+              vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512]>;
 // Codegen pattern with the alternative types insert VEC256 into VEC512
 defm : vinsert_for_size_lowering<"VINSERTI64x4Z", v16i16x_info, v32i16_info,
               vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
 defm : vinsert_for_size_lowering<"VINSERTI64x4Z", v32i8x_info, v64i8_info,
               vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
 defm : vinsert_for_size_lowering<"VINSERTF64x4Z", v16f16x_info, v32f16_info,
+              vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
+defm : vinsert_for_size_lowering<"VINSERTF64x4Z", v16bf16x_info, v32bf16_info,
               vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
 
 
@@ -795,6 +801,8 @@ defm : vextract_for_size_lowering<"VEXTRACTI32x4Z256", v32i8x_info, v16i8x_info,
           vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
 defm : vextract_for_size_lowering<"VEXTRACTF32x4Z256", v16f16x_info, v8f16x_info,
           vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
+defm : vextract_for_size_lowering<"VEXTRACTF32x4Z256", v16bf16x_info, v8bf16x_info,
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
 
 // Codegen pattern with the alternative types extract VEC128 from VEC512
 defm : vextract_for_size_lowering<"VEXTRACTI32x4Z", v32i16_info, v8i16x_info,
@@ -803,12 +811,16 @@ defm : vextract_for_size_lowering<"VEXTRACTI32x4Z", v64i8_info, v16i8x_info,
                  vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512]>;
 defm : vextract_for_size_lowering<"VEXTRACTF32x4Z", v32f16_info, v8f16x_info,
                  vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512]>;
+defm : vextract_for_size_lowering<"VEXTRACTF32x4Z", v32bf16_info, v8bf16x_info,
+                 vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512]>;
 // Codegen pattern with the alternative types extract VEC256 from VEC512
 defm : vextract_for_size_lowering<"VEXTRACTI64x4Z", v32i16_info, v16i16x_info,
                  vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512]>;
 defm : vextract_for_size_lowering<"VEXTRACTI64x4Z", v64i8_info, v32i8x_info,
                  vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512]>;
 defm : vextract_for_size_lowering<"VEXTRACTF64x4Z", v32f16_info, v16f16x_info,
+                 vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512]>;
+defm : vextract_for_size_lowering<"VEXTRACTF64x4Z", v32bf16_info, v16bf16x_info,
                  vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512]>;
 
 

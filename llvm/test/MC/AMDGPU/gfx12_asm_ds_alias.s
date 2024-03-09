@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
 
 ds_max_f32 v1, v2
 // GFX12: ds_max_num_f32 v1, v2                   ; encoding: [0x00,0x00,0x4c,0xd8,0x01,0x02,0x00,0x00]

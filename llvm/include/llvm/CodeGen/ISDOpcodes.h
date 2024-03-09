@@ -921,6 +921,8 @@ enum NodeType {
   /// has native conversions.
   BF16_TO_FP,
   FP_TO_BF16,
+  STRICT_BF16_TO_FP,
+  STRICT_FP_TO_BF16,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
@@ -1383,6 +1385,15 @@ enum NodeType {
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
+
+  // The `llvm.experimental.convergence.*` intrinsics.
+  CONVERGENCECTRL_ANCHOR,
+  CONVERGENCECTRL_ENTRY,
+  CONVERGENCECTRL_LOOP,
+  // This does not correspond to any convergence control intrinsic. It is used
+  // to glue a convergence control token to a convergent operation in the DAG,
+  // which is later translated to an implicit use in the MIR.
+  CONVERGENCECTRL_GLUE,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

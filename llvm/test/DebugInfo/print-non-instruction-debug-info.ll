@@ -21,8 +21,8 @@
 ; CHECK-NEXT: {{^}}  %[[VAL_ADD:[0-9a-zA-Z]+]] = add i32 %[[VAL_A]], 5
 ; OLDDBG-NEXT: call void @llvm.dbg.value(metadata !DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), metadata ![[VAR_A]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg ![[LOC_3:[0-9]+]]
 ; NEWDBG-NEXT: {{^}}    #dbg_value(!DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), ![[VAR_A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), ![[LOC_3:[0-9]+]])
-; OLDDBG-NEXT: call void @llvm.dbg.label(metadata ![[LABEL_ID:[0-9]+]])
-; NEWDBG-NEXT: {{^}}    #dbg_label(![[LABEL_ID:[0-9]+]])
+; OLDDBG-NEXT: call void @llvm.dbg.label(metadata ![[LABEL_ID:[0-9]+]]), !dbg ![[LOC_3]]
+; NEWDBG-NEXT: {{^}}    #dbg_label(![[LABEL_ID:[0-9]+]], ![[LOC_3]])
 ; CHECK-NEXT: {{^}}  store i32 %[[VAL_ADD]]{{.+}}, !DIAssignID ![[ASSIGNID:[0-9]+]]
 ; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata i32 %[[VAL_ADD]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ptr %[[VAL_B]], metadata !DIExpression()), !dbg ![[LOC_4:[0-9]+]]
 ; NEWDBG-NEXT: {{^}}    #dbg_assign(i32 %[[VAL_ADD]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ptr %[[VAL_B]], !DIExpression(), ![[LOC_4:[0-9]+]])

@@ -4608,10 +4608,10 @@ CmpInst *
 CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
                 const Twine &Name, BasicBlock *InsertAtEnd) {
   if (Op == Instruction::ICmp) {
-    return new ICmpInst(*InsertAtEnd, CmpInst::Predicate(predicate),
+    return new ICmpInst(InsertAtEnd, CmpInst::Predicate(predicate),
                         S1, S2, Name);
   }
-  return new FCmpInst(*InsertAtEnd, CmpInst::Predicate(predicate),
+  return new FCmpInst(InsertAtEnd, CmpInst::Predicate(predicate),
                       S1, S2, Name);
 }
 
