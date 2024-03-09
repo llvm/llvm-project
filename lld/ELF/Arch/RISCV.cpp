@@ -1089,7 +1089,6 @@ static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
                         const InputSectionBase *newSection, unsigned int oldTag,
                         unsigned int newTag) {
   using RISCVAttrs::RISCVAtomicAbiTag::AtomicABI;
-  llvm::errs() << "oldTag=" << oldTag << ", newTag=" << newTag << "\n";
   // Same tags stay the same, and UNKNOWN is compatible with anything
   if (oldTag == newTag || newTag == AtomicABI::UNKNOWN)
     return;
@@ -1197,8 +1196,6 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
           } else {
             mergeAtomic(merged.intAttr, firstAtomicAbi, sec,
                         r.first->getSecond(), *i);
-            llvm::errs() << "Merged Attr = " << merged.intAttr[tag.attr]
-                         << "\n";
           }
         }
         continue;
