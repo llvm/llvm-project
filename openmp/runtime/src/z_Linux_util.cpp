@@ -65,6 +65,9 @@
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#if KMP_OS_NETBSD
+#include <sched.h>
+#endif
 #elif KMP_OS_SOLARIS
 #include <libproc.h>
 #include <procfs.h>
@@ -122,7 +125,8 @@ static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
 }
 #endif
 
-#if ((KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED)
+#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD) &&                      \
+     KMP_AFFINITY_SUPPORTED)
 
 /* Affinity support */
 
@@ -149,6 +153,8 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 #define KMP_CPU_SET_TRY_SIZE CACHE_LINE
 #elif KMP_OS_FREEBSD
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
+#elif KMP_OS_NETBSD
+#define KMP_CPU_SET_SIZE_LIMIT (256)
 #endif
 
   int verbose = __kmp_affinity.flags.verbose;
@@ -236,7 +242,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_INTERNAL_FREE(buf);
     return;
   }
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
@@ -1262,7 +1268,7 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
