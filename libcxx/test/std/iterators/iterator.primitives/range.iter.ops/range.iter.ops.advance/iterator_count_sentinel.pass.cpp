@@ -42,6 +42,13 @@ constexpr void check_forward(int* first, int* last, std::iter_difference_t<It> n
     // regardless of the iterator category.
     assert(it.stride_count() == M);
     assert(it.stride_displacement() == M);
+    if (n == 0) {
+      assert(it.equals_count() == 0);
+    } else {
+      assert(it.equals_count() > 0);
+      assert(it.equals_count() == M || it.equals_count() == M + 1);
+      assert(it.equals_count() <= n);
+    }
   }
 }
 
@@ -95,6 +102,7 @@ constexpr void check_backward(int* first, int* last, std::iter_difference_t<It> 
     (void)std::ranges::advance(it, n, sent);
     assert(it.stride_count() <= 1);
     assert(it.stride_displacement() <= 1);
+    assert(it.equals_count() == 0);
   }
 }
 
@@ -211,6 +219,20 @@ constexpr bool test() {
     i = iota_iterator{+1};
     assert(std::ranges::advance(i, INT_MIN, iota_iterator{INT_MIN+1}) == 0);
     assert(i == iota_iterator{INT_MIN+1});
+  }
+
+  // Check that we don't do an unneeded bounds check when decrementing a
+  // `bidirectional_iterator` that doesn't model `sized_sentinel_for`.
+  {
+    static_assert(std::bidirectional_iterator<bidirectional_iterator<iota_iterator>>);
+    static_assert(!std::sized_sentinel_for<bidirectional_iterator<iota_iterator>,
+                                           bidirectional_iterator<iota_iterator>>);
+
+    auto it = stride_counting_iterator(bidirectional_iterator(iota_iterator{+1}));
+    auto sent = stride_counting_iterator(bidirectional_iterator(iota_iterator{-2}));
+    assert(std::ranges::advance(it, -3, sent) == 0);
+    assert(base(base(it)) == iota_iterator{-2});
+    assert(it.equals_count() == 3);
   }
 
   return true;
