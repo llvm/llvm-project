@@ -2506,7 +2506,7 @@ typedef struct kmp_depend_info {
   union {
     kmp_uint8 flag; // flag as an unsigned char
     struct { // flag as a set of 8 bits
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
       /* Same fields as in the #else branch, but in reverse order */
       unsigned all : 1;
       unsigned unused : 3;
@@ -2671,7 +2671,7 @@ typedef struct kmp_task_stack {
 #endif // BUILD_TIED_TASK_STACK
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
   unsigned reserved31 : 6;
