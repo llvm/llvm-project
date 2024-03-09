@@ -388,6 +388,8 @@ Arm and AArch64 Support
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-A78AE (cortex-a78ae).
 
 Android Support
 ^^^^^^^^^^^^^^^

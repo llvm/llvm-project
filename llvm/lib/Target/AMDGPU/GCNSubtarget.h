@@ -654,7 +654,7 @@ public:
     return !hasGFX940Insts();
   }
 
-  bool hasInterpInsts() const {
+  bool hasVINTERPEncoding() const {
     return GFX11Insts;
   }
 
