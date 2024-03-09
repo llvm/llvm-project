@@ -53,10 +53,6 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(hasName("data"),
                     ofClass(matchers::matchesAnyListedName(StringViewTypes)));
 
-  auto DataWithSelfCall =
-      cxxMemberCallExpr(on(ignoringParenImpCasts(expr().bind("self"))),
-                        callee(DataMethod))
-          .bind("data-call");
   auto SizeCall = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasAnyName("size", "length"))),
       on(ignoringParenImpCasts(
