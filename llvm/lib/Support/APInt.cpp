@@ -3069,6 +3069,7 @@ void llvm::StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
 
 APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   // Return higher order bits for unsigned (C1 * C2)
+  assert(C1.BitWidth == C2.BitWidth && "Bit widths must be the same");
   unsigned FullWidth = C1.getBitWidth() * 2;
   APInt C1Ext = C1.zext(FullWidth);
   APInt C2Ext = C2.zext(FullWidth);
@@ -3077,6 +3078,7 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
 
 APInt APIntOps::mulhs(const APInt &C1, const APInt &C2) {
   // Return higher order bits for signed (C1 * C2)
+  assert(C1.BitWidth == C2.BitWidth && "Bit widths must be the same");
   unsigned FullWidth = C1.getBitWidth() * 2;
   APInt C1Ext = C1.sext(FullWidth);
   APInt C2Ext = C2.sext(FullWidth);
