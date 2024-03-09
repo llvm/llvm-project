@@ -3404,7 +3404,9 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Lhs,
                                                  const Value *Rhs) const {
   using namespace llvm::PatternMatch;
-  int BaseCost = BrMergingBaseCostThresh.getValue();
+  // Disable condition merging when CCMP is available b/c we can eliminate
+  // branches in a more efficient way.
+  int BaseCost = Subtarget.hasCCMP() ? -1 : BrMergingBaseCostThresh.getValue();
   // a == b && a == c is a fast pattern on x86.
   ICmpInst::Predicate Pred;
   if (BaseCost >= 0 && Opc == Instruction::And &&

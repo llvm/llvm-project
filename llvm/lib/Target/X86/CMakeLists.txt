@@ -30,6 +30,7 @@ set(sources
   X86CallingConv.cpp
   X86CmovConversion.cpp
   X86CodeGenPassBuilder.cpp
+  X86ConditionalCompares.cpp
   X86DomainReassignment.cpp
   X86DiscriminateMemOps.cpp
   X86LowerTileCopy.cpp
