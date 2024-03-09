@@ -212,6 +212,8 @@ struct InternalDeadlockDetector {
     return initialized > 0;
   }
 };
+// This variable is used by the __tls_get_addr interceptor, so cannot use the
+// global-dynamic TLS model, as that would result in crashes.
 __attribute__((tls_model("initial-exec"))) static THREADLOCAL
     InternalDeadlockDetector deadlock_detector;
 

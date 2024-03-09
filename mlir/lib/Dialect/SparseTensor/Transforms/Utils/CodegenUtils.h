@@ -149,7 +149,7 @@ Value genScalarToTensor(OpBuilder &builder, Location loc, Value elem,
 /// Generates a pointer/index load from the sparse storage scheme. Narrower
 /// data types need to be zero extended before casting the value into the
 /// index type used for looping and indexing.
-Value genIndexLoad(OpBuilder &builder, Location loc, Value mem, Value s);
+Value genIndexLoad(OpBuilder &builder, Location loc, Value mem, ValueRange s);
 
 /// Generates a 1-valued attribute of the given type.  This supports
 /// all the same types as `getZeroAttr`; however, unlike `getZeroAttr`,

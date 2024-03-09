@@ -138,6 +138,8 @@ constexpr int dependent[4] = {
 static_assert(dependent[2] == dependent[0], "");
 static_assert(dependent[3] == dependent[1], "");
 
+union { char x[]; } r = {0};
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #pragma clang diagnostic ignored "-Winitializer-overrides"

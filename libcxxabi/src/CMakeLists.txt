@@ -230,9 +230,12 @@ if (LIBCXXABI_ENABLE_SHARED)
     reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
   endif()
 
+  # Note that std:: exception types are always defined by the library regardless of
+  # whether the exception runtime machinery is provided.
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
+
   if (LIBCXXABI_ENABLE_EXCEPTIONS)
     reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
-    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
 
     if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
       reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")

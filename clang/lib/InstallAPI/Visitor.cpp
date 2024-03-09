@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/InstallAPI/Visitor.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/InstallAPI/Frontend.h"
 #include "llvm/ADT/SmallString.h"
@@ -25,6 +26,31 @@ static bool isExported(const NamedDecl *D) {
   auto LV = D->getLinkageAndVisibility();
   return isExternallyVisible(LV.getLinkage()) &&
          (LV.getVisibility() == DefaultVisibility);
+}
+
+static bool isInlined(const FunctionDecl *D) {
+  bool HasInlineAttribute = false;
+  bool NoCXXAttr =
+      (!D->getASTContext().getLangOpts().CPlusPlus &&
+       !D->getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+       !D->hasAttr<DLLExportAttr>());
+
+  // Check all redeclarations to find an inline attribute or keyword.
+  for (const auto *RD : D->redecls()) {
+    if (!RD->isInlined())
+      continue;
+    HasInlineAttribute = true;
+    if (!(NoCXXAttr || RD->hasAttr<GNUInlineAttr>()))
+      continue;
+    if (RD->doesThisDeclarationHaveABody() &&
+        RD->isInlineDefinitionExternallyVisible())
+      return false;
+  }
+
+  if (!HasInlineAttribute)
+    return false;
+
+  return true;
 }
 
 static SymbolFlags getFlags(bool WeakDef, bool ThreadLocal) {
@@ -99,6 +125,29 @@ static bool hasObjCExceptionAttribute(const ObjCInterfaceDecl *D) {
 
   return false;
 }
+void InstallAPIVisitor::recordObjCInstanceVariables(
+    const ASTContext &ASTCtx, ObjCContainerRecord *Record, StringRef SuperClass,
+    const llvm::iterator_range<
+        DeclContext::specific_decl_iterator<ObjCIvarDecl>>
+        Ivars) {
+  RecordLinkage Linkage = RecordLinkage::Exported;
+  const RecordLinkage ContainerLinkage = Record->getLinkage();
+  // If fragile, set to unknown.
+  if (ASTCtx.getLangOpts().ObjCRuntime.isFragile())
+    Linkage = RecordLinkage::Unknown;
+  // Linkage should be inherited from container.
+  else if (ContainerLinkage != RecordLinkage::Unknown)
+    Linkage = ContainerLinkage;
+  for (const auto *IV : Ivars) {
+    auto Access = getAccessForDecl(IV);
+    if (!Access)
+      continue;
+    StringRef Name = IV->getName();
+    const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(IV);
+    auto AC = IV->getCanonicalAccessControl();
+    Ctx.Slice->addObjCIVar(Record, Name, Linkage, Avail, IV, *Access, AC);
+  }
+}
 
 bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
   // Skip forward declaration for classes (@class)
@@ -118,7 +167,33 @@ bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
       (!D->getASTContext().getLangOpts().ObjCRuntime.isFragile() &&
        hasObjCExceptionAttribute(D));
 
-  Ctx.Slice->addObjCInterface(Name, Linkage, Avail, D, *Access, IsEHType);
+  ObjCInterfaceRecord *Class =
+      Ctx.Slice->addObjCInterface(Name, Linkage, Avail, D, *Access, IsEHType);
+
+  // Get base class.
+  StringRef SuperClassName;
+  if (const auto *SuperClass = D->getSuperClass())
+    SuperClassName = SuperClass->getObjCRuntimeNameAsString();
+
+  recordObjCInstanceVariables(D->getASTContext(), Class, SuperClassName,
+                              D->ivars());
+  return true;
+}
+
+bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
+  StringRef CategoryName = D->getName();
+  // Skip over declarations that access could not be collected for.
+  auto Access = getAccessForDecl(D);
+  if (!Access)
+    return true;
+  const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
+  const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
+  const StringRef InterfaceName = InterfaceD->getName();
+
+  ObjCCategoryRecord *Category = Ctx.Slice->addObjCCategory(
+      InterfaceName, CategoryName, Avail, D, *Access);
+  recordObjCInstanceVariables(D->getASTContext(), Category, InterfaceName,
+                              D->ivars());
   return true;
 }
 
@@ -152,6 +227,58 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
   Ctx.Slice->addGlobal(getMangledName(D), Linkage, GlobalRecord::Kind::Variable,
                        Avail, D, *Access, getFlags(WeakDef, ThreadLocal));
+  return true;
+}
+
+bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
+  if (const CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(D)) {
+    // Skip member function in class templates.
+    if (M->getParent()->getDescribedClassTemplate() != nullptr)
+      return true;
+
+    // Skip methods in CXX RecordDecls.
+    for (auto P : D->getASTContext().getParents(*M)) {
+      if (P.get<CXXRecordDecl>())
+        return true;
+    }
+
+    // Skip CXX ConstructorDecls and DestructorDecls.
+    if (isa<CXXConstructorDecl>(M) || isa<CXXDestructorDecl>(M))
+      return true;
+  }
+
+  // Skip templated functions.
+  switch (D->getTemplatedKind()) {
+  case FunctionDecl::TK_NonTemplate:
+  case FunctionDecl::TK_DependentNonTemplate:
+    break;
+  case FunctionDecl::TK_MemberSpecialization:
+  case FunctionDecl::TK_FunctionTemplateSpecialization:
+    if (auto *TempInfo = D->getTemplateSpecializationInfo()) {
+      if (!TempInfo->isExplicitInstantiationOrSpecialization())
+        return true;
+    }
+    break;
+  case FunctionDecl::TK_FunctionTemplate:
+  case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
+    return true;
+  }
+
+  auto Access = getAccessForDecl(D);
+  if (!Access)
+    return true;
+  auto Name = getMangledName(D);
+  const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
+  const bool ExplicitInstantiation = D->getTemplateSpecializationKind() ==
+                                     TSK_ExplicitInstantiationDeclaration;
+  const bool WeakDef = ExplicitInstantiation || D->hasAttr<WeakAttr>();
+  const bool Inlined = isInlined(D);
+  const RecordLinkage Linkage = (Inlined || !isExported(D))
+                                    ? RecordLinkage::Internal
+                                    : RecordLinkage::Exported;
+  Ctx.Slice->addGlobal(Name, Linkage, GlobalRecord::Kind::Function, Avail, D,
+                       *Access, getFlags(WeakDef, /*ThreadLocal=*/false),
+                       Inlined);
   return true;
 }
 
