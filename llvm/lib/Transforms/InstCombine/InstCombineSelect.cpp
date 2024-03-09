@@ -511,26 +511,36 @@ static bool simplifySeqSelectWithSameCond(SelectInst &SI,
                                           const SimplifyQuery &SQ,
                                           InstCombinerImpl &IC) {
   Value *CondVal = SI.getCondition();
-  Type *CondType = CondVal->getType();
-  SelectInst *SINext = &SI;
-  Type *SelType = SINext->getType();
-  Value *FalseVal = SINext->getFalseValue();
-  Value *CondNext;
-  Value *FalseNext;
-  while (match(FalseVal,
-               m_Select(m_Value(CondNext), m_Value(), m_Value(FalseNext)))) {
+  auto trySimplifySeqSelect = [=, &SI, &IC](unsigned OpIndex) {
+    assert((OpIndex == 1 || OpIndex == 2) && "Unexpected operand index");
+    SelectInst *SINext = &SI;
+    Type *SelType = SINext->getType();
+    Value *ValOp = SINext->getOperand(OpIndex);
+    Value *CondNext;
     // Only support the type of select is an integer type as float type need
     // address FMF flag.
-    if (CondNext == CondVal && SelType->isIntOrIntVectorTy() &&
-        SINext->hasOneUse()) {
-      IC.replaceOperand(*SINext, 2, FalseNext);
-      return true;
-    }
+    while (match(ValOp, m_Select(m_Value(CondNext), m_Value(), m_Value()))) {
+      if (CondNext == CondVal && SelType->isIntOrIntVectorTy() &&
+          SINext->hasOneUse()) {
+        IC.replaceOperand(*SINext, OpIndex,
+                          cast<SelectInst>(ValOp)->getOperand(OpIndex));
+        return true;
+      }
 
-    SINext = cast<SelectInst>(FalseVal);
-    SelType = SINext->getType();
-    FalseVal = SINext->getFalseValue();
-  }
+      SINext = cast<SelectInst>(ValOp);
+      SelType = SINext->getType();
+      ValOp = SINext->getOperand(OpIndex);
+    }
+    return false;
+  };
+
+  // Try to simplify the true value of select.
+  if (trySimplifySeqSelect(/*OpIndex=*/1))
+    return true;
+
+  // Try to simplify the false value of select.
+  if (trySimplifySeqSelect(/*OpIndex=*/2))
+    return true;
 
   return false;
 }

@@ -4539,9 +4539,8 @@ define i32 @sequence_select_with_same_cond_false(i1 %c1, i1 %c2){
 
 define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_true(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 45, i32 23
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 [[S1]], i32 666
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 [[S2]], i32 789
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 45, i32 666
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], i32 [[S2]], i32 789
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
   %s1 = select i1 %c1, i32 45, i32 23
@@ -4639,10 +4638,12 @@ define i8 @test_replace_freeze_oneuse(i1 %x, i8 %y) {
   ret i8 %sel
 }
 
+; first, %sel2 change into select i1 %cond1, i8 %sel0, i8 3, the the %sel1 is OneUse
+; second, %sel1 change into select i1 %cond1, i8 %a, i8 2
 define i8 @sequence_select_with_same_cond_multi_arms(i1 %cond0, i1 %cond1, i8 %a, i8 %b) {
 ; CHECK-LABEL: @sequence_select_with_same_cond_multi_arms(
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[COND0:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i8 [[SEL0]], i8 2
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i8 [[A]], i8 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND1]], i8 [[SEL0]], i8 3
 ; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[COND0]], i8 [[SEL1]], i8 [[SEL2]]
 ; CHECK-NEXT:    ret i8 [[SEL3]]
