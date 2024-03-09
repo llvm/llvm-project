@@ -128,6 +128,9 @@ Changes to the C API
 * Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
   functions for accessing the values in a blockaddress constant.
 
+* Added ``LLVMConstStringInContext2`` function, which better matches the C++
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
