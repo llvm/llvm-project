@@ -15,6 +15,8 @@
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 
+// ADDITIONAL_COMPILE_FLAGS: -DFR_THOU_SEP=%{LOCALE_CONV_FR_FR_UTF_8_THOUSANDS_SEP}
+
 // <locale>
 
 // template <class charT> class numpunct_byname;
@@ -26,6 +28,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "locale_helpers.h"
 #include "platform_support.h" // locale name macros
 
 int main(int, char**)
@@ -75,16 +78,11 @@ int main(int, char**)
         }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
-#if defined(_CS_GNU_LIBC_VERSION)
-            const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
-#elif defined(_WIN32)
-            const wchar_t wsep = L'\u00A0';
-#else
-            const wchar_t wsep = L',';
-#endif
-            typedef wchar_t C;
-            const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-            assert(np.thousands_sep() == wsep);
+          const wchar_t wsep = LocaleHelpers::thousands_sep_or_default(FR_THOU_SEP);
+
+          typedef wchar_t C;
+          const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
+          assert(np.thousands_sep() == wsep);
         }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
     }

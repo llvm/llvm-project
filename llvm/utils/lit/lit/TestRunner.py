@@ -1625,6 +1625,10 @@ class SubstDirective(ExpandableScriptDirective):
         substitutions[existing[0]] = (self.name, value_repl)
 
 
+def substitutionsWillEscapeBackslashes():
+    return kIsWindows
+
+
 def applySubstitutions(script, substitutions, conditions={}, recursion_limit=None):
     """
     Apply substitutions to the script.  Allow full regular expression syntax.
@@ -1738,7 +1742,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
         # Apply substitutions
         ln = substituteIfElse(escapePercents(ln))
         for a, b in substitutions:
-            if kIsWindows:
+            if substitutionsWillEscapeBackslashes():
                 b = b.replace("\\", "\\\\")
             # re.compile() has a built-in LRU cache with 512 entries. In some
             # test suites lit ends up thrashing that cache, which made e.g.
