@@ -2700,7 +2700,7 @@ mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
   // FIXME: should we even be calling this method if RTTI is disabled
   // and it's not for EH?
   if (!shouldEmitRTTI(ForEH))
-    llvm_unreachable("NYI");
+    return getBuilder().getConstNullPtrAttr(builder.getUInt8PtrTy());
 
   if (ForEH && Ty->isObjCObjectPointerType() &&
       getLangOpts().ObjCRuntime.isGNUFamily()) {
