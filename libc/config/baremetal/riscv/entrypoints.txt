@@ -132,6 +132,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.strfromd
+    libc.src.stdlib.strfromf
+    libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol

@@ -53,6 +53,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strfromd
+  SRCS
+    strfromd.cpp
+  HDRS
+    strfromd.h
+)
+
+add_entrypoint_object(
+  strfromf
+  SRCS
+    strfromf.cpp
+  HDRS
+    strfromf.h
+)
+
+add_entrypoint_object(
+  strfroml
+  SRCS
+    strfroml.cpp
+  HDRS
+    strfroml.h
+)
+
+add_entrypoint_object(
   strtof
   SRCS
     strtof.cpp
