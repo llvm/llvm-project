@@ -70,6 +70,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -125,6 +127,9 @@ Changes to the C API
 
 * Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
   functions for accessing the values in a blockaddress constant.
+
+* Added ``LLVMConstStringInContext2`` function, which better matches the C++
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
 
 Changes to the CodeGen infrastructure
 -------------------------------------

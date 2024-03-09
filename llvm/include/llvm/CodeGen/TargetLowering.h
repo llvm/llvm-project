@@ -1609,13 +1609,14 @@ public:
     assert((VT.isInteger() || VT.isFloatingPoint()) &&
            "Cannot autopromote this type, add it with AddPromotedToType.");
 
+    uint64_t VTBits = VT.getScalarSizeInBits();
     MVT NVT = VT;
     do {
       NVT = (MVT::SimpleValueType)(NVT.SimpleTy+1);
       assert(NVT.isInteger() == VT.isInteger() && NVT != MVT::isVoid &&
              "Didn't find type to promote to!");
-    } while (!isTypeLegal(NVT) ||
-              getOperationAction(Op, NVT) == Promote);
+    } while (VTBits >= NVT.getScalarSizeInBits() || !isTypeLegal(NVT) ||
+             getOperationAction(Op, NVT) == Promote);
     return NVT;
   }
 
@@ -4437,6 +4438,7 @@ public:
     SmallVector<ISD::InputArg, 32> Ins;
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
+    SDValue ConvergenceControlToken;
 
     CallLoweringInfo(SelectionDAG &DAG)
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
@@ -4567,6 +4569,11 @@ public:
 
     CallLoweringInfo &setCFIType(const ConstantInt *Type) {
       CFIType = Type;
+      return *this;
+    }
+
+    CallLoweringInfo &setConvergenceControlToken(SDValue Token) {
+      ConvergenceControlToken = Token;
       return *this;
     }
 

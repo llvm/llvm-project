@@ -17091,37 +17091,24 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     }
     return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
   }
-  // Rotate and insert under mask operation.
-  // __rldimi(rs, is, shift, mask)
-  // (rotl64(rs, shift) & mask) | (is & ~mask)
-  // __rlwimi(rs, is, shift, mask)
-  // (rotl(rs, shift) & mask) | (is & ~mask)
   case PPC::BI__builtin_ppc_rldimi:
   case PPC::BI__builtin_ppc_rlwimi: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
     Value *Op3 = EmitScalarExpr(E->getArg(3));
-    llvm::Type *Ty = Op0->getType();
-    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
-    if (BuiltinID == PPC::BI__builtin_ppc_rldimi)
-      Op2 = Builder.CreateZExt(Op2, Int64Ty);
-    Value *Shift = Builder.CreateCall(F, {Op0, Op0, Op2});
-    Value *X = Builder.CreateAnd(Shift, Op3);
-    Value *Y = Builder.CreateAnd(Op1, Builder.CreateNot(Op3));
-    return Builder.CreateOr(X, Y);
+    return Builder.CreateCall(
+        CGM.getIntrinsic(BuiltinID == PPC::BI__builtin_ppc_rldimi
+                             ? Intrinsic::ppc_rldimi
+                             : Intrinsic::ppc_rlwimi),
+        {Op0, Op1, Op2, Op3});
   }
-  // Rotate and insert under mask operation.
-  // __rlwnm(rs, shift, mask)
-  // rotl(rs, shift) & mask
   case PPC::BI__builtin_ppc_rlwnm: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
-    llvm::Type *Ty = Op0->getType();
-    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
-    Value *Shift = Builder.CreateCall(F, {Op0, Op0, Op1});
-    return Builder.CreateAnd(Shift, Op2);
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_rlwnm),
+                              {Op0, Op1, Op2});
   }
   case PPC::BI__builtin_ppc_poppar4:
   case PPC::BI__builtin_ppc_poppar8: {
@@ -17976,6 +17963,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_any: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
+        Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -18009,7 +18002,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "Dot product requires vectors to be of the same size.");
 
     return Builder.CreateIntrinsic(
-        /*ReturnType*/ T0->getScalarType(), Intrinsic::dx_dot,
+        /*ReturnType=*/T0->getScalarType(), Intrinsic::dx_dot,
         ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
@@ -18046,7 +18039,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            XVecTy->getElementType() == SVecTy->getElementType() &&
            "Lerp requires float vectors to be of the same type.");
     return Builder.CreateIntrinsic(
-        /*ReturnType*/ Xty, Intrinsic::dx_lerp, ArrayRef<Value *>{X, Y, S},
+        /*ReturnType=*/Xty, Intrinsic::dx_lerp, ArrayRef<Value *>{X, Y, S},
         nullptr, "dx.lerp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
@@ -18054,8 +18047,35 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("frac operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType*/ Op0->getType(), Intrinsic::dx_frac,
+        /*ReturnType=*/Op0->getType(), Intrinsic::dx_frac,
         ArrayRef<Value *>{Op0}, nullptr, "dx.frac");
+  }
+  case Builtin::BI__builtin_hlsl_mad: {
+    Value *M = EmitScalarExpr(E->getArg(0));
+    Value *A = EmitScalarExpr(E->getArg(1));
+    Value *B = EmitScalarExpr(E->getArg(2));
+    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+      return Builder.CreateIntrinsic(
+          /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.fmad");
+    }
+    if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
+      return Builder.CreateIntrinsic(
+          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+    }
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
+        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_rcp: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("rcp operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
+        ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
   }
   }
   return nullptr;
@@ -18418,6 +18438,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F =
         CGM.getIntrinsic(Intrinsic::amdgcn_global_load_tr, {ArgTy});
     return Builder.CreateCall(F, {Addr});
+  }
+  case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
+    Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
+                                   {llvm::Type::getInt64Ty(getLLVMContext())});
+    return Builder.CreateCall(F);
+  }
+  case AMDGPU::BI__builtin_amdgcn_set_fpenv: {
+    Function *F = CGM.getIntrinsic(Intrinsic::set_fpenv,
+                                   {llvm::Type::getInt64Ty(getLLVMContext())});
+    llvm::Value *Env = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(F, {Env});
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);

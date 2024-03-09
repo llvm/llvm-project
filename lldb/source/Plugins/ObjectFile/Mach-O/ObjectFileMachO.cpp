@@ -6620,7 +6620,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Bits will be set to indicate which bits are NOT used in
         // addressing in this process or 0 for unknown.
         uint64_t address_mask = process_sp->GetCodeAddressMask();
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           // LC_NOTE "addrable bits"
           mach_header.ncmds++;
           mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6654,7 +6654,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
         // Add "addrable bits" LC_NOTE when an address mask is available
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
               new LCNoteEntry(addr_byte_size, byte_order));
           addrable_bits_lcnote_up->name = "addrable bits";

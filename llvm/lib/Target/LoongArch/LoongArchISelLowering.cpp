@@ -4963,3 +4963,8 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
 
   return !isa<ConstantSDNode>(Y);
 }
+
+ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
+  // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
+  return ISD::SIGN_EXTEND;
+}

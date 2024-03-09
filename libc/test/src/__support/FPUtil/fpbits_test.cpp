@@ -237,6 +237,8 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
     return T::signaling_nan(sign);
   case FP::QUIET_NAN:
     return T::quiet_nan(sign);
+  default:
+    __builtin_unreachable();
   }
 }
 
@@ -503,7 +505,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
 }
 #else
 TEST(LlvmLibcFPBitsTest, LongDoubleType) {
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   return; // The tests for the "double" type cover for this case.
 #else
   using LongDoubleBits = FPBits<long double>;
