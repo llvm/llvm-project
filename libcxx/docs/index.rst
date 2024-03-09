@@ -70,7 +70,7 @@ libc++ has become the default C++ Standard Library implementation for many major
 iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD. As a result, libc++ has an estimated
 user base of over 1 billion daily active users, making it one of the most widely-deployed C++ Standard Libraries in the world.
 
-Since its inception, libc++ has focused on delivering high performance, standards-conformant, and portability. It has
+Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
 been extensively tested and optimized, making it one of the most efficient implementations of the C++ Standard Library
 available. libc++ fully implements C++11, C++14, and C++17, with C++20, C++23, and C++26 features being actively
 developed and making steady progress.
