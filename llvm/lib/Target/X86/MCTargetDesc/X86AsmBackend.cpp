@@ -1376,7 +1376,7 @@ public:
         memset(SavedRegs, 0, sizeof(SavedRegs));
         StackAdjust = 0;
         SavedRegIdx = 0;
-        MinAbsOffset = std::numeric_limits<long>::max();
+        MinAbsOffset = std::numeric_limits<int64_t>::max();
         InstrOffset += MoveInstrSize;
         break;
       }
