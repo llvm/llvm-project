@@ -31,46 +31,118 @@ void test() {
   using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   CharT arr[4];
+
   std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
 
-  // TODO:
-
-  // Mode: default
+  // Mode: default (`in` | `out`)
   {
     SpBuf rhsSpBuf{sp};
-    SpBuf spBuf(std::span<CharT>{});
+    assert(rhsSpBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+
+    SpBuf spBuf;
+    assert(spBuf.span().data() == nullptr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
     spBuf.swap(rhsSpBuf);
-    // assert(spBuf.span().data() == arr);
-    // assert(!spBuf.span().empty());
-    // assert(spBuf.span().size() == 4);
+    assert(spBuf.span().data() == arr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+    assert(rhsSpBuf.span().data() == nullptr);
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
   }
-  // // Mode: `ios_base::in`
-  // {
-  //   SpBuf rhsSpBuf{sp, std::ios_base::in};
-  //   SpBuf spBuf(std::span<CharT>{});
-  //   spBuf.swap(rhsSpBuf);
-  //   assert(spBuf.span().data() == arr);
-  //   assert(!spBuf.span().empty());
-  //   assert(spBuf.span().size() == 4);
-  // }
-  // // Mode `ios_base::out`
-  // {
-  //   SpBuf rhsSpBuf{sp, std::ios_base::out};
-  //   SpBuf spBuf(std::span<CharT>{});
-  //   spBuf.swap(rhsSpBuf);
-  //   assert(spBuf.span().data() == arr);
-  //   assert(spBuf.span().empty());
-  //   assert(spBuf.span().size() == 0);
-  // }
-  // // Mode: multiple
-  // {
-  //   SpBuf rhsSpBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-  //   SpBuf spBuf(std::span<CharT>{});
-  //   spBuf.swap(rhsSpBuf);
-  //   assert(spBuf.span().data() == arr);
-  //   assert(spBuf.span().empty());
-  //   assert(spBuf.span().size() == 0);
-  // }
+  // Mode: `ios_base::in`
+  {
+    SpBuf rhsSpBuf{sp, std::ios_base::in};
+    assert(rhsSpBuf.span().data() == arr);
+    assert(!rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 4);
+
+    SpBuf spBuf(std::span<CharT>{});
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.swap(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
+    assert(rhsSpBuf.span().data() == nullptr);
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+  }
+  // Mode `ios_base::out`
+  {
+    SpBuf rhsSpBuf{sp, std::ios_base::out};
+    assert(rhsSpBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+
+    SpBuf spBuf;
+    assert(spBuf.span().data() == nullptr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.swap(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+    assert(rhsSpBuf.span().data() == nullptr);
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+  }
+  // Mode: multiple
+  {
+    SpBuf rhsSpBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    assert(rhsSpBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+
+    SpBuf spBuf;
+    assert(spBuf.span().data() == nullptr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.swap(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+    assert(rhsSpBuf.span().data() == nullptr);
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+  }
+  // Mode: `ios_base::ate`
+  {
+    SpBuf rhsSpBuf{sp, std::ios_base::out | std::ios_base::ate};
+    assert(rhsSpBuf.span().data() == arr);
+    assert(!rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 4);
+
+    SpBuf spBuf(std::span<CharT>{});
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.swap(rhsSpBuf);
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
+    assert(rhsSpBuf.span().data() == nullptr);
+    assert(rhsSpBuf.span().empty());
+    assert(rhsSpBuf.span().size() == 0);
+  }
 }
 
 int main(int, char**) {
