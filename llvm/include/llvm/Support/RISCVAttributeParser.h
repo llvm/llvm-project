@@ -24,6 +24,8 @@ class RISCVAttributeParser : public ELFAttributeParser {
 
   Error unalignedAccess(unsigned tag);
   Error stackAlign(unsigned tag);
+  Error atomicAbi(unsigned tag);
+  Error x3RegUsage(unsigned tag);
 
 public:
   RISCVAttributeParser(ScopedPrinter *sw)

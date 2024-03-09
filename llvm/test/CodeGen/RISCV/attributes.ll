@@ -128,7 +128,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefixes=CHECK,RV64M %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zmmul %s -o - | FileCheck --check-prefixes=CHECK,RV64ZMMUL %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zmmul %s -o - | FileCheck --check-prefixes=CHECK,RV64MZMMUL %s
-; RUN: llc -mtriple=riscv64 -mattr=+a %s -o - | FileCheck --check-prefixes=CHECK,RV64A %s
+; RUN: llc -mtriple=riscv64 -mattr=+a %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6C %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+no-seq-cst-trailing-fence %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6S %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f %s -o - | FileCheck --check-prefixes=CHECK,RV64F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d %s -o - | FileCheck --check-prefixes=CHECK,RV64D %s
 ; RUN: llc -mtriple=riscv64 -mattr=+c %s -o - | FileCheck --check-prefixes=CHECK,RV64C %s
@@ -512,3 +513,15 @@ define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
   ret i32 %1
 }
+
+define i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
+  %1 = load atomic i8, ptr %a seq_cst, align 1
+  ret i8 %1
+; A6S: .attribute 14, 2
+; A6C: .attribute 14, 1
+}
+
+define void @f1() shadowcallstack {
+  ret void
+}
+
