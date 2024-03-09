@@ -65,8 +65,8 @@ static_assert(h(4) == sizeof(int));
 static_assert(__has_cpp_attribute(assume) == 202207L);
 static_assert(__has_attribute(assume));
 
-constexpr bool i() { // expected-error {{never produces a constant expression}}
-  [[assume(false)]]; // expected-note {{assumption evaluated to false}} expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
+constexpr bool i() { // ext-error {{never produces a constant expression}}
+  [[assume(false)]]; // ext-note {{assumption evaluated to false}} expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
   return true;
 }
 
