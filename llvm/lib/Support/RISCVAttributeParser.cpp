@@ -41,10 +41,6 @@ const RISCVAttributeParser::DisplayHandler
             RISCVAttrs::ATOMIC_ABI,
             &RISCVAttributeParser::atomicAbi,
         },
-        {
-            RISCVAttrs::X3_REG_USAGE,
-            &RISCVAttributeParser::x3RegUsage,
-        },
 };
 
 Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
