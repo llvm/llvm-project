@@ -1,7 +1,4 @@
-if(NOT LLVM_RUNTIMES_GPU_BUILD)
-  include(GNUInstallDirs)
-endif()
-
+include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 include(LLVMProcessSources)
 include(LLVM-Config)

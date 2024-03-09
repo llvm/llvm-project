@@ -1,7 +1,7 @@
 # REQUIRES: native && x86_64-linux && intel-jitevents
 
-# RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
+# RUN: rm -rf %t && mkdir %t
+# RUN: llvm-mc -triple=x86_64-unknown-linux \
 # RUN:     -filetype=obj -o %t/ELF_x86-64_vtune.o %s
 # RUN: llvm-jitlink -vtune-support %t/ELF_x86-64_vtune.o | \
 # RUN: FileCheck %s

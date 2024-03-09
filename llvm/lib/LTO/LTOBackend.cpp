@@ -431,7 +431,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
                          AddStreamFn AddStream,
                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                          const ModuleSummaryIndex &CombinedIndex) {
-  ThreadPool CodegenThreadPool(
+  DefaultThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();

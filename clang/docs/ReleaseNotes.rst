@@ -86,11 +86,23 @@ C++20 Feature Support
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
+- Clang now implements [module.import]p7 fully. Clang now will import module
+  units transitively for the module units coming from the same module of the
+  current module units.
+  Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
+
+- Initial support for class template argument deduction (CTAD) for type alias
+  templates (`P1814R0 <https://wg21.link/p1814r0>`_).
+  (#GH54051).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+- Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
+
+- Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -107,6 +119,10 @@ Resolutions to C++ Defect Reports
 - Type qualifications are now ignored when evaluating layout compatibility
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
+
+- Alignment of members is now respected when evaluating layout compatibility
+  of structs.
+  (`CWG2583: Common initial sequence should consider over-alignment <https://cplusplus.github.io/CWG/issues/2583.html>`_).
 
 - ``[[no_unique_address]]`` is now respected when evaluating layout
   compatibility of two types.
@@ -138,6 +154,9 @@ C23 Feature Support
   macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
   (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
 
+- Clang now supports `N3018 The constexpr specifier for object definitions`
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -147,8 +166,17 @@ Non-comprehensive list of changes in this release
 - ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
   builtins are now constexpr and may be used in constant expressions.
 
+- Added ``__builtin_popcountg`` as a type-generic alternative to
+  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type. Like
+  the previous builtins, this new builtin is constexpr and may be used in
+  constant expressions.
+
 New Compiler Flags
 ------------------
+
+- ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
+  This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
+  like it did before Clang 18.x. Fixes (`#56628 <https://github.com/llvm/llvm-project/issues/68933>`_)
 
 Deprecated Compiler Flags
 -------------------------
@@ -176,6 +204,9 @@ Improvements to Clang's diagnostics
 
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes #GH69444.
+
+- Clang now uses thousand separators when printing large numbers in integer overflow diagnostics.
+  Fixes #GH80939.
 
 - Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
@@ -224,6 +255,10 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Clang now emits errors for explicit specializations/instatiations of lambda call
+  operator.
+  Fixes (#GH83267).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -265,6 +300,8 @@ Bug Fixes to C++ Support
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter. (#GH80971)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
+- Fix parsing of abominable function types inside type traits.
+  Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
 - Clang now classifies aggregate initialization in C++17 and newer as constant
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Partially fixes
@@ -298,6 +335,16 @@ Bug Fixes to C++ Support
 - Fixed an issue where an attribute on a declarator would cause the attribute to
   be destructed prematurely. This fixes a pair of Chromium that were brought to
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
+- Fix evaluation of some immediate calls in default arguments.
+  Fixes (#GH80630)
+- Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
+  calculation. (#GH56556), (#GH82849).
+- Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
+  a member-function against a non member function or a member-function with an
+  explicit object parameter against a member function with no explicit object parameter
+  when one of the function had more specialized templates.
+  Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
+  and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -342,6 +389,8 @@ Arm and AArch64 Support
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-A78AE (cortex-a78ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -359,6 +408,9 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- PTX is no longer included by default when compiling for CUDA. Using
+  ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -388,6 +440,7 @@ AST Matchers
 ------------
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
+- Add ``isExplicitObjectMemberFunction``.
 
 clang-format
 ------------

@@ -2821,7 +2821,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
 bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
@@ -2913,7 +2913,7 @@ bool PPCInstrInfo::shouldClusterMemOps(
     return false;
 
   int64_t Offset1 = 0, Offset2 = 0;
-  unsigned Width1 = 0, Width2 = 0;
+  LocationSize Width1 = 0, Width2 = 0;
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
   if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
       !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
@@ -2924,7 +2924,7 @@ bool PPCInstrInfo::shouldClusterMemOps(
          "getMemOperandWithOffsetWidth return incorrect base op");
   // The caller should already have ordered FirstMemOp/SecondMemOp by offset.
   assert(Offset1 <= Offset2 && "Caller should have ordered offsets.");
-  return Offset1 + Width1 == Offset2;
+  return Offset1 + (int64_t)Width1.getValue() == Offset2;
 }
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -5504,7 +5504,7 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 // memory width. Width is the size of memory that is being loaded/stored.
 bool PPCInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    unsigned &Width, const TargetRegisterInfo *TRI) const {
+    LocationSize &Width, const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore() || LdSt.getNumExplicitOperands() != 3)
     return false;
 
@@ -5542,14 +5542,15 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  unsigned int WidthA = 0, WidthB = 0;
+  LocationSize WidthA = 0, WidthB = 0;
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
-      int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-      if (LowOffset + LowWidth <= HighOffset)
+      LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+      if (LowWidth.hasValue() &&
+          LowOffset + (int)LowWidth.getValue() <= HighOffset)
         return true;
     }
   }

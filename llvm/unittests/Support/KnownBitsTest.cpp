@@ -169,41 +169,69 @@ static void TestAddSubExhaustive(bool IsAdd) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
-      KnownBits Known(Bits), KnownNSW(Bits);
+      KnownBits Known(Bits), KnownNSW(Bits), KnownNUW(Bits),
+          KnownNSWAndNUW(Bits);
       Known.Zero.setAllBits();
       Known.One.setAllBits();
       KnownNSW.Zero.setAllBits();
       KnownNSW.One.setAllBits();
+      KnownNUW.Zero.setAllBits();
+      KnownNUW.One.setAllBits();
+      KnownNSWAndNUW.Zero.setAllBits();
+      KnownNSWAndNUW.One.setAllBits();
 
       ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
         ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
-          bool Overflow;
+          bool SignedOverflow;
+          bool UnsignedOverflow;
           APInt Res;
-          if (IsAdd)
-            Res = N1.sadd_ov(N2, Overflow);
-          else
-            Res = N1.ssub_ov(N2, Overflow);
+          if (IsAdd) {
+            Res = N1.uadd_ov(N2, UnsignedOverflow);
+            Res = N1.sadd_ov(N2, SignedOverflow);
+          } else {
+            Res = N1.usub_ov(N2, UnsignedOverflow);
+            Res = N1.ssub_ov(N2, SignedOverflow);
+          }
 
           Known.One &= Res;
           Known.Zero &= ~Res;
 
-          if (!Overflow) {
+          if (!SignedOverflow) {
             KnownNSW.One &= Res;
             KnownNSW.Zero &= ~Res;
+          }
+
+          if (!UnsignedOverflow) {
+            KnownNUW.One &= Res;
+            KnownNUW.Zero &= ~Res;
+          }
+
+          if (!UnsignedOverflow && !SignedOverflow) {
+            KnownNSWAndNUW.One &= Res;
+            KnownNSWAndNUW.Zero &= ~Res;
           }
         });
       });
 
-      KnownBits KnownComputed =
-          KnownBits::computeForAddSub(IsAdd, /*NSW*/ false, Known1, Known2);
-      EXPECT_EQ(Known, KnownComputed);
+      KnownBits KnownComputed = KnownBits::computeForAddSub(
+          IsAdd, /*NSW=*/false, /*NUW=*/false, Known1, Known2);
+      EXPECT_TRUE(isOptimal(Known, KnownComputed, {Known1, Known2}));
 
-      // The NSW calculation is not precise, only check that it's
-      // conservatively correct.
       KnownBits KnownNSWComputed = KnownBits::computeForAddSub(
-          IsAdd, /*NSW*/true, Known1, Known2);
-      EXPECT_TRUE(KnownNSWComputed.Zero.isSubsetOf(KnownNSW.Zero));
-      EXPECT_TRUE(KnownNSWComputed.One.isSubsetOf(KnownNSW.One));
+          IsAdd, /*NSW=*/true, /*NUW=*/false, Known1, Known2);
+      if (!KnownNSW.hasConflict())
+        EXPECT_TRUE(isOptimal(KnownNSW, KnownNSWComputed, {Known1, Known2}));
+
+      KnownBits KnownNUWComputed = KnownBits::computeForAddSub(
+          IsAdd, /*NSW=*/false, /*NUW=*/true, Known1, Known2);
+      if (!KnownNUW.hasConflict())
+        EXPECT_TRUE(isOptimal(KnownNUW, KnownNUWComputed, {Known1, Known2}));
+
+      KnownBits KnownNSWAndNUWComputed = KnownBits::computeForAddSub(
+          IsAdd, /*NSW=*/true, /*NUW=*/true, Known1, Known2);
+      if (!KnownNSWAndNUW.hasConflict())
+        EXPECT_TRUE(isOptimal(KnownNSWAndNUW, KnownNSWAndNUWComputed,
+                              {Known1, Known2}));
     });
   });
 }
@@ -242,6 +270,28 @@ TEST(KnownBitsTest, SubBorrowExhaustive) {
       });
     });
   });
+}
+
+TEST(KnownBitsTest, SignBitUnknown) {
+  KnownBits Known(2);
+  EXPECT_TRUE(Known.isSignUnknown());
+  Known.Zero.setBit(0);
+  EXPECT_TRUE(Known.isSignUnknown());
+  Known.Zero.setBit(1);
+  EXPECT_FALSE(Known.isSignUnknown());
+  Known.Zero.clearBit(0);
+  EXPECT_FALSE(Known.isSignUnknown());
+  Known.Zero.clearBit(1);
+  EXPECT_TRUE(Known.isSignUnknown());
+
+  Known.One.setBit(0);
+  EXPECT_TRUE(Known.isSignUnknown());
+  Known.One.setBit(1);
+  EXPECT_FALSE(Known.isSignUnknown());
+  Known.One.clearBit(0);
+  EXPECT_FALSE(Known.isSignUnknown());
+  Known.One.clearBit(1);
+  EXPECT_TRUE(Known.isSignUnknown());
 }
 
 TEST(KnownBitsTest, AbsDiffSpecialCase) {

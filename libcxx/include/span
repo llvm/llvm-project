@@ -130,10 +130,12 @@ template<class R>
 
 #include <__assert>
 #include <__config>
+#include <__fwd/array.h>
 #include <__fwd/span.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/pointer_traits.h>
 #include <__ranges/concepts.h>
@@ -141,13 +143,16 @@ template<class R>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
-#include <array>   // for array
-#include <cstddef> // for byte
+#include <cstddef>      // for byte
+#include <initializer_list>
 #include <stdexcept>
 #include <version>
 
@@ -170,12 +175,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
-
-template <class _Tp>
-struct __is_std_array : false_type {};
-
-template <class _Tp, size_t _Sz>
-struct __is_std_array<array<_Tp, _Sz>> : true_type {};
 
 template <class _Tp>
 struct __is_std_span : false_type {};
@@ -564,10 +563,8 @@ _LIBCPP_HIDE_FROM_ABI auto as_writable_bytes(span<_Tp, _Extent> __s) noexcept {
   return __s.__as_writable_bytes();
 }
 
-#  if _LIBCPP_STD_VER >= 20
 template <contiguous_iterator _It, class _EndOrSize>
 span(_It, _EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
-#  endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp, size_t _Sz>
 span(_Tp (&)[_Sz]) -> span<_Tp, _Sz>;
@@ -588,6 +585,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <array>
 #  include <concepts>
 #  include <functional>
 #  include <iterator>

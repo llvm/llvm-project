@@ -66,7 +66,7 @@ public:
 
   template <class LP> void run();
 
-  ThreadPool threadPool;
+  DefaultThreadPool threadPool;
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
