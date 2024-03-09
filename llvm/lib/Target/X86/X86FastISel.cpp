@@ -2198,7 +2198,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     const TargetRegisterClass *VK1 = &X86::VK1RegClass;
 
     unsigned CmpOpcode =
-      (RetVT == MVT::f32) ? X86::VCMPSSZrr : X86::VCMPSDZrr;
+      (RetVT == MVT::f32) ? X86::VCMPSSZrri : X86::VCMPSDZrri;
     Register CmpReg = fastEmitInst_rri(CmpOpcode, VK1, CmpLHSReg, CmpRHSReg,
                                        CC);
 
@@ -2228,7 +2228,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     // instructions as the AND/ANDN/OR sequence due to register moves, so
     // don't bother.
     unsigned CmpOpcode =
-      (RetVT == MVT::f32) ? X86::VCMPSSrr : X86::VCMPSDrr;
+      (RetVT == MVT::f32) ? X86::VCMPSSrri : X86::VCMPSDrri;
     unsigned BlendOpcode =
       (RetVT == MVT::f32) ? X86::VBLENDVPSrr : X86::VBLENDVPDrr;
 
@@ -2242,8 +2242,8 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   } else {
     // Choose the SSE instruction sequence based on data type (float or double).
     static const uint16_t OpcTable[2][4] = {
-      { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
-      { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
+      { X86::CMPSSrri,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
+      { X86::CMPSDrri,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
     };
 
     const uint16_t *Opc = nullptr;
