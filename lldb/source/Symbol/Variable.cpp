@@ -27,6 +27,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -568,7 +570,9 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (compiler_type.GetNumChildren(omit_empty_base_classes, nullptr) > 0)
+        if (llvm::expectedToStdOptional(
+                compiler_type.GetNumChildren(omit_empty_base_classes, nullptr))
+                .value_or(0))
           request.AddCompletion((prefix_path + "->").str());
         else {
           request.AddCompletion(prefix_path.str());
