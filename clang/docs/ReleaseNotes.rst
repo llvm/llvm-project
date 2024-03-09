@@ -91,6 +91,10 @@ C++20 Feature Support
   current module units.
   Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
 
+- Initial support for class template argument deduction (CTAD) for type alias
+  templates (`P1814R0 <https://wg21.link/p1814r0>`_).
+  (#GH54051).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -254,6 +258,9 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Fixes an assertion failure on invalid code when trying to define member
+  functions in lambdas.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -332,8 +339,6 @@ Bug Fixes to C++ Support
   our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
 - Fix evaluation of some immediate calls in default arguments.
   Fixes (#GH80630)
-- Fix a crash when an explicit template argument list is used with a name for which lookup
-  finds a non-template function and a dependent using declarator.
 - Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
   calculation. (#GH56556), (#GH82849).
 - Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
@@ -386,6 +391,8 @@ Arm and AArch64 Support
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-A78AE (cortex-a78ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -404,7 +411,7 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- PTX is no longer included by default when compiling for CUDA. Using 
+- PTX is no longer included by default when compiling for CUDA. Using
   ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
@@ -435,6 +442,7 @@ AST Matchers
 ------------
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
+- Add ``isExplicitObjectMemberFunction``.
 
 clang-format
 ------------

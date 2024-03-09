@@ -309,6 +309,10 @@ public:
   void createStoreWithConvert(mlir::Location loc, mlir::Value val,
                               mlir::Value addr);
 
+  /// Create a fir.load if \p val is a reference or pointer type. Return the
+  /// result of the load if it was created, otherwise return \p val
+  mlir::Value loadIfRef(mlir::Location loc, mlir::Value val);
+
   /// Create a new FuncOp. If the function may have already been created, use
   /// `addNamedFunction` instead.
   mlir::func::FuncOp createFunction(mlir::Location loc, llvm::StringRef name,

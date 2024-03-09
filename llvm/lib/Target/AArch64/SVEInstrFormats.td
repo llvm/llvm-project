@@ -9893,23 +9893,33 @@ class sve2p1_dupq<bits<5> ind_tsz, string mnemonic, ZPRRegOp zprty, Operand ityp
   let hasSideEffects = 0;
 }
 
-multiclass sve2p1_dupq<string mnemonic> {
-  def _B : sve2p1_dupq<{?, ?, ?, ?, 1}, mnemonic, ZPR8, VectorIndexB32b> {
+multiclass sve2p1_dupq<string mnemonic, SDPatternOperator Op> {
+  def _B : sve2p1_dupq<{?, ?, ?, ?, 1}, mnemonic, ZPR8, VectorIndexB32b_timm> {
     bits<4> index;
     let Inst{20-17} = index;
   }
-  def _H : sve2p1_dupq<{?, ?, ?, 1, 0}, mnemonic, ZPR16, VectorIndexH32b> {
+  def _H : sve2p1_dupq<{?, ?, ?, 1, 0}, mnemonic, ZPR16, VectorIndexH32b_timm> {
     bits<3> index;
     let Inst{20-18} = index;
   }
-  def _S : sve2p1_dupq<{?, ?, 1, 0, 0}, mnemonic, ZPR32, VectorIndexS32b> {
+  def _S : sve2p1_dupq<{?, ?, 1, 0, 0}, mnemonic, ZPR32, VectorIndexS32b_timm> {
     bits<2> index;
     let Inst{20-19} = index;
   }
-  def _D : sve2p1_dupq<{?, 1, 0, 0, 0}, mnemonic, ZPR64, VectorIndexD32b> {
+  def _D : sve2p1_dupq<{?, 1, 0, 0, 0}, mnemonic, ZPR64, VectorIndexD32b_timm> {
     bits<1> index;
     let Inst{20} = index;
   }
+
+  def : SVE_2_Op_Imm_Pat<nxv16i8, Op, nxv16i8, i32, VectorIndexB32b_timm, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Imm_Pat<nxv8i16, Op, nxv8i16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Imm_Pat<nxv4i32, Op, nxv4i32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Imm_Pat<nxv2i64, Op, nxv2i64, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_2_Op_Imm_Pat<nxv8f16, Op, nxv8f16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Imm_Pat<nxv4f32, Op, nxv4f32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Imm_Pat<nxv2f64, Op, nxv2f64, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Imm_Pat<nxv8bf16, Op, nxv8bf16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _H)>;
 }
 
 

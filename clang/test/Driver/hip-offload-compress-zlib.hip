@@ -7,7 +7,7 @@
 // RUN: rm -rf %t.bc
 // RUN: %clang -c -v --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   --no-offload-new-driver -fgpu-rdc -nogpuinc -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   --offload-compress --offload-device-only --gpu-bundle-output \
 // RUN:   -o %t.bc \
@@ -22,7 +22,7 @@
 
 // RUN: %clang --hip-link -### -v --target=x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   -fgpu-rdc -nogpulib \
+// RUN:   --no-offload-new-driver -fgpu-rdc -nogpulib \
 // RUN:   %t.bc --offload-device-only \
 // RUN: 2>&1 | FileCheck -check-prefix=UNBUNDLE %s
 
@@ -35,7 +35,7 @@
 
 // RUN: %clang -c -### -v --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
-// RUN:   -nogpuinc -nogpulib \
+// RUN:   --no-offload-new-driver -nogpuinc -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   --offload-compress \
 // RUN: 2>&1 | FileCheck -check-prefix=CO %s

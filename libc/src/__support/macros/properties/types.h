@@ -17,7 +17,7 @@
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
 
-#include <stdint.h> // UINT64_MAX
+#include <stdint.h> // UINT64_MAX, __SIZEOF_INT128__
 
 // 'long double' properties.
 #if (LDBL_MANT_DIG == 53)
@@ -32,6 +32,11 @@
 #if defined(UINT64_MAX)
 #define LIBC_TYPES_HAS_INT64
 #endif // UINT64_MAX
+
+// int128 / uint128 support
+#if defined(__SIZEOF_INT128__)
+#define LIBC_TYPES_HAS_INT128
+#endif // defined(__SIZEOF_INT128__)
 
 // -- float16 support ---------------------------------------------------------
 // TODO: move this logic to "llvm-libc-types/float16.h"
