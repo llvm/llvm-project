@@ -500,7 +500,7 @@ private:
     for (unsigned I = 0; I < CFG.getNumBlockIDs(); ++I) {
       std::string Name = blockID(I);
       // Rightwards arrow, vertical line
-      char ConvergenceMarker[] = u8"\\n\u2192\u007c";
+      const char *ConvergenceMarker = (const char *)u8"\\n\u2192\u007c";
       if (BlockConverged[I])
         Name += ConvergenceMarker;
       GraphS << "  " << blockID(I) << " [id=" << blockID(I) << " label=\""

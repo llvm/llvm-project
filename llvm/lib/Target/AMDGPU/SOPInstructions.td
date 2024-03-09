@@ -1705,7 +1705,7 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
-let OtherPredicates = [HasExpOrExportInsts] in
+let OtherPredicates = [HasExportInsts] in
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
                                  "$simm16"> {
                                    let hasSideEffects = 1;
@@ -1738,7 +1738,7 @@ let OtherPredicates = [HasImageInsts] in {
     SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
 } // End OtherPredicates = [HasImageInsts].
-let OtherPredicates = [HasExpOrExportInsts] in
+let OtherPredicates = [HasExportInsts] in
   def S_WAIT_EXPCNT :
     SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_expcnt timm:$simm16)]>;
