@@ -4749,9 +4749,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 ///    128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [2 x double] vector consisting of two doubles corresponding to
-///    the two comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4785,8 +4783,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    If the result is true, all 64 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///

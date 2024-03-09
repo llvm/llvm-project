@@ -2954,9 +2954,7 @@ _mm_movemask_ps(__m128 __a)
 ///    [4 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [4 x float] vector consisting of four floats corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2989,8 +2987,7 @@ _mm_movemask_ps(__m128 __a)
 ///    vectors of [4 x float], using the operation specified by the immediate
 ///    integer operand.
 ///
-///    If the result is true, all 32 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison yields 0x0 for false, 0xFFFFFFFF for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
