@@ -110,6 +110,37 @@ def getSizeOptimizationFlag(cfg):
         )
 
 
+def testClangTidy(cfg, version, executable):
+    try:
+        if version in commandOutput(cfg, [f"{executable} --version"]):
+            return executable
+    except ConfigurationRuntimeError:
+        return None
+
+
+def getSuitableClangTidy(cfg):
+    # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
+    if (
+        runScriptExitCode(
+            cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]
+        )
+        != 0
+    ):
+        return None
+
+    version = "{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(
+        **compilerMacros(cfg)
+    )
+    exe = testClangTidy(
+        cfg, version, "clang-tidy-{__clang_major__}".format(**compilerMacros(cfg))
+    )
+
+    if not exe:
+        exe = testClangTidy(cfg, version, "clang-tidy")
+
+    return exe
+
+
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
@@ -366,6 +397,16 @@ DEFAULT_PARAMETERS = [
         default=f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
-    )
+    ),
+    Parameter(
+        name='clang-tidy-executable',
+        type=str,
+        default=lambda cfg: getSuitableClangTidy(cfg),
+        help="Selects the clang-tidy executable to use.",
+        actions=lambda exe: [] if exe is None else [
+            AddFeature('has-clang-tidy'),
+            AddSubstitution('%{clang-tidy}', exe),
+        ]
+     ),
 ]
 # fmt: on
