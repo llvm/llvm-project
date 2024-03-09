@@ -4745,6 +4745,74 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
   return (__m128d)__a;
 }
 
+/// Compares each of the corresponding double-precision values of two
+///    128-bit vectors of [2 x double], using the operation specified by the
+///    immediate integer operand.
+///
+///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> (V)CMPPD </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double].
+/// \param b
+///    A 128-bit vector of [2 x double].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+/// \returns A 128-bit vector of [2 x double] containing the comparison results.
+#define _mm_cmp_pd(a, b, c)                                                    \
+  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),   \
+                                 (c)))
+
+/// Compares each of the corresponding scalar double-precision values of
+///    two 128-bit vectors of [2 x double], using the operation specified by the
+///    immediate integer operand.
+///
+///    Each comparison yields 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> (V)CMPSD </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double].
+/// \param b
+///    A 128-bit vector of [2 x double].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+/// \returns A 128-bit vector of [2 x double] containing the comparison results.
+#define _mm_cmp_sd(a, b, c)                                                    \
+  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),   \
+                                 (c)))
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
