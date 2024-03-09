@@ -32,8 +32,8 @@ AST_MATCHER_P(FunctionDecl, isInstantiatedFrom, Matcher<FunctionDecl>,
 }
 
 AST_MATCHER_P(CXXMethodDecl, isOperatorOverloading,
-              llvm::SmallVector<OverloadedOperatorKind>, kinds) {
-  return llvm::is_contained(kinds, Node.getOverloadedOperator());
+              llvm::SmallVector<OverloadedOperatorKind>, Kinds) {
+  return llvm::is_contained(Kinds, Node.getOverloadedOperator());
 }
 } // namespace
 
