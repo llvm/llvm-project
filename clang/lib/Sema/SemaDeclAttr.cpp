@@ -1771,8 +1771,8 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
 }
 
 /// Check if \p AssumptionStr is a known assumption and warn if not.
-static void checkAssumptionAttr(Sema &S, SourceLocation Loc,
-                                StringRef AssumptionStr) {
+static void checkOMPAssumeAttr(Sema &S, SourceLocation Loc,
+                               StringRef AssumptionStr) {
   if (llvm::KnownAssumptionStrings.count(AssumptionStr))
     return;
 
@@ -1788,22 +1788,23 @@ static void checkAssumptionAttr(Sema &S, SourceLocation Loc,
   }
 
   if (!Suggestion.empty())
-    S.Diag(Loc, diag::warn_assume_attribute_string_unknown_suggested)
+    S.Diag(Loc, diag::warn_omp_assume_attribute_string_unknown_suggested)
         << AssumptionStr << Suggestion;
   else
-    S.Diag(Loc, diag::warn_assume_attribute_string_unknown) << AssumptionStr;
+    S.Diag(Loc, diag::warn_omp_assume_attribute_string_unknown)
+        << AssumptionStr;
 }
 
-static void handleAssumumptionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleOMPAssumeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Handle the case where the attribute has a text message.
   StringRef Str;
   SourceLocation AttrStrLoc;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &AttrStrLoc))
     return;
 
-  checkAssumptionAttr(S, AttrStrLoc, Str);
+  checkOMPAssumeAttr(S, AttrStrLoc, Str);
 
-  D->addAttr(::new (S.Context) AssumptionAttr(S.Context, AL, Str));
+  D->addAttr(::new (S.Context) OMPAssumeAttr(S.Context, AL, Str));
 }
 
 /// Normalize the attribute, __foo__ becomes foo.
@@ -9491,8 +9492,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Unavailable:
     handleAttrWithMessage<UnavailableAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_Assumption:
-    handleAssumumptionAttr(S, D, AL);
+  case ParsedAttr::AT_OMPAssume:
+    handleOMPAssumeAttr(S, D, AL);
     break;
   case ParsedAttr::AT_ObjCDirect:
     handleObjCDirectAttr(S, D, AL);
