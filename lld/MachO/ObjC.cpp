@@ -903,9 +903,9 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
   return catListSym;
 }
 
-// Here we generate the main category body and just the body and link the name
-// and base class into it. We don't link any other info like the protocol and
-// class/instance methods/props.
+// Here we generate the main category body and link the name and base class into
+// it. We don't link any other info yet like the protocol and class/instance
+// methods/props.
 Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                               const Defined *nameSym,
                                               const Symbol *baseClassSym,
@@ -1062,8 +1062,10 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       Defined *categorySym = tryGetDefinedAtIsecOffset(catListCisec, off);
       assert(categorySym &&
              "Failed to get a valid cateogry at __objc_catlit offset");
+
+      // We only support ObjC categories (no swift + @objc)
       if (!categorySym->getName().starts_with(objc::symbol_names::category))
-        continue; // Only support ObjC categories (no swift + @objc)
+        continue;
 
       auto *catBodyIsec = dyn_cast<ConcatInputSection>(categorySym->isec);
       assert(catBodyIsec &&
@@ -1082,18 +1084,6 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       collectCategoryWriterInfoFromCategory(catInputInfo);
     }
   }
-
-  for (auto &entry : categoryMap)
-    if (entry.second.size() > 1) {
-      // Sort categories by offset to make sure we process categories in
-      // the same order as they appear in the input
-      auto cmpFn = [](const InfoInputCategory &a, const InfoInputCategory &b) {
-        return (a.catListIsec == b.catListIsec) &&
-               (a.offCatListIsec < b.offCatListIsec);
-      };
-
-      llvm::sort(entry.second, cmpFn);
-    }
 }
 
 // In the input we have multiple __objc_catlist InputSection, each of which may
