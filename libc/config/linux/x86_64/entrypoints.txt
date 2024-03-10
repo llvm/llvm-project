@@ -158,6 +158,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_bit_floor_ui
     libc.src.stdbit.stdc_bit_floor_ul
     libc.src.stdbit.stdc_bit_floor_ull
+    libc.src.stdbit.stdc_bit_ceil_uc
+    libc.src.stdbit.stdc_bit_ceil_us
+    libc.src.stdbit.stdc_bit_ceil_ui
+    libc.src.stdbit.stdc_bit_ceil_ul
+    libc.src.stdbit.stdc_bit_ceil_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
