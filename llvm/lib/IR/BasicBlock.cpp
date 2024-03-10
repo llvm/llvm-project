@@ -756,9 +756,8 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
     if (!SrcTrailingDPValues)
       return;
 
-    createMarker(Dest)->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
-    SrcTrailingDPValues->eraseFromParent();
-    Src->deleteTrailingDPValues();
+    Dest->adoptDbgValues(Src, Src->end(), InsertAtHead);
+    // adoptDbgValues should have released the trailing DPValues.
     assert(!Src->getTrailingDPValues());
     return;
   }
