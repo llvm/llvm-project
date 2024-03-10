@@ -167,7 +167,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
       Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  IsCpp = Style.isCpp();
+  assert(IsCpp == Style.isCpp());
 }
 
 void UnwrappedLineParser::reset() {

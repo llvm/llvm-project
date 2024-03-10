@@ -213,7 +213,7 @@ class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), Keywords(Keywords) {
-    IsCpp = Style.isCpp();
+    assert(IsCpp == Style.isCpp());
   }
 
   /// Adapts the indent levels of comment lines to the indent of the

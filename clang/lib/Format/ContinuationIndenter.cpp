@@ -242,7 +242,7 @@ ContinuationIndenter::ContinuationIndenter(const FormatStyle &Style,
       Whitespaces(Whitespaces), Encoding(Encoding),
       BinPackInconclusiveFunctions(BinPackInconclusiveFunctions),
       CommentPragmasRegex(Style.CommentPragmas), RawStringFormats(Style) {
-  IsCpp = Style.isCpp();
+  assert(IsCpp == Style.isCpp());
 }
 
 LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,

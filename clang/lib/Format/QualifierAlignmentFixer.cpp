@@ -528,7 +528,7 @@ LeftRightQualifierAlignmentFixer::LeftRightQualifierAlignmentFixer(
     const std::vector<tok::TokenKind> &QualifierTokens, bool RightAlign)
     : TokenAnalyzer(Env, Style), Qualifier(Qualifier), RightAlign(RightAlign),
       ConfiguredQualifierTokens(QualifierTokens) {
-  IsCpp = Style.isCpp();
+  assert(IsCpp == Style.isCpp());
 }
 
 std::pair<tooling::Replacements, unsigned>

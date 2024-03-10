@@ -127,7 +127,7 @@ public:
                    SmallVector<ScopeType> &Scopes)
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         Keywords(Keywords), Scopes(Scopes) {
-    IsCpp = Style.isCpp();
+    assert(IsCpp == Style.isCpp());
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
