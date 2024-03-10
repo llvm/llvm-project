@@ -11,6 +11,7 @@
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Decimal/binary-floating-point.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Evaluate/real.h"
 #include <cinttypes>
 #include <cstring>
 #include <ctype.h>
