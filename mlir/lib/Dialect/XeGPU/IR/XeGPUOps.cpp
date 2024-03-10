@@ -16,8 +16,6 @@
 namespace mlir {
 namespace xegpu {
 
-bool printDefaultValues() {return false;}
-
 static size_t getRankOf(Value value) {
   if (value.getType().isIntOrIndexOrFloat())
     return 0;
