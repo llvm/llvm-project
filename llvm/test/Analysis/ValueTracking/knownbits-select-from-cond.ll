@@ -6,7 +6,7 @@ define i8 @select_condition_implies_highbits_op1(i8 %xx, i8 noundef %y) {
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[XX:%.*]], 15
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y]], i8 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[SEL]], 32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SEL]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = and i8 %xx, 15
@@ -36,7 +36,7 @@ define i8 @select_condition_implies_highbits_op2(i8 %xx, i8 noundef %y) {
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[XX:%.*]], 15
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[X]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[SEL]], 32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SEL]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = and i8 %xx, 15
@@ -52,7 +52,7 @@ define i8 @select_condition_implies_highbits_op1_and(i8 %xx, i8 noundef %y, i1 %
 ; CHECK-NEXT:    [[COND0:%.*]] = icmp ult i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[COND0]], [[OTHER_COND:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y]], i8 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[SEL]], 32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SEL]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = and i8 %xx, 15
@@ -69,7 +69,7 @@ define i8 @select_condition_implies_highbits_op2_or(i8 %xx, i8 noundef %y, i1 %o
 ; CHECK-NEXT:    [[COND0:%.*]] = icmp ugt i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = or i1 [[COND0]], [[OTHER_COND:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[X]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[SEL]], 32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SEL]], 32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = and i8 %xx, 15
