@@ -210,12 +210,12 @@ inline unsigned long long stdc_bit_ceil(unsigned long long x) {
 #else
 
 #define STDBIT_GENERIC_FUNC(FUNC_NAME, x)                                      \
-  _Generic((x), unsigned char                                                  \
-           : FUNC_NAME##_uc, unsigned short                                    \
-           : FUNC_NAME##_us, unsigned                                          \
-           : FUNC_NAME##_ui, unsigned long                                     \
-           : FUNC_NAME##_ul, unsigned long long                                \
-           : FUNC_NAME##_ull)(x)
+  _Generic((x),                                                                \
+      unsigned char: FUNC_NAME##_uc,                                           \
+      unsigned short: FUNC_NAME##_us,                                          \
+      unsigned: FUNC_NAME##_ui,                                                \
+      unsigned long: FUNC_NAME##_ul,                                           \
+      unsigned long long: FUNC_NAME##_ull)(x)
 
 #define stdc_leading_zeros(x) STDBIT_GENERIC_FUNC(stdc_leading_zeros, (x))
 #define stdc_leading_ones(x) STDBIT_GENERIC_FUNC(stdc_leading_ones, (x))
