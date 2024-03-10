@@ -4082,23 +4082,22 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
 /// The Mask can be a constant, too.
 /// For some predicates, the operands are commutative.
 /// For others, x can only be on a specific side.
-static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
+static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
+                                          Value *Op1,
                                           InstCombiner::BuilderTy &Builder) {
-  ICmpInst::Predicate SrcPred;
-  Value *X, *M, *Y;
+  Value *M, *Y;
   auto m_VariableMask = m_CombineOr(
       m_CombineOr(m_Not(m_Shl(m_AllOnes(), m_Value())),
                   m_Add(m_Shl(m_One(), m_Value()), m_AllOnes())),
       m_CombineOr(m_LShr(m_AllOnes(), m_Value()),
                   m_LShr(m_Shl(m_AllOnes(), m_Value(Y)), m_Deferred(Y))));
   auto m_Mask = m_CombineOr(m_VariableMask, m_LowBitMask());
-  if (!match(&I, m_c_ICmp(SrcPred,
-                          m_c_And(m_CombineAnd(m_Mask, m_Value(M)), m_Value(X)),
-                          m_Deferred(X))))
+
+  if (!match(Op0, m_c_And(m_CombineAnd(m_Mask, m_Value(M)), m_Specific(Op1))))
     return nullptr;
 
   ICmpInst::Predicate DstPred;
-  switch (SrcPred) {
+  switch (Pred) {
   case ICmpInst::Predicate::ICMP_EQ:
     //  x & (-1 >> y) == x    ->    x u<= (-1 >> y)
     DstPred = ICmpInst::Predicate::ICMP_ULE;
@@ -4164,7 +4163,7 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
     M = Constant::replaceUndefsWith(VecC, SafeReplacementConstant);
   }
 
-  return Builder.CreateICmp(DstPred, X, M);
+  return Builder.CreateICmp(DstPred, Op1, M);
 }
 
 /// Some comparisons can be simplified.
@@ -5079,9 +5078,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   }
 
   if (Value *V = foldMultiplicationOverflowCheck(I))
-    return replaceInstUsesWith(I, V);
-
-  if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = foldICmpAndXX(I, Q, *this))
@@ -6983,6 +6979,9 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
       }
     }
   }
+
+  if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Builder))
+    return replaceInstUsesWith(CxtI, V);
 
   return nullptr;
 }
