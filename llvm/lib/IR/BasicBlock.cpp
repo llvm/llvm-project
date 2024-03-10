@@ -756,9 +756,9 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
     if (!SrcTrailingDPValues)
       return;
 
-    DPMarker *DestMarker = getMarker(Dest);
-    DestMarker->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
+    createMarker(Dest)->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
     SrcTrailingDPValues->eraseFromParent();
+    Src->deleteTrailingDPValues();
     assert(!Src->getTrailingDPValues());
     return;
   }
