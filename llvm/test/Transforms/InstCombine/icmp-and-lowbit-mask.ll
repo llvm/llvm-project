@@ -41,10 +41,9 @@ define i1 @src_is_mask_zext_fail_not_mask(i16 %x_in, i8 %y) {
 define i1 @src_is_mask_sext(i16 %x_in, i8 %y) {
 ; CHECK-LABEL: @src_is_mask_sext(
 ; CHECK-NEXT:    [[X:%.*]] = xor i16 [[X_IN:%.*]], 123
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 -32, [[Y:%.*]]
-; CHECK-NEXT:    [[NOTMASK:%.*]] = sext i8 [[TMP1]] to i16
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[NOTMASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 31, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i16 [[X]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i16 %x_in, 123
@@ -212,9 +211,7 @@ define i1 @src_is_mask_shl_lshr(i8 %x_in, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @src_is_mask_shl_lshr(
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 122
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[NOTMASK:%.*]] = xor i8 [[TMP1]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NOTMASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -558,11 +555,10 @@ define i1 @src_is_notmask_neg_p2(i8 %x_in, i8 %y) {
 define i1 @src_is_notmask_neg_p2_fail_not_invertable(i8 %x_in, i8 %y) {
 ; CHECK-LABEL: @src_is_notmask_neg_p2_fail_not_invertable(
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
-; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = and i8 [[NY]], [[Y]]
-; CHECK-NEXT:    [[NOTMASK:%.*]] = sub i8 0, [[P2]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NOTMASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[Y]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
