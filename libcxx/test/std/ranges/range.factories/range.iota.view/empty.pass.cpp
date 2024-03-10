@@ -34,11 +34,13 @@ struct ThrowBound {
   }
 
   constexpr bool operator==(SomeInt x) const {
+    if (x.value_ > 0) {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-    throw my_exception();
+      throw my_exception();
 #else
-    assert(false && "Exceptions are disabled");
+      assert(false && "Exceptions are disabled");
 #endif
+    }
     return x.value_ == bound;
   }
 };
