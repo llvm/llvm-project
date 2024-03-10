@@ -103,12 +103,12 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::dyn_cast_if_present<TensorDescAttr>(getEncoding());
     }
 
-    xegpu::MemoryScopeKind getMemoryScope() const {
+    xegpu::MemoryScope getMemoryScope() const {
       auto attr = getEncodingAsTensorDescAttr();
       if (attr && attr.getMemoryScope())
         return attr.getMemoryScope().getValue();
       // return default value
-      return MemoryScopeKind::Global;
+      return MemoryScope::Global;
     }
 
     int getArrayLength() {
@@ -129,6 +129,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   }];
 
   let hasCustomAssemblyFormat = true;
+  
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD

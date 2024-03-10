@@ -88,14 +88,21 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: ui64 -> TensorDesc<8x16xf32>
   }];
 
-  let arguments = (ins XeGPU_BaseAddrType: $source, 
-                 Variadic<Index>: $dynamic_offsets, 
-                 Variadic<Index>: $dynamic_shape, 
-                 Variadic<Index>: $dynamic_strides,
-                 DenseI64ArrayAttr: $static_offsets);
-  let results = (outs XeGPU_TensorDesc:$TensorDesc);
+  let arguments = (ins 
+    XeGPU_BaseAddrType: $source, 
+    Variadic<Index>: $dynamic_offsets, 
+    Variadic<Index>: $dynamic_shape, 
+    Variadic<Index>: $dynamic_strides,
+    DenseI64ArrayAttr: $static_offsets
+  );
+  let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $source ``
+    custom<DynamicIndexList>($dynamic_offsets, $static_offsets)
+    (`,` `[` $dynamic_shape^ `]` `,` `[` $dynamic_strides `]`)?
+    attr-dict `:` type($source) `->` type($TensorDesc)
+  }];
   let skipDefaultBuilders = 1;
   let hasVerifier = 1;
 
@@ -154,8 +161,77 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
       return getType().getShape();
     }
   }];
-
 }
 
+def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
+  let summary = "prefetches a nD block to cache";
+  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+
+  // Format: xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>, 
+  //                                   l2_hint = #xegpu.cache_hint<cached>, 
+  //                                   l3_hint = #xegpu.cache_hint<cached>}
+  //         : !xegpu.tensor_desc<8x16xf16>
+  let assemblyFormat = "$TensorDesc attr-dict `:` type($TensorDesc)";
+}
+
+
+def XeGPU_LoadNDOp : XeGPU_Op<"load_nd"> {
+  let summary = "loads a n-D block from memory (represented by TensorDesc)" 
+                "to registers (represented by vector)";
+  let description = [{
+    LoadNDOp essentially mimics the hardware block read instruction to read 
+    a block of data from memory to register. It takes a set of cache hints 
+    for each level of cache, L1, L2 and L3. If hardware does not have a 
+    correspoding cache, Corresponding cache hint attribute will be masked.
+    If both transpose and vnni_axis present at the same time. It assume to 
+    perform transpose first and then vnni transform.
+  }];
+
+  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+                       OptionalAttr<I64Attr>: $vnni_axis,
+                       OptionalAttr<DenseI64ArrayAttr>: $transpose,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+
+  let results = (outs XeGPU_ValueType: $value);
+
+  let extraClassDeclaration = [{
+    VectorType getType() {
+      return llvm::dyn_cast<VectorType>(getValue().getType());
+    }
+
+    xegpu::TensorDescType getTensorDescType() {
+      return getTensorDesc().getType();
+    }
+  }];
+
+  // Format: xegpu.load_nd %1 {transpose = [1, 0], 
+  //                l1_hint = #xegpu.cache_hint<cached>, 
+  //                l2_hint = #xegpu.cache_hint<uncached>, 
+  //                l3_hint = #xegpu.cache_hint<streaming>}
+  //         : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
+  let assemblyFormat = "$TensorDesc attr-dict `:` type($TensorDesc) `->` type($value)";
+  let hasVerifier = 1;
+}
+
+def XeGPU_StoreNDOp : XeGPU_Op<"store_nd", []> {
+  let summary = "stores a n-D block register region back to memory, currently only supports 2D";
+  let arguments = (ins XeGPU_ValueType: $value,
+                       XeGPU_TensorDesc: $TensorDesc,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+
+  // Format: xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+  //                                l2_hint = #xegpu.cache_hint<write_back>, 
+  //                                l3_hint = #xegpu.cache_hint<write_through>}
+  //                                : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+  let assemblyFormat = "$value `,` $TensorDesc attr-dict `:` type($value) `,` type($TensorDesc)";
+  let hasVerifier = 1;
+}
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

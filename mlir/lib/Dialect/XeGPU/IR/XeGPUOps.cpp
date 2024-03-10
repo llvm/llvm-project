@@ -28,86 +28,28 @@ static size_t getRankOf(Value value) {
   llvm_unreachable("Unsupported value for getRankOf");
 }
 
-static ParseResult
-parseOptionalAttrDictWithCustomAttrs(OpAsmParser &parser,
-                                     OperationState &result) {
-  // no optional attributes, return success
-  if (failed(parser.parseOptionalLBrace()))
-    return success();
-
-  llvm::SmallDenseSet<StringRef, 8> seenKeys;
-  auto parseElt = [&]() -> ParseResult {
-    // The name of an attribute can either be a keyword, or a string.
-    // as compared to mlir::parseOptionalAttrList, the cases of using
-    // TOken::bare_identifier and Token::inttype as key maybe not handlered
-    std::string nameId;
-    auto loc = parser.getCurrentLocation();
-    if (parser.parseOptionalKeywordOrString(&nameId))
-      return parser.emitError(loc, "invalid attribute name: ")
-             << nameId << ".\n";
-
-    if (nameId.empty())
-      return parser.emitError(loc, "expected valid attribute name");
-
-    if (!seenKeys.insert(nameId).second)
-      return parser.emitError(loc, "duplicate key '")
-             << nameId << "' in dictionary attribute.";
-
-    // Lazy load a dialect in the context if there is a possible namespace.
-    auto splitName = StringRef(nameId).split('.');
-    if (!splitName.second.empty())
-      parser.getContext()->getOrLoadDialect(splitName.first);
-
-    // Try to parse the '=' for the attribute value.
-    if (parser.parseEqual()) {
-      // If there is no '=', it is treated as a unit attribute.
-      result.addAttribute(nameId, parser.getBuilder().getUnitAttr());
-      return success();
-    }
-
-    // for xegpu specific attributes
-    if (nameId == "mode") {
-      ModeKindAttr attr;
-      return parser.parseCustomAttributeWithFallback(attr, Type{}, nameId,
-                                                     result.attributes);
-    } else if (nameId == "l1_hint" || nameId == "l2_hint" ||
-               nameId == "l3_hint") {
-      CacheKindAttr attr;
-      return parser.parseCustomAttributeWithFallback(attr, Type{}, nameId,
-                                                     result.attributes);
-    } else if (nameId == "transpose") {
-      // in form of [4, 5], acctually it is a copy of DenseI63ArrayAttr::parse()
-      if (succeeded(parser.parseOptionalLSquare())) {
-        Attribute attr;
-        // handle empty list case
-        if (succeeded(parser.parseOptionalRSquare())) {
-          attr = DenseI64ArrayAttr::get(parser.getContext(), {});
-        } else {
-          attr = DenseI64ArrayAttr::parseWithoutBraces(parser, Type{});
-          if (failed(parser.parseRSquare()))
-            return failure();
-        }
-        if (!attr)
-          return failure();
-        result.addAttribute(nameId, attr);
-        return success();
-      } else {
-        // in form of array<i64: 4, 5>
-        DenseI64ArrayAttr attr;
-        return parser.parseAttribute(attr, nameId, result.attributes);
-      }
-    } else {
-      Attribute attr;
-      return parser.parseAttribute(attr, nameId, result.attributes);
-    }
-  };
-
-  if (parser.parseCommaSeparatedList(parseElt))
-    return failure();
-
-  return parser.parseRBrace();
+static void transpose(llvm::ArrayRef<int64_t> trans,
+                      std::vector<int64_t> &shape) {
+  std::vector<int64_t> old = shape;
+  for (size_t i = 0; i < trans.size(); i++)
+    shape[i] = old[trans[i]];
 }
 
+template <typename T>
+static std::string makeString(T array, bool breakline = false) {
+  std::string buf;
+  buf.clear();
+  llvm::raw_string_ostream os(buf);
+  os << "[";
+  for (size_t i = 1; i < array.size(); i++) {
+    os << array[i - 1] << ", ";
+    if (breakline)
+      os << "\n\t\t";
+  }
+  os << array.back() << "]";
+  os.flush();
+  return buf;
+}
 
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
@@ -176,128 +118,6 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         /* static offsets = */ staticOffsets);
 }
 
-ParseResult CreateNdDescOp::parse(OpAsmParser &parser, OperationState &result) {
-  // parse the source operand
-  llvm::SmallVector<OpAsmParser::UnresolvedOperand> sourceOperands(1);
-  llvm::SMLoc sourceOperandsLoc = parser.getCurrentLocation();
-  if (parser.parseOperand(sourceOperands[0]))
-    return failure();
-
-  // parse the offset operand, in format of [x, y]
-  llvm::SmallVector<OpAsmParser::UnresolvedOperand, 4> offsetsOperands;
-  DenseI64ArrayAttr static_offsetsAttr;
-  llvm::SMLoc offsetsOperandsLoc = parser.getCurrentLocation();
-  if (parseDynamicIndexList(parser, offsetsOperands, static_offsetsAttr))
-    return failure();
-  result.addAttribute("static_offsets", static_offsetsAttr);
-
-  llvm::SmallVector<OpAsmParser::UnresolvedOperand, 4> shapeOperands;
-  llvm::SMLoc shapeOperandsLoc;
-
-  llvm::SmallVector<OpAsmParser::UnresolvedOperand, 4> stridesOperands;
-  llvm::SMLoc stridesOperandsLoc;
-  // parse optional shape and strides, shape and strides should always come
-  // together
-  if (succeeded(parser.parseOptionalComma())) {
-    // parse shape part, in form of [x, y]
-    if (parser.parseLSquare())
-      return failure();
-    shapeOperandsLoc = parser.getCurrentLocation();
-    if (parser.parseOperandList(shapeOperands))
-      return failure();
-    if (parser.parseRSquare())
-      return failure();
-
-    if (parser.parseComma())
-      return failure();
-
-    // parse stride part, in form of [x, y]
-    if (parser.parseLSquare())
-      return failure();
-    stridesOperandsLoc = parser.getCurrentLocation();
-    if (parser.parseOperandList(stridesOperands))
-      return failure();
-    if (parser.parseRSquare())
-      return failure();
-  }
-
-  auto loc = parser.getCurrentLocation();
-  if (parseOptionalAttrDictWithCustomAttrs(parser, result))
-    return failure();
-
-  if (failed(verifyInherentAttrs(result.name, result.attributes, [&]() {
-        return parser.emitError(loc)
-               << "'" << result.name.getStringRef() << "' op ";
-      })))
-    return failure();
-
-  if (parser.parseColon())
-    return failure();
-
-  llvm::SmallVector<Type> sourceTypes(1);
-  if (parser.parseType(sourceTypes[0]))
-    return failure();
-
-  if (parser.parseArrow())
-    return failure();
-
-  llvm::SmallVector<Type> TensorDescTypes(1);
-  if (parser.parseType(TensorDescTypes[0]))
-    return failure();
-  result.addAttribute("operandSegmentSizes",
-                      parser.getBuilder().getDenseI32ArrayAttr(
-                          {1, static_cast<int32_t>(offsetsOperands.size()),
-                           static_cast<int32_t>(shapeOperands.size()),
-                           static_cast<int32_t>(stridesOperands.size())}));
-
-  result.addTypes(TensorDescTypes);
-  if (parser.resolveOperands(sourceOperands, sourceTypes, sourceOperandsLoc,
-                             result.operands))
-    return failure();
-
-  Type indexType = parser.getBuilder().getIndexType();
-  if (parser.resolveOperands(offsetsOperands, indexType, offsetsOperandsLoc,
-                             result.operands))
-    return failure();
-  if (parser.resolveOperands(shapeOperands, indexType, shapeOperandsLoc,
-                             result.operands))
-    return failure();
-  if (parser.resolveOperands(stridesOperands, indexType, stridesOperandsLoc,
-                             result.operands))
-    return failure();
-  return success();
-}
-
-void CreateNdDescOp::print(OpAsmPrinter &printer) {
-  printer << ' ';
-  printer << getSource();
-  printDynamicIndexList(printer, *this, getDynamicOffsets(),
-                        getStaticOffsetsAttr());
-  if (!getDynamicShape().empty()) {
-    printer << ",";
-    printer << ' ' << "[";
-    printer << getDynamicShape();
-    printer << "]";
-  }
-
-  if (!getDynamicStrides().empty()) {
-    printer << ",";
-    printer << ' ' << "[";
-    printer << getDynamicStrides();
-    printer << "]";
-  }
-
-  llvm::SmallVector<llvm::StringRef> elidedAttrs;
-  elidedAttrs.push_back("static_offsets");
-  elidedAttrs.push_back("operandSegmentSizes");
-  printer.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
-  printer << ' ' << ":";
-  printer << ' ';
-  printer << getSourceType();
-  printer << ' ' << "->";
-  printer << ' ';
-  printer << getType();
-}
 
 LogicalResult CreateNdDescOp::verify() {
   auto offsetRank = getOffsets().size();
@@ -389,6 +209,96 @@ llvm::SmallVector<OpFoldResult> CreateNdDescOp::getStrides() {
 
   this->emitError("The strides information of the memory is missing.\n");
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_LoadNDOp
+//===----------------------------------------------------------------------===//
+LogicalResult LoadNDOp::verify() {
+  auto tdescTy = getTensorDescType();
+  auto valueTy = getType();
+
+  if (tdescTy.getRank() != 2)
+    return emitOpError(
+        "The TensorDesc for LoadNDOp should be a 2D TensorDesc.");
+
+  if (!valueTy)
+    return emitOpError("Invalid result, it should be a VectorType.\n");
+
+  auto tdescElemTy = tdescTy.getElementType();
+  auto valueElemTy = valueTy.getElementType();
+
+  if (tdescElemTy != valueElemTy)
+    return emitOpError(
+        "Value should have the same element type as TensorDesc.");
+
+  auto array_len = tdescTy.getArrayLength();
+  auto tdescShape = tdescTy.getShape().vec();
+  auto valueShape = valueTy.getShape().vec();
+
+  if (getTranspose()) {
+    auto trans = getTranspose().value();
+    if (tdescShape.size() >= trans.size())
+      transpose(trans, tdescShape);
+    else
+      emitWarning("Invalid transpose attr. It is ignored.");
+  }
+
+  if (getVnniAxis()) {
+    auto axis = getVnniAxis().value();
+    auto vnni_factor = valueShape.back();
+    tdescShape[axis] /= vnni_factor;
+    tdescShape.push_back(vnni_factor);
+  }
+
+  if (array_len > 1) {
+    auto it = tdescShape.begin();
+    tdescShape.insert(it, array_len);
+  }
+
+  if (tdescShape != valueShape)
+    return emitOpError("Result shape doesn't match TensorDesc shape.")
+           << "\nThe expected shape is " << makeString(tdescShape) << "."
+           << "\nBut the given shape is " << makeString(valueShape) << "."
+           << "\nIn VC mode, when VNNI is not enabled, the result should have "
+           << "the same shape (or transposed shape if transpose is enabled) "
+           << "as TensorDesc; \nwhen VNNI is enabled, the result should have "
+           << "one more dimention than the TensorDesc, with last dimention "
+           << "having vnni factor, \nbut having same number of total data "
+           << "elements. The vnni factor are typically calculated as "
+           << "simd_lane_width / elementTypeBitWidth. \nFor element type "
+           << "having more than 32 bits, vnni shouldn't be used. \nIn SIMT "
+           << "mode, the shape is derived from the mapping attributes.\n";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_StoreNDOp
+//===----------------------------------------------------------------------===//
+LogicalResult StoreNDOp::verify() {
+  auto dstTy = getTensorDesc().getType();                        // Tile
+  // auto valTy = llvm::dyn_cast<VectorType>(getValue().getType()); // Vector
+  auto valTy = getValue().getType().cast<VectorType>(); // Vector
+
+  if (dstTy.getRank() != 2)
+    return emitOpError(
+        "The TensorDesc for StoreNdOp should be a 2D TensorDesc.");
+
+  if (!valTy)
+    return emitOpError("Invalid value operand, it should be a VectorType.\n");
+
+  auto dstElemTy = dstTy.getElementType();
+  auto valElemTy = valTy.getElementType();
+
+  if (dstElemTy != valElemTy) {
+    return emitOpError("The elem type of the value doesn't "
+                       "match the elem type of the TensorDesc.\n");
+  }
+
+  if (dstTy.getShape() != valTy.getShape())
+    return emitOpError("The value shape doesn't match "
+                       "the TensorDesc shape.\n");
+  return success();
 }
 
 } // namespace xegpu
