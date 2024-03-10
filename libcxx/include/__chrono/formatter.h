@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___CHRONO_FORMATTER_H
 #define _LIBCPP___CHRONO_FORMATTER_H
 
+#include <__algorithm/ranges_copy.h>
 #include <__chrono/calendar.h>
 #include <__chrono/concepts.h>
 #include <__chrono/convert_to_tm.h>
@@ -170,10 +171,45 @@ _LIBCPP_HIDE_FROM_ABI void __format_century(basic_stringstream<_CharT>& __sstr, 
   __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __century);
 }
 
+// Implements the %z format specifier according to [tab:time.format.spec], where
+// '__modifier' signals %Oz or %Ez were used. (Both modifiers behave the same,
+// so there is no need to distinguish between them.)
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI void
+__format_zone_offset(basic_stringstream<_CharT>& __sstr, chrono::seconds __offset, bool __modifier) {
+  if (__offset < 0s) {
+    __sstr << _CharT('-');
+    __offset = -__offset;
+  } else {
+    __sstr << _CharT('+');
+  }
+
+  chrono::hh_mm_ss __hms{__offset};
+  std::ostreambuf_iterator<_CharT> __out_it{__sstr};
+  if (__modifier)
+    std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:%H:%M}"), __hms);
+  else
+    std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:%H%M}"), __hms);
+}
+
+// Helper to store the time zone information needed for formatting.
+struct _LIBCPP_HIDE_FROM_ABI __time_zone {
+  // Typically these abbreviations are short and fit in the string's internal
+  // buffer.
+  string __abbrev;
+  chrono::seconds __offset;
+};
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const _Tp& __value) {
+  return {"UTC", chrono::seconds{0}};
+}
+
 template <class _CharT, class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
     basic_stringstream<_CharT>& __sstr, const _Tp& __value, basic_string_view<_CharT> __chrono_specs) {
   tm __t              = std::__convert_to_tm<tm>(__value);
+  __time_zone __z     = __formatter::__convert_to_time_zone(__value);
   const auto& __facet = std::use_facet<time_put<_CharT>>(__sstr.getloc());
   for (auto __it = __chrono_specs.begin(); __it != __chrono_specs.end(); ++__it) {
     if (*__it == _CharT('%')) {
@@ -296,9 +332,13 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
               {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
       } break;
 
+      case _CharT('z'):
+        __formatter::__format_zone_offset(__sstr, __z.__offset, false);
+        break;
+
       case _CharT('Z'):
-        // TODO FMT Add proper timezone support.
-        __sstr << _LIBCPP_STATICALLY_WIDEN(_CharT, "UTC");
+        // __abbrev is always a char so the copy may convert.
+        ranges::copy(__z.__abbrev, std::ostreambuf_iterator<_CharT>{__sstr});
         break;
 
       case _CharT('O'):
@@ -314,9 +354,15 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
             break;
           }
         }
+
+        // Oz produces the same output as Ez below.
         [[fallthrough]];
       case _CharT('E'):
         ++__it;
+        if (*__it == 'z') {
+          __formatter::__format_zone_offset(__sstr, __z.__offset, true);
+          break;
+        }
         [[fallthrough]];
       default:
         __facet.put(
