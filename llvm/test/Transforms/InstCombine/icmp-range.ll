@@ -171,6 +171,42 @@ define i1 @test_two_ranges3(ptr nocapture readonly %arg1, ptr nocapture readonly
   ret i1 %rval
 }
 
+; Values' ranges overlap each other, so it can not be simplified.
+define <2 x i1> @test_two_ranges_vec(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_two_ranges_vec(
+; CHECK-NEXT:    [[VAL1:%.*]] = load <2 x i32>, ptr [[ARG1:%.*]], align 8, !range [[RNG4]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load <2 x i32>, ptr [[ARG2:%.*]], align 8, !range [[RNG5]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult <2 x i32> [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
+;
+  %val1 = load <2 x i32>, ptr %arg1, !range !5
+  %val2 = load <2 x i32>, ptr %arg2, !range !6
+  %rval = icmp ult <2 x i32> %val2, %val1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define <2 x i1> @test_two_ranges_vec_true(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_two_ranges_vec_true(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %val1 = load <2 x i32>, ptr %arg1, !range !0
+  %val2 = load <2 x i32>, ptr %arg2, !range !6
+  %rval = icmp ult <2 x i32> %val2, %val1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define <2 x i1> @test_two_ranges_vec_false(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_two_ranges_vec_false(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %val1 = load <2 x i32>, ptr %arg1, !range !0
+  %val2 = load <2 x i32>, ptr %arg2, !range !6
+  %rval = icmp ugt <2 x i32> %val2, %val1
+  ret <2 x i1> %rval
+}
+
 define i1 @ugt_zext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ugt_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
