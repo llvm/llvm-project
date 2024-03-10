@@ -562,8 +562,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // Try to match one of the patterns. The rewriter is automatically
     // notified of any necessary changes, so there is nothing else to do
     // here.
-#ifndef NDEBUG
-    auto canApply = [&](const Pattern &pattern) {
+    auto canApplyCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG({
         logger.getOStream() << "\n";
         logger.startLine() << "* Pattern " << pattern.getDebugName() << " : '"
@@ -572,20 +571,34 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         logger.getOStream() << ")' {\n";
         logger.indent();
       });
+      if (config.listener)
+        config.listener->notifyPatternBegin(pattern, op);
       return true;
     };
-    auto onFailure = [&](const Pattern &pattern) {
+    function_ref<bool(const Pattern &)> canApply = canApplyCallback;
+    auto onFailureCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG(logResult("failure", "pattern failed to match"));
+      if (config.listener)
+        config.listener->notifyPatternEnd(pattern, failure());
     };
-    auto onSuccess = [&](const Pattern &pattern) {
+    function_ref<void(const Pattern &)> onFailure = onFailureCallback;
+    auto onSuccessCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG(logResult("success", "pattern applied successfully"));
+      if (config.listener)
+        config.listener->notifyPatternEnd(pattern, success());
       return success();
     };
-#else
-    function_ref<bool(const Pattern &)> canApply = {};
-    function_ref<void(const Pattern &)> onFailure = {};
-    function_ref<LogicalResult(const Pattern &)> onSuccess = {};
-#endif
+    function_ref<LogicalResult(const Pattern &)> onSuccess = onSuccessCallback;
+
+#ifdef NDEBUG
+    // Optimization: PatternApplicator callbacks are not needed when running in
+    // optimized mode and without a listener.
+    if (!config.listener) {
+      canApply = nullptr;
+      onFailure = nullptr;
+      onSuccess = nullptr;
+    }
+#endif // NDEBUG
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     if (config.scope) {
@@ -731,7 +744,7 @@ void GreedyPatternRewriteDriver::notifyMatchFailure(
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
-    logger.startLine() << "** Failure : " << diag.str() << "\n";
+    logger.startLine() << "** Match Failure : " << diag.str() << "\n";
   });
   if (config.listener)
     config.listener->notifyMatchFailure(loc, reasonCallback);
