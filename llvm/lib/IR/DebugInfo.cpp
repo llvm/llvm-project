@@ -1659,90 +1659,51 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
       unwrapDI<MDNode>(Decl), nullptr, AlignInBits));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
-    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
-  return wrap(
-      unwrap(Builder)
-          ->insertDeclare(unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-                          unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-                          unwrap<Instruction>(Instr))
-          .get<Instruction *>());
-}
-LLVMDbgRecordRef
+LLVMValueRef
 LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
                                  LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
                                  LLVMMetadataRef DL, LLVMValueRef Instr) {
-  return wrap(
-      unwrap(Builder)
-          ->insertDeclare(unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-                          unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-                          unwrap<Instruction>(Instr))
-          .get<DbgRecord *>());
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+      unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+      unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
+      unwrap<Instruction>(Instr));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
-    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  return wrap(unwrap(Builder)
-                  ->insertDeclare(unwrap(Storage),
-                                  unwrap<DILocalVariable>(VarInfo),
-                                  unwrap<DIExpression>(Expr),
-                                  unwrap<DILocation>(DL), unwrap(Block))
-                  .get<Instruction *>());
-}
-LLVMDbgRecordRef
+LLVMValueRef
 LLVMDIBuilderInsertDeclareAtEnd(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
                                 LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
                                 LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  return wrap(unwrap(Builder)
-                  ->insertDeclare(unwrap(Storage),
-                                  unwrap<DILocalVariable>(VarInfo),
-                                  unwrap<DIExpression>(Expr),
-                                  unwrap<DILocation>(DL), unwrap(Block))
-                  .get<DbgRecord *>());
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+      unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+      unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
+LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
-  return wrap(unwrap(Builder)
-                  ->insertDbgValueIntrinsic(
-                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                      unwrap<Instruction>(Instr))
-                  .get<Instruction *>());
-}
-LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueBefore(
-    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
-  return wrap(unwrap(Builder)
-                  ->insertDbgValueIntrinsic(
-                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                      unwrap<Instruction>(Instr))
-                  .get<DbgRecord *>());
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
+      unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
+      unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
+LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
-  return wrap(unwrap(Builder)
-                  ->insertDbgValueIntrinsic(
-                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                      unwrap(Block))
-                  .get<Instruction *>());
-}
-LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueAtEnd(
-    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
-  return wrap(unwrap(Builder)
-                  ->insertDbgValueIntrinsic(
-                      unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                      unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                      unwrap(Block))
-                  .get<DbgRecord *>());
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
+      unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
+      unwrap<DILocation>(DebugLoc), unwrap(Block));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(

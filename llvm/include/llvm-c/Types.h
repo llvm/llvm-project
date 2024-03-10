@@ -170,11 +170,6 @@ typedef struct LLVMOpaqueJITEventListener *LLVMJITEventListenerRef;
 typedef struct LLVMOpaqueBinary *LLVMBinaryRef;
 
 /**
- * @see llvm::DbgRecord
- */
-typedef struct LLVMOpaqueDbgRecord *LLVMDbgRecordRef;
-
-/**
  * @}
  */
 
