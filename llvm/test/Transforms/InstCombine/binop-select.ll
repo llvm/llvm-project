@@ -403,8 +403,8 @@ define i32 @ashr_sel_op1_use(i1 %b) {
 define i32 @test_mul_to_const_Cmul(i32 %x) {
 ; CHECK-LABEL: @test_mul_to_const_Cmul(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 9, i32 14
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], 14
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 549, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp eq i32 %x, 61
@@ -429,8 +429,8 @@ define float @test_fmul_to_const_Cmul_fail(float %x) {
 define i32 @test_mul_to_const_mul(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_to_const_mul(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 61
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 9, i32 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 549, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp eq i32 %x, 61
@@ -442,8 +442,8 @@ define i32 @test_mul_to_const_mul(i32 %x, i32 %y) {
 define <2 x i32> @test_mul_to_const_mul_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test_mul_to_const_mul_vec(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 61, i32 9>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 9, i32 12>, <2 x i32> [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i32> [[X]], [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 549, i32 108>, <2 x i32> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %c = icmp eq <2 x i32> %x, <i32 61, i32 9>
@@ -523,7 +523,7 @@ define i32 @test_div_with_multiuse(i1 %cond) {
 ; CHECK-LABEL: @test_div_with_multiuse(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 132, i32 66
 ; CHECK-NEXT:    call void @use(i32 [[SEL]])
-; CHECK-NEXT:    [[RET:%.*]] = udiv i32 [[SEL]], 22
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i32 6, i32 3
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %sel = select i1 %cond, i32 132, i32 66
@@ -563,7 +563,7 @@ define <2 x i32> @test_rem_with_multiuse(<2 x i1> %cond) {
 ; CHECK-LABEL: @test_rem_with_multiuse(
 ; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 132, i32 132>, <2 x i32> <i32 66, i32 66>
 ; CHECK-NEXT:    call void @use(<2 x i32> [[SEL]])
-; CHECK-NEXT:    [[RET:%.*]] = urem <2 x i32> [[SEL]], <i32 21, i32 21>
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[COND]], <2 x i32> <i32 6, i32 6>, <2 x i32> <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %sel = select <2 x i1> %cond, <2 x i32> <i32 132, i32 132>, <2 x i32> <i32 66, i32 66>
