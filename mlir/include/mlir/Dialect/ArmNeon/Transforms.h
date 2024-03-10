@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_ARMNEON_TRANSFORMS_H
 
 namespace mlir {
+class RewritePatternSet;
 
 namespace arm_neon {
 void populateLowerContractionToSMMLAPatternPatterns(

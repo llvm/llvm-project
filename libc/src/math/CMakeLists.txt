@@ -183,6 +183,7 @@ add_math_entrypoint_object(lroundf128)
 add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
+add_math_entrypoint_object(modff128)
 
 add_math_entrypoint_object(nan)
 add_math_entrypoint_object(nanf)
