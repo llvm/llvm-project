@@ -30,8 +30,8 @@ static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
 template <uint32_t lane_size>
 rpc_status_t handle_server_impl(
     rpc::Server &server,
-    const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-    const std::unordered_map<rpc_opcode_t, void *> &callback_data,
+    const std::unordered_map<uint16_t, rpc_opcode_callback_ty> &callbacks,
+    const std::unordered_map<uint16_t, void *> &callback_data,
     uint32_t &index) {
   auto port = server.try_open(lane_size, index);
   if (!port)
@@ -239,8 +239,8 @@ struct Device {
   void *buffer;
   rpc::Server server;
   rpc::Client client;
-  std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> callbacks;
-  std::unordered_map<rpc_opcode_t, void *> callback_data;
+  std::unordered_map<uint16_t, rpc_opcode_callback_ty> callbacks;
+  std::unordered_map<uint16_t, void *> callback_data;
 };
 
 // A struct containing all the runtime state required to run the RPC server.
@@ -335,7 +335,7 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
   }
 }
 
-rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
+rpc_status_t rpc_register_callback(uint32_t device_id, uint16_t opcode,
                                    rpc_opcode_callback_ty callback,
                                    void *data) {
   if (!state)
