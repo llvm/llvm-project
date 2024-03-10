@@ -320,14 +320,16 @@ public:
   ObjCSelRefsSection();
   void initialize();
 
-  // This SyntheticSection does not do its own writing, but instead uses the
-  // creates SyntheticInputSection's and inserts them into inputSections
+  // This SyntheticSection does not do directly write data to the output, it is
+  // just a placeholder for easily creating SyntheticInputSection's which will
+  // be inserted into inputSections and handeled by the default writing
+  // mechanism.
   uint64_t getSize() const override { return 0; }
   bool isNeeded() const override { return false; }
   void writeTo(uint8_t *buf) const override {}
 
-  ConcatInputSection *getSelRef(StringRef methName);
-  ConcatInputSection *makeSelRef(StringRef methName);
+  ConcatInputSection *getSelRef(StringRef methname);
+  ConcatInputSection *makeSelRef(StringRef methname);
 
 private:
   llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>

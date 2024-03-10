@@ -836,9 +836,9 @@ void ObjCSelRefsSection::initialize() {
   }
 }
 
-ConcatInputSection *ObjCSelRefsSection::makeSelRef(StringRef methName) {
+ConcatInputSection *ObjCSelRefsSection::makeSelRef(StringRef methname) {
   auto methnameOffset =
-      in.objcMethnameSection->getStringOffset(methName).outSecOff;
+      in.objcMethnameSection->getStringOffset(methname).outSecOff;
 
   size_t wordSize = target->wordSize;
   uint8_t *selrefData = bAlloc().Allocate<uint8_t>(wordSize);
@@ -857,12 +857,12 @@ ConcatInputSection *ObjCSelRefsSection::makeSelRef(StringRef methName) {
   objcSelref->parent = ConcatOutputSection::getOrCreateForInput(objcSelref);
   inputSections.push_back(objcSelref);
   objcSelref->isFinal = true;
-  methnameToSelref[CachedHashStringRef(methName)] = objcSelref;
+  methnameToSelref[CachedHashStringRef(methname)] = objcSelref;
   return objcSelref;
 }
 
-ConcatInputSection *ObjCSelRefsSection::getSelRef(StringRef methName) {
-  auto it = methnameToSelref.find(CachedHashStringRef(methName));
+ConcatInputSection *ObjCSelRefsSection::getSelRef(StringRef methname) {
+  auto it = methnameToSelref.find(CachedHashStringRef(methname));
   if (it == methnameToSelref.end())
     return nullptr;
   return it->second;
