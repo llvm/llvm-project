@@ -743,9 +743,9 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     if (match(Src, m_OneUse(m_LShr(m_Shl(m_ImmConstant(C1), m_Value(X)),
                                    m_ImmConstant(C2)))) &&
         match(C1, m_Power2())) {
-      Constant *Bound = ConstantInt::get(
+      Constant *Width = ConstantInt::get(
           SrcTy, APInt(SrcWidth, SrcTy->getScalarSizeInBits()));
-      if (ConstantExpr::getICmp(ICmpInst::ICMP_UGE, C2, Bound)->isNullValue()) {
+      if (ConstantExpr::getICmp(ICmpInst::ICMP_UGE, C2, Width)->isNullValue()) {
         // iff C1 is pow2 and C2 < BitWidth:
         // trunc ((C1 << X) >> C2) to i1 -> X == (C2-cttz(C1))
         Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
