@@ -17041,6 +17041,38 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+bool RISCVTargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, unsigned Depth) const {
+
+  // TODO: Add more target nodes.
+  switch (Op.getOpcode()) {
+  case RISCVISD::SELECT_CC:
+    return all_of(Op->ops(), [&](SDValue V) {
+      return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly, Depth + 1);
+    });
+  }
+  return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, Depth);
+}
+
+bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+
+  // TODO: Add more target nodes.
+  switch (Op.getOpcode()) {
+  case RISCVISD::SELECT_CC:
+    // Integer select_cc cannot create poison.
+    // TODO: What are the FP poison semantics?
+    // TODO: This instruction blocks poison from the unselected operand, can
+    // we do anything with that?
+    return !Op.getValueType().isInteger();
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+}
+
 const Constant *
 RISCVTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
   assert(Ld && "Unexpected null LoadSDNode");
