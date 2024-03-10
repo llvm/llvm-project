@@ -299,12 +299,12 @@ inline unsigned long long stdc_bit_ceil(unsigned long long x) {
       unsigned: stdc_bit_floor_ui,                                             \
       unsigned long: stdc_bit_floor_ul,                                        \
       unsigned long long: stdc_bit_floor_ull)(x)
-#define stdc_bit_ceil(x)                                                      \
-  _Generic((x),                                                               \
-      unsigned char: stdc_bit_ceil_uc,                                        \
-      unsigned short: stdc_bit_ceil_us,                                       \
-      unsigned: stdc_bit_ceil_ui,                                             \
-      unsigned long: stdc_bit_ceil_ul,                                        \
+#define stdc_bit_ceil(x)                                                       \
+  _Generic((x),                                                                \
+      unsigned char: stdc_bit_ceil_uc,                                         \
+      unsigned short: stdc_bit_ceil_us,                                        \
+      unsigned: stdc_bit_ceil_ui,                                              \
+      unsigned long: stdc_bit_ceil_ul,                                         \
       unsigned long long: stdc_bit_ceil_ull)(x)
 #endif // __cplusplus
 
