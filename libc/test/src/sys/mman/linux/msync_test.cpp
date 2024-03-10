@@ -44,25 +44,25 @@ TEST(LlvmLibcMsyncTest, UnMappedMemory) {
 
 TEST(LlvmLibcMsyncTest, LockedPage) {
   PageHolder page;
-  EXPECT_TRUE(page.is_valid());
-  EXPECT_THAT(LIBC_NAMESPACE::mlock(page.addr, page.size), Succeeds());
+  ASSERT_TRUE(page.is_valid());
+  ASSERT_THAT(LIBC_NAMESPACE::mlock(page.addr, page.size), Succeeds());
   EXPECT_THAT(
       LIBC_NAMESPACE::msync(page.addr, page.size, MS_SYNC | MS_INVALIDATE),
       Fails(EBUSY));
-  EXPECT_THAT(LIBC_NAMESPACE::munlock(page.addr, page.size), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::munlock(page.addr, page.size), Succeeds());
   EXPECT_THAT(LIBC_NAMESPACE::msync(page.addr, page.size, MS_SYNC), Succeeds());
 }
 
 TEST(LlvmLibcMsyncTest, UnalignedAddress) {
   PageHolder page;
-  EXPECT_TRUE(page.is_valid());
+  ASSERT_TRUE(page.is_valid());
   EXPECT_THAT(LIBC_NAMESPACE::msync(&page[1], page.size - 1, MS_SYNC),
               Fails(EINVAL));
 }
 
 TEST(LlvmLibcMsyncTest, InvalidFlag) {
   PageHolder page;
-  EXPECT_TRUE(page.is_valid());
+  ASSERT_TRUE(page.is_valid());
   EXPECT_THAT(LIBC_NAMESPACE::msync(page.addr, page.size, MS_SYNC | MS_ASYNC),
               Fails(EINVAL));
   EXPECT_THAT(LIBC_NAMESPACE::msync(page.addr, page.size, -1), Fails(EINVAL));
