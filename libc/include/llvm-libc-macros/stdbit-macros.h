@@ -208,104 +208,36 @@ inline unsigned long long stdc_bit_ceil(unsigned long long x) {
   return stdc_bit_ceil_ull(x);
 }
 #else
-#define stdc_leading_zeros(x)                                                  \
-  _Generic((x),                                                                \
-      unsigned char: stdc_leading_zeros_uc,                                    \
-      unsigned short: stdc_leading_zeros_us,                                   \
-      unsigned: stdc_leading_zeros_ui,                                         \
-      unsigned long: stdc_leading_zeros_ul,                                    \
-      unsigned long long: stdc_leading_zeros_ull)(x)
-#define stdc_leading_ones(x)                                                   \
-  _Generic((x),                                                                \
-      unsigned char: stdc_leading_ones_uc,                                     \
-      unsigned short: stdc_leading_ones_us,                                    \
-      unsigned: stdc_leading_ones_ui,                                          \
-      unsigned long: stdc_leading_ones_ul,                                     \
-      unsigned long long: stdc_leading_ones_ull)(x)
-#define stdc_trailing_zeros(x)                                                 \
-  _Generic((x),                                                                \
-      unsigned char: stdc_trailing_zeros_uc,                                   \
-      unsigned short: stdc_trailing_zeros_us,                                  \
-      unsigned: stdc_trailing_zeros_ui,                                        \
-      unsigned long: stdc_trailing_zeros_ul,                                   \
-      unsigned long long: stdc_trailing_zeros_ull)(x)
-#define stdc_trailing_ones(x)                                                  \
-  _Generic((x),                                                                \
-      unsigned char: stdc_trailing_ones_uc,                                    \
-      unsigned short: stdc_trailing_ones_us,                                   \
-      unsigned: stdc_trailing_ones_ui,                                         \
-      unsigned long: stdc_trailing_ones_ul,                                    \
-      unsigned long long: stdc_trailing_ones_ull)(x)
+
+#define STDBIT_GENERIC_FUNC(FUNC_NAME, x)                                      \
+  _Generic((x), unsigned char                                                  \
+           : FUNC_NAME##_uc, unsigned short                                    \
+           : FUNC_NAME##_us, unsigned                                          \
+           : FUNC_NAME##_ui, unsigned long                                     \
+           : FUNC_NAME##_ul, unsigned long long                                \
+           : FUNC_NAME##_ull)(x)
+
+#define stdc_leading_zeros(x) STDBIT_GENERIC_FUNC(stdc_leading_zeros, (x))
+#define stdc_leading_ones(x) STDBIT_GENERIC_FUNC(stdc_leading_ones, (x))
+#define stdc_trailing_zeros(x) STDBIT_GENERIC_FUNC(stdc_trailing_zeros, (x))
+#define stdc_trailing_ones(x) STDBIT_GENERIC_FUNC(stdc_trailing_ones, (x))
 #define stdc_first_leading_zero(x)                                             \
-  _Generic((x),                                                                \
-      unsigned char: stdc_first_leading_zero_uc,                               \
-      unsigned short: stdc_first_leading_zero_us,                              \
-      unsigned: stdc_first_leading_zero_ui,                                    \
-      unsigned long: stdc_first_leading_zero_ul,                               \
-      unsigned long long: stdc_first_leading_zero_ull)(x)
+  STDBIT_GENERIC_FUNC(stdc_first_leading_zero, (x))
 #define stdc_first_leading_one(x)                                              \
-  _Generic((x),                                                                \
-      unsigned char: stdc_first_leading_one_uc,                                \
-      unsigned short: stdc_first_leading_one_us,                               \
-      unsigned: stdc_first_leading_one_ui,                                     \
-      unsigned long: stdc_first_leading_one_ul,                                \
-      unsigned long long: stdc_first_leading_one_ull)(x)
+  STDBIT_GENERIC_FUNC(stdc_first_leading_one, (x))
 #define stdc_first_trailing_zero(x)                                            \
-  _Generic((x),                                                                \
-      unsigned char: stdc_first_trailing_zero_uc,                              \
-      unsigned short: stdc_first_trailing_zero_us,                             \
-      unsigned: stdc_first_trailing_zero_ui,                                   \
-      unsigned long: stdc_first_trailing_zero_ul,                              \
-      unsigned long long: stdc_first_trailing_zero_ull)(x)
+  STDBIT_GENERIC_FUNC(stdc_first_trailing_zero, (x))
 #define stdc_first_trailing_one(x)                                             \
-  _Generic((x),                                                                \
-      unsigned char: stdc_first_trailing_one_uc,                               \
-      unsigned short: stdc_first_trailing_one_us,                              \
-      unsigned: stdc_first_trailing_one_ui,                                    \
-      unsigned long: stdc_first_trailing_one_ul,                               \
-      unsigned long long: stdc_first_trailing_one_ull)(x)
-#define stdc_count_zeros(x)                                                    \
-  _Generic((x),                                                                \
-      unsigned char: stdc_count_zeros_uc,                                      \
-      unsigned short: stdc_count_zeros_us,                                     \
-      unsigned: stdc_count_zeros_ui,                                           \
-      unsigned long: stdc_count_zeros_ul,                                      \
-      unsigned long long: stdc_count_zeros_ull)(x)
-#define stdc_count_ones(x)                                                     \
-  _Generic((x),                                                                \
-      unsigned char: stdc_count_ones_uc,                                       \
-      unsigned short: stdc_count_ones_us,                                      \
-      unsigned: stdc_count_ones_ui,                                            \
-      unsigned long: stdc_count_ones_ul,                                       \
-      unsigned long long: stdc_count_ones_ull)(x)
-#define stdc_has_single_bit(x)                                                 \
-  _Generic((x),                                                                \
-      unsigned char: stdc_has_single_bit_uc,                                   \
-      unsigned short: stdc_has_single_bit_us,                                  \
-      unsigned: stdc_has_single_bit_ui,                                        \
-      unsigned long: stdc_has_single_bit_ul,                                   \
-      unsigned long long: stdc_has_single_bit_ull)(x)
-#define stdc_bit_width(x)                                                      \
-  _Generic((x),                                                                \
-      unsigned char: stdc_bit_width_uc,                                        \
-      unsigned short: stdc_bit_width_us,                                       \
-      unsigned: stdc_bit_width_ui,                                             \
-      unsigned long: stdc_bit_width_ul,                                        \
-      unsigned long long: stdc_bit_width_ull)(x)
-#define stdc_bit_floor(x)                                                      \
-  _Generic((x),                                                                \
-      unsigned char: stdc_bit_floor_uc,                                        \
-      unsigned short: stdc_bit_floor_us,                                       \
-      unsigned: stdc_bit_floor_ui,                                             \
-      unsigned long: stdc_bit_floor_ul,                                        \
-      unsigned long long: stdc_bit_floor_ull)(x)
-#define stdc_bit_ceil(x)                                                       \
-  _Generic((x),                                                                \
-      unsigned char: stdc_bit_ceil_uc,                                         \
-      unsigned short: stdc_bit_ceil_us,                                        \
-      unsigned: stdc_bit_ceil_ui,                                              \
-      unsigned long: stdc_bit_ceil_ul,                                         \
-      unsigned long long: stdc_bit_ceil_ull)(x)
+  STDBIT_GENERIC_FUNC(stdc_first_trailing_one, (x))
+#define stdc_count_zeros(x) STDBIT_GENERIC_FUNC(stdc_count_zeros, (x))
+#define stdc_count_ones(x) STDBIT_GENERIC_FUNC(stdc_count_ones, (x))
+#define stdc_has_single_bit(x) STDBIT_GENERIC_FUNC(stdc_has_single_bit, (x))
+#define stdc_bit_width(x) STDBIT_GENERIC_FUNC(stdc_bit_width, (x))
+#define stdc_bit_floor(x) STDBIT_GENERIC_FUNC(stdc_bit_floor, (x))
+#define stdc_bit_ceil(x) STDBIT_GENERIC_FUNC(stdc_bit_ceil, (x))
+
+#undef STDBIT_GENERIC_FUNC
+
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
