@@ -2674,10 +2674,10 @@ void Verifier::visitFunction(const Function &F) {
   Check(verifyAttributeCount(Attrs, FT->getNumParams()),
         "Attribute after last parameter!", &F);
 
-  Check(F.IsNewDbgInfoFormat == F.getParent()->IsNewDbgInfoFormat,
-        "Fn debug format should match parent", &F,
-        F.IsNewDbgInfoFormat, F.getParent(),
-        F.getParent()->IsNewDbgInfoFormat);
+  CheckDI(F.IsNewDbgInfoFormat == F.getParent()->IsNewDbgInfoFormat,
+          "Function debug format should match parent module", &F,
+          F.IsNewDbgInfoFormat, F.getParent(),
+          F.getParent()->IsNewDbgInfoFormat);
 
   bool IsIntrinsic = F.isIntrinsic();
 
@@ -3022,10 +3022,10 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
   }
 
-  Check(BB.IsNewDbgInfoFormat == BB.getParent()->IsNewDbgInfoFormat,
-        "BB debug format should match parent", &BB,
-        BB.IsNewDbgInfoFormat, BB.getParent(),
-        BB.getParent()->IsNewDbgInfoFormat);
+  CheckDI(BB.IsNewDbgInfoFormat == BB.getParent()->IsNewDbgInfoFormat,
+          "BB debug format should match parent function", &BB,
+          BB.IsNewDbgInfoFormat, BB.getParent(),
+          BB.getParent()->IsNewDbgInfoFormat);
 
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat)
