@@ -165,11 +165,8 @@ void Instruction::insertBefore(BasicBlock &BB,
     }
   }
 
-  // If we're inserting a terminator, check if we need to flush out
-  // TrailingDPValues.
-  // if (isTerminator()) // @OCH -- what if we always attach danglers to the
-  // next inserted inst? This might be needed for the FE. Not very efficient
-  // though.
+  // If we're inserting a new terminator or an instruction at end() check
+  // if we need to flush out TrailingDPValues.
   if (isTerminator() ||
       (getParent()->getTrailingDPValues() && InsertPos == BB.end()))
     getParent()->flushTerminatorDbgValues();
