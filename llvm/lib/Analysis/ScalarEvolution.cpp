@@ -15035,13 +15035,6 @@ public:
       return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
     return I->second;
   }
-
-  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
-    auto I = Map.find(Expr);
-    if (I == Map.end())
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitMulExpr(Expr);
-    return I->second;
-  }
 };
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
@@ -15191,14 +15184,17 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       const SCEV *URemLHS = nullptr;
       const SCEV *URemRHS = nullptr;
       if (matchURem(LHS, URemLHS, URemRHS)) {
-        auto I = RewriteMap.find(URemLHS);
-        const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : URemLHS;
-        RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
-        const auto *Multiple =
-            getMulExpr(getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
-        RewriteMap[URemLHS] = Multiple;
-        ExprsToRewrite.push_back(URemLHS);
-        return;
+        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
+          auto I = RewriteMap.find(LHSUnknown);
+          const SCEV *RewrittenLHS =
+              I != RewriteMap.end() ? I->second : LHSUnknown;
+          RewrittenLHS = ApplyDivisibiltyOnMinMaxExpr(RewrittenLHS, URemRHS);
+          const auto *Multiple =
+              getMulExpr(getUDivExpr(RewrittenLHS, URemRHS), URemRHS);
+          RewriteMap[LHSUnknown] = Multiple;
+          ExprsToRewrite.push_back(LHSUnknown);
+          return;
+        }
       }
     }
 
@@ -15231,13 +15227,14 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       return I != RewriteMap.end() ? I->second : S;
     };
 
-    // Check for the SCEV expression (A /u B) * B while B is a constant, inside
+    // Check for the SCEV expression A * B while B is a constant, inside
     // \p Expr. The check is done recuresively on \p Expr, which is assumed to
     // be a composition of Min/Max SCEVs. Return whether the SCEV expression (A
-    // /u B) * B was found, and return the divisor B in \p DividesBy. For
-    // example, if Expr = umin (umax ((A /u 8) * 8, 16), 64), return true since
-    // (A /u 8) * 8 matched the pattern, and return the constant SCEV 8 in \p
-    // DividesBy.
+    // * B) was found, and return the divisor B in \p DividesBy. For example, if
+    // Expr = umin (umax ((A /u 8) * 8, 16), 64), return true since (A /u 8) * 8
+    // matched the pattern, and return the constant SCEV 8 in \p DividesBy.
+    // The returned \p DividesBy is just a candidate, and later on it is checked
+    // if the whole expression divides by it.
     std::function<bool(const SCEV *, const SCEV *&)> HasDivisibiltyInfo =
         [&](const SCEV *Expr, const SCEV *&DividesBy) {
           if (auto *Mul = dyn_cast<SCEVMulExpr>(Expr)) {
