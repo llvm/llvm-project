@@ -309,6 +309,11 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<IntType>,
           [ArgSpec<VoidType>]
         >,
+        FunctionSpec<
+          "msync",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
       ]
   >;
 
