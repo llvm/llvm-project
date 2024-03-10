@@ -737,16 +737,18 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
     // For vectors, we do not canonicalize all truncs to icmp, so optimize
     // patterns that would be covered within visitICmpInst.
+
     Value *X;
     Constant *C1, *C2;
     if (match(Src, m_OneUse(m_LShr(m_Shl(m_ImmConstant(C1), m_Value(X)),
                                    m_ImmConstant(C2)))) &&
         match(C1, m_Power2())) {
-      Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
-      KnownBits KnownLShrc = computeKnownBits(C2, 0, nullptr);
-      if (KnownLShrc.getMaxValue().ult(X->getType()->getScalarSizeInBits())) {
+      Constant *Bound = ConstantInt::get(
+          SrcTy, APInt(SrcWidth, SrcTy->getScalarSizeInBits()));
+      if (ConstantExpr::getICmp(ICmpInst::ICMP_UGE, C2, Bound)->isNullValue()) {
         // iff C1 is pow2 and C2 < BitWidth:
         // trunc ((C1 << X) >> C2) to i1 -> X == (C2-cttz(C1))
+        Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
         Constant *CmpC = ConstantExpr::getSub(C2, Log2C1);
         return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
       }
@@ -768,10 +770,13 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       Value *And = Builder.CreateAnd(X, Builder.CreateOr(MaskC, One));
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
-    if (match(Src, m_Shl(m_SpecificInt(1), m_Value(X)))) {
-      // trunc (1 << X) to i1 --> X == 0
-      auto *CmpC = ConstantInt::get(X->getType(), 0);
-      return new ICmpInst(ICmpInst::Predicate::ICMP_EQ, X, CmpC);
+
+    {
+      const APInt *C;
+      if (match(Src, m_Shl(m_APInt(C), m_Value(X))) && (*C)[0] == 1) {
+        // trunc (C << X) to i1 --> X == 0, where C is odd
+        return new ICmpInst(ICmpInst::Predicate::ICMP_EQ, X, Zero);
+      }
     }
   }
 
