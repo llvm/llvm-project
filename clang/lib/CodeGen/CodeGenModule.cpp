@@ -4365,13 +4365,16 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // For cpu_specific, don't create an ifunc yet because we don't know if the
   // cpu_dispatch will be emitted in this translation unit.
   if (getTarget().supportsIFunc() && !FD->isCPUSpecificMultiVersion()) {
-    llvm::Type *ResolverType = llvm::FunctionType::get(
+    llvm::FunctionType *ResolverType = llvm::FunctionType::get(
         llvm::PointerType::get(DeclTy,
                                getTypes().getTargetAddressSpace(FD->getType())),
         false);
-    llvm::Constant *Resolver = GetOrCreateLLVMFunction(
-        MangledName + ".resolver", ResolverType, GlobalDecl{},
-        /*ForVTable=*/false);
+    llvm::Function *Resolver = cast<llvm::Function>(
+        CreateRuntimeFunction(ResolverType, MangledName + ".resolver")
+            .getCallee());
+    llvm::AttrBuilder Attrs(getLLVMContext());
+    addDefaultFunctionDefinitionAttributes(Attrs);
+    Resolver->addFnAttrs(Attrs);
     llvm::GlobalIFunc *GIF =
         llvm::GlobalIFunc::create(DeclTy, 0, getMultiversionLinkage(*this, GD),
                                   "", Resolver, &getModule());
@@ -4381,8 +4384,11 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
     return GIF;
   }
 
-  llvm::Constant *Resolver = GetOrCreateLLVMFunction(
-      ResolverName, DeclTy, GlobalDecl{}, /*ForVTable=*/false);
+  llvm::Function *Resolver = cast<llvm::Function>(
+      CreateRuntimeFunction(DeclTy, ResolverName).getCallee());
+  llvm::AttrBuilder Attrs(getLLVMContext());
+  addDefaultFunctionDefinitionAttributes(Attrs);
+  Resolver->addFnAttrs(Attrs);
   assert(isa<llvm::GlobalValue>(Resolver) &&
          "Resolver should be created for the first time");
   SetCommonAttributes(FD, cast<llvm::GlobalValue>(Resolver));

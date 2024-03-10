@@ -603,16 +603,21 @@ public:
     return nullptr;
   }
 
+  virtual const MCExpr *
+  emitMachOIfuncLazyPointerInit(const MCSymbolRefExpr *Init) {
+    return Init;
+  }
+
   virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                       MCSymbol *LazyPointer) {
-    llvm_unreachable(
-        "Mach-O IFunc lowering is not yet supported on this target");
+    assert(false &&
+           "Mach-O IFunc lowering is not yet supported on this target");
   }
 
   virtual void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
                                             MCSymbol *LazyPointer) {
-    llvm_unreachable(
-        "Mach-O IFunc lowering is not yet supported on this target");
+    assert(false &&
+           "Mach-O IFunc lowering is not yet supported on this target");
   }
 
   /// Emit N NOP instructions.

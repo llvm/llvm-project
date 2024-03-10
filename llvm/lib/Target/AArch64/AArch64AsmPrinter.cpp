@@ -208,6 +208,8 @@ private:
     assert(STI);
     return STI;
   }
+  const MCExpr *
+  emitMachOIfuncLazyPointerInit(const MCSymbolRefExpr *Init) override;
   void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
@@ -1897,6 +1899,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+const MCExpr *
+AArch64AsmPrinter::emitMachOIfuncLazyPointerInit(const MCSymbolRefExpr *Init) {
+  if (TM.getTargetTriple().isArm64e())
+    return AArch64AuthMCExpr::create(Init, /*Disc=*/0, AArch64PACKey::IA,
+                                     /*HasAddressDiversity=*/false, OutContext);
+
+  return Init;
+}
+
 void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                                MCSymbol *LazyPointer) {
   // _ifunc:
@@ -1979,6 +1990,9 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
   //   ldp	x1, x0, [sp], #16
   //   ldp	fp, lr, [sp], #16
   //   br	x16
+
+  if (TM.getTargetTriple().isArm64e())
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::PACIBSP), *STI);
 
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
                                    .addReg(AArch64::SP)
@@ -2084,6 +2098,37 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                                    .addReg(AArch64::SP)
                                    .addImm(2),
                                *STI);
+
+  if (TM.getTargetTriple().isArm64e()) {
+    //   autibsp
+    //   eor x17, lr, lr, lsl #1
+    //   tbz x17, #62, Lgoodsig
+    //   brk #0xc741
+    // Lgoodsig:
+
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::AUTIBSP), *STI);
+
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::EORXrs)
+                                     .addReg(AArch64::X17)
+                                     .addReg(AArch64::LR)
+                                     .addReg(AArch64::LR)
+                                     .addImm(1),
+                                 *STI);
+
+    MCContext &Ctx = OutStreamer->getContext();
+    MCSymbol *GoodSigSym = Ctx.createTempSymbol();
+    const MCExpr *GoodSig = MCSymbolRefExpr::create(GoodSigSym, Ctx);
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::TBZX)
+                                     .addReg(AArch64::X17)
+                                     .addImm(62)
+                                     .addExpr(GoodSig),
+                                 *STI);
+
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::BRK).addImm(0xc471),
+                                 *STI);
+
+    OutStreamer->emitLabel(GoodSigSym);
+  }
 
   OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
                                                  ? AArch64::BRAAZ
