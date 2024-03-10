@@ -165,10 +165,10 @@ void Instruction::insertBefore(BasicBlock &BB,
     }
   }
 
-  // If we're inserting a new terminator or an instruction at end() check
-  // if we need to flush out TrailingDPValues.
-  if (isTerminator() ||
-      (getParent()->getTrailingDPValues() && InsertPos == BB.end()))
+  // If we're inserting a terminator, check if we need to flush out
+  // TrailingDPValues. Inserting instructions at the end of an incomplete
+  // block is handled by the code block above.
+  if (isTerminator())
     getParent()->flushTerminatorDbgValues();
 }
 
