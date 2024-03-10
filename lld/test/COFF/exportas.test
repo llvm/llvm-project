@@ -1,0 +1,19 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+Link to an import library containing EXPORTAS and verify that we use proper name for the import.
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows test.s -o test.obj
+RUN: llvm-lib -machine:amd64 -out:test.lib -def:test.def
+RUN: lld-link -out:out1.dll -dll -noentry test.obj test.lib
+RUN: llvm-readobj --coff-imports out1.dll | FileCheck --check-prefix=IMPORT %s
+IMPORT: Symbol: expfunc
+
+#--- test.s
+    .section ".test", "rd"
+    .rva __imp_func
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS
+    func EXPORTAS expfunc
