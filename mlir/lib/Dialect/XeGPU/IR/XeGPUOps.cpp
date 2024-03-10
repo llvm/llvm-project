@@ -8,8 +8,8 @@
 
 #include <mlir/Dialect/Utils/StaticValueUtils.h>
 #include <mlir/Dialect/XeGPU/IR/XeGPU.h>
-#include <mlir/Interfaces/ViewLikeInterface.h>
 #include <mlir/IR/Builders.h>
+#include <mlir/Interfaces/ViewLikeInterface.h>
 
 #define DEBUG_TYPE "xegpu"
 
@@ -112,10 +112,9 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
 
   build(builder, state, tdesc, source, /* dynamic_offsets = */ dynamicOffsets,
-        /* dynamic shape = */ shape , /* dynamic strides = */ stride,
+        /* dynamic shape = */ shape, /* dynamic strides = */ stride,
         /* static offsets = */ staticOffsets);
 }
-
 
 LogicalResult CreateNdDescOp::verify() {
   auto offsetRank = getOffsets().size();
@@ -132,7 +131,8 @@ LogicalResult CreateNdDescOp::verify() {
   return success();
 }
 
-// compute consolidated offsets from dynamic_offsets and static_offsets parameters
+// compute consolidated offsets from dynamic_offsets and static_offsets
+// parameters
 llvm::SmallVector<OpFoldResult> CreateNdDescOp::getOffsets() {
   llvm::SmallVector<OpFoldResult> offsets;
   auto dynamicOffsets = getDynamicOffsets(); // dynamic_offsets variable
@@ -144,7 +144,7 @@ llvm::SmallVector<OpFoldResult> CreateNdDescOp::getOffsets() {
     return offsets;
   }
 
-  // use static offsets for each dim if it has valid value, 
+  // use static offsets for each dim if it has valid value,
   // othwise use the value from dynamic_offsets
   for (size_t i = 0, j = 0; i < staticOffsets.size(); i++) {
     if (ShapedType::isDynamic(staticOffsets[i])) {
@@ -159,8 +159,8 @@ llvm::SmallVector<OpFoldResult> CreateNdDescOp::getOffsets() {
   return offsets;
 }
 
-// get the consolidated shape of the 2D memory region. 
-// It prefer dynamic_shape than the static shape of 
+// get the consolidated shape of the 2D memory region.
+// It prefer dynamic_shape than the static shape of
 // memref type.
 llvm::SmallVector<OpFoldResult> CreateNdDescOp::getShape() {
   llvm::SmallVector<OpFoldResult> shape;
@@ -178,13 +178,13 @@ llvm::SmallVector<OpFoldResult> CreateNdDescOp::getShape() {
     }
     return shape;
   }
-  
+
   this->emitError("The shape information of the memory is missing.\n");
   return {};
 }
 
-// get the consolidated strides of the 2D memory region. 
-// It prefer dynamic_stride than the static strides of 
+// get the consolidated strides of the 2D memory region.
+// It prefer dynamic_stride than the static strides of
 // memref type.
 llvm::SmallVector<OpFoldResult> CreateNdDescOp::getStrides() {
   llvm::SmallVector<OpFoldResult> strides;
@@ -255,9 +255,11 @@ LogicalResult LoadNDOp::verify() {
   }
 
   if (tdescShape != valueShape)
-    return emitOpError() <<"Result shape doesn't match TensorDesc shape."
-           << "The expected shape is " << makeString(tdescShape) << ". "
-           << "But the given shape is " << makeString(valueShape) << ".\n";
+    return emitOpError() << "Result shape doesn't match TensorDesc shape."
+                         << "The expected shape is " << makeString(tdescShape)
+                         << ". "
+                         << "But the given shape is " << makeString(valueShape)
+                         << ".\n";
   return success();
 }
 
@@ -279,11 +281,12 @@ LogicalResult StoreNDOp::verify() {
 
   if (dstElemTy != valElemTy) {
     return emitOpError() << "The element type of the value should "
-                       "match the elementtype of the TensorDesc.\n";
+                            "match the elementtype of the TensorDesc.\n";
   }
 
   if (dstTy.getShape() != valTy.getShape())
-    return emitOpError() << "The result shape should match the TensorDesc shape.\n";
+    return emitOpError()
+           << "The result shape should match the TensorDesc shape.\n";
   return success();
 }
 

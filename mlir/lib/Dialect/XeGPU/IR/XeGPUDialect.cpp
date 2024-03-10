@@ -29,7 +29,6 @@ void XeGPUDialect::initialize() {
       >();
 }
 
-
 //===----------------------------------------------------------------------===//
 // XeGPU_TensorDescAttr
 //===----------------------------------------------------------------------===//
@@ -62,7 +61,8 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   if (mlir::succeeded(parser.parseOptionalComma())) {
     encoding = mlir::FieldParser<mlir::Attribute>::parse(parser);
     if (mlir::failed(encoding)) {
-      parser.emitError(parser.getCurrentLocation(),
+      parser.emitError(
+          parser.getCurrentLocation(),
           "Failed to parse the attribute field for TensorDescType.\n");
       return {};
     }
@@ -95,7 +95,6 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
 
   printer << ">";
 }
-
 
 } // namespace xegpu
 } // namespace mlir
