@@ -141,7 +141,7 @@ static bool FunctionCanThrow(const FunctionDecl *D) {
          Proto->canThrow() != CT_Cannot;
 }
 
-static bool ResumeStmtCanThrow(const Stmt *S) {
+static bool StmtCanThrow(const Stmt *S) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
     const auto *Callee = CE->getDirectCallee();
     if (!Callee)
@@ -167,14 +167,10 @@ static bool ResumeStmtCanThrow(const Stmt *S) {
   }
 
   for (const auto *child : S->children())
-    if (ResumeStmtCanThrow(child))
+    if (StmtCanThrow(child))
       return true;
 
   return false;
-}
-
-static bool AwaitSuspendStmtCanThrow(const Stmt *S) {
-  return ResumeStmtCanThrow(S);
 }
 
 // Emit suspend expression which roughly looks like:
@@ -282,8 +278,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
 
-  const auto AwaitSuspendCanThrow =
-      AwaitSuspendStmtCanThrow(S.getSuspendExpr());
+  const auto AwaitSuspendCanThrow = StmtCanThrow(S.getSuspendExpr());
 
   llvm::CallBase *SuspendRet = nullptr;
   // FIXME: add call attributes?
@@ -343,7 +338,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // is marked as 'noexcept', we avoid generating this additional IR.
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
-      ResumeStmtCanThrow(S.getResumeExpr())) {
+      StmtCanThrow(S.getResumeExpr())) {
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
