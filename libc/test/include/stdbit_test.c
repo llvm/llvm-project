@@ -56,6 +56,6 @@ int main(void) {
   CHECK_FUNCTION(stdc_bit_width, 0x4);
   CHECK_FUNCTION(stdc_bit_floor, 0x5);
   CHECK_FUNCTION(stdc_bit_ceil, 0x6);
-  
+
   return 0;
 }
