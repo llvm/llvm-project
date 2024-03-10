@@ -1,4 +1,4 @@
-//===-- GPU Implementation of malloc --------------------------------------===//
+//===-- GPU memory allocator implementation ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/malloc.h"
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
 
-#include "src/__support/GPU/allocator.h"
-#include "src/__support/common.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE {
+namespace gpu {
 
-LLVM_LIBC_FUNCTION(void *, malloc, (size_t size)) {
-  return gpu::allocate(size);
-}
+void *allocate(uint64_t size);
+void deallocate(void *ptr);
 
+} // namespace gpu
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
