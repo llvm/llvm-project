@@ -1841,6 +1841,7 @@ static Function *moveFunctionAdaptingType(Function *OldF, FunctionType *NewTy,
   bool IsIntrinsic = OldF->isIntrinsic();
   Function *NewF =
       Function::Create(NewTy, OldF->getLinkage(), OldF->getAddressSpace());
+  NewF->IsNewDbgInfoFormat = OldF->IsNewDbgInfoFormat;
   NewF->copyAttributesFrom(OldF);
   NewF->copyMetadata(OldF, 0);
   NewF->takeName(OldF);
