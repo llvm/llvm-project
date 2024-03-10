@@ -979,7 +979,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
     Builder.CreateRet(nullptr);
     DIB.finalize();
-    // Check the labels are not/are added to Bar's retainedNodes array (AlwaysPreserve).
+    // Check the labels are not/are added to Bar's retainedNodes array
+    // (AlwaysPreserve).
     EXPECT_EQ(find(BarSP->getRetainedNodes(), Label),
               BarSP->getRetainedNodes().end());
     EXPECT_NE(find(BarSP->getRetainedNodes(), AlwaysPreserveLabel),
