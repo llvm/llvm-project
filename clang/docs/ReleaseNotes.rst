@@ -249,14 +249,12 @@ Bug Fixes in This Version
 
 - Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
   for logical operators in C23.
-  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
-- ``__is_trivially_relocatable`` no longer returns ``true`` for non-object types
-  such as references and functions, and no longer returns ``false`` for volatile-qualified types.
-  Fixes (`#67498 <https://github.com/llvm/llvm-project/issues/67498>`_) and
-  (`#77091 <https://github.com/llvm/llvm-project/issues/77091>`_)
-
   Fixes (#GH64356).
 
+- ``__is_trivially_relocatable`` no longer returns ``true`` for non-object types
+  such as references and functions, and no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH67498) and (#GH77091).
+  
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
