@@ -345,6 +345,11 @@ public:
     return __iterator{__bound_sentinel_};
   }
 
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
+      noexcept(noexcept(__value_ == __bound_sentinel_)) /* strengthened */ {
+    return __value_ == __bound_sentinel_;
+  }
+
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(same_as<_Start, _BoundSentinel> && __advanceable<_Start>) ||
             (integral<_Start> && integral<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
