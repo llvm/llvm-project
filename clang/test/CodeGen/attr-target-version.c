@@ -138,7 +138,8 @@ int hoo(void) {
 // CHECK-NEXT:    ret i32 [[ADD3]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv.resolver
+// CHECK-SAME: () #[[ATTR3:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -216,17 +217,20 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_one.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_one.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @fmv_one._Mls64Msimd
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_two.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_two.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @fmv_two._Mfp16Msimd
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_e.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_e.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @fmv_e._Mls64
 //
@@ -238,7 +242,8 @@ int hoo(void) {
 // CHECK-NEXT:    ret i32 111
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_c.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_c.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -264,7 +269,8 @@ int hoo(void) {
 // CHECK-NEXT:    ret i32 [[CALL3]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -398,7 +404,8 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv_inline.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_d.resolver() {
+// CHECK-LABEL: define {{[^@]+}}@fmv_d.resolver
+// CHECK-SAME: () #[[ATTR3]] {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -819,7 +826,7 @@ int hoo(void) {
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+flagm,+fp-armv8,+fp16fml,+fullfp16,+ls64,+neon,+rand" }
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+neon" }
 // CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+ls64" }
-// CHECK: attributes #[[ATTR3:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+ls64" }
+// CHECK: attributes #[[ATTR3]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+ls64" }
 // CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+altnzcv,+bf16,+flagm,+fullfp16,+ls64,+sme,+sme-i16i64" }
 // CHECK: attributes #[[ATTR5]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+ls64,+lse,+neon,+sha2" }
 // CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+fullfp16,+ls64,+neon" }

@@ -22,7 +22,7 @@ void foo() {
 // LINUX: declare void @_ZN1S4FuncEv.S
 // LINUX: define linkonce_odr void @_ZN1S4FuncEv.O
 
-// WINDOWS: define weak_odr dso_local void @"?Func@S@@QEAAXXZ"(ptr %0) comdat
+// WINDOWS: define weak_odr dso_local void @"?Func@S@@QEAAXXZ"(ptr %0) {{.*}} comdat
 // WINDOWS: musttail call void @"?Func@S@@QEAAXXZ.S"(ptr %0)
 // WINDOWS: musttail call void @"?Func@S@@QEAAXXZ.O"(ptr %0)
 // WINDOWS: declare dso_local void @"?Func@S@@QEAAXXZ.S"

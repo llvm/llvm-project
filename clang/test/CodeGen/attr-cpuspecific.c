@@ -51,7 +51,7 @@ void SingleVersion(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @SingleVersion() comdat
+// WINDOWS: define weak_odr dso_local void @SingleVersion() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
 // WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 525311
@@ -82,7 +82,7 @@ void TwoVersions(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @TwoVersions() comdat
+// WINDOWS: define weak_odr dso_local void @TwoVersions() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
 // WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 59754495
@@ -125,7 +125,7 @@ void OrderDispatchUsageSpecific(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @OrderDispatchUsageSpecific() comdat
+// WINDOWS: define weak_odr dso_local void @OrderDispatchUsageSpecific() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call void @OrderDispatchUsageSpecific.Z()
 // WINDOWS-NEXT: ret void
@@ -174,7 +174,7 @@ void TwoVersionsSameAttr(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @TwoVersionsSameAttr() comdat
+// WINDOWS: define weak_odr dso_local void @TwoVersionsSameAttr() {{.*}} comdat
 // WINDOWS: call void @TwoVersionsSameAttr.Z
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @TwoVersionsSameAttr.S
@@ -194,7 +194,7 @@ void ThreeVersionsSameAttr(void){}
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @ThreeVersionsSameAttr() comdat
+// WINDOWS: define weak_odr dso_local void @ThreeVersionsSameAttr() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @ThreeVersionsSameAttr.Z
 // WINDOWS-NEXT: ret void
@@ -210,7 +210,7 @@ void OrderSpecificUsageDispatch(void);
 // LINUX: define weak_odr ptr @OrderSpecificUsageDispatch.resolver()
 // LINUX: ret ptr @OrderSpecificUsageDispatch.Z
 
-// WINDOWS: define weak_odr dso_local void @OrderSpecificUsageDispatch() comdat
+// WINDOWS: define weak_odr dso_local void @OrderSpecificUsageDispatch() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @OrderSpecificUsageDispatch.Z
 // WINDOWS-NEXT: ret void
@@ -226,7 +226,7 @@ void NoSpecifics(void);
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
-// WINDOWS: define weak_odr dso_local void @NoSpecifics() comdat
+// WINDOWS: define weak_odr dso_local void @NoSpecifics() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @NoSpecifics.Z
 // WINDOWS-NEXT: ret void
@@ -247,7 +247,7 @@ void HasGeneric(void);
 // LINUX: ret ptr @HasGeneric.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local void @HasGeneric() comdat
+// WINDOWS: define weak_odr dso_local void @HasGeneric() {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @HasGeneric.Z
 // WINDOWS-NEXT: ret void
@@ -269,7 +269,7 @@ void HasParams(int i, double d);
 // LINUX: ret ptr @HasParams.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local void @HasParams(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local void @HasParams(i32 %0, double %1) {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: call void @HasParams.Z(i32 %0, double %1)
 // WINDOWS-NEXT: ret void
@@ -291,7 +291,7 @@ int HasParamsAndReturn(int i, double d);
 // LINUX: ret ptr @HasParamsAndReturn.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local i32 @HasParamsAndReturn(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local i32 @HasParamsAndReturn(i32 %0, double %1) {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: %[[RET:.+]] = musttail call i32 @HasParamsAndReturn.Z(i32 %0, double %1)
 // WINDOWS-NEXT: ret i32 %[[RET]]
@@ -312,7 +312,7 @@ int GenericAndPentium(int i, double d);
 // LINUX-NOT: ret ptr @GenericAndPentium.A
 // LINUX-NOT: call void @llvm.trap
 
-// WINDOWS: define weak_odr dso_local i32 @GenericAndPentium(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local i32 @GenericAndPentium(i32 %0, double %1) {{.*}} comdat
 // WINDOWS: call void @__cpu_indicator_init
 // WINDOWS: %[[RET:.+]] = musttail call i32 @GenericAndPentium.O(i32 %0, double %1)
 // WINDOWS-NEXT: ret i32 %[[RET]]
@@ -327,7 +327,7 @@ int DispatchFirst(void);
 // LINUX: ret ptr @DispatchFirst.O
 // LINUX: ret ptr @DispatchFirst.B
 
-// WINDOWS: define weak_odr dso_local i32 @DispatchFirst() comdat
+// WINDOWS: define weak_odr dso_local i32 @DispatchFirst() {{.*}} comdat
 // WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.O()
 // WINDOWS-NEXT: ret i32 %[[RET]]
 // WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.B()
