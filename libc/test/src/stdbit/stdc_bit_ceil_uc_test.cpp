@@ -28,7 +28,7 @@ TEST(LlvmLibcStdcBitceilUcTest, OneLessThanPowsTwo) {
 }
 
 TEST(LlvmLibcStdcBitceilUcTest, OneMoreThanPowsTwo) {
-  for (unsigned i = 2U; i != UCHAR_WIDTH; ++i)
+  for (unsigned i = 1U; i != UCHAR_WIDTH - 1; ++i)
     EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_ceil_uc((1U << i) + 1),
               static_cast<unsigned char>(1U << (i + 1)));
 }
