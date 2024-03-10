@@ -101,7 +101,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
     $source ``
     custom<DynamicIndexList>($dynamic_offsets, $static_offsets)
     (`,` `[` $dynamic_shape^ `]` `,` `[` $dynamic_strides `]`)?
-    attr-dict `:` type($source) `->` type($TensorDesc)
+    attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
   let skipDefaultBuilders = 1;
   let hasVerifier = 1;
@@ -174,7 +174,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
   //                                   l2_hint = #xegpu.cache_hint<cached>, 
   //                                   l3_hint = #xegpu.cache_hint<cached>}
   //         : !xegpu.tensor_desc<8x16xf16>
-  let assemblyFormat = "$TensorDesc attr-dict `:` type($TensorDesc)";
+  let assemblyFormat = "$TensorDesc attr-dict `:` qualified(type($TensorDesc))";
 }
 
 
@@ -214,7 +214,7 @@ def XeGPU_LoadNDOp : XeGPU_Op<"load_nd"> {
   //                l2_hint = #xegpu.cache_hint<uncached>, 
   //                l3_hint = #xegpu.cache_hint<streaming>}
   //         : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
-  let assemblyFormat = "$TensorDesc attr-dict `:` type($TensorDesc) `->` type($value)";
+  let assemblyFormat = "$TensorDesc attr-dict `:` qualified(type($TensorDesc)) `->` type($value)";
   let hasVerifier = 1;
 }
 
@@ -230,7 +230,7 @@ def XeGPU_StoreNDOp : XeGPU_Op<"store_nd", []> {
   //                                l2_hint = #xegpu.cache_hint<write_back>, 
   //                                l3_hint = #xegpu.cache_hint<write_through>}
   //                                : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
-  let assemblyFormat = "$value `,` $TensorDesc attr-dict `:` type($value) `,` type($TensorDesc)";
+  let assemblyFormat = "$value `,` $TensorDesc attr-dict `:` type($value) `,` qualified(type($TensorDesc))";
   let hasVerifier = 1;
 }
 

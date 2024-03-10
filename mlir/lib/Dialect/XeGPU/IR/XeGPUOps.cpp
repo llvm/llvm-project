@@ -255,18 +255,9 @@ LogicalResult LoadNDOp::verify() {
   }
 
   if (tdescShape != valueShape)
-    return emitOpError("Result shape doesn't match TensorDesc shape.")
-           << "\nThe expected shape is " << makeString(tdescShape) << "."
-           << "\nBut the given shape is " << makeString(valueShape) << "."
-           << "\nIn VC mode, when VNNI is not enabled, the result should have "
-           << "the same shape (or transposed shape if transpose is enabled) "
-           << "as TensorDesc; \nwhen VNNI is enabled, the result should have "
-           << "one more dimention than the TensorDesc, with last dimention "
-           << "having vnni factor, \nbut having same number of total data "
-           << "elements. The vnni factor are typically calculated as "
-           << "simd_lane_width / elementTypeBitWidth. \nFor element type "
-           << "having more than 32 bits, vnni shouldn't be used. \nIn SIMT "
-           << "mode, the shape is derived from the mapping attributes.\n";
+    return emitOpError() <<"Result shape doesn't match TensorDesc shape."
+           << "The expected shape is " << makeString(tdescShape) << ". "
+           << "But the given shape is " << makeString(valueShape) << ".\n";
   return success();
 }
 
@@ -274,28 +265,25 @@ LogicalResult LoadNDOp::verify() {
 // XeGPU_StoreNDOp
 //===----------------------------------------------------------------------===//
 LogicalResult StoreNDOp::verify() {
-  auto dstTy = getTensorDesc().getType();                        // Tile
-  // auto valTy = llvm::dyn_cast<VectorType>(getValue().getType()); // Vector
+  auto dstTy = getTensorDesc().getType();               // Tile
   auto valTy = getValue().getType().cast<VectorType>(); // Vector
 
   if (dstTy.getRank() != 2)
-    return emitOpError(
-        "The TensorDesc for StoreNdOp should be a 2D TensorDesc.");
+    return emitOpError("Expecting a 2D TensorDesc shape.\n");
 
   if (!valTy)
-    return emitOpError("Invalid value operand, it should be a VectorType.\n");
+    return emitOpError("Exepcting a VectorType result.\n");
 
   auto dstElemTy = dstTy.getElementType();
   auto valElemTy = valTy.getElementType();
 
   if (dstElemTy != valElemTy) {
-    return emitOpError("The elem type of the value doesn't "
-                       "match the elem type of the TensorDesc.\n");
+    return emitOpError() << "The element type of the value should "
+                       "match the elementtype of the TensorDesc.\n";
   }
 
   if (dstTy.getShape() != valTy.getShape())
-    return emitOpError("The value shape doesn't match "
-                       "the TensorDesc shape.\n");
+    return emitOpError() << "The result shape should match the TensorDesc shape.\n";
   return success();
 }
 
