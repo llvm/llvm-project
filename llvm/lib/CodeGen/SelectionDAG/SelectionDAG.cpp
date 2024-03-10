@@ -6752,7 +6752,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::UCMP:
   case ISD::SCMP:
-    assert(VT.isInteger() && "This operator doe snot apply to FP types!");
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() && 
            N1.getValueType() == VT && "Binary operator types must match");
       break;
