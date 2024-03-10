@@ -79,6 +79,9 @@ public:
 };
 
 /// This represents the llvm.coro.await.suspend instruction.
+// FIXME: add callback metadata
+// FIXME: make a proper IntrinisicInst. Currently this is not possible,
+// because llvm.coro.await.suspend can be invoked.
 class LLVM_LIBRARY_VISIBILITY CoroAwaitSuspendInst : public CallBase {
   enum { AwaiterArg, FrameArg, WrapperArg };
 

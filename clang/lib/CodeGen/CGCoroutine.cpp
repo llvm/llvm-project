@@ -452,6 +452,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 
+  // FIXME: add TBAA metadata to the loads
   llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(&AwaiterDecl));
   auto AwaiterLValue =
       MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl.getType());
@@ -459,9 +460,6 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   CurAwaitSuspendWrapper.FramePtr =
       Builder.CreateLoad(GetAddrOfLocalVar(&FrameDecl));
 
-  // FIXME: mark as aliasing with frame?
-  // FIXME: TBAA?
-  // FIXME: emit in a better way (maybe egenerate AST in SemaCoroutine)?
   auto AwaiterBinder = CodeGenFunction::OpaqueValueMappingData::bind(
       *this, S.getOpaqueValue(), AwaiterLValue);
 

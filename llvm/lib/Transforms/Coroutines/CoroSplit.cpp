@@ -179,6 +179,12 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
   Builder.SetInsertPoint(CB);
 
   CallBase *NewCall = nullptr;
+  // await_suspend has only 2 parameters, awaiter and handle.
+  // Copy parameter attributes from the intrinsic call, but remove the last,
+  // because the last parameter now becomes the function that is being called.
+  AttributeList NewAttributes =
+      CB->getAttributes().removeParamAttributes(CB->getContext(), 2);
+
   if (auto Invoke = dyn_cast<InvokeInst>(CB)) {
     auto WrapperInvoke =
         Builder.CreateInvoke(Wrapper, Invoke->getNormalDest(),
@@ -187,16 +193,12 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB) {
     WrapperInvoke->setCallingConv(Invoke->getCallingConv());
     std::copy(Invoke->bundle_op_info_begin(), Invoke->bundle_op_info_end(),
               WrapperInvoke->bundle_op_info_begin());
-    AttributeList NewAttributes =
-        Invoke->getAttributes().removeParamAttributes(Invoke->getContext(), 2);
     WrapperInvoke->setAttributes(NewAttributes);
     WrapperInvoke->setDebugLoc(Invoke->getDebugLoc());
     NewCall = WrapperInvoke;
   } else if (auto Call = dyn_cast<CallInst>(CB)) {
     auto WrapperCall = Builder.CreateCall(Wrapper, {Awaiter, FramePtr});
 
-    AttributeList NewAttributes =
-        Call->getAttributes().removeParamAttributes(Call->getContext(), 2);
     WrapperCall->setAttributes(NewAttributes);
     WrapperCall->setDebugLoc(Call->getDebugLoc());
     NewCall = WrapperCall;
