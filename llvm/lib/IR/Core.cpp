@@ -404,10 +404,6 @@ void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
                            {Key, KeyLen}, unwrap(Val));
 }
 
-LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
-  return unwrap(M)->IsNewDbgInfoFormat;
-}
-
 /*--.. Printing modules ....................................................--*/
 
 void LLVMDumpModule(LLVMModuleRef M) {
