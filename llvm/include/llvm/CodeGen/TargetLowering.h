@@ -5314,6 +5314,10 @@ public:
   /// method accepts integers as its arguments.
   SDValue expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Method for building the DAG expansion of ISD::[US]CMP. This
+  /// method accepts integers as its arguments.
+  SDValue expandCMP(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
   SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;

@@ -676,6 +676,11 @@ enum NodeType {
   UMIN,
   UMAX,
 
+  /// [US]CMP - Three way integer comparison - returns -1, 0, or 1 if
+  /// Op1 < Op2, Op1 == Op2, Op1 > Op2, respectively.
+  SCMP,
+  UCMP,
+
   /// Bitwise operators - logical and, logical or, logical xor.
   AND,
   OR,
