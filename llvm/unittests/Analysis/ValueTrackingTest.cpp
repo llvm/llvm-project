@@ -891,8 +891,6 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call i32 @llvm.smin.i32(i32 %x, i32 %y)", 0},
       {true, "call i32 @llvm.umax.i32(i32 %x, i32 %y)", 0},
       {true, "call i32 @llvm.umin.i32(i32 %x, i32 %y)", 0},
-      {true, "call i32 @llvm.sthreecmp.i32(i32 %x, i32 %y)", 0},
-      {true, "call i32 @llvm.uthreecmp.i32(i32 %x, i32 %y)", 0},
       {true, "call i32 @llvm.bitreverse.i32(i32 %x)", 0},
       {true, "call i32 @llvm.bswap.i32(i32 %x)", 0},
       {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
