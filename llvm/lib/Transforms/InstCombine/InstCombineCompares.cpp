@@ -1962,6 +1962,17 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return BinaryOperator::CreateAnd(TruncY, X);
   }
 
+  // (icmp eq/ne (and (shl -1, X), Y), 0)
+  //    -> (icmp eq/ne (lshr Y, X), 0)
+  // We could technically handle any C == 0 or (C < 0 && isOdd(C)) but it seems
+  // highly unlikely the non-zero case will ever show up in code.
+  if (C.isZero() &&
+      match(And, m_OneUse(m_c_And(m_OneUse(m_Shl(m_AllOnes(), m_Value(X))),
+                                  m_Value(Y))))) {
+    Value *LShr = Builder.CreateLShr(Y, X);
+    return new ICmpInst(Pred, LShr, Constant::getNullValue(LShr->getType()));
+  }
+
   return nullptr;
 }
 
