@@ -246,12 +246,9 @@ define i4 @PR45762(i3 %x4) {
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext nneg i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
-; CHECK-NEXT:    [[BIT_SLICE_61:%.*]] = trunc i4 [[ONE_HOT_16]] to i1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[ONE_HOT_16]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i4 [[TMP1]], 0
-; CHECK-NEXT:    [[OR_69:%.*]] = or i1 [[TMP2]], [[BIT_SLICE_61]]
-; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[OR_69]], i4 [[T7]], i4 0
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
+; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
+; CHECK-NEXT:    [[UMUL_231:%.*]] = shl i4 [[ONE_HOT_16]], [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = select i1 [[OR_69_NOT]], i4 -8, i4 [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)
@@ -278,12 +275,9 @@ define i4 @PR45762_logical(i3 %x4) {
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext nneg i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
-; CHECK-NEXT:    [[BIT_SLICE_61:%.*]] = trunc i4 [[ONE_HOT_16]] to i1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[ONE_HOT_16]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i4 [[TMP1]], 0
-; CHECK-NEXT:    [[OR_69:%.*]] = or i1 [[TMP2]], [[BIT_SLICE_61]]
-; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[OR_69]], i4 [[T7]], i4 0
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
+; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
+; CHECK-NEXT:    [[UMUL_231:%.*]] = shl i4 [[ONE_HOT_16]], [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = select i1 [[OR_69_NOT]], i4 -8, i4 [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)
