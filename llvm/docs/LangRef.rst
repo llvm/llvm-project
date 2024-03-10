@@ -14531,21 +14531,21 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
-.. _int_sthreecmp:
+.. _int_scmp:
 
-'``llvm.sthreecmp.*``' Intrinsic
+'``llvm.scmp.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
-This is an overloaded intrinsic. You can use ``@llvm.sthreecmp`` on any
+This is an overloaded intrinsic. You can use ``@llvm.scmp`` on any
 integer bit width or any vector of integer elements.
 
 ::
 
-      declare i32 @llvm.sthreecmp.i32(i32 %a, i32 %b)
-      declare <4 x i32> @llvm.sthreecmp.v4i32(<4 x i32> %a, <4 x i32> %b)
+      declare i32 @llvm.scmp.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.v4i32(<4 x i32> %a, <4 x i32> %b)
 
 Overview:
 """""""""
@@ -14560,21 +14560,21 @@ The arguments (``%a`` and ``%b``) may be of any signed integer type or a vector 
 integer element type. The argument types must match each other, and the return
 type must be at least as wide as ``i2``, to uphold the ``-1`` return value.
 
-.. _int_uthreecmp:
+.. _int_ucmp:
 
-'``llvm.uthreecmp.*``' Intrinsic
+'``llvm.ucmp.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
-This is an overloaded intrinsic. You can use ``@llvm.sthreecmp`` on any
+This is an overloaded intrinsic. You can use ``@llvm.ucmp`` on any
 integer bit width or any vector of integer elements.
 
 ::
 
-      declare i2 @llvm.uthreecmp.i32(i32 %a, i32 %b)
-      declare <4 x i32> @llvm.uthreecmp.v4i32(<4 x i32> %a, <4 x i32> %b)
+      declare i2 @llvm.ucmp.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.v4i32(<4 x i32> %a, <4 x i32> %b)
 
 Overview:
 """""""""
