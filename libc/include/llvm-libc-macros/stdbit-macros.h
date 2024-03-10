@@ -236,8 +236,6 @@ inline unsigned long long stdc_bit_ceil(unsigned long long x) {
 #define stdc_bit_floor(x) STDBIT_GENERIC_FUNC(stdc_bit_floor, (x))
 #define stdc_bit_ceil(x) STDBIT_GENERIC_FUNC(stdc_bit_ceil, (x))
 
-#undef STDBIT_GENERIC_FUNC
-
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
