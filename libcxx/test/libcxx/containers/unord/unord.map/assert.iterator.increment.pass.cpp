@@ -55,5 +55,5 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(++i2, "Attempted to increment a non-incrementable unordered container const_iterator");
   }
 
-    return 0;
+  return 0;
 }
