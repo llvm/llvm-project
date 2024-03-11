@@ -18,7 +18,6 @@
 //     basic_streambuf<charT, traits>* setbuf(charT*, streamsize) override;
 
 #include <cassert>
-#include <concepts>
 #include <span>
 #include <spanstream>
 
