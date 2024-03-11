@@ -411,7 +411,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     }
 
     if (Opt.starts_with("-experimental-wasm-enable-alt-sjlj")) {
-      // '-mllvm -experimental-wasm-enable-alt-sjlj'  should be used with
+      // '-mllvm -experimental-wasm-enable-alt-sjlj' should be used with
       // '-mllvm -wasm-enable-sjlj'
       bool HasWasmEnableSjlj = false;
       for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
