@@ -100,9 +100,9 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<bool> PrintPipelinePasses;
 
-cl::opt<bool> ClRemoveTraps("clang-remove-traps", cl::Optional,
-                            cl::desc("Insert remove-traps pass."),
-                            cl::init(false));
+static cl::opt<bool> ClRemoveTraps("clang-remove-traps", cl::Optional,
+                                   cl::desc("Insert remove-traps pass."),
+                                   cl::init(false));
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(

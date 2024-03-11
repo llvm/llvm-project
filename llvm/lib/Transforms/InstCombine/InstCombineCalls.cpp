@@ -2827,6 +2827,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }))
       return nullptr;
     break;
+  case Intrinsic::experimental_hot: {
+    // The intrinsic declaration includes sideeffects to avoid it moved. This
+    // prevents removing even if the intrinsic is unused. We should remove
+    // unused ones to enabled other optimizations.
+    if (CI.use_empty())
+      return eraseInstFromFunction(CI);
+    break;
+  }
   case Intrinsic::assume: {
     Value *IIOperand = II->getArgOperand(0);
     SmallVector<OperandBundleDef, 4> OpBundles;

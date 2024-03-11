@@ -27553,7 +27553,7 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
   label %fast_path:
     ; Apply memory-consuming but fast solution for a task.
@@ -27638,6 +27638,54 @@ call of ``@llvm.experimental.widenable.condition``  with
 constant `true`. However it is always correct to replace
 it with any other `i1` value. Any pass can
 freely do it if it can benefit from non-default lowering.
+
+'``llvm.experimental.hot``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.experimental.hot()
+
+Overview:
+"""""""""
+
+This intrinsic returns true iff it's known that containing basic block is hot in
+profile.
+
+When used with profile based optimization allows to change program behaviour
+deppending on the code hotness.
+
+Arguments:
+""""""""""
+
+None.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.experimental.hot()`` returns either `true` or `false`,
+deppending on profile used. Expresion is evaluated as `true` iff profile and
+summary are availible and profile counter for the block reach hotness threshold.
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns `true` and if it returns `false`.
+
+When used in a branch condition, it allows us to choose between
+two alternative correct solutions for the same problem, like
+in example below:
+
+.. code-block:: text
+
+    %cond = call i1 @llvm.experimental.hot()
+    br i1 %cond, label %fast_path, label %slow_path
+
+  label %fast_path:
+    ; Omit diagnostics.
+
+  label %slow_path:
+    ; Additional diagnostics.
 
 
 '``llvm.load.relative``' Intrinsic
