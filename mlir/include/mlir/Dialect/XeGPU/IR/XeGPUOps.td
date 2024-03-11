@@ -9,26 +9,13 @@
 #ifndef MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
 #define MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUAttrs.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUTypes.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/AttrTypeBase.td"
-
-
-include "mlir/IR/OpBase.td"
-include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/BuiltinTypes.td"
-include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/Interfaces/CastInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
-include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/ShapedOpInterfaces.td"
-
 
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
@@ -39,7 +26,8 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
           Op<XeGPU_Dialect, mnemonic, traits>;
 
 
-def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSegments]> {
+def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, 
+  AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
 
   let summary = "create nd tensor descriptor operation";
   let description = [{
@@ -90,17 +78,20 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
 
   let arguments = (ins 
     XeGPU_BaseAddrType: $source, 
-    Variadic<Index>: $dynamic_offsets, 
-    Variadic<Index>: $dynamic_shape, 
-    Variadic<Index>: $dynamic_strides,
-    DenseI64ArrayAttr: $static_offsets
+    Variadic<Index>: $offsets, 
+    Variadic<Index>: $shape, 
+    Variadic<Index>: $strides,
+    DenseI64ArrayAttr: $static_offsets,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{0, 0}">: $static_shape,
+    DefaultValuedAttr<DenseI64ArrayAttr, "{0, 0}">: $static_strides
   );
   let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($dynamic_offsets, $static_offsets)
-    (`,` `[` $dynamic_shape^ `]` `,` `[` $dynamic_strides `]`)?
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    (`,` custom<DynamicIndexList>($shape, $static_shape)^
+     `,` custom<DynamicIndexList>($strides, $static_strides))?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
   let skipDefaultBuilders = 1;
@@ -135,21 +126,21 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
     /// parameters. static_offsets parameter always has the expected
     /// ranks with some dim could have ShapeType::kDynamic value
     /// indicating the corresponding value should be from dynamic_offsets.
-    llvm::SmallVector<OpFoldResult> getOffsets();
+    llvm::SmallVector<OpFoldResult> getEffectiveOffsets();
 
     /// returns the shape info of the source. It is either from the
     /// memref type, if source is a memref with static shape
     /// information or from the dynamic_shape parameter. If both
     /// exists, the dynamic_shape parameter will be used and the
     /// shape information from  memref type will be ignored.
-    llvm::SmallVector<OpFoldResult> getShape();
+    llvm::SmallVector<OpFoldResult> getEffectiveShape();
 
     /// returns the strides info of the source. It is either from the
     /// memref type, if source is a memref with static shape
     /// information or from the dynamic_stride parameter. If both
     /// exists, the dynamic_strides parameter will be used and the
     /// strides information from  memref type will be ignored.
-    llvm::SmallVector<OpFoldResult> getStrides();
+    llvm::SmallVector<OpFoldResult> getEffectiveStrides();
 
     /// Return the element type of the TensorDesc
     Type getElementType() {
@@ -160,6 +151,24 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
     llvm::ArrayRef<int64_t> getTensorDescShape() {
       return getType().getShape();
     }
+
+    /// Return the expected rank of each of the`static_offsets`, `static_sizes`
+    /// and `static_strides` attributes.
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
+      return {2, 2, 2};
+    }
+
+    mlir::OperandRange getSizes() {
+      return getShape();
+    }
+    
+    llvm::ArrayRef<int64_t> getStaticSizes() {
+      return getStaticShape();
+    }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
   }];
 }
 

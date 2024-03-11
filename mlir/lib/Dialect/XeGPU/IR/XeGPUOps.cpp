@@ -8,8 +8,9 @@
 
 #include <mlir/Dialect/Utils/StaticValueUtils.h>
 #include <mlir/Dialect/XeGPU/IR/XeGPU.h>
-#include <mlir/Interfaces/ViewLikeInterface.h>
 #include <mlir/IR/Builders.h>
+
+#include <llvm/Support/Debug.h>
 
 #define DEBUG_TYPE "xegpu"
 
@@ -118,24 +119,30 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 
 
 LogicalResult CreateNdDescOp::verify() {
-  auto offsetRank = getOffsets().size();
-  auto shapeRank = getShape().size();
-  auto stridesRank = getStrides().size();
-  auto baseRank = getRankOf(getSource()) ? getRankOf(getSource()) : 2;
+  // auto offsetRank = getEffectiveOffsets().size();
+  // auto shapeRank = getEffectiveShape().size();
+  // auto stridesRank = getEffectiveStrides().size();
+  // auto baseRank = getRankOf(getSource()) ? getRankOf(getSource()) : 2;
 
-  if (offsetRank != shapeRank || shapeRank != stridesRank ||
-      shapeRank != baseRank)
+  llvm::dbgs() << "\nNum of mixed Offsets: " << getMixedOffsets().size()
+               << "\nNum of mixed Sizes: " << getMixedSizes().size()
+               << "\nNum of mixed Strides: " << getMixedStrides().size()
+               << "\n";
 
-    return emitOpError(
-        "Expecting the rank of shape, strides, offsets and memref type "
-        "should match with each other (they currently should be 2D).");
+  // if (offsetRank != shapeRank || shapeRank != stridesRank ||
+  //     shapeRank != baseRank)
+
+  //   return emitOpError(
+  //       "Expecting the rank of shape, strides, offsets and memref type "
+  //       "should match with each other (they currently should be 2D).");
   return success();
 }
 
-// compute consolidated offsets from dynamic_offsets and static_offsets parameters
-llvm::SmallVector<OpFoldResult> CreateNdDescOp::getOffsets() {
+// compute consolidated offsets from dynamic_offsets and static_offsets
+// parameters
+llvm::SmallVector<OpFoldResult> CreateNdDescOp::getEffectiveOffsets() {
   llvm::SmallVector<OpFoldResult> offsets;
-  auto dynamicOffsets = getDynamicOffsets(); // dynamic_offsets variable
+  auto dynamicOffsets = getOffsets(); // offsets variable
   auto staticOffsets = getStaticOffsets();   // static_offsets attribute
 
   // in case static_offsets is missing, dynamic_offsets will be used
@@ -162,9 +169,9 @@ llvm::SmallVector<OpFoldResult> CreateNdDescOp::getOffsets() {
 // get the consolidated shape of the 2D memory region. 
 // It prefer dynamic_shape than the static shape of 
 // memref type.
-llvm::SmallVector<OpFoldResult> CreateNdDescOp::getShape() {
+llvm::SmallVector<OpFoldResult> CreateNdDescOp::getEffectiveShape() {
   llvm::SmallVector<OpFoldResult> shape;
-  auto dynShape = getDynamicShape();
+  auto dynShape = getShape();
   if (dynShape.size()) {
     shape.append(dynShape.begin(), dynShape.end());
     return shape;
@@ -186,10 +193,10 @@ llvm::SmallVector<OpFoldResult> CreateNdDescOp::getShape() {
 // get the consolidated strides of the 2D memory region. 
 // It prefer dynamic_stride than the static strides of 
 // memref type.
-llvm::SmallVector<OpFoldResult> CreateNdDescOp::getStrides() {
+llvm::SmallVector<OpFoldResult> CreateNdDescOp::getEffectiveStrides() {
   llvm::SmallVector<OpFoldResult> strides;
 
-  auto dynStrides = getDynamicStrides();
+  auto dynStrides = getStrides();
   if (dynStrides.size()) {
     strides.append(dynStrides.begin(), dynStrides.end());
     return strides;
