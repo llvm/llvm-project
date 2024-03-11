@@ -481,7 +481,7 @@ public:
       // behavior in C++).
       auto u = std::make_unsigned_t<SINT>(ToUInt());
       u = (u >> (bits - 1)) << (bits - 1); // Get the sign bit only.
-      u = ~u + 1;                          // Negate top bits if not 0.
+      u = ~u + 1; // Negate top bits if not 0.
       n |= static_cast<SINT>(u);
     }
     return n;
