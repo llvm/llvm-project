@@ -2451,13 +2451,6 @@ private:
   uint32_t Value;
   uint32_t CurrentBitsIndex = ~0;
 };
-
-inline bool shouldSkipCheckingODR(const Decl *D) {
-  return D->getOwningModule() &&
-         D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         D->getOwningModule()->isExplicitGlobalModule();
-}
-
 } // namespace clang
 
 #endif // LLVM_CLANG_SERIALIZATION_ASTREADER_H
