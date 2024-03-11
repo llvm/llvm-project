@@ -1684,19 +1684,19 @@ public:
   /// such a way. These are stored in LLVMContext because typically LLVM only
   /// edits a small number of blocks at a time, so there's no need to bloat
   /// BasicBlock with such a data structure.
-  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDPValues;
+  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDbgRecords;
 
-  // Set, get and delete operations for TrailingDPValues.
+  // Set, get and delete operations for TrailingDbgRecords.
   void setTrailingDbgRecords(BasicBlock *B, DPMarker *M) {
-    assert(!TrailingDPValues.count(B));
-    TrailingDPValues[B] = M;
+    assert(!TrailingDbgRecords.count(B));
+    TrailingDbgRecords[B] = M;
   }
 
   DPMarker *getTrailingDbgRecords(BasicBlock *B) {
-    return TrailingDPValues.lookup(B);
+    return TrailingDbgRecords.lookup(B);
   }
 
-  void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDPValues.erase(B); }
+  void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDbgRecords.erase(B); }
 };
 
 } // end namespace llvm
