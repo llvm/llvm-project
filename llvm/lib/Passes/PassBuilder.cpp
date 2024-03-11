@@ -358,7 +358,7 @@ public:
     // Intentionally break the Function by inserting a terminator
     // instruction in the middle of a basic block.
     BasicBlock &BB = F.getEntryBlock();
-    new UnreachableInst(F.getContext(), BB.getTerminator());
+    new UnreachableInst(F.getContext(), BB.getTerminator()->getIterator());
     return PreservedAnalyses::none();
   }
 

@@ -117,7 +117,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
     // Load the global variable which represents the type info.
     auto *LDInst =
-        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call->getIterator());
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
     Call->replaceAllUsesWith(PassThroughInst);
