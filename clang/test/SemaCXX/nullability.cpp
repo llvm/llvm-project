@@ -155,7 +155,7 @@ void AssignAndInitNonNullFromFn() {
   SmartPtr _Nonnull s_nonnull;
   s_nonnull = ReturnSmartNullable(); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
   s_nonnull = {ReturnSmartNullable()};
-  TakeSmartNonnull(ReturnSmartNullable()); //expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull}}
+  TakeSmartNonnull(ReturnSmartNullable()); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
 }
 
 void ConditionalExpr(bool c) {

@@ -4152,10 +4152,11 @@ non-underscored keywords. For example:
       @property (readonly, nonnull) NSArray *subviews;
     @end
 
-As well as built-in pointer types, ithe nullability attributes can be attached
-to nullable types from the C++ standard library such as ``std::unique_ptr`` and
-``std::function``, as well as C++ classes marked with the ``_Nullable``
-attribute.
+As well as built-in pointer types, the nullability attributes can be attached
+to C++ classes marked with the ``_Nullable`` attribute, as well as the C++
+standard library types ``unique_ptr``, ``shared_ptr``, ``auto_ptr``,
+``exception_ptr``, ``function``, ``move_only_function`` and
+``coroutine_handle``.
   }];
 }
 

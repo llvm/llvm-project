@@ -5981,7 +5981,7 @@ static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   if (auto *CRD = dyn_cast<CXXRecordDecl>(D);
-      !D || !(CRD->isClass() || CRD->isStruct())) {
+      !CRD || !(CRD->isClass() || CRD->isStruct())) {
     S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type_str)
         << AL << AL.isRegularKeywordAttribute() << "classes";
     return;
