@@ -46,9 +46,9 @@ namespace Fortran::evaluate::value {
 // named accordingly in ALL CAPS so that they can be referenced easily in
 // the language standard.
 template <int BITS, bool IS_LITTLE_ENDIAN = isHostLittleEndian,
-          int PARTBITS = BITS <= 32 ? BITS : 32,
-          typename PART = HostUnsignedInt<PARTBITS>,
-          typename BIGPART = HostUnsignedInt<PARTBITS * 2>>
+    int PARTBITS = BITS <= 32 ? BITS : 32,
+    typename PART = HostUnsignedInt<PARTBITS>,
+    typename BIGPART = HostUnsignedInt<PARTBITS * 2>>
 class Integer {
 public:
   static constexpr int bits{BITS};
@@ -68,8 +68,8 @@ private:
   static constexpr int extraPartBits{maxPartBits - partBits};
   static constexpr int parts{(bits + partBits - 1) / partBits};
   static_assert(parts >= 1);
-  static constexpr int extraTopPartBits{extraPartBits + (parts * partBits) -
-                                        bits};
+  static constexpr int extraTopPartBits{
+      extraPartBits + (parts * partBits) - bits};
   static constexpr int topPartBits{maxPartBits - extraTopPartBits};
   static_assert(topPartBits > 0 && topPartBits <= partBits);
   static_assert((parts - 1) * partBits + topPartBits == bits);
@@ -228,8 +228,8 @@ public:
     return result;
   }
 
-  static constexpr ValueWithOverflow
-  Read(const char *&pp, std::uint64_t base = 10, bool isSigned = false) {
+  static constexpr ValueWithOverflow Read(
+      const char *&pp, std::uint64_t base = 10, bool isSigned = false) {
     Integer result;
     bool overflow{false};
     const char *p{pp};
@@ -358,8 +358,7 @@ public:
   static constexpr int DIGITS{bits - 1}; // don't count the sign bit
   static constexpr Integer HUGE() { return MASKR(bits - 1); }
   static constexpr Integer Least() { return MASKL(1); }
-  static constexpr int RANGE{
-      // in the sense of SELECTED_INT_KIND
+  static constexpr int RANGE{// in the sense of SELECTED_INT_KIND
       // This magic value is LOG10(2.)*1E12.
       static_cast<int>(((bits - 1) * 301029995664) / 1000000000000)};
 
@@ -463,8 +462,7 @@ public:
     return CompareUnsigned(y);
   }
 
-  template <typename UINT = std::uint64_t>
-  constexpr UINT ToUInt() const {
+  template <typename UINT = std::uint64_t> constexpr UINT ToUInt() const {
     UINT n{LEPart(0)};
     std::size_t filled{partBits};
     constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
@@ -483,7 +481,7 @@ public:
       // behavior in C++).
       auto u = std::make_unsigned_t<SINT>(ToUInt());
       u = (u >> (bits - 1)) << (bits - 1); // Get the sign bit only.
-      u = ~u + 1; // Negate top bits if not 0.
+      u = ~u + 1;                          // Negate top bits if not 0.
       n |= static_cast<SINT>(u);
     }
     return n;
@@ -557,8 +555,8 @@ public:
         }
       } else {
         for (; j > shiftParts; --j) {
-          result.SetLEPart(
-              j, ((LEPart(j - shiftParts) << bitShift) |
+          result.SetLEPart(j,
+              ((LEPart(j - shiftParts) << bitShift) |
                   (LEPart(j - shiftParts - 1) >> (partBits - bitShift))));
         }
         if (j == shiftParts) {
@@ -659,9 +657,9 @@ public:
         }
       } else {
         for (; j + shiftParts + 1 < parts; ++j) {
-          result.SetLEPart(
-              j, (LEPart(j + shiftParts) >> bitShift) |
-                     (LEPart(j + shiftParts + 1) << (partBits - bitShift)));
+          result.SetLEPart(j,
+              (LEPart(j + shiftParts) >> bitShift) |
+                  (LEPart(j + shiftParts + 1) << (partBits - bitShift)));
         }
         if (j + shiftParts + 1 == parts) {
           result.LEPart(j++) = LEPart(parts - 1) >> bitShift;
@@ -758,8 +756,8 @@ public:
   }
 
   // Unsigned addition with carry.
-  constexpr ValueWithCarry AddUnsigned(const Integer &y,
-                                       bool carryIn = false) const {
+  constexpr ValueWithCarry AddUnsigned(
+      const Integer &y, bool carryIn = false) const {
     Integer sum{nullptr};
     BigPart carry{carryIn};
     for (int j{0}; j + 1 < parts; ++j) {
