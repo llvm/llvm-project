@@ -1,4 +1,4 @@
-//===-- Single-precision fmodf function -----------------------------------===//
+//===-- Single-precision fmodl function -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmodf.h"
+#include "src/math/fmodl.h"
 #include "src/__support/FPUtil/generic/FMod.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, fmodf, (float x, float y)) {
-  return fputil::generic::FMod<float, uint64_t>::eval(x, y);
+LLVM_LIBC_FUNCTION(long double, fmodl, (long double x, long double y)) {
+  return fputil::generic::FMod<long double>::eval(x, y);
 }
 
 } // namespace LIBC_NAMESPACE
