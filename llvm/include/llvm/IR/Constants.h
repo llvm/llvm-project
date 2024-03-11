@@ -1289,14 +1289,13 @@ public:
                             Type *SrcTy = nullptr) const;
 
   /// Returns an Instruction which implements the same operation as this
-  /// ConstantExpr. If \p InsertBefore is not null, the new instruction is
-  /// inserted before it, otherwise it is not inserted into any basic block.
+  /// ConstantExpr. It is not inserted into any basic block.
   ///
   /// A better approach to this could be to have a constructor for Instruction
   /// which would take a ConstantExpr parameter, but that would have spread
   /// implementation details of ConstantExpr outside of Constants.cpp, which
   /// would make it harder to remove ConstantExprs altogether.
-  Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
+  Instruction *getAsInstruction() const;
 
   /// Whether creating a constant expression for this binary operator is
   /// desirable.
