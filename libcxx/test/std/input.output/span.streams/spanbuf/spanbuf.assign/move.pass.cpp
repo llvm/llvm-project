@@ -52,7 +52,7 @@ void test_postconditions() {
 
   // Empty `span`
   {
-    // Mode: default
+    // Mode: default (`in` | `out`)
     {
       std::span<CharT> sp;
       TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
@@ -103,7 +103,7 @@ void test_postconditions() {
   {
     CharT arr[4];
 
-    // Mode: default
+    // Mode: default (`in` | `out`)
     {
       std::span<CharT> sp{arr};
       TestSpanBuf<CharT, TraitsT> rhsSpBuf(sp);
