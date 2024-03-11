@@ -27553,7 +27553,7 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
   label %fast_path:
     ; Apply memory-consuming but fast solution for a task.
