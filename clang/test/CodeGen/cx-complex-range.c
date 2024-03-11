@@ -227,6 +227,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
   // IMPRVD-NEXT: fsub{{.*}}double
   // IMPRVD-NEXT: fdiv{{.*}}double
   //
+  // PRMTD: load double, ptr {{.*}}
   // PRMTD: fpext double {{.*}} to x86_fp80
   // PRMTD-NEXT: fpext double {{.*}} to x86_fp80
   // PRMTD-NEXT: getelementptr inbounds { double, double }, ptr {{.*}}, i32 0, i32 0
@@ -235,31 +236,19 @@ _Complex double divd(_Complex double a, _Complex double b) {
   // PRMTD-NEXT: load double, ptr {{.*}}
   // PRMTD-NEXT: fpext double {{.*}} to x86_fp80
   // PRMTD-NEXT: fpext double {{.*}} to x86_fp80
-  // PRMTD-NEXT: call{{.*}}x86_fp80 @llvm.fabs.f80(x86_fp80 {{.*}})
-  // PRMTD-NEXT: call{{.*}}x86_fp80 @llvm.fabs.f80(x86_fp80 {{.*}})
-  // PRMTD-NEXT: fcmp{{.*}}ugt x86_fp80 {{.*}},{{.*}}
-  // PRMTD-NEXT: br i1 {{.*}}
-  // PRMTD: abs_rhsr_greater_or_equal_abs_rhsi:
-  // PRMTD-NEXT: fdiv{{.*}} x86_fp80
+  // PRMTD-NEXT: fmul{{.*}}x86_fp80
   // PRMTD-NEXT: fmul{{.*}}x86_fp80
   // PRMTD-NEXT: fadd{{.*}}x86_fp80
   // PRMTD-NEXT: fmul{{.*}}x86_fp80
+  // PRMTD-NEXT: fmul{{.*}}x86_fp80
   // PRMTD-NEXT: fadd{{.*}}x86_fp80
-  // PRMTD-NEXT: fdiv{{.*}}x86_fp80
+  // PRMTD-NEXT: fmul{{.*}}x86_fp80
   // PRMTD-NEXT: fmul{{.*}}x86_fp80
   // PRMTD-NEXT: fsub{{.*}}x86_fp80
   // PRMTD-NEXT: fdiv{{.*}}x86_fp80
-  // PRMTD-NEXT: br label
-  // PRMTD: abs_rhsr_less_than_abs_rhsi:
   // PRMTD-NEXT: fdiv{{.*}}x86_fp80
-  // PRMTD-NEXT: fmul{{.*}}x86_fp80
-  // PRMTD-NEXT: fadd{{.*}}x86_fp80
-  // PRMTD-NEXT: fmul{{.*}}x86_fp80
-  // PRMTD-NEXT: fadd{{.*}}x86_fp80
-  // PRMTD-NEXT: fdiv{{.*}}x86_fp80
-  // PRMTD-NEXT: fmul{{.*}}x86_fp80
-  // PRMTD-NEXT: fsub{{.*}}x86_fp80
-  // PRMTD-NEXT: fdiv {{.*}}x86_fp80
+  // PRMTD-NEXT: fptrunc x86_fp80 {{.*}} to double
+  // PRMTD-NEXT: fptrunc x86_fp80 {{.*}} to double
 
   return a / b;
 }

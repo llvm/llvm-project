@@ -47,11 +47,12 @@ class ComplexExprEmitter
   CGBuilderTy &Builder;
   bool IgnoreReal;
   bool IgnoreImag;
+  LangOptions::ComplexRangeKind FPHasBeenPromoted;
+
 public:
   ComplexExprEmitter(CodeGenFunction &cgf, bool ir=false, bool ii=false)
-    : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii) {
-  }
-
+      : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii),
+        FPHasBeenPromoted(LangOptions::ComplexRangeKind::CX_None) {}
 
   //===--------------------------------------------------------------------===//
   //                               Utilities
@@ -305,12 +306,11 @@ public:
         CGF.getContext().getFloatTypeSemantics(ElementType);
     const llvm::fltSemantics &HigherElementTypeSemantics =
         CGF.getContext().getFloatTypeSemantics(HigherElementType);
-    const llvm::Triple TI = CGF.getTarget().getTriple();
-    if ((llvm::APFloat::getSizeInBits(HigherElementTypeSemantics) >
-         llvm::APFloat::getSizeInBits(ElementTypeSemantics)) &&
-        !CGF.getTarget().getTriple().isOSWindows()) {
+    if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
+        llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
       return CGF.getContext().getComplexType(HigherElementType);
     } else {
+      FPHasBeenPromoted = LangOptions::ComplexRangeKind::CX_Improved;
       DiagnosticsEngine &Diags = CGF.CGM.getDiags();
       Diags.Report(diag::warn_next_larger_fp_type_same_size_than_fp);
       return CGF.getContext().getComplexType(ElementType);
@@ -1025,10 +1025,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
     QualType ComplexElementTy = Op.Ty->castAs<ComplexType>()->getElementType();
-    const BuiltinType *BT = ComplexElementTy->getAs<BuiltinType>();
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
-         BT->getKind() == BuiltinType::Kind::Double))
+         FPHasBeenPromoted == LangOptions::CX_Improved))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
