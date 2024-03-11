@@ -124,8 +124,10 @@ void NullCheckAfterDereferenceCheck::registerMatchers(MatchFinder *Finder) {
                               // well supported by the check.
                               unless(hasDeclContext(cxxRecordDecl(isLambda()))),
                               hasBody(containsPointerValue)),
-                 cxxConstructorDecl(hasAnyConstructorInitializer(
-                     withInitializer(containsPointerValue)))))
+                 cxxConstructorDecl(
+                     unless(hasDeclContext(cxxRecordDecl(isLambda()))),
+                     hasAnyConstructorInitializer(
+                         withInitializer(containsPointerValue)))))
           .bind(FuncID),
       this);
 }

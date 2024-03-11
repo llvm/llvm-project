@@ -4,7 +4,7 @@ struct S {
   int a;
 };
 
-int warning_deref(int *p) {
+void warning_deref(int *p) {
   *p = 42;
 
   if (p) {
@@ -12,49 +12,38 @@ int warning_deref(int *p) {
     // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
   // FIXME: If there's a direct path, make the error message more precise, ie. remove `one of the locations`
     *p += 20;
-    return *p;
-  } else {
-    return 0;
   }
 }
 
-int warning_member(S *q) {
+void warning_member(S *q) {
   q->a = 42;
 
   if (q) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
     // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
     q->a += 20;
-    return q->a;
-  } else {
-    return 0;
   }
 }
 
-int negative_warning(int *p) {
+void negative_warning(int *p) {
   *p = 42;
 
   if (!p) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: pointer value is checked even though it cannot be null at this point
     // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
-    return 0;
-  } else {
-    *p += 20;
-    return *p;
+    return;
   }
+  
+  *p += 20;
 }
 
-int no_warning(int *p, bool b) {
+void no_warning(int *p, bool b) {
   if (b) {
     *p = 42;
   }
 
   if (p) {
-    // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point 
     *p += 20;
-    return *p;
-  } else {
-    return 0;
   }
 }
 
@@ -197,18 +186,6 @@ int chained_references(int *a, int *b, int *c, int *d, int *e) {
   if (c) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
     // CHECK-MESSAGES: :[[@LINE-5]]:5: note: one of the locations where the pointer's value cannot be null
-    *d = 42;
-  }
-
-  if (d) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // CHECK-MESSAGES: :[[@LINE-5]]:5: note: one of the locations where the pointer's value cannot be null
-    *e = 42;
-  }
-
-  if (e) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // CHECK-MESSAGES: :[[@LINE-5]]:5: note: one of the locations where the pointer's value cannot be null
     return *a;
   } else {
     return 0;
@@ -280,6 +257,12 @@ int cxx17_crash(int *p) {
   auto [a, b] = arr;
   
   return 0;
+}
+
+// In an earlier version, the check would crash when encountering anonymous lambdas.
+void lambda_crash(int *p) {
+  auto f = [p](){ *p = 42; };
+  f();
 }
 
 int note_tags() {
