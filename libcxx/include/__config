@@ -180,6 +180,9 @@
 // requires code not to make these assumptions.
 #    define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #    define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
+// Allows std::pair's copy assignment and move assignment operators to be trivial
+// when both its element types' respective assignment operators are trivial.
+#    define _LIBCPP_ABI_PAIR_TRIVIALLY_COPYABLE
 #  elif _LIBCPP_ABI_VERSION == 1
 #    if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support

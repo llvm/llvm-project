@@ -88,6 +88,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(&p.second == &inc_obj);
   }
 
+#if TEST_STD_VER >= 20 && defined(_LIBCPP_ABI_PAIR_TRIVIALLY_COPYABLE)
+  static_assert(std::is_trivially_copy_assignable<std::pair<int, int>>::value, "");
+#else
+  static_assert(!std::is_trivially_copy_assignable<std::pair<int, int>>::value, "");
+#endif
+
+  static_assert(!std::is_trivially_copy_assignable<std::pair<CountAssign, int>>::value, "");
+  static_assert(!std::is_trivially_copy_assignable<std::pair<int, CountAssign>>::value, "");
+  static_assert(!std::is_trivially_copy_assignable<std::pair<CountAssign, CountAssign>>::value, "");
+
   return true;
 }
 

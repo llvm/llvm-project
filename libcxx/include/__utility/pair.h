@@ -11,6 +11,7 @@
 
 #include <__compare/common_comparison_category.h>
 #include <__compare/synth_three_way.h>
+#include <__concepts/assignable.h>
 #include <__concepts/different_from.h>
 #include <__config>
 #include <__fwd/array.h>
@@ -26,6 +27,7 @@
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -40,8 +42,11 @@
 #include <__type_traits/is_nothrow_copy_constructible.h>
 #include <__type_traits/is_nothrow_default_constructible.h>
 #include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_trivially_copy_assignable.h>
+#include <__type_traits/is_trivially_move_assignable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/unwrap_ref.h>
@@ -66,6 +71,14 @@ struct __non_trivially_copyable_base {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   __non_trivially_copyable_base(__non_trivially_copyable_base const&) _NOEXCEPT {}
 };
+
+#if _LIBCPP_STD_VER >= 20
+template <class _Tp>
+concept __trivially_copy_assignable_object = is_trivially_copy_assignable_v<_Tp> && is_object_v<_Tp>;
+
+template <class _Tp>
+concept __trivially_move_assignable_object = is_trivially_move_assignable_v<_Tp> && is_object_v<_Tp>;
+#endif
 
 #if _LIBCPP_STD_VER >= 23
 template <class _Tp>
@@ -236,6 +249,28 @@ struct _LIBCPP_TEMPLATE_VIS pair
              typename __make_tuple_indices<sizeof...(_Args1)>::type(),
              typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
 
+#  if _LIBCPP_STD_VER >= 20 && defined(_LIBCPP_ABI_PAIR_TRIVIALLY_COPYABLE)
+  _LIBCPP_HIDE_FROM_ABI pair& operator=(pair const& __p) = default;
+  _LIBCPP_HIDE_FROM_ABI pair& operator=(pair&& __p) = default;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair& operator=(pair const& __p)
+      _NOEXCEPT_(is_nothrow_copy_assignable<first_type>::value&& is_nothrow_copy_assignable<second_type>::value)
+    requires is_copy_assignable_v<first_type> && is_copy_assignable_v<second_type> && (!(__trivially_copy_assignable_object<first_type> && __trivially_copy_assignable_object<second_type>))
+  {
+    first  = __p.first;
+    second = __p.second;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair& operator=(pair&& __p)
+      _NOEXCEPT_(is_nothrow_move_assignable<first_type>::value&& is_nothrow_move_assignable<second_type>::value)
+    requires is_move_assignable_v<first_type> && is_move_assignable_v<second_type> && (!(__trivially_move_assignable_object<first_type> && __trivially_move_assignable_object<second_type>))
+  {
+    first  = std::forward<first_type>(__p.first);
+    second = std::forward<second_type>(__p.second);
+    return *this;
+  }
+#  else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
   operator=(__conditional_t< is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
                              pair,
@@ -254,6 +289,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     second = std::forward<second_type>(__p.second);
     return *this;
   }
+#  endif
 
   template <
       class _U1,
