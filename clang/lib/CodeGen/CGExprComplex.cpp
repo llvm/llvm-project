@@ -50,7 +50,7 @@ class ComplexExprEmitter
   LangOptions::ComplexRangeKind FPHasBeenPromoted;
 
 public:
-  ComplexExprEmitter(CodeGenFunction &cgf, bool ir=false, bool ii=false)
+  ComplexExprEmitter(CodeGenFunction &cgf, bool ir = false, bool ii = false)
       : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii),
         FPHasBeenPromoted(LangOptions::ComplexRangeKind::CX_None) {}
 
