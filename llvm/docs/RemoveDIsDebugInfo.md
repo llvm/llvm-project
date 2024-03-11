@@ -32,19 +32,18 @@ The second matter is that if you transfer sequences of instructions from one pla
 
 # C-API changes
 
-```
-LLVMDIBuilderInsertDeclareBefore            # Changed - Inserts a non-instruction debug record.
-LLVMDIBuilderInsertDeclareAtEnd             # Changed - Inserts a non-instruction debug record.
-LLVMDIBuilderInsertDbgValueBefore           # Changed - Inserts a non-instruction debug record.
-LLVMDIBuilderInsertDbgValueAtEnd            # Changed - Inserts a non-instruction debug record.
+All the functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
 
-LLVMIsNewDbgInfoFormat                      # New - Returns true if the module is in the new non-instruction mode.  Will be deprecated in future.
-LLVMDIBuilderInsertDeclareIntrinsicBefore   # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
-LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
-LLVMDIBuilderInsertDbgValueIntrinsicBefore  # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
-LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
 ```
-
+New functions (all to be deprecated)
+------------------------------------
+LLVMIsNewDbgInfoFormat                      # Returns true if the module is in the new non-instruction mode.
+LLVMSetIsNewDbgInfoFormat                   # Convert to the requested debug info format.
+LLVMDIBuilderInsertDeclareIntrinsicBefore   # Insert a debug intrinsic (old debug info format). 
+LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # Same as above.
+LLVMDIBuilderInsertDbgValueIntrinsicBefore  # Same as above.
+LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # Same as above.
+```
 
 # Anything else?
 
