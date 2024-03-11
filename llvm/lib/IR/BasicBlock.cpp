@@ -348,6 +348,8 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
 
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   const Instruction *I = getFirstNonPHI();
+  if (!I)
+    return end();
   BasicBlock::const_iterator It = I->getIterator();
   // Set the head-inclusive bit to indicate that this iterator includes
   // any debug-info at the start of the block. This is a no-op unless the
