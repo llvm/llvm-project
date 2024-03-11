@@ -2677,6 +2677,8 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
     return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();
+  } else if (BaseElementType.isTriviallyCopyableType(Context)) {
+    return true;
   } else {
     switch (isNonTrivialToPrimitiveDestructiveMove()) {
     case PCK_Trivial:
