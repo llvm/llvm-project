@@ -221,13 +221,18 @@ namespace std {
 #include <__functional/operations.h>
 #include <__functional/unary_function.h>
 #include <__memory/addressof.h>
+#include <__tuple/find_index.h>
+#include <__tuple/sfinae_helpers.h>
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/add_volatile.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/dependent_type.h>
 #include <__type_traits/is_array.h>
+#include <__type_traits/is_default_constructible.h>
 #include <__type_traits/is_destructible.h>
+#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_move_constructible.h>
 #include <__type_traits/is_trivially_copy_assignable.h>
 #include <__type_traits/is_trivially_copy_constructible.h>
@@ -242,6 +247,7 @@ namespace std {
 #include <__utility/forward.h>
 #include <__utility/forward_like.h>
 #include <__utility/in_place.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__variant/monostate.h>
@@ -249,7 +255,6 @@ namespace std {
 #include <initializer_list>
 #include <limits>
 #include <new>
-#include <tuple>
 #include <version>
 
 // standard-mandated includes
@@ -340,21 +345,20 @@ struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
 
 inline constexpr size_t variant_npos = static_cast<size_t>(-1);
 
-_LIBCPP_HIDE_FROM_ABI constexpr int __choose_index_type(unsigned int __num_elem) {
-  if (__num_elem < numeric_limits<unsigned char>::max())
-    return 0;
-  if (__num_elem < numeric_limits<unsigned short>::max())
-    return 1;
-  return 2;
+template <size_t _NumAlternatives>
+_LIBCPP_HIDE_FROM_ABI constexpr auto __choose_index_type() {
+#ifdef _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+  if constexpr (_NumAlternatives < numeric_limits<unsigned char>::max())
+    return static_cast<unsigned char>(0);
+  else if constexpr (_NumAlternatives < numeric_limits<unsigned short>::max())
+    return static_cast<unsigned short>(0);
+  else
+#endif // _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+    return static_cast<unsigned int>(0);
 }
 
 template <size_t _NumAlts>
-using __variant_index_t =
-#  ifndef _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
-    unsigned int;
-#  else
-    std::tuple_element_t< __choose_index_type(_NumAlts), std::tuple<unsigned char, unsigned short, unsigned int> >;
-#  endif
+using __variant_index_t = decltype(std::__choose_index_type<_NumAlts>());
 
 template <class _IndexType>
 constexpr _IndexType __variant_npos = static_cast<_IndexType>(-1);
@@ -1625,6 +1629,7 @@ _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <exception>
+#  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
