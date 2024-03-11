@@ -1168,8 +1168,12 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   const std::string Name;
 
-  /// Returns true if this VPInstruction generates scalar values only.
-  bool doesGenerateScalars() const;
+  /// Returns true if this VPInstruction generates scalar values for all lanes.
+  bool doesGeneratePerAllLanes() const;
+
+  /// Returns true if we can generate a scalar for the first lane only if
+  /// needed.
+  bool canGenerateScalarForFirstLane() const;
 
   /// Utility methods serving execute(): generates a single instance of the
   /// modeled instruction for a given part. \returns the generated value for \p
