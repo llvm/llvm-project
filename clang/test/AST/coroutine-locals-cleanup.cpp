@@ -90,10 +90,7 @@ Task bar() {
 // CHECK:                 ExprWithCleanups {{.*}} 'bool'
 // CHECK-NEXT:              CXXMemberCallExpr {{.*}} 'bool'
 // CHECK-NEXT:                MemberExpr {{.*}} .await_ready
-// CHECK:                 CallExpr {{.*}} 'void'
-// CHECK-NEXT:              ImplicitCastExpr {{.*}} 'void (*)(void *)'
-// CHECK-NEXT:                DeclRefExpr {{.*}} '__builtin_coro_resume' 'void (void *)'
-// CHECK-NEXT:              ExprWithCleanups {{.*}} 'void *'
+// CHECK:                 ExprWithCleanups {{.*}} 'void *'
 
 // CHECK:           CaseStmt
 // CHECK:             ExprWithCleanups {{.*}} 'void'
@@ -103,7 +100,4 @@ Task bar() {
 // CHECK:                 ExprWithCleanups {{.*}} 'bool'
 // CHECK-NEXT:              CXXMemberCallExpr {{.*}} 'bool'
 // CHECK-NEXT:                MemberExpr {{.*}} .await_ready
-// CHECK:                 CallExpr {{.*}} 'void'
-// CHECK-NEXT:              ImplicitCastExpr {{.*}} 'void (*)(void *)'
-// CHECK-NEXT:                DeclRefExpr {{.*}} '__builtin_coro_resume' 'void (void *)'
-// CHECK-NEXT:              ExprWithCleanups {{.*}} 'void *'
+// CHECK:                 ExprWithCleanups {{.*}} 'void *'
