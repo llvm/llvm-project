@@ -1216,13 +1216,14 @@ void TableJumpSection::finalizeContents() {
   isFinalized = true;
 
   finalizedCMJTEntries = finalizeEntry(CMJTEntryCandidates, maxCMJTEntrySize);
+  CMJTEntryCandidates.clear();
+  int32_t CMJTSizeReduction = getSizeReduction();
   finalizedCMJALTEntries =
       finalizeEntry(CMJALTEntryCandidates, maxCMJALTEntrySize);
-  CMJTEntryCandidates.clear();
   CMJALTEntryCandidates.clear();
 
-  if (finalizedCMJALTEntries.size() > 0 && getSizeReduction() <= 0) {
-    // Stop relax to cm.jalt if there will be negative effect
+  if (finalizedCMJALTEntries.size() > 0 && getSizeReduction() < CMJTSizeReduction) {
+    // Stop relax to cm.jalt if there will be the code reduction of cm.jalt is smaller then the size of padding 0 for doing cm.jalt optmise
     finalizedCMJALTEntries.clear();
   }
   // if table jump still got negative effect, give up.
@@ -1317,9 +1318,9 @@ void TableJumpSection::writeTo(uint8_t *buf) {
 void TableJumpSection::padWords(uint8_t *buf, const uint8_t maxWordCount) {
   for (size_t i = 0; i < maxWordCount; ++i) {
     if (config->is64)
-      write64le(buf, 0);
+      write64le(buf + i, 0);
     else
-      write32le(buf, 0);
+      write32le(buf + i, 0);
   }
 }
 
