@@ -139,6 +139,10 @@ struct CppEmitter {
   LogicalResult emitVariableDeclaration(OpResult result,
                                         bool trailingSemicolon);
 
+  /// Emits a declaration of a variable with the given type and name.
+  LogicalResult emitVariableDeclaration(Location loc, Type type,
+                                        StringRef name);
+
   /// Emits the variable declaration and assignment prefix for 'op'.
   /// - emits separate variable followed by std::tie for multi-valued operation;
   /// - emits single type followed by variable for single result;
@@ -870,10 +874,8 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
 
   return (interleaveCommaWithError(
       arguments, os, [&](BlockArgument arg) -> LogicalResult {
-        if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
-          return failure();
-        os << " " << emitter.getOrCreateName(arg);
-        return success();
+        return emitter.emitVariableDeclaration(
+            functionOp->getLoc(), arg.getType(), emitter.getOrCreateName(arg));
       }));
 }
 
@@ -917,6 +919,9 @@ static LogicalResult printFunctionBody(CppEmitter &emitter,
       if (emitter.hasValueInScope(arg))
         return functionOp->emitOpError(" block argument #")
                << arg.getArgNumber() << " is out of scope";
+      if (isa<ArrayType>(arg.getType()))
+        return functionOp->emitOpError("cannot emit block argument #")
+               << arg.getArgNumber() << " with array type";
       if (failed(
               emitter.emitType(block.getParentOp()->getLoc(), arg.getType()))) {
         return failure();
@@ -958,6 +963,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
       functionOp.getBlocks().size() > 1) {
     return functionOp.emitOpError(
         "with multiple blocks needs variables declared at top");
+  }
+
+  if (llvm::any_of(functionOp.getResultTypes(),
+                   [](Type type) { return isa<ArrayType>(type); })) {
+    return functionOp.emitOpError() << "cannot emit array type as result type";
   }
 
   CppEmitter::Scope scope(emitter);
@@ -1306,9 +1316,10 @@ LogicalResult CppEmitter::emitVariableDeclaration(OpResult result,
     return result.getDefiningOp()->emitError(
         "result variable for the operation already declared");
   }
-  if (failed(emitType(result.getOwner()->getLoc(), result.getType())))
+  if (failed(emitVariableDeclaration(result.getOwner()->getLoc(),
+                                     result.getType(),
+                                     getOrCreateName(result))))
     return failure();
-  os << " " << getOrCreateName(result);
   if (trailingSemicolon)
     os << ";\n";
   return success();
@@ -1403,6 +1414,23 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   return success();
 }
 
+LogicalResult CppEmitter::emitVariableDeclaration(Location loc, Type type,
+                                                  StringRef name) {
+  if (auto arrType = dyn_cast<emitc::ArrayType>(type)) {
+    if (failed(emitType(loc, arrType.getElementType())))
+      return failure();
+    os << " " << name;
+    for (auto dim : arrType.getShape()) {
+      os << "[" << dim << "]";
+    }
+    return success();
+  }
+  if (failed(emitType(loc, type)))
+    return failure();
+  os << " " << name;
+  return success();
+}
+
 LogicalResult CppEmitter::emitType(Location loc, Type type) {
   if (auto iType = dyn_cast<IntegerType>(type)) {
     switch (iType.getWidth()) {
@@ -1438,6 +1466,8 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
     if (!tType.hasStaticShape())
       return emitError(loc, "cannot emit tensor type with non static shape");
     os << "Tensor<";
+    if (isa<ArrayType>(tType.getElementType()))
+      return emitError(loc, "cannot emit tensor of array type ") << type;
     if (failed(emitType(loc, tType.getElementType())))
       return failure();
     auto shape = tType.getShape();
@@ -1454,7 +1484,16 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
     os << oType.getValue();
     return success();
   }
+  if (auto aType = dyn_cast<emitc::ArrayType>(type)) {
+    if (failed(emitType(loc, aType.getElementType())))
+      return failure();
+    for (auto dim : aType.getShape())
+      os << "[" << dim << "]";
+    return success();
+  }
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
+    if (isa<ArrayType>(pType.getPointee()))
+      return emitError(loc, "cannot emit pointer to array type ") << type;
     if (failed(emitType(loc, pType.getPointee())))
       return failure();
     os << "*";
@@ -1476,6 +1515,9 @@ LogicalResult CppEmitter::emitTypes(Location loc, ArrayRef<Type> types) {
 }
 
 LogicalResult CppEmitter::emitTupleType(Location loc, ArrayRef<Type> types) {
+  if (llvm::any_of(types, [](Type type) { return isa<ArrayType>(type); })) {
+    return emitError(loc, "cannot emit tuple of array type");
+  }
   os << "std::tuple<";
   if (failed(interleaveCommaWithError(
           types, os, [&](Type type) { return emitType(loc, type); })))
