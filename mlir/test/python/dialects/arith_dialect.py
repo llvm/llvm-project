@@ -107,7 +107,9 @@ def testArrayConstantConstruction():
             arith.constant(vec_i32, i32_array)
             arith.ConstantOp(vec_i32, DenseIntElementsAttr.get(i32_array, type=vec_i32))
 
-            i64_array = array("l", [5, 6, 7, 8])
+            # "q" is the equivalent of `long long` in C and requires at least
+            # 64 bit width integers on both Linux and Windows.
+            i64_array = array("q", [5, 6, 7, 8])
             i64 = IntegerType.get_signless(64)
             vec_i64 = VectorType.get([1, 4], i64)
             arith.constant(vec_i64, i64_array)

@@ -57,3 +57,31 @@ func.func @non_static_shape(%arg0 : tensor<?xf32>) {
 func.func @unranked_tensor(%arg0 : tensor<*xf32>) {
   return
 }
+
+// -----
+
+// expected-error@+1 {{cannot emit tensor of array type}}
+func.func @tensor_of_array(%arg0 : tensor<4x!emitc.array<4xf32>>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{cannot emit pointer to array type}}
+func.func @pointer_to_array(%arg0 : !emitc.ptr<!emitc.array<4xf32>>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{cannot emit array type as result type}}
+func.func @array_as_result(%arg: !emitc.array<4xi8>) -> (!emitc.array<4xi8>) {
+   return %arg : !emitc.array<4xi8>
+}
+
+// -----
+func.func @ptr_to_array() {
+  // expected-error@+1 {{cannot emit pointer to array type '!emitc.ptr<!emitc.array<9xi16>>'}}
+  %v = "emitc.variable"(){value = #emitc.opaque<"NULL">} : () -> !emitc.ptr<!emitc.array<9xi16>>
+  return
+}

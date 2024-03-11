@@ -65,10 +65,17 @@ class ConstantOp(ConstantOp):
             super().__init__(IntegerAttr.get(result, value), loc=loc, ip=ip)
         elif isinstance(value, float):
             super().__init__(FloatAttr.get(result, value), loc=loc, ip=ip)
-        elif isinstance(value, _array) and value.typecode in ["i", "l"]:
-            super().__init__(DenseIntElementsAttr.get(value, type=result))
-        elif isinstance(value, _array) and value.typecode in ["f", "d"]:
-            super().__init__(DenseFPElementsAttr.get(value, type=result))
+        elif isinstance(value, _array):
+            if 8 * value.itemsize != result.element_type.width:
+                raise ValueError(
+                    f"Mismatching array element ({8 * value.itemsize}) and type ({result.element_type.width}) width."
+                )
+            if value.typecode in ["i", "l", "q"]:
+                super().__init__(DenseIntElementsAttr.get(value, type=result))
+            elif value.typecode in ["f", "d"]:
+                super().__init__(DenseFPElementsAttr.get(value, type=result))
+            else:
+                raise ValueError(f'Unsupported typecode: "{value.typecode}".')
         else:
             super().__init__(value, loc=loc, ip=ip)
 

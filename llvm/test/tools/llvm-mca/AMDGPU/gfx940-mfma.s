@@ -2,7 +2,7 @@
 
 # CHECK: Iterations:        1
 # CHECK: Instructions:      78
-# CHECK: Total Cycles:      699
+# CHECK: Total Cycles:      701
 # CHECK: Total uOps:        78
 
 v_mfma_f32_16x16x4_f32 a[0:3], v0, v1, a[2:5]
@@ -128,11 +128,10 @@ v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], v[2:3], v[4:7], v1 cbsz:3 abid:1
 # CHECK-NEXT:[6]: HasSideEffects (U)
 
 # CHECK:     [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-
-# CHECK:      1      8     1.00                  U     v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3]
-# CHECK-NEXT: 1      8     1.00                  U     v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[2:3]
-# CHECK-NEXT: 1      20    1.00                  U     v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
-# CHECK-NEXT: 1      20    1.00                  U     v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7]
+# CHECK:      1      8     4.00                  U     v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3]
+# CHECK-NEXT: 1      8     4.00                  U     v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+# CHECK-NEXT: 1      12    8.00                  U     v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
+# CHECK-NEXT: 1      12    8.00                  U     v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7]
 
 # CHECK: Resources:
 # CHECK: [0]   - HWBranch
@@ -148,10 +147,10 @@ v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], v[2:3], v[4:7], v1 cbsz:3 abid:1
 # CHECK-NEXT: -      -      -      -      -      -     8.00   v_mfma_f32_16x16x4_f32 v[0:3], v0, v1, v[2:5]
 # CHECK-NEXT: -      -      -      -      -      -     16.00  v_mfma_f32_32x32x2_f32 a[0:15], v0, v1, a[18:33]
 # CHECK-NEXT: -      -      -      -      -      -     16.00  v_mfma_f32_32x32x2_f32 v[0:15], v0, v1, v[18:33]
-# CHECK-NEXT: -      -      -      -     1.00    -      -     v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3]
-# CHECK-NEXT: -      -      -      -     1.00    -      -     v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[2:3]
-# CHECK-NEXT: -      -      -      -     1.00    -      -     v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
-# CHECK-NEXT: -      -      -      -     1.00    -      -     v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7]
+# CHECK-NEXT: -      -      -      -     4.00    -      -     v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3]
+# CHECK-NEXT: -      -      -      -     4.00    -      -     v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+# CHECK-NEXT: -      -      -      -     8.00    -      -     v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
+# CHECK-NEXT: -      -      -      -     8.00    -      -     v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7]
 # CHECK-NEXT: -      -      -      -      -      -     4.00   v_mfma_f32_16x16x16_f16 v[0:3], v[4:5], v[6:7], v[0:3]
 # CHECK-NEXT: -      -      -      -      -      -     4.00   v_mfma_f32_16x16x16_f16 a[0:3], v[4:5], v[6:7], a[0:3]
 # CHECK-NEXT: -      -      -      -      -      -     8.00   v_mfma_f32_32x32x8_f16 v[0:15], v[4:5], v[6:7], v[0:15]

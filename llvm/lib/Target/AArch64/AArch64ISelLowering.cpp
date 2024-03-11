@@ -701,43 +701,45 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   auto LegalizeNarrowFP = [this](MVT ScalarVT) {
-    for (auto Op : {ISD::SETCC,
-                    ISD::SELECT_CC,
-                    ISD::BR_CC,
-                    ISD::FADD,
-                    ISD::FSUB,
-                    ISD::FMUL,
-                    ISD::FDIV,
-                    ISD::FMA,
-                    ISD::FCEIL,
-                    ISD::FSQRT,
-                    ISD::FFLOOR,
-                    ISD::FNEARBYINT,
-                    ISD::FRINT,
-                    ISD::FROUND,
-                    ISD::FROUNDEVEN,
-                    ISD::FTRUNC,
-                    ISD::FMINNUM,
-                    ISD::FMAXNUM,
-                    ISD::FMINIMUM,
-                    ISD::FMAXIMUM,
-                    ISD::STRICT_FADD,
-                    ISD::STRICT_FSUB,
-                    ISD::STRICT_FMUL,
-                    ISD::STRICT_FDIV,
-                    ISD::STRICT_FMA,
-                    ISD::STRICT_FCEIL,
-                    ISD::STRICT_FFLOOR,
-                    ISD::STRICT_FSQRT,
-                    ISD::STRICT_FRINT,
-                    ISD::STRICT_FNEARBYINT,
-                    ISD::STRICT_FROUND,
-                    ISD::STRICT_FTRUNC,
-                    ISD::STRICT_FROUNDEVEN,
-                    ISD::STRICT_FMINNUM,
-                    ISD::STRICT_FMAXNUM,
-                    ISD::STRICT_FMINIMUM,
-                    ISD::STRICT_FMAXIMUM})
+    for (auto Op : {
+             ISD::SETCC,
+             ISD::SELECT_CC,
+             ISD::BR_CC,
+             ISD::FADD,
+             ISD::FSUB,
+             ISD::FMUL,
+             ISD::FDIV,
+             ISD::FMA,
+             ISD::FCEIL,
+             ISD::FSQRT,
+             ISD::FFLOOR,
+             ISD::FNEARBYINT,
+             ISD::FRINT,
+             ISD::FROUND,
+             ISD::FROUNDEVEN,
+             ISD::FTRUNC,
+             ISD::FMINNUM,
+             ISD::FMAXNUM,
+             ISD::FMINIMUM,
+             ISD::FMAXIMUM,
+             ISD::STRICT_FADD,
+             ISD::STRICT_FSUB,
+             ISD::STRICT_FMUL,
+             ISD::STRICT_FDIV,
+             ISD::STRICT_FMA,
+             ISD::STRICT_FCEIL,
+             ISD::STRICT_FFLOOR,
+             ISD::STRICT_FSQRT,
+             ISD::STRICT_FRINT,
+             ISD::STRICT_FNEARBYINT,
+             ISD::STRICT_FROUND,
+             ISD::STRICT_FTRUNC,
+             ISD::STRICT_FROUNDEVEN,
+             ISD::STRICT_FMINNUM,
+             ISD::STRICT_FMAXNUM,
+             ISD::STRICT_FMINIMUM,
+             ISD::STRICT_FMAXIMUM,
+         })
       setOperationAction(Op, ScalarVT, Promote);
 
     for (auto Op : {ISD::FNEG, ISD::FABS})
@@ -752,45 +754,45 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // promote v4f16 to v4f32 when that is known to be safe.
     auto V4Narrow = MVT::getVectorVT(ScalarVT, 4);
-    setOperationPromotedToType(ISD::FADD, V4Narrow, MVT::v4f32);
-    setOperationPromotedToType(ISD::FSUB, V4Narrow, MVT::v4f32);
-    setOperationPromotedToType(ISD::FMUL, V4Narrow, MVT::v4f32);
-    setOperationPromotedToType(ISD::FDIV, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FADD,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FSUB,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FMUL,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FDIV,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FCEIL,      V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FFLOOR,     V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FROUND,     V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FTRUNC,     V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FROUNDEVEN, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FRINT,      V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FNEARBYINT, V4Narrow, MVT::v4f32);
 
-    setOperationAction(ISD::FABS, V4Narrow, Legal);
-    setOperationAction(ISD::FNEG, V4Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V4Narrow, Expand);
-    setOperationAction(ISD::FROUNDEVEN,  V4Narrow, Expand);
+    setOperationAction(ISD::FABS,        V4Narrow, Legal);
+    setOperationAction(ISD::FNEG, 	 V4Narrow, Legal);
     setOperationAction(ISD::FMA,         V4Narrow, Expand);
     setOperationAction(ISD::SETCC,       V4Narrow, Custom);
     setOperationAction(ISD::BR_CC,       V4Narrow, Expand);
     setOperationAction(ISD::SELECT,      V4Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V4Narrow, Expand);
-    setOperationAction(ISD::FTRUNC,      V4Narrow, Expand);
-    setOperationAction(ISD::FCOPYSIGN, V4Narrow, Custom);
-    setOperationAction(ISD::FFLOOR,      V4Narrow, Expand);
-    setOperationAction(ISD::FCEIL,       V4Narrow, Expand);
-    setOperationAction(ISD::FRINT,       V4Narrow, Expand);
-    setOperationAction(ISD::FNEARBYINT,  V4Narrow, Expand);
+    setOperationAction(ISD::FCOPYSIGN,   V4Narrow, Custom);
     setOperationAction(ISD::FSQRT,       V4Narrow, Expand);
 
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
-    setOperationAction(ISD::FABS, V8Narrow, Legal);
-    setOperationAction(ISD::FADD,        V8Narrow, Expand);
-    setOperationAction(ISD::FCEIL,       V8Narrow, Expand);
-    setOperationAction(ISD::FCOPYSIGN, V8Narrow, Custom);
-    setOperationAction(ISD::FDIV,        V8Narrow, Expand);
-    setOperationAction(ISD::FFLOOR,      V8Narrow, Expand);
+    setOperationAction(ISD::FABS,        V8Narrow, Legal);
+    setOperationAction(ISD::FADD,        V8Narrow, Legal);
+    setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
+    setOperationAction(ISD::FCOPYSIGN,   V8Narrow, Custom);
+    setOperationAction(ISD::FDIV,        V8Narrow, Legal);
+    setOperationAction(ISD::FFLOOR,      V8Narrow, Legal);
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
-    setOperationAction(ISD::FMUL,        V8Narrow, Expand);
-    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Expand);
-    setOperationAction(ISD::FNEG, V8Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V8Narrow, Expand);
-    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Expand);
-    setOperationAction(ISD::FRINT,       V8Narrow, Expand);
+    setOperationAction(ISD::FMUL,        V8Narrow, Legal);
+    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
+    setOperationAction(ISD::FNEG, 	 V8Narrow, Legal);
+    setOperationAction(ISD::FROUND,      V8Narrow, Legal);
+    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
+    setOperationAction(ISD::FRINT,       V8Narrow, Legal);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
-    setOperationAction(ISD::FSUB,        V8Narrow, Expand);
-    setOperationAction(ISD::FTRUNC,      V8Narrow, Expand);
+    setOperationAction(ISD::FSUB,        V8Narrow, Legal);
+    setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
     setOperationAction(ISD::SETCC,       V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
@@ -4121,14 +4123,16 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
 
     // Now that we have rounded, shift the bits into position.
     Narrow = DAG.getNode(ISD::SRL, dl, I32, Narrow,
-                     DAG.getShiftAmountConstant(16, I32, dl));
+                         DAG.getShiftAmountConstant(16, I32, dl));
     if (VT.isVector()) {
       EVT I16 = I32.changeVectorElementType(MVT::i16);
       Narrow = DAG.getNode(ISD::TRUNCATE, dl, I16, Narrow);
       return DAG.getNode(ISD::BITCAST, dl, VT, Narrow);
     }
     Narrow = DAG.getNode(ISD::BITCAST, dl, F32, Narrow);
-    return DAG.getTargetExtractSubreg(AArch64::hsub, dl, VT, Narrow);
+    SDValue Result = DAG.getTargetExtractSubreg(AArch64::hsub, dl, VT, Narrow);
+    return IsStrict ? DAG.getMergeValues({Result, Op.getOperand(0)}, dl)
+                    : Result;
   }
 
   if (SrcVT != MVT::f128) {
@@ -4487,20 +4491,124 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
 
-  // f16 conversions are promoted to f32 when full fp16 is not supported.
-  if ((Op.getValueType() == MVT::f16 && !Subtarget->hasFullFP16()) || Op.getValueType() == MVT::bf16) {
+  bool IsSigned = Op->getOpcode() == ISD::STRICT_SINT_TO_FP ||
+                  Op->getOpcode() == ISD::SINT_TO_FP;
+
+  auto IntToFpViaPromotion = [&](EVT PromoteVT) {
     SDLoc dl(Op);
     if (IsStrict) {
-      SDValue Val = DAG.getNode(Op.getOpcode(), dl, {MVT::f32, MVT::Other},
+      SDValue Val = DAG.getNode(Op.getOpcode(), dl, {PromoteVT, MVT::Other},
                                 {Op.getOperand(0), SrcVal});
       return DAG.getNode(
           ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
           {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
     }
-    return DAG.getNode(
-        ISD::FP_ROUND, dl, Op.getValueType(),
-        DAG.getNode(Op.getOpcode(), dl, MVT::f32, SrcVal),
-        DAG.getIntPtrConstant(0, dl));
+    return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
+                       DAG.getNode(Op.getOpcode(), dl, PromoteVT, SrcVal),
+                       DAG.getIntPtrConstant(0, dl));
+  };
+
+  if (Op.getValueType() == MVT::bf16) {
+    unsigned MaxWidth = IsSigned
+                            ? DAG.ComputeMaxSignificantBits(SrcVal)
+                            : DAG.computeKnownBits(SrcVal).countMaxActiveBits();
+    // bf16 conversions are promoted to f32 when converting from i16.
+    if (MaxWidth <= 24) {
+      return IntToFpViaPromotion(MVT::f32);
+    }
+
+    // bf16 conversions are promoted to f64 when converting from i32.
+    if (MaxWidth <= 53) {
+      return IntToFpViaPromotion(MVT::f64);
+    }
+
+    // We need to be careful about i64 -> bf16.
+    // Consider an i32 22216703.
+    // This number cannot be represented exactly as an f32 and so a itofp will
+    // turn it into 22216704.0 fptrunc to bf16 will turn this into 22282240.0
+    // However, the correct bf16 was supposed to be 22151168.0
+    // We need to use sticky rounding to get this correct.
+    if (SrcVal.getValueType() == MVT::i64) {
+      SDLoc DL(Op);
+      // This algorithm is equivalent to the following:
+      // uint64_t SrcHi = SrcVal & ~0xfffull;
+      // uint64_t SrcLo = SrcVal &  0xfffull;
+      // uint64_t Highest = SrcVal >> 53;
+      // bool HasHighest = Highest != 0;
+      // uint64_t ToRound = HasHighest ? SrcHi : SrcVal;
+      // double  Rounded = static_cast<double>(ToRound);
+      // uint64_t RoundedBits = std::bit_cast<uint64_t>(Rounded);
+      // uint64_t HasLo = SrcLo != 0;
+      // bool NeedsAdjustment = HasHighest & HasLo;
+      // uint64_t AdjustedBits = RoundedBits | uint64_t{NeedsAdjustment};
+      // double Adjusted = std::bit_cast<double>(AdjustedBits);
+      // return static_cast<__bf16>(Adjusted);
+      //
+      // Essentially, what happens is that SrcVal either fits perfectly in a
+      // double-precision value or it is too big. If it is sufficiently small,
+      // we should just go u64 -> double -> bf16 in a naive way. Otherwise, we
+      // ensure that u64 -> double has no rounding error by only using the 52
+      // MSB of the input. The low order bits will get merged into a sticky bit
+      // which will avoid issues incurred by double rounding.
+
+      // Signed conversion is more or less like so:
+      // copysign((__bf16)abs(SrcVal), SrcVal)
+      SDValue SignBit;
+      if (IsSigned) {
+        SignBit = DAG.getNode(ISD::AND, DL, MVT::i64, SrcVal,
+                              DAG.getConstant(1ull << 63, DL, MVT::i64));
+        SrcVal = DAG.getNode(ISD::ABS, DL, MVT::i64, SrcVal);
+      }
+      SDValue SrcHi = DAG.getNode(ISD::AND, DL, MVT::i64, SrcVal,
+                                  DAG.getConstant(~0xfffull, DL, MVT::i64));
+      SDValue SrcLo = DAG.getNode(ISD::AND, DL, MVT::i64, SrcVal,
+                                  DAG.getConstant(0xfffull, DL, MVT::i64));
+      SDValue Highest =
+          DAG.getNode(ISD::SRL, DL, MVT::i64, SrcVal,
+                      DAG.getShiftAmountConstant(53, MVT::i64, DL));
+      SDValue Zero64 = DAG.getConstant(0, DL, MVT::i64);
+      SDValue ToRound =
+          DAG.getSelectCC(DL, Highest, Zero64, SrcHi, SrcVal, ISD::SETNE);
+      SDValue Rounded =
+          IsStrict ? DAG.getNode(Op.getOpcode(), DL, {MVT::f64, MVT::Other},
+                                 {Op.getOperand(0), ToRound})
+                   : DAG.getNode(Op.getOpcode(), DL, MVT::f64, ToRound);
+
+      SDValue RoundedBits = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Rounded);
+      if (SignBit) {
+        RoundedBits = DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, SignBit);
+      }
+
+      SDValue HasHighest = DAG.getSetCC(
+          DL,
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
+          Highest, Zero64, ISD::SETNE);
+
+      SDValue HasLo = DAG.getSetCC(
+          DL,
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
+          SrcLo, Zero64, ISD::SETNE);
+
+      SDValue NeedsAdjustment =
+          DAG.getNode(ISD::AND, DL, HasLo.getValueType(), HasHighest, HasLo);
+      NeedsAdjustment = DAG.getZExtOrTrunc(NeedsAdjustment, DL, MVT::i64);
+
+      SDValue AdjustedBits =
+          DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, NeedsAdjustment);
+      SDValue Adjusted = DAG.getNode(ISD::BITCAST, DL, MVT::f64, AdjustedBits);
+      return IsStrict
+                 ? DAG.getNode(ISD::STRICT_FP_ROUND, DL,
+                               {Op.getValueType(), MVT::Other},
+                               {Rounded.getValue(1), Adjusted,
+                                DAG.getIntPtrConstant(0, DL)})
+                 : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
+                               DAG.getIntPtrConstant(0, DL, true));
+    }
+  }
+
+  // f16 conversions are promoted to f32 when full fp16 is not supported.
+  if (Op.getValueType() == MVT::f16 && !Subtarget->hasFullFP16()) {
+    return IntToFpViaPromotion(MVT::f32);
   }
 
   // i128 conversions are libcalls.
@@ -10487,13 +10595,19 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
         VT == MVT::v4f32)) ||
       (ST->hasSVE() &&
        (VT == MVT::nxv8f16 || VT == MVT::nxv4f32 || VT == MVT::nxv2f64))) {
-    if (ExtraSteps == TargetLoweringBase::ReciprocalEstimate::Unspecified)
+    if (ExtraSteps == TargetLoweringBase::ReciprocalEstimate::Unspecified) {
       // For the reciprocal estimates, convergence is quadratic, so the number
       // of digits is doubled after each iteration.  In ARMv8, the accuracy of
       // the initial estimate is 2^-8.  Thus the number of extra steps to refine
       // the result for float (23 mantissa bits) is 2 and for double (52
       // mantissa bits) is 3.
-      ExtraSteps = VT.getScalarType() == MVT::f64 ? 3 : 2;
+      constexpr unsigned AccurateBits = 8;
+      unsigned DesiredBits =
+          APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(VT));
+      ExtraSteps = DesiredBits <= AccurateBits
+                       ? 0
+                       : Log2_64_Ceil(DesiredBits) - Log2_64_Ceil(AccurateBits);
+    }
 
     return DAG.getNode(Opcode, SDLoc(Operand), VT, Operand);
   }
@@ -19272,6 +19386,94 @@ static SDValue performBuildVectorCombine(SDNode *N,
                                          SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+    SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
+            Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
+    if (Elt0->getOpcode() == ISD::FP_ROUND &&
+        Elt1->getOpcode() == ISD::FP_ROUND &&
+        isa<ConstantSDNode>(Elt0->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(1)) &&
+        Elt0->getConstantOperandVal(1) == Elt1->getConstantOperandVal(1) &&
+        Elt0->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt1->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        // Constant index.
+        isa<ConstantSDNode>(Elt0->getOperand(0)->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(0)->getOperand(1)) &&
+        Elt0->getOperand(0)->getOperand(0) ==
+            Elt1->getOperand(0)->getOperand(0) &&
+        Elt0->getOperand(0)->getConstantOperandVal(1) == 0 &&
+        Elt1->getOperand(0)->getConstantOperandVal(1) == 1) {
+      SDValue LowLanesSrcVec = Elt0->getOperand(0)->getOperand(0);
+      if (LowLanesSrcVec.getValueType() == MVT::v2f64) {
+        SDValue HighLanes;
+        if (Elt2->getOpcode() == ISD::UNDEF &&
+            Elt3->getOpcode() == ISD::UNDEF) {
+          HighLanes = DAG.getUNDEF(MVT::v2f32);
+        } else if (Elt2->getOpcode() == ISD::FP_ROUND &&
+                   Elt3->getOpcode() == ISD::FP_ROUND &&
+                   isa<ConstantSDNode>(Elt2->getOperand(1)) &&
+                   isa<ConstantSDNode>(Elt3->getOperand(1)) &&
+                   Elt2->getConstantOperandVal(1) ==
+                       Elt3->getConstantOperandVal(1) &&
+                   Elt2->getOperand(0)->getOpcode() ==
+                       ISD::EXTRACT_VECTOR_ELT &&
+                   Elt3->getOperand(0)->getOpcode() ==
+                       ISD::EXTRACT_VECTOR_ELT &&
+                   // Constant index.
+                   isa<ConstantSDNode>(Elt2->getOperand(0)->getOperand(1)) &&
+                   isa<ConstantSDNode>(Elt3->getOperand(0)->getOperand(1)) &&
+                   Elt2->getOperand(0)->getOperand(0) ==
+                       Elt3->getOperand(0)->getOperand(0) &&
+                   Elt2->getOperand(0)->getConstantOperandVal(1) == 0 &&
+                   Elt3->getOperand(0)->getConstantOperandVal(1) == 1) {
+          SDValue HighLanesSrcVec = Elt2->getOperand(0)->getOperand(0);
+          HighLanes =
+              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, HighLanesSrcVec);
+        }
+        if (HighLanes) {
+          SDValue DoubleToSingleSticky =
+              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, LowLanesSrcVec);
+          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32,
+                                       DoubleToSingleSticky, HighLanes);
+          return DAG.getNode(ISD::FP_ROUND, DL, VT, Concat,
+                             Elt0->getOperand(1));
+        }
+      }
+    }
+  }
+
+  if (VT == MVT::v2f64) {
+    SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1);
+    if (Elt0->getOpcode() == ISD::FP_EXTEND &&
+        Elt1->getOpcode() == ISD::FP_EXTEND &&
+        Elt0->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt1->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt0->getOperand(0)->getOperand(0) ==
+            Elt1->getOperand(0)->getOperand(0) &&
+        // Constant index.
+        isa<ConstantSDNode>(Elt0->getOperand(0)->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(0)->getOperand(1)) &&
+        Elt0->getOperand(0)->getConstantOperandVal(1) + 1 ==
+            Elt1->getOperand(0)->getConstantOperandVal(1) &&
+        // EXTRACT_SUBVECTOR requires that Idx be a constant multiple of
+        // ResultType's known minimum vector length.
+        Elt0->getOperand(0)->getConstantOperandVal(1) %
+                VT.getVectorMinNumElements() ==
+            0) {
+      SDValue SrcVec = Elt0->getOperand(0)->getOperand(0);
+      if (SrcVec.getValueType() == MVT::v4f16 ||
+          SrcVec.getValueType() == MVT::v4bf16) {
+        SDValue HalfToSingle =
+            DAG.getNode(ISD::FP_EXTEND, DL, MVT::v4f32, SrcVec);
+        SDValue SubvectorIdx = Elt0->getOperand(0)->getOperand(1);
+        SDValue Extract = DAG.getNode(
+            ISD::EXTRACT_SUBVECTOR, DL, VT.changeVectorElementType(MVT::f32),
+            HalfToSingle, SubvectorIdx);
+        return DAG.getNode(ISD::FP_EXTEND, DL, VT, Extract);
+      }
+    }
+  }
 
   // A build vector of two extracted elements is equivalent to an
   // extract subvector where the inner vector is any-extended to the

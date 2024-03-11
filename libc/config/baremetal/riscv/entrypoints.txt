@@ -288,6 +288,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.abslk
     libc.src.stdfix.abslr
+    libc.src.stdfix.exphk
+    libc.src.stdfix.expk
     libc.src.stdfix.roundhk
     libc.src.stdfix.roundhr
     libc.src.stdfix.roundk
@@ -306,6 +308,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtur
     # libc.src.stdfix.sqrtulk
     libc.src.stdfix.sqrtulr
+    libc.src.stdfix.uhksqrtus
+    libc.src.stdfix.uksqrtui
   )
 endif()
 
