@@ -624,9 +624,6 @@ public:
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
-  Instruction *foldPHIWithMinMax(PHINode &PN);
-  Instruction *foldPHIWithMinMaxHelper(PHINode &PN, Instruction *I, Value *Z,
-                                       ICmpInst::Predicate Pred);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
@@ -723,6 +720,10 @@ public:
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
   Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
                                    Value *Op1, ICmpInst &CxtI);
+
+  Instruction *foldICmpPHIWithMinMaxHelper(PHINode &PN, Instruction &I,
+                                           Value *Z, ICmpInst::Predicate Pred);
+  Instruction *foldICmpPHIWithMinMax(ICmpInst &Cmp);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);

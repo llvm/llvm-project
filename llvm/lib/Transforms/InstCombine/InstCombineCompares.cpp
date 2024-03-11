@@ -6908,6 +6908,90 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
   return nullptr;
 }
 
+/// Helper function for foldICmpPHIWithMinMax
+Instruction *InstCombinerImpl::foldICmpPHIWithMinMaxHelper(
+    PHINode &PN, Instruction &I, Value *Z, ICmpInst::Predicate Pred) {
+
+  if (!PN.hasOneUse())
+    return nullptr;
+
+  bool Changed = false;
+  auto IsCondKnownTrue = [](Value *Val) -> std::optional<bool> {
+    if (!Val)
+      return std::nullopt;
+    if (match(Val, m_One()))
+      return true;
+    if (match(Val, m_Zero()))
+      return false;
+    return std::nullopt;
+  };
+
+  ICmpInst::Predicate SwappedPred =
+      ICmpInst::getNonStrictPredicate(ICmpInst::getSwappedPredicate(Pred));
+  for (unsigned OpNum = 0; OpNum != PN.getNumIncomingValues(); ++OpNum) {
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(PN.getIncomingValue(OpNum))) {
+      if (Pred != MinMax->getPredicate())
+        continue;
+
+      Value *X = MinMax->getLHS();
+      Value *Y = MinMax->getRHS();
+
+      SimplifyQuery Q =
+          SQ.getWithInstruction(PN.getIncomingBlock(OpNum)->getTerminator());
+
+      auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(SwappedPred, X, Z, Q));
+      auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(SwappedPred, Y, Z, Q));
+
+      if (!CmpXZ.has_value() && !CmpYZ.has_value())
+        continue;
+
+      if (CmpXZ.has_value() && CmpYZ.has_value()) {
+        auto CmpXY = IsCondKnownTrue(simplifyICmpInst(SwappedPred, X, Y, Q));
+        if (!CmpXY.has_value())
+          continue;
+        // take the greater or lesser of X,Y depending on the intrinsic
+        if (!CmpXY.value()) {
+          std::swap(X, Y);
+          std::swap(CmpXZ, CmpYZ);
+        }
+      }
+      // swap XZ with YZ if XZ has no value
+      else if (!CmpXZ.has_value()) {
+        std::swap(X, Y);
+        std::swap(CmpXZ, CmpYZ);
+      }
+      // if X >= Z
+      // %min = llvm.min ( X, Y )
+      // %phi = phi %min ...         =>  %phi = phi Y ..
+      // %cmp = icmp lt %phi, Z          %cmp = icmp %phi, Z
+      // if X <= Z
+      // %max = llvm.max ( X, Y )
+      // %phi = phi %max ...         =>  %phi = phi Y ..
+      // %cmp = icmp gt %phi, Z          %cmp = icmp %phi, Z
+      if (CmpXZ.value()) {
+        Changed = true;
+        replaceOperand(PN, OpNum, Y);
+      }
+    }
+  }
+  return Changed ? &I : nullptr;
+}
+
+/// folds max min intrinsic into PHI instruction based on current ICmp
+/// Instruction
+Instruction *InstCombinerImpl::foldICmpPHIWithMinMax(ICmpInst &Cmp) {
+  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
+  // case 1: icmp <op> %phi, %intrinsic
+  if (PHINode *PNOp0 = dyn_cast<PHINode>(Op0))
+    return foldICmpPHIWithMinMaxHelper(*PNOp0, Cmp, Op1, Cmp.getPredicate());
+  // case 2: icmp <op> %intrinsic, %phi
+  else if (PHINode *PNOp1 = dyn_cast<PHINode>(Op1))
+    return foldICmpPHIWithMinMaxHelper(*PNOp1, Cmp, Op0,
+                                       Cmp.getSwappedPredicate());
+
+  return nullptr;
+}
+
 // This helper will be called with icmp operands in both orders.
 Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
                                                    Value *Op0, Value *Op1,
@@ -7285,6 +7369,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldReductionIdiom(I, Builder, DL))
+    return Res;
+
+  if (Instruction *Res = foldICmpPHIWithMinMax(I))
     return Res;
 
   return Changed ? &I : nullptr;
