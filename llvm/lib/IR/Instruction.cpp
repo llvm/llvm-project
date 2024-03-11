@@ -149,6 +149,18 @@ void Instruction::insertBefore(BasicBlock &BB,
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
     if (SrcMarker && !SrcMarker->empty()) {
+      // If this assertion fires, the calling code is about to insert a PHI
+      // after debug-records, which would form a sequence like:
+      //     %0 = PHI
+      //     #dbg_value
+      //     %1 = PHI
+      // Which is de-normalised and undesired -- hence the assertion. To avoid
+      // this, you must insert at that position using an iterator, and it must
+      // be aquired by calling getFirstNonPHIIt / begin or similar methods on
+      // the block. This will signal to this behind-the-scenes debug-info
+      // maintenence code that you intend the PHI to be ahead of everything,
+      // including any debug-info.
+      assert(!isa<PHINode>(this) && "Inserting PHI after debug-records!");
       adoptDbgValues(&BB, InsertPos, false);
     }
   }
