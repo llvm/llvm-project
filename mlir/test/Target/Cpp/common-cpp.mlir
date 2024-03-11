@@ -89,3 +89,8 @@ func.func @apply(%arg0: i32) -> !emitc.ptr<i32> {
   %1 = emitc.apply "*"(%0) : (!emitc.ptr<i32>) -> (i32)
   return %0 : !emitc.ptr<i32>
 }
+
+// CHECK: void array_type(int32_t v1[3], float v2[10][20])
+func.func @array_type(%arg0: !emitc.array<3xi32>, %arg1: !emitc.array<10x20xf32>) {
+  return
+}
