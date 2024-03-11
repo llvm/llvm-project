@@ -17048,6 +17048,8 @@ bool RISCVTargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
   case RISCVISD::SELECT_CC:
+    if (!Op.getValueType().isInteger())
+      return false;
     return all_of(Op->ops(), [&](SDValue V) {
       return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly, Depth + 1);
     });
