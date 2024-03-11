@@ -349,19 +349,20 @@ public:
     // ld0.
 
     LoadInst *LastLoad =
-        std::max_element(Candidates.begin(), Candidates.end(),
-                         [&](const StoreToLoadForwardingCandidate &A,
-                             const StoreToLoadForwardingCandidate &B) {
-                           return getInstrIndex(A.Load) < getInstrIndex(B.Load);
-                         })
+        llvm::max_element(Candidates,
+                          [&](const StoreToLoadForwardingCandidate &A,
+                              const StoreToLoadForwardingCandidate &B) {
+                            return getInstrIndex(A.Load) <
+                                   getInstrIndex(B.Load);
+                          })
             ->Load;
     StoreInst *FirstStore =
-        std::min_element(Candidates.begin(), Candidates.end(),
-                         [&](const StoreToLoadForwardingCandidate &A,
-                             const StoreToLoadForwardingCandidate &B) {
-                           return getInstrIndex(A.Store) <
-                                  getInstrIndex(B.Store);
-                         })
+        llvm::min_element(Candidates,
+                          [&](const StoreToLoadForwardingCandidate &A,
+                              const StoreToLoadForwardingCandidate &B) {
+                            return getInstrIndex(A.Store) <
+                                   getInstrIndex(B.Store);
+                          })
             ->Store;
 
     // We're looking for stores after the first forwarding store until the end

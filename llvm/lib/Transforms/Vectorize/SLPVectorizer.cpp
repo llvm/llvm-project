@@ -10172,11 +10172,10 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // No 2 source vectors with the same vector factor - just choose 2 with max
     // index.
     if (Entries.empty()) {
-      Entries.push_back(
-          *std::max_element(UsedTEs.front().begin(), UsedTEs.front().end(),
-                            [](const TreeEntry *TE1, const TreeEntry *TE2) {
-                              return TE1->Idx < TE2->Idx;
-                            }));
+      Entries.push_back(*llvm::max_element(
+          UsedTEs.front(), [](const TreeEntry *TE1, const TreeEntry *TE2) {
+            return TE1->Idx < TE2->Idx;
+          }));
       Entries.push_back(SecondEntries.front());
       VF = std::max(Entries.front()->getVectorFactor(),
                     Entries.back()->getVectorFactor());
