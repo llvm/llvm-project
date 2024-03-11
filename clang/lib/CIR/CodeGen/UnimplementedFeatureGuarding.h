@@ -101,6 +101,7 @@ struct UnimplementedFeature {
   static bool constructABIArgDirectExtend() { return false; }
   static bool mayHaveIntegerOverflow() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
+  static bool emitNullCheckForDeleteCalls() { return false; }
 
   // Folding methods.
   static bool foldBinOpFMF() { return false; }

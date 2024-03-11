@@ -624,6 +624,7 @@ public:
   void buildCXXTemporary(const CXXTemporary *Temporary, QualType TempType,
                          Address Ptr);
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
+  void buildCXXDeleteExpr(const CXXDeleteExpr *E);
 
   void buildDeleteCall(const FunctionDecl *DeleteFD, mlir::Value Ptr,
                        QualType DeleteTy, mlir::Value NumElements = nullptr,

@@ -539,9 +539,12 @@ public:
     return create<mlir::cir::ConstantOp>(loc, uInt64Ty,
                                          mlir::cir::IntAttr::get(uInt64Ty, C));
   }
-  mlir::cir::ConstantOp getConstInt(mlir::Location loc, mlir::cir::IntType t,
+  mlir::cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t,
                                     uint64_t C) {
-    return create<mlir::cir::ConstantOp>(loc, t, mlir::cir::IntAttr::get(t, C));
+    auto intTy = t.dyn_cast<mlir::cir::IntType>();
+    assert(intTy && "expected mlir::cir::IntType");
+    return create<mlir::cir::ConstantOp>(loc, intTy,
+                                         mlir::cir::IntAttr::get(t, C));
   }
   mlir::cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal) {
     bool isSigned = intVal.isSigned();
