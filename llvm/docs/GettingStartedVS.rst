@@ -36,7 +36,7 @@ and software you will need.
 
 Hardware
 --------
-Any system that can adequately run Visual Studio 2019 is fine. The LLVM
+Any system that can adequately run Visual Studio 2019 or 2022 is fine. The LLVM
 source tree including the git index consumes approximately 3GB.
 Object files, libraries and executables consume approximately 5GB in
 Release mode and much more in Debug mode. SSD drive and >16GB RAM are
@@ -47,7 +47,7 @@ Software
 --------
 You will need `Visual Studio <https://visualstudio.microsoft.com/>`_ 2019 or
 later, with the latest Update installed. Visual Studio Community Edition
-suffices.
+suffices. We recommend using Visual Studio 2022.
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
 generates the project files you will use to build with. CMake is bundled with
@@ -72,7 +72,8 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
 1. Download and install `Visual Studio <https://visualstudio.microsoft.com/>`_.
 2. In the Visual Studio installer, Workloads tab, select the
    **Desktop development with C++** workload. Under Individual components tab,
-   select **Git for Windows**.
+   select **Git for Windows**. You might want to install **C++ Clang compiler for Windows**
+   as well, since this will allow you to build LLVM with Clang. 
 3. Complete the Visual Studio installation.
 4. Download and install the latest `Python 3 release <http://www.python.org/>`_.
 5. In the first install screen, select both **Install launcher for all users**
@@ -119,7 +120,43 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
  Select the last link: ``Source code (zip)`` and unpack the downloaded file using
  Windows Explorer built-in zip support or any other unzip tool.
 
-12. Finally, configure LLVM using CMake:
+12. Open the LLVM folder in Visual Studio or configure LLVM with CMake.
+
+    Recently Visual Studio has added native support for CMake which will run and
+    manage the CMake settings for you instead of you manually having to generate
+    a Visual Studio Soluion. This is the recommended way to build and debug LLVM
+    in Visual Studio 2022.
+
+    If you want to generate a Visual Studio Solution for older versions of Visual
+    Studio or becasue that is a workflow that suites you better please refer to the
+    chapter below on :ref:`generating Visual Studio Solution<gen_vs_cmake>`.
+
+    To use the native CMake support, launch `Visual Studio 2022` and select the
+    option `Open a Local Folder` and open the root `llvm-project` folder. This
+    will automatically launch CMake (have some patience, it can be a bit slow)
+    and populate the interface.
+
+    LLVM ships with a default `CMakePresets.json` that is supposed to make it easy
+    to get started, but usually you need to modify the setings used, the best way
+    to do this is to create a `CMakeUserPresets.json` in the `llvm` subfolder and
+    add your own configuration there. For more information about the Preset system
+    see `Microsoft's documentation <https://learn.microsoft.com/en-us/cpp/build/cmake-presets-json-reference>`_.
+
+    The default CMakePreset comes with MSVC and Clang targets. In order to use the
+    Clang target you need to have the **C++ Clang compiler for Windows** component
+    of Visual Studio installed.
+
+    In order to debug Clang and other binaries within Visual Studio, see `Microsoft's
+    documentation. <https://learn.microsoft.com/en-us/cpp/build/configure-cmake-debugging-sessions>`_.
+
+
+.. _gen_vs_cmake:
+
+Generate Visual Studio Solution with CMake
+==========================================
+
+1.  After following the steps above you can generate a Visual Studio Solution by
+    running the following CMake command:
 
     .. code-block:: bat
 
@@ -154,7 +191,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
      want to use the 64-bit toolset, pass the ``-Thost=x64`` flag when
      generating the Visual Studio solution. This requires CMake 3.8.0 or later.
 
-13. Start Visual Studio and select configuration:
+2. Start Visual Studio and select configuration:
 
    In the directory you created the project files will have an ``llvm.sln``
    file, just double-click on that to open Visual Studio. The default Visual
@@ -166,7 +203,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
    compiler flags, disabling optimization and enabling debug information, only
    for specific libraries or source files you actually need to debug.
 
-14. Test LLVM in Visual Studio:
+3. Test LLVM in Visual Studio:
 
    You can run LLVM tests by merely building the project "check-all". The test
    results will be shown in the VS output window. Once the build succeeds, you

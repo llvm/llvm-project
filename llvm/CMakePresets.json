@@ -1,0 +1,91 @@
+
+/*
+   This is the default presets for LLVM, if you want to add your own
+   custom one, create a CMakeUserPreset.json instead.
+*/
+
+{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default_win",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceParentDir}/out/${presetName}",
+      "cacheVariables": {
+        /* Most of the users would like to have these projects enabled */
+        "LLVM_ENABLE_PROJECTS": "clang;lld;clang-tools-extra"
+      }
+    },
+    {
+      "name": "Debug_Win_x64_msvc",
+      "inherits": "default_win",
+      "displayName": "Debug Win x64 (MSVC)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LLVM_OPTIMIZED_TABLEGEN": "ON"
+      }
+    },
+    {
+      "name": "Release_Win_x64_msvc",
+      "inherits": "default_win",
+      "displayName": "Release Win x64 (MSVC)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LLVM_ENABLE_PDB": "ON",
+        "LLVM_ENABLE_ASSERTIONS": "ON"
+      }
+    },
+    {
+      "name": "Debug_Win_x64_clang",
+      "inherits": "default_win",
+      "displayName": "Debug Win x64 (Clang)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_C_COMPILER": "clang-cl",
+        "LLVM_OPTIMIZED_TABLEGEN": "ON"
+      }
+    },
+    {
+      "name": "Release_Win_x64_clang",
+      "inherits": "default_win",
+      "displayName": "Release Win x64 (Clang)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_C_COMPILER": "clang-cl",
+        "LLVM_ENABLE_PDB": "ON",
+        "LLVM_ENABLE_ASSERTIONS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "Debug_Win_x64_msvc",
+      "configurePreset": "Debug_Win_x64_msvc",
+      "inheritConfigureEnvironment": true
+    },
+    {
+      "name": "Release_Win_x64_msvc",
+      "configurePreset": "Release_Win_x64_msvc",
+      "inheritConfigureEnvironment": true
+    },
+    {
+      "name": "Debug_Win_x64_clang",
+      "configurePreset": "Debug_Win_x64_clang",
+      "inheritConfigureEnvironment": true
+    },
+    {
+      "name": "Release_Win_x64_clang",
+      "configurePreset": "Release_Win_x64_clang",
+      "inheritConfigureEnvironment": true
+    }
+
+  ]
+}
