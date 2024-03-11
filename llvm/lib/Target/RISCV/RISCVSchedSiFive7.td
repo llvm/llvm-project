@@ -887,10 +887,10 @@ foreach mx = SchedMxList in {
 
 // 16. Vector Permutation Instructions
 let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 1)] in {
-  def : WriteRes<WriteVIMovVX, [SiFive7VCQ, SiFive7VA]>;
-  def : WriteRes<WriteVIMovXV, [SiFive7VCQ, SiFive7VA]>;
-  def : WriteRes<WriteVFMovVF, [SiFive7VCQ, SiFive7VA]>;
-  def : WriteRes<WriteVFMovFV, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovSX, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovXS, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovSF, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovFS, [SiFive7VCQ, SiFive7VA]>;
 }
 foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
@@ -1190,12 +1190,12 @@ defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 17. Vector Permutation Instructions
-def : ReadAdvance<ReadVIMovVX, 0>;
-def : ReadAdvance<ReadVIMovXV, 0>;
-def : ReadAdvance<ReadVIMovXX, 0>;
-def : ReadAdvance<ReadVFMovVF, 0>;
-def : ReadAdvance<ReadVFMovFV, 0>;
-def : ReadAdvance<ReadVFMovFX, 0>;
+def : ReadAdvance<ReadVMovXS, 0>;
+def : ReadAdvance<ReadVMovSX_V, 0>;
+def : ReadAdvance<ReadVMovSX_X, 0>;
+def : ReadAdvance<ReadVMovFS, 0>;
+def : ReadAdvance<ReadVMovSF_V, 0>;
+def : ReadAdvance<ReadVMovSF_F, 0>;
 defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
