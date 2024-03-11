@@ -14556,7 +14556,7 @@ Return ``-1`` if ``%a`` is less than ``%b``, ``0`` if they are equal, and
 Arguments:
 """"""""""
 
-The arguments (``%a`` and ``%b``) may be of any signed integer type or a vector with
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must be at least as wide as ``i2``, to uphold the ``-1`` return value.
 
