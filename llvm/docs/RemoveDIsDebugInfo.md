@@ -39,10 +39,16 @@ New functions (all to be deprecated)
 ------------------------------------
 LLVMIsNewDbgInfoFormat                      # Returns true if the module is in the new non-instruction mode.
 LLVMSetIsNewDbgInfoFormat                   # Convert to the requested debug info format.
+
 LLVMDIBuilderInsertDeclareIntrinsicBefore   # Insert a debug intrinsic (old debug info format). 
 LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # Same as above.
 LLVMDIBuilderInsertDbgValueIntrinsicBefore  # Same as above.
 LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # Same as above.
+
+LLVMDIBuilderInsertDeclareRecordBefore      # Insert a debug record (new debug info format). 
+LLVMDIBuilderInsertDeclareRecordAtEnd       # Same as above.
+LLVMDIBuilderInsertDbgValueRecordBefore     # Same as above.
+LLVMDIBuilderInsertDbgValueRecordAtEnd      # Same as above.
 ```
 
 # Anything else?
