@@ -1,4 +1,4 @@
-//===-- Single-precision fmodf function -----------------------------------===//
+//===-- Implementation header for fmodf128 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmodf.h"
-#include "src/__support/FPUtil/generic/FMod.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_FMODF128_H
+#define LLVM_LIBC_SRC_MATH_FMODF128_H
+
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float, fmodf, (float x, float y)) {
-  return fputil::generic::FMod<float, uint64_t>::eval(x, y);
-}
+float128 fmodf128(float128 x, float128 y);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_MATH_FMODF128_H
