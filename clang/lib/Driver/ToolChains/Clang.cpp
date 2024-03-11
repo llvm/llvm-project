@@ -2712,10 +2712,10 @@ static void EmitComplexRangeDiag(const Driver &D,
     if (!Option.empty()) {
       NegateFortranOption =
           Range1 == LangOptions::ComplexRangeKind::CX_Fortran &&
-          Option == "fno-cx-fortran-rules";
+          Option == "-fno-cx-fortran-rules";
       NegateLimitedOption =
           Range1 == LangOptions::ComplexRangeKind::CX_Limited &&
-          Option == "fno-cx-limited-range";
+          Option == "-fno-cx-limited-range";
     }
     if (Option.empty() ||
         !Option.empty() && !NegateFortranOption && !NegateLimitedOption)
@@ -2831,7 +2831,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     }
     case options::OPT_fno_cx_limited_range:
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full,
-                           "fno-cx-limited-range");
+                           "-fno-cx-limited-range");
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcx_fortran_rules: {
@@ -2841,7 +2841,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     }
     case options::OPT_fno_cx_fortran_rules:
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full,
-                           "fno-cx-fortran-rules");
+                           "-fno-cx-fortran-rules");
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_ffp_model_EQ: {
