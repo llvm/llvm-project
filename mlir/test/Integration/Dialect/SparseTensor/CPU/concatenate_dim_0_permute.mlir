@@ -153,7 +153,7 @@ module {
     //
     %4 = call @concat_sparse_sparse_perm(%sm24ccp, %sm34cd, %sm44dc)
                : (tensor<2x4xf64, #MAT_C_C_P>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C_P>
-    sparse_tensor.print %4  : tensor<9x4xf64, #MAT_C_C_P>
+    sparse_tensor.print %4 : tensor<9x4xf64, #MAT_C_C_P>
 
     // CHECK:      {{\[}}[1,   0,   3,   0],
     // CHECK-NEXT:  [0,   2,   0,   0],
@@ -182,7 +182,7 @@ module {
     //
     %6 = call @concat_mix_sparse_perm(%m24, %sm34cdp, %sm44dc)
                : (tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D_P>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C>
-    sparse_tensor.print %6  : tensor<9x4xf64, #MAT_C_C>
+    sparse_tensor.print %6 : tensor<9x4xf64, #MAT_C_C>
 
     // CHECK:      {{\[}}[1,   0,   3,   0],
     // CHECK-NEXT:  [0,   2,   0,   0],
