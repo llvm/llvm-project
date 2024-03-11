@@ -26,6 +26,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
@@ -1026,17 +1027,15 @@ void SystemZAsmPrinter::emitADASection() {
       EmittedBytes += PointerSize;
       break;
     case SystemZII::MO_ADA_INDIRECT_FUNC_DESC: {
-      MCSymbol *Alias = OutContext.createTempSymbol(
-          Twine(Sym->getName()).concat("@indirect"));
-      OutStreamer->emitAssignment(Alias,
-                                  MCSymbolRefExpr::create(Sym, OutContext));
-      OutStreamer->emitSymbolAttribute(Alias, MCSA_IndirectSymbol);
+      MCSymbolGOFF *IndirectSym =
+          static_cast<MCSymbolGOFF *>(OutContext.getOrCreateSymbol(
+              Twine(Sym->getName()).concat("@indirect")));
 
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
-          SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
-                                MCSymbolRefExpr::create(Alias, OutContext),
-                                OutContext),
+          SystemZMCExpr::create(
+              SystemZMCExpr::VK_SystemZ_VCon,
+              MCSymbolRefExpr::create(IndirectSym, OutContext), OutContext),
           PointerSize);
       EmittedBytes += PointerSize;
       break;
@@ -1539,6 +1538,40 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->AddComment("A(PPA2-CELQSTRT)");
   OutStreamer->emitAbsoluteSymbolDiff(PPA2Sym, CELQSTRT, 8);
   OutStreamer->popSection();
+}
+
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (!TM.getTargetTriple().isOSzOS()) {
+    AsmPrinter::emitGlobalAlias(M, GA);
+    return;
+  }
+
+  MCSymbol *Name = getSymbol(&GA);
+  bool IsFunc = isa<Function>(GA.getAliasee()->stripPointerCasts());
+
+  if (GA.hasExternalLinkage() || !MAI->getWeakRefDirective())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
+  else if (GA.hasWeakLinkage() || GA.hasLinkOnceLinkage())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
+  else
+    assert(GA.hasLocalLinkage() && "Invalid alias linkage");
+
+  emitVisibility(Name, GA.getVisibility());
+
+  const MCExpr *Expr;
+
+  // For XPLINK, create a VCON relocation in case of a function, and
+  // a direct reference else.
+  MCSymbol *Sym = getSymbol(GA.getAliaseeObject());
+  if (IsFunc)
+    Expr = SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+                                 MCSymbolRefExpr::create(Sym, OutContext),
+                                 OutContext);
+
+  else
+    Expr = MCSymbolRefExpr::create(Sym, OutContext);
+  OutStreamer->emitAssignment(Name, Expr);
 }
 
 void SystemZAsmPrinter::emitFunctionEntryLabel() {

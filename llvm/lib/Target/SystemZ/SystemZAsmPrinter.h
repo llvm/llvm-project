@@ -118,6 +118,7 @@ public:
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
 private:
   void emitCallInformation(CallType CT);
