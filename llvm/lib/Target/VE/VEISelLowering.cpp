@@ -648,7 +648,6 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // PC-relative references to external symbols should go through $stub.
   // If so, we need to prepare GlobalBaseReg first.
   const TargetMachine &TM = DAG.getTarget();
-  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
   const GlobalValue *GV = nullptr;
   auto *CalleeG = dyn_cast<GlobalAddressSDNode>(Callee);
   if (CalleeG)
