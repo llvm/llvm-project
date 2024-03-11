@@ -1253,14 +1253,14 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op, DS_Pseudo ps, i
 // GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
+multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
   defvar ps = !cast<DS_Pseudo>(NAME);
   let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" in
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
                                                      SIEncodingFamily.GFX12,
                                                      name, /*hasGDS=*/false>;
-  if !ne(ps.Mnemonic, name) then
+  if !and(needAlias, !ne(ps.Mnemonic, name)) then
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Only]>;
 }
 
