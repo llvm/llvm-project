@@ -141,7 +141,7 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
-    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+    LLVMDIBuilderInsertDeclareAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   LLVMMetadataRef FooParamVar2 =
@@ -153,7 +153,7 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
-    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+    LLVMDIBuilderInsertDeclareAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
         FooParamExpression, FooParamLocation, FooEntryBlock);
 
@@ -165,7 +165,7 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
-    LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
+    LLVMDIBuilderInsertDeclareAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
         FooParamExpression, FooParamLocation, FooEntryBlock);
 
