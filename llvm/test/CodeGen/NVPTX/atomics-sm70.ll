@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --dump-input=always
+; RUN: llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s
 ; RUN: llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx62 | FileCheck %s --check-prefixes=CHECKPTX62
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
