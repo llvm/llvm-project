@@ -73,7 +73,7 @@ commands below.
 ::
 
   $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
+  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
   $ pkg install swig python libxml2
   $ pkgin install swig python36 cmake ninja-build
   $ brew install swig cmake ninja
@@ -84,6 +84,13 @@ commands below.
    and swig versions older than 4.0.0 which makes builds of LLDB using debug
    versions of python unusable. This primarily affects Windows, as debug builds of
    LLDB must use debug python as well.
+
+.. note::
+  Installing multiple versions of Curses, particularly when only one is built with
+  wide character support, can cause lldb to be linked with an incorrect set of
+  libraries. If your system already has Curses, we recommend you use that version.
+  If you do install another one, use a tool like ``ldd`` to ensure only one version
+  of Curses is being used in the final ``lldb`` executable.
 
 Windows
 *******

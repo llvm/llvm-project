@@ -1315,7 +1315,7 @@ module std_private_format_format_functions                [system] {
   header "__format/format_functions.h"
   export std_string
 }
-module std_private_format_format_fwd                      [system] { header "__format/format_fwd.h" }
+module std_private_format_fwd                             [system] { header "__fwd/format.h" }
 module std_private_format_format_parse_context            [system] { header "__format/format_parse_context.h" }
 module std_private_format_format_string                   [system] { header "__format/format_string.h" }
 module std_private_format_format_to_n_result              [system] {
@@ -1799,6 +1799,7 @@ module std_private_thread_thread               [system] {
 }
 module std_private_thread_timed_backoff_policy [system] { header "__thread/timed_backoff_policy.h" }
 
+module std_private_tuple_find_index       [system] { header "__tuple/find_index.h" }
 module std_private_tuple_make_tuple_types [system] { header "__tuple/make_tuple_types.h" }
 module std_private_tuple_pair_like        [system] {
   header "__tuple/pair_like.h"

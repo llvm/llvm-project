@@ -488,7 +488,7 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   return {};
 }
 
-uint32_t Type::GetNumChildren(bool omit_empty_base_classes) {
+llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
   return GetForwardCompilerType().GetNumChildren(omit_empty_base_classes, nullptr);
 }
 

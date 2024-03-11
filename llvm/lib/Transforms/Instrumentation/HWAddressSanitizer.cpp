@@ -316,7 +316,6 @@ private:
     Value *PtrTag = nullptr;
     Value *MemTag = nullptr;
   };
-  void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
   void initializeModule();
   void createHwasanCtorComdat();

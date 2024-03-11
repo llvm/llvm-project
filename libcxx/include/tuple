@@ -213,6 +213,7 @@ template <class... Types>
 #include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
+#include <__tuple/find_index.h>
 #include <__tuple/make_tuple_types.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__tuple/tuple_element.h>
@@ -548,10 +549,6 @@ class _LIBCPP_TEMPLATE_VIS tuple {
 public:
   // [tuple.cnstr]
 
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
-
   // tuple() constructors (including allocator_arg_t variants)
   template <template <class...> class _IsImpDefault                = __is_implicitly_default_constructible,
             template <class...> class _IsDefault                   = is_default_constructible,
@@ -833,8 +830,6 @@ public:
       : __base_(allocator_arg_t(), __alloc, std::move(__p)) {}
 #  endif // _LIBCPP_STD_VER >= 23
 
-  _LIBCPP_DIAGNOSTIC_POP
-
   // [tuple.assign]
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple)
@@ -1092,40 +1087,6 @@ get(const tuple<_Tp...>&& __t) _NOEXCEPT {
 }
 
 #  if _LIBCPP_STD_VER >= 14
-
-namespace __find_detail {
-
-static constexpr size_t __not_found = static_cast<size_t>(-1);
-static constexpr size_t __ambiguous = __not_found - 1;
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx_return(size_t __curr_i, size_t __res, bool __matches) {
-  return !__matches ? __res : (__res == __not_found ? __curr_i : __ambiguous);
-}
-
-template <size_t _Nx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx(size_t __i, const bool (&__matches)[_Nx]) {
-  return __i == _Nx
-           ? __not_found
-           : __find_detail::__find_idx_return(__i, __find_detail::__find_idx(__i + 1, __matches), __matches[__i]);
-}
-
-template <class _T1, class... _Args>
-struct __find_exactly_one_checked {
-  static constexpr bool __matches[sizeof...(_Args)] = {is_same<_T1, _Args>::value...};
-  static constexpr size_t value                     = __find_detail::__find_idx(0, __matches);
-  static_assert(value != __not_found, "type not found in type list");
-  static_assert(value != __ambiguous, "type occurs more than once in type list");
-};
-
-template <class _T1>
-struct __find_exactly_one_checked<_T1> {
-  static_assert(!is_same<_T1, _T1>::value, "type not in empty type list");
-};
-
-} // namespace __find_detail
-
-template <typename _T1, typename... _Args>
-struct __find_exactly_one_t : public __find_detail::__find_exactly_one_checked<_T1, _Args...> {};
 
 template <class _T1, class... _Args>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(tuple<_Args...>& __tup) noexcept {

@@ -268,6 +268,24 @@ namespace popcount {
   static_assert(__builtin_popcountl(0) == 0, "");
   static_assert(__builtin_popcountll(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
   static_assert(__builtin_popcountll(0) == 0, "");
+  static_assert(__builtin_popcountg((unsigned char)~0) == __CHAR_BIT__ * sizeof(unsigned char), "");
+  static_assert(__builtin_popcountg((unsigned char)0) == 0, "");
+  static_assert(__builtin_popcountg((unsigned short)~0) == __CHAR_BIT__ * sizeof(unsigned short), "");
+  static_assert(__builtin_popcountg((unsigned short)0) == 0, "");
+  static_assert(__builtin_popcountg(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
+  static_assert(__builtin_popcountg(0u) == 0, "");
+  static_assert(__builtin_popcountg(~0ul) == __CHAR_BIT__ * sizeof(unsigned long), "");
+  static_assert(__builtin_popcountg(0ul) == 0, "");
+  static_assert(__builtin_popcountg(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
+  static_assert(__builtin_popcountg(0ull) == 0, "");
+#ifdef __SIZEOF_INT128__
+  static_assert(__builtin_popcountg(~(unsigned __int128)0) == __CHAR_BIT__ * sizeof(unsigned __int128), "");
+  static_assert(__builtin_popcountg((unsigned __int128)0) == 0, "");
+#endif
+#ifndef __AVR__
+  static_assert(__builtin_popcountg(~(unsigned _BitInt(128))0) == __CHAR_BIT__ * sizeof(unsigned _BitInt(128)), "");
+  static_assert(__builtin_popcountg((unsigned _BitInt(128))0) == 0, "");
+#endif
 
   /// From test/Sema/constant-builtins-2.c
   char popcount1[__builtin_popcount(0) == 0 ? 1 : -1];
@@ -280,6 +298,17 @@ namespace popcount {
   char popcount8[__builtin_popcountll(0LL) == 0 ? 1 : -1];
   char popcount9[__builtin_popcountll(0xF0F0LL) == 8 ? 1 : -1];
   char popcount10[__builtin_popcountll(~0LL) == BITSIZE(long long) ? 1 : -1];
+  char popcount11[__builtin_popcountg(0U) == 0 ? 1 : -1];
+  char popcount12[__builtin_popcountg(0xF0F0U) == 8 ? 1 : -1];
+  char popcount13[__builtin_popcountg(~0U) == BITSIZE(int) ? 1 : -1];
+  char popcount14[__builtin_popcountg(~0UL) == BITSIZE(long) ? 1 : -1];
+  char popcount15[__builtin_popcountg(~0ULL) == BITSIZE(long long) ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+  char popcount16[__builtin_popcountg(~(unsigned __int128)0) == BITSIZE(__int128) ? 1 : -1];
+#endif
+#ifndef __AVR__
+  char popcount17[__builtin_popcountg(~(unsigned _BitInt(128))0) == BITSIZE(_BitInt(128)) ? 1 : -1];
+#endif
 }
 
 namespace parity {
