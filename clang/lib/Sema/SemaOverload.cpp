@@ -8977,7 +8977,7 @@ class BuiltinOperatorOverloadBuilder {
       for (QualType BitTy : Candidate.bitint_types())
         BitIntCandidates.insert(CanQualType::CreateUnsafe(BitTy));
     });
-    llvm::copy(BitIntCandidates, std::back_inserter(ArithmeticTypes));
+    llvm::move(BitIntCandidates, std::back_inserter(ArithmeticTypes));
     LastPromotedIntegralType = ArithmeticTypes.size();
     LastPromotedArithmeticType = ArithmeticTypes.size();
     // End of promoted types.
