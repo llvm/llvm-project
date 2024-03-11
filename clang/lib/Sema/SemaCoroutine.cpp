@@ -1402,7 +1402,8 @@ static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
         Sema::CXXThisScopeRAII ThisScope(S, Record, ThisQuals,
                                          /*Enabled=*/Record != nullptr);
 
-        ThisExpr = S.ActOnCXXThis(Loc, /*ThisRefersToClosureObject=*/true);
+        ThisExpr = S.BuildCXXThisExpr(
+            Loc, MD->getThisType().getNonReferenceType(), true, true);
       } else {
         ThisExpr = S.ActOnCXXThis(Loc);
       }
@@ -1671,6 +1672,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   NewExpr = S.ActOnFinishFullExpr(NewExpr.get(), /*DiscardedValue*/ false);
   if (NewExpr.isInvalid())
     return false;
+
 
   // Make delete call.
 

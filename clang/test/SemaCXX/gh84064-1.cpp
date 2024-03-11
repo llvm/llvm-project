@@ -66,6 +66,15 @@ struct CapturingThisTest
 
       static_assert(sizeof(decltype(lamb)) == sizeof(int));
     }
+
+    void NoCapture()
+    {
+      auto lamb = []() -> Generator {
+        co_return;
+      };
+
+      static_assert(sizeof(decltype(lamb)) == 1);
+    }
 };
 
 int main()
