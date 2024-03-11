@@ -154,12 +154,6 @@ public:
     return getInfo(id).MetaVar;
   }
 
-  /// Get the string of acceptable argument value choices
-  /// that could be supplied to this option.
-  const char *getOptionValues(OptSpecifier id) const {
-    return getInfo(id).Values;
-  }
-
   /// Specify the environment variable where initial options should be read.
   void setInitialOptionsFromEnvironment(const char *E) { EnvVar = E; }
 

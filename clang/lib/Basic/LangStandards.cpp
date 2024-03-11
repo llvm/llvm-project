@@ -70,18 +70,13 @@ LangStandard::Kind LangStandard::getLangKind(StringRef Name) {
 }
 
 LangStandard::Kind LangStandard::getHLSLLangKind(StringRef Name) {
-  if (Name == "2016")
-    return LangStandard::lang_hlsl2016;
-  if (Name == "2017")
-    return LangStandard::lang_hlsl2017;
-  if (Name == "2018")
-    return LangStandard::lang_hlsl2018;
-  if (Name == "2021")
-    return LangStandard::lang_hlsl2021;
-  if (Name == "202x")
-    return LangStandard::lang_hlsl202x;
-
-  return LangStandard::lang_unspecified;
+  return llvm::StringSwitch<LangStandard::Kind>(Name)
+      .Case("2016", LangStandard::lang_hlsl2016)
+      .Case("2017", LangStandard::lang_hlsl2017)
+      .Case("2018", LangStandard::lang_hlsl2018)
+      .Case("2021", LangStandard::lang_hlsl2021)
+      .Case("202x", LangStandard::lang_hlsl202x)
+      .Default(LangStandard::lang_unspecified);
 }
 
 const LangStandard *LangStandard::getLangStandardForName(StringRef Name) {
