@@ -4,8 +4,9 @@
 define i32 @test_ult_254_inc_imm(i8 zeroext %x) {
 ; CHECK-LABEL: @test_ult_254_inc_imm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[ADD]], -2
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], -255
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], -2
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 35, i32 47
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
