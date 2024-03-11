@@ -4496,7 +4496,7 @@ unsigned FunctionDecl::getODRHash() {
   }
 
   class ODRHash Hash;
-  Hash.AddFunctionDecl(this);
+  Hash.AddFunctionDecl(this, /*SkipBody=*/shouldSkipCheckingODR());
   setHasODRHash(true);
   ODRHash = Hash.CalculateHash();
   return ODRHash;
