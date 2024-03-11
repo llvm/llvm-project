@@ -95,6 +95,10 @@ C++20 Feature Support
   templates (`P1814R0 <https://wg21.link/p1814r0>`_).
   (#GH54051).
 
+- Clang now treats a lambda-coroutine with a `promise_type` with a constructor
+  or a user-defined `operator new` correctly, passing the lambdas
+  `this`-pointer as the first argument of the parameter list.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
