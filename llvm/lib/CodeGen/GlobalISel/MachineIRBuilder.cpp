@@ -877,6 +877,21 @@ MachineIRBuilder::buildSelect(const DstOp &Res, const SrcOp &Tst,
   return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1}, Flags);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildInsertSubvector(const DstOp &Res,
+                                                           const SrcOp &Src0,
+                                                           const SrcOp &Src1,
+                                                           unsigned Idx) {
+  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+                    {Src0, Src1, uint64_t(Idx)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildExtractSubvector(const DstOp &Res,
+                                                            const SrcOp &Src,
+                                                            unsigned Idx) {
+  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+                    {Src, uint64_t(Idx)});
+}
+
 MachineInstrBuilder
 MachineIRBuilder::buildInsertVectorElement(const DstOp &Res, const SrcOp &Val,
                                            const SrcOp &Elt, const SrcOp &Idx) {
