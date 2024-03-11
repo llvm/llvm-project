@@ -1829,14 +1829,8 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
 
   // Figure out the depth and types in the topology
   depth = 0;
-  pu = hwloc_get_pu_obj_by_os_index(tp, __kmp_affin_fullMask->begin());
-  KMP_ASSERT(pu);
-  obj = pu;
-  types[depth] = KMP_HW_THREAD;
-  hwloc_types[depth] = obj->type;
-  depth++;
-  while (obj != root && obj != NULL) {
-    obj = obj->parent;
+  obj = hwloc_get_pu_obj_by_os_index(tp, __kmp_affin_fullMask->begin());
+  while (obj && obj != root) {
 #if HWLOC_API_VERSION >= 0x00020000
     if (obj->memory_arity) {
       hwloc_obj_t memory;
@@ -1858,6 +1852,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       hwloc_types[depth] = obj->type;
       depth++;
     }
+    obj = obj->parent;
   }
   KMP_ASSERT(depth > 0);
 
