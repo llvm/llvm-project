@@ -37,6 +37,7 @@ if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS)
   )
   add_libc_test(
     stdbit_c_test
+    C_TEST
     UNIT_TEST_ONLY
     SUITE
       libc_include_tests
