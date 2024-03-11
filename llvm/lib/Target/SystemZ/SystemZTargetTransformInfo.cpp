@@ -1312,7 +1312,6 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
     // Then, we need S operations to sum up the elements of that sum vector,
     // for a total of V + S - 1 operations.
     int Cost = VectorRegsNeeded + LastVectorHandling - 1;
-    assert(Cost > 0 && "Predicted cost of vector.reduce.add must be > 0");
     return Cost;
   }
   return -1;
