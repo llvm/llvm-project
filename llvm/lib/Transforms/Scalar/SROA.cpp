@@ -324,6 +324,18 @@ static DebugVariable getAggregateVariable(DPValue *DPV) {
                        DPV->getDebugLoc().getInlinedAt());
 }
 
+/// Helpers for handling new and old debug info modes in migrateDebugInfo.
+/// These overloads unwrap a DbgInstPtr {Instruction* | DbgRecord*} union based
+/// on the \p Unused parameter type.
+DPValue *UnwrapDbgInstPtr(DbgInstPtr P, DPValue *Unused) {
+  (void)Unused;
+  return static_cast<DPValue *>(cast<DbgRecord *>(P));
+}
+DbgAssignIntrinsic *UnwrapDbgInstPtr(DbgInstPtr P, DbgAssignIntrinsic *Unused) {
+  (void)Unused;
+  return static_cast<DbgAssignIntrinsic *>(cast<Instruction *>(P));
+}
+
 /// Find linked dbg.assign and generate a new one with the correct
 /// FragmentInfo. Link Inst to the new dbg.assign.  If Value is nullptr the
 /// value component is copied from the old dbg.assign to the new.
@@ -379,7 +391,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto *DbgAssign, auto *DbgInstType) {
+  auto MigrateDbgAssign = [&](auto *DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -433,19 +445,12 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     }
 
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-    // insertDbgAssign returns a PointerUnion of {Instruction* | DbgRecord*}.
-    // If DbgAssign is a DPValue* it'll return a DbgRecord*, otherwise if
-    // DbgAssign is a DbgAssignIntrinsic* it'll return a Instruction*.
-    // The ugly code below creates a new debug marker, then gets the
-    // pointer type out of the union based on the type of DbgInstType
-    // (Instruction* or DbgRecord*), which is then cast to DbgAssignIntrinsic*
-    // or DPValue* so that the relevant member functions can be called.
-    auto *NewAssign = static_cast<decltype(DbgAssign)>(
+    auto *NewAssign = UnwrapDbgInstPtr(
         DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
                             Dest,
                             DIExpression::get(Expr->getContext(), std::nullopt),
-                            DbgAssign->getDebugLoc())
-            .template get<decltype(DbgInstType)>());
+                            DbgAssign->getDebugLoc()),
+        DbgAssign);
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -482,12 +487,8 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
   };
 
-  for_each(MarkerRange, [&](DbgAssignIntrinsic *DAI) {
-    MigrateDbgAssign(DAI, static_cast<Instruction *>(nullptr));
-  });
-  for_each(DPVAssignMarkerRange, [&](DPValue *DPV) {
-    MigrateDbgAssign(DPV, static_cast<DbgRecord *>(nullptr));
-  });
+  for_each(MarkerRange, MigrateDbgAssign);
+  for_each(DPVAssignMarkerRange, MigrateDbgAssign);
 }
 
 namespace {
