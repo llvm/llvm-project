@@ -1228,8 +1228,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
           if (r.second) {
             firstX3RegUse = sec;
           } else {
-            mergeX3RegUse(merged.intAttr, firstX3RegUse, sec,
-                          r.first->getSecond(), *i);
+            mergeX3RegUse(r.first, firstX3RegUse, sec, r.first->getSecond(),
+                          *i);
           }
         }
         continue;
