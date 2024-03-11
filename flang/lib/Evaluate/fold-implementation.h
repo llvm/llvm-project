@@ -39,10 +39,6 @@
 #include <type_traits>
 #include <variant>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
-#undef HUGE
-
 namespace Fortran::evaluate {
 
 // Utilities
