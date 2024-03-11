@@ -4292,6 +4292,12 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF0u);
   const ArgDescriptor ClusterWorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF00u);
+  const ArgDescriptor ClusterNumWorkGroupsX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF000u);
+  const ArgDescriptor ClusterNumWorkGroupsY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF0000u);
+  const ArgDescriptor ClusterNumWorkGroupsZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF00000u);
   if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
@@ -4321,6 +4327,21 @@ bool AMDGPULegalizerInfo::loadInputValue(
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
       Arg = &ClusterWorkGroupIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X:
+      Arg = &ClusterNumWorkGroupsX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y:
+      Arg = &ClusterNumWorkGroupsY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z:
+      Arg = &ClusterNumWorkGroupsZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
@@ -7252,6 +7273,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return ST.hasGFX12_10Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_num_workgroups_x:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X);
+  case Intrinsic::amdgcn_cluster_num_workgroups_y:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y);
+  case Intrinsic::amdgcn_cluster_num_workgroups_z:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z);
   case Intrinsic::amdgcn_wave_id:
     return legalizeWaveID(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
