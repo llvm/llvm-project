@@ -12,3 +12,15 @@ add_header_library(
   DEPENDS
     ${target_gpu_utils}
 )
+
+add_object_library(
+  allocator
+  SRCS
+    allocator.cpp
+  HDRS
+    allocator.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.GPU.utils
+    libc.src.__support.RPC.rpc_client
+)
