@@ -3452,6 +3452,12 @@ def int_amdgcn_permlane_xor : ClangBuiltin<"__builtin_amdgcn_permlane_xor">,
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// llvm.amdgcn.permlane.idx.gen <old> <src0> <src1>
+def int_amdgcn_permlane_idx_gen : ClangBuiltin<"__builtin_amdgcn_permlane_idx_gen">,
+  Intrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.

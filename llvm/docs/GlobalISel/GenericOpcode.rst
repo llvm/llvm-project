@@ -607,6 +607,41 @@ See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
 Vector Specific Operations
 --------------------------
 
+G_INSERT_SUBVECTOR
+^^^^^^^^^^^^^^^^^^
+
+Insert the second source vector into the first source vector. The index operand
+represents the starting index in the first source vector at which the second
+source vector should be inserted into.
+
+The index must be a constant multiple of the second source vector's minimum
+vector length. If the vectors are scalable, then the index is first scaled by
+the runtime scaling factor. The indices inserted in the source vector must be
+valid indicies of that vector. If this condition cannot be determined statically
+but is false at runtime, then the result vector is undefined.
+
+.. code-block:: none
+
+  %2:_(<vscale x 4 x i64>) = G_INSERT_SUBVECTOR %0:_(<vscale x 4 x i64>), %1:_(<vscale x 2 x i64>), 0
+
+G_EXTRACT_SUBVECTOR
+^^^^^^^^^^^^^^^^^^^
+
+Extract a vector of destination type from the source vector. The index operand
+represents the starting index from which a subvector is extracted from
+the source vector.
+
+The index must be a constant multiple of the source vector's minimum vector
+length. If the source vector is a scalable vector, then the index is first
+scaled by the runtime scaling factor. The indices extracted from the source
+vector must be valid indicies of that vector. If this condition cannot be
+determined statically but is false at runtime, then the result vector is
+undefined.
+
+.. code-block:: none
+
+  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
+
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
 
