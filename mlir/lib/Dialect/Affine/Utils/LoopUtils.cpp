@@ -261,7 +261,7 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
   unsigned numChildOps = shifts.size();
 
   // Do a linear time (counting) sort for the shifts.
-  uint64_t maxShift = *std::max_element(shifts.begin(), shifts.end());
+  uint64_t maxShift = *llvm::max_element(shifts);
   if (maxShift >= numChildOps) {
     // Large shifts are not the typical use case.
     forOp.emitWarning("not shifting because shifts are unrealistically large");

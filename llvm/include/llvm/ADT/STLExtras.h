@@ -1971,6 +1971,22 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
+template <typename R> auto min_element(R &&Range) {
+  return std::min_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
+  return std::min_element(adl_begin(Range), adl_end(Range), C);
+}
+
+template <typename R> auto max_element(R &&Range) {
+  return std::max_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
+  return std::max_element(adl_begin(Range), adl_end(Range), C);
+}
+
 template <typename R>
 void stable_sort(R &&Range) {
   std::stable_sort(adl_begin(Range), adl_end(Range));

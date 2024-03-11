@@ -1084,7 +1084,7 @@ static void GetBranchWeights(Instruction *TI,
 
 /// Keep halving the weights until all can fit in uint32_t.
 static void FitWeights(MutableArrayRef<uint64_t> Weights) {
-  uint64_t Max = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t Max = *llvm::max_element(Weights);
   if (Max > UINT_MAX) {
     unsigned Offset = 32 - llvm::countl_zero(Max);
     for (uint64_t &I : Weights)
