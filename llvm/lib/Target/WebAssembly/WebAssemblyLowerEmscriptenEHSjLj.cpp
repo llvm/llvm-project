@@ -1458,37 +1458,37 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
       auto *Free = IRB.CreateFree(SetjmpTable, Bundles);
       Free->setDebugLoc(DL);
     }
+
+    // Every call to saveSetjmp can change setjmpTable and setjmpTableSize
+    // (when buffer reallocation occurs)
+    // entry:
+    //   setjmpTableSize = 4;
+    //   setjmpTable = (int *) malloc(40);
+    //   setjmpTable[0] = 0;
+    // ...
+    // somebb:
+    //   setjmpTable = saveSetjmp(env, label, setjmpTable, setjmpTableSize);
+    //   setjmpTableSize = getTempRet0();
+    // So we need to make sure the SSA for these variables is valid so that
+    // every saveSetjmp and testSetjmp calls have the correct arguments.
+    SSAUpdater SetjmpTableSSA;
+    SSAUpdater SetjmpTableSizeSSA;
+    SetjmpTableSSA.Initialize(PointerType::get(C, 0), "setjmpTable");
+    SetjmpTableSizeSSA.Initialize(Type::getInt32Ty(C), "setjmpTableSize");
+    for (Instruction *I : SetjmpTableInsts)
+      SetjmpTableSSA.AddAvailableValue(I->getParent(), I);
+    for (Instruction *I : SetjmpTableSizeInsts)
+      SetjmpTableSizeSSA.AddAvailableValue(I->getParent(), I);
+
+    for (auto &U : make_early_inc_range(SetjmpTable->uses()))
+      if (auto *I = dyn_cast<Instruction>(U.getUser()))
+        if (I->getParent() != Entry)
+          SetjmpTableSSA.RewriteUse(U);
+    for (auto &U : make_early_inc_range(SetjmpTableSize->uses()))
+      if (auto *I = dyn_cast<Instruction>(U.getUser()))
+        if (I->getParent() != Entry)
+          SetjmpTableSizeSSA.RewriteUse(U);
   }
-
-  // Every call to saveSetjmp can change setjmpTable and setjmpTableSize
-  // (when buffer reallocation occurs)
-  // entry:
-  //   setjmpTableSize = 4;
-  //   setjmpTable = (int *) malloc(40);
-  //   setjmpTable[0] = 0;
-  // ...
-  // somebb:
-  //   setjmpTable = saveSetjmp(env, label, setjmpTable, setjmpTableSize);
-  //   setjmpTableSize = getTempRet0();
-  // So we need to make sure the SSA for these variables is valid so that every
-  // saveSetjmp and testSetjmp calls have the correct arguments.
-  SSAUpdater SetjmpTableSSA;
-  SSAUpdater SetjmpTableSizeSSA;
-  SetjmpTableSSA.Initialize(PointerType::get(C, 0), "setjmpTable");
-  SetjmpTableSizeSSA.Initialize(Type::getInt32Ty(C), "setjmpTableSize");
-  for (Instruction *I : SetjmpTableInsts)
-    SetjmpTableSSA.AddAvailableValue(I->getParent(), I);
-  for (Instruction *I : SetjmpTableSizeInsts)
-    SetjmpTableSizeSSA.AddAvailableValue(I->getParent(), I);
-
-  for (auto &U : make_early_inc_range(SetjmpTable->uses()))
-    if (auto *I = dyn_cast<Instruction>(U.getUser()))
-      if (I->getParent() != Entry)
-        SetjmpTableSSA.RewriteUse(U);
-  for (auto &U : make_early_inc_range(SetjmpTableSize->uses()))
-    if (auto *I = dyn_cast<Instruction>(U.getUser()))
-      if (I->getParent() != Entry)
-        SetjmpTableSizeSSA.RewriteUse(U);
 
   // Finally, our modifications to the cfg can break dominance of SSA variables.
   // For example, in this code,
