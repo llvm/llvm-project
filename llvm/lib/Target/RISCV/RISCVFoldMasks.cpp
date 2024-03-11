@@ -204,7 +204,7 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
     const MachineInstr *CurrentV0Def = nullptr;
     for (const MachineInstr &MI : MBB) {
       if (MI.readsRegister(RISCV::V0, TRI))
-	V0Defs[&MI] = CurrentV0Def;
+        V0Defs[&MI] = CurrentV0Def;
 
       if (MI.definesRegister(RISCV::V0, TRI))
         CurrentV0Def = &MI;
