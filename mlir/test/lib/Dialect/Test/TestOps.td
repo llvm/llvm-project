@@ -1856,6 +1856,7 @@ def ILLegalOpD : TEST_Op<"illegal_op_d">, Results<(outs I32)>;
 def ILLegalOpE : TEST_Op<"illegal_op_e">, Results<(outs I32)>;
 def ILLegalOpF : TEST_Op<"illegal_op_f">, Results<(outs I32)>;
 def ILLegalOpG : TEST_Op<"illegal_op_g">, Results<(outs I32)>;
+def ILLegalOpH : TEST_Op<"illegal_op_h">, Results<(outs I64)>;
 def LegalOpA : TEST_Op<"legal_op_a">,
   Arguments<(ins StrAttr:$status)>, Results<(outs I32)>;
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
