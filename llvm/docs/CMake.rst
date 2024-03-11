@@ -363,7 +363,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   documentation targets being as part of a normal build.  If the ``install``
   target is run then this also enables all built documentation targets to be
   installed. Defaults to OFF.  To enable a particular documentation target, see
-  see LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
+  LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
 
 **LLVM_BUILD_EXAMPLES**:BOOL
   Build LLVM examples. Defaults to OFF. Targets for building each example are
