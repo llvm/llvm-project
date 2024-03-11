@@ -787,6 +787,50 @@ void test_get_cluster_group_id(int d, global int *out)
   }
 }
 
+// CHECK-LABEL: @test_get_cluster_num_workgroups(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[D_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    store i32 [[D:%.*]], ptr addrspace(5) [[D_ADDR]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[D_ADDR]], align 4
+// CHECK-NEXT:    switch i32 [[TMP0]], label [[SW_DEFAULT:%.*]] [
+// CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+// CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+// CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
+// CHECK-NEXT:    ]
+// CHECK:       sw.bb:
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.num.workgroups.x()
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
+// CHECK:       sw.bb1:
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cluster.num.workgroups.y()
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.bb2:
+// CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.cluster.num.workgroups.z()
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[TMP6]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.default:
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 0, ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.epilog:
+// CHECK-NEXT:    ret void
+//
+void test_get_cluster_num_workgroups(int d, global int *out)
+{
+  switch (d) {
+  case 0: *out = __builtin_amdgcn_cluster_num_workgroups_x(); break;
+  case 1: *out = __builtin_amdgcn_cluster_num_workgroups_y(); break;
+  case 2: *out = __builtin_amdgcn_cluster_num_workgroups_z(); break;
+  default: *out = 0;
+  }
+}
+
 // CHECK-LABEL: @test_permlane16_swap(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
