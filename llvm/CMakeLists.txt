@@ -712,8 +712,6 @@ if(LLVM_INDIVIDUAL_TEST_COVERAGE)
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
-option(LLVM_PARALLEL_LIT "Enable multiple lit suites to run in parallel" OFF)
-
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
 if( WIN32 AND NOT CYGWIN )
   set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
