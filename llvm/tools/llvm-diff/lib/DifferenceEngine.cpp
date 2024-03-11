@@ -377,8 +377,11 @@ class FunctionDifferenceEngine {
       return true;
     }
 
-    if (!L->hasSameSpecialState(R))
+    if (!L->hasSameSpecialState(R)) {
+      if (Complain)
+        Engine.log("special states differ");
       return true;
+    }
 
     if (isa<CmpInst>(L)) {
       if (cast<CmpInst>(L)->getPredicate()
