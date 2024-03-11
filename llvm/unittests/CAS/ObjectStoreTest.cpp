@@ -328,7 +328,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
     EXPECT_EQ(Node->getData(), Blobs[I]);
   };
 
-  ThreadPool Threads;
+  StdThreadPool Threads;
   for (unsigned I = 0; I < BlobCount; ++I) {
     Threads.async(Consumer, I, &Read1);
     Threads.async(Consumer, I, &Read2);
