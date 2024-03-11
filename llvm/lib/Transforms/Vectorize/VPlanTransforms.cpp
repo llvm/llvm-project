@@ -1306,9 +1306,9 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  // Walk users of WideCanonicalIV and replace all compares of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
-  // all-true-mask.
+  // Walk VPWidenMemoryInstructionRecipe users of WideCanonicalIV and replace
+  // all compares of the form (ICMP_ULE, WideCanonicalIV, backedge-taken-count),
+  // used as mask in VPWidenMemoryInstructionRecipe, with an all-true-mask.
   Value *TrueMask =
       ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
   VPValue *VPTrueMask = Plan.getVPValueOrAddLiveIn(TrueMask);
@@ -1325,11 +1325,11 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   VPSingleDefRecipe *OpVPEVL = VPEVL;
-  if (CanonicalIVPHI->getScalarType() !=
-      IntegerType::get(CanonicalIVPHI->getScalarType()->getContext(),
-                       /*NumBits=*/32)) {
-    OpVPEVL = new VPScalarCastRecipe(Instruction::ZExt, OpVPEVL,
-                                     CanonicalIVPHI->getScalarType());
+  if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
+      IVSize != 32) {
+    OpVPEVL = new VPScalarCastRecipe(IVSize < 32 ? Instruction::Trunc
+                                                 : Instruction::ZExt,
+                                     OpVPEVL, CanonicalIVPHI->getScalarType());
     OpVPEVL->insertBefore(CanonicalIVIncrement);
   }
   auto *NextEVLIV =
@@ -1341,7 +1341,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   EVLPhi->addOperand(NextEVLIV);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPEVLBasedIVPHIRecipe except for the canonical IV increment..
+  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.

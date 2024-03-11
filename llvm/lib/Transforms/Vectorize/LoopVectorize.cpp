@@ -253,7 +253,8 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "data-and-control-without-rt-check",
                    "Similar to data-and-control, but remove the runtime check"),
         clEnumValN(TailFoldingStyle::DataWithEVL, "data-with-evl",
-                   "Use predicated EVL instructions for tail folding")));
+                   "Use predicated EVL instructions for tail folding. If EVL "
+                   "is unsupported, fallback to data-without-lane-mask.")));
 
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
@@ -1507,8 +1508,13 @@ public:
 
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
-    return IVUpdateMayOverflow ? ChosenTailFoldingStyle.first
-                               : ChosenTailFoldingStyle.second;
+    if (!ChosenTailFoldingStyle.first) {
+      assert(!ChosenTailFoldingStyle.second &&
+             "Chosen tail folding style must not be set.");
+      return TailFoldingStyle::None;
+    }
+    return *(IVUpdateMayOverflow ? ChosenTailFoldingStyle.first
+                                 : ChosenTailFoldingStyle.second);
   }
 
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
@@ -1516,16 +1522,13 @@ public:
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
   void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
-    assert(ChosenTailFoldingStyle.first == TailFoldingStyle::None &&
-           ChosenTailFoldingStyle.second == TailFoldingStyle::None &&
+    assert(!ChosenTailFoldingStyle.first && !ChosenTailFoldingStyle.second &&
            "Tail folding must not be selected yet.");
     if (!Legal->prepareToFoldTailByMasking())
       return;
 
     if (ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
-          ForceTailFoldingStyle;
-      if (ChosenTailFoldingStyle.first == TailFoldingStyle::DataWithEVL) {
+      if (ForceTailFoldingStyle == TailFoldingStyle::DataWithEVL) {
         // FIXME: use actual opcode/data type for analysis here.
         // FIXME: Investigate opportunity for fixed vector factor.
         bool EVLIsLegal =
@@ -1544,17 +1547,23 @@ public:
                       return Data.second.first == CM_Widen_Reverse;
                     });
         if (!EVLIsLegal) {
+          // If for some reason EVL mode is unsupported, fallback to
+          // DataWithoutLaneMask to try to vectorize the loop with folded tail
+          // in a generic way.
           ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
               TailFoldingStyle::DataWithoutLaneMask;
-          LLVM_DEBUG(dbgs()
-                     << "LV: Preference for VP intrinsics indicated. Will "
-                        "not try to generate VP Intrinsics since "
-                     << (UserIC > 1
-                             ? "interleave count specified is greater than 1.\n"
-                             : "the target does not support vector length "
-                               "predication.\n"));
+          LLVM_DEBUG(
+              dbgs()
+              << "LV: Preference for VP intrinsics indicated. Will "
+                 "not try to generate VP Intrinsics "
+              << (UserIC > 1
+                      ? "since interleave count specified is greater than 1.\n"
+                      : "due to non-interleaving reasons.\n"));
+          return;
         }
       }
+      ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
+          ForceTailFoldingStyle;
       return;
     }
 
@@ -1728,8 +1737,8 @@ private:
 
   /// Control finally chosen tail folding style. The first element is used if
   /// the IV update may overflow, the second element - if it does not.
-  std::pair<TailFoldingStyle, TailFoldingStyle> ChosenTailFoldingStyle =
-      std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
+  std::pair<std::optional<TailFoldingStyle>, std::optional<TailFoldingStyle>>
+      ChosenTailFoldingStyle;
 
   /// A map holding scalar costs for different vectorization factors. The
   /// presence of a cost for an instruction in the mapping indicates that the
@@ -9453,6 +9462,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Instruction *NewSI = nullptr;
       Value *StoredVal = State.get(StoredValue, Part);
+      // TODO: split this into several classes for better design.
       if (State.EVL) {
         assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                                 "explicit vector length.");
@@ -9500,6 +9510,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewLI;
+    // TODO: split this into several classes for better design.
     if (State.EVL) {
       assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                               "explicit vector length.");

@@ -246,6 +246,8 @@ struct VPTransformState {
   /// transformation, possibly a default value = whole vector register length.
   /// EVL is created only if TTI prefers predicated vectorization, thus if EVL
   /// is not nullptr it also implies preference for predicated vectorization.
+  /// TODO: this is a temporarily solution, the EVL must be explicitly used by
+  /// the recipes and must be removed here.
   VPValue *EVL = nullptr;
 
   /// Hold the indices to generate specific scalar instructions. Null indicates
