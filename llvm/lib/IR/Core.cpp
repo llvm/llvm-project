@@ -408,6 +408,10 @@ LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
   return unwrap(M)->IsNewDbgInfoFormat;
 }
 
+void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat) {
+  unwrap(M)->setIsNewDbgInfoFormat(UseNewFormat);
+}
+
 /*--.. Printing modules ....................................................--*/
 
 void LLVMDumpModule(LLVMModuleRef M) {
