@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <charconv>
 #include <concepts>
