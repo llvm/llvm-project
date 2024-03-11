@@ -14544,8 +14544,8 @@ integer bit width or any vector of integer elements.
 
 ::
 
-      declare i32 @llvm.scmp.i32(i32 %a, i32 %b)
-      declare <4 x i32> @llvm.scmp.v4i32(<4 x i32> %a, <4 x i32> %b)
+      declare i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.i32.v4i32(<4 x i32> %a, <4 x i32> %b)
 
 Overview:
 """""""""
@@ -14573,8 +14573,8 @@ integer bit width or any vector of integer elements.
 
 ::
 
-      declare i2 @llvm.ucmp.i32(i32 %a, i32 %b)
-      declare <4 x i32> @llvm.ucmp.v4i32(<4 x i32> %a, <4 x i32> %b)
+      declare i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.i32.v4i32(<4 x i32> %a, <4 x i32> %b)
 
 Overview:
 """""""""
