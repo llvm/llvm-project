@@ -701,6 +701,7 @@ set(files
   __thread/thread.h
   __thread/timed_backoff_policy.h
   __tree
+  __tuple/find_index.h
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
   __tuple/sfinae_helpers.h
