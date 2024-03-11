@@ -251,6 +251,9 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (#GH64356).
 
+- ``__is_trivially_relocatable`` no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH77091).
+
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
