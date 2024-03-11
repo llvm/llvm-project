@@ -1699,7 +1699,7 @@ Expected<bool> FunctionImporter::importFunctions(
         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID() << " "
                           << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
-        if (EnableImportMetadata) {
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
           // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
           // statistics and debugging.
           Fn->setMetadata(
