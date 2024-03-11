@@ -441,7 +441,6 @@
 #--- x3_reg_usage_tmp.s
 .attribute x3_reg_usage, 3
 
-
 # X3_REG_SCS_UKNOWN: BuildAttributes {
 # X3_REG_SCS_UKNOWN:   FormatVersion: 0x41
 # X3_REG_SCS_UKNOWN:   Section 1 {
@@ -459,9 +458,6 @@
 # X3_REG_SCS_UKNOWN:     }
 # X3_REG_SCS_UKNOWN:   }
 # X3_REG_SCS_UKNOWN: }
-
-
-
 
 #--- unknown13.s
 .attribute 13, "0"
