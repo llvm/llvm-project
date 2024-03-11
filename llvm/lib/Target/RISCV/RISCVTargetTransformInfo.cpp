@@ -37,6 +37,9 @@ static cl::opt<unsigned> SLPMaxVF(
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
+  // Check if the type is valid for all CostKind
+  if (!VT.isVector())
+    return InstructionCost::getInvalid();
   size_t NumInstr = OpCodes.size();
   if (CostKind == TTI::TCK_CodeSize)
     return NumInstr;
@@ -162,6 +165,14 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
+  case Instruction::Store:
+    // If the address is a constant, use the materialization cost.
+    if (Idx == 1)
+      return getIntImmCost(Imm, Ty, CostKind);
+    return TTI::TCC_Free;
+  case Instruction::Load:
+    // If the address is a constant, use the materialization cost.
+    return getIntImmCost(Imm, Ty, CostKind);
   case Instruction::And:
     // zext.h
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())

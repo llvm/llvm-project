@@ -38,9 +38,8 @@ void AccelTableBase::computeBucketCount() {
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
 
-  auto Counts = llvm::dwarf::getDebugNamesBucketAndHashCount(Uniques);
-  BucketCount = Counts.first;
-  UniqueHashCount = Counts.second;
+  std::tie(BucketCount, UniqueHashCount) =
+      llvm::dwarf::getDebugNamesBucketAndHashCount(Uniques);
 }
 
 void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {

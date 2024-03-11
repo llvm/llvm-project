@@ -882,18 +882,15 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
   for (auto &Feat : Features)
     Feat = Feat.trim();
 
-  // FIXME: It was brought up in #79316 that sorting the features which are
-  // used for mangling based on their multiversion priority is not a good
-  // practice. Changing the feature priorities will break the ABI. Perhaps
-  // it would be preferable to perform a lexicographical sort instead.
-  const TargetInfo &TI = CGT.getTarget();
-  llvm::sort(Features, [&TI](const StringRef LHS, const StringRef RHS) {
-    return TI.multiVersionSortPriority(LHS) < TI.multiVersionSortPriority(RHS);
+  llvm::sort(Features, [](const StringRef LHS, const StringRef RHS) {
+    return LHS.compare(RHS) < 0;
   });
 
+  llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
     if (auto Ext = llvm::AArch64::parseArchExtension(Feat))
-      Out << 'M' << Ext->Name;
+      if (UniqueFeats.insert(Ext->Name).second)
+        Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

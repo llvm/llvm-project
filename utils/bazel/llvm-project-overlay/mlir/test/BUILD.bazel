@@ -4,7 +4,6 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:lit_test.bzl", "package_path")
-load("//mlir:build_defs.bzl", "if_cuda_available")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
@@ -663,9 +662,6 @@ cc_library(
 cc_library(
     name = "TestGPU",
     srcs = glob(["lib/Dialect/GPU/*.cpp"]),
-    defines = if_cuda_available([
-        "MLIR_GPU_TO_CUBIN_PASS_ENABLE",
-    ]),
     includes = ["lib/Dialect/Test"],
     deps = [
         "//llvm:NVPTXCodeGen",
@@ -890,6 +886,21 @@ cc_library(
         "//mlir:Pass",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
+    ],
+)
+
+cc_library(
+    name = "TestArmNeon",
+    srcs = glob(["lib/Dialect/ArmNeon/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArmNeonDialect",
+        "//mlir:ArmNeonTransforms",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:Transforms",
     ],
 )
 

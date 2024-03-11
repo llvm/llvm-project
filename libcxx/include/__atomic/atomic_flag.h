@@ -16,6 +16,7 @@
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__thread/support.h>
 #include <cstdint>
 
@@ -50,20 +51,20 @@ struct atomic_flag {
 
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const
       volatile _NOEXCEPT {
-    __cxx_atomic_wait(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
+    std::__atomic_wait(*this, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
   wait(bool __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT {
-    __cxx_atomic_wait(&__a_, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
+    std::__atomic_wait(*this, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_one() volatile _NOEXCEPT {
-    __cxx_atomic_notify_one(&__a_);
+    std::__atomic_notify_one(*this);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { __cxx_atomic_notify_one(&__a_); }
+  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_notify_one(*this); }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() volatile _NOEXCEPT {
-    __cxx_atomic_notify_all(&__a_);
+    std::__atomic_notify_all(*this);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { __cxx_atomic_notify_all(&__a_); }
+  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
 
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI constexpr atomic_flag() _NOEXCEPT : __a_(false) {}
@@ -76,6 +77,28 @@ struct atomic_flag {
   atomic_flag(const atomic_flag&)                     = delete;
   atomic_flag& operator=(const atomic_flag&)          = delete;
   atomic_flag& operator=(const atomic_flag&) volatile = delete;
+};
+
+template <>
+struct __atomic_waitable_traits<atomic_flag> {
+  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATOMIC_FLAG_TYPE __atomic_load(const atomic_flag& __a, memory_order __order) {
+    return std::__cxx_atomic_load(&__a.__a_, __order);
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATOMIC_FLAG_TYPE
+  __atomic_load(const volatile atomic_flag& __a, memory_order __order) {
+    return std::__cxx_atomic_load(&__a.__a_, __order);
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI const __cxx_atomic_impl<_LIBCPP_ATOMIC_FLAG_TYPE>*
+  __atomic_contention_address(const atomic_flag& __a) {
+    return std::addressof(__a.__a_);
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI const volatile __cxx_atomic_impl<_LIBCPP_ATOMIC_FLAG_TYPE>*
+  __atomic_contention_address(const volatile atomic_flag& __a) {
+    return std::addressof(__a.__a_);
+  }
 };
 
 inline _LIBCPP_HIDE_FROM_ABI bool atomic_flag_test(const volatile atomic_flag* __o) _NOEXCEPT { return __o->test(); }

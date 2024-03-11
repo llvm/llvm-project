@@ -6,7 +6,7 @@
 "`P2545R4 <https://wg21.link/P2545R4>`__","LWG","Read-Copy Update (RCU)","Varna June 2023","","",""
 "`P2530R3 <https://wg21.link/P2530R3>`__","LWG","Hazard Pointers for C++26","Varna June 2023","","",""
 "`P2538R1 <https://wg21.link/P2538R1>`__","LWG","ADL-proof ``std::projected``","Varna June 2023","|Complete|","18.0","|ranges|"
-"`P2495R3 <https://wg21.link/P2495R3>`__","LWG","Interfacing ``stringstreams`` with ``string_view``","Varna June 2023","","",""
+"`P2495R3 <https://wg21.link/P2495R3>`__","LWG","Interfacing ``stringstream``\s with ``string_view``","Varna June 2023","|Complete|","19.0",""
 "`P2510R3 <https://wg21.link/P2510R3>`__","LWG","Formatting pointers","Varna June 2023","|Complete| [#note-P2510R3]_","17.0","|format|"
 "`P2198R7 <https://wg21.link/P2198R7>`__","LWG","Freestanding Feature-Test Macros and Implementation-Defined Extensions","Varna June 2023","","",""
 "`P2338R4 <https://wg21.link/P2338R4>`__","LWG","Freestanding Library: Character primitives and the C library","Varna June 2023","","",""

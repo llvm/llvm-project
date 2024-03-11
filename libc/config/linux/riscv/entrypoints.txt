@@ -190,6 +190,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munlock
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
+    libc.src.sys.mman.msync
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -423,7 +424,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
-if(LIBC_COMPILER_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128
@@ -438,6 +439,12 @@ if(LIBC_COMPILER_HAS_FLOAT128)
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.logbf128
+    libc.src.math.llrintf128
+    libc.src.math.llroundf128
+    libc.src.math.lrintf128
+    libc.src.math.lroundf128
+    libc.src.math.modff128
+    libc.src.math.rintf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128

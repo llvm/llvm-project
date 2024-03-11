@@ -4,8 +4,6 @@
 
 ; CHECK-GI:         warning: Instruction selection used fallback path for shufflevector_v2i1
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for shufflevector_v2i1_zeroes
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for shufflevector_v3i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for shufflevector_v3i8_zeroes
 
 ; ===== Legal Vector Types =====
 
@@ -497,12 +495,45 @@ define <4 x i64> @shufflevector_v4i64_zeroes(<4 x i64> %a, <4 x i64> %b) {
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i8> @shufflevector_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: shufflevector_v3i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, w1
-; CHECK-NEXT:    mov w1, w2
-; CHECK-NEXT:    mov w2, w4
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shufflevector_v3i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w0, w1
+; CHECK-SD-NEXT:    mov w1, w2
+; CHECK-SD-NEXT:    mov w2, w4
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shufflevector_v3i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    fmov s2, w3
+; CHECK-GI-NEXT:    fmov s3, w4
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w2
+; CHECK-GI-NEXT:    mov v2.b[1], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w5
+; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
+; CHECK-GI-NEXT:    mov v0.b[3], v0.b[0]
+; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[4], v0.b[0]
+; CHECK-GI-NEXT:    mov v2.b[4], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[5], v0.b[0]
+; CHECK-GI-NEXT:    mov v2.b[5], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[6], v0.b[0]
+; CHECK-GI-NEXT:    mov v2.b[6], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[7], v0.b[0]
+; CHECK-GI-NEXT:    mov v2.b[7], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    fmov w1, s1
+; CHECK-GI-NEXT:    fmov w2, s2
+; CHECK-GI-NEXT:    ret
     %c = shufflevector <3 x i8> %a, <3 x i8> %b, <3 x i32> <i32 1, i32 2, i32 4>
     ret <3 x i8> %c
 }
@@ -597,11 +628,21 @@ define <3 x i32> @shufflevector_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; ===== Vectors with Non-Pow 2 Widths with Zero Masks =====
 
 define <3 x i8> @shufflevector_v3i8_zeroes(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: shufflevector_v3i8_zeroes:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w1, w0
-; CHECK-NEXT:    mov w2, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shufflevector_v3i8_zeroes:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w1, w0
+; CHECK-SD-NEXT:    mov w2, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shufflevector_v3i8_zeroes:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    dup v0.8b, w0
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    fmov w1, s1
+; CHECK-GI-NEXT:    fmov w2, s2
+; CHECK-GI-NEXT:    ret
     %c = shufflevector <3 x i8> %a, <3 x i8> %b, <3 x i32> <i32 0, i32 0, i32 0>
     ret <3 x i8> %c
 }

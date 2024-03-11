@@ -178,7 +178,6 @@ experimental/utility utility
 filesystem compare
 filesystem cstddef
 filesystem cstdint
-filesystem cstring
 filesystem ctime
 filesystem iomanip
 filesystem limits
@@ -510,7 +509,6 @@ shared_mutex string
 shared_mutex version
 source_location cstdint
 source_location version
-span array
 span cstddef
 span initializer_list
 span limits
@@ -520,6 +518,7 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
+sstream string_view
 sstream version
 stack compare
 stack cstddef
