@@ -210,8 +210,9 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                          "atomic_ref ctor: referenced object must be aligned to required_alignment");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
+        "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
@@ -229,8 +230,9 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using difference_type = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                          "atomic_ref ctor: referenced object must be aligned to required_alignment");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
+        "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
@@ -274,8 +276,9 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using difference_type = __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((uintptr_t)addressof(__obj) % __base::required_alignment == 0,
-                                          "atomic_ref ctor: referenced object must be aligned to required_alignment");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
+        "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
