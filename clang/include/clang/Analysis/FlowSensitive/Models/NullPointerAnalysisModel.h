@@ -58,11 +58,6 @@ public:
 
   static ast_matchers::StatementMatcher ptrValueMatcher();
 
-  // Used to initialize the storage locations of function arguments.
-  // Required to merge these values within the environment.
-  void initializeFunctionParameters(const ControlFlowContext &CFCtx,
-                                    Environment &Env);
-
   void transfer(const CFGElement &E, NoopLattice &State, Environment &Env);
 
   void transferBranch(bool Branch, const Stmt *E, NoopLattice &State,
@@ -88,6 +83,8 @@ public:
     const Environment &Env;
   };
 
+  /// Checked when known to be null, and checked after already dereferenced,
+  /// respectively.
   using ResultType =
       std::pair<std::vector<SourceLocation>, std::vector<SourceLocation>>;
 

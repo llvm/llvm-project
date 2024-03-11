@@ -66,18 +66,18 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
   NullCheckAfterDereferenceDiagnoser Diagnoser;
   NullCheckAfterDereferenceDiagnoser::ResultType Diagnostics;
 
-  using LatticeState = DataflowAnalysisState<NullPointerAnalysisModel::Lattice>;
-  using DetailMaybeLatticeStates = std::vector<std::optional<LatticeState>>;
+  using State = DataflowAnalysisState<NullPointerAnalysisModel::Lattice>;
+  using DetailMaybeStates = std::vector<std::optional<State>>;
 
   auto DiagnoserImpl = [&ASTCtx, &Diagnoser,
                         &Diagnostics](const CFGElement &Elt,
-                                      const LatticeState &S) mutable -> void {
+                                      const State &S) mutable -> void {
     auto EltDiagnostics = Diagnoser.diagnose(ASTCtx, &Elt, S.Env);
     llvm::move(EltDiagnostics.first, std::back_inserter(Diagnostics.first));
     llvm::move(EltDiagnostics.second, std::back_inserter(Diagnostics.second));
   };
 
-  Expected<DetailMaybeLatticeStates> BlockToOutputState =
+  Expected<DetailMaybeStates> BlockToOutputState =
       dataflow::runDataflowAnalysis(*Context, Analysis, Env, DiagnoserImpl);
 
   if (llvm::Error E = BlockToOutputState.takeError()) {
@@ -116,16 +116,16 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 void NullCheckAfterDereferenceCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto hasPointerValue =
+  auto containsPointerValue =
       hasDescendant(NullPointerAnalysisModel::ptrValueMatcher());
   Finder->addMatcher(
       decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
                               // FIXME: Remove the filter below when lambdas are
                               // well supported by the check.
                               unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                              hasBody(hasPointerValue)),
+                              hasBody(containsPointerValue)),
                  cxxConstructorDecl(hasAnyConstructorInitializer(
-                     withInitializer(hasPointerValue)))))
+                     withInitializer(containsPointerValue)))))
           .bind(FuncID),
       this);
 }
@@ -141,10 +141,10 @@ void NullCheckAfterDereferenceCheck::check(
     return;
 
   if (const auto Diagnostics = analyzeFunction(*FuncDecl)) {
-    const auto &[CheckWhenNullLocations, CheckAfterDereferenceLocations] =
+    const auto &[CheckWhenNullLocations, CheckWhenNonnullLocations] =
         *Diagnostics;
 
-    for (const auto [WarningLoc, DerefLoc] : CheckAfterDereferenceLocations) {
+    for (const auto [WarningLoc, DerefLoc] : CheckWhenNonnullLocations) {
       diag(WarningLoc, "pointer value is checked even though "
                        "it cannot be null at this point");
 

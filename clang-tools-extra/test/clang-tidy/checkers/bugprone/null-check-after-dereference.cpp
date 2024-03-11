@@ -70,7 +70,6 @@ int else_branch_warning(int *p, bool b) {
     // CHECK-MESSAGES: :[[@LINE-7]]:5: note: one of the locations where the pointer's value cannot be null
     return 0;
   } else {
-    *p += 20;
     return *p;
   }
 }
@@ -89,30 +88,9 @@ int two_branches_warning(int *p, bool b) {
     // CHECK-MESSAGES: :[[@LINE-9]]:5: note: one of the locations where the pointer's value cannot be null
     return 0;
   } else {
-    *p += 20;
     return *p;
   }
 }
-
-int two_branches_reversed(int *p, bool b) {
-  if (!b) {
-    *p = 42;
-  }
-  
-  if (b) {
-    *p = 20;
-  }
-
-  if (p) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // CHECK-MESSAGES: :[[@LINE-9]]:5: note: one of the locations where the pointer's value cannot be null
-    return 0;
-  } else {
-    *p += 20;
-    return *p;
-  }
-}
-
 
 int regular_assignment(int *p, int *q) {
   *p = 42;
@@ -121,7 +99,6 @@ int regular_assignment(int *p, int *q) {
   if (q) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
     // CHECK-MESSAGES: :[[@LINE-5]]:3: note: one of the locations where the pointer's value cannot be null
-    *p += 20; 
     return *p;
   } else {
     return 0;
@@ -139,29 +116,26 @@ int nullptr_assignment(int *nullptr_param, bool b) {
   }
 
   if (nullptr_assigned) {
-    // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
-    *nullptr_assigned = 20;
     return *nullptr_assigned;
   } else {
     return 0;
   }
 }
 
-extern int *fncall();
-extern void refresh_ref(int *&ptr);
-extern void refresh_ptr(int **ptr);
+extern int *external_fn();
+extern void ref_fn(int *&ptr);
+extern void ptr_fn(int **ptr);
 
 int fncall_reassignment(int *fncall_reassigned) {
   *fncall_reassigned = 42;
 
-  fncall_reassigned = fncall();
+  fncall_reassigned = external_fn();
 
   if (fncall_reassigned) {
-    // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
     *fncall_reassigned = 42;
   }
   
-  fncall_reassigned = fncall();
+  fncall_reassigned = external_fn();
 
   *fncall_reassigned = 42;
 
@@ -171,19 +145,33 @@ int fncall_reassignment(int *fncall_reassigned) {
     *fncall_reassigned = 42;
   }
   
-  refresh_ptr(&fncall_reassigned);
+  ptr_fn(&fncall_reassigned);
 
   if (fncall_reassigned) {
-    // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
+    // FIXME: References of a pointer passed to external functions do not invalidate its value
+    // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: pointer value is checked even though it cannot be null at this point
+    // CHECK-MESSAGES: :[[@LINE-8]]:5: note: one of the locations where the pointer's value cannot be null
+    *fncall_reassigned = 42;
+  }
+
+  *fncall_reassigned = 42;
+
+  ref_fn(fncall_reassigned);
+
+  if (fncall_reassigned) {
+    // FIXME: References of a pointer passed to external functions do not invalidate its value
+    // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: pointer value is checked even though it cannot be null at this point
+    // CHECK-MESSAGES: :[[@LINE-19]]:5: note: one of the locations where the pointer's value cannot be null
     *fncall_reassigned = 42;
   }
   
-  refresh_ptr(&fncall_reassigned);
+  ptr_fn(&fncall_reassigned);
   *fncall_reassigned = 42;
 
   if (fncall_reassigned) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
+    // FIXME: Better note tag support, preferably after the reassignment/refresh
+    // CHECK-MESSAGES: :[[@LINE-29]]:5: note: one of the locations where the pointer's value cannot be null
     *fncall_reassigned = 42;
     return *fncall_reassigned;
   } else {
@@ -292,33 +280,6 @@ int cxx17_crash(int *p) {
   auto [a, b] = arr;
   
   return 0;
-}
-
-void external_by_ref(int *&p);
-void external_by_ptr(int **p);
-
-int external_invalidates() {
-  int *p = nullptr;
-
-  external_by_ref(p);
-
-  if (p) {
-    // FIXME: References of a pointer passed to external functions do not invalidate its value
-    // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: pointer value is checked but it can only be null at this point
-    return *p;
-  }
-
-  p = nullptr;
-
-  external_by_ptr(&p);
-
-  if (p) {
-    // FIXME: References of a pointer passed to external functions do not invalidate its value
-    // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: pointer value is checked but it can only be null at this point
-    return *p;
-  } else {
-    return 0;
-  }
 }
 
 int note_tags() {

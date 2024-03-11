@@ -148,6 +148,12 @@ New checks
   Finds cases when an uninstantiated virtual member function in a template class
   causes cross-compiler incompatibility.
 
+- New :doc:`bugprone-null-check-after-dereference
+  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
+
+  Finds locations where a pointer's nullability is checked after it has already
+  been dereferenced.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

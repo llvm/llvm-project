@@ -63,26 +63,21 @@ using SR = SatisfiabilityResult;
 
 // FIXME: These AST matchers should also be exported via the
 // NullPointerAnalysisModel class, for tests
-auto ptrToVar(llvm::StringRef VarName = kVar) {
-  return traverse(TK_IgnoreUnlessSpelledInSource,
-                  declRefExpr(hasType(isAnyPointer())).bind(VarName));
+auto ptrWithBinding(llvm::StringRef VarName = kVar) {
+  return expr(hasType(isAnyPointer())).bind(VarName);
 }
 
 auto derefMatcher() {
-  return traverse(
-      TK_IgnoreUnlessSpelledInSource,
-      unaryOperator(hasOperatorName("*"), hasUnaryOperand(ptrToVar())));
+  return unaryOperator(hasOperatorName("*"), hasUnaryOperand(ptrWithBinding()));
 }
 
 auto arrowMatcher() {
-  return traverse(
-      TK_IgnoreUnlessSpelledInSource,
-      memberExpr(allOf(isArrow(), hasObjectExpression(ptrToVar()))));
+  return memberExpr(allOf(isArrow(), hasObjectExpression(ptrWithBinding())));
 }
 
 auto castExprMatcher() {
   return castExpr(hasCastKind(CK_PointerToBoolean),
-                  hasSourceExpression(ptrToVar()))
+                  hasSourceExpression(ptrWithBinding()))
       .bind(kCond);
 }
 
@@ -100,7 +95,7 @@ auto functionCallMatcher() {
 }
 
 auto assignMatcher() {
-  return binaryOperation(isAssignmentOperator(), hasLHS(ptrToVar()),
+  return binaryOperation(isAssignmentOperator(), hasLHS(ptrWithBinding()),
                          hasRHS(expr().bind(kValue)));
 }
 
@@ -153,9 +148,8 @@ inline BoolValue &getVal(llvm::StringRef Name, Value &RootValue) {
 void initializeRootValue(Value &RootValue, Environment &Env) {
   Arena &A = Env.arena();
 
-  BoolValue *IsNull = cast_or_null<BoolValue>(RootValue.getProperty(kIsNull));
-  BoolValue *IsNonnull =
-      cast_or_null<BoolValue>(RootValue.getProperty(kIsNonnull));
+  auto *IsNull = cast_or_null<BoolValue>(RootValue.getProperty(kIsNull));
+  auto *IsNonnull = cast_or_null<BoolValue>(RootValue.getProperty(kIsNonnull));
 
   if (!IsNull) {
     IsNull = &A.makeAtomValue();
@@ -167,7 +161,7 @@ void initializeRootValue(Value &RootValue, Environment &Env) {
     RootValue.setProperty(kIsNonnull, *IsNonnull);
   }
 
-  // If the pointer cannot have either a null or nonull value, the state is
+  // If the pointer cannot have either a null or nonnull value, the state is
   // unreachable.
   // FIXME: This condition is added in all cases when getValue() is called.
   // The reason is that on a post-visit step, the initialized Values are used,
@@ -190,14 +184,12 @@ void setGLValue(const Expr &E, Value &Val, Environment &Env) {
 void setUnknownValue(const Expr &E, Value &Val, Environment &Env) {
   if (E.isGLValue())
     setGLValue(E, Val, Env);
-  else if (E.isPRValue())
-    Env.setValue(E, Val);
   else
-    llvm_unreachable("all value cases covered");
+    Env.setValue(E, Val);
 }
 
 Value *getValue(const Expr &Var, Environment &Env) {
-  if (auto *EnvVal = Env.getValue(Var)) {
+  if (Value *EnvVal = Env.getValue(Var)) {
     // FIXME: The framework usually creates the values for us, but without the
     // null-properties.
     initializeRootValue(*EnvVal, Env);
@@ -205,10 +197,7 @@ Value *getValue(const Expr &Var, Environment &Env) {
     return EnvVal;
   }
 
-  auto *RootValue = Env.createValue(Var.getType());
-
-  if (!RootValue)
-    return nullptr;
+  Value *RootValue = Env.createValue(Var.getType());
 
   initializeRootValue(*RootValue, Env);
 
@@ -223,10 +212,7 @@ void matchDereferenceExpr(const Stmt *stmt,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  auto *RootValue = getValue(*Var, Env);
-  if (!RootValue) {
-    return;
-  }
+  Value *RootValue = getValue(*Var, Env);
 
   Env.assume(Env.arena().makeNot(getVal(kIsNull, *RootValue).formula()));
 }
@@ -238,14 +224,9 @@ void matchCastExpr(const CastExpr *cond, const MatchFinder::MatchResult &Result,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  auto *RootValue = getValue(*Var, Env);
-  if (!RootValue) {
-    return;
-  }
+  Value *RootValue = getValue(*Var, Env);
 
-  auto *NewRootValue = Env.createValue(Var->getType());
-  if (!NewRootValue)
-    return;
+  Value *NewRootValue = Env.createValue(Var->getType());
 
   setGLValue(*Var, *NewRootValue, Env);
 
@@ -271,13 +252,9 @@ void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
   const auto *PrVar = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(PrVar != nullptr);
 
-  auto *RootValue = Env.getValue(*PrVar);
+  Value *RootValue = Env.getValue(*PrVar);
   if (!RootValue) {
     RootValue = Env.createValue(PrVar->getType());
-
-    if (!RootValue) {
-      return;
-    }
   }
 
   RootValue->setProperty(kIsNull, Env.getBoolLiteralValue(true));
@@ -291,10 +268,7 @@ void matchAddressofExpr(const Expr *expr,
   const auto *PrVar = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(PrVar != nullptr);
 
-  auto *RootValue = Env.createValue(PrVar->getType());
-  if (!RootValue) {
-    return;
-  }
+  Value *RootValue = Env.createValue(PrVar->getType());
 
   RootValue->setProperty(kIsNull, Env.getBoolLiteralValue(false));
   RootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(true));
@@ -313,9 +287,7 @@ void matchAnyPointerExpr(const Expr *fncall,
   if (Env.getValue(*Var))
     return;
 
-  auto *RootValue = Env.createValue(Var->getType());
-  if (!RootValue)
-    return;
+  Value *RootValue = Env.createValue(Var->getType());
 
   initializeRootValue(*RootValue, Env);
   setUnknownValue(*Var, *RootValue, Env);
@@ -329,7 +301,7 @@ diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  auto *RootValue = Env.getValue(*Var);
+  Value *RootValue = Env.getValue(*Var);
   if (!RootValue)
     return {};
 
@@ -351,7 +323,7 @@ diagnoseAssignLocation(const Expr *Assign,
   const auto *RHSVar = Result.Nodes.getNodeAs<Expr>(kValue);
   assert(RHSVar != nullptr);
 
-  auto *RHSValue = Env.getValue(*RHSVar);
+  Value *RHSValue = Env.getValue(*RHSVar);
   if (!RHSValue)
     return {};
 
@@ -372,7 +344,7 @@ diagnoseCastExpr(const CastExpr *Stmt, const MatchFinder::MatchResult &Result,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  if (auto *RootValue = Env.getValue(*Var)) {
+  if (Value *RootValue = Env.getValue(*Var)) {
     // FIXME: The framework usually creates the values for us, but without the
     // nullability properties.
     if (RootValue->getProperty(kIsNull) && RootValue->getProperty(kIsNonnull)) {
@@ -383,6 +355,7 @@ diagnoseCastExpr(const CastExpr *Stmt, const MatchFinder::MatchResult &Result,
         bool Inserted =
             WarningLocToVal.try_emplace(Var->getBeginLoc(), RootValue).second;
         assert(Inserted && "multiple warnings at the same source location");
+        (void)Inserted;
 
         return {{}, {Var->getBeginLoc()}};
       }
@@ -391,6 +364,7 @@ diagnoseCastExpr(const CastExpr *Stmt, const MatchFinder::MatchResult &Result,
         bool Inserted =
             WarningLocToVal.try_emplace(Var->getBeginLoc(), RootValue).second;
         assert(Inserted && "multiple warnings at the same source location");
+        (void)Inserted;
 
         return {{Var->getBeginLoc()}, {}};
       }
@@ -441,7 +415,7 @@ NullPointerAnalysisModel::NullPointerAnalysisModel(ASTContext &Context)
       BranchTransferMatchSwitch(buildBranchTransferMatchSwitch()) {}
 
 ast_matchers::StatementMatcher NullPointerAnalysisModel::ptrValueMatcher() {
-  return ptrToVar();
+  return ptrWithBinding();
 }
 
 void NullPointerAnalysisModel::transfer(const CFGElement &E, NoopLattice &State,
@@ -467,8 +441,11 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     return;
 
   const auto MergeValues = [&](llvm::StringRef Name) -> BoolValue & {
-    BoolValue *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
-    BoolValue *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
+    auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
+    auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
+
+    if (LHSVar == RHSVar)
+      return *LHSVar;
 
     SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
     SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
@@ -518,8 +495,11 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
 
   // Evaluate values, but different values compare to Unknown.
   auto CompareValues = [&](llvm::StringRef Name) -> ComparisonResult {
-    BoolValue *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
-    BoolValue *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
+    auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
+    auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
+
+    if (LHSVar == RHSVar)
+      return ComparisonResult::Same;
 
     SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
     SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
@@ -559,8 +539,8 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
     return ComparisonResult::Unknown;
 
   auto FastCompareValues = [&](llvm::StringRef Name) -> ComparisonResult {
-    BoolValue *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
-    BoolValue *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
+    auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
+    auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
     SatisfiabilityResult LHSResult = shallowComputeSatisfiability(LHSVar, Env1);
     SatisfiabilityResult RHSResult = shallowComputeSatisfiability(RHSVar, Env2);

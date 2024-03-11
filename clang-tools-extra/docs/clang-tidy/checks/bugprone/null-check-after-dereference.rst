@@ -7,7 +7,7 @@ bugprone-null-check-after-dereference
 
    This check uses a flow-sensitive static analysis to produce its
    results. Therefore, it may be more resource intensive (RAM, CPU) than the
-   average clang-tidy check.
+   average Clang-tidy check.
 
 This check identifies redundant pointer null-checks, by finding cases where the
 pointer cannot be null at the location of the null-check.
@@ -33,9 +33,9 @@ Supported pointer operations
 Pointer null-checks
 -------------------
 
-The checker currently supports null-checks on pointers that use
+The check currently supports null-checks on pointers that use
 ``operator bool``, such as when being used as the condition
-for an `if` statement.
+for an ``if`` statement.
 
 .. code-block:: c++
 
@@ -69,8 +69,8 @@ Pointer star- and arrow-dereferences are supported.
 Null-pointer and other value assignments
 ----------------------------------------
 
-The checker supports assigning various values to pointers, making them *null*
-or *non-null*. The checker also supports passing pointers of a pointer to
+The check supports assigning various values to pointers, making them *null*
+or *non-null*. The check also supports passing pointers of a pointer to
 external functions.
 
 .. code-block:: c++
@@ -103,7 +103,7 @@ Limitations
 
 The check only supports C++ due to limitations in the data-flow framework.
 
-The annotations ``_nullable`` and ``_nonnull`` are not supported.
+The annotations ``_Nullable`` and ``_Nonnull`` are not supported.
 
 .. code-block:: c++
 
