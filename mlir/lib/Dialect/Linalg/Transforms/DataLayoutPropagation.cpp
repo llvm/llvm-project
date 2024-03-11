@@ -552,6 +552,26 @@ private:
   ControlPropagationFn controlFn;
 };
 
+static SmallVector<int64_t>
+projectToInnerMostNonUnitDimsPos(ArrayRef<int64_t> dimsPos,
+                                 ArrayRef<ReassociationIndices> reassocIndices,
+                                 ArrayRef<int64_t> baseShape) {
+  SmallVector<int64_t> projectedDimsPos;
+  for (auto pos : dimsPos) {
+    int64_t projectedPos = -1;
+    for (auto it = reassocIndices[pos].rbegin();
+         it != reassocIndices[pos].rend(); ++it) {
+      projectedPos = *it;
+      if (baseShape[projectedPos] > 1) {
+        break;
+      }
+    }
+    assert(projectedPos != -1 && "projected dim not found");
+    projectedDimsPos.push_back(projectedPos);
+  }
+  return projectedDimsPos;
+}
+
 static LogicalResult
 bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
                                    tensor::PackOp packOp,
@@ -568,10 +588,9 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   ArrayRef<int64_t> srcShape = collapseOp.getSrcType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       collapseOp.getReassociationIndices();
-  SmallVector<int64_t> baseDimsPos;
-  for (auto pos : innerDimsPos) {
-    baseDimsPos.push_back(reassocIndices[pos].back());
-  }
+  SmallVector<int64_t> baseDimsPos =
+      projectToInnerMostNonUnitDimsPos(innerDimsPos, reassocIndices, srcShape);
+
   // Check if the base dims before reassociation are divisible by the inner tile
   // sizes.
   for (auto [basePos, tileSize] :
@@ -590,11 +609,11 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   }
 
   auto emptyOp = tensor::PackOp::createDestinationTensor(
-      rewriter, packOp.getLoc(), collapseOp.getSrc(), packOp.getMixedTiles(), baseDimsPos,
-      newOuterDimsPerm);
+      rewriter, packOp.getLoc(), collapseOp.getSrc(), packOp.getMixedTiles(),
+      baseDimsPos, newOuterDimsPerm);
   auto newPackOp = rewriter.create<tensor::PackOp>(
-      packOp.getLoc(), collapseOp.getSrc(), emptyOp, baseDimsPos, packOp.getMixedTiles(),
-      packOp.getPaddingValue(), newOuterDimsPerm);
+      packOp.getLoc(), collapseOp.getSrc(), emptyOp, baseDimsPos,
+      packOp.getMixedTiles(), packOp.getPaddingValue(), newOuterDimsPerm);
 
   SmallVector<ReassociationIndices> newReassocIndices;
   int64_t currPos = 0;
@@ -660,10 +679,9 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
   ArrayRef<int64_t> dstShape = expandOp.getType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       expandOp.getReassociationIndices();
-  SmallVector<int64_t> baseDimsPos;
-  for (auto pos : innerDimsPos) {
-    baseDimsPos.push_back(reassocIndices[pos].back());
-  }
+  SmallVector<int64_t> baseDimsPos =
+      projectToInnerMostNonUnitDimsPos(innerDimsPos, reassocIndices, dstShape);
+
   // Check if the base dims after reassociation are divisible by the inner tile
   // sizes.
   for (auto [basePos, tileSize] :
@@ -702,8 +720,8 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
       newReassocIndices);
 
   auto emptyOp = tensor::UnPackOp::createDestinationTensor(
-      rewriter, unPackOp.getLoc(), newExpandOp, unPackOp.getMixedTiles(), baseDimsPos,
-      newOuterDimsPerm);
+      rewriter, unPackOp.getLoc(), newExpandOp, unPackOp.getMixedTiles(),
+      baseDimsPos, newOuterDimsPerm);
   auto newUnPackOp = rewriter.create<tensor::UnPackOp>(
       unPackOp.getLoc(), newExpandOp.getResult(), emptyOp, baseDimsPos,
       unPackOp.getMixedTiles(), newOuterDimsPerm);
