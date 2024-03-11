@@ -4748,7 +4748,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
                                                 CGF.Builder, false);
           // Get the call dbg.declare instruction we just created and update
           // its DIExpression to add offset to base address.
-          auto UpdateExpr = [](llvm::LLVMContext &Ctx, auto *DDI,
+          auto UpdateExpr = [](llvm::LLVMContext &Ctx, auto *Declare,
                                unsigned Offset) {
             SmallVector<uint64_t, 8> Ops;
             // Add offset to the base address if non zero.
@@ -4757,7 +4757,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
               Ops.push_back(Offset);
             }
             Ops.push_back(llvm::dwarf::DW_OP_deref);
-            DDI->setExpression(llvm::DIExpression::get(Ctx, Ops));
+            Declare->setExpression(llvm::DIExpression::get(Ctx, Ops));
           };
           llvm::Instruction &Last = CGF.Builder.GetInsertBlock()->back();
           if (auto DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&Last))
