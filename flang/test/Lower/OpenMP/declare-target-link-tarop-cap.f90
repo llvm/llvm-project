@@ -20,6 +20,13 @@ program test_link
   integer, pointer :: test_ptr2
   !$omp declare target link(test_ptr2)
 
+  integer :: test_int_cb
+
+  integer :: test_int_array_cb(3) = (/1,2,3/)
+
+  common /test_cb/ test_int_cb, test_int_array_cb
+  !$omp declare target link(/test_cb/)
+
   !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "test_int"}
   !$omp target
     test_int = test_int + 1
@@ -52,4 +59,15 @@ program test_link
     test_ptr2 = test_ptr2 + 1
   !$omp end target
 
+  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "test_int_cb"}
+  !$omp target
+    test_int_cb = test_int_cb + 1
+  !$omp end target
+
+  !CHECK-DAG: {{%.*}} = omp.map_info var_ptr({{%.*}} : !fir.ref<!fir.array<3xi32>>, !fir.array<3xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{%.*}}) -> !fir.ref<!fir.array<3xi32>> {name = "test_int_array_cb"}
+  !$omp target
+    do i = 1,3
+      test_int_array_cb(i) = i * 2
+    end do
+  !$omp end target
 end

@@ -1037,6 +1037,31 @@ static void genBodyOfTargetOp(
     genNestedEvaluations(converter, eval);
 }
 
+// If the symbol is specified in declare target directive, the function returns
+// the corresponding declare target operation.
+static mlir::omp::DeclareTargetInterface
+getDeclareTargetOp(const Fortran::semantics::Symbol &sym,
+                   Fortran::lower::AbstractConverter &converter) {
+  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+  mlir::Operation *op;
+  op = mod.lookupSymbol(converter.mangleName(sym));
+  auto declareTargetOp =
+      llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+  // If declare target op is not found Check if common block containing the
+  // variable is specified in declare target
+  if (!declareTargetOp || !declareTargetOp.isDeclareTarget()) {
+    if (auto cB = Fortran::semantics::FindCommonBlockContaining(sym)) {
+      op = mod.lookupSymbol(converter.mangleName(*cB));
+      declareTargetOp =
+          llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+    }
+  }
+  if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
+    return declareTargetOp;
+  }
+  return static_cast<mlir::omp::DeclareTargetInterface>(nullptr);
+}
+
 static mlir::omp::TargetOp
 genTargetOp(Fortran::lower::AbstractConverter &converter,
             Fortran::semantics::SemanticsContext &semaCtx,
@@ -1122,11 +1147,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
         // If a variable is specified in declare target link and if device
         // type is not specified as `nohost`, it needs to be mapped tofrom
-        mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
-        mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
-        auto declareTargetOp =
-            llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
-        if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
+        if (auto declareTargetOp = getDeclareTargetOp(sym, converter)) {
           if (declareTargetOp.getDeclareTargetCaptureClause() ==
                   mlir::omp::DeclareTargetCaptureClause::link &&
               declareTargetOp.getDeclareTargetDeviceType() !=
