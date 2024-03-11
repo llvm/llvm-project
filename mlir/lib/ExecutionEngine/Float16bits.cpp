@@ -150,6 +150,10 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
   return os;
 }
 
+bool operator==(const f16 &f1, const f16 &f2) { return f1.bits == f2.bits; }
+
+bool operator==(const bf16 &f1, const bf16 &f2) { return f1.bits == f2.bits; }
+
 // Mark these symbols as weak so they don't conflict when compiler-rt also
 // defines them.
 #define ATTR_WEAK

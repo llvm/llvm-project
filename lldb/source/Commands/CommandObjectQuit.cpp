@@ -21,8 +21,7 @@ using namespace lldb_private;
 CommandObjectQuit::CommandObjectQuit(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "quit", "Quit the LLDB debugger.",
                           "quit [exit-code]") {
-  CommandArgumentData exit_code_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-  m_arguments.push_back({exit_code_arg});
+  AddSimpleArgumentList(eArgTypeUnsignedInteger);
 }
 
 CommandObjectQuit::~CommandObjectQuit() = default;

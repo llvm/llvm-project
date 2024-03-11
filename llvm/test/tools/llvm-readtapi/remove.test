@@ -1,5 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t 
+// Check that arch removal is accepted with tbdv5 and various inlined contents.
+
 ; RUN: llvm-readtapi --remove -arch x86_64h %t/libfat.tbd -o %t/libslim.tbd 2>&1 | FileCheck --allow-empty %s
 ; RUN: llvm-readtapi --compare %t/libslim.tbd %t/libslim_expected.tbd
 

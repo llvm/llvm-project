@@ -11,15 +11,13 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
-    name = "bit_test",
-    srcs = ["bit_test.cpp"],
-    deps = ["//libc:__support_bit"],
-)
-
-libc_test(
     name = "math_extras_test",
     srcs = ["math_extras_test.cpp"],
-    deps = ["//libc:__support_math_extras"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc:__support_math_extras",
+        "//libc:__support_uint128",
+    ],
 )
 
 # This test is currently disabled because of an issue in
@@ -48,9 +46,15 @@ libc_test(
 
 libc_test(
     name = "str_to_float_test",
-    srcs = ["str_to_float_test.cpp"],
+    srcs = [
+        "str_to_double_test.cpp",
+        "str_to_float_test.cpp",
+        "str_to_fp_test.h",
+        "str_to_long_double_test.cpp",
+    ],
     deps = [
         "//libc:__support_fputil_fp_bits",
+        "//libc:__support_integer_literals",
         "//libc:__support_str_to_float",
         "//libc:__support_uint128",
     ],
@@ -62,6 +66,7 @@ libc_test(
     deps = [
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string_view",
+        "//libc:__support_integer_literals",
         "//libc:__support_integer_to_string",
         "//libc:__support_uint",
         "//libc:__support_uint128",
@@ -81,6 +86,7 @@ libc_test(
     srcs = ["uint_test.cpp"],
     deps = [
         "//libc:__support_cpp_optional",
+        "//libc:__support_macros_properties_types",
         "//libc:__support_uint",
     ],
 )
@@ -98,5 +104,14 @@ libc_test(
     srcs = ["char_vector_test.cpp"],
     deps = [
         "//libc:__support_char_vector",
+    ],
+)
+
+libc_test(
+    name = "integer_literals_test",
+    srcs = ["integer_literals_test.cpp"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc:__support_macros_properties_types",
     ],
 )

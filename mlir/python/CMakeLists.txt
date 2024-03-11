@@ -21,13 +21,20 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
-    extras/types.py
     dialects/_ods_common.py
 
     # The main _mlir module has submodules: include stubs from each.
     _mlir_libs/_mlir/__init__.pyi
     _mlir_libs/_mlir/ir.pyi
     _mlir_libs/_mlir/passmanager.pyi
+)
+
+declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Core.Python
+  SOURCES
+    extras/types.py
+    extras/meta.py
 )
 
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
@@ -165,6 +172,21 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Transform/IR/TransformAttrs.td"
 )
+
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.transform.extras
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  GEN_ENUM_BINDINGS
+  SOURCES
+    dialects/transform/extras/__init__.py)
+
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.transform.interpreter
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/transform/interpreter/__init__.py)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -335,7 +357,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/OpenMPOps.td
   SOURCES
     dialects/openmp.py
-  DIALECT_NAME omp)
+  DIALECT_NAME omp
+  DEPENDS omp_common_td)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -361,6 +384,13 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 )
+
+declare_mlir_dialect_python_bindings(
+    ADD_TO_PARENT MLIRPythonSources.Dialects
+    ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+    TD_FILE dialects/SPIRVOps.td
+    SOURCES dialects/spirv.py
+    DIALECT_NAME spirv)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -457,6 +487,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILinalg
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
+  MODULE_NAME _mlirDialectsLLVM
+  ADD_TO_PARENT MLIRPythonSources.Dialects.llvm
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectLLVM.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPILLVM
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
@@ -571,6 +614,18 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPISparseTensor
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
+  MODULE_NAME _mlirTransformInterpreter
+  ADD_TO_PARENT MLIRPythonSources.Dialects.transform
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    TransformInterpreter.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPITransformDialectTransforms
 )
 
 # TODO: Figure out how to put this in the test tree.

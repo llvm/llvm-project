@@ -136,6 +136,7 @@ public:
 
 class TypePromotionImpl {
   unsigned TypeSize = 0;
+  const TargetLowering *TLI = nullptr;
   LLVMContext *Ctx = nullptr;
   unsigned RegisterBitWidth = 0;
   SmallPtrSet<Value *, 16> AllVisited;
@@ -272,64 +273,58 @@ bool TypePromotionImpl::isSink(Value *V) {
 
 /// Return whether this instruction can safely wrap.
 bool TypePromotionImpl::isSafeWrap(Instruction *I) {
-  // We can support a potentially wrapping instruction (I) if:
+  // We can support a potentially wrapping Add/Sub instruction (I) if:
   // - It is only used by an unsigned icmp.
   // - The icmp uses a constant.
-  // - The wrapping value (I) is decreasing, i.e would underflow - wrapping
-  //   around zero to become a larger number than before.
   // - The wrapping instruction (I) also uses a constant.
   //
-  // We can then use the two constants to calculate whether the result would
-  // wrap in respect to itself in the original bitwidth. If it doesn't wrap,
-  // just underflows the range, the icmp would give the same result whether the
-  // result has been truncated or not. We calculate this by:
-  // - Zero extending both constants, if needed, to RegisterBitWidth.
-  // - Take the absolute value of I's constant, adding this to the icmp const.
-  // - Check that this value is not out of range for small type. If it is, it
-  //   means that it has underflowed enough to wrap around the icmp constant.
+  // This a common pattern emitted to check if a value is within a range.
+  //
+  // For example:
+  //
+  // %sub = sub i8 %a, C1
+  // %cmp = icmp ule i8 %sub, C2
+  //
+  // or
+  //
+  // %add = add i8 %a, C1
+  // %cmp = icmp ule i8 %add, C2.
+  //
+  // We will treat an add as though it were a subtract by -C1. To promote
+  // the Add/Sub we will zero extend the LHS and the subtracted amount. For Add,
+  // this means we need to negate the constant, zero extend to RegisterBitWidth,
+  // and negate in the larger type.
+  //
+  // This will produce a value in the range [-zext(C1), zext(X)-zext(C1)] where
+  // C1 is the subtracted amount. This is either a small unsigned number or a
+  // large unsigned number in the promoted type.
+  //
+  // Now we need to correct the compare constant C2. Values >= C1 in the
+  // original add result range have been remapped to large values in the
+  // promoted range. If the compare constant fell into this range we need to
+  // remap it as well. We can do this as -(zext(-C2)).
   //
   // For example:
   //
   // %sub = sub i8 %a, 2
   // %cmp = icmp ule i8 %sub, 254
   //
-  // If %a = 0, %sub = -2 == FE == 254
-  // But if this is evalulated as a i32
-  // %sub = -2 == FF FF FF FE == 4294967294
-  // So the unsigned compares (i8 and i32) would not yield the same result.
+  // becomes
   //
-  // Another way to look at it is:
-  // %a - 2 <= 254
-  // %a + 2 <= 254 + 2
-  // %a <= 256
-  // And we can't represent 256 in the i8 format, so we don't support it.
+  // %zext = zext %a to i32
+  // %sub = sub i32 %zext, 2
+  // %cmp = icmp ule i32 %sub, 4294967294
   //
-  // Whereas:
+  // Another example:
   //
-  // %sub i8 %a, 1
+  // %sub = sub i8 %a, 1
   // %cmp = icmp ule i8 %sub, 254
   //
-  // If %a = 0, %sub = -1 == FF == 255
-  // As i32:
-  // %sub = -1 == FF FF FF FF == 4294967295
+  // becomes
   //
-  // In this case, the unsigned compare results would be the same and this
-  // would also be true for ult, uge and ugt:
-  // - (255 < 254) == (0xFFFFFFFF < 254) == false
-  // - (255 <= 254) == (0xFFFFFFFF <= 254) == false
-  // - (255 > 254) == (0xFFFFFFFF > 254) == true
-  // - (255 >= 254) == (0xFFFFFFFF >= 254) == true
-  //
-  // To demonstrate why we can't handle increasing values:
-  //
-  // %add = add i8 %a, 2
-  // %cmp = icmp ult i8 %add, 127
-  //
-  // If %a = 254, %add = 256 == (i8 1)
-  // As i32:
-  // %add = 256
-  //
-  // (1 < 127) != (256 < 127)
+  // %zext = zext %a to i32
+  // %sub = sub i32 %zext, 1
+  // %cmp = icmp ule i32 %sub, 254
 
   unsigned Opc = I->getOpcode();
   if (Opc != Instruction::Add && Opc != Instruction::Sub)
@@ -356,25 +351,32 @@ bool TypePromotionImpl::isSafeWrap(Instruction *I) {
   APInt OverflowConst = cast<ConstantInt>(I->getOperand(1))->getValue();
   if (Opc == Instruction::Sub)
     OverflowConst = -OverflowConst;
-  if (!OverflowConst.isNonPositive())
-    return false;
 
-  // Using C1 = OverflowConst and C2 = ICmpConst, we can either prove that:
-  //   zext(x) + sext(C1) <u zext(C2)  if C1 < 0 and C1 >s C2
-  //   zext(x) + sext(C1) <u sext(C2)  if C1 < 0 and C1 <=s C2
-  if (OverflowConst.sgt(ICmpConst)) {
+  // If the constant is positive, we will end up filling the promoted bits with
+  // all 1s. Make sure that results in a cheap add constant.
+  if (!OverflowConst.isNonPositive()) {
+    // We don't have the true promoted width, just use 64 so we can create an
+    // int64_t for the isLegalAddImmediate call.
+    if (OverflowConst.getBitWidth() >= 64)
+      return false;
+
+    APInt NewConst = -((-OverflowConst).zext(64));
+    if (!TLI->isLegalAddImmediate(NewConst.getSExtValue()))
+      return false;
+  }
+
+  SafeWrap.insert(I);
+
+  if (OverflowConst.ugt(ICmpConst)) {
     LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
                       << "const of " << *I << "\n");
-    SafeWrap.insert(I);
-    return true;
-  } else {
-    LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
-                      << "const of " << *I << " and " << *CI << "\n");
-    SafeWrap.insert(I);
-    SafeWrap.insert(CI);
     return true;
   }
-  return false;
+
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
+                    << "const of " << *I << " and " << *CI << "\n");
+  SafeWrap.insert(CI);
+  return true;
 }
 
 bool TypePromotionImpl::shouldPromote(Value *V) {
@@ -488,18 +490,24 @@ void IRPromoter::PromoteTree() {
         continue;
 
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
-        // For subtract, we don't need to sext the constant. We only put it in
+        // For subtract, we only need to zext the constant. We only put it in
         // SafeWrap because SafeWrap.size() is used elsewhere.
-        // For cmp, we need to sign extend a constant appearing in either
-        // operand. For add, we should only sign extend the RHS.
-        Constant *NewConst =
-            ConstantInt::get(Const->getContext(),
-                             (SafeWrap.contains(I) &&
-                              (I->getOpcode() == Instruction::ICmp || i == 1) &&
-                              I->getOpcode() != Instruction::Sub)
-                                 ? Const->getValue().sext(PromotedWidth)
-                                 : Const->getValue().zext(PromotedWidth));
-        I->setOperand(i, NewConst);
+        // For Add and ICmp we need to find how far the constant is from the
+        // top of its original unsigned range and place it the same distance
+        // from the top of its new unsigned range. We can do this by negating
+        // the constant, zero extending it, then negating in the new type.
+        APInt NewConst;
+        if (SafeWrap.contains(I)) {
+          if (I->getOpcode() == Instruction::ICmp)
+            NewConst = -((-Const->getValue()).zext(PromotedWidth));
+          else if (I->getOpcode() == Instruction::Add && i == 1)
+            NewConst = -((-Const->getValue()).zext(PromotedWidth));
+          else
+            NewConst = Const->getValue().zext(PromotedWidth);
+        } else
+          NewConst = Const->getValue().zext(PromotedWidth);
+
+        I->setOperand(i, ConstantInt::get(Const->getContext(), NewConst));
       } else if (isa<UndefValue>(Op))
         I->setOperand(i, ConstantInt::get(ExtTy, 0));
     }
@@ -918,7 +926,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   const TargetSubtargetInfo *SubtargetInfo = TM->getSubtargetImpl(F);
-  const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
+  TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
   Ctx = &F.getParent()->getContext();
@@ -937,6 +945,8 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
       return 0;
 
     EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
+    if (TLI->isSExtCheaperThanZExt(SrcVT, PromotedVT))
+      return 0;
     if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
                         << "for promoted type\n");

@@ -477,9 +477,8 @@ mode.  Instead of formatting and printing out the diagnostics, this
 implementation just captures and remembers the diagnostics as they fly by.
 Then ``-verify`` compares the list of produced diagnostics to the list of
 expected ones.  If they disagree, it prints out its own output.  Full
-documentation for the ``-verify`` mode can be found in the Clang API
-documentation for `VerifyDiagnosticConsumer
-</doxygen/classclang_1_1VerifyDiagnosticConsumer.html#details>`_.
+documentation for the ``-verify`` mode can be found at
+:ref:`verifying-diagnostics`.
 
 There are many other possible implementations of this interface, and this is
 why we prefer diagnostics to pass down rich structured information in
@@ -932,7 +931,7 @@ the option appears on the command line, the argument value is simply copied.
 .. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">,
-    Visibility<[ClangOption, CC1Option]>,
+    Visibility<[ClangOption, CC1Option, FlangOption]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**
@@ -3308,6 +3307,205 @@ are similar.
      proper visitation for your expression, enabling various IDE features such
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
+
+Testing
+-------
+All functional changes to Clang should come with test coverage demonstrating
+the change in behavior.
+
+.. _verifying-diagnostics:
+
+Verifying Diagnostics
+^^^^^^^^^^^^^^^^^^^^^
+Clang ``-cc1`` supports the ``-verify`` command line option as a way to
+validate diagnostic behavior. This option will use special comments within the
+test file to verify that expected diagnostics appear in the correct source
+locations. If all of the expected diagnostics match the actual output of Clang,
+then the invocation will return normally. If there are discrepancies between
+the expected and actual output, Clang will emit detailed information about
+which expected diagnostics were not seen or which unexpected diagnostics were
+seen, etc. A complete example is:
+
+.. code-block: c++
+
+  // RUN: %clang_cc1 -verify %s
+  int A = B; // expected-error {{use of undeclared identifier 'B'}}
+
+If the test is run and the expected error is emitted on the expected line, the
+diagnostic verifier will pass. However, if the expected error does not appear
+or appears in a different location than expected, or if additional diagnostics
+appear, the diagnostic verifier will fail and emit information as to why.
+
+The ``-verify`` command optionally accepts a comma-delimited list of one or
+more verification prefixes that can be used to craft those special comments.
+Each prefix must start with a letter and contain only alphanumeric characters,
+hyphens, and underscores. ``-verify`` by itself is equivalent to
+``-verify=expected``, meaning that special comments will start with
+``expected``. Using different prefixes makes it easier to have separate
+``RUN:`` lines in the same test file which result in differing diagnostic
+behavior. For example:
+
+.. code-block:: c++
+
+  // RUN: %clang_cc1 -verify=foo,bar %s
+
+  int A = B; // foo-error {{use of undeclared identifier 'B'}}
+  int C = D; // bar-error {{use of undeclared identifier 'D'}}
+  int E = F; // expected-error {{use of undeclared identifier 'F'}}
+
+The verifier will recognize ``foo-error`` and ``bar-error`` as special comments
+but will not recognize ``expected-error`` as one because the ``-verify`` line
+does not contain that as a prefix. Thus, this test would fail verification
+because an unexpected diagnostic would appear on the declaration of ``E``.
+
+Multiple occurrences accumulate prefixes.  For example,
+``-verify -verify=foo,bar -verify=baz`` is equivalent to
+``-verify=expected,foo,bar,baz``.
+
+Specifying Diagnostics
+^^^^^^^^^^^^^^^^^^^^^^
+Indicating that a line expects an error or a warning is easy. Put a comment
+on the line that has the diagnostic, use
+``expected-{error,warning,remark,note}`` to tag if it's an expected error,
+warning, remark, or note (respectively), and place the expected text between
+``{{`` and ``}}`` markers. The full text doesn't have to be included, only
+enough to ensure that the correct diagnostic was emitted. (Note: full text
+should be included in test cases unless there is a compelling reason to use
+truncated text instead.)
+
+For a full description of the matching behavior, including more complex
+matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
+
+Here's an example of the most commonly used way to specify expected
+diagnostics:
+
+.. code-block:: c++
+
+  int A = B; // expected-error {{use of undeclared identifier 'B'}}
+
+You can place as many diagnostics on one line as you wish. To make the code
+more readable, you can use slash-newline to separate out the diagnostics.
+
+Alternatively, it is possible to specify the line on which the diagnostic
+should appear by appending ``@<line>`` to ``expected-<type>``, for example:
+
+.. code-block:: c++
+
+  #warning some text
+  // expected-warning@10 {{some text}}
+
+The line number may be absolute (as above), or relative to the current line by
+prefixing the number with either ``+`` or ``-``.
+
+If the diagnostic is generated in a separate file, for example in a shared
+header file, it may be beneficial to be able to declare the file in which the
+diagnostic will appear, rather than placing the ``expected-*`` directive in the
+actual file itself. This can be done using the following syntax:
+
+.. code-block:: c++
+
+  // expected-error@path/include.h:15 {{error message}}
+
+The path can be absolute or relative and the same search paths will be used as
+for ``#include`` directives. The line number in an external file may be
+substituted with ``*`` meaning that any line number will match (useful where
+the included file is, for example, a system header where the actual line number
+may change and is not critical).
+
+As an alternative to specifying a fixed line number, the location of a
+diagnostic can instead be indicated by a marker of the form ``#<marker>``.
+Markers are specified by including them in a comment, and then referenced by
+appending the marker to the diagnostic with ``@#<marker>``, as with:
+
+.. code-block:: c++
+
+  #warning some text  // #1
+  // ... other code ...
+  // expected-warning@#1 {{some text}}
+
+The name of a marker used in a directive must be unique within the compilation.
+
+The simple syntax above allows each specification to match exactly one
+diagnostic. You can use the extended syntax to customize this. The extended
+syntax is ``expected-<type> <n> {{diag text}}``, where ``<type>`` is one of
+``error``, ``warning``, ``remark``, or ``note``, and ``<n>`` is a positive
+integer. This allows the diagnostic to appear as many times as specified. For
+example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 2 {{previous declaration is here}}
+
+Where the diagnostic is expected to occur a minimum number of times, this can
+be specified by appending a ``+`` to the number. For example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 0+ {{previous declaration is here}}
+  void g(); // expected-note 1+ {{previous declaration is here}}
+
+In the first example, the diagnostic becomes optional, i.e. it will be
+swallowed if it occurs, but will not generate an error if it does not occur. In
+the second example, the diagnostic must occur at least once. As a short-hand,
+"one or more" can be specified simply by ``+``. For example:
+
+.. code-block:: c++
+
+  void g(); // expected-note + {{previous declaration is here}}
+
+A range can also be specified by ``<n>-<m>``. For example:
+
+.. code-block:: c++
+
+  void f(); // expected-note 0-1 {{previous declaration is here}}
+
+In this example, the diagnostic may appear only once, if at all.
+
+.. _DiagnosticMatching:
+
+Matching Modes
+~~~~~~~~~~~~~~
+
+The default matching mode is simple string, which looks for the expected text
+that appears between the first `{{` and `}}` pair of the comment. The string is
+interpreted just as-is, with one exception: the sequence `\n` is converted to a
+single newline character. This mode matches the emitted diagnostic when the
+text appears as a substring at any position of the emitted message.
+
+To enable matching against desired strings that contain `}}` or `{{`, the
+string-mode parser accepts opening delimiters of more than two curly braces,
+like `{{{`. It then looks for a closing delimiter of equal "width" (i.e `}}}`).
+For example:
+
+.. code-block:: c++
+
+  // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
+
+The intent is to allow the delimeter to be wider than the longest `{` or `}`
+brace sequence in the content, so that if your expected text contains `{{{`
+(three braces) it may be delimited with `{{{{` (four braces), and so on.
+
+Regex matching mode may be selected by appending ``-re`` to the diagnostic type
+and including regexes wrapped in double curly braces (`{{` and `}}`) in the
+directive, such as:
+
+.. code-block:: text
+
+  expected-error-re {{format specifies type 'wchar_t **' (aka '{{.+}}')}}
+
+Examples matching error: "variable has incomplete type 'struct s'"
+
+.. code-block:: c++
+
+  // expected-error {{variable has incomplete type 'struct s'}}
+  // expected-error {{variable has incomplete type}}
+  // expected-error {{{variable has incomplete type}}}
+  // expected-error {{{{variable has incomplete type}}}}
+
+  // expected-error-re {{variable has type 'struct {{.}}'}}
+  // expected-error-re {{variable has type 'struct {{.*}}'}}
+  // expected-error-re {{variable has type 'struct {{(.*)}}'}}
+  // expected-error-re {{variable has type 'struct{{[[:space:]](.*)}}'}}
 
 Feature Test Macros
 ===================

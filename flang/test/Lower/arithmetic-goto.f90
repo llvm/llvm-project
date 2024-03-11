@@ -36,10 +36,10 @@ function kagf(findex)
   ! CHECK:   %[[V_3:[0-9]+]] = arith.addf %[[V_1]], %[[V_2]] {{.*}} : f32
   ! CHECK:   %[[V_4:[0-9]+]] = arith.addf %[[V_3]], %[[V_3]] {{.*}} : f32
   ! CHECK:   %cst = arith.constant 0.000000e+00 : f32
-  ! CHECK:   %[[V_5:[0-9]+]] = arith.cmpf olt, %[[V_4]], %cst : f32
+  ! CHECK:   %[[V_5:[0-9]+]] = arith.cmpf olt, %[[V_4]], %cst {{.*}} : f32
   ! CHECK:   cf.cond_br %[[V_5]], ^bb2, ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_6:[0-9]+]] = arith.cmpf ogt, %[[V_4]], %cst : f32
+  ! CHECK:   %[[V_6:[0-9]+]] = arith.cmpf ogt, %[[V_4]], %cst {{.*}} : f32
   ! CHECK:   cf.cond_br %[[V_6]], ^bb4, ^bb3
   ! CHECK: ^bb2:  // pred: ^bb0
   ! CHECK:   fir.store %c1{{.*}} to %[[V_0]] : !fir.ref<i32>

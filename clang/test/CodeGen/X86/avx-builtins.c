@@ -100,7 +100,7 @@ __m256 test_mm256_broadcast_ps(__m128* A) {
 __m256d test_mm256_broadcast_sd(double* A) {
   // CHECK-LABEL: test_mm256_broadcast_sd
   // CHECK: load double, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <4 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <4 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 1
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 2
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
@@ -110,7 +110,7 @@ __m256d test_mm256_broadcast_sd(double* A) {
 __m128 test_mm_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm_broadcast_ss
   // CHECK: load float, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 3
@@ -120,7 +120,7 @@ __m128 test_mm_broadcast_ss(float* A) {
 __m256 test_mm256_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm256_broadcast_ss
   // CHECK: load float, ptr %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <8 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 3
@@ -596,54 +596,6 @@ __m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
   return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
 }
 
-__m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_eq_oq
-  // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
-}
-
-__m128d test_mm_cmp_pd_lt_os(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_lt_os
-  // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_LT_OS);
-}
-
-__m128d test_mm_cmp_pd_le_os(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_le_os
-  // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_LE_OS);
-}
-
-__m128d test_mm_cmp_pd_unord_q(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_unord_q
-  // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_UNORD_Q);
-}
-
-__m128d test_mm_cmp_pd_neq_uq(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_neq_uq
-  // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_NEQ_UQ);
-}
-
-__m128d test_mm_cmp_pd_nlt_us(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_nlt_us
-  // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_NLT_US);
-}
-
-__m128d test_mm_cmp_pd_nle_us(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_nle_us
-  // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_NLE_US);
-}
-
-__m128d test_mm_cmp_pd_ord_q(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_ord_q
-  // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_ORD_Q);
-}
-
 __m128d test_mm_cmp_pd_eq_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_eq_uq
   // CHECK: fcmp ueq <2 x double> %{{.*}}, %{{.*}}
@@ -786,54 +738,6 @@ __m128d test_mm_cmp_pd_true_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_true_us
   // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_TRUE_US);
-}
-
-__m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_eq_oq
-  // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
-}
-
-__m128 test_mm_cmp_ps_lt_os(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_lt_os
-  // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_LT_OS);
-}
-
-__m128 test_mm_cmp_ps_le_os(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_le_os
-  // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_LE_OS);
-}
-
-__m128 test_mm_cmp_ps_unord_q(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_unord_q
-  // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_UNORD_Q);
-}
-
-__m128 test_mm_cmp_ps_neq_uq(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_neq_uq
-  // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_NEQ_UQ);
-}
-
-__m128 test_mm_cmp_ps_nlt_us(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_nlt_us
-  // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_NLT_US);
-}
-
-__m128 test_mm_cmp_ps_nle_us(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_nle_us
-  // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_NLE_US);
-}
-
-__m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_ord_q
-  // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_ORD_Q);
 }
 
 __m128 test_mm_cmp_ps_eq_uq(__m128 a, __m128 b) {
@@ -1481,7 +1385,7 @@ __m256i test_mm256_set_epi8(char A0, char A1, char A2, char A3, char A4, char A5
                             char A16, char A17, char A18, char A19, char A20, char A21, char A22, char A23,
                             char A24, char A25, char A26, char A27, char A28, char A29, char A30, char A31) {
   // CHECK-LABEL: test_mm256_set_epi8
-  // CHECK: insertelement <32 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -1519,7 +1423,7 @@ __m256i test_mm256_set_epi8(char A0, char A1, char A2, char A3, char A4, char A5
 __m256i test_mm256_set_epi16(short A0, short A1, short A2, short A3, short A4, short A5, short A6, short A7,
                              short A8, short A9, short A10, short A11, short A12, short A13, short A14, short A15) {
   // CHECK-LABEL: test_mm256_set_epi16
-  // CHECK: insertelement <16 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -1540,7 +1444,7 @@ __m256i test_mm256_set_epi16(short A0, short A1, short A2, short A3, short A4, s
 
 __m256i test_mm256_set_epi32(int A0, int A1, int A2, int A3, int A4, int A5, int A6, int A7) {
   // CHECK-LABEL: test_mm256_set_epi32
-  // CHECK: insertelement <8 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -1553,7 +1457,7 @@ __m256i test_mm256_set_epi32(int A0, int A1, int A2, int A3, int A4, int A5, int
 
 __m256i test_mm256_set_epi64x(long long A0, long long A1, long long A2, long long A3) {
   // CHECK-LABEL: test_mm256_set_epi64x
-  // CHECK: insertelement <4 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 3
@@ -1580,7 +1484,7 @@ __m256i test_mm256_set_m128i(__m128i A, __m128i B) {
 
 __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
   // CHECK-LABEL: test_mm256_set_pd
-  // CHECK: insertelement <4 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <4 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 1
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 2
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
@@ -1589,7 +1493,7 @@ __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
 
 __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_set_ps
-  // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <8 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 3
@@ -1602,7 +1506,7 @@ __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float
 
 __m256i test_mm256_set1_epi8(char A) {
   // CHECK-LABEL: test_mm256_set1_epi8
-  // CHECK: insertelement <32 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -1639,7 +1543,7 @@ __m256i test_mm256_set1_epi8(char A) {
 
 __m256i test_mm256_set1_epi16(short A) {
   // CHECK-LABEL: test_mm256_set1_epi16
-  // CHECK: insertelement <16 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -1660,7 +1564,7 @@ __m256i test_mm256_set1_epi16(short A) {
 
 __m256i test_mm256_set1_epi32(int A) {
   // CHECK-LABEL: test_mm256_set1_epi32
-  // CHECK: insertelement <8 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -1673,7 +1577,7 @@ __m256i test_mm256_set1_epi32(int A) {
 
 __m256i test_mm256_set1_epi64x(long long A) {
   // CHECK-LABEL: test_mm256_set1_epi64x
-  // CHECK: insertelement <4 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 3
@@ -1682,7 +1586,7 @@ __m256i test_mm256_set1_epi64x(long long A) {
 
 __m256d test_mm256_set1_pd(double A) {
   // CHECK-LABEL: test_mm256_set1_pd
-  // CHECK: insertelement <4 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <4 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 1
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 2
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
@@ -1691,7 +1595,7 @@ __m256d test_mm256_set1_pd(double A) {
 
 __m256 test_mm256_set1_ps(float A) {
   // CHECK-LABEL: test_mm256_set1_ps
-  // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <8 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 3
@@ -1707,7 +1611,7 @@ __m256i test_mm256_setr_epi8(char A0, char A1, char A2, char A3, char A4, char A
                              char A16, char A17, char A18, char A19, char A20, char A21, char A22, char A23,
                              char A24, char A25, char A26, char A27, char A28, char A29, char A30, char A31) {
   // CHECK-LABEL: test_mm256_setr_epi8
-  // CHECK: insertelement <32 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -1745,7 +1649,7 @@ __m256i test_mm256_setr_epi8(char A0, char A1, char A2, char A3, char A4, char A
 __m256i test_mm256_setr_epi16(short A0, short A1, short A2, short A3, short A4, short A5, short A6, short A7,
                               short A8, short A9, short A10, short A11, short A12, short A13, short A14, short A15) {
   // CHECK-LABEL: test_mm256_setr_epi16
-  // CHECK: insertelement <16 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -1766,7 +1670,7 @@ __m256i test_mm256_setr_epi16(short A0, short A1, short A2, short A3, short A4, 
 
 __m256i test_mm256_setr_epi32(int A0, int A1, int A2, int A3, int A4, int A5, int A6, int A7) {
   // CHECK-LABEL: test_mm256_setr_epi32
-  // CHECK: insertelement <8 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -1779,7 +1683,7 @@ __m256i test_mm256_setr_epi32(int A0, int A1, int A2, int A3, int A4, int A5, in
 
 __m256i test_mm256_setr_epi64x(long long A0, long long A1, long long A2, long long A3) {
   // CHECK-LABEL: test_mm256_setr_epi64x
-  // CHECK: insertelement <4 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 3
@@ -1806,7 +1710,7 @@ __m256i test_mm256_setr_m128i(__m128i A, __m128i B) {
 
 __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
   // CHECK-LABEL: test_mm256_setr_pd
-  // CHECK: insertelement <4 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <4 x double> poison, double %{{.*}}, i32 0
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 1
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 2
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
@@ -1815,7 +1719,7 @@ __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
 
 __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_setr_ps
-  // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
+  // CHECK: insertelement <8 x float> poison, float %{{.*}}, i32 0
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 2
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 3

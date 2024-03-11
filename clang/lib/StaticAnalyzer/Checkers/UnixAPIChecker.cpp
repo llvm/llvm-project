@@ -11,12 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -38,11 +40,18 @@ enum class OpenVariant {
 
 namespace {
 
-class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
-  mutable std::unique_ptr<BugType> BT_open, BT_pthreadOnce;
+class UnixAPIMisuseChecker
+    : public Checker<check::PreStmt<CallExpr>,
+                     check::ASTDecl<TranslationUnitDecl>> {
+  const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
+  const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
+                               categories::UnixAPI};
   mutable std::optional<uint64_t> Val_O_CREAT;
 
 public:
+  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
+                    BugReporter &BR) const;
+
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
   void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
@@ -52,11 +61,8 @@ public:
   void CheckOpenVariant(CheckerContext &C,
                         const CallExpr *CE, OpenVariant Variant) const;
 
-  void ReportOpenBug(CheckerContext &C,
-                     ProgramStateRef State,
-                     const char *Msg,
+  void ReportOpenBug(CheckerContext &C, ProgramStateRef State, const char *Msg,
                      SourceRange SR) const;
-
 };
 
 class UnixAPIPortabilityChecker : public Checker< check::PreStmt<CallExpr> > {
@@ -64,7 +70,9 @@ public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
 private:
-  mutable std::unique_ptr<BugType> BT_mallocZero;
+  const BugType BT_mallocZero{
+      this, "Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)",
+      categories::UnixAPI};
 
   void CheckCallocZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckMallocZero(CheckerContext &C, const CallExpr *CE) const;
@@ -85,14 +93,20 @@ private:
                             const char *fn) const;
 };
 
-} //end anonymous namespace
+} // end anonymous namespace
 
-static void LazyInitialize(const CheckerBase *Checker,
-                           std::unique_ptr<BugType> &BT,
-                           const char *name) {
-  if (BT)
-    return;
-  BT.reset(new BugType(Checker, name, categories::UnixAPI));
+void UnixAPIMisuseChecker::checkASTDecl(const TranslationUnitDecl *TU,
+                                        AnalysisManager &Mgr,
+                                        BugReporter &) const {
+  // The definition of O_CREAT is platform specific.
+  // Try to get the macro value from the preprocessor.
+  Val_O_CREAT = tryExpandAsInteger("O_CREAT", Mgr.getPreprocessor());
+  // If we failed, fall-back to known values.
+  if (!Val_O_CREAT) {
+    if (TU->getASTContext().getTargetInfo().getTriple().getVendor() ==
+        llvm::Triple::Apple)
+      Val_O_CREAT = 0x0200;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -132,9 +146,7 @@ void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
   if (!N)
     return;
 
-  LazyInitialize(this, BT_open, "Improper use of 'open'");
-
-  auto Report = std::make_unique<PathSensitiveBugReport>(*BT_open, Msg, N);
+  auto Report = std::make_unique<PathSensitiveBugReport>(BT_open, Msg, N);
   Report->addRange(SR);
   C.emitReport(std::move(Report));
 }
@@ -209,19 +221,8 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
     return;
   }
 
-  // The definition of O_CREAT is platform specific.  We need a better way
-  // of querying this information from the checking environment.
   if (!Val_O_CREAT) {
-    if (C.getASTContext().getTargetInfo().getTriple().getVendor()
-                                                      == llvm::Triple::Apple)
-      Val_O_CREAT = 0x0200;
-    else {
-      // FIXME: We need a more general way of getting the O_CREAT value.
-      // We could possibly grovel through the preprocessor state, but
-      // that would require passing the Preprocessor object to the ExprEngine.
-      // See also: MallocChecker.cpp / M_ZERO.
-      return;
-    }
+    return;
   }
 
   // Now check if oflags has O_CREAT set.
@@ -301,10 +302,8 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
   if (isa<VarRegion>(R) && isa<StackLocalsSpaceRegion>(R->getMemorySpace()))
     os << "  Perhaps you intended to declare the variable as 'static'?";
 
-  LazyInitialize(this, BT_pthreadOnce, "Improper use of 'pthread_once'");
-
   auto report =
-      std::make_unique<PathSensitiveBugReport>(*BT_pthreadOnce, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(BT_pthreadOnce, os.str(), N);
   report->addRange(CE->getArg(0)->getSourceRange());
   C.emitReport(std::move(report));
 }
@@ -341,14 +340,11 @@ bool UnixAPIPortabilityChecker::ReportZeroByteAllocation(
   if (!N)
     return false;
 
-  LazyInitialize(this, BT_mallocZero,
-                 "Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)");
-
   SmallString<256> S;
   llvm::raw_svector_ostream os(S);
   os << "Call to '" << fn_name << "' has an allocation size of 0 bytes";
   auto report =
-      std::make_unique<PathSensitiveBugReport>(*BT_mallocZero, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(BT_mallocZero, os.str(), N);
 
   report->addRange(arg->getSourceRange());
   bugreporter::trackExpressionValue(N, arg, *report);

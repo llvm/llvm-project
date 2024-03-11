@@ -7,11 +7,11 @@
 # Test '.option arch, +' and '.option arch, -' directive
 # The following test cases were copied from MC/RISCV/option-rvc.s
 
-# CHECK-INST: addi a0, a1, 0
+# CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
 
-# CHECK-INST: addi s0, sp, 1020
+# CHECK-INST: addi s0, sp, 0x3fc
 # CHECK: # encoding:  [0x13,0x04,0xc1,0x3f]
 addi s0, sp, 1020
 
@@ -21,17 +21,17 @@ addi s0, sp, 1020
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0
 
-# CHECK-INST: c.addi4spn s0, sp, 1020
+# CHECK-INST: c.addi4spn s0, sp, 0x3fc
 # CHECK: # encoding:  [0xe0,0x1f]
 addi s0, sp, 1020
 
 # CHECK: .option arch, -c
 .option arch, -c
-# CHECK-INST: addi a0, a1, 0
+# CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
 
-# CHECK-INST: addi s0, sp, 1020
+# CHECK-INST: addi s0, sp, 0x3fc
 # CHECK: # encoding:  [0x13,0x04,0xc1,0x3f]
 addi s0, sp, 1020
 
@@ -41,23 +41,23 @@ addi s0, sp, 1020
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0
 
-# CHECK-INST: c.addi4spn s0, sp, 1020
+# CHECK-INST: c.addi4spn s0, sp, 0x3fc
 # CHECK: # encoding:  [0xe0,0x1f]
 addi s0, sp, 1020
 
 # CHECK: .option arch, -c
 .option arch, -c
-# CHECK-INST: addi a0, a1, 0
+# CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
 
-# CHECK-INST: addi s0, sp, 1020
+# CHECK-INST: addi s0, sp, 0x3fc
 # CHECK: # encoding:  [0x13,0x04,0xc1,0x3f]
 addi s0, sp, 1020
 
 # CHECK: .option arch, +d, -d
 .option arch, +d, -d
-# CHECK-INST: flw ft0, 12(a0)
+# CHECK-INST: flw ft0, 0xc(a0)
 # CHECK: # encoding:  [0x07,0x20,0xc5,0x00]
 flw f0, 12(a0)
 
@@ -101,7 +101,7 @@ lr.w t0, (t1)
 
 # Test +c, -c and vice-versa
 .option arch, +c, -c
-# CHECK-INST: addi a0, a1, 0
+# CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
 
@@ -121,6 +121,6 @@ addi a0, a1, 0
 
 .option arch, rv32i
 .option arch, +zce, +f
-# CHECK-INST: flw fa0, 0(a0)
+# CHECK-INST: flw fa0, 0x0(a0)
 # CHECK: # encoding: [0x08,0x61]
 c.flw fa0, 0(a0)

@@ -246,7 +246,7 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
 Error TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
 
-  while (Line->startswith(":")) {
+  while (Line->starts_with(":")) {
     StringRef Str = Line->substr(1);
     if (Str.equals_insensitive("ir"))
       ProfileKind |= InstrProfKind::IRInstrumentation;
@@ -366,6 +366,11 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
               return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
+        } else if (ValueKind == IPVK_VTableTarget) {
+          if (InstrProfSymtab::isExternalSymbol(VD.first))
+            Value = 0;
+          else
+            Value = IndexedInstrProf::ComputeHash(VD.first);
         } else {
           READ_NUM(VD.first, Value);
         }
@@ -386,7 +391,7 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
 
 Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   // Skip empty lines and comments.
-  while (!Line.is_at_end() && (Line->empty() || Line->startswith("#")))
+  while (!Line.is_at_end() && (Line->empty() || Line->starts_with("#")))
     ++Line;
   // If we hit EOF while looking for a name, we're done.
   if (Line.is_at_end()) {
@@ -428,7 +433,7 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   }
 
   // Bitmap byte information is indicated with special character.
-  if (Line->startswith("$")) {
+  if (Line->starts_with("$")) {
     Record.BitmapBytes.clear();
     // Read the number of bitmap bytes.
     uint64_t NumBitmapBytes;
@@ -539,7 +544,7 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
-    Symtab.mapAddress(FPtr, I->NameRef);
+    Symtab.mapAddress(FPtr, swap(I->NameRef));
   }
   return success();
 }
@@ -556,10 +561,6 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-  if (useCorrelate() && !Correlator)
-    return error(instrprof_error::missing_debug_info_for_correlation);
-  if (!useCorrelate() && Correlator)
-    return error(instrprof_error::unexpected_debug_info_for_correlation);
 
   uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
   // Binary id start just after the header if exists.
@@ -586,10 +587,17 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto NumBitmapBytes = swap(Header.NumBitmapBytes);
   auto PaddingBytesAfterBitmapBytes = swap(Header.PaddingBytesAfterBitmapBytes);
   auto NamesSize = swap(Header.NamesSize);
+  auto VTableNameSize = swap(Header.VNamesSize);
+  auto NumVTables = swap(Header.NumVTables);
   ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
-  auto PaddingSize = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterNames = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterVTableNames = getNumPaddingBytes(VTableNameSize);
+
+  auto VTableSectionSize =
+      NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
+  auto PaddingBytesAfterVTableProfData = getNumPaddingBytes(VTableSectionSize);
 
   // Profile data starts after profile header and binary ids if exist.
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdSize;
@@ -598,7 +606,12 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
   ptrdiff_t NamesOffset =
       BitmapOffset + NumBitmapBytes + PaddingBytesAfterBitmapBytes;
-  ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
+  ptrdiff_t VTableProfDataOffset =
+      NamesOffset + NamesSize + PaddingBytesAfterNames;
+  ptrdiff_t VTableNameOffset = VTableProfDataOffset + VTableSectionSize +
+                               PaddingBytesAfterVTableProfData;
+  ptrdiff_t ValueDataOffset =
+      VTableNameOffset + VTableNameSize + PaddingBytesAfterVTableNames;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
@@ -607,8 +620,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (Correlator) {
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
-    assert(DataSize == 0 && NamesSize == 0);
-    assert(CountersDelta == 0 && NamesDelta == 0);
+    if (!(DataSize == 0 && NamesSize == 0 && CountersDelta == 0 &&
+          NamesDelta == 0))
+      return error(instrprof_error::unexpected_correlation_info);
     Data = Correlator->getDataPointer();
     DataEnd = Data + Correlator->getDataSize();
     NamesStart = Correlator->getNamesPointer();
@@ -617,8 +631,14 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);
     DataEnd = Data + NumData;
+    VTableBegin =
+        reinterpret_cast<const RawInstrProf::VTableProfileData<IntPtrT> *>(
+            Start + VTableProfDataOffset);
+    VTableEnd = VTableBegin + NumVTables;
     NamesStart = Start + NamesOffset;
     NamesEnd = NamesStart + NamesSize;
+    VNamesStart = Start + VTableNameOffset;
+    VNamesEnd = VNamesStart + VTableNameSize;
   }
 
   CountersStart = Start + CountersOffset;
@@ -1011,13 +1031,14 @@ public:
 
   /// Extract the original function name from a PGO function name.
   static StringRef extractName(StringRef Name) {
-    // We can have multiple :-separated pieces; there can be pieces both
-    // before and after the mangled name. Find the first part that starts
-    // with '_Z'; we'll assume that's the mangled name we want.
+    // We can have multiple pieces separated by kGlobalIdentifierDelimiter (
+    // semicolon now and colon in older profiles); there can be pieces both
+    // before and after the mangled name. Find the first part that starts with
+    // '_Z'; we'll assume that's the mangled name we want.
     std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
     while (true) {
-      Parts = Parts.second.split(':');
-      if (Parts.first.startswith("_Z"))
+      Parts = Parts.second.split(kGlobalIdentifierDelimiter);
+      if (Parts.first.starts_with("_Z"))
         return Parts.first;
       if (Parts.second.empty())
         return Name;
@@ -1262,6 +1283,23 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
+  if (GET_VERSION(Header->formatVersion()) >= 12) {
+    uint64_t VTableNamesOffset =
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->VTableNamesOffset);
+    const unsigned char *Ptr = Start + VTableNamesOffset;
+
+    CompressedVTableNamesLen =
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
+
+    // Writer first writes the length of compressed string, and then the actual
+    // content.
+    VTableNamePtr = (const char *)Ptr;
+    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::truncated);
+  }
+
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
       Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
     uint64_t TemporalProfTracesOffset =
@@ -1437,13 +1475,30 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
   return success();
 }
 
-Error IndexedInstrProfReader::getFunctionBitmapBytes(
-    StringRef FuncName, uint64_t FuncHash, std::vector<uint8_t> &BitmapBytes) {
+Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
+                                                uint64_t FuncHash,
+                                                BitVector &Bitmap) {
   Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
-  BitmapBytes = Record.get().BitmapBytes;
+  const auto &BitmapBytes = Record.get().BitmapBytes;
+  size_t I = 0, E = BitmapBytes.size();
+  Bitmap.resize(E * CHAR_BIT);
+  BitVector::apply(
+      [&](auto X) {
+        using XTy = decltype(X);
+        alignas(XTy) uint8_t W[sizeof(X)];
+        size_t N = std::min(E - I, sizeof(W));
+        std::memset(W, 0, sizeof(W));
+        std::memcpy(W, &BitmapBytes[I], N);
+        I += N;
+        return support::endian::read<XTy, llvm::endianness::little,
+                                     support::aligned>(W);
+      },
+      Bitmap, Bitmap);
+  assert(I == E);
+
   return success();
 }
 

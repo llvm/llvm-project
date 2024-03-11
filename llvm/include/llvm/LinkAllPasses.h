@@ -60,6 +60,7 @@ namespace {
       if (std::getenv("bar") != (char*) -1)
         return;
 
+      (void)llvm::createAtomicExpandLegacyPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
       (void) llvm::createTypeBasedAAWrapperPass();
@@ -89,7 +90,6 @@ namespace {
       (void) llvm::createLoopSimplifyPass();
       (void) llvm::createLoopStrengthReducePass();
       (void) llvm::createLoopUnrollPass();
-      (void) llvm::createLoopRotatePass();
       (void) llvm::createLowerConstantIntrinsicsPass();
       (void) llvm::createLowerGlobalDtorsLegacyPass();
       (void) llvm::createLowerInvokePass();
@@ -113,13 +113,13 @@ namespace {
       (void) llvm::createTailCallEliminationPass();
       (void)llvm::createTLSVariableHoistPass();
       (void) llvm::createConstantHoistingPass();
-      (void) llvm::createCodeGenPreparePass();
+      (void)llvm::createCodeGenPrepareLegacyPass();
       (void) llvm::createEarlyCSEPass();
       (void) llvm::createGVNPass();
       (void) llvm::createPostDomTree();
       (void) llvm::createMergeICmpsLegacyPass();
       (void) llvm::createExpandLargeDivRemPass();
-      (void) llvm::createExpandMemCmpPass();
+      (void)llvm::createExpandMemCmpLegacyPass();
       (void) llvm::createExpandVectorPredicationPass();
       std::string buf;
       llvm::raw_string_ostream os(buf);
@@ -148,8 +148,7 @@ namespace {
       llvm::AliasAnalysis AA(TLI);
       llvm::BatchAAResults BAA(AA);
       llvm::AliasSetTracker X(BAA);
-      X.add(nullptr, llvm::LocationSize::beforeOrAfterPointer(),
-            llvm::AAMDNodes()); // for -print-alias-sets
+      X.add(llvm::MemoryLocation()); // for -print-alias-sets
       (void) llvm::AreStatisticsEnabled();
       (void) llvm::sys::RunningOnValgrind();
     }

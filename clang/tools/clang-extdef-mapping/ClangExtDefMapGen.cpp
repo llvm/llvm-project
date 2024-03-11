@@ -181,7 +181,7 @@ static int HandleFiles(ArrayRef<std::string> SourceFiles,
   // process them directly in HandleAST, otherwise put them
   // on a list for ClangTool to handle.
   for (StringRef Src : SourceFiles) {
-    if (Src.endswith(".ast")) {
+    if (Src.ends_with(".ast")) {
       if (!HandleAST(Src)) {
         return 1;
       }

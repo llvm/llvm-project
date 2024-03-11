@@ -158,7 +158,60 @@ getTypeConversionFailure(ConversionPatternRewriter &rewriter, Operation *op) {
   return getTypeConversionFailure(rewriter, op, op->getResultTypes().front());
 }
 
+// TODO: Move to some common place?
+static std::string getDecorationString(spirv::Decoration decor) {
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
+}
+
 namespace {
+
+/// Converts elementwise unary, binary and ternary arith operations to SPIR-V
+/// operations. Op can potentially support overflow flags.
+template <typename Op, typename SPIRVOp>
+struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
+  using OpConversionPattern<Op>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(adaptor.getOperands().size() <= 3);
+    auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
+    Type dstType = converter->convertType(op.getType());
+    if (!dstType) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert type {0} for SPIR-V", op.getType()));
+    }
+
+    if (SPIRVOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&
+        !getElementTypeOrSelf(op.getType()).isIndex() &&
+        dstType != op.getType()) {
+      return op.emitError("bitwidth emulation is not implemented yet on "
+                          "unsigned op pattern version");
+    }
+
+    auto overflowFlags = arith::IntegerOverflowFlags::none;
+    if (auto overflowIface =
+            dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(*op)) {
+      if (converter->getTargetEnv().allows(
+              spirv::Extension::SPV_KHR_no_integer_wrap_decoration))
+        overflowFlags = overflowIface.getOverflowAttr().getValue();
+    }
+
+    auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
+        op, dstType, adaptor.getOperands());
+
+    if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nsw))
+      newOp->setAttr(getDecorationString(spirv::Decoration::NoSignedWrap),
+                     rewriter.getUnitAttr());
+
+    if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
+      newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
+                     rewriter.getUnitAttr());
+
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // ConstantOp
@@ -1154,9 +1207,9 @@ void mlir::arith::populateArithToSPIRVPatterns(
   patterns.add<
     ConstantCompositeOpPattern,
     ConstantScalarOpPattern,
-    spirv::ElementwiseOpPattern<arith::AddIOp, spirv::IAddOp>,
-    spirv::ElementwiseOpPattern<arith::SubIOp, spirv::ISubOp>,
-    spirv::ElementwiseOpPattern<arith::MulIOp, spirv::IMulOp>,
+    ElementwiseArithOpPattern<arith::AddIOp, spirv::IAddOp>,
+    ElementwiseArithOpPattern<arith::SubIOp, spirv::ISubOp>,
+    ElementwiseArithOpPattern<arith::MulIOp, spirv::IMulOp>,
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
@@ -1164,7 +1217,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,
-    spirv::ElementwiseOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
+    ElementwiseArithOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
     spirv::ElementwiseOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
     spirv::ElementwiseOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
     spirv::ElementwiseOpPattern<arith::NegFOp, spirv::FNegateOp>,

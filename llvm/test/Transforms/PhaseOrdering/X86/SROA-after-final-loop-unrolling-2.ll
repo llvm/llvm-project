@@ -31,7 +31,7 @@ define dso_local void @foo(i32 noundef %arg, ptr noundef nonnull align 4 derefer
 ; CHECK-NEXT:    [[I3_SROA_8_0_INSERT_EXT:%.*]] = zext i32 [[I21_3:%.*]] to i64
 ; CHECK-NEXT:    [[I3_SROA_8_0_INSERT_SHIFT:%.*]] = shl nuw i64 [[I3_SROA_8_0_INSERT_EXT]], 32
 ; CHECK-NEXT:    [[I3_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[I21_2:%.*]] to i64
-; CHECK-NEXT:    [[I3_SROA_0_0_INSERT_INSERT:%.*]] = or i64 [[I3_SROA_8_0_INSERT_SHIFT]], [[I3_SROA_0_0_INSERT_EXT]]
+; CHECK-NEXT:    [[I3_SROA_0_0_INSERT_INSERT:%.*]] = or disjoint i64 [[I3_SROA_8_0_INSERT_SHIFT]], [[I3_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    br label [[BB12]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ [[I3_SROA_0_0_INSERT_INSERT]], [[BB12_LOOPEXIT:%.*]] ], [ 180388626456, [[BB:%.*]] ]

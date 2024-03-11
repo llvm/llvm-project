@@ -155,22 +155,21 @@ unsigned PPCInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
     if (!MO.isReg() || !MO.isDef() || MO.isImplicit())
       continue;
 
-    int Cycle = ItinData->getOperandCycle(DefClass, i);
-    if (Cycle < 0)
+    std::optional<unsigned> Cycle = ItinData->getOperandCycle(DefClass, i);
+    if (!Cycle)
       continue;
 
-    Latency = std::max(Latency, (unsigned) Cycle);
+    Latency = std::max(Latency, *Cycle);
   }
 
   return Latency;
 }
 
-int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                    const MachineInstr &DefMI, unsigned DefIdx,
-                                    const MachineInstr &UseMI,
-                                    unsigned UseIdx) const {
-  int Latency = PPCGenInstrInfo::getOperandLatency(ItinData, DefMI, DefIdx,
-                                                   UseMI, UseIdx);
+std::optional<unsigned> PPCInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
+  std::optional<unsigned> Latency = PPCGenInstrInfo::getOperandLatency(
+      ItinData, DefMI, DefIdx, UseMI, UseIdx);
 
   if (!DefMI.getParent())
     return Latency;
@@ -190,7 +189,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   }
 
   if (UseMI.isBranch() && IsRegCR) {
-    if (Latency < 0)
+    if (!Latency)
       Latency = getInstrLatency(ItinData, DefMI);
 
     // On some cores, there is an additional delay between writing to a condition
@@ -210,8 +209,8 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case PPC::DIR_PWR7:
     case PPC::DIR_PWR8:
     // FIXME: Is this needed for POWER9?
-      Latency += 2;
-      break;
+    Latency = *Latency + 2;
+    break;
     }
   }
 
@@ -1048,7 +1047,7 @@ bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
   }
 }
 
-unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   if (llvm::is_contained(getLoadOpcodesForSpillArray(), MI.getOpcode())) {
     // Check for the operands added by addFrameReference (the immediate is the
@@ -1068,9 +1067,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
-    // This function should only be called for opcodes with the ReMaterializable
-    // flag set.
-    llvm_unreachable("Unknown rematerializable operation!");
+    // Let base implementaion decide.
     break;
   case PPC::LI:
   case PPC::LI8:
@@ -1082,6 +1079,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::ADDIStocHA8:
   case PPC::ADDItocL:
   case PPC::LOAD_STACK_GUARD:
+  case PPC::PPCLdFixedAddr:
   case PPC::XXLXORz:
   case PPC::XXLXORspz:
   case PPC::XXLXORdpz:
@@ -1104,7 +1102,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
-unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (llvm::is_contained(getStoreOpcodesForSpillArray(), MI.getOpcode())) {
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
@@ -1976,14 +1974,6 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
   unsigned Opcode = getLoadOpcodeForSpill(RC);
   NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(Opcode), DestReg),
                                      FrameIdx));
-  PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-
-  if (PPC::CRRCRegClass.hasSubClassEq(RC) ||
-      PPC::CRBITRCRegClass.hasSubClassEq(RC))
-    FuncInfo->setSpillsCR();
-
-  if (isXFormMemOp(Opcode))
-    FuncInfo->setHasNonRISpills();
 }
 
 void PPCInstrInfo::loadRegFromStackSlotNoUpd(
@@ -1994,9 +1984,6 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   SmallVector<MachineInstr*, 4> NewMIs;
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
-
-  PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  FuncInfo->setHasSpills();
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
@@ -2114,7 +2101,7 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 // Folds zero into instructions which have a load immediate zero as an operand
 // but also recognize zero as immediate zero. If the definition of the load
 // has no more users it is deleted.
-bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool PPCInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                  Register Reg, MachineRegisterInfo *MRI) const {
   bool Changed = onlyFoldImmediate(UseMI, DefMI, Reg);
   if (MRI->use_nodbg_empty(Reg))
@@ -2158,11 +2145,17 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
 bool PPCInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                         const MachineBasicBlock *MBB,
                                         const MachineFunction &MF) const {
+  switch (MI.getOpcode()) {
+  default:
+    break;
   // Set MFFS and MTFSF as scheduling boundary to avoid unexpected code motion
   // across them, since some FP operations may change content of FPSCR.
   // TODO: Model FPSCR in PPC instruction definitions and remove the workaround
-  if (MI.getOpcode() == PPC::MFFS || MI.getOpcode() == PPC::MTFSF)
+  case PPC::MFFS:
+  case PPC::MTFSF:
+  case PPC::FENCE:
     return true;
+  }
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
@@ -2828,7 +2821,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
 bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
@@ -2878,8 +2871,9 @@ static bool isClusterableLdStOpcPair(unsigned FirstOpc, unsigned SecondOpc,
 }
 
 bool PPCInstrInfo::shouldClusterMemOps(
-    ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned NumLoads,
+    ArrayRef<const MachineOperand *> BaseOps1, int64_t OpOffset1,
+    bool OffsetIsScalable1, ArrayRef<const MachineOperand *> BaseOps2,
+    int64_t OpOffset2, bool OffsetIsScalable2, unsigned ClusterSize,
     unsigned NumBytes) const {
 
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
@@ -2888,9 +2882,10 @@ bool PPCInstrInfo::shouldClusterMemOps(
   assert((BaseOp1.isReg() || BaseOp1.isFI()) &&
          "Only base registers and frame indices are supported.");
 
-  // The NumLoads means the number of loads that has been clustered.
+  // ClusterSize means the number of memory operations that will have been
+  // clustered if this hook returns true.
   // Don't cluster memory op if there are already two ops clustered at least.
-  if (NumLoads > 2)
+  if (ClusterSize > 2)
     return false;
 
   // Cluster the load/store only when they have the same base
@@ -2918,7 +2913,7 @@ bool PPCInstrInfo::shouldClusterMemOps(
     return false;
 
   int64_t Offset1 = 0, Offset2 = 0;
-  unsigned Width1 = 0, Width2 = 0;
+  LocationSize Width1 = 0, Width2 = 0;
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
   if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
       !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
@@ -2929,7 +2924,7 @@ bool PPCInstrInfo::shouldClusterMemOps(
          "getMemOperandWithOffsetWidth return incorrect base op");
   // The caller should already have ordered FirstMemOp/SecondMemOp by offset.
   assert(Offset1 <= Offset2 && "Caller should have ordered offsets.");
-  return Offset1 + Width1 == Offset2;
+  return Offset1 + (int64_t)Width1.getValue() == Offset2;
 }
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -2955,27 +2950,12 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
 std::pair<unsigned, unsigned>
 PPCInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
-  const unsigned Mask = PPCII::MO_ACCESS_MASK;
-  return std::make_pair(TF & Mask, TF & ~Mask);
+  // PPC always uses a direct mask.
+  return std::make_pair(TF, 0u);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
 PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
-  using namespace PPCII;
-  static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_LO, "ppc-lo"},
-      {MO_HA, "ppc-ha"},
-      {MO_TPREL_LO, "ppc-tprel-lo"},
-      {MO_TPREL_HA, "ppc-tprel-ha"},
-      {MO_DTPREL_LO, "ppc-dtprel-lo"},
-      {MO_TLSLD_LO, "ppc-tlsld-lo"},
-      {MO_TOC_LO, "ppc-toc-lo"},
-      {MO_TLS, "ppc-tls"}};
-  return ArrayRef(TargetFlags);
-}
-
-ArrayRef<std::pair<unsigned, const char *>>
-PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace PPCII;
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_PLT, "ppc-plt"},
@@ -2984,12 +2964,27 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_GOT_FLAG, "ppc-got"},
       {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"},
       {MO_TLSGD_FLAG, "ppc-tlsgd"},
-      {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_TLSLDM_FLAG, "ppc-tlsldm"},
+      {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TLSGDM_FLAG, "ppc-tlsgdm"},
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
-      {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
+      {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"},
+      {MO_LO, "ppc-lo"},
+      {MO_HA, "ppc-ha"},
+      {MO_TPREL_LO, "ppc-tprel-lo"},
+      {MO_TPREL_HA, "ppc-tprel-ha"},
+      {MO_DTPREL_LO, "ppc-dtprel-lo"},
+      {MO_TLSLD_LO, "ppc-tlsld-lo"},
+      {MO_TOC_LO, "ppc-toc-lo"},
+      {MO_TLS, "ppc-tls"},
+      {MO_PIC_HA_FLAG, "ppc-ha-pic"},
+      {MO_PIC_LO_FLAG, "ppc-lo-pic"},
+      {MO_TPREL_PCREL_FLAG, "ppc-tprel-pcrel"},
+      {MO_TLS_PCREL_FLAG, "ppc-tls-pcrel"},
+      {MO_GOT_PCREL_FLAG, "ppc-got-pcrel"},
+  };
   return ArrayRef(TargetFlags);
 }
 
@@ -3106,6 +3101,46 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(Reg);
     return true;
   }
+  case PPC::PPCLdFixedAddr: {
+    assert(Subtarget.getTargetTriple().isOSGlibc() &&
+           "Only targets with Glibc expected to contain PPCLdFixedAddr");
+    int64_t Offset = 0;
+    const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
+    MI.setDesc(get(PPC::LWZ));
+    uint64_t FAType = MI.getOperand(1).getImm();
+#undef PPC_LNX_FEATURE
+#undef PPC_LNX_CPU
+#define PPC_LNX_DEFINE_OFFSETS
+#include "llvm/TargetParser/PPCTargetParser.def"
+    bool IsLE = Subtarget.isLittleEndian();
+    bool Is64 = Subtarget.isPPC64();
+    if (FAType == PPC_FAWORD_HWCAP) {
+      if (IsLE)
+        Offset = Is64 ? PPC_HWCAP_OFFSET_LE64 : PPC_HWCAP_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_HWCAP_OFFSET_BE64 : PPC_HWCAP_OFFSET_BE32;
+    } else if (FAType == PPC_FAWORD_HWCAP2) {
+      if (IsLE)
+        Offset = Is64 ? PPC_HWCAP2_OFFSET_LE64 : PPC_HWCAP2_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_HWCAP2_OFFSET_BE64 : PPC_HWCAP2_OFFSET_BE32;
+    } else if (FAType == PPC_FAWORD_CPUID) {
+      if (IsLE)
+        Offset = Is64 ? PPC_CPUID_OFFSET_LE64 : PPC_CPUID_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_CPUID_OFFSET_BE64 : PPC_CPUID_OFFSET_BE32;
+    }
+    assert(Offset && "Do not know the offset for this fixed addr load");
+    MI.removeOperand(1);
+    Subtarget.getTargetMachine().setGlibcHWCAPAccess();
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+        .addImm(Offset)
+        .addReg(Reg);
+    return true;
+#define PPC_TGT_PARSER_UNDEF_MACROS
+#include "llvm/TargetParser/PPCTargetParser.def"
+#undef PPC_TGT_PARSER_UNDEF_MACROS
+  }
   case PPC::DFLOADf32:
   case PPC::DFLOADf64:
   case PPC::DFSTOREf32:
@@ -3179,9 +3214,11 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
     // FIXME: Maybe we can expand it in 'PowerPC Expand Atomic' pass.
+  case PPC::CFENCE:
   case PPC::CFENCE8: {
     auto Val = MI.getOperand(0).getReg();
-    BuildMI(MBB, MI, DL, get(PPC::CMPD), PPC::CR7).addReg(Val).addReg(Val);
+    unsigned CmpOp = Subtarget.isPPC64() ? PPC::CMPD : PPC::CMPW;
+    BuildMI(MBB, MI, DL, get(CmpOp), PPC::CR7).addReg(Val).addReg(Val);
     BuildMI(MBB, MI, DL, get(PPC::CTRL_DEP))
         .addImm(PPC::PRED_NE_MINUS)
         .addReg(PPC::CR7)
@@ -5467,7 +5504,7 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 // memory width. Width is the size of memory that is being loaded/stored.
 bool PPCInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    unsigned &Width, const TargetRegisterInfo *TRI) const {
+    LocationSize &Width, const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore() || LdSt.getNumExplicitOperands() != 3)
     return false;
 
@@ -5505,14 +5542,15 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  unsigned int WidthA = 0, WidthB = 0;
+  LocationSize WidthA = 0, WidthB = 0;
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
-      int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-      if (LowOffset + LowWidth <= HighOffset)
+      LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+      if (LowWidth.hasValue() &&
+          LowOffset + (int)LowWidth.getValue() <= HighOffset)
         return true;
     }
   }

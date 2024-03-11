@@ -47,12 +47,12 @@
 ! MISSED-REGEX-LOOP-ONLY:       optimization-remark.f90:72:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
 
 
-! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:73:7: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:74:7: remark: loop not vectorized: unsafe dependent memory operations in loop
 ! ANALYSIS-REGEX-LOOP-ONLY-NOT: remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
 
 ! PASS:                         optimization-remark.f90:79:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
 
-! MISSED:                       optimization-remark.f90:73:7: remark: failed to move load with loop-invariant address because the loop may invalidate its value [-Rpass-missed=licm]
+! MISSED:                       optimization-remark.f90:73:7: remark: failed to hoist load with loop-invariant address
 ! MISSED:                       optimization-remark.f90:72:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
 ! MISSED-NOT:                   optimization-remark.f90:75:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ! MISSED-NOT:                   Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]

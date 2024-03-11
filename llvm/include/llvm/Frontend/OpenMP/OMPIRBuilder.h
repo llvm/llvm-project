@@ -83,11 +83,20 @@ BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 /// are ones that are not dependent on the configuration.
 class OpenMPIRBuilderConfig {
 public:
-  /// Flag for specifying if the compilation is done for embedded device code
-  /// or host code.
+  /// Flag to define whether to generate code for the role of the OpenMP host
+  /// (if set to false) or device (if set to true) in an offloading context. It
+  /// is set when the -fopenmp-is-target-device compiler frontend option is
+  /// specified.
   std::optional<bool> IsTargetDevice;
 
-  /// Flag for specifying if the compilation is done for an accelerator.
+  /// Flag for specifying if the compilation is done for an accelerator. It is
+  /// set according to the architecture of the target triple and currently only
+  /// true when targeting AMDGPU or NVPTX. Today, these targets can only perform
+  /// the role of an OpenMP target device, so `IsTargetDevice` must also be true
+  /// if `IsGPU` is true. This restriction might be lifted if an accelerator-
+  /// like target with the ability to work as the OpenMP host is added, or if
+  /// the capabilities of the currently supported GPU architectures are
+  /// expanded.
   std::optional<bool> IsGPU;
 
   // Flag for specifying if offloading is mandatory.
@@ -333,6 +342,8 @@ public:
     OMPTargetGlobalVarEntryNone = 0x3,
     /// Mark the entry as a declare target indirect global.
     OMPTargetGlobalVarEntryIndirect = 0x8,
+    /// Mark the entry as a register requires global.
+    OMPTargetGlobalRegisterRequires = 0x10,
   };
 
   /// Kind of device clause for declare target variables
@@ -900,6 +911,28 @@ public:
                               omp::OpenMPOffloadMappingFlags MemberOfFlag);
 
 private:
+  /// Modifies the canonical loop to be a statically-scheduled workshare loop
+  /// which is executed on the device
+  ///
+  /// This takes a \p CLI representing a canonical loop, such as the one
+  /// created by \see createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to call OpenMP device rtl function
+  /// which handles worksharing of loop body interations.
+  ///
+  /// \param DL       Debug location for instructions added for the
+  ///                 workshare-loop construct itself.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param LoopType Information about type of loop worksharing.
+  ///                 It corresponds to type of loop workshare OpenMP pragma.
+  ///
+  /// \returns Point where to insert code after the workshare construct.
+  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                                         InsertPointTy AllocaIP,
+                                         omp::WorksharingLoopType LoopType);
+
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
   /// This takes a \p LoopInfo representing a canonical loop, such as the one
@@ -1012,6 +1045,8 @@ public:
   ///                                present in the schedule clause.
   /// \param HasOrderedClause Whether the (parameterless) ordered clause is
   ///                         present.
+  /// \param LoopType Information about type of loop worksharing.
+  ///                 It corresponds to type of loop workshare OpenMP pragma.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoop(
@@ -1020,7 +1055,9 @@ public:
       llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default,
       Value *ChunkSize = nullptr, bool HasSimdModifier = false,
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
-      bool HasOrderedClause = false);
+      bool HasOrderedClause = false,
+      omp::WorksharingLoopType LoopType =
+          omp::WorksharingLoopType::ForStaticLoop);
 
   /// Tile a loop nest.
   ///
@@ -1469,6 +1506,11 @@ public:
   /// Collection of regions that need to be outlined during finalization.
   SmallVector<OutlineInfo, 16> OutlineInfos;
 
+  /// A collection of candidate target functions that's constant allocas will
+  /// attempt to be raised on a call of finalize after all currently enqueued
+  /// outline info's have been processed.
+  SmallVector<llvm::Function *, 16> ConstantAllocaRaiseCandidates;
+
   /// Collection of owned canonical loop objects that eventually need to be
   /// free'd.
   std::forward_list<CanonicalLoopInfo> LoopInfos;
@@ -1792,13 +1834,15 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param FiniCB Callback to finalize variable copies.
   /// \param IsNowait If false, a barrier is emitted.
-  /// \param DidIt Local variable used as a flag to indicate 'single' thread
+  /// \param CPVars copyprivate variables.
+  /// \param CPFuncs copy functions to use for each copyprivate variable.
   ///
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB, bool IsNowait,
-                             llvm::Value *DidIt);
+                             ArrayRef<llvm::Value *> CPVars = {},
+                             ArrayRef<llvm::Function *> CPFuncs = {});
 
   /// Generator for '#omp master'
   ///
@@ -2536,6 +2580,13 @@ public:
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
                       AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
                       bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
+  InsertPointTy createAtomicCompare(const LocationDescription &Loc,
+                                    AtomicOpValue &X, AtomicOpValue &V,
+                                    AtomicOpValue &R, Value *E, Value *D,
+                                    AtomicOrdering AO,
+                                    omp::OMPAtomicCompareOp Op,
+                                    bool IsXBinopExpr, bool IsPostfixUpdate,
+                                    bool IsFailOnly, AtomicOrdering Failure);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///
@@ -2586,16 +2637,6 @@ public:
   /// \param Name Name of the variable.
   GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                               unsigned AddressSpace = 0);
-
-  /// Create a global function to register OpenMP requires flags into the
-  /// runtime, according to the `Config`.
-  ///
-  /// This function should be added to the list of constructors of the
-  /// compilation unit in order to be called before other OpenMP runtime
-  /// functions.
-  ///
-  /// \param Name  Name of the created function.
-  Function *createRegisterRequires(StringRef Name);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

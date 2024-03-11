@@ -5,6 +5,7 @@
 
 
 using MaxBitInt = _BitInt(128);
+#define INT_MIN (~__INT_MAX__)
 
 constexpr _BitInt(2) A = 0;
 constexpr _BitInt(2) B = A + 1;
@@ -44,6 +45,35 @@ static_assert(MulA * MulB == 50, ""); // ref-error {{not an integral constant ex
 static_assert(MulA * 5 == 25, "");
 static_assert(-1 * MulB == -7, "");
 
+
+constexpr _BitInt(4) DivA = 2;
+constexpr _BitInt(2) DivB = 1;
+static_assert(DivA / DivB == 2, "");
+
+constexpr _BitInt(4) DivC = DivA / 0; // ref-error {{must be initialized by a constant expression}} \
+                                      // ref-note {{division by zero}} \
+                                      // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{division by zero}}
+
+constexpr _BitInt(7) RemA = 47;
+constexpr _BitInt(6) RemB = 9;
+static_assert(RemA % RemB == 2, "");
+static_assert(RemA % 0 == 1, ""); // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{division by zero}} \
+                                  // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{division by zero}}
+
+constexpr _BitInt(32) bottom = -1;
+constexpr _BitInt(32) top = INT_MIN;
+constexpr _BitInt(32) nope = top / bottom;  // ref-error {{must be initialized by a constant expression}} \
+                                            // ref-note {{value 2147483648 is outside the range}} \
+                                            // expected-error {{must be initialized by a constant expression}} \
+                                            // expected-note {{value 2147483648 is outside the range}}
+constexpr _BitInt(32) noooo = top % bottom; // ref-error {{must be initialized by a constant expression}} \
+                                            // ref-note {{value 2147483648 is outside the range}} \
+                                            // expected-error {{must be initialized by a constant expression}} \
+                                            // expected-note {{value 2147483648 is outside the range}}
+
 namespace APCast {
   constexpr _BitInt(10) A = 1;
   constexpr _BitInt(11) B = A;
@@ -57,9 +87,25 @@ namespace APCast {
 }
 
 #ifdef __SIZEOF_INT128__
+typedef __int128 int128_t;
+typedef unsigned __int128 uint128_t;
+static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
+static_assert(UINT128_MAX == -1, "");
+static_assert(UINT128_MAX == 1, ""); // expected-error {{static assertion failed}} \
+                                     // expected-note {{'340282366920938463463374607431768211455 == 1'}} \
+                                     // ref-error {{static assertion failed}} \
+                                     // ref-note {{'340282366920938463463374607431768211455 == 1'}}
+
+static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
+static_assert(INT128_MAX != 0, "");
+static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
+                                    // expected-note {{evaluates to '170141183460469231731687303715884105727 == 0'}} \
+                                    // ref-error {{failed}} \
+                                    // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+static const __int128_t INT128_MIN = -INT128_MAX - 1;
+
 namespace i128 {
-  typedef __int128 int128_t;
-  typedef unsigned __int128 uint128_t;
+
   constexpr int128_t I128_1 = 12;
   static_assert(I128_1 == 12, "");
   static_assert(I128_1 != 10, "");
@@ -107,6 +153,20 @@ namespace i128 {
   static_assert(i128Zero == 0, "");
   constexpr uint128_t ui128Zero{};
   static_assert(ui128Zero == 0, "");
+
+
+  enum LargeEnum : signed __int128 {
+    LV = (signed __int128)1 << 127,
+  };
+
+  constexpr LargeEnum F = LV;
+  static_assert(F ==  (signed __int128)1 << 127, "");
+  constexpr LargeEnum getLargeEnum() {
+    return LV;
+  }
+  static_assert(getLargeEnum() ==  (signed __int128)1 << 127, "");
+
+
 
 #if __cplusplus >= 201402L
   template <typename T>
@@ -198,6 +258,52 @@ namespace BitOps {
   static_assert((Max & 1) == 1, "");
   static_assert((UZero | 1) == 1, "");
   static_assert((Max ^ UZero) == Max, "");
+}
+
+namespace IncDec {
+#if __cplusplus >= 201402L
+  constexpr int128_t maxPlus1(bool Pre) {
+    int128_t a = INT128_MAX;
+
+    if (Pre)
+      ++a; // ref-note {{value 170141183460469231731687303715884105728 is outside the range}} \
+           // expected-note {{value 170141183460469231731687303715884105728 is outside the range}}
+    else
+      a++; // ref-note {{value 170141183460469231731687303715884105728 is outside the range}} \
+           // expected-note {{value 170141183460469231731687303715884105728 is outside the range}}
+    return a;
+  }
+  static_assert(maxPlus1(true) == 0, ""); // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}} \
+                                          // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}}
+  static_assert(maxPlus1(false) == 0, ""); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to}} \
+                                           // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to}}
+
+  constexpr int128_t inc1(bool Pre) {
+    int128_t A = 0;
+    if (Pre)
+      ++A;
+    else
+      A++;
+    return A;
+  }
+  static_assert(inc1(true) == 1, "");
+  static_assert(inc1(false) == 1, "");
+
+  constexpr int128_t dec1(bool Pre) {
+    int128_t A = 2;
+    if (Pre)
+      --A;
+    else
+      A--;
+    return A;
+  }
+  static_assert(dec1(true) == 1, "");
+  static_assert(dec1(false) == 1, "");
+#endif
 }
 
 #endif

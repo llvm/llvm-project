@@ -20,7 +20,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
@@ -157,6 +156,8 @@ static void ParseArgs(int argc, char **argv) {
             .Case("none", ScanningOptimizations::None)
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
+            .Case("canonicalize-macros", ScanningOptimizations::Macros)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -699,7 +700,6 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 // form specified command line after the positional parameter "--".
 static std::unique_ptr<tooling::CompilationDatabase>
 getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
-  llvm::InitLLVM X(argc, argv);
   ParseArgs(argc, argv);
 
   if (!CompilationDB.empty())
@@ -728,7 +728,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
                            *Diags);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
-  if (!C)
+  if (!C || C->getJobs().empty())
     return nullptr;
 
   auto Cmd = C->getJobs().begin();
@@ -830,9 +830,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                 // Also, clang-cl adds ".obj" extension if none is found.
                 if ((Arg == "-o" || Arg == "/o") && I != R)
                   LastO = I[-1]; // Next argument (reverse iterator)
-                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                else if (Arg.starts_with("/Fo") || Arg.starts_with("-Fo"))
                   LastO = Arg.drop_front(3).str();
-                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                else if (Arg.starts_with("/o") || Arg.starts_with("-o"))
                   LastO = Arg.drop_front(2).str();
 
                 if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))
@@ -869,9 +869,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
                                     EagerLoadModules);
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
+  for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
   std::vector<tooling::CompileCommand> Inputs =
@@ -895,13 +895,13 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (Verbose) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << Pool.getThreadCount() << " workers\n";
+                 << " files using " << Pool.getMaxConcurrency() << " workers\n";
   }
 
   llvm::Timer T;
   T.startTimer();
 
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
+  for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I) {
     Pool.async([&, I]() {
       llvm::DenseSet<ModuleID> AlreadySeenModules;
       while (auto MaybeInputIndex = GetNextInputIndex()) {

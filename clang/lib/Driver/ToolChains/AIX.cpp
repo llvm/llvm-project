@@ -88,7 +88,7 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
   for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
     llvm::StringRef ArgString(CmdArgs[i]);
 
-    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+    if (ArgString.starts_with("-bE:") || ArgString.starts_with("-bexport:") ||
         ArgString == "-bexpall" || ArgString == "-bexpfull")
       return true;
 
@@ -96,8 +96,8 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
     if (ArgString == "-b" && i + 1 < Size) {
       ++i;
       llvm::StringRef ArgNextString(CmdArgs[i]);
-      if (ArgNextString.startswith("E:") ||
-          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+      if (ArgNextString.starts_with("E:") ||
+          ArgNextString.starts_with("export:") || ArgNextString == "expall" ||
           ArgNextString == "expfull")
         return true;
     }
@@ -328,6 +328,12 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (D.IsFlangMode()) {
+    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    CmdArgs.push_back("-lm");
+    CmdArgs.push_back("-lpthread");
+  }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));
@@ -336,9 +342,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 /// AIX - AIX tool chain which can call as(1) and ld(1) directly.
 AIX::AIX(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 
   ParseInlineAsmUsingAsmParser = Args.hasFlag(
       options::OPT_fintegrated_as, options::OPT_fno_integrated_as, true);

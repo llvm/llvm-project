@@ -194,7 +194,9 @@ static bool shouldCacheStatFailures(StringRef Filename) {
 DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
     DependencyScanningFilesystemSharedCache &SharedCache,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache),
+    : llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
+                        llvm::vfs::ProxyFileSystem>(std::move(FS)),
+      SharedCache(SharedCache),
       WorkingDirForCacheLookup(llvm::errc::invalid_argument) {
   updateWorkingDirForCacheLookup();
 }
@@ -290,7 +292,7 @@ DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
-  if (Filename.endswith(".pcm"))
+  if (Filename.ends_with(".pcm"))
     return getUnderlyingFS().status(Path);
 
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
@@ -350,7 +352,7 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
-  if (Filename.endswith(".pcm"))
+  if (Filename.ends_with(".pcm"))
     return getUnderlyingFS().openFileForRead(Path);
 
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
@@ -379,3 +381,5 @@ void DependencyScanningWorkerFilesystem::updateWorkingDirForCacheLookup() {
   assert(!WorkingDirForCacheLookup ||
          llvm::sys::path::is_absolute_gnu(*WorkingDirForCacheLookup));
 }
+
+const char DependencyScanningWorkerFilesystem::ID = 0;

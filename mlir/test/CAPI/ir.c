@@ -1482,6 +1482,10 @@ int printAffineMap(MlirContext ctx) {
   // CHECK: (d0, d1, d2) -> (d0)
   // CHECK: (d0, d1, d2) -> (d2)
 
+  // CHECK: distinct[0]<"foo">
+  mlirAttributeDump(mlirDisctinctAttrCreate(
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo"))));
+
   return 0;
 }
 
@@ -1969,6 +1973,15 @@ int testOperands(void) {
   mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: Second replacement use owner: "dummy.op2"
+
+  MlirOpOperand use5 = mlirValueGetFirstUse(constTwoValue);
+  MlirOpOperand use6 = mlirOpOperandGetNextUse(use5);
+  if (!mlirValueEqual(mlirOpOperandGetValue(use5),
+                      mlirOpOperandGetValue(use6))) {
+    fprintf(stderr,
+            "ERROR: First and second operand should share the same value\n");
+    return 5;
+  }
 
   mlirOperationDestroy(op);
   mlirOperationDestroy(op2);

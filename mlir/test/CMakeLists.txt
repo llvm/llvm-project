@@ -45,10 +45,10 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
   endif()
 
-  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS 
-  # configuration flag, we automatically include sm80 tests when build for 
-  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and 
-  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in 
+  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS
+  # configuration flag, we automatically include sm80 tests when build for
+  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and
+  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in
   # addition to those.
   if (MLIR_ENABLE_CUDA_CUSPARSE)
     set(MLIR_RUN_CUDA_SM80_TESTS ON)
@@ -97,21 +97,26 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
-  mlir-capi-pdl-test
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-transform-interpreter-test
+  mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
-  mlir-pdll-lsp-server
   mlir-opt
-  mlir-pdll
   mlir-query
   mlir-reduce
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server
   tblgen-to-irdl
+  )
+
+set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
+  mlir-capi-pdl-test
+  mlir-pdll-lsp-server
+  mlir-pdll
   )
 
 # The native target may not be enabled, in this case we won't
@@ -141,8 +146,16 @@ if(MLIR_ENABLE_ROCM_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
 endif()
 
+if(MLIR_ENABLE_SYCL_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
+endif()
+
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
+endif()
+
+if (MLIR_RUN_ARM_SVE_TESTS OR MLIR_RUN_ARM_SME_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS mlir_arm_runner_utils)
 endif()
 
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
@@ -154,9 +167,13 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch3
     toyc-ch4
     toyc-ch5
+    )
+  list(APPEND MLIR_TEST_DEPENDS
     transform-opt-ch2
     transform-opt-ch3
+    transform-opt-ch4
     mlir-minimal-opt
+    mlir-transform-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

@@ -249,3 +249,54 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // between parallel, reduction and possibly other cases.
   return ratio.has_value();
 }
+
+bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
+  if (vectorType.isScalable())
+    return false;
+
+  ArrayRef<int64_t> vectorShape = vectorType.getShape();
+  auto vecRank = vectorType.getRank();
+
+  if (!trailingNDimsContiguous(memrefType, vecRank))
+    return false;
+
+  // Extract the trailing dims and strides of the input memref
+  auto memrefShape = memrefType.getShape().take_back(vecRank);
+
+  // Compare the dims of `vectorType` against `memrefType` (in reverse).
+  // In the most basic case, all dims will match.
+  auto firstNonMatchingDim =
+      std::mismatch(vectorShape.rbegin(), vectorShape.rend(),
+                    memrefShape.rbegin(), memrefShape.rend());
+  if (firstNonMatchingDim.first == vectorShape.rend())
+    return true;
+
+  // One non-matching dim is still fine, however the remaining leading dims of
+  // `vectorType` need to be 1.
+  SmallVector<int64_t> leadingDims(++firstNonMatchingDim.first,
+                                   vectorShape.rend());
+
+  return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
+}
+
+std::optional<StaticTileOffsetRange>
+vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
+  if (vType.getRank() <= targetRank)
+    return {};
+  // Attempt to unroll until targetRank or the first scalable dimension (which
+  // cannot be unrolled).
+  auto shapeToUnroll = vType.getShape().drop_back(targetRank);
+  auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
+  auto it =
+      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto firstScalableDim = it - scalableDimsToUnroll.begin();
+  if (firstScalableDim == 0)
+    return {};
+  // All scalable dimensions should be removed now.
+  scalableDimsToUnroll = scalableDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(scalableDimsToUnroll, true) &&
+         "unexpected leading scalable dimension");
+  // Create an unroll iterator for leading dimensions.
+  shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
+  return StaticTileOffsetRange(shapeToUnroll, /*unrollStep=*/1);
+}

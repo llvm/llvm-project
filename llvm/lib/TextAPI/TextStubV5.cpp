@@ -74,7 +74,7 @@ using namespace llvm::MachO;
 
 namespace {
 struct JSONSymbol {
-  SymbolKind Kind;
+  EncodeKind Kind;
   std::string Name;
   SymbolFlags Flags;
 };
@@ -201,8 +201,9 @@ Expected<StubT> getRequiredValue(
 template <typename JsonT, typename StubT = JsonT>
 Expected<StubT> getRequiredValue(
     TBDKey Key, const Object *Obj,
-    std::function<std::optional<JsonT>(const Object *, StringRef)> GetValue,
-    StubT DefaultValue, std::function<std::optional<StubT>(JsonT)> Validate) {
+    std::function<std::optional<JsonT>(const Object *, StringRef)> const
+        GetValue,
+    StubT DefaultValue, function_ref<std::optional<StubT>(JsonT)> Validate) {
   std::optional<JsonT> Val = GetValue(Obj, Keys[Key]);
   if (!Val)
     return DefaultValue;
@@ -215,7 +216,7 @@ Expected<StubT> getRequiredValue(
 }
 
 Error collectFromArray(TBDKey Key, const Object *Obj,
-                       std::function<void(StringRef)> Append,
+                       function_ref<void(StringRef)> Append,
                        bool IsRequired = false) {
   const auto *Values = Obj->getArray(Keys[Key]);
   if (!Values) {
@@ -305,7 +306,7 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
                                 SymbolFlags SectionFlag) {
   auto Err = collectFromArray(
       TBDKey::Globals, Segment, [&Result, &SectionFlag](StringRef Name) {
-        JSONSymbol Sym = {SymbolKind::GlobalSymbol, Name.str(), SectionFlag};
+        JSONSymbol Sym = {EncodeKind::GlobalSymbol, Name.str(), SectionFlag};
         Result.back().second.emplace_back(Sym);
       });
   if (Err)
@@ -313,7 +314,7 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
 
   Err = collectFromArray(
       TBDKey::ObjCClass, Segment, [&Result, &SectionFlag](StringRef Name) {
-        JSONSymbol Sym = {SymbolKind::ObjectiveCClass, Name.str(), SectionFlag};
+        JSONSymbol Sym = {EncodeKind::ObjectiveCClass, Name.str(), SectionFlag};
         Result.back().second.emplace_back(Sym);
       });
   if (Err)
@@ -321,7 +322,7 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
 
   Err = collectFromArray(TBDKey::ObjCEHType, Segment,
                          [&Result, &SectionFlag](StringRef Name) {
-                           JSONSymbol Sym = {SymbolKind::ObjectiveCClassEHType,
+                           JSONSymbol Sym = {EncodeKind::ObjectiveCClassEHType,
                                              Name.str(), SectionFlag};
                            Result.back().second.emplace_back(Sym);
                          });
@@ -330,7 +331,7 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
 
   Err = collectFromArray(
       TBDKey::ObjCIvar, Segment, [&Result, &SectionFlag](StringRef Name) {
-        JSONSymbol Sym = {SymbolKind::ObjectiveCInstanceVariable, Name.str(),
+        JSONSymbol Sym = {EncodeKind::ObjectiveCInstanceVariable, Name.str(),
                           SectionFlag};
         Result.back().second.emplace_back(Sym);
       });
@@ -344,7 +345,7 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
            : SymbolFlags::WeakDefined);
   Err = collectFromArray(
       TBDKey::Weak, Segment, [&Result, WeakFlag](StringRef Name) {
-        JSONSymbol Sym = {SymbolKind::GlobalSymbol, Name.str(), WeakFlag};
+        JSONSymbol Sym = {EncodeKind::GlobalSymbol, Name.str(), WeakFlag};
         Result.back().second.emplace_back(Sym);
       });
   if (Err)
@@ -352,7 +353,7 @@ Error collectSymbolsFromSegment(const Object *Segment, TargetsToSymbols &Result,
 
   Err = collectFromArray(
       TBDKey::ThreadLocal, Segment, [&Result, SectionFlag](StringRef Name) {
-        JSONSymbol Sym = {SymbolKind::GlobalSymbol, Name.str(),
+        JSONSymbol Sym = {EncodeKind::GlobalSymbol, Name.str(),
                           SymbolFlags::ThreadLocalValue | SectionFlag};
         Result.back().second.emplace_back(Sym);
       });
@@ -856,16 +857,16 @@ Array serializeSymbols(InterfaceFile::const_filtered_symbol_range Symbols,
   auto AssignForSymbolType = [](SymbolFields::SymbolTypes &Assignment,
                                 const Symbol *Sym) {
     switch (Sym->getKind()) {
-    case SymbolKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClass:
       Assignment.ObjCClasses.emplace_back(Sym->getName());
       return;
-    case SymbolKind::ObjectiveCClassEHType:
+    case EncodeKind::ObjectiveCClassEHType:
       Assignment.EHTypes.emplace_back(Sym->getName());
       return;
-    case SymbolKind::ObjectiveCInstanceVariable:
+    case EncodeKind::ObjectiveCInstanceVariable:
       Assignment.IVars.emplace_back(Sym->getName());
       return;
-    case SymbolKind::GlobalSymbol: {
+    case EncodeKind::GlobalSymbol: {
       if (Sym->isWeakReferenced() || Sym->isWeakDefined())
         Assignment.Weaks.emplace_back(Sym->getName());
       else if (Sym->isThreadLocalValue())

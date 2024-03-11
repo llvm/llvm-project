@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=riscv32 --mattr=+xcvmem -show-encoding %s \
 # RUN:     | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INSTR
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+xcvmem < %s \
-# RUN:     | llvm-objdump --mattr=+xcvmem -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+xcvmem -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-INSTR %s
 # RUN: not llvm-mc -triple riscv32 %s 2>&1 \
 # RUN:     | FileCheck -check-prefix=CHECK-NO-EXT %s

@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -load-store-vectorizer %s -S -o - | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -passes=load-store-vectorizer %s -S -o - | FileCheck %s
 ; RUN: opt                 -passes=load-store-vectorizer %s -S -o - | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' %s -S -o - | FileCheck %s
 

@@ -158,6 +158,7 @@ struct DAP {
   std::vector<ExceptionBreakpoint> exception_breakpoints;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
+  std::vector<std::string> post_run_commands;
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
@@ -188,7 +189,6 @@ struct DAP {
   StartDebuggingRequestHandler start_debugging_request_handler;
   ReplModeRequestHandler repl_mode_request_handler;
   ReplMode repl_mode;
-  bool auto_repl_mode_collision_warning;
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
@@ -224,14 +224,24 @@ struct DAP {
 
   llvm::json::Value CreateTopLevelScopes();
 
-  ExpressionContext DetectExpressionContext(lldb::SBFrame &frame,
-                                            std::string &text);
+  /// \return
+  ///   Attempt to determine if an expression is a variable expression or
+  ///   lldb command using a hueristic based on the first term of the
+  ///   expression.
+  ExpressionContext DetectExpressionContext(lldb::SBFrame frame,
+                                            std::string &expression);
 
-  void RunLLDBCommands(llvm::StringRef prefix,
-                       const std::vector<std::string> &commands);
+  /// \return
+  ///   \b false if a fatal error was found while executing these commands,
+  ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
+  bool RunLLDBCommands(llvm::StringRef prefix,
+                       llvm::ArrayRef<std::string> commands);
 
-  void RunInitCommands();
-  void RunPreRunCommands();
+  llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
+  llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error RunInitCommands();
+  llvm::Error RunPreRunCommands();
+  void RunPostRunCommands();
   void RunStopCommands();
   void RunExitCommands();
   void RunTerminateCommands();

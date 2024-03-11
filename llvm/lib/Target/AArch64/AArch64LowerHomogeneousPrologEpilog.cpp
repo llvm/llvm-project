@@ -220,8 +220,7 @@ static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
       Opc = IsPaired ? AArch64::STPXi : AArch64::STRXui;
   }
   // The implicit scale for Offset is 8.
-  TypeSize Scale(0U, false);
-  unsigned Width;
+  TypeSize Scale(0U, false), Width(0U, false);
   int64_t MinOffset, MaxOffset;
   [[maybe_unused]] bool Success =
       AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
@@ -262,8 +261,7 @@ static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
       Opc = IsPaired ? AArch64::LDPXi : AArch64::LDRXui;
   }
   // The implicit scale for Offset is 8.
-  TypeSize Scale(0U, false);
-  unsigned Width;
+  TypeSize Scale(0U, false), Width(0U, false);
   int64_t MinOffset, MaxOffset;
   [[maybe_unused]] bool Success =
       AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);

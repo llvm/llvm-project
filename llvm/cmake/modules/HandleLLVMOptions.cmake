@@ -120,7 +120,18 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
+# If we are targeting a GPU architecture in a runtimes build we want to ignore
+# all the standard flag handling.
+if(LLVM_RUNTIMES_GPU_BUILD)
+  return()
+endif()
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
+  # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
+  # using assert(). An explicit check is performed here.
+  if (NOT LLVM_ENABLE_ASSERTIONS)
+    message(FATAL_ERROR "LLVM_ENABLE_EXPENSIVE_CHECKS requires LLVM_ENABLE_ASSERTIONS \"ON\".")
+  endif()
   add_compile_definitions(EXPENSIVE_CHECKS)
 
   # In some libstdc++ versions, std::min_element is not constexpr when
@@ -138,10 +149,6 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   else()
     add_compile_definitions(_GLIBCXX_ASSERTIONS)
   endif()
-endif()
-
-if(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS)
-  add_compile_definitions(EXPERIMENTAL_DEBUGINFO_ITERATORS)
 endif()
 
 if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)
@@ -988,6 +995,9 @@ if(LLVM_USE_SANITIZER)
       endif()
       # Prepare ASAN runtime if needed
       if (LLVM_USE_SANITIZER MATCHES ".*Address.*")
+        # lld string tail merging interacts badly with ASAN on Windows, turn it off here
+        # See https://github.com/llvm/llvm-project/issues/62078
+        append("/opt:nolldtailmerge" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
           append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS)
@@ -1341,7 +1351,7 @@ if(LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO)
   else()
     set(source_root "${LLVM_MAIN_SRC_DIR}")
   endif()
-  file(RELATIVE_PATH relative_root "${source_root}" "${CMAKE_BINARY_DIR}")
+  file(RELATIVE_PATH relative_root "${CMAKE_BINARY_DIR}" "${source_root}")
   append_if(SUPPORTS_FDEBUG_PREFIX_MAP "-fdebug-prefix-map=${CMAKE_BINARY_DIR}=${relative_root}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_if(SUPPORTS_FDEBUG_PREFIX_MAP "-fdebug-prefix-map=${source_root}/=${LLVM_SOURCE_PREFIX}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)
@@ -1356,7 +1366,7 @@ if(LLVM_USE_RELATIVE_PATHS_IN_FILES)
   else()
     set(source_root "${LLVM_MAIN_SRC_DIR}")
   endif()
-  file(RELATIVE_PATH relative_root "${source_root}" "${CMAKE_BINARY_DIR}")
+  file(RELATIVE_PATH relative_root "${CMAKE_BINARY_DIR}" "${source_root}")
   append_if(SUPPORTS_FFILE_PREFIX_MAP "-ffile-prefix-map=${CMAKE_BINARY_DIR}=${relative_root}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_if(SUPPORTS_FFILE_PREFIX_MAP "-ffile-prefix-map=${source_root}/=${LLVM_SOURCE_PREFIX}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)

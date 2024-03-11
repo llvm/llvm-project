@@ -172,7 +172,7 @@ static SDValue EmitUnrolledSetTag(SelectionDAG &DAG, const SDLoc &dl,
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForSetTag(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Addr,
     SDValue Size, MachinePointerInfo DstPtrInfo, bool ZeroData) const {
-  uint64_t ObjSize = cast<ConstantSDNode>(Size)->getZExtValue();
+  uint64_t ObjSize = Size->getAsZExtVal();
   assert(ObjSize % 16 == 0);
 
   MachineFunction &MF = DAG.getMachineFunction();

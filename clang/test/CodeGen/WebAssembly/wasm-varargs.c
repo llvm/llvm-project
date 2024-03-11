@@ -68,7 +68,7 @@ struct S {
 };
 
 // CHECK-LABEL: define {{[^@]+}}@test_struct
-// CHECK-SAME: (ptr noalias sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
+// CHECK-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
@@ -96,7 +96,7 @@ struct S test_struct(char *fmt, ...) {
 struct Z {};
 
 // CHECK-LABEL: define {{[^@]+}}@test_empty_struct
-// CHECK-SAME: (ptr noalias sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
+// CHECK-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[FMT:%.*]], ...) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4

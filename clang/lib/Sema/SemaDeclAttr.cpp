@@ -1771,8 +1771,8 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
 }
 
 /// Check if \p AssumptionStr is a known assumption and warn if not.
-static void checkAssumptionAttr(Sema &S, SourceLocation Loc,
-                                StringRef AssumptionStr) {
+static void checkOMPAssumeAttr(Sema &S, SourceLocation Loc,
+                               StringRef AssumptionStr) {
   if (llvm::KnownAssumptionStrings.count(AssumptionStr))
     return;
 
@@ -1788,29 +1788,30 @@ static void checkAssumptionAttr(Sema &S, SourceLocation Loc,
   }
 
   if (!Suggestion.empty())
-    S.Diag(Loc, diag::warn_assume_attribute_string_unknown_suggested)
+    S.Diag(Loc, diag::warn_omp_assume_attribute_string_unknown_suggested)
         << AssumptionStr << Suggestion;
   else
-    S.Diag(Loc, diag::warn_assume_attribute_string_unknown) << AssumptionStr;
+    S.Diag(Loc, diag::warn_omp_assume_attribute_string_unknown)
+        << AssumptionStr;
 }
 
-static void handleAssumumptionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleOMPAssumeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Handle the case where the attribute has a text message.
   StringRef Str;
   SourceLocation AttrStrLoc;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &AttrStrLoc))
     return;
 
-  checkAssumptionAttr(S, AttrStrLoc, Str);
+  checkOMPAssumeAttr(S, AttrStrLoc, Str);
 
-  D->addAttr(::new (S.Context) AssumptionAttr(S.Context, AL, Str));
+  D->addAttr(::new (S.Context) OMPAssumeAttr(S.Context, AL, Str));
 }
 
 /// Normalize the attribute, __foo__ becomes foo.
 /// Returns true if normalization was applied.
 static bool normalizeName(StringRef &AttrName) {
-  if (AttrName.size() > 4 && AttrName.startswith("__") &&
-      AttrName.endswith("__")) {
+  if (AttrName.size() > 4 && AttrName.starts_with("__") &&
+      AttrName.ends_with("__")) {
     AttrName = AttrName.drop_front(2).drop_back(2);
     return true;
   }
@@ -2050,12 +2051,6 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (Model != "global-dynamic" && Model != "local-dynamic"
       && Model != "initial-exec" && Model != "local-exec") {
     S.Diag(LiteralLoc, diag::err_attr_tlsmodel_arg);
-    return;
-  }
-
-  if (S.Context.getTargetInfo().getTriple().isOSAIX() &&
-      Model == "local-dynamic") {
-    S.Diag(LiteralLoc, diag::err_aix_attr_unsupported_tls_model) << Model;
     return;
   }
 
@@ -3369,6 +3364,22 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  SourceLocation LiteralLoc;
+  // Check that it is a string.
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
+    return;
+
+  llvm::CodeModel::Model CM;
+  if (!CodeModelAttr::ConvertStrToModel(Str, CM)) {
+    S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CodeModelAttr(S.Context, AL, CM));
+}
+
 // This is used for `__declspec(code_seg("segname"))` on a decl.
 // `#pragma code_seg("segname")` uses checkSectionName() instead.
 static bool checkCodeSegName(Sema &S, SourceLocation LiteralLoc,
@@ -3485,9 +3496,16 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   return false;
 }
 
+static bool hasArmStreamingInterface(const FunctionDecl *FD) {
+  if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+      return true;
+  return false;
+}
+
 // Check Target Version attrs
-bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &AttrStr,
-                                  bool &isDefault) {
+bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
+                                  StringRef &AttrStr, bool &isDefault) {
   enum FirstParam { Unsupported };
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
@@ -3503,6 +3521,8 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &AttrStr,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
+  if (hasArmStreamingInterface(cast<FunctionDecl>(D)))
+    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
@@ -3511,7 +3531,7 @@ static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SourceLocation LiteralLoc;
   bool isDefault = false;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      S.checkTargetVersionAttr(LiteralLoc, Str, isDefault))
+      S.checkTargetVersionAttr(LiteralLoc, D, Str, isDefault))
     return;
   // Do not create default only target_version attribute
   if (!isDefault) {
@@ -3534,7 +3554,7 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 bool Sema::checkTargetClonesAttrString(
     SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-    bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
+    Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
     SmallVectorImpl<SmallString<64>> &StringsBuffer) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3603,9 +3623,12 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
+      if (hasArmStreamingInterface(cast<FunctionDecl>(D)))
+        return Diag(LiteralLoc,
+                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
-      if (Cur.startswith("arch=")) {
+      if (Cur.starts_with("arch=")) {
         if (!Context.getTargetInfo().isValidCPUName(
                 Cur.drop_front(sizeof("arch=") - 1)))
           return Diag(CurLoc, diag::warn_unsupported_target_attribute)
@@ -3623,7 +3646,7 @@ bool Sema::checkTargetClonesAttrString(
       StringsBuffer.push_back(Cur);
     }
   }
-  if (Str.rtrim().endswith(","))
+  if (Str.rtrim().ends_with(","))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "" << TargetClones;
   return false;
@@ -3654,7 +3677,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (!S.checkStringLiteralArgumentAttr(AL, I, CurStr, &LiteralLoc) ||
         S.checkTargetClonesAttrString(
             LiteralLoc, CurStr,
-            cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()),
+            cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()), D,
             HasDefault, HasCommas, HasNotDefault, StringsBuffer))
       return;
   }
@@ -4855,7 +4878,9 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
 
   if (NewElemTy.isNull()) {
-    Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
+    // Only emit diagnostic on host for 128-bit mode attribute
+    if (!(DestWidth == 128 && getLangOpts().CUDAIsDevice))
+      Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
   }
 
@@ -5219,14 +5244,20 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_M68kRTD:
     D->addAttr(::new (S.Context) M68kRTDAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_PreserveNone:
+    D->addAttr(::new (S.Context) PreserveNoneAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
 }
 
 static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 1))
-    return;
+  if (AL.getAttributeSpellingListIndex() == SuppressAttr::CXX11_gsl_suppress) {
+    // Suppression attribute with GSL spelling requires at least 1 argument.
+    if (!AL.checkAtLeastNumArgs(S, 1))
+      return;
+  }
 
   std::vector<StringRef> DiagnosticIdentifiers;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
@@ -5235,8 +5266,6 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (!S.checkStringLiteralArgumentAttr(AL, I, RuleName, nullptr))
       return;
 
-    // FIXME: Warn if the rule name is unknown. This is tricky because only
-    // clang-tidy knows about available rules.
     DiagnosticIdentifiers.push_back(RuleName);
   }
   D->addAttr(::new (S.Context)
@@ -5418,6 +5447,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_M68kRTD:
     CC = CC_M68kRTD;
+    break;
+  case ParsedAttr::AT_PreserveNone:
+    CC = CC_PreserveNone;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -5819,8 +5851,7 @@ struct IntrinToName {
 static bool ArmBuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
                                  ArrayRef<IntrinToName> Map,
                                  const char *IntrinNames) {
-  if (AliasName.startswith("__arm_"))
-    AliasName = AliasName.substr(6);
+  AliasName.consume_front("__arm_");
   const IntrinToName *It =
       llvm::lower_bound(Map, BuiltinID, [](const IntrinToName &L, unsigned Id) {
         return L.Id < Id;
@@ -6215,29 +6246,35 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) ObjCRequiresSuperAttr(S.Context, Attrs));
 }
 
-static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *E = AL.getArgAsExpr(0);
-  auto Loc = E ? E->getBeginLoc() : AL.getLoc();
+static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
+  if (!isa<TagDecl>(D)) {
+    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl) << 0;
+    return;
+  }
 
-  auto *DRE = dyn_cast<DeclRefExpr>(AL.getArgAsExpr(0));
-  if (!DRE) {
+  IdentifierLoc *IdentLoc =
+      Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
+  if (!IdentLoc || !IdentLoc->Ident) {
+    // Try to locate the argument directly.
+    SourceLocation Loc = Attr.getLoc();
+    if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
+      Loc = Attr.getArgAsExpr(0)->getBeginLoc();
+
     S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
 
-  auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-  if (!VD) {
-    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 1 << DRE->getDecl();
+  // Verify that the identifier is a valid decl in the C decl namespace.
+  LookupResult Result(S, DeclarationName(IdentLoc->Ident), SourceLocation(),
+                      Sema::LookupNameKind::LookupOrdinaryName);
+  if (!S.LookupName(Result, S.TUScope) || !Result.getAsSingle<VarDecl>()) {
+    S.Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << 1 << IdentLoc->Ident;
     return;
   }
 
-  if (!isNSStringType(VD->getType(), S.Context) &&
-      !isCFStringType(VD->getType(), S.Context)) {
-    S.Diag(Loc, diag::err_nserrordomain_wrong_type) << VD;
-    return;
-  }
-
-  D->addAttr(::new (S.Context) NSErrorDomainAttr(S.Context, AL, VD));
+  D->addAttr(::new (S.Context)
+                 NSErrorDomainAttr(S.Context, Attr, IdentLoc->Ident));
 }
 
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6663,13 +6700,10 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
   // Check whether this will be mapped to a getter or setter of a property.
   bool IsGetter = false, IsSetter = false;
-  if (Name.startswith("getter:")) {
+  if (Name.consume_front("getter:"))
     IsGetter = true;
-    Name = Name.substr(7);
-  } else if (Name.startswith("setter:")) {
+  else if (Name.consume_front("setter:"))
     IsSetter = true;
-    Name = Name.substr(7);
-  }
 
   if (Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
@@ -7292,7 +7326,7 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
     }
   }
 
-  if (!Space.startswith("space")) {
+  if (!Space.starts_with("space")) {
     S.Diag(SpaceArgLoc, diag::err_hlsl_expected_space) << Space;
     return;
   }
@@ -7309,6 +7343,36 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
       HLSLResourceBindingAttr::Create(S.getASTContext(), Slot, Space, AL);
   if (NewAttr)
     D->addAttr(NewAttr);
+}
+
+static void handleHLSLParamModifierAttr(Sema &S, Decl *D,
+                                        const ParsedAttr &AL) {
+  HLSLParamModifierAttr *NewAttr = S.mergeHLSLParamModifierAttr(
+      D, AL,
+      static_cast<HLSLParamModifierAttr::Spelling>(AL.getSemanticSpelling()));
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
+HLSLParamModifierAttr *
+Sema::mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
+                                 HLSLParamModifierAttr::Spelling Spelling) {
+  // We can only merge an `in` attribute with an `out` attribute. All other
+  // combinations of duplicated attributes are ill-formed.
+  if (HLSLParamModifierAttr *PA = D->getAttr<HLSLParamModifierAttr>()) {
+    if ((PA->isIn() && Spelling == HLSLParamModifierAttr::Keyword_out) ||
+        (PA->isOut() && Spelling == HLSLParamModifierAttr::Keyword_in)) {
+      D->dropAttr<HLSLParamModifierAttr>();
+      SourceRange AdjustedRange = {PA->getLocation(), AL.getRange().getEnd()};
+      return HLSLParamModifierAttr::Create(
+          Context, /*MergedSpelling=*/true, AdjustedRange,
+          HLSLParamModifierAttr::Keyword_inout);
+    }
+    Diag(AL.getLoc(), diag::err_hlsl_duplicate_parameter_modifier) << AL;
+    Diag(PA->getLocation(), diag::note_conflicting_attribute);
+    return nullptr;
+  }
+  return HLSLParamModifierAttr::Create(Context, AL);
 }
 
 static void handleMSInheritanceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7340,6 +7404,28 @@ static void handleDeclspecThreadAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   D->addAttr(::new (S.Context) ThreadAttr(S.Context, AL));
+}
+
+static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!S.getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2022_3)) {
+    S.Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
+        << AL << AL.getRange();
+    return;
+  }
+  auto *FD = cast<FunctionDecl>(D);
+  if (FD->isConstexprSpecified() || FD->isConsteval()) {
+    S.Diag(AL.getLoc(), diag::err_ms_constexpr_cannot_be_applied)
+        << FD->isConsteval() << FD;
+    return;
+  }
+  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    if (!S.getLangOpts().CPlusPlus20 && MD->isVirtual()) {
+      S.Diag(AL.getLoc(), diag::err_ms_constexpr_cannot_be_applied)
+          << /*virtual*/ 2 << MD;
+      return;
+    }
+  }
+  D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8401,42 +8487,26 @@ static void handleCountedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(CBA);
 }
 
-bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
-  const auto *CBA = FD->getAttr<CountedByAttr>();
-  const IdentifierInfo *FieldName = CBA->getCountedByField();
-  DeclarationNameInfo NameInfo(FieldName,
-                               CBA->getCountedByFieldLoc().getBegin());
+static const FieldDecl *
+FindFieldInTopLevelOrAnonymousStruct(const RecordDecl *RD,
+                                     const IdentifierInfo *FieldName) {
+  for (const Decl *D : RD->decls()) {
+    if (const auto *FD = dyn_cast<FieldDecl>(D))
+      if (FD->getName() == FieldName->getName())
+        return FD;
 
-  LookupResult MemResult(*this, NameInfo, Sema::LookupMemberName);
-  LookupName(MemResult, S);
-
-  if (MemResult.empty()) {
-    // The "counted_by" field needs to exist within the struct.
-    LookupResult OrdResult(*this, NameInfo, Sema::LookupOrdinaryName);
-    LookupName(OrdResult, S);
-
-    if (!OrdResult.empty()) {
-      SourceRange SR = FD->getLocation();
-      Diag(SR.getBegin(), diag::err_counted_by_must_be_in_structure)
-          << FieldName << SR;
-
-      if (auto *ND = OrdResult.getAsSingle<NamedDecl>()) {
-        SR = ND->getLocation();
-        Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-            << ND << SR;
-      }
-      return true;
-    }
-
-    CXXScopeSpec SS;
-    DeclFilterCCC<FieldDecl> Filter(FieldName);
-    return DiagnoseEmptyLookup(S, SS, MemResult, Filter, nullptr, std::nullopt,
-                               const_cast<DeclContext *>(FD->getDeclContext()));
+    if (const auto *R = dyn_cast<RecordDecl>(D))
+      if (const FieldDecl *FD =
+              FindFieldInTopLevelOrAnonymousStruct(R, FieldName))
+        return FD;
   }
 
+  return nullptr;
+}
+
+bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
-
   if (!Decl::isFlexibleArrayMemberLike(Context, FD, FD->getType(),
                                        StrictFlexArraysLevel, true)) {
     // The "counted_by" attribute must be on a flexible array member.
@@ -8446,28 +8516,87 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
     return true;
   }
 
-  if (const FieldDecl *Field = MemResult.getAsSingle<FieldDecl>()) {
-    if (Field->hasAttr<CountedByAttr>()) {
-      // The "counted_by" field can't point to the flexible array member.
+  const auto *CBA = FD->getAttr<CountedByAttr>();
+  const IdentifierInfo *FieldName = CBA->getCountedByField();
+
+  auto GetNonAnonStructOrUnion = [](const RecordDecl *RD) {
+    while (RD && !RD->getDeclName())
+      if (const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext()))
+        RD = R;
+      else
+        break;
+
+    return RD;
+  };
+
+  const RecordDecl *EnclosingRD = GetNonAnonStructOrUnion(FD->getParent());
+  const FieldDecl *CountFD =
+      FindFieldInTopLevelOrAnonymousStruct(EnclosingRD, FieldName);
+
+  if (!CountFD) {
+    DeclarationNameInfo NameInfo(FieldName,
+                                 CBA->getCountedByFieldLoc().getBegin());
+    LookupResult MemResult(*this, NameInfo, Sema::LookupMemberName);
+    LookupName(MemResult, S);
+
+    if (!MemResult.empty()) {
       SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(), diag::err_counted_by_attr_refers_to_flexible_array)
+      Diag(SR.getBegin(), diag::err_flexible_array_count_not_in_same_struct)
           << CBA->getCountedByField() << SR;
+
+      if (auto *ND = MemResult.getAsSingle<NamedDecl>()) {
+        SR = ND->getLocation();
+        Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
+            << ND << SR;
+      }
+
       return true;
+    } else {
+      // The "counted_by" field needs to exist in the struct.
+      LookupResult OrdResult(*this, NameInfo, Sema::LookupOrdinaryName);
+      LookupName(OrdResult, S);
+
+      if (!OrdResult.empty()) {
+        SourceRange SR = FD->getLocation();
+        Diag(SR.getBegin(), diag::err_counted_by_must_be_in_structure)
+            << FieldName << SR;
+
+        if (auto *ND = OrdResult.getAsSingle<NamedDecl>()) {
+          SR = ND->getLocation();
+          Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
+              << ND << SR;
+        }
+
+        return true;
+      }
     }
 
-    if (!Field->getType()->isIntegerType() ||
-        Field->getType()->isBooleanType()) {
-      // The "counted_by" field must have an integer type.
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(),
-           diag::err_flexible_array_counted_by_attr_field_not_integer)
-          << CBA->getCountedByField() << SR;
+    CXXScopeSpec SS;
+    DeclFilterCCC<FieldDecl> Filter(FieldName);
+    return DiagnoseEmptyLookup(S, SS, MemResult, Filter, nullptr, std::nullopt,
+                               const_cast<DeclContext *>(FD->getDeclContext()));
+  }
 
-      SR = Field->getLocation();
-      Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-          << Field << SR;
-      return true;
-    }
+  if (CountFD->hasAttr<CountedByAttr>()) {
+    // The "counted_by" field can't point to the flexible array member.
+    SourceRange SR = CBA->getCountedByFieldLoc();
+    Diag(SR.getBegin(), diag::err_counted_by_attr_refers_to_flexible_array)
+        << CBA->getCountedByField() << SR;
+    return true;
+  }
+
+  if (!CountFD->getType()->isIntegerType() ||
+      CountFD->getType()->isBooleanType()) {
+    // The "counted_by" field must have an integer type.
+    SourceRange SR = CBA->getCountedByFieldLoc();
+    Diag(SR.getBegin(),
+         diag::err_flexible_array_counted_by_attr_field_not_integer)
+        << CBA->getCountedByField() << SR;
+
+    SR = CountFD->getLocation();
+    Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
+        << CountFD << SR;
+    return true;
   }
 
   return false;
@@ -8835,26 +8964,80 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+static bool checkArmNewAttrMutualExclusion(
+    Sema &S, const ParsedAttr &AL, const FunctionProtoType *FPT,
+    FunctionType::ArmStateValue CurrentState, StringRef StateName) {
+  auto CheckForIncompatibleAttr =
+      [&](FunctionType::ArmStateValue IncompatibleState,
+          StringRef IncompatibleStateName) {
+        if (CurrentState == IncompatibleState) {
+          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+              << (std::string("'__arm_new(\"") + StateName.str() + "\")'")
+              << (std::string("'") + IncompatibleStateName.str() + "(\"" +
+                  StateName.str() + "\")'")
+              << true;
+          AL.setInvalid();
+        }
+      };
 
-static void handleArmNewZaAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  CheckForIncompatibleAttr(FunctionType::ARM_In, "__arm_in");
+  CheckForIncompatibleAttr(FunctionType::ARM_Out, "__arm_out");
+  CheckForIncompatibleAttr(FunctionType::ARM_InOut, "__arm_inout");
+  CheckForIncompatibleAttr(FunctionType::ARM_Preserves, "__arm_preserves");
+  return AL.isInvalid();
+}
+
+static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.getNumArgs()) {
+    S.Diag(AL.getLoc(), diag::err_missing_arm_state) << AL;
+    AL.setInvalid();
+    return;
+  }
+
+  std::vector<StringRef> NewState;
+  if (const auto *ExistingAttr = D->getAttr<ArmNewAttr>()) {
+    for (StringRef S : ExistingAttr->newArgs())
+      NewState.push_back(S);
+  }
+
+  bool HasZA = false;
+  bool HasZT0 = false;
+  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(AL, I, StateName, &LiteralLoc))
+      return;
+
+    if (StateName == "za")
+      HasZA = true;
+    else if (StateName == "zt0")
+      HasZT0 = true;
+    else {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      AL.setInvalid();
+      return;
+    }
+
+    if (!llvm::is_contained(NewState, StateName)) // Avoid adding duplicates.
+      NewState.push_back(StateName);
+  }
+
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZASharedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_shared_za'" << true;
-      AL.setInvalid();
-    }
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZAPreservedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_preserves_za'" << true;
-      AL.setInvalid();
-    }
-    if (AL.isInvalid())
+    FunctionType::ArmStateValue ZAState =
+        FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
+    if (HasZA && ZAState != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZAState, "za"))
+      return;
+    FunctionType::ArmStateValue ZT0State =
+        FunctionType::getArmZT0State(FPT->getAArch64SMEAttributes());
+    if (HasZT0 && ZT0State != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZT0State, "zt0"))
       return;
   }
 
-  handleSimpleAttribute<ArmNewZAAttr>(S, D, AL);
+  D->dropAttr<ArmNewAttr>();
+  D->addAttr(::new (S.Context)
+                 ArmNewAttr(S.Context, AL, NewState.data(), NewState.size()));
 }
 
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
@@ -9005,6 +9188,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_BPFPreserveAccessIndex:
     handleBPFPreserveAccessIndexAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_BPFPreserveStaticOffset:
+    handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
@@ -9279,6 +9465,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_CodeModel:
+    handleCodeModelAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_RandomizeLayout:
     handleRandomizeLayoutAttr(S, D, AL);
     break;
@@ -9303,8 +9492,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Unavailable:
     handleAttrWithMessage<UnavailableAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_Assumption:
-    handleAssumumptionAttr(S, D, AL);
+  case ParsedAttr::AT_OMPAssume:
+    handleOMPAssumeAttr(S, D, AL);
     break;
   case ParsedAttr::AT_ObjCDirect:
     handleObjCDirectAttr(S, D, AL);
@@ -9380,6 +9569,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AArch64SVEPcs:
   case ParsedAttr::AT_AMDGPUKernelCall:
   case ParsedAttr::AT_M68kRTD:
+  case ParsedAttr::AT_PreserveNone:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:
@@ -9444,6 +9634,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Thread:
     handleDeclspecThreadAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_MSConstexpr:
+    handleMSConstexprAttr(S, D, AL);
+    break;
 
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
@@ -9460,6 +9653,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     handleHLSLResourceBindingAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLParamModifier:
+    handleHLSLParamModifierAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AbiTag:
@@ -9624,8 +9820,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
     break;
 
-  case ParsedAttr::AT_ArmNewZA:
-    handleArmNewZaAttr(S, D, AL);
+  case ParsedAttr::AT_ArmNew:
+    handleArmNewAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AcquireHandle:
@@ -9947,6 +10143,9 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
 
   // Apply additional attributes specified by '#pragma clang attribute'.
   AddPragmaAttributes(S, D);
+
+  // Look for API notes that map to attributes.
+  ProcessAPINotes(D);
 }
 
 /// Is the given declaration allowed to use a forbidden type?

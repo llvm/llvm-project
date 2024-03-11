@@ -1,12 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
-// RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
-// RUN:   -convert-arm-sme-to-llvm \
-// RUN:   -convert-vector-to-llvm=enable-arm-sve \
-// RUN:   -cse -canonicalize -allocate-arm-sme-tiles -test-lower-to-llvm | \
+// RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
@@ -21,7 +16,7 @@ func.func @matmul_transpose_a(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : t
   return
 }
 
-func.func @main() attributes { enable_arm_streaming_ignore } {
+func.func @main() {
   %c0 = arith.constant 0 : i32
   %c7 = arith.constant 7 : index
 

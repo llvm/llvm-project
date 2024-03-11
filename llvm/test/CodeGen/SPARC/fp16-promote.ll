@@ -5,18 +5,18 @@
 ; RUN: llc -mtriple=sparc-linux-gnu -mattr=v9 < %s | FileCheck %s -check-prefixes=ALL,V9
 ; RUN: llc -mtriple=sparc64-unknown-linux < %s | FileCheck %s -check-prefixes=ALL,SPARC64
 
-define void @test_load_store(half* %p, half* %q) nounwind {
+define void @test_load_store(ptr %p, ptr %q) nounwind {
 ; ALL-LABEL: test_load_store:
 ; ALL:       ! %bb.0:
 ; ALL-NEXT:    lduh [%o0], %o0
 ; ALL-NEXT:    retl
 ; ALL-NEXT:    sth %o0, [%o1]
-  %a = load half, half* %p
-  store half %a, half* %q
+  %a = load half, ptr %p
+  store half %a, ptr %q
   ret void
 }
 
-define float @test_fpextend_float(half* %p) nounwind {
+define float @test_fpextend_float(ptr %p) nounwind {
 ; V8-LABEL: test_fpextend_float:
 ; V8:       ! %bb.0:
 ; V8-NEXT:    save %sp, -96, %sp
@@ -40,12 +40,12 @@ define float @test_fpextend_float(half* %p) nounwind {
 ; SPARC64-NEXT:    lduh [%i0], %o0
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %a = load half, half* %p
+  %a = load half, ptr %p
   %r = fpext half %a to float
   ret float %r
 }
 
-define double @test_fpextend_double(half* %p) nounwind {
+define double @test_fpextend_double(ptr %p) nounwind {
 ; V8-LABEL: test_fpextend_double:
 ; V8:       ! %bb.0:
 ; V8-NEXT:    save %sp, -96, %sp
@@ -72,12 +72,12 @@ define double @test_fpextend_double(half* %p) nounwind {
 ; SPARC64-NEXT:    fstod %f0, %f0
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %a = load half, half* %p
+  %a = load half, ptr %p
   %r = fpext half %a to double
   ret double %r
 }
 
-define void @test_fpextend_fp128(half* %p, fp128* %out) nounwind {
+define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; V8-OPT-LABEL: test_fpextend_fp128:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -112, %sp
@@ -155,13 +155,13 @@ define void @test_fpextend_fp128(half* %p, fp128* %out) nounwind {
 ; SPARC64-NEXT:    std %f0, [%i1]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %a = load half, half* %p
+  %a = load half, ptr %p
   %r = fpext half %a to fp128
-  store fp128 %r, fp128* %out
+  store fp128 %r, ptr %out
   ret void
 }
 
-define void @test_fptrunc_float(float %f, half* %p) nounwind {
+define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; V8-OPT-LABEL: test_fptrunc_float:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -96, %sp
@@ -200,11 +200,11 @@ define void @test_fptrunc_float(float %f, half* %p) nounwind {
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
   %a = fptrunc float %f to half
-  store half %a, half* %p
+  store half %a, ptr %p
   ret void
 }
 
-define void @test_fptrunc_double(double %d, half* %p) nounwind {
+define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; V8-OPT-LABEL: test_fptrunc_double:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -112, %sp
@@ -261,11 +261,11 @@ define void @test_fptrunc_double(double %d, half* %p) nounwind {
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
   %a = fptrunc double %d to half
-  store half %a, half* %p
+  store half %a, ptr %p
   ret void
 }
 
-define void @test_fptrunc_fp128(fp128* %dp, half* %p) nounwind {
+define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-OPT-LABEL: test_fptrunc_fp128:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -104, %sp
@@ -319,13 +319,13 @@ define void @test_fptrunc_fp128(fp128* %dp, half* %p) nounwind {
 ; SPARC64-NEXT:    sth %o0, [%i1]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %d = load fp128, fp128* %dp
+  %d = load fp128, ptr %dp
   %a = fptrunc fp128 %d to half
-  store half %a, half* %p
+  store half %a, ptr %p
   ret void
 }
 
-define void @test_fadd(half* %p, half* %q) nounwind {
+define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; V8-OPT-LABEL: test_fadd:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -104, %sp
@@ -392,14 +392,14 @@ define void @test_fadd(half* %p, half* %q) nounwind {
 ; SPARC64-NEXT:    sth %o0, [%i0]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %a = load half, half* %p
-  %b = load half, half* %q
+  %a = load half, ptr %p
+  %b = load half, ptr %q
   %r = fadd half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
 
-define void @test_fmul(half* %p, half* %q) nounwind {
+define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; V8-OPT-LABEL: test_fmul:
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -104, %sp
@@ -466,9 +466,9 @@ define void @test_fmul(half* %p, half* %q) nounwind {
 ; SPARC64-NEXT:    sth %o0, [%i0]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %a = load half, half* %p
-  %b = load half, half* %q
+  %a = load half, ptr %p
+  %b = load half, ptr %q
   %r = fmul half %a, %b
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }

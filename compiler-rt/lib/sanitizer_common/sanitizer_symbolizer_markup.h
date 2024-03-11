@@ -20,6 +20,14 @@
 
 namespace __sanitizer {
 
+// Simplier view of a LoadedModule. It only holds information necessary to
+// identify unique modules.
+struct RenderedModule {
+  char *full_name;
+  uptr base_address;
+  u8 uuid[kModuleUUIDSize];  // BuildId
+};
+
 class MarkupStackTracePrinter : public StackTracePrinter {
  public:
   // We don't support the stack_trace_format flag at all.
@@ -35,6 +43,9 @@ class MarkupStackTracePrinter : public StackTracePrinter {
                   const char *strip_path_prefix = "") override;
 
  private:
+  // Keeps track of the modules that have been rendered to avoid re-rendering
+  // them
+  InternalMmapVector<RenderedModule> renderedModules_;
   void RenderContext(InternalScopedString *buffer);
 
  protected:

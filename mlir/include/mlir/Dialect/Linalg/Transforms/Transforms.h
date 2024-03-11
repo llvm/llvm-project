@@ -493,6 +493,8 @@ LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
+  static llvm::SmallDenseSet<int>
+  getPreservedProducerResults(GenericOp producer, GenericOp consumer);
 };
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
@@ -753,7 +755,8 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
                         ArrayRef<int64_t> inputVectorSizes = {},
                         ArrayRef<bool> inputScalableVecDims = {},
-                        bool vectorizeNDExtract = false);
+                        bool vectorizeNDExtract = false,
+                        bool flatten1DDepthwiseConv = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -1071,6 +1074,11 @@ bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
                               ArrayRef<ReassociationIndices> dimSequences);
 
+struct CollapseResult {
+  SmallVector<Value> results;
+  LinalgOp collapsedOp;
+};
+
 /// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition
 /// to calling this method is that for each list in `foldedIterationDim`, the
 /// sequence of dimensions is contiguous in domains of all `indexing_maps` of
@@ -1078,9 +1086,8 @@ bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
 /// When valid, the method also collapses the operands of the op. Returns
 /// replacement values of the results of the original `linalgOp` by inserting
 /// reshapes to get back values of compatible types.
-template <typename LinalgType>
-FailureOr<SmallVector<Value>>
-collapseOpIterationDims(LinalgType op,
+FailureOr<CollapseResult>
+collapseOpIterationDims(LinalgOp op,
                         ArrayRef<ReassociationIndices> foldedIterationDims,
                         RewriterBase &rewriter);
 
@@ -1224,6 +1231,13 @@ rewriteInIm2Col(RewriterBase &rewriter,
 /// (C x Kh x Kw, Ho x Wo))
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
+
+/// Convert linalg.conv_2d_nhwc_fhwc(_q) to linalg.conv_2d_nhwc_hwcf(_q) by
+/// materializing transpose.
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcOp op);
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcQOp op);
 
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.

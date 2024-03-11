@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
@@ -19,14 +19,14 @@
 // file_time_type last_write_time() const;
 // file_time_type last_write_time(error_code const&) const noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "assert_macros.h"
 #include "filesystem_test_helper.h"
-
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 static void signatures() {
   using namespace fs;

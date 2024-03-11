@@ -156,7 +156,7 @@ ProcessMinidump::ProcessMinidump(lldb::TargetSP target_sp,
                                  lldb::ListenerSP listener_sp,
                                  const FileSpec &core_file,
                                  DataBufferSP core_data)
-    : PostMortemProcess(target_sp, listener_sp), m_core_file(core_file),
+    : PostMortemProcess(target_sp, listener_sp, core_file),
       m_core_data(std::move(core_data)), m_active_exception(nullptr),
       m_is_wow64(false) {}
 
@@ -166,7 +166,7 @@ ProcessMinidump::~ProcessMinidump() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 void ProcessMinidump::Initialize() {

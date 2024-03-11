@@ -6,9 +6,9 @@ func.func @vector_multi_reduction(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -
 }
 // CHECK-LABEL: func @vector_multi_reduction
 //  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>, %[[ACC:.*]]: vector<2xf32>)
-//       CHECK:       %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<2xf32>
-//       CHECK:       %[[C0:.+]] = arith.constant 0 : index
-//       CHECK:       %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:       %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<2xf32>
+//   CHECK-DAG:       %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:       %[[C1:.+]] = arith.constant 1 : index
 //       CHECK:       %[[V0:.+]] = vector.extract %[[INPUT]][0]
 //       CHECK:       %[[ACC0:.+]] = vector.extract %[[ACC]][0]
 //       CHECK:       %[[RV0:.+]] = vector.reduction <mul>, %[[V0]], %[[ACC0]] : vector<4xf32> into f32
@@ -37,7 +37,7 @@ func.func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>, %acc: vector<2x3xi
 }
 // CHECK-LABEL: func @vector_reduction_inner
 //  CHECK-SAME:   %[[INPUT:.+]]: vector<2x3x4x5xi32>, %[[ACC:.*]]: vector<2x3xi32>
-//       CHECK:       %[[FLAT_RESULT_VEC_0:.+]] = arith.constant dense<0> : vector<6xi32>
+//   CHECK-DAG:       %[[FLAT_RESULT_VEC_0:.+]] = arith.constant dense<0> : vector<6xi32>
 //   CHECK-DAG:       %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:       %[[C1:.+]] = arith.constant 1 : index
 //   CHECK-DAG:       %[[C2:.+]] = arith.constant 2 : index
@@ -90,15 +90,15 @@ func.func @vector_multi_reduction_ordering(%arg0: vector<3x2x4xf32>, %acc: vecto
 }
 // CHECK-LABEL: func @vector_multi_reduction_ordering
 //  CHECK-SAME:   %[[INPUT:.+]]: vector<3x2x4xf32>, %[[ACC:.*]]: vector<2x4xf32>)
-//       CHECK:       %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<8xf32>
-//       CHECK:       %[[C0:.+]] = arith.constant 0 : index
-//       CHECK:       %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:       %[[C2:.+]] = arith.constant 2 : index
-//       CHECK:       %[[C3:.+]] = arith.constant 3 : index
-//       CHECK:       %[[C4:.+]] = arith.constant 4 : index
-//       CHECK:       %[[C5:.+]] = arith.constant 5 : index
-//       CHECK:       %[[C6:.+]] = arith.constant 6 : index
-//       CHECK:       %[[C7:.+]] = arith.constant 7 : index
+//   CHECK-DAG:       %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<8xf32>
+//   CHECK-DAG:       %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:       %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:       %[[C2:.+]] = arith.constant 2 : index
+//   CHECK-DAG:       %[[C3:.+]] = arith.constant 3 : index
+//   CHECK-DAG:       %[[C4:.+]] = arith.constant 4 : index
+//   CHECK-DAG:       %[[C5:.+]] = arith.constant 5 : index
+//   CHECK-DAG:       %[[C6:.+]] = arith.constant 6 : index
+//   CHECK-DAG:       %[[C7:.+]] = arith.constant 7 : index
 //       CHECK:       %[[TRANSPOSED_INPUT:.+]] = vector.transpose %[[INPUT]], [1, 2, 0] : vector<3x2x4xf32> to vector<2x4x3xf32>
 //       CHECK:       %[[V0:.+]] = vector.extract %[[TRANSPOSED_INPUT]][0, 0]
 //       CHECK:       %[[ACC0:.+]] = vector.extract %[[ACC]][0, 0] : f32 from vector<2x4xf32>
@@ -256,10 +256,10 @@ func.func private @scalable_dims(%A : vector<8x[4]x2xf32>, %B: vector<8x[4]xf32>
 // CHECK-LABEL:   func.func private @scalable_dims(
 // CHECK-SAME:                                     %[[VAL_0:.*]]: vector<8x[4]x2xf32>,
 // CHECK-SAME:                                     %[[VAL_1:.*]]: vector<8x[4]xf32>) -> vector<8x[4]xf32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<0.000000e+00> : vector<[32]xf32>
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_34:.*]] = arith.constant 31 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant dense<0.000000e+00> : vector<[32]xf32>
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_34:.*]] = arith.constant 31 : index
 
 // CHECK:           %[[VAL_35:.*]] = vector.extract %[[VAL_0]][0, 0] : vector<2xf32> from vector<8x[4]x2xf32>
 // CHECK:           %[[VAL_36:.*]] = vector.extract %[[VAL_1]][0, 0] : f32 from vector<8x[4]xf32>

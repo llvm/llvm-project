@@ -170,6 +170,11 @@ def AMDGPUfmax3 : SDNode<"AMDGPUISD::FMAX3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
+// out = max(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfmaximum3 : SDNode<"AMDGPUISD::FMAXIMUM3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
 // out = max(a, b, c) a, b, and c are signed ints
 def AMDGPUsmax3 : SDNode<"AMDGPUISD::SMAX3", AMDGPUDTIntTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
@@ -182,6 +187,11 @@ def AMDGPUumax3 : SDNode<"AMDGPUISD::UMAX3", AMDGPUDTIntTernaryOp,
 
 // out = min(a, b, c) a, b and c are floats
 def AMDGPUfmin3 : SDNode<"AMDGPUISD::FMIN3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
+// out = min(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfminimum3 : SDNode<"AMDGPUISD::FMINIMUM3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
@@ -281,11 +291,15 @@ def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
 
 // Signed and unsigned 24-bit multiply. The highest 8-bits are ignore
-// when performing the multiply. The result is a 32-bit value.
-def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", SDTIntBinOp,
+// when performing the multiply. The result is a 32 or 64 bit value.
+def AMDGPUMul24Op : SDTypeProfile<1, 2, [
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>
+]>;
+
+def AMDGPUmul_u24_impl : SDNode<"AMDGPUISD::MUL_U24", AMDGPUMul24Op,
   [SDNPCommutative, SDNPAssociative]
 >;
-def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", SDTIntBinOp,
+def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", AMDGPUMul24Op,
   [SDNPCommutative, SDNPAssociative]
 >;
 

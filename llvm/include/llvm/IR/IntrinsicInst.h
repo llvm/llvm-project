@@ -55,6 +55,18 @@ public:
     return getCalledFunction()->getIntrinsicID();
   }
 
+  bool isAssociative() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Return true if swapping the first two arguments to the intrinsic produces
   /// the same result.
   bool isCommutative() const {
@@ -519,6 +531,9 @@ public:
 class DbgLabelInst : public DbgInfoIntrinsic {
 public:
   DILabel *getLabel() const { return cast<DILabel>(getRawLabel()); }
+  void setLabel(DILabel *NewLabel) {
+    setArgOperand(0, MetadataAsValue::get(getContext(), NewLabel));
+  }
 
   Metadata *getRawLabel() const {
     return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
@@ -1414,7 +1429,35 @@ public:
 
 /// A base class for all instrprof intrinsics.
 class InstrProfInstBase : public IntrinsicInst {
+protected:
+  static bool isCounterBase(const IntrinsicInst &I) {
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::instrprof_cover:
+    case Intrinsic::instrprof_increment:
+    case Intrinsic::instrprof_increment_step:
+    case Intrinsic::instrprof_timestamp:
+    case Intrinsic::instrprof_value_profile:
+      return true;
+    }
+    return false;
+  }
+  static bool isMCDCBitmapBase(const IntrinsicInst &I) {
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::instrprof_mcdc_parameters:
+    case Intrinsic::instrprof_mcdc_tvbitmap_update:
+      return true;
+    }
+    return false;
+  }
+
 public:
+  static bool classof(const Value *V) {
+    if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
+      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr) ||
+             Instr->getIntrinsicID() ==
+                 Intrinsic::instrprof_mcdc_condbitmap_update;
+    return false;
+  }
   // The name of the instrumented function.
   GlobalVariable *getName() const {
     return cast<GlobalVariable>(
@@ -1429,6 +1472,12 @@ public:
 /// A base class for all instrprof counter intrinsics.
 class InstrProfCntrInstBase : public InstrProfInstBase {
 public:
+  static bool classof(const Value *V) {
+    if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
+      return InstrProfInstBase::isCounterBase(*Instr);
+    return false;
+  }
+
   // The number of counters for the instrumented function.
   ConstantInt *getNumCounters() const;
   // The index of the counter that this instruction acts on.
@@ -1509,8 +1558,7 @@ public:
 class InstrProfMCDCBitmapInstBase : public InstrProfInstBase {
 public:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_mcdc_parameters ||
-           I->getIntrinsicID() == Intrinsic::instrprof_mcdc_tvbitmap_update;
+    return InstrProfInstBase::isMCDCBitmapBase(*I);
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -1707,6 +1755,30 @@ public:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::assume;
   }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// Check if \p ID corresponds to a convergence control intrinsic.
+static inline bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
+  switch (IntrinsicID) {
+  default:
+    return false;
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return true;
+  }
+}
+
+/// Represents calls to the llvm.experimintal.convergence.* intrinsics.
+class ConvergenceControlInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return isConvergenceControlIntrinsic(I->getIntrinsicID());
+  }
+
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }

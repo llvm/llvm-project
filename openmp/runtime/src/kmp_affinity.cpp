@@ -127,8 +127,12 @@ const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural) {
     return ((plural) ? KMP_I18N_STR(Threads) : KMP_I18N_STR(Thread));
   case KMP_HW_PROC_GROUP:
     return ((plural) ? KMP_I18N_STR(ProcGroups) : KMP_I18N_STR(ProcGroup));
+  case KMP_HW_UNKNOWN:
+  case KMP_HW_LAST:
+    return KMP_I18N_STR(Unknown);
   }
-  return KMP_I18N_STR(Unknown);
+  KMP_ASSERT2(false, "Unhandled kmp_hw_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
@@ -157,13 +161,18 @@ const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
     return ((plural) ? "threads" : "thread");
   case KMP_HW_PROC_GROUP:
     return ((plural) ? "proc_groups" : "proc_group");
+  case KMP_HW_UNKNOWN:
+  case KMP_HW_LAST:
+    return ((plural) ? "unknowns" : "unknown");
   }
-  return ((plural) ? "unknowns" : "unknown");
+  KMP_ASSERT2(false, "Unhandled kmp_hw_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
   switch (type) {
   case KMP_HW_CORE_TYPE_UNKNOWN:
+  case KMP_HW_MAX_NUM_CORE_TYPES:
     return "unknown";
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   case KMP_HW_CORE_TYPE_ATOM:
@@ -172,7 +181,8 @@ const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
     return "Intel(R) Core(TM) processor";
 #endif
   }
-  return "unknown";
+  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -1238,17 +1248,18 @@ bool kmp_topology_t::filter_hw_subset() {
   struct core_type_indexer {
     int operator()(const kmp_hw_thread_t &t) const {
       switch (t.attrs.get_core_type()) {
+      case KMP_HW_CORE_TYPE_UNKNOWN:
+      case KMP_HW_MAX_NUM_CORE_TYPES:
+        return 0;
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
       case KMP_HW_CORE_TYPE_ATOM:
         return 1;
       case KMP_HW_CORE_TYPE_CORE:
         return 2;
 #endif
-      case KMP_HW_CORE_TYPE_UNKNOWN:
-        return 0;
       }
-      KMP_ASSERT(0);
-      return 0;
+      KMP_ASSERT2(false, "Unhandled kmp_hw_thread_t enumeration");
+      KMP_BUILTIN_UNREACHABLE;
     }
   };
   struct core_eff_indexer {
@@ -2817,7 +2828,9 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1] =
       nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L1 + 1] = __kmp_ncores;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) &&   \
+#if KMP_ARCH_X86_64 &&                                                         \
+    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||    \
+     KMP_OS_WINDOWS) &&                                                        \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores / 2;
@@ -2832,7 +2845,9 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_THREAD + 1] = 1;
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L1 + 1] =
       __kmp_nThreadsPerCore;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) &&   \
+#if KMP_ARCH_X86_64 &&                                                         \
+    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||    \
+     KMP_OS_WINDOWS) &&                                                        \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
@@ -5546,7 +5561,7 @@ void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
   }
 }
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
 // We don't need this entry for Windows because
 // there is GetProcessAffinityMask() api
 //

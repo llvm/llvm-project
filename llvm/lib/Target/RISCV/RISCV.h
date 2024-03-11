@@ -18,13 +18,8 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class AsmPrinter;
 class FunctionPass;
 class InstructionSelector;
-class MCInst;
-class MCOperand;
-class MachineInstr;
-class MachineOperand;
 class PassRegistry;
 class RISCVRegisterBankInfo;
 class RISCVSubtarget;
@@ -76,10 +71,6 @@ void initializeRISCVInsertWriteVXRMPass(PassRegistry &);
 
 FunctionPass *createRISCVRedundantCopyEliminationPass();
 void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
-
-FunctionPass *createRISCVInitUndefPass();
-void initializeRISCVInitUndefPass(PassRegistry &);
-extern char &RISCVInitUndefID;
 
 FunctionPass *createRISCVMoveMergePass();
 void initializeRISCVMoveMergePass(PassRegistry &);

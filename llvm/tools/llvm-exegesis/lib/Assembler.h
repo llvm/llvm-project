@@ -23,7 +23,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
@@ -90,10 +90,8 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // AsmStream, the temporary function is eventually discarded.
 Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns,
-                       ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStreamm,
-                       const BenchmarkKey &Key,
+                       ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
+                       raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions);
 
 // Creates an ObjectFile in the format understood by the host.
@@ -124,11 +122,10 @@ public:
 
 private:
   ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
-                     std::unique_ptr<ExecutionEngine> EE,
-                     StringRef FunctionBytes);
+                     std::unique_ptr<orc::LLJIT> EJIT, StringRef FunctionBytes);
 
   std::unique_ptr<LLVMContext> Context;
-  std::unique_ptr<ExecutionEngine> ExecEngine;
+  std::unique_ptr<orc::LLJIT> ExecJIT;
 };
 
 // Copies benchmark function's bytes from benchmark object.

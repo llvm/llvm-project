@@ -21,13 +21,21 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -95,14 +103,11 @@ public:
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
-         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
+         v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);
@@ -111,13 +116,11 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 1'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
-         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType COUNT = 1'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+         v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);

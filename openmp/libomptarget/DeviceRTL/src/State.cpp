@@ -8,14 +8,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "State.h"
+#include "Shared/Environment.h"
+
 #include "Allocator.h"
 #include "Configuration.h"
 #include "Debug.h"
-#include "Environment.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
+#include "State.h"
 #include "Synchronization.h"
 #include "Types.h"
 #include "Utils.h"
@@ -425,6 +426,8 @@ int omp_get_num_teams(void) { return mapping::getNumberOfBlocksInKernel(); }
 int omp_get_team_num() { return mapping::getBlockIdInKernel(); }
 
 int omp_get_initial_device(void) { return -1; }
+
+int omp_is_initial_device(void) { return 0; }
 }
 
 extern "C" {

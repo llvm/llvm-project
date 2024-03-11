@@ -39,8 +39,35 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
 
       StmtToBlock[Stmt->getStmt()] = Block;
     }
-    if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
-      StmtToBlock[TerminatorStmt] = Block;
+  }
+  // Some terminator conditions don't appear as a `CFGElement` anywhere else -
+  // for example, this is true if the terminator condition is a `&&` or `||`
+  // operator.
+  // We associate these conditions with the block the terminator appears in,
+  // but only if the condition has not already appeared as a regular
+  // `CFGElement`. (The `insert()` below does nothing if the key already exists
+  // in the map.)
+  for (const CFGBlock *Block : Cfg) {
+    if (Block != nullptr)
+      if (const Stmt *TerminatorCond = Block->getTerminatorCondition())
+        StmtToBlock.insert({TerminatorCond, Block});
+  }
+  // Terminator statements typically don't appear as a `CFGElement` anywhere
+  // else, so we want to associate them with the block that they terminate.
+  // However, there are some important special cases:
+  // -  The conditional operator is a type of terminator, but it also appears
+  //    as a regular `CFGElement`, and we want to associate it with the block
+  //    in which it appears as a `CFGElement`.
+  // -  The `&&` and `||` operators are types of terminators, but like the
+  //    conditional operator, they can appear as a regular `CFGElement` or
+  //    as a terminator condition (see above).
+  // We process terminators last to make sure that we only associate them with
+  // the block they terminate if they haven't previously occurred as a regular
+  // `CFGElement` or as a terminator condition.
+  for (const CFGBlock *Block : Cfg) {
+    if (Block != nullptr)
+      if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
+        StmtToBlock.insert({TerminatorStmt, Block});
   }
   return StmtToBlock;
 }
@@ -67,9 +94,41 @@ static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
   return BlockReachable;
 }
 
+static llvm::DenseSet<const CFGBlock *>
+buildContainsExprConsumedInDifferentBlock(
+    const CFG &Cfg,
+    const llvm::DenseMap<const Stmt *, const CFGBlock *> &StmtToBlock) {
+  llvm::DenseSet<const CFGBlock *> Result;
+
+  auto CheckChildExprs = [&Result, &StmtToBlock](const Stmt *S,
+                                                 const CFGBlock *Block) {
+    for (const Stmt *Child : S->children()) {
+      if (!isa<Expr>(Child))
+        continue;
+      const CFGBlock *ChildBlock = StmtToBlock.lookup(Child);
+      if (ChildBlock != Block)
+        Result.insert(ChildBlock);
+    }
+  };
+
+  for (const CFGBlock *Block : Cfg) {
+    if (Block == nullptr)
+      continue;
+
+    for (const CFGElement &Element : *Block)
+      if (auto S = Element.getAs<CFGStmt>())
+        CheckChildExprs(S->getStmt(), Block);
+
+    if (const Stmt *TerminatorCond = Block->getTerminatorCondition())
+      CheckChildExprs(TerminatorCond, Block);
+  }
+
+  return Result;
+}
+
 llvm::Expected<ControlFlowContext>
 ControlFlowContext::build(const FunctionDecl &Func) {
-  if (!Func.hasBody())
+  if (!Func.doesThisDeclarationHaveABody())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Cannot analyze function without a body");
@@ -113,8 +172,12 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
 
   llvm::BitVector BlockReachable = findReachableBlocks(*Cfg);
 
+  llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock =
+      buildContainsExprConsumedInDifferentBlock(*Cfg, StmtToBlock);
+
   return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
-                            std::move(BlockReachable));
+                            std::move(BlockReachable),
+                            std::move(ContainsExprConsumedInDifferentBlock));
 }
 
 } // namespace dataflow

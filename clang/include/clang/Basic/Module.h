@@ -118,7 +118,7 @@ public:
     /// of header files.
     ModuleMapModule,
 
-    /// This is a C++ 20 header unit.
+    /// This is a C++20 header unit.
     ModuleHeaderUnit,
 
     /// This is a C++20 module interface unit.
@@ -127,10 +127,10 @@ public:
     /// This is a C++20 module implementation unit.
     ModuleImplementationUnit,
 
-    /// This is a C++ 20 module partition interface.
+    /// This is a C++20 module partition interface.
     ModulePartitionInterface,
 
-    /// This is a C++ 20 module partition implementation.
+    /// This is a C++20 module partition implementation.
     ModulePartitionImplementation,
 
     /// This is the explicit Global Module Fragment of a modular TU.
@@ -156,7 +156,7 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
+  OptionalDirectoryEntryRef Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
@@ -598,6 +598,11 @@ public:
            Kind == ModulePartitionImplementation;
   }
 
+  /// Is this a module partition implementation unit.
+  bool isModulePartitionImplementation() const {
+    return Kind == ModulePartitionImplementation;
+  }
+
   /// Is this a module implementation.
   bool isModuleImplementation() const {
     return Kind == ModuleImplementationUnit;
@@ -672,7 +677,7 @@ public:
   }
 
   /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRefDegradesToFileEntryPtr getASTFile() const {
+  OptionalFileEntryRef getASTFile() const {
     return getTopLevelModule()->ASTFile;
   }
 
@@ -853,12 +858,6 @@ public:
                   VisibleCallback Vis = [](Module *) {},
                   ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
                                            StringRef) {});
-
-  /// Make transitive imports visible for [module.import]/7.
-  void makeTransitiveImportsVisible(
-      Module *M, SourceLocation Loc, VisibleCallback Vis = [](Module *) {},
-      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
-
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.

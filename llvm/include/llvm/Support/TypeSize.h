@@ -15,12 +15,10 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -323,8 +321,6 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
-  constexpr TypeSize() : FixedOrScalableQuantity(0, false) {}
-
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
@@ -337,6 +333,7 @@ public:
   static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
+  static constexpr TypeSize getZero() { return TypeSize(0, false); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

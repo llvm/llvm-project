@@ -663,6 +663,14 @@ static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
   return true;
 }
 
+static void instantiateDependentHLSLParamModifierAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const HLSLParamModifierAttr *Attr, Decl *New) {
+  ParmVarDecl *P = cast<ParmVarDecl>(New);
+  P->addAttr(Attr->clone(S.getASTContext()));
+  P->setType(S.getASTContext().getLValueReferenceType(P->getType()));
+}
+
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
@@ -782,6 +790,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+    }
+
+    if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
+      instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
+                                                New);
+      continue;
     }
 
     // Existing DLL attribute on the instantiation takes precedence.
@@ -1393,11 +1407,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
     if (!InstTy)
       return nullptr;
 
-    FriendDecl *FD = SemaRef.CheckFriendTypeDecl(D->getBeginLoc(),
-                                                 D->getFriendLoc(), InstTy);
-    if (!FD)
-      return nullptr;
-
+    FriendDecl *FD = FriendDecl::Create(
+        SemaRef.Context, Owner, D->getLocation(), InstTy, D->getFriendLoc());
     FD->setAccess(AS_public);
     FD->setUnsupportedFriend(D->isUnsupportedFriend());
     Owner->addDecl(FD);
@@ -2208,7 +2219,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       FunctionTemplate->setInstantiatedFromMemberTemplate(
                                            D->getDescribedFunctionTemplate());
     }
-  } else if (FunctionTemplate) {
+  } else if (FunctionTemplate &&
+             SemaRef.CodeSynthesisContexts.back().Kind !=
+                 Sema::CodeSynthesisContext::BuildingDeductionGuides) {
     // Record this function template specialization.
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
     Function->setFunctionTemplateSpecialization(FunctionTemplate,
@@ -2741,7 +2754,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
                                    IsExplicitSpecialization,
                                    Method->isThisDeclarationADefinition());
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     SemaRef.CheckPureMethod(Method, SourceRange());
 
   // Propagate access.  For a non-friend declaration, the access is
@@ -3042,16 +3055,21 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
         D->getPosition(), D->getIdentifier(), T, D->isParameterPack(), DI);
 
   if (AutoTypeLoc AutoLoc = DI->getTypeLoc().getContainedAutoTypeLoc())
-    if (AutoLoc.isConstrained())
+    if (AutoLoc.isConstrained()) {
+      SourceLocation EllipsisLoc;
+      if (IsExpandedParameterPack)
+        EllipsisLoc =
+            DI->getTypeLoc().getAs<PackExpansionTypeLoc>().getEllipsisLoc();
+      else if (auto *Constraint = dyn_cast_if_present<CXXFoldExpr>(
+                   D->getPlaceholderTypeConstraint()))
+        EllipsisLoc = Constraint->getEllipsisLoc();
       // Note: We attach the uninstantiated constriant here, so that it can be
-      // instantiated relative to the top level, like all our other constraints.
-      if (SemaRef.AttachTypeConstraint(
-              AutoLoc, Param, D,
-              IsExpandedParameterPack
-                ? DI->getTypeLoc().getAs<PackExpansionTypeLoc>()
-                    .getEllipsisLoc()
-                : SourceLocation()))
+      // instantiated relative to the top level, like all our other
+      // constraints.
+      if (SemaRef.AttachTypeConstraint(AutoLoc, /*NewConstrainedParm=*/Param,
+                                       /*OrigConstrainedParm=*/D, EllipsisLoc))
         Invalid = true;
+    }
 
   Param->setAccess(AS_public);
   Param->setImplicit(D->isImplicit());
@@ -4637,9 +4655,10 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   //
   // template<typename T>
   // A<T> Foo(int a = A<T>::FooImpl());
-  MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-      FD, FD->getLexicalDeclContext(), /*Final=*/false, nullptr,
-      /*RelativeToPrimary=*/true);
+  MultiLevelTemplateArgumentList TemplateArgs =
+      getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
+                                   /*Final=*/false, /*Innermost=*/std::nullopt,
+                                   /*RelativeToPrimary=*/true);
 
   if (SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
     return true;
@@ -4677,9 +4696,10 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   Sema::ContextRAII savedContext(*this, Decl);
   LocalInstantiationScope Scope(*this);
 
-  MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-      Decl, Decl->getLexicalDeclContext(), /*Final=*/false, nullptr,
-      /*RelativeToPrimary*/ true);
+  MultiLevelTemplateArgumentList TemplateArgs =
+      getTemplateInstantiationArgs(Decl, Decl->getLexicalDeclContext(),
+                                   /*Final=*/false, /*Innermost=*/std::nullopt,
+                                   /*RelativeToPrimary*/ true);
 
   // FIXME: We can't use getTemplateInstantiationPattern(false) in general
   // here, because for a non-defining friend declaration in a class template,
@@ -4835,16 +4855,13 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
 ///
 /// Usually this should not be used, and template argument deduction should be
 /// used in its place.
-FunctionDecl *
-Sema::InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
-                                     const TemplateArgumentList *Args,
-                                     SourceLocation Loc) {
+FunctionDecl *Sema::InstantiateFunctionDeclaration(
+    FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+    SourceLocation Loc, CodeSynthesisContext::SynthesisKind CSC) {
   FunctionDecl *FD = FTD->getTemplatedDecl();
 
   sema::TemplateDeductionInfo Info(Loc);
-  InstantiatingTemplate Inst(
-      *this, Loc, FTD, Args->asArray(),
-      CodeSynthesisContext::ExplicitTemplateArgumentSubstitution, Info);
+  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asArray(), CSC, Info);
   if (Inst.isInvalid())
     return nullptr;
 
@@ -5121,8 +5138,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-        Function, Function->getLexicalDeclContext(), /*Final=*/false, nullptr,
-        false, PatternDecl);
+        Function, Function->getLexicalDeclContext(), /*Final=*/false,
+        /*Innermost=*/std::nullopt, false, PatternDecl);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.
@@ -5192,7 +5209,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
 VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
     VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-    const TemplateArgumentList &TemplateArgList,
+    const TemplateArgumentList *PartialSpecArgs,
     const TemplateArgumentListInfo &TemplateArgsInfo,
     SmallVectorImpl<TemplateArgument> &Converted,
     SourceLocation PointOfInstantiation, LateInstantiatedAttrVec *LateAttrs,
@@ -5217,14 +5234,15 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   MultiLevelTemplateArgumentList MultiLevelList;
   if (auto *PartialSpec =
           dyn_cast<VarTemplatePartialSpecializationDecl>(FromVar)) {
+    assert(PartialSpecArgs);
     IsMemberSpec = PartialSpec->isMemberSpecialization();
     MultiLevelList.addOuterTemplateArguments(
-        PartialSpec, TemplateArgList.asArray(), /*Final=*/false);
+        PartialSpec, PartialSpecArgs->asArray(), /*Final=*/false);
   } else {
     assert(VarTemplate == FromVar->getDescribedVarTemplate());
     IsMemberSpec = VarTemplate->isMemberSpecialization();
-    MultiLevelList.addOuterTemplateArguments(
-        VarTemplate, TemplateArgList.asArray(), /*Final=*/false);
+    MultiLevelList.addOuterTemplateArguments(VarTemplate, Converted,
+                                             /*Final=*/false);
   }
   if (!IsMemberSpec)
     FromVar = FromVar->getFirstDecl();
@@ -5421,6 +5439,8 @@ void Sema::InstantiateVariableInitializer(
     EnterExpressionEvaluationContext Evaluated(
         *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
 
+    keepInLifetimeExtendingContext();
+    keepInMaterializeTemporaryObjectContext();
     // Instantiate the initializer.
     ExprResult Init;
 
@@ -6265,8 +6285,18 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
           if (T.isNull())
             return nullptr;
-          auto *SubstRecord = T->getAsCXXRecordDecl();
-          assert(SubstRecord && "class template id not a class type?");
+          CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
+
+          if (!SubstRecord) {
+            // T can be a dependent TemplateSpecializationType when performing a
+            // substitution for building a deduction guide.
+            assert(CodeSynthesisContexts.back().Kind ==
+                   CodeSynthesisContext::BuildingDeductionGuides);
+            // Return a nullptr as a sentinel value, we handle it properly in
+            // the TemplateInstantiator::TransformInjectedClassNameType
+            // override, which we transform it to a TemplateSpecializationType.
+            return nullptr;
+          }
           // Check that this template-id names the primary template and not a
           // partial or explicit specialization. (In the latter cases, it's
           // meaningless to attempt to find an instantiation of D within the

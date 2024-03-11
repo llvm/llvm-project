@@ -541,31 +541,31 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // duplication.
     using DbgIntrinsicHash =
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
-    auto makeHash = [](DbgVariableIntrinsic *D) -> DbgIntrinsicHash {
+    auto makeHash = [](auto *D) -> DbgIntrinsicHash {
       auto VarLocOps = D->location_ops();
       return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
                D->getVariable()},
               D->getExpression()};
     };
+
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
     for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I))
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         DbgIntrinsics.insert(makeHash(DII));
-      else
+        // Until RemoveDIs supports dbg.declares in DPValue format, we'll need
+        // to collect DPValues attached to any other debug intrinsics.
+        for (const DPValue &DPV : DPValue::filter(DII->getDbgValueRange()))
+          DbgIntrinsics.insert(makeHash(&DPV));
+      } else {
         break;
+      }
     }
 
-    // Duplicate implementation for DPValues, the non-instruction format of
-    // debug-info records in RemoveDIs.
-    auto makeHashDPV = [](const DPValue &D) -> DbgIntrinsicHash {
-      auto VarLocOps = D.location_ops();
-      return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
-               D.getVariable()},
-              D.getExpression()};
-    };
-    for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader)))
-      for (const DPValue &DPV : I.getDbgValueRange())
-        DbgIntrinsics.insert(makeHashDPV(DPV));
+    // Build DPValue hashes for DPValues attached to the terminator, which isn't
+    // considered in the loop above.
+    for (const DPValue &DPV :
+         DPValue::filter(OrigPreheader->getTerminator()->getDbgValueRange()))
+      DbgIntrinsics.insert(makeHash(&DPV));
 
     // Remember the local noalias scope declarations in the header. After the
     // rotation, they must be duplicated and the scope must be cloned. This
@@ -596,7 +596,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // on the next instruction, here labelled xyzzy, before we hoist %foo.
     // Later, we only only clone DPValues from that position (xyzzy) onwards,
     // which avoids cloning DPValue "blah" multiple times.
-    std::optional<DPValue::self_iterator> NextDbgInst = std::nullopt;
+    // (Stored as a range because it gives us a natural way of testing whether
+    //  there were DPValues on the next instruction before we hoisted things).
+    iterator_range<DPValue::self_iterator> NextDbgInsts =
+      (I != E) ? I->getDbgValueRange() : DPMarker::getEmptyDPValueRange();
 
     while (I != E) {
       Instruction *Inst = &*I++;
@@ -609,16 +612,32 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // memory (without proving that the loop doesn't write).
       if (L->hasLoopInvariantOperands(Inst) && !Inst->mayReadFromMemory() &&
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
-          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
+          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst) &&
+          // It is not safe to hoist the value of these instructions in
+          // coroutines, as the addresses of otherwise eligible variables (e.g.
+          // thread-local variables and errno) may change if the coroutine is
+          // resumed in a different thread.Therefore, we disable this
+          // optimization for correctness. However, this may block other correct
+          // optimizations.
+          // FIXME: This should be reverted once we have a better model for
+          // memory access in coroutines.
+          !Inst->getFunction()->isPresplitCoroutine()) {
 
-        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
+        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
+            !NextDbgInsts.empty()) {
           auto DbgValueRange =
-              LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
+              LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
           RemapDPValueRange(M, DbgValueRange, ValueMap,
                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+          // Erase anything we've seen before.
+          for (DPValue &DPV :
+               make_early_inc_range(DPValue::filter(DbgValueRange)))
+            if (DbgIntrinsics.count(makeHash(&DPV)))
+              DPV.eraseFromParent();
         }
 
-        NextDbgInst = I->getDbgValueRange().begin();
+        NextDbgInsts = I->getDbgValueRange();
+
         Inst->moveBefore(LoopEntryBranch);
 
         ++NumInstrsHoisted;
@@ -631,15 +650,16 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       ++NumInstrsDuplicated;
 
-      if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
-        auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInst);
-        // Erase anything we've seen before.
-        for (DPValue &DPV : make_early_inc_range(Range))
-          if (DbgIntrinsics.count(makeHashDPV(DPV)))
-            DPV.eraseFromParent();
+      if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
+          !NextDbgInsts.empty()) {
+        auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
         RemapDPValueRange(M, Range, ValueMap,
                           RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-        NextDbgInst = std::nullopt;
+        NextDbgInsts = DPMarker::getEmptyDPValueRange();
+        // Erase anything we've seen before.
+        for (DPValue &DPV : make_early_inc_range(DPValue::filter(Range)))
+          if (DbgIntrinsics.count(makeHash(&DPV)))
+            DPV.eraseFromParent();
       }
 
       // Eagerly remap the operands of the instruction.
@@ -704,12 +724,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // as U1'' and U1' scopes will not be compatible wrt to the local restrict
 
       // Clone the llvm.experimental.noalias.decl again for the NewHeader.
-      Instruction *NewHeaderInsertionPoint = &(*NewHeader->getFirstNonPHI());
+      BasicBlock::iterator NewHeaderInsertionPoint =
+          NewHeader->getFirstNonPHIIt();
       for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions) {
         LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
                           << *NAD << "\n");
         Instruction *NewNAD = NAD->clone();
-        NewNAD->insertBefore(NewHeaderInsertionPoint);
+        NewNAD->insertBefore(*NewHeader, NewHeaderInsertionPoint);
       }
 
       // Scopes must now be duplicated, once for OrigHeader and once for
@@ -853,7 +874,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // We can fold the conditional branch in the preheader, this makes things
       // simpler. The first step is to remove the extra edge to the Exit block.
       Exit->removePredecessor(OrigPreheader, true /*preserve LCSSA*/);
-      BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI);
+      BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI->getIterator());
       NewBI->setDebugLoc(PHBI->getDebugLoc());
       PHBI->eraseFromParent();
 

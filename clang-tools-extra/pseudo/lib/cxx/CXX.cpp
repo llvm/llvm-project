@@ -28,9 +28,9 @@ static const char *CXXBNF =
 
 // User-defined string literals look like `""suffix`.
 bool isStringUserDefined(const Token &Tok) {
-  return !Tok.text().endswith("\"");
+  return !Tok.text().ends_with("\"");
 }
-bool isCharUserDefined(const Token &Tok) { return !Tok.text().endswith("'"); }
+bool isCharUserDefined(const Token &Tok) { return !Tok.text().ends_with("'"); }
 
 // Combinable flags describing numbers.
 // Clang has just one numeric_token kind, the grammar has 4.

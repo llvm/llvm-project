@@ -611,13 +611,13 @@ define i4 @ptr_N_signed_positive_assume(ptr %src, ptr %lower, ptr %upper, i16 %N
 ; CHECK:       step.check:
 ; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp sge i16 [[STEP:%.*]], 0
 ; CHECK-NEXT:    [[STEP_SLT_N:%.*]] = icmp slt i16 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], false
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 false, [[STEP_SLT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 [[STEP]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp slt ptr [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp sge ptr [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 true, [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3

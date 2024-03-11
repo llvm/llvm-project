@@ -898,8 +898,8 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
   Phi->addIncoming(NewIndex, Phi->getIncomingBlock(StartIndex));
   Phi->addIncoming(Phi->getIncomingValue(IncrementIndex),
                    Phi->getIncomingBlock(IncrementIndex));
-  Phi->removeIncomingValue(IncrementIndex);
-  Phi->removeIncomingValue(StartIndex);
+  Phi->removeIncomingValue(1);
+  Phi->removeIncomingValue((unsigned)0);
 }
 
 void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
@@ -1060,7 +1060,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     NewPhi = Phi;
   } else {
     // There are other users -> create a new phi
-    NewPhi = PHINode::Create(Phi->getType(), 2, "NewPhi", Phi);
+    NewPhi = PHINode::Create(Phi->getType(), 2, "NewPhi", Phi->getIterator());
     // Copy the incoming values of the old phi
     NewPhi->addIncoming(Phi->getIncomingValue(IncrementingBlock == 1 ? 0 : 1),
                         Phi->getIncomingBlock(IncrementingBlock == 1 ? 0 : 1));

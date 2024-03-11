@@ -14,7 +14,7 @@
 #include <__config>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
-#include <__format/format_fwd.h>
+#include <__fwd/format.h>
 #include <cstddef>
 #include <cstdint>
 
@@ -37,14 +37,13 @@ public:
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args))) {
         __values_ = __store.__storage.__values_;
-        __types_ = __store.__storage.__types_;
+        __types_  = __store.__storage.__types_;
       } else
         __args_ = __store.__storage.__args_;
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  basic_format_arg<_Context> get(size_t __id) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> get(size_t __id) const noexcept {
     if (__id >= __size_)
       return basic_format_arg<_Context>{};
 

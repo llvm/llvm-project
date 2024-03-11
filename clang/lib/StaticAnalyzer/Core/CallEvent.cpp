@@ -659,17 +659,17 @@ bool AnyFunctionCall::argumentsMayEscape() const {
 
   // - CoreFoundation functions that end with "NoCopy" can free a passed-in
   //   buffer even if it is const.
-  if (FName.endswith("NoCopy"))
+  if (FName.ends_with("NoCopy"))
     return true;
 
   // - NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
   //   be deallocated by NSMapRemove.
-  if (FName.startswith("NS") && FName.contains("Insert"))
+  if (FName.starts_with("NS") && FName.contains("Insert"))
     return true;
 
   // - Many CF containers allow objects to escape through custom
   //   allocators/deallocators upon container construction. (PR12101)
-  if (FName.startswith("CF") || FName.startswith("CG")) {
+  if (FName.starts_with("CF") || FName.starts_with("CG")) {
     return StrInStrNoCase(FName, "InsertValue")  != StringRef::npos ||
            StrInStrNoCase(FName, "AddValue")     != StringRef::npos ||
            StrInStrNoCase(FName, "SetValue")     != StringRef::npos ||
@@ -1409,7 +1409,7 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
-      if (MD->isInstance())
+      if (MD->isImplicitObjectMemberFunction())
         return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {

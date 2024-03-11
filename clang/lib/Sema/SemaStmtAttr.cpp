@@ -53,6 +53,13 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
 static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
+  if (A.getAttributeSpellingListIndex() == SuppressAttr::CXX11_gsl_suppress &&
+      A.getNumArgs() < 1) {
+    // Suppression attribute with GSL spelling requires at least 1 argument.
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+    return nullptr;
+  }
+
   std::vector<StringRef> DiagnosticIdentifiers;
   for (unsigned I = 0, E = A.getNumArgs(); I != E; ++I) {
     StringRef RuleName;
@@ -60,8 +67,6 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     if (!S.checkStringLiteralArgumentAttr(A, I, RuleName, nullptr))
       return nullptr;
 
-    // FIXME: Warn if the rule name is unknown. This is tricky because only
-    // clang-tidy knows about available rules.
     DiagnosticIdentifiers.push_back(RuleName);
   }
 
@@ -298,6 +303,15 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) AlwaysInlineAttr(S.Context, A);
 }
 
+static Attr *handleCXXAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                 SourceRange Range) {
+  ExprResult Res = S.ActOnCXXAssumeAttr(St, A, Range);
+  if (!Res.isUsable())
+    return nullptr;
+
+  return ::new (S.Context) CXXAssumeAttr(S.Context, A, Res.get());
+}
+
 static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   // Validation is in Sema::ActOnAttributedStmt().
@@ -356,11 +370,10 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 }
 
 // Diagnose non-identical duplicates as a 'conflicting' loop attributes
-// and suppress duplicate errors in cases where the two match for
-// [[clang::code_align()]] attribute.
-static void CheckForDuplicateCodeAlignAttrs(Sema &S,
-                                            ArrayRef<const Attr *> Attrs) {
-  auto FindFunc = [](const Attr *A) { return isa<const CodeAlignAttr>(A); };
+// and suppress duplicate errors in cases where the two match.
+template <typename LoopAttrT>
+static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
+  auto FindFunc = [](const Attr *A) { return isa<const LoopAttrT>(A); };
   const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
 
   if (FirstItr == Attrs.end()) // no attributes found
@@ -370,7 +383,7 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
   std::optional<llvm::APSInt> FirstValue;
 
   const auto *CAFA =
-      dyn_cast<ConstantExpr>(cast<CodeAlignAttr>(*FirstItr)->getAlignment());
+      dyn_cast<ConstantExpr>(cast<LoopAttrT>(*FirstItr)->getAlignment());
   // Return early if first alignment expression is dependent (since we don't
   // know what the effective size will be), and skip the loop entirely.
   if (!CAFA)
@@ -378,8 +391,8 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
 
   while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1,
                                                      Attrs.end(), FindFunc))) {
-    const auto *CASA = dyn_cast<ConstantExpr>(
-        cast<CodeAlignAttr>(*LastFoundItr)->getAlignment());
+    const auto *CASA =
+        dyn_cast<ConstantExpr>(cast<LoopAttrT>(*LastFoundItr)->getAlignment());
     // If the value is dependent, we can not test anything.
     if (!CASA)
       return;
@@ -395,6 +408,16 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
     }
     return;
   }
+}
+
+static Attr *handleMSConstexprAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                   SourceRange Range) {
+  if (!S.getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2022_3)) {
+    S.Diag(A.getLoc(), diag::warn_unknown_attribute_ignored)
+        << A << A.getRange();
+    return nullptr;
+  }
+  return ::new (S.Context) MSConstexprAttr(S.Context, A);
 }
 
 #define WANT_STMT_MERGE_LOGIC
@@ -580,6 +603,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   switch (A.getKind()) {
   case ParsedAttr::AT_AlwaysInline:
     return handleAlwaysInlineAttr(S, St, A, Range);
+  case ParsedAttr::AT_CXXAssume:
+    return handleCXXAssumeAttr(S, St, A, Range);
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
@@ -600,6 +625,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleUnlikely(S, St, A, Range);
   case ParsedAttr::AT_CodeAlign:
     return handleCodeAlignAttr(S, St, A);
+  case ParsedAttr::AT_MSConstexpr:
+    return handleMSConstexprAttr(S, St, A, Range);
   default:
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // declaration attribute is not written on a statement, but this code is
@@ -618,10 +645,54 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
   }
 
   CheckForIncompatibleAttributes(*this, OutAttrs);
-  CheckForDuplicateCodeAlignAttrs(*this, OutAttrs);
+  CheckForDuplicateLoopAttrs<CodeAlignAttr>(*this, OutAttrs);
 }
 
-bool Sema::CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs) {
-  CheckForDuplicateCodeAlignAttrs(*this, Attrs);
+bool Sema::CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs) {
+  CheckForDuplicateLoopAttrs<CodeAlignAttr>(*this, Attrs);
   return false;
+}
+
+ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+  if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
+    Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+    return ExprError();
+  }
+
+  auto *Assumption = A.getArgAsExpr(0);
+  if (Assumption->getDependence() == ExprDependence::None) {
+    ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);
+    if (Res.isInvalid())
+      return ExprError();
+    Assumption = Res.get();
+  }
+
+  if (!getLangOpts().CPlusPlus23)
+    Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
+
+  return Assumption;
+}
+
+ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
+                                    const IdentifierInfo *AttrName,
+                                    SourceRange Range) {
+  ExprResult Res = CorrectDelayedTyposInExpr(Assumption);
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = CheckPlaceholderExpr(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Assumption = Res.get();
+  if (Assumption->HasSideEffects(Context))
+    Diag(Assumption->getBeginLoc(), diag::warn_assume_side_effects)
+        << AttrName << Range;
+
+  return Assumption;
 }

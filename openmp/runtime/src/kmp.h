@@ -63,7 +63,15 @@
 #undef KMP_CANCEL_THREADS
 #endif
 
+// Some WASI targets (e.g., wasm32-wasi-threads) do not support thread
+// cancellation.
+#if KMP_OS_WASI
+#undef KMP_CANCEL_THREADS
+#endif
+
+#if !KMP_OS_WASI
 #include <signal.h>
+#endif
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -95,7 +103,8 @@ class kmp_stats_list;
 #define KMP_USE_HIER_SCHED KMP_AFFINITY_SUPPORTED
 #endif
 
-#if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
+// OMPD_SKIP_HWLOC used in libompd/omp-icv.cpp to avoid OMPD depending on hwloc
+#if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED && !defined(OMPD_SKIP_HWLOC)
 #include "hwloc.h"
 #ifndef HWLOC_OBJ_NUMANODE
 #define HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
@@ -124,7 +133,7 @@ class kmp_stats_list;
 #endif
 #include "kmp_i18n.h"
 
-#define KMP_HANDLE_SIGNALS (KMP_OS_UNIX || KMP_OS_WINDOWS)
+#define KMP_HANDLE_SIGNALS ((KMP_OS_UNIX && !KMP_OS_WASI) || KMP_OS_WINDOWS)
 
 #include "kmp_wrapper_malloc.h"
 #if KMP_OS_UNIX
@@ -601,7 +610,9 @@ typedef int PACKED_REDUCTION_METHOD_T;
 #endif
 
 #if KMP_OS_UNIX
+#if !KMP_OS_WASI
 #include <dlfcn.h>
+#endif
 #include <pthread.h>
 #endif
 
@@ -679,7 +690,7 @@ typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *,
 extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 #endif /* KMP_OS_WINDOWS */
 
-#if KMP_USE_HWLOC
+#if KMP_USE_HWLOC && !defined(OMPD_SKIP_HWLOC)
 extern hwloc_topology_t __kmp_hwloc_topology;
 extern int __kmp_hwloc_error;
 #endif
@@ -1171,7 +1182,11 @@ extern void __kmp_init_target_task();
 #define KMP_MIN_STKSIZE ((size_t)(32 * 1024))
 #endif
 
+#if KMP_OS_AIX && KMP_ARCH_PPC
+#define KMP_MAX_STKSIZE 0x10000000 /* 256Mb max size on 32-bit AIX */
+#else
 #define KMP_MAX_STKSIZE (~((size_t)1 << ((sizeof(size_t) * (1 << 3)) - 1)))
+#endif
 
 #if KMP_ARCH_X86
 #define KMP_DEFAULT_STKSIZE ((size_t)(2 * 1024 * 1024))
@@ -1181,6 +1196,9 @@ extern void __kmp_init_target_task();
 #elif KMP_ARCH_VE
 // Minimum stack size for pthread for VE is 4MB.
 //   https://www.hpc.nec/documents/veos/en/glibc/Difference_Points_glibc.htm
+#define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
+#elif KMP_OS_AIX
+// The default stack size for worker threads on AIX is 4MB.
 #define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #else
 #define KMP_DEFAULT_STKSIZE ((size_t)(1024 * 1024))
@@ -1338,6 +1356,14 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_SOLARIS
 /* TODO: tune for KMP_OS_SOLARIS */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_WASI
+/* TODO: tune for KMP_OS_WASI */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_AIX
+/* TODO: tune for KMP_OS_AIX */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #endif
@@ -2473,14 +2499,15 @@ typedef struct kmp_dephash_entry kmp_dephash_entry_t;
 #define KMP_DEP_MTX 0x4
 #define KMP_DEP_SET 0x8
 #define KMP_DEP_ALL 0x80
-// Compiler sends us this info:
+// Compiler sends us this info. Note: some test cases contain an explicit copy
+// of this struct and should be in sync with any changes here.
 typedef struct kmp_depend_info {
   kmp_intptr_t base_addr;
   size_t len;
   union {
     kmp_uint8 flag; // flag as an unsigned char
     struct { // flag as a set of 8 bits
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
       /* Same fields as in the #else branch, but in reverse order */
       unsigned all : 1;
       unsigned unused : 3;
@@ -2645,7 +2672,7 @@ typedef struct kmp_task_stack {
 #endif // BUILD_TIED_TASK_STACK
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
   unsigned reserved31 : 6;
@@ -3885,7 +3912,7 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {

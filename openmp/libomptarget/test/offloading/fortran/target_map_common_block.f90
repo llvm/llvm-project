@@ -1,5 +1,5 @@
 ! Basic offloading test with a target region
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
@@ -12,9 +12,12 @@
 ! Testing simple variables in common block.
 program main
   call check_device
-  call commonblock_simple_with_implicit_type
+  call commonblock_simple_with_implicit_type_var
   call commonblock_simple_with_integer
   call commonblock_simple_with_real
+  call commonblock_simple_to_from
+  call set_commonblock_named
+  call use_commonblock_named
 end program main
 
 !-----
@@ -26,14 +29,17 @@ subroutine check_device
   !$omp target map(tofrom:devices)
     devices(2) = omp_get_device_num()
   !$omp end target
+  print *, omp_get_num_devices()
+  !CHECK: [[ND:[0-9]+]]
+  print *, omp_get_default_device()
+  !CHECK: [[DD:[0-9]+]]
+  !CHECK: devices: [[ND]] [[DD]]
   print *, "devices: ", devices
 end subroutine check_device
 
-!CHECK: devices: 1 0
-
 !-----
 
-subroutine commonblock_simple_with_implicit_type
+subroutine commonblock_simple_with_implicit_type_var
   use omp_lib
   common var1
   var1 = 10
@@ -80,3 +86,43 @@ end subroutine
 
 ! CHECK: var3 before target = 12.5
 ! CHECK: var3 after target = 14.5
+
+! -----
+
+subroutine commonblock_simple_to_from
+  use omp_lib
+  integer :: var4, tmp
+  common var4
+  var4 = 10
+  tmp = 20
+  !$omp target map(to:var4) map(from:tmp)
+    tmp = var4
+    var4 = 20
+  !$omp end target
+  print *, "var4 after target = ", var4
+  print *, "tmp after target = ", tmp
+end subroutine
+
+! CHECK: var4 after target = 10
+! CHECK: tmp after target = 10
+
+! -----
+
+subroutine set_commonblock_named
+  integer :: var6
+  common /my_common_block/ var6
+  var6 = 20
+end subroutine
+
+subroutine use_commonblock_named
+  integer :: var6
+  common /my_common_block/ var6
+  print *, "var6 before target = ", var6
+  !$omp target map(tofrom: var6)
+    var6 = 30
+  !$omp end target
+  print *, "var6 after target = ", var6
+end subroutine
+
+! CHECK: var6 before target = 20
+! CHECK: var6 after target = 30

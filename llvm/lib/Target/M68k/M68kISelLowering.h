@@ -194,6 +194,15 @@ private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                        SelectionDAG &DAG) const;
 
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override {
+    // In many cases, `GA` doesn't give the correct offset to fold. It's
+    // hard to know if the real offset actually fits into the displacement
+    // of the perspective addressing mode.
+    // Thus, we disable offset folding altogether and leave that to ISel
+    // patterns.
+    return false;
+  }
+
   SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
 
   /// Emit a load of return address if tail call

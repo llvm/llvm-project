@@ -284,6 +284,71 @@ TEST(MetadataTest, DeleteInstUsedByDPValue) {
   UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
+// Ensure that the order of dbg.value intrinsics returned by findDbgValues, and
+// their corresponding DPValue representation, are consistent.
+TEST(MetadataTest, OrderingOfDPValues) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !12, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "foo", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+    !12 = !DILocalVariable(name: "bar", scope: !6, file: !1, line: 1, type: !10)
+)");
+
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+
+  SmallVector<DbgValueInst *, 2> DVIs;
+  SmallVector<DPValue *, 2> DPVs;
+  findDbgValues(DVIs, &I, &DPVs);
+  ASSERT_EQ(DVIs.size(), 2u);
+  ASSERT_EQ(DPVs.size(), 0u);
+
+  // The correct order of dbg.values is given by their use-list, which becomes
+  // the reverse order of creation. Thus the dbg.values should come out as
+  // "bar" and then "foo".
+  DILocalVariable *Var0 = DVIs[0]->getVariable();
+  EXPECT_TRUE(Var0->getName() == "bar");
+  DILocalVariable *Var1 = DVIs[1]->getVariable();
+  EXPECT_TRUE(Var1->getName() == "foo");
+
+  // Now try again, but in DPValue form.
+  DVIs.clear();
+
+  M->convertToNewDbgValues();
+  findDbgValues(DVIs, &I, &DPVs);
+  ASSERT_EQ(DVIs.size(), 0u);
+  ASSERT_EQ(DPVs.size(), 2u);
+
+  Var0 = DPVs[0]->getVariable();
+  EXPECT_TRUE(Var0->getName() == "bar");
+  Var1 = DPVs[1]->getVariable();
+  EXPECT_TRUE(Var1->getName() == "foo");
+
+  M->convertFromNewDbgValues();
+  UseNewDbgInfoFormat = OldDbgValueMode;
+}
+
 TEST(DIBuiler, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
@@ -890,7 +955,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   FirstInst->DbgMarker->insertDPValue(DPV1, false);
   FirstInst->DbgMarker->insertDPValue(DPV2, true);
   unsigned int ItCount = 0;
-  for (DPValue &Item : FirstInst->DbgMarker->getDbgValueRange()) {
+  for (DbgRecord &Item : FirstInst->DbgMarker->getDbgValueRange()) {
     EXPECT_TRUE((&Item == DPV2 && ItCount == 0) ||
               (&Item == DPV1 && ItCount == 1));
     EXPECT_EQ(Item.getMarker(), FirstInst->DbgMarker);
@@ -903,17 +968,18 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
-  for (DPValue &Item : RetInst->DbgMarker->getDbgValueRange()) {
+  for (DPValue &Item :
+       DPValue::filter(RetInst->DbgMarker->getDbgValueRange())) {
     EXPECT_TRUE((Item.getRawLocation() == DPV2->getRawLocation() && ItCount == 0) ||
                 (Item.getRawLocation() == DPV1->getRawLocation() && ItCount == 1));
-    
+
     EXPECT_EQ(Item.getMarker(), RetInst->DbgMarker);
     EXPECT_NE(&Item, DPV1);
     EXPECT_NE(&Item, DPV2);
     ++ItCount;
   }
 
-  RetInst->DbgMarker->dropDPValues();
+  RetInst->DbgMarker->dropDbgValues();
   EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 0u);
 
   // Try cloning one single DPValue.
@@ -922,10 +988,12 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 1u);
   // The second DPValue should have been cloned; it should have the same values
   // as DPV1.
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.begin()->getRawLocation(),
+  EXPECT_EQ(cast<DPValue>(RetInst->DbgMarker->StoredDPValues.begin())
+                ->getRawLocation(),
             DPV1->getRawLocation());
   // We should be able to drop individual DPValues.
-  RetInst->DbgMarker->dropOneDPValue(&*RetInst->DbgMarker->StoredDPValues.begin());
+  RetInst->DbgMarker->dropOneDbgValue(
+      &*RetInst->DbgMarker->StoredDPValues.begin());
 
   // "Aborb" a DPMarker: this means pretend that the instruction it's attached
   // to is disappearing so it needs to be transferred into "this" marker.
@@ -933,7 +1001,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2u);
   // Should be the DPV1 and DPV2 objects.
   ItCount = 0;
-  for (DPValue &Item : RetInst->DbgMarker->getDbgValueRange()) {
+  for (DbgRecord &Item : RetInst->DbgMarker->getDbgValueRange()) {
     EXPECT_TRUE((&Item == DPV2 && ItCount == 0) ||
               (&Item == DPV1 && ItCount == 1));
     EXPECT_EQ(Item.getMarker(), RetInst->DbgMarker);
@@ -954,7 +1022,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   EXPECT_EQ(EndMarker->StoredDPValues.size(), 2u);
   // Test again that it's those two DPValues, DPV1 and DPV2.
   ItCount = 0;
-  for (DPValue &Item : EndMarker->getDbgValueRange()) {
+  for (DbgRecord &Item : EndMarker->getDbgValueRange()) {
     EXPECT_TRUE((&Item == DPV2 && ItCount == 0) ||
               (&Item == DPV1 && ItCount == 1));
     EXPECT_EQ(Item.getMarker(), EndMarker);
@@ -1014,7 +1082,10 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
   // Validating the block for DPValues / DPMarkers shouldn't fail -- there's
   // no data stored right now.
-  EXPECT_FALSE(BB1->validateDbgValues(false, false));
+  bool BrokenDebugInfo = false;
+  bool Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(Error);
+  EXPECT_FALSE(BrokenDebugInfo);
 
   // Function and module should be marked as not having the new format too.
   EXPECT_FALSE(F->IsNewDbgInfoFormat);
@@ -1045,13 +1116,15 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_EQ(SecondInst, SecondInst->DbgMarker->MarkedInstr);
 
   EXPECT_EQ(FirstInst->DbgMarker->StoredDPValues.size(), 1u);
-  DPValue *DPV1 = &*FirstInst->DbgMarker->getDbgValueRange().begin();
+  DPValue *DPV1 =
+      cast<DPValue>(&*FirstInst->DbgMarker->getDbgValueRange().begin());
   EXPECT_EQ(DPV1->getMarker(), FirstInst->DbgMarker);
   // Should point at %a, an argument.
   EXPECT_TRUE(isa<Argument>(DPV1->getVariableLocationOp(0)));
 
   EXPECT_EQ(SecondInst->DbgMarker->StoredDPValues.size(), 1u);
-  DPValue *DPV2 = &*SecondInst->DbgMarker->getDbgValueRange().begin();
+  DPValue *DPV2 =
+      cast<DPValue>(&*SecondInst->DbgMarker->getDbgValueRange().begin());
   EXPECT_EQ(DPV2->getMarker(), SecondInst->DbgMarker);
   // Should point at FirstInst.
   EXPECT_EQ(DPV2->getVariableLocationOp(0), FirstInst);
@@ -1065,13 +1138,17 @@ TEST(MetadataTest, DPValueConversionRoutines) {
     EXPECT_TRUE(!Inst.DbgMarker || Inst.DbgMarker->StoredDPValues.empty());
 
   // Validating the first block should continue to not be a problem,
-  EXPECT_FALSE(BB1->validateDbgValues(false, false));
+  Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(Error);
+  EXPECT_FALSE(BrokenDebugInfo);
   // But if we were to break something, it should be able to fire. Don't attempt
   // to comprehensively test the validator, it's a smoke-test rather than a
   // "proper" verification pass.
   DPV1->setMarker(nullptr);
   // A marker pointing the wrong way should be an error.
-  EXPECT_TRUE(BB1->validateDbgValues(false, false));
+  Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(Error);
+  EXPECT_TRUE(BrokenDebugInfo);
   DPV1->setMarker(FirstInst->DbgMarker);
 
   DILocalVariable *DLV1 = DPV1->getVariable();

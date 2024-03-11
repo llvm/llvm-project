@@ -110,7 +110,7 @@ define void @f(ptr noalias %a,
 ; NO-VERSION:       for.end:
 ; NO-VERSION-NEXT:    ret void
 ;
-  i32* noalias %b,
+  ptr noalias %b,
   ptr noalias %c,
   ptr noalias %d,
   i64 %stride) {

@@ -173,7 +173,8 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
 
   void notifyFinalized(
       jitlink::JITLinkMemoryManager::FinalizedAlloc Alloc) override {
-    Linker.Allocs.push_back(std::move(Alloc));
+    if (Alloc)
+      Linker.Allocs.push_back(std::move(Alloc));
     ++Linker.MM->ObjectsLoaded;
   }
 };

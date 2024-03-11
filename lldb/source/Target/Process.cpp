@@ -445,7 +445,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_currently_handling_do_on_removals(false),
-      m_resume_requested(false), m_finalizing(false),
+      m_resume_requested(false), m_finalizing(false), m_destructing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
@@ -518,9 +518,11 @@ ProcessProperties &Process::GetGlobalProperties() {
   return *g_settings_ptr;
 }
 
-void Process::Finalize() {
+void Process::Finalize(bool destructing) {
   if (m_finalizing.exchange(true))
     return;
+  if (destructing)
+    m_destructing.exchange(true);
 
   // Destroy the process. This will call the virtual function DoDestroy under
   // the hood, giving our derived class a chance to do the ncessary tear down.
@@ -1415,7 +1417,13 @@ bool Process::StateChangedIsHijackedForSynchronousResume() {
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
 
 void Process::SetPrivateState(StateType new_state) {
-  if (m_finalizing)
+  // Use m_destructing not m_finalizing here.  If we are finalizing a process
+  // that we haven't started tearing down, we'd like to be able to nicely
+  // detach if asked, but that requires the event system be live.  That will
+  // not be true for an in-the-middle-of-being-destructed Process, since the
+  // event system relies on Process::shared_from_this, which may have already
+  // been destroyed.
+  if (m_destructing)
     return;
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process | LLDBLog::Unwind));
@@ -2929,14 +2937,11 @@ void Process::CompleteAttach() {
   DidAttach(process_arch);
 
   if (process_arch.IsValid()) {
+    LLDB_LOG(log,
+             "Process::{0} replacing process architecture with DidAttach() "
+             "architecture: \"{1}\"",
+             __FUNCTION__, process_arch.GetTriple().getTriple());
     GetTarget().SetArchitecture(process_arch);
-    if (log) {
-      const char *triple_str = process_arch.GetTriple().getTriple().c_str();
-      LLDB_LOGF(log,
-                "Process::%s replacing process architecture with DidAttach() "
-                "architecture: %s",
-                __FUNCTION__, triple_str ? triple_str : "<null>");
-    }
   }
 
   // We just attached.  If we have a platform, ask it for the process
@@ -3160,8 +3165,8 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
     // Don't hijack and eat the eStateExited as the code that was doing the
     // attach will be waiting for this event...
     RestoreProcessEvents();
-    SetExitStatus(SIGKILL, "Cancelled async attach.");
     Destroy(false);
+    SetExitStatus(SIGKILL, "Cancelled async attach.");
     return Status();
   }
 
@@ -3847,6 +3852,13 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
                   ") woke up with an interrupt while attaching - "
                   "forwarding interrupt.",
                   __FUNCTION__, static_cast<void *>(this), GetID());
+        // The server may be spinning waiting for a process to appear, in which
+        // case we should tell it to stop doing that.  Normally, we don't NEED
+        // to do that because we will next close the communication to the stub
+        // and that will get it to shut down.  But there are remote debugging
+        // cases where relying on that side-effect causes the shutdown to be 
+        // flakey, so we should send a positive signal to interrupt the wait. 
+        Status error = HaltPrivate();
         BroadcastEvent(eBroadcastBitInterrupt, nullptr);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
         LLDB_LOGF(log,
@@ -4266,32 +4278,38 @@ void Process::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 //    return Host::GetArchSpecForExistingProcess (process_name);
 //}
 
+EventSP Process::CreateEventFromProcessState(uint32_t event_type) {
+  auto event_data_sp =
+      std::make_shared<ProcessEventData>(shared_from_this(), GetState());
+  return std::make_shared<Event>(event_type, event_data_sp);
+}
+
 void Process::AppendSTDOUT(const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   m_stdout_data.append(s, len);
-  BroadcastEventIfUnique(eBroadcastBitSTDOUT,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitSTDOUT);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::AppendSTDERR(const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   m_stderr_data.append(s, len);
-  BroadcastEventIfUnique(eBroadcastBitSTDERR,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitSTDERR);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::BroadcastAsyncProfileData(const std::string &one_profile_data) {
   std::lock_guard<std::recursive_mutex> guard(m_profile_data_comm_mutex);
   m_profile_data.push_back(one_profile_data);
-  BroadcastEventIfUnique(eBroadcastBitProfileData,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitProfileData);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
                                       const StructuredDataPluginSP &plugin_sp) {
-  BroadcastEvent(
-      eBroadcastBitStructuredData,
-      new EventDataStructuredData(shared_from_this(), object_sp, plugin_sp));
+  auto data_sp = std::make_shared<EventDataStructuredData>(
+      shared_from_this(), object_sp, plugin_sp);
+  BroadcastEvent(eBroadcastBitStructuredData, data_sp);
 }
 
 StructuredDataPluginSP
@@ -5664,27 +5682,33 @@ void Process::Flush() {
 
 lldb::addr_t Process::GetCodeAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_code_address_mask;
 }
 
 lldb::addr_t Process::GetDataAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_data_address_mask;
 }
 
 lldb::addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_code_address_mask != LLDB_INVALID_ADDRESS_MASK)
+    return m_highmem_code_address_mask;
   return GetCodeAddressMask();
 }
 
 lldb::addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_data_address_mask != LLDB_INVALID_ADDRESS_MASK)
+    return m_highmem_data_address_mask;
   return GetDataAddressMask();
 }
 

@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_UTILS_H
 
 #include "src/__support/CPP/limits.h"
-#include "src/__support/common.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include <inttypes.h>
@@ -51,6 +50,9 @@ LIBC_INLINE uintmax_t apply_length_modifier(uintmax_t num, LengthModifier lm) {
     if (result < 0)                                                            \
       return result;                                                           \
   }
+
+// This is used to represent which direction the number should be rounded.
+enum class RoundDirection { Up, Down, Even };
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE

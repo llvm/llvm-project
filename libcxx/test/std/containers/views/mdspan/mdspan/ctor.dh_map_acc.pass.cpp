@@ -43,7 +43,7 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
       assert((H::move_counter() == 1));
     }
   }
-  static_assert(!noexcept(MDS(handle, map, acc)));
+  LIBCPP_STATIC_ASSERT(!noexcept(MDS(handle, map, acc)));
   assert(m.extents() == map.extents());
   if constexpr (std::equality_comparable<H>)
     assert(m.data_handle() == handle);
@@ -57,10 +57,10 @@ template <class H, class L, class A>
 constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int>()), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D>(7)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D>(7)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<unsigned, 7>()), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<size_t, D, 4, D>(2, 3)), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D, 7, D>(0, 3)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D, 7, D>(0, 3)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int64_t, D, 7, D, 4, D, D>(1, 2, 3, 2)), acc);
 }
 
@@ -87,7 +87,7 @@ constexpr void mixin_accessor() {
 }
 
 template <class E>
-using mapping_t = typename std::layout_right::template mapping<E>;
+using mapping_t = std::layout_right::mapping<E>;
 
 constexpr bool test() {
   mixin_accessor<int>();

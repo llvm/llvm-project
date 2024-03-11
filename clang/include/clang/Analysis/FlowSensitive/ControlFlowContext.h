@@ -32,7 +32,8 @@ namespace dataflow {
 class ControlFlowContext {
 public:
   /// Builds a ControlFlowContext from a `FunctionDecl`.
-  /// `Func.hasBody()` must be true, and `Func.isTemplated()` must be false.
+  /// `Func.doesThisDeclarationHaveABody()` must be true, and
+  /// `Func.isTemplated()` must be false.
   static llvm::Expected<ControlFlowContext> build(const FunctionDecl &Func);
 
   /// Builds a ControlFlowContext from an AST node. `D` is the function in which
@@ -57,19 +58,36 @@ public:
     return BlockReachable[B.getBlockID()];
   }
 
+  /// Returns whether `B` contains an expression that is consumed in a
+  /// different block than `B` (i.e. the parent of the expression is in a
+  /// different block).
+  /// This happens if there is control flow within a full-expression (triggered
+  /// by `&&`, `||`, or the conditional operator). Note that the operands of
+  /// these operators are not the only expressions that can be consumed in a
+  /// different block. For example, in the function call
+  /// `f(&i, cond() ? 1 : 0)`, `&i` is in a different block than the `CallExpr`.
+  bool containsExprConsumedInDifferentBlock(const CFGBlock &B) const {
+    return ContainsExprConsumedInDifferentBlock.contains(&B);
+  }
+
 private:
-  ControlFlowContext(const Decl &D, std::unique_ptr<CFG> Cfg,
-                     llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
-                     llvm::BitVector BlockReachable)
+  ControlFlowContext(
+      const Decl &D, std::unique_ptr<CFG> Cfg,
+      llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
+      llvm::BitVector BlockReachable,
+      llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock)
       : ContainingDecl(D), Cfg(std::move(Cfg)),
         StmtToBlock(std::move(StmtToBlock)),
-        BlockReachable(std::move(BlockReachable)) {}
+        BlockReachable(std::move(BlockReachable)),
+        ContainsExprConsumedInDifferentBlock(
+            std::move(ContainsExprConsumedInDifferentBlock)) {}
 
   /// The `Decl` containing the statement used to construct the CFG.
   const Decl &ContainingDecl;
   std::unique_ptr<CFG> Cfg;
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
   llvm::BitVector BlockReachable;
+  llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock;
 };
 
 } // namespace dataflow

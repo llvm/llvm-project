@@ -829,14 +829,17 @@ to ``float``; see below for more information on this emulation.
   see below.
 
 * ``_Float16`` is supported on the following targets:
+
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
+  * NVPTX (natively)
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
+
   * 32-bit ARM
   * 64-bit ARM (AArch64)
   * RISC-V
@@ -1470,7 +1473,7 @@ Relaxed constexpr                      __cpp_constexpr                  C++14   
 ``if constexpr``                       __cpp_if_constexpr               C++17         C++11
 fold expressions                       __cpp_fold_expressions           C++17         C++03
 Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++11
+Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
 Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
 Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
 ``inline`` variables                   __cpp_inline_variables           C++17         C++03
@@ -1483,6 +1486,7 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``using enum``                         __cpp_using_enum                 C++20         C++03
 ``if consteval``                       __cpp_if_consteval               C++23         C++20
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                        C++23         C++11
 -------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C23           C89
@@ -1566,6 +1570,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_const`` (C++, Embarcadero)
 * ``__is_constructible`` (C++, MSVC 2013)
 * ``__is_convertible`` (C++, Embarcadero)
+* ``__is_nothrow_convertible`` (C++, GNU)
 * ``__is_convertible_to`` (Microsoft):
   Synonym for ``__is_convertible``.
 * ``__is_destructible`` (C++, MSVC 2013)
@@ -1578,6 +1583,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_integral`` (C++, Embarcadero)
 * ``__is_interface_class`` (Microsoft):
   Returns ``false``, even for types defined with ``__interface``.
+* ``__is_layout_compatible`` (C++, GNU, Microsoft)
 * ``__is_literal`` (Clang):
   Synonym for ``__is_literal_type``.
 * ``__is_literal_type`` (C++, GNU, Microsoft):
@@ -2018,7 +2024,7 @@ would be +1.  ``ns_returns_autoreleased`` specifies that the returned object is
 autorelease pool.
 
 **Usage**: The ``ns_consumed`` and ``cf_consumed`` attributes can be placed on
-an parameter declaration; they specify that the argument is expected to have a
+a parameter declaration; they specify that the argument is expected to have a
 +1 retain count, which will be balanced in some way by the function or method.
 The ``ns_consumes_self`` attribute can only be placed on an Objective-C
 method; it specifies that the method expects its ``self`` parameter to have a
@@ -2760,6 +2766,67 @@ Query for this feature with ``__has_builtin(__builtin_readcyclecounter)``. Note
 that even if present, its use may depend on run-time privilege or other OS
 controlled state.
 
+``__builtin_readsteadycounter``
+-------------------------------
+
+``__builtin_readsteadycounter`` is used to access the fixed frequency counter
+register (or a similar steady-rate clock) on those targets that support it.
+The function is similar to ``__builtin_readcyclecounter`` above except that the
+frequency is fixed, making it suitable for measuring elapsed time.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_readsteadycounter()
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  unsigned long long t0 = __builtin_readsteadycounter();
+  do_something();
+  unsigned long long t1 = __builtin_readsteadycounter();
+  unsigned long long secs_to_do_something = (t1 - t0) / tick_rate;
+
+**Description**:
+
+The ``__builtin_readsteadycounter()`` builtin returns the frequency counter value.
+When not supported by the target, the return value is always zero. This builtin
+takes no arguments and produces an unsigned long long result. The builtin does
+not guarantee any particular frequency, only that it is stable. Knowledge of the
+counter's true frequency will need to be provided by the user.
+
+Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
+
+``__builtin_cpu_supports``
+--------------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_cpu_supports(const char *features);
+
+**Example of Use:**:
+
+.. code-block:: c++
+
+  if (__builtin_cpu_supports("sve"))
+    sve_code();
+
+**Description**:
+
+The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
+features specified in string argument. It returns a positive integer if all
+features are supported and 0 otherwise. Feature names are target specific. On
+AArch64 features are combined using ``+`` like this
+``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
+If a feature name is not supported, Clang will issue a warning and replace
+builtin by the constant 0.
+
+Query for this feature with ``__has_builtin(__builtin_cpu_supports)``.
+
 ``__builtin_dump_struct``
 -------------------------
 
@@ -2821,7 +2888,7 @@ Example output:
 
 The ``__builtin_dump_struct`` function is used to print the fields of a simple
 structure and their values for debugging purposes. The first argument of the
-builtin should be a pointer to the struct to dump. The second argument ``f``
+builtin should be a pointer to a complete record type to dump. The second argument ``f``
 should be some callable expression, and can be a function object or an overload
 set. The builtin calls ``f``, passing any further arguments ``args...``
 followed by a ``printf``-compatible format string and the corresponding
@@ -3434,6 +3501,37 @@ builtin, the mangler emits their usual pattern without any special treatment.
   // Computes a unique stable name for the given type.
   constexpr const char * __builtin_sycl_unique_stable_name( type-id );
 
+``__builtin_popcountg``
+-----------------------
+
+``__builtin_popcountg`` returns the number of 1 bits in the argument. The
+argument can be of any unsigned integer type.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_popcountg(type x)
+
+**Examples**:
+
+.. code-block:: c++
+
+  unsigned int x = 1;
+  int x_pop = __builtin_popcountg(x);
+
+  unsigned long y = 3;
+  int y_pop = __builtin_popcountg(y);
+
+  unsigned _BitInt(128) z = 7;
+  int z_pop = __builtin_popcountg(z);
+
+**Description**:
+
+``__builtin_popcountg`` is meant to be a type-generic alternative to the
+``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
+such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
@@ -3600,7 +3698,7 @@ scalar calls of ``__builtin_isfpclass`` applied to the input elementwise.
 The result of ``__builtin_isfpclass`` is a boolean value, if the first argument
 is a scalar, or an integer vector with the same element count as the first
 argument. The element type in this vector has the same bit length as the
-element of the the first argument type.
+element of the first argument type.
 
 This function never raises floating-point exceptions and does not canonicalize
 its input. The floating-point argument is not promoted, its data class is
@@ -3865,6 +3963,30 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 ``__OPENCL_MEMORY_SCOPE_DEVICE``, ``__OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES``,
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
+
+__scoped_atomic builtins
+------------------------
+
+Clang provides a set of atomics taking a memory scope argument. These atomics
+are identical to the standard GNU / GCC atomic builtins but taking an extra
+memory scope argument. These are designed to be a generic alternative to the
+``__opencl_atomic_*`` builtin functions for targets that support atomic memory
+scopes.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+* ``__MEMORY_SCOPE_SYSTEM``
+* ``__MEMORY_SCOPE_DEVICE``
+* ``__MEMORY_SCOPE_WRKGRP``
+* ``__MEMORY_SCOPE_WVFRNT``
+* ``__MEMORY_SCOPE_SINGLE``
+
+This controls whether or not the atomic operation is ordered with respect to the
+whole system, the current device, an OpenCL workgroup, wavefront, or just a
+single thread. If these are used on a target that does not support atomic
+scopes, then they will behave exactly as the standard GNU atomic builtins.
 
 Low-level ARM exclusive memory builtins
 ---------------------------------------
@@ -4629,6 +4751,22 @@ The pragma can take two values: ``on`` and ``off``.
     float v = t + z;
   }
 
+``#pragma clang fp reciprocal`` allows control over using reciprocal
+approximations in floating point expressions. When enabled, this
+pragma allows the expression ``x / y`` to be approximated as ``x *
+(1.0 / y)``.  This pragma can be used to disable reciprocal
+approximation when it is otherwise enabled for the translation unit
+with the ``-freciprocal-math`` flag or other fast-math options. The
+pragma can take two values: ``on`` and ``off``.
+
+.. code-block:: c++
+
+  float f(float x, float y)
+  {
+    // Enable floating point reciprocal approximation
+    #pragma clang fp reciprocal(on)
+    return x / y;
+  }
 
 ``#pragma clang fp contract`` specifies whether the compiler should
 contract a multiply and an addition (or subtraction) into a fused FMA
@@ -4918,7 +5056,7 @@ Clang supports the following match rules:
 - ``record(unless(is_union))``: Can be used to apply attributes only to
   ``struct`` and ``class`` declarations.
 
-- ``enum``: Can be be used to apply attributes to enumeration declarations.
+- ``enum``: Can be used to apply attributes to enumeration declarations.
 
 - ``enum_constant``: Can be used to apply attributes to enumerators.
 
@@ -5197,6 +5335,11 @@ Intrinsics Support within Constant Expressions
 
 The following builtin intrinsics can be used in constant expressions:
 
+* ``__builtin_addcb``
+* ``__builtin_addcs``
+* ``__builtin_addc``
+* ``__builtin_addcl``
+* ``__builtin_addcll``
 * ``__builtin_bitreverse8``
 * ``__builtin_bitreverse16``
 * ``__builtin_bitreverse32``
@@ -5235,6 +5378,7 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_popcount``
 * ``__builtin_popcountl``
 * ``__builtin_popcountll``
+* ``__builtin_popcountg``
 * ``__builtin_rotateleft8``
 * ``__builtin_rotateleft16``
 * ``__builtin_rotateleft32``
@@ -5243,6 +5387,11 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_rotateright16``
 * ``__builtin_rotateright32``
 * ``__builtin_rotateright64``
+* ``__builtin_subcb``
+* ``__builtin_subcs``
+* ``__builtin_subc``
+* ``__builtin_subcl``
+* ``__builtin_subcll``
 
 The following x86-specific intrinsics can be used in constant expressions:
 

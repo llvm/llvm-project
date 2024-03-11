@@ -89,7 +89,7 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
   // where both are valid examples of the same platform+environment but in the
   // variant (2) the simulator is hardcoded as part of the platform name. Both
   // forms above should match for "iossimulator" requirement.
-  if (Target.getTriple().isOSDarwin() && PlatformEnv.endswith("simulator"))
+  if (Target.getTriple().isOSDarwin() && PlatformEnv.ends_with("simulator"))
     return PlatformEnv == Feature || CmpPlatformEnv(PlatformEnv, Feature);
 
   return PlatformEnv == Feature;
@@ -166,7 +166,8 @@ bool Module::isForBuilding(const LangOptions &LangOpts) const {
   // for either.
   if (!LangOpts.isCompilingModule() && getTopLevelModule()->IsFramework &&
       CurrentModule == LangOpts.ModuleName &&
-      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+      !CurrentModule.ends_with("_Private") &&
+      TopLevelName.ends_with("_Private"))
     TopLevelName = TopLevelName.drop_back(8);
 
   return TopLevelName == CurrentModule;
@@ -375,7 +376,7 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
 
 Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isExplicitGlobalModule())
@@ -386,7 +387,7 @@ Module *Module::getGlobalModuleFragment() const {
 
 Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isPrivateModule())
@@ -719,14 +720,6 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     }
   };
   VisitModule({M, nullptr});
-}
-
-void VisibleModuleSet::makeTransitiveImportsVisible(Module *M,
-                                                    SourceLocation Loc,
-                                                    VisibleCallback Vis,
-                                                    ConflictCallback Cb) {
-  for (auto *I : M->Imports)
-    setVisible(I, Loc, Vis, Cb);
 }
 
 ASTSourceDescriptor::ASTSourceDescriptor(Module &M)

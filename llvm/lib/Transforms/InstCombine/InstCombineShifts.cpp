@@ -366,14 +366,14 @@ static Instruction *foldShiftOfShiftedBinOp(BinaryOperator &I,
 
   Type *Ty = I.getType();
 
-  // Find a matching one-use shift by constant. The fold is not valid if the sum
+  // Find a matching shift by constant. The fold is not valid if the sum
   // of the shift values equals or exceeds bitwidth.
-  // TODO: Remove the one-use check if the other logic operand (Y) is constant.
   Value *X, *Y;
-  auto matchFirstShift = [&](Value *V) {
-    APInt Threshold(Ty->getScalarSizeInBits(), Ty->getScalarSizeInBits());
-    return match(V,
-                 m_OneUse(m_BinOp(ShiftOpcode, m_Value(X), m_Constant(C0)))) &&
+  auto matchFirstShift = [&](Value *V, Value *W) {
+    unsigned Size = Ty->getScalarSizeInBits();
+    APInt Threshold(Size, Size);
+    return match(V, m_BinOp(ShiftOpcode, m_Value(X), m_Constant(C0))) &&
+           (V->hasOneUse() || match(W, m_ImmConstant())) &&
            match(ConstantExpr::getAdd(C0, C1),
                  m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));
   };
@@ -382,9 +382,9 @@ static Instruction *foldShiftOfShiftedBinOp(BinaryOperator &I,
   // is not so we cannot reoder if we match operand(1) and need to keep the
   // operands in their original positions.
   bool FirstShiftIsOp1 = false;
-  if (matchFirstShift(BinInst->getOperand(0)))
+  if (matchFirstShift(BinInst->getOperand(0), BinInst->getOperand(1)))
     Y = BinInst->getOperand(1);
-  else if (matchFirstShift(BinInst->getOperand(1))) {
+  else if (matchFirstShift(BinInst->getOperand(1), BinInst->getOperand(0))) {
     Y = BinInst->getOperand(0);
     FirstShiftIsOp1 = BinInst->getOpcode() == Instruction::Sub;
   } else
@@ -439,7 +439,14 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   if (match(Op0, m_Constant(C)) &&
       match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
     Value *NewC = Builder.CreateBinOp(I.getOpcode(), C, C1);
-    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+    BinaryOperator *NewShiftOp = BinaryOperator::Create(I.getOpcode(), NewC, A);
+    if (I.getOpcode() == Instruction::Shl) {
+      NewShiftOp->setHasNoSignedWrap(I.hasNoSignedWrap());
+      NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+    } else {
+      NewShiftOp->setIsExact(I.isExact());
+    }
+    return NewShiftOp;
   }
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
@@ -962,15 +969,13 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   }
 
   // Compute what we know about shift count.
-  KnownBits KnownCnt =
-      computeKnownBits(I.getOperand(1), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+  KnownBits KnownCnt = computeKnownBits(I.getOperand(1), /* Depth */ 0, Q);
   unsigned BitWidth = KnownCnt.getBitWidth();
   // Since shift produces a poison value if RHS is equal to or larger than the
   // bit width, we can safely assume that RHS is less than the bit width.
   uint64_t MaxCnt = KnownCnt.getMaxValue().getLimitedValue(BitWidth - 1);
 
-  KnownBits KnownAmt =
-      computeKnownBits(I.getOperand(0), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+  KnownBits KnownAmt = computeKnownBits(I.getOperand(0), /* Depth */ 0, Q);
   bool Changed = false;
 
   if (I.getOpcode() == Instruction::Shl) {
@@ -1199,6 +1204,12 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateShl(AllOnes, Op1);
     return BinaryOperator::CreateAnd(Mask, X);
+  }
+
+  // Transform  (-1 >> y) << y  to -1 << y
+  if (match(Op0, m_LShr(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateShl(AllOnes, Op1);
   }
 
   Constant *C1;
@@ -1486,6 +1497,12 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateLShr(AllOnes, Op1);
     return BinaryOperator::CreateAnd(Mask, X);
+  }
+
+  // Transform  (-1 << y) >> y  to -1 >> y
+  if (match(Op0, m_Shl(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateLShr(AllOnes, Op1);
   }
 
   if (Instruction *Overflow = foldLShrOverflowBit(I))

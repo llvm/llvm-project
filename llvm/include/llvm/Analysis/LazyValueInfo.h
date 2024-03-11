@@ -32,7 +32,6 @@ namespace llvm {
     friend class LazyValueInfoWrapperPass;
     AssumptionCache *AC = nullptr;
     const DataLayout *DL = nullptr;
-    class TargetLibraryInfo *TLI = nullptr;
     LazyValueInfoImpl *PImpl = nullptr;
     LazyValueInfo(const LazyValueInfo &) = delete;
     void operator=(const LazyValueInfo &) = delete;
@@ -43,18 +42,16 @@ namespace llvm {
   public:
     ~LazyValueInfo();
     LazyValueInfo() = default;
-    LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_,
-                  TargetLibraryInfo *TLI_)
-        : AC(AC_), DL(DL_), TLI(TLI_) {}
+    LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_)
+        : AC(AC_), DL(DL_) {}
     LazyValueInfo(LazyValueInfo &&Arg)
-        : AC(Arg.AC), DL(Arg.DL), TLI(Arg.TLI), PImpl(Arg.PImpl) {
+        : AC(Arg.AC), DL(Arg.DL), PImpl(Arg.PImpl) {
       Arg.PImpl = nullptr;
     }
     LazyValueInfo &operator=(LazyValueInfo &&Arg) {
       releaseMemory();
       AC = Arg.AC;
       DL = Arg.DL;
-      TLI = Arg.TLI;
       PImpl = Arg.PImpl;
       Arg.PImpl = nullptr;
       return *this;
@@ -95,11 +92,11 @@ namespace llvm {
     /// specified value at the specified instruction. This may only be called
     /// on integer-typed Values.
     ConstantRange getConstantRange(Value *V, Instruction *CxtI,
-                                   bool UndefAllowed = true);
+                                   bool UndefAllowed);
 
     /// Return the ConstantRange constraint that is known to hold for the value
     /// at a specific use-site.
-    ConstantRange getConstantRangeAtUse(const Use &U, bool UndefAllowed = true);
+    ConstantRange getConstantRangeAtUse(const Use &U, bool UndefAllowed);
 
     /// Determine whether the specified value is known to be a
     /// constant on the specified edge.  Return null if not.
@@ -160,6 +157,8 @@ public:
   explicit LazyValueInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Wrapper around LazyValueInfo.

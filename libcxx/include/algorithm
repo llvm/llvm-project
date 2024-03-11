@@ -42,6 +42,9 @@ namespace ranges {
   template <class I>
     struct in_found_result;              // since C++20
 
+  template <class I, class T>
+    struct in_value_result;              // since C++23
+
   template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
     indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>                                   // since C++20
   constexpr I min_element(I first, S last, Comp comp = {}, Proj proj = {});
@@ -214,6 +217,19 @@ namespace ranges {
     constexpr ranges::minmax_element_result<borrowed_iterator_t<R>>
       minmax_element(R&& r, Comp comp = {}, Proj proj = {});                                              // since C++20
 
+  template<forward_iterator I1, sentinel_for<I1> S1,
+           forward_iterator I2, sentinel_for<I2> S2,
+           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_comparable<I1, I2, Pred, Proj1, Proj2>
+    constexpr bool contains_subrange(I1 first1, S1 last1, I2 first2, S2 last2,
+                                     Pred pred = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                // since C++23
+
+  template<forward_range R1, forward_range R2,
+           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_comparable<iterator_t<R1>, iterator_t<R2>, Pred, Proj1, Proj2>
+    constexpr bool contains_subrange(R1&& r1, R2&& r2, Pred pred = {},
+                                     Proj1 proj1 = {}, Proj2 proj2 = {});                                // since C++23
+
   template<class I, class O>
     using copy_result = in_out_result<I, O>;                                                // since C++20
 
@@ -225,6 +241,14 @@ namespace ranges {
 
   template<class I1, class I2>
     using copy_backward_result = in_out_result<I1, I2>;                                     // since C++20
+
+  template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
+    requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
+    constexpr bool ranges::contains(I first, S last, const T& value, Proj proj = {});       // since C++23
+
+  template<input_range R, class T, class Proj = identity>
+    requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<R>, Proj>, const T*>
+    constexpr bool ranges::contains(R&& r, const T& value, Proj proj = {});                 // since C++23
 
   template<input_iterator I, sentinel_for<I> S, weakly_incrementable O>
     requires indirectly_copyable<I, O>
@@ -872,6 +896,23 @@ namespace ranges {
     constexpr borrowed_subrange_t<R>
       ranges::search_n(R&& r, range_difference_t<R> count,
                        const T& value, Pred pred = {}, Proj proj = {});                             // since C++20
+
+  template<input_iterator I, sentinel_for<I> S, class T,
+           indirectly-binary-left-foldable<T, I> F>
+    constexpr auto ranges::fold_left(I first, S last, T init, F f);                                 // since C++23
+
+  template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
+    constexpr auto fold_left(R&& r, T init, F f);                                                   // since C++23
+
+  template<class I, class T>
+    using fold_left_with_iter_result = in_value_result<I, T>;                                       // since C++23
+
+  template<input_iterator I, sentinel_for<I> S, class T,
+           indirectly-binary-left-foldable<T, I> F>
+    constexpr see below fold_left_with_iter(I first, S last, T init, F f);                          // since C++23
+
+  template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
+    constexpr see below fold_left_with_iter(R&& r, T init, F f);                                    // since C++23
 
   template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2, sentinel_for<I2> S2,
            class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
@@ -1752,7 +1793,6 @@ template <class BidirectionalIterator, class Compare>
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <version>
 
@@ -1778,6 +1818,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/find_first_of.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/find_if_not.h>
+#include <__algorithm/fold.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/generate.h>
@@ -1826,6 +1867,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/pstl_any_all_none_of.h>
 #include <__algorithm/pstl_copy.h>
 #include <__algorithm/pstl_count.h>
+#include <__algorithm/pstl_equal.h>
 #include <__algorithm/pstl_fill.h>
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_for_each.h>
@@ -1844,6 +1886,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_any_of.h>
 #include <__algorithm/ranges_binary_search.h>
 #include <__algorithm/ranges_clamp.h>
+#include <__algorithm/ranges_contains.h>
+#include <__algorithm/ranges_contains_subrange.h>
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_copy_backward.h>
 #include <__algorithm/ranges_copy_if.h>

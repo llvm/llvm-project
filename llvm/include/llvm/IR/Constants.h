@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -77,12 +78,19 @@ public:
 /// Class for constant integers.
 class ConstantInt final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APInt Val;
 
-  ConstantInt(IntegerType *Ty, const APInt &V);
+  ConstantInt(Type *Ty, const APInt &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the vector type whose integer element type corresponds to the bit
+  /// width of the value.
+  static ConstantInt *get(LLVMContext &Context, ElementCount EC,
+                          const APInt &V);
 
 public:
   ConstantInt(const ConstantInt &) = delete;
@@ -135,7 +143,7 @@ public:
   /// Return the constant's value.
   inline const APInt &getValue() const { return Val; }
 
-  /// getBitWidth - Return the bitwidth of this constant.
+  /// getBitWidth - Return the scalar bitwidth of this constant.
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
   /// Return the constant as a 64-bit unsigned integer value after it
@@ -170,10 +178,9 @@ public:
   /// Determine if this constant's value is same as an unsigned char.
   bool equalsInt(uint64_t V) const { return Val == V; }
 
-  /// getType - Specialize the getType() method to always return an IntegerType,
-  /// which reduces the amount of casting needed in parts of the compiler.
-  ///
-  inline IntegerType *getType() const {
+  /// Variant of the getType() method to always return an IntegerType, which
+  /// reduces the amount of casting needed in parts of the compiler.
+  inline IntegerType *getIntegerType() const {
     return cast<IntegerType>(Value::getType());
   }
 
@@ -259,12 +266,19 @@ public:
 ///
 class ConstantFP final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APFloat Val;
 
   ConstantFP(Type *Ty, const APFloat &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantFP with the specified value and an implied Type. The
+  /// type is the vector type whose element type has the same floating point
+  /// semantics as the value.
+  static ConstantFP *get(LLVMContext &Context, ElementCount EC,
+                         const APFloat &V);
 
 public:
   ConstantFP(const ConstantFP &) = delete;
@@ -1095,17 +1109,23 @@ public:
   static Constant *getExactLogBase2(Constant *C);
 
   /// Return the identity constant for a binary opcode.
-  /// The identity constant C is defined as X op C = X and C op X = X for every
-  /// X when the binary operation is commutative. If the binop is not
-  /// commutative, callers can acquire the operand 1 identity constant by
-  /// setting AllowRHSConstant to true. For example, any shift has a zero
-  /// identity constant for operand 1: X shift 0 = X.
-  /// If this is a fadd/fsub operation and we don't care about signed zeros,
-  /// then setting NSZ to true returns the identity +0.0 instead of -0.0.
-  /// Return nullptr if the operator does not have an identity constant.
+  /// If the binop is not commutative, callers can acquire the operand 1
+  /// identity constant by setting AllowRHSConstant to true. For example, any
+  /// shift has a zero identity constant for operand 1: X shift 0 = X. If this
+  /// is a fadd/fsub operation and we don't care about signed zeros, then
+  /// setting NSZ to true returns the identity +0.0 instead of -0.0. Return
+  /// nullptr if the operator does not have an identity constant.
   static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty,
                                     bool AllowRHSConstant = false,
                                     bool NSZ = false);
+
+  static Constant *getIntrinsicIdentity(Intrinsic::ID, Type *Ty);
+
+  /// Return the identity constant for a binary or intrinsic Instruction.
+  /// The identity constant C is defined as X op C = X and C op X = X where C
+  /// and X are the first two operands, and the operation is commutative.
+  static Constant *getIdentity(Instruction *I, Type *Ty,
+                               bool AllowRHSConstant = false, bool NSZ = false);
 
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for

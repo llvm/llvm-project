@@ -1063,8 +1063,7 @@ public:
 
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements
-  MachineInstrBuilder buildSplatVector(const DstOp &Res,
-                                       const SrcOp &Src);
+  MachineInstrBuilder buildSplatBuildVector(const DstOp &Res, const SrcOp &Src);
 
   /// Build and insert \p Res = G_BUILD_VECTOR_TRUNC \p Op0, ...
   ///
@@ -1098,6 +1097,15 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildShuffleVector(const DstOp &Res, const SrcOp &Src1,
                                          const SrcOp &Src2, ArrayRef<int> Mask);
+
+  /// Build and insert \p Res = G_SPLAT_VECTOR \p Val
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with vector type.
+  /// \pre \p Val must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildSplatVector(const DstOp &Res, const SrcOp &Val);
 
   /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
@@ -1194,7 +1202,7 @@ public:
                                 const SrcOp &Op0, const SrcOp &Op1,
                                 std::optional<unsigned> Flags = std::nullopt);
 
-  /// Build and insert a \p Res = G_IS_FPCLASS \p Pred, \p Src, \p Mask
+  /// Build and insert a \p Res = G_IS_FPCLASS \p Src, \p Mask
   MachineInstrBuilder buildIsFPClass(const DstOp &Res, const SrcOp &Src,
                                      unsigned Mask) {
     return buildInstr(TargetOpcode::G_IS_FPCLASS, {Res},
@@ -1528,6 +1536,11 @@ public:
 
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
+
+  /// Build and insert G_PREFETCH \p Addr, \p RW, \p Locality, \p CacheType
+  MachineInstrBuilder buildPrefetch(const SrcOp &Addr, unsigned RW,
+                                    unsigned Locality, unsigned CacheType,
+                                    MachineMemOperand &MMO);
 
   /// Build and insert \p Dst = G_FREEZE \p Src
   MachineInstrBuilder buildFreeze(const DstOp &Dst, const SrcOp &Src) {

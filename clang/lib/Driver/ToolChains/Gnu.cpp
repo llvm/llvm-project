@@ -30,6 +30,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <system_error>
@@ -422,8 +423,12 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     D.Diag(diag::err_target_unknown_triple) << Triple.str();
     return;
   }
-  if (Triple.isRISCV())
+
+  if (Triple.isRISCV()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   const bool IsShared = Args.hasArg(options::OPT_shared);
   if (IsShared)
@@ -507,6 +512,11 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Add crtfastmath.o if available and fast math is enabled.
     ToolChain.addFastMathRuntimeIfAvailable(Args, CmdArgs);
+
+    if (isAndroid && Args.hasFlag(options::OPT_fandroid_pad_segment,
+                                  options::OPT_fno_android_pad_segment, false))
+      CmdArgs.push_back(
+          Args.MakeArgString(ToolChain.GetFilePath("crt_pad_segment.o")));
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
@@ -564,7 +574,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // AddRunTimeLibs).
   if (D.IsFlangMode()) {
     addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, CmdArgs);
+    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
     CmdArgs.push_back("-lm");
   }
 
@@ -1084,7 +1094,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
             .FilterOut(NonExistent)
             .setIncludeDirsCallback([](const Multilib &M) {
               std::vector<std::string> Dirs({"/include"});
-              if (StringRef(M.includeSuffix()).startswith("/uclibc"))
+              if (StringRef(M.includeSuffix()).starts_with("/uclibc"))
                 Dirs.push_back(
                     "/../../../../mips-linux-gnu/libc/uclibc/usr/include");
               else
@@ -1288,7 +1298,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
             .FilterOut(NonExistent)
             .setIncludeDirsCallback([](const Multilib &M) {
               std::vector<std::string> Dirs({"/include"});
-              if (StringRef(M.includeSuffix()).startswith("/uclibc"))
+              if (StringRef(M.includeSuffix()).starts_with("/uclibc"))
                 Dirs.push_back("/../../../../sysroot/uclibc/usr/include");
               else
                 Dirs.push_back("/../../../../sysroot/usr/include");
@@ -1715,6 +1725,125 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
     Result.Multilibs = CSKYMultilibs;
 }
 
+/// Extend the multi-lib re-use selection mechanism for RISC-V.
+/// This function will try to re-use multi-lib if they are compatible.
+/// Definition of compatible:
+///   - ABI must be the same.
+///   - multi-lib is a subset of current arch, e.g. multi-lib=march=rv32im
+///     is a subset of march=rv32imc.
+///   - march that contains atomic extension can't reuse multi-lib that
+///     doesn't have atomic, vice versa. e.g. multi-lib=march=rv32im and
+///     march=rv32ima are not compatible, because software and hardware
+///     atomic operation can't work together correctly.
+static bool
+selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
+                    const Multilib::flags_list &Flags,
+                    llvm::SmallVectorImpl<Multilib> &SelectedMultilibs) {
+  // Try to find the perfect matching multi-lib first.
+  if (RISCVMultilibSet.select(Flags, SelectedMultilibs))
+    return true;
+
+  Multilib::flags_list NewFlags;
+  std::vector<MultilibBuilder> NewMultilibs;
+
+  llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> ParseResult =
+      llvm::RISCVISAInfo::parseArchString(
+          Arch, /*EnableExperimentalExtension=*/true,
+          /*ExperimentalExtensionVersionCheck=*/false);
+  // Ignore any error here, we assume it will be handled in another place.
+  if (llvm::errorToBool(ParseResult.takeError()))
+    return false;
+
+  auto &ISAInfo = *ParseResult;
+
+  addMultilibFlag(ISAInfo->getXLen() == 32, "-m32", NewFlags);
+  addMultilibFlag(ISAInfo->getXLen() == 64, "-m64", NewFlags);
+
+  // Collect all flags except march=*
+  for (StringRef Flag : Flags) {
+    if (Flag.starts_with("!march=") || Flag.starts_with("-march="))
+      continue;
+
+    NewFlags.push_back(Flag.str());
+  }
+
+  llvm::StringSet<> AllArchExts;
+  // Reconstruct multi-lib list, and break march option into separated
+  // extension. e.g. march=rv32im -> +i +m
+  for (const auto &M : RISCVMultilibSet) {
+    bool Skip = false;
+
+    MultilibBuilder NewMultilib =
+        MultilibBuilder(M.gccSuffix(), M.osSuffix(), M.includeSuffix());
+    for (StringRef Flag : M.flags()) {
+      // Add back all flags except -march.
+      if (!Flag.consume_front("-march=")) {
+        NewMultilib.flag(Flag);
+        continue;
+      }
+
+      // Break down -march into individual extension.
+      llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> MLConfigParseResult =
+          llvm::RISCVISAInfo::parseArchString(
+              Flag, /*EnableExperimentalExtension=*/true,
+              /*ExperimentalExtensionVersionCheck=*/false);
+      // Ignore any error here, we assume it will handled in another place.
+      if (llvm::errorToBool(MLConfigParseResult.takeError())) {
+        // We might get a parsing error if rv32e in the list, we could just skip
+        // that and process the rest of multi-lib configs.
+        Skip = true;
+        continue;
+      }
+      auto &MLConfigISAInfo = *MLConfigParseResult;
+
+      const llvm::RISCVISAInfo::OrderedExtensionMap &MLConfigArchExts =
+          MLConfigISAInfo->getExtensions();
+      for (auto MLConfigArchExt : MLConfigArchExts) {
+        auto ExtName = MLConfigArchExt.first;
+        NewMultilib.flag(Twine("-", ExtName).str());
+
+        if (AllArchExts.insert(ExtName).second) {
+          addMultilibFlag(ISAInfo->hasExtension(ExtName),
+                          Twine("-", ExtName).str(), NewFlags);
+        }
+      }
+
+      // Check the XLEN explicitly.
+      if (MLConfigISAInfo->getXLen() == 32) {
+        NewMultilib.flag("-m32");
+        NewMultilib.flag("-m64", /*Disallow*/ true);
+      } else {
+        NewMultilib.flag("-m32", /*Disallow*/ true);
+        NewMultilib.flag("-m64");
+      }
+
+      // Atomic extension must be explicitly checked, soft and hard atomic
+      // operation never co-work correctly.
+      if (!MLConfigISAInfo->hasExtension("a"))
+        NewMultilib.flag("-a", /*Disallow*/ true);
+    }
+
+    if (Skip)
+      continue;
+
+    NewMultilibs.emplace_back(NewMultilib);
+  }
+
+  // Build an internal used only multi-lib list, used for checking any
+  // compatible multi-lib.
+  MultilibSet NewRISCVMultilibs =
+      MultilibSetBuilder().Either(NewMultilibs).makeMultilibSet();
+
+  if (NewRISCVMultilibs.select(NewFlags, SelectedMultilibs))
+    for (const Multilib &NewSelectedM : SelectedMultilibs)
+      for (const auto &M : RISCVMultilibSet)
+        // Look up the corresponding multi-lib entry in original multi-lib set.
+        if (M.gccSuffix() == NewSelectedM.gccSuffix())
+          return true;
+
+  return false;
+}
+
 static void findRISCVBareMetalMultilibs(const Driver &D,
                                         const llvm::Triple &TargetTriple,
                                         StringRef Path, const ArgList &Args,
@@ -1766,7 +1895,8 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
     }
   }
 
-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
+  if (selectRISCVMultilib(RISCVMultilibs, MArch, Flags,
+                          Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
 
@@ -2130,6 +2260,15 @@ void Generic_GCC::GCCInstallationDetector::init(
     return;
   }
 
+  // If --gcc-triple is specified use this instead of trying to
+  // auto-detect a triple.
+  if (const Arg *A =
+          Args.getLastArg(clang::driver::options::OPT_gcc_triple_EQ)) {
+    StringRef GCCTriple = A->getValue();
+    CandidateTripleAliases.clear();
+    CandidateTripleAliases.push_back(GCCTriple);
+  }
+
   // Compute the set of prefixes for our search.
   SmallVector<std::string, 8> Prefixes;
   StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);
@@ -2146,7 +2285,7 @@ void Generic_GCC::GCCInstallationDetector::init(
     }
 
     // Then look for gcc installed alongside clang.
-    Prefixes.push_back(D.InstalledDir + "/..");
+    Prefixes.push_back(D.Dir + "/..");
 
     // Next, look for prefix(es) that correspond to distribution-supplied gcc
     // installations.
@@ -2355,7 +2494,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const X86Triples[] = {
       "i586-linux-gnu",      "i686-linux-gnu",        "i686-pc-linux-gnu",
       "i386-redhat-linux6E", "i686-redhat-linux",     "i386-redhat-linux",
-      "i586-suse-linux",     "i686-montavista-linux", "i686-gnu",
+      "i586-suse-linux",     "i686-montavista-linux",
   };
 
   static const char *const LoongArch64LibDirs[] = {"/lib64", "/lib"};
@@ -2522,6 +2661,23 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     return;
   }
 
+  if (TargetTriple.isOSHurd()) {
+    switch (TargetTriple.getArch()) {
+    case llvm::Triple::x86_64:
+      LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+      TripleAliases.push_back("x86_64-gnu");
+      break;
+    case llvm::Triple::x86:
+      LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
+      TripleAliases.push_back("i686-gnu");
+      break;
+    default:
+      break;
+    }
+
+    return;
+  }
+
   switch (TargetTriple.getArch()) {
   case llvm::Triple::aarch64:
     LibDirs.append(begin(AArch64LibDirs), end(AArch64LibDirs));
@@ -2538,7 +2694,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     LibDirs.append(begin(ARMLibDirs), end(ARMLibDirs));
-    if (TargetTriple.getEnvironment() == llvm::Triple::GNUEABIHF) {
+    if (TargetTriple.getEnvironment() == llvm::Triple::GNUEABIHF ||
+        TargetTriple.getEnvironment() == llvm::Triple::MuslEABIHF ||
+        TargetTriple.getEnvironment() == llvm::Triple::EABIHF) {
       TripleAliases.append(begin(ARMHFTriples), end(ARMHFTriples));
     } else {
       TripleAliases.append(begin(ARMTriples), end(ARMTriples));
@@ -2547,7 +2705,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
     LibDirs.append(begin(ARMebLibDirs), end(ARMebLibDirs));
-    if (TargetTriple.getEnvironment() == llvm::Triple::GNUEABIHF) {
+    if (TargetTriple.getEnvironment() == llvm::Triple::GNUEABIHF ||
+        TargetTriple.getEnvironment() == llvm::Triple::MuslEABIHF ||
+        TargetTriple.getEnvironment() == llvm::Triple::EABIHF) {
       TripleAliases.append(begin(ARMebHFTriples), end(ARMebHFTriples));
     } else {
       TripleAliases.append(begin(ARMebTriples), end(ARMebTriples));
@@ -2894,9 +3054,7 @@ Generic_GCC::Generic_GCC(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), GCCInstallation(D),
       CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 Generic_GCC::~Generic_GCC() {}
@@ -3055,7 +3213,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // the cross. Note that GCC does include some of these directories in some
     // configurations but this seems somewhere between questionable and simply
     // a bug.
-    if (StringRef(LibPath).startswith(SysRoot))
+    if (StringRef(LibPath).starts_with(SysRoot))
       addPathIfExists(D, LibPath + "/../" + OSLibDir, Paths);
   }
 }

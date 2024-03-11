@@ -215,11 +215,13 @@ class PredicateInfoPrinterPass
 public:
   explicit PredicateInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c PredicateInfo.
 struct PredicateInfoVerifierPass : PassInfoMixin<PredicateInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

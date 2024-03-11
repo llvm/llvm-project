@@ -17,8 +17,8 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVSubtarget.h"
 #include "RISCVISelDAGToDAG.h"
+#include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -36,9 +36,7 @@ public:
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RISCVFoldMasks() : MachineFunctionPass(ID) {
-    initializeRISCVFoldMasksPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVFoldMasks() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
@@ -49,10 +47,10 @@ public:
   StringRef getPassName() const override { return "RISC-V Fold Masks"; }
 
 private:
-  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef);
-  bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef);
+  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef) const;
+  bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef) const;
 
-  bool isAllOnesMask(MachineInstr *MaskDef);
+  bool isAllOnesMask(MachineInstr *MaskDef) const;
 };
 
 } // namespace
@@ -61,7 +59,7 @@ char RISCVFoldMasks::ID = 0;
 
 INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
 
-bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
+bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) const {
   if (!MaskDef)
     return false;
   assert(MaskDef->isCopy() && MaskDef->getOperand(0).getReg() == RISCV::V0);
@@ -91,7 +89,8 @@ bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
 
 // Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
 // (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
+bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI,
+                                        MachineInstr *V0Def) const {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
     NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                      \
@@ -99,7 +98,7 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
   unsigned NewOpc;
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected VMERGE_VVM_<LMUL> instruction.");
+    return false;
     CASE_VMERGE_TO_VMV(MF8)
     CASE_VMERGE_TO_VMV(MF4)
     CASE_VMERGE_TO_VMV(MF2)
@@ -135,7 +134,7 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
 }
 
 bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
-                                       MachineInstr *MaskDef) {
+                                       MachineInstr *MaskDef) const {
   const RISCV::RISCVMaskedPseudoInfo *I =
       RISCV::getMaskedPseudoInfo(MI.getOpcode());
   if (!I)
@@ -148,7 +147,8 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
   // everything else.  See the comment on RISCVMaskedPseudo for details.
   const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-  const bool HasPolicyOp = RISCVII::hasVecPolicyOp(MCID.TSFlags);
+  [[maybe_unused]] const bool HasPolicyOp =
+      RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
 #ifndef NDEBUG
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
@@ -204,10 +204,8 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     CurrentV0Def = nullptr;
     for (MachineInstr &MI : MBB) {
-      unsigned BaseOpc = RISCV::getRVVMCOpcode(MI.getOpcode());
       Changed |= convertToUnmasked(MI, CurrentV0Def);
-      if (BaseOpc == RISCV::VMERGE_VVM)
-        Changed |= convertVMergeToVMv(MI, CurrentV0Def);
+      Changed |= convertVMergeToVMv(MI, CurrentV0Def);
 
       if (MI.definesRegister(RISCV::V0, TRI))
         CurrentV0Def = &MI;

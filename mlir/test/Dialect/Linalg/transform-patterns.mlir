@@ -170,7 +170,7 @@ func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [5, 6] {interchange = [1, 0]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 [5, 6] interchange = [1, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -199,8 +199,8 @@ func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:3 = transform.structured.tile_using_for %0 [2000, 3000, 4000] {interchange = [1, 2, 0]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      %2, %loops_2:3 = transform.structured.tile_using_for %1 [200, 300, 400] {interchange = [1, 0, 2]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:3 = transform.structured.tile_using_for %0 [2000, 3000, 4000] interchange = [1, 2, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %2, %loops_2:3 = transform.structured.tile_using_for %1 [200, 300, 400] interchange = [1, 0, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       %3, %loops_3:3 = transform.structured.tile_using_for %2 [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }

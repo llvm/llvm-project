@@ -343,6 +343,10 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
       LV.merge(getTypeLinkageAndVisibility(Arg.getNullPtrType()));
       continue;
 
+    case TemplateArgument::StructuralValue:
+      LV.merge(getLVForValue(Arg.getAsStructuralValue(), computation));
+      continue;
+
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =
@@ -1088,11 +1092,11 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
     return false;
   if (isa<FieldDecl>(this))
     return true;
-  if (auto *IFD = dyn_cast<IndirectFieldDecl>(this)) {
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(this)) {
     if (!getDeclContext()->isFunctionOrMethod() &&
         !getDeclContext()->isRecord())
       return false;
-    VarDecl *VD = IFD->getVarDecl();
+    const VarDecl *VD = IFD->getVarDecl();
     return !VD || VD->getStorageDuration() == SD_Automatic;
   }
   // and it declares a variable with automatic storage duration
@@ -1105,7 +1109,7 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
   }
   if (const auto *BD = dyn_cast<BindingDecl>(this);
       BD && getDeclContext()->isFunctionOrMethod()) {
-    VarDecl *VD = BD->getHoldingVar();
+    const VarDecl *VD = BD->getHoldingVar();
     return !VD || VD->getStorageDuration() == StorageDuration::SD_Automatic;
   }
   return false;
@@ -1843,7 +1847,8 @@ static bool isRedeclarable(Decl::Kind K) {
   llvm_unreachable("unknown decl kind");
 }
 
-bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
+bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
+                                    bool IsKnownNewer) const {
   assert(getDeclName() == OldD->getDeclName() && "Declaration name mismatch");
 
   // Never replace one imported declaration with another; we need both results
@@ -1873,13 +1878,13 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
 
   // Using declarations can be replaced if they import the same name from the
   // same context.
-  if (auto *UD = dyn_cast<UsingDecl>(this)) {
+  if (const auto *UD = dyn_cast<UsingDecl>(this)) {
     ASTContext &Context = getASTContext();
     return Context.getCanonicalNestedNameSpecifier(UD->getQualifier()) ==
            Context.getCanonicalNestedNameSpecifier(
                cast<UsingDecl>(OldD)->getQualifier());
   }
-  if (auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
+  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
     ASTContext &Context = getASTContext();
     return Context.getCanonicalNestedNameSpecifier(UUVD->getQualifier()) ==
            Context.getCanonicalNestedNameSpecifier(
@@ -1896,7 +1901,7 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
     // Check whether this is actually newer than OldD. We want to keep the
     // newer declaration. This loop will usually only iterate once, because
     // OldD is usually the previous declaration.
-    for (auto *D : redecls()) {
+    for (const auto *D : redecls()) {
       if (D == OldD)
         break;
 
@@ -2199,8 +2204,7 @@ static LanguageLinkage getDeclLanguageLinkage(const T &D) {
 
   // Language linkage is a C++ concept, but saying that everything else in C has
   // C language linkage fits the implementation nicely.
-  ASTContext &Context = D.getASTContext();
-  if (!Context.getLangOpts().CPlusPlus)
+  if (!D.getASTContext().getLangOpts().CPlusPlus)
     return CLanguageLinkage;
 
   // C++ [dcl.link]p4: A C language linkage is ignored in determining the
@@ -2461,7 +2465,7 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
 
   // OpenCL permits const integral variables to be used in constant
   // expressions, like in C++98.
-  if (!Lang.CPlusPlus && !Lang.OpenCL)
+  if (!Lang.CPlusPlus && !Lang.OpenCL && !Lang.C23)
     return false;
 
   // Function parameters are never usable in constant expressions.
@@ -2483,14 +2487,19 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   if (!getType().isConstant(C) || getType().isVolatileQualified())
     return false;
 
-  // In C++, const, non-volatile variables of integral or enumeration types
-  // can be used in constant expressions.
-  if (getType()->isIntegralOrEnumerationType())
+  // In C++, but not in C, const, non-volatile variables of integral or
+  // enumeration types can be used in constant expressions.
+  if (getType()->isIntegralOrEnumerationType() && !Lang.C23)
     return true;
 
+  // C23 6.6p7: An identifier that is:
+  // ...
+  // - declared with storage-class specifier constexpr and has an object type,
+  // is a named constant, ... such a named constant is a constant expression
+  // with the type and value of the declared object.
   // Additionally, in C++11, non-volatile constexpr variables can be used in
   // constant expressions.
-  return Lang.CPlusPlus11 && isConstexpr();
+  return (Lang.CPlusPlus11 || Lang.C23) && isConstexpr();
 }
 
 bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
@@ -2568,11 +2577,11 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
                                             IsConstantInitialization);
 
-  // In C++, this isn't a constant initializer if we produced notes. In that
+  // In C++/C23, this isn't a constant initializer if we produced notes. In that
   // case, we can't keep the result, because it may only be correct under the
   // assumption that the initializer is a constant context.
-  if (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus &&
-      !Notes.empty())
+  if (IsConstantInitialization &&
+      (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23) && !Notes.empty())
     Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
@@ -2630,7 +2639,9 @@ bool VarDecl::checkForConstantInitialization(
   // std::is_constant_evaluated()).
   assert(!Eval->WasEvaluated &&
          "already evaluated var value before checking for constant init");
-  assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
+  assert((getASTContext().getLangOpts().CPlusPlus ||
+          getASTContext().getLangOpts().C23) &&
+         "only meaningful in C++/C23");
 
   assert(!getInit()->isValueDependent());
 
@@ -2835,7 +2846,7 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
-  if (!List)
+  if (!List || List->getNumInits() == 0)
     return CharUnits::Zero();
   const Expr *FlexibleInit = List->getInit(List->getNumInits() - 1);
   auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
@@ -2943,7 +2954,7 @@ bool ParmVarDecl::isDestroyedInCallee() const {
 
   // FIXME: isParamDestroyedInCallee() should probably imply
   // isDestructedType()
-  auto *RT = getType()->getAs<RecordType>();
+  const auto *RT = getType()->getAs<RecordType>();
   if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
       getType().isDestructedType())
     return true;
@@ -3036,7 +3047,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
   FunctionDeclBits.IsVirtualAsWritten = false;
-  FunctionDeclBits.IsPure = false;
+  FunctionDeclBits.IsPureVirtual = false;
   FunctionDeclBits.HasInheritedPrototype = false;
   FunctionDeclBits.HasWrittenPrototype = true;
   FunctionDeclBits.IsDeleted = false;
@@ -3105,7 +3116,7 @@ FunctionDecl::getDefaultedFunctionInfo() const {
 }
 
 bool FunctionDecl::hasBody(const FunctionDecl *&Definition) const {
-  for (auto *I : redecls()) {
+  for (const auto *I : redecls()) {
     if (I->doesThisDeclarationHaveABody()) {
       Definition = I;
       return true;
@@ -3116,7 +3127,7 @@ bool FunctionDecl::hasBody(const FunctionDecl *&Definition) const {
 }
 
 bool FunctionDecl::hasTrivialBody() const {
-  Stmt *S = getBody();
+  const Stmt *S = getBody();
   if (!S) {
     // Since we don't have a body for this function, we don't know if it's
     // trivial or not.
@@ -3203,8 +3214,8 @@ void FunctionDecl::setBody(Stmt *B) {
     EndRangeLoc = B->getEndLoc();
 }
 
-void FunctionDecl::setPure(bool P) {
-  FunctionDeclBits.IsPure = P;
+void FunctionDecl::setIsPureVirtual(bool P) {
+  FunctionDeclBits.IsPureVirtual = P;
   if (P)
     if (auto *Parent = dyn_cast<CXXRecordDecl>(getDeclContext()))
       Parent->markedVirtualFunctionPure();
@@ -3212,7 +3223,7 @@ void FunctionDecl::setPure(bool P) {
 
 template<std::size_t Len>
 static bool isNamed(const NamedDecl *ND, const char (&Str)[Len]) {
-  IdentifierInfo *II = ND->getIdentifier();
+  const IdentifierInfo *II = ND->getIdentifier();
   return II && II->isStr(Str);
 }
 
@@ -3305,9 +3316,9 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   if (proto->getNumParams() != 2 || proto->isVariadic())
     return false;
 
-  ASTContext &Context =
-    cast<TranslationUnitDecl>(getDeclContext()->getRedeclContext())
-      ->getASTContext();
+  const ASTContext &Context =
+      cast<TranslationUnitDecl>(getDeclContext()->getRedeclContext())
+          ->getASTContext();
 
   // The result type and first argument type are constant across all
   // these operators.  The second argument must be exactly void*.
@@ -3342,7 +3353,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
 
   unsigned Params = 1;
   QualType Ty = FPT->getParamType(Params);
-  ASTContext &Ctx = getASTContext();
+  const ASTContext &Ctx = getASTContext();
 
   auto Consume = [&] {
     ++Params;
@@ -3388,7 +3399,8 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
     QualType T = Ty;
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
-    IdentifierInfo *II = T->castAs<EnumType>()->getDecl()->getIdentifier();
+    const IdentifierInfo *II =
+        T->castAs<EnumType>()->getDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }
@@ -3532,8 +3544,21 @@ bool FunctionDecl::isTargetMultiVersion() const {
          (hasAttr<TargetAttr>() || hasAttr<TargetVersionAttr>());
 }
 
+bool FunctionDecl::isTargetMultiVersionDefault() const {
+  if (!isMultiVersion())
+    return false;
+  if (hasAttr<TargetAttr>())
+    return getAttr<TargetAttr>()->isDefaultVersion();
+  return hasAttr<TargetVersionAttr>() &&
+         getAttr<TargetVersionAttr>()->isDefaultVersion();
+}
+
 bool FunctionDecl::isTargetClonesMultiVersion() const {
   return isMultiVersion() && hasAttr<TargetClonesAttr>();
+}
+
+bool FunctionDecl::isTargetVersionMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetVersionAttr>();
 }
 
 void
@@ -3586,7 +3611,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
       (!hasAttr<ArmBuiltinAliasAttr>() && !hasAttr<BuiltinAliasAttr>()))
     return 0;
 
-  ASTContext &Context = getASTContext();
+  const ASTContext &Context = getASTContext();
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return BuiltinID;
 
@@ -3745,7 +3770,7 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
   assert(!doesThisDeclarationHaveABody() &&
          "Must have a declaration without a body.");
 
-  ASTContext &Context = getASTContext();
+  const ASTContext &Context = getASTContext();
 
   if (Context.getLangOpts().MSVCCompat) {
     const FunctionDecl *Definition;
@@ -4150,6 +4175,7 @@ FunctionDecl::setFunctionTemplateSpecialization(ASTContext &C,
   assert(TSK != TSK_Undeclared &&
          "Must specify the type of function template specialization");
   assert((TemplateOrSpecialization.isNull() ||
+          getFriendObjectKind() != FOK_None ||
           TSK == TSK_ExplicitSpecialization) &&
          "Member specialization must be an explicit specialization");
   FunctionTemplateSpecializationInfo *Info =
@@ -5023,7 +5049,13 @@ void RecordDecl::completeDefinition() {
 
   // Layouts are dumped when computed, so if we are dumping for all complete
   // types, we need to force usage to get types that wouldn't be used elsewhere.
-  if (Ctx.getLangOpts().DumpRecordLayoutsComplete)
+  //
+  // If the type is dependent, then we can't compute its layout because there
+  // is no way for us to know the size or alignment of a dependent type. Also
+  // ignore declarations marked as invalid since 'getASTRecordLayout()' asserts
+  // on that.
+  if (Ctx.getLangOpts().DumpRecordLayoutsComplete && !isDependentType() &&
+      !isInvalidDecl())
     (void)Ctx.getASTRecordLayout(this);
 }
 
@@ -5367,16 +5399,23 @@ void CapturedDecl::setBody(Stmt *B) { BodyAndNothrow.setPointer(B); }
 bool CapturedDecl::isNothrow() const { return BodyAndNothrow.getInt(); }
 void CapturedDecl::setNothrow(bool Nothrow) { BodyAndNothrow.setInt(Nothrow); }
 
+EnumConstantDecl::EnumConstantDecl(const ASTContext &C, DeclContext *DC,
+                                   SourceLocation L, IdentifierInfo *Id,
+                                   QualType T, Expr *E, const llvm::APSInt &V)
+    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt *)E) {
+  setInitVal(C, V);
+}
+
 EnumConstantDecl *EnumConstantDecl::Create(ASTContext &C, EnumDecl *CD,
                                            SourceLocation L,
                                            IdentifierInfo *Id, QualType T,
                                            Expr *E, const llvm::APSInt &V) {
-  return new (C, CD) EnumConstantDecl(CD, L, Id, T, E, V);
+  return new (C, CD) EnumConstantDecl(C, CD, L, Id, T, E, V);
 }
 
 EnumConstantDecl *
 EnumConstantDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) EnumConstantDecl(nullptr, SourceLocation(), nullptr,
+  return new (C, ID) EnumConstantDecl(C, nullptr, SourceLocation(), nullptr,
                                       QualType(), nullptr, llvm::APSInt());
 }
 
@@ -5513,14 +5552,13 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
 void TopLevelStmtDecl::anchor() {}
 
 TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
-  assert(Statement);
   assert(C.getLangOpts().IncrementalExtensions &&
          "Must be used only in incremental mode");
 
-  SourceLocation BeginLoc = Statement->getBeginLoc();
+  SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, BeginLoc, Statement);
+  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
@@ -5531,6 +5569,12 @@ TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
 
 SourceRange TopLevelStmtDecl::getSourceRange() const {
   return SourceRange(getLocation(), Statement->getEndLoc());
+}
+
+void TopLevelStmtDecl::setStmt(Stmt *S) {
+  assert(S);
+  Statement = S;
+  setLocation(Statement->getBeginLoc());
 }
 
 void EmptyDecl::anchor() {}
