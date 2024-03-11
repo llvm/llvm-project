@@ -866,7 +866,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
 
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+            .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
@@ -881,13 +881,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (DestReg == AMDGPU::VCC) {
       if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
         BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), AMDGPU::VCC)
-            .addReg(SrcReg, getKillRegState(KillSrc));
+          .addReg(SrcReg, getKillRegState(KillSrc));
       } else {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
-            .addImm(0)
-            .addReg(SrcReg, getKillRegState(KillSrc));
+          .addImm(0)
+          .addReg(SrcReg, getKillRegState(KillSrc));
       }
 
       return;
