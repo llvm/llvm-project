@@ -606,7 +606,8 @@ public:
     return CGF.buildCXXNewExpr(E);
   }
   mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
-    llvm_unreachable("NYI");
+    CGF.buildCXXDeleteExpr(E);
+    return {};
   }
   mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *E) {
     llvm_unreachable("NYI");

@@ -633,6 +633,151 @@ static CharUnits CalculateCookiePadding(CIRGenFunction &CGF,
   // return CGF.CGM.getCXXABI().GetArrayCookieSize(E);
 }
 
+namespace {
+/// Calls the given 'operator delete' on a single object.
+struct CallObjectDelete final : EHScopeStack::Cleanup {
+  mlir::Value Ptr;
+  const FunctionDecl *OperatorDelete;
+  QualType ElementType;
+
+  CallObjectDelete(mlir::Value Ptr, const FunctionDecl *OperatorDelete,
+                   QualType ElementType)
+      : Ptr(Ptr), OperatorDelete(OperatorDelete), ElementType(ElementType) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    CGF.buildDeleteCall(OperatorDelete, Ptr, ElementType);
+  }
+};
+} // namespace
+
+/// Emit the code for deleting a single object.
+/// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
+/// if not.
+static bool EmitObjectDelete(CIRGenFunction &CGF, const CXXDeleteExpr *DE,
+                             Address Ptr, QualType ElementType) {
+  // C++11 [expr.delete]p3:
+  //   If the static type of the object to be deleted is different from its
+  //   dynamic type, the static type shall be a base class of the dynamic type
+  //   of the object to be deleted and the static type shall have a virtual
+  //   destructor or the behavior is undefined.
+  CGF.buildTypeCheck(CIRGenFunction::TCK_MemberCall, DE->getExprLoc(),
+                     Ptr.getPointer(), ElementType);
+
+  const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
+  assert(!OperatorDelete->isDestroyingOperatorDelete());
+
+  // Find the destructor for the type, if applicable.  If the
+  // destructor is virtual, we'll just emit the vcall and return.
+  const CXXDestructorDecl *Dtor = nullptr;
+  if (const RecordType *RT = ElementType->getAs<RecordType>()) {
+    CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+    if (RD->hasDefinition() && !RD->hasTrivialDestructor()) {
+      Dtor = RD->getDestructor();
+
+      if (Dtor->isVirtual()) {
+        bool UseVirtualCall = true;
+        const Expr *Base = DE->getArgument();
+        if (auto *DevirtualizedDtor = dyn_cast_or_null<const CXXDestructorDecl>(
+                Dtor->getDevirtualizedMethod(
+                    Base, CGF.CGM.getLangOpts().AppleKext))) {
+          UseVirtualCall = false;
+          const CXXRecordDecl *DevirtualizedClass =
+              DevirtualizedDtor->getParent();
+          if (declaresSameEntity(getCXXRecord(Base), DevirtualizedClass)) {
+            // Devirtualized to the class of the base type (the type of the
+            // whole expression).
+            Dtor = DevirtualizedDtor;
+          } else {
+            // Devirtualized to some other type. Would need to cast the this
+            // pointer to that type but we don't have support for that yet, so
+            // do a virtual call. FIXME: handle the case where it is
+            // devirtualized to the derived type (the type of the inner
+            // expression) as in EmitCXXMemberOrOperatorMemberCallExpr.
+            UseVirtualCall = true;
+          }
+        }
+        if (UseVirtualCall) {
+          llvm_unreachable("NYI");
+          return false;
+        }
+      }
+    }
+  }
+
+  // Make sure that we call delete even if the dtor throws.
+  // This doesn't have to a conditional cleanup because we're going
+  // to pop it off in a second.
+  CGF.EHStack.pushCleanup<CallObjectDelete>(
+      NormalAndEHCleanup, Ptr.getPointer(), OperatorDelete, ElementType);
+
+  if (Dtor) {
+    llvm_unreachable("NYI");
+  } else if (auto Lifetime = ElementType.getObjCLifetime()) {
+    switch (Lifetime) {
+    case Qualifiers::OCL_None:
+    case Qualifiers::OCL_ExplicitNone:
+    case Qualifiers::OCL_Autoreleasing:
+      break;
+
+    case Qualifiers::OCL_Strong:
+      llvm_unreachable("NYI");
+      break;
+
+    case Qualifiers::OCL_Weak:
+      llvm_unreachable("NYI");
+      break;
+    }
+  }
+
+  // In traditional LLVM codegen null checks are emitted to save a delete call.
+  // In CIR we optimize for size by default, the null check should be added into
+  // this function callers.
+  assert(!UnimplementedFeature::emitNullCheckForDeleteCalls());
+
+  CGF.PopCleanupBlock();
+  return false;
+}
+
+void CIRGenFunction::buildCXXDeleteExpr(const CXXDeleteExpr *E) {
+  const Expr *Arg = E->getArgument();
+  Address Ptr = buildPointerWithAlignment(Arg);
+
+  // Null check the pointer.
+  //
+  // We could avoid this null check if we can determine that the object
+  // destruction is trivial and doesn't require an array cookie; we can
+  // unconditionally perform the operator delete call in that case. For now, we
+  // assume that deleted pointers are null rarely enough that it's better to
+  // keep the branch. This might be worth revisiting for a -O0 code size win.
+  //
+  // CIR note: emit the code size friendly by default for now, such as mentioned
+  // in `EmitObjectDelete`.
+  assert(!UnimplementedFeature::emitNullCheckForDeleteCalls());
+  QualType DeleteTy = E->getDestroyedType();
+
+  // A destroying operator delete overrides the entire operation of the
+  // delete expression.
+  if (E->getOperatorDelete()->isDestroyingOperatorDelete()) {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  // We might be deleting a pointer to array.  If so, GEP down to the
+  // first non-array element.
+  // (this assumes that A(*)[3][7] is converted to [3 x [7 x %A]]*)
+  if (DeleteTy->isConstantArrayType()) {
+    llvm_unreachable("NYI");
+  }
+
+  assert(convertTypeForMem(DeleteTy) == Ptr.getElementType());
+
+  if (E->isArrayForm()) {
+    llvm_unreachable("NYI");
+  } else {
+    (void)EmitObjectDelete(*this, E, Ptr, DeleteTy);
+  }
+}
+
 mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   // The element type being allocated.
   QualType allocType = getContext().getBaseElementType(E->getAllocatedType());
@@ -893,7 +1038,30 @@ void CIRGenFunction::buildDeleteCall(const FunctionDecl *DeleteFD,
 
   // Pass the size if the delete function has a size_t parameter.
   if (Params.Size) {
-    llvm_unreachable("NYI");
+    QualType SizeType = *ParamTypeIt++;
+    CharUnits DeleteTypeSize = getContext().getTypeSizeInChars(DeleteTy);
+    assert(SizeTy && "expected mlir::cir::IntType");
+    auto Size = builder.getConstInt(*currSrcLoc, ConvertType(SizeType),
+                                    DeleteTypeSize.getQuantity());
+
+    // For array new, multiply by the number of elements.
+    if (NumElements) {
+      // Uncomment upon adding testcase.
+      // Size = builder.createMul(Size, NumElements);
+      llvm_unreachable("NYI");
+    }
+
+    // If there is a cookie, add the cookie size.
+    if (!CookieSize.isZero()) {
+      // Uncomment upon adding testcase.
+      // builder.createBinop(
+      //     Size, mlir::cir::BinOpKind::Add,
+      //     builder.getConstInt(*currSrcLoc, SizeTy,
+      //     CookieSize.getQuantity()));
+      llvm_unreachable("NYI");
+    }
+
+    DeleteArgs.add(RValue::get(Size), SizeType);
   }
 
   // Pass the alignment if the delete function has an align_val_t parameter.
