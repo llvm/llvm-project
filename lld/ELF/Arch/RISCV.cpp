@@ -1222,8 +1222,10 @@ void TableJumpSection::finalizeContents() {
       finalizeEntry(CMJALTEntryCandidates, maxCMJALTEntrySize);
   CMJALTEntryCandidates.clear();
 
-  if (finalizedCMJALTEntries.size() > 0 && getSizeReduction() < CMJTSizeReduction) {
-    // Stop relax to cm.jalt if there will be the code reduction of cm.jalt is smaller then the size of padding 0 for doing cm.jalt optmise
+  if (finalizedCMJALTEntries.size() > 0 &&
+      getSizeReduction() < CMJTSizeReduction) {
+    // Stop relax to cm.jalt if there will be the code reduction of cm.jalt is
+    // smaller then the size of padding 0 for doing cm.jalt optmise
     finalizedCMJALTEntries.clear();
   }
   // if table jump still got negative effect, give up.
