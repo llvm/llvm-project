@@ -2302,9 +2302,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
+    sym = &s->file->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
+    sym = &s->file->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
