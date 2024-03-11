@@ -7,8 +7,8 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 
 ; Test case for https://github.com/llvm/llvm-project/issues/84807.
 
-; FIXME: Currently the loads from @callee are moved to @caller, even though
-;        the store in %then may aliases to load from %q.
+; Make sure the loads from @callee are not moved to @caller, as the store
+; in %then may aliases to load from %q.
 
 define i32 @caller1(i1 %c) {
 ; CHECK-LABEL: define i32 @caller1(
