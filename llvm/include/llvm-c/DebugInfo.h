@@ -1361,7 +1361,7 @@ LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder, LLVMValueRef Val,
 /**
  * Soon to be deprecated.
  * Only use in "old debug mode" (Module::IsNewDbgInfoFormat is false).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
@@ -1377,7 +1377,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
 /**
  * Soon to be deprecated.
  * Only use in "new debug mode" (Module::IsNewDbgInfoFormat is true).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
@@ -1393,7 +1393,7 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
 /**
  * Soon to be deprecated.
  * Only use in "old debug mode" (Module::IsNewDbgInfoFormat is false).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
  * block. If the basic block has a terminator instruction, the intrinsic is
@@ -1411,7 +1411,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(
 /**
  * Soon to be deprecated.
  * Only use in "old debug mode" (Module::IsNewDbgInfoFormat is false).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
  * block. If the basic block has a terminator instruction, the intrinsic is
@@ -1429,7 +1429,7 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
 /**
  * Soon to be deprecated.
  * Only use in "new debug mode" (Module::IsNewDbgInfoFormat is true).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
  * block. If the basic block has a terminator instruction, the intrinsic is

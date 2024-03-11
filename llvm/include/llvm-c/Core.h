@@ -746,7 +746,7 @@ void LLVMDisposeModule(LLVMModuleRef M);
 
 /**
  * Soon to be deprecated.
- * See See https://llvm.org/docs/RemoveDIsDebugInfo.html.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Returns true if the module is in the new debug info mode which uses
  * non-instruction debug records instead of debug intrinsics for variable
@@ -756,7 +756,7 @@ LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M);
 
 /**
  * Soon to be deprecated.
- * See See https://llvm.org/docs/RemoveDIsDebugInfo.html.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Convert module into desired debug info format.
  */
