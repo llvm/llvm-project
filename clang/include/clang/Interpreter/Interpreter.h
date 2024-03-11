@@ -18,6 +18,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
+#include "clang/Sema/Ownership.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -75,16 +76,25 @@ private:
   llvm::StringRef CudaSDKPath;
 };
 
+/// Generate glue code between the Interpreter's built-in runtime and user code.
+class RuntimeInterfaceBuilder {
+public:
+  virtual ~RuntimeInterfaceBuilder() = default;
+
+  using TransformExprFunction = ExprResult(RuntimeInterfaceBuilder *Builder,
+                                           Expr *, ArrayRef<Expr *>);
+  virtual TransformExprFunction *getPrintValueTransformer() = 0;
+};
+
 /// Provides top-level interfaces for incremental compilation and execution.
 class Interpreter {
   std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
   std::unique_ptr<IncrementalParser> IncrParser;
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
+  std::unique_ptr<RuntimeInterfaceBuilder> RuntimeIB;
 
   // An optional parser for CUDA offloading
   std::unique_ptr<IncrementalParser> DeviceParser;
-
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
   llvm::Error CreateExecutor();
   unsigned InitPTUSize = 0;
@@ -94,8 +104,25 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
+  // Add a call to an Expr to report its result. We query the function from
+  // RuntimeInterfaceBuilder once and store it as a function pointer to avoid
+  // frequent virtual function calls.
+  RuntimeInterfaceBuilder::TransformExprFunction *AddPrintValueCall = nullptr;
+
+protected:
+  // Derived classes can make use an extended interface of the Interpreter.
+  // That's useful for testing and out-of-tree clients.
+  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
+
+  // Lazily construct the RuntimeInterfaceBuilder. The provided instance will be
+  // used for the entire lifetime of the interpreter. The default implementation
+  // targets the in-process __clang_Interpreter runtime. Override this to use a
+  // custom runtime.
+  virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
+
 public:
-  ~Interpreter();
+  virtual ~Interpreter();
+
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
   static llvm::Expected<std::unique_ptr<Interpreter>>
@@ -142,8 +169,6 @@ public:
 
 private:
   size_t getEffectivePTUSize() const;
-
-  bool FindRuntimeInterface();
 
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
