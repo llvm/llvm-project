@@ -24,8 +24,6 @@
 #include <vector>
 
 namespace llvm {
-class Record;
-class DagInit;
 class CodeGenTarget;
 
 class CGIOperandList {
