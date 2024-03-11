@@ -514,7 +514,7 @@ static llvm::SmallDenseSet<int64_t> getPreservedDims(AffineMap map) {
 }
 
 static SmallVector<int64_t, 2>
-getConstantsFromExprList(SmallVector<AffineExpr, 2> exprs) {
+getConstantsFromExprList(const SmallVector<AffineExpr, 2> &exprs) {
   SmallVector<int64_t, 2> vals;
   for (auto e : exprs) {
     auto constantExpr = dyn_cast<AffineConstantExpr>(e);
@@ -1040,6 +1040,11 @@ int64_t LinalgOp::getIndexingMapIndex(OpOperand *opOperand) {
 
 LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   LinalgOp linalgOp = cast<LinalgOp>(op);
+
+  // Mixed tensor/buffer operands are not allowed.
+  if (!linalgOp.hasPureTensorSemantics() &&
+      !linalgOp.hasPureBufferSemantics() && op->getNumOperands() > 0)
+    return op->emitOpError("expected to have pure tensor or buffer semantics");
 
   // Before checking indexing maps, we need to make sure the attributes
   // referenced by it are valid.

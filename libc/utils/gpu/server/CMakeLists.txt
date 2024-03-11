@@ -12,9 +12,13 @@ target_compile_definitions(llvmlibc_rpc_server PUBLIC
                            LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Install the server and associated header.
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc_server.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm/
-        COMPONENT libc)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc_rpc_server.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        COMPONENT libc-headers)
+install(FILES ${LIBC_SOURCE_DIR}/include/llvm-libc-types/rpc_opcodes_t.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        RENAME llvmlibc_rpc_opcodes.h
+        COMPONENT libc-headers)
 install(TARGETS llvmlibc_rpc_server
         ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
         COMPONENT libc)

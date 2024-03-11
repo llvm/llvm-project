@@ -1290,18 +1290,6 @@ public:
     return (*this)[size() - 1];
   }
 
-  /// Compare this range with another.
-  template <typename OtherT>
-  friend bool operator==(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-  }
-  template <typename OtherT>
-  friend bool operator!=(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return !(lhs == rhs);
-  }
-
   /// Return the size of this range.
   size_t size() const { return count; }
 
@@ -1364,6 +1352,23 @@ protected:
   /// The size from the owning range.
   ptrdiff_t count;
 };
+/// Compare this range with another.
+/// FIXME: Make me a member function instead of friend when it works in C++20.
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return !(lhs == rhs);
+}
 } // end namespace detail
 
 /// This class provides an implementation of a range of
@@ -1966,6 +1971,22 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
+template <typename R> auto min_element(R &&Range) {
+  return std::min_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
+  return std::min_element(adl_begin(Range), adl_end(Range), C);
+}
+
+template <typename R> auto max_element(R &&Range) {
+  return std::max_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
+  return std::max_element(adl_begin(Range), adl_end(Range), C);
+}
+
 template <typename R>
 void stable_sort(R &&Range) {
   std::stable_sort(adl_begin(Range), adl_end(Range));
@@ -1987,6 +2008,12 @@ auto partition_point(R &&Range, Predicate P) {
 template<typename Range, typename Predicate>
 auto unique(Range &&R, Predicate P) {
   return std::unique(adl_begin(R), adl_end(R), P);
+}
+
+/// Wrapper function around std::unique to allow calling unique on a
+/// container without having to specify the begin/end iterators.
+template <typename Range> auto unique(Range &&R) {
+  return std::unique(adl_begin(R), adl_end(R));
 }
 
 /// Wrapper function around std::equal to detect if pair-wise elements between

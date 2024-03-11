@@ -159,8 +159,24 @@ public:
     OPC_CheckChild2Same,
     OPC_CheckChild3Same,
     OPC_CheckPatternPredicate,
+    OPC_CheckPatternPredicate0,
+    OPC_CheckPatternPredicate1,
     OPC_CheckPatternPredicate2,
+    OPC_CheckPatternPredicate3,
+    OPC_CheckPatternPredicate4,
+    OPC_CheckPatternPredicate5,
+    OPC_CheckPatternPredicate6,
+    OPC_CheckPatternPredicate7,
+    OPC_CheckPatternPredicateTwoByte,
     OPC_CheckPredicate,
+    OPC_CheckPredicate0,
+    OPC_CheckPredicate1,
+    OPC_CheckPredicate2,
+    OPC_CheckPredicate3,
+    OPC_CheckPredicate4,
+    OPC_CheckPredicate5,
+    OPC_CheckPredicate6,
+    OPC_CheckPredicate7,
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
@@ -207,6 +223,14 @@ public:
     OPC_CheckChild2CondCode,
     OPC_CheckValueType,
     OPC_CheckComplexPat,
+    OPC_CheckComplexPat0,
+    OPC_CheckComplexPat1,
+    OPC_CheckComplexPat2,
+    OPC_CheckComplexPat3,
+    OPC_CheckComplexPat4,
+    OPC_CheckComplexPat5,
+    OPC_CheckComplexPat6,
+    OPC_CheckComplexPat7,
     OPC_CheckAndImm,
     OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
@@ -434,6 +458,10 @@ private:
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
   void Select_MEMBARRIER(SDNode *N);
+
+  void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
+  void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
+  void Select_CONVERGENCECTRL_LOOP(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);

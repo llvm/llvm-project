@@ -11,26 +11,29 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
-define i32 @basic_test() sanitize_address {
-  ; CHECK-LABEL: define i32 @basic_test()
+define i32 @basic_test(i64 %i) sanitize_address {
+  ; CHECK-LABEL: define i32 @basic_test(
 
 entry:
   %retval = alloca i32, align 4
-  %c = alloca i8, align 1
+  %c = alloca [2 x i8], align 1
 
   ; Memory is poisoned in prologue: F1F1F1F104F3F8F2
   ; CHECK-UAS: store i64 -866676825215864335, ptr %{{[0-9]+}}
+  ; CHECK-UAS-SS-NOT: store i64
 
   call void @llvm.lifetime.start.p0(i64 1, ptr %c)
   ; Memory is unpoisoned at llvm.lifetime.start: 01
-  ; CHECK-UAS: store i8 1, ptr %{{[0-9]+}}
+  ; CHECK-UAS: store i8 2, ptr %{{[0-9]+}}
 
+  %ci = getelementptr inbounds [2 x i8], ptr %c, i64 0, i64 %i
   store volatile i32 0, ptr %retval
-  store volatile i8 0, ptr %c, align 1
+  store volatile i8 0, ptr %ci, align 1
 
   call void @llvm.lifetime.end.p0(i64 1, ptr %c)
   ; Memory is poisoned at llvm.lifetime.end: F8
   ; CHECK-UAS: store i8 -8, ptr %{{[0-9]+}}
+  ; CHECK-UAS-SS-NOT: store i8 -8,
 
   ; Unpoison memory at function exit in UAS mode.
   ; CHECK-UAS: store i64 0, ptr %{{[0-9]+}}

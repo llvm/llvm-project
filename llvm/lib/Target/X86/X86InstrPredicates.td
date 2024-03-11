@@ -122,6 +122,7 @@ def HasTBM       : Predicate<"Subtarget->hasTBM()">;
 def NoTBM        : Predicate<"!Subtarget->hasTBM()">;
 def HasLWP       : Predicate<"Subtarget->hasLWP()">;
 def HasMOVBE     : Predicate<"Subtarget->hasMOVBE()">;
+def NoNDD_Or_NoMOVBE     : Predicate<"!Subtarget->hasNDD() || !Subtarget->hasMOVBE()">;
 def HasRDRAND    : Predicate<"Subtarget->hasRDRAND()">;
 def HasF16C      : Predicate<"Subtarget->hasF16C()">;
 def HasFSGSBase  : Predicate<"Subtarget->hasFSGSBase()">;

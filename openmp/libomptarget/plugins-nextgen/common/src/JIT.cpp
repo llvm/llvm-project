@@ -93,7 +93,7 @@ createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   StringRef Data((const char *)Image.ImageStart,
                  target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
+      Data, /*BufferName=*/"", /*RequiresNullTerminator=*/false);
   return createModuleFromMemoryBuffer(MB, Context);
 }
 
@@ -186,7 +186,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
-                          /* DisableVerify */ false, MMIWP);
+                          /*DisableVerify=*/false, MMIWP);
 
   PM.run(M);
 }
@@ -196,8 +196,8 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
                    unsigned OptLevel) {
 
   auto RemarksFileOrErr = setupLLVMOptimizationRemarks(
-      M.getContext(), /* RemarksFilename */ "", /* RemarksPasses */ "",
-      /* RemarksFormat */ "", /* RemarksWithHotness */ false);
+      M.getContext(), /*RemarksFilename=*/"", /*RemarksPasses=*/"",
+      /*RemarksFormat=*/"", /*RemarksWithHotness=*/false);
   if (Error E = RemarksFileOrErr.takeError())
     return std::move(E);
   if (*RemarksFileOrErr)

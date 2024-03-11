@@ -372,12 +372,12 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   return ret;
 }
 
-ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
+ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
   ValueObjectSP child_sp;
   // We may need to update our value if we are dynamic
   if (IsPossibleDynamicType())
     UpdateValueIfNeeded(false);
-  if (idx < GetNumChildren()) {
+  if (idx < GetNumChildrenIgnoringErrors()) {
     // Check if we have already made the child value object?
     if (can_create && !m_children.HasChildAtIndex(idx)) {
       // No we haven't created the child at this index, so lets have our
@@ -440,7 +440,7 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
   return child_sp;
 }
 
-size_t ValueObject::GetNumChildren(uint32_t max) {
+llvm::Expected<uint32_t> ValueObject::GetNumChildren(uint32_t max) {
   UpdateValueIfNeeded();
 
   if (max < UINT32_MAX) {
@@ -452,9 +452,22 @@ size_t ValueObject::GetNumChildren(uint32_t max) {
   }
 
   if (!m_flags.m_children_count_valid) {
-    SetNumChildren(CalculateNumChildren());
+    auto num_children_or_err = CalculateNumChildren();
+    if (num_children_or_err)
+      SetNumChildren(*num_children_or_err);
+    else
+      return num_children_or_err;
   }
   return m_children.GetChildrenCount();
+}
+
+uint32_t ValueObject::GetNumChildrenIgnoringErrors(uint32_t max) {
+  auto value_or_err = GetNumChildren(max);
+  if (value_or_err)
+    return *value_or_err;
+  LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), value_or_err.takeError(),
+                  "{0}");
+  return 0;
 }
 
 bool ValueObject::MightHaveChildren() {
@@ -464,13 +477,13 @@ bool ValueObject::MightHaveChildren() {
     if (type_info & (eTypeHasChildren | eTypeIsPointer | eTypeIsReference))
       has_children = true;
   } else {
-    has_children = GetNumChildren() > 0;
+    has_children = GetNumChildrenIgnoringErrors() > 0;
   }
   return has_children;
 }
 
 // Should only be called by ValueObject::GetNumChildren()
-void ValueObject::SetNumChildren(size_t num_children) {
+void ValueObject::SetNumChildren(uint32_t num_children) {
   m_flags.m_children_count_valid = true;
   m_children.SetChildrenCount(num_children);
 }
@@ -813,8 +826,7 @@ static bool CopyStringDataToBufferSP(const StreamString &source,
 
 std::pair<size_t, bool>
 ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
-                               Status &error, uint32_t max_length,
-                               bool honor_array, Format item_format) {
+                               Status &error, bool honor_array) {
   bool was_capped = false;
   StreamString s;
   ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -827,8 +839,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     return {0, was_capped};
   }
 
-  if (max_length == 0)
-    max_length = target->GetMaximumSizeOfStringSummary();
+  const auto max_length = target->GetMaximumSizeOfStringSummary();
 
   size_t bytes_read = 0;
   size_t total_bytes_read = 0;
@@ -1149,9 +1160,10 @@ bool ValueObject::DumpPrintableRepresentation(
       {
         Status error;
         lldb::WritableDataBufferSP buffer_sp;
-        std::pair<size_t, bool> read_string = ReadPointedString(
-            buffer_sp, error, 0, (custom_format == eFormatVectorOfChar) ||
-                                     (custom_format == eFormatCharArray));
+        std::pair<size_t, bool> read_string =
+            ReadPointedString(buffer_sp, error,
+                              (custom_format == eFormatVectorOfChar) ||
+                                  (custom_format == eFormatCharArray));
         lldb_private::formatters::StringPrinter::
             ReadBufferAndDumpToStreamOptions options(*this);
         options.SetData(DataExtractor(
@@ -1177,7 +1189,7 @@ bool ValueObject::DumpPrintableRepresentation(
       if (flags.Test(eTypeIsArray)) {
         if ((custom_format == eFormatBytes) ||
             (custom_format == eFormatBytesWithASCII)) {
-          const size_t count = GetNumChildren();
+          const size_t count = GetNumChildrenIgnoringErrors();
 
           s << '[';
           for (size_t low = 0; low < count; low++) {
@@ -1216,7 +1228,7 @@ bool ValueObject::DumpPrintableRepresentation(
                                                      // format should be printed
                                                      // directly
         {
-          const size_t count = GetNumChildren();
+          const size_t count = GetNumChildrenIgnoringErrors();
 
           Format format = FormatManager::GetSingleItemFormat(custom_format);
 
@@ -1295,7 +1307,7 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
 
     case eValueObjectRepresentationStyleChildrenCount:
-      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildren());
+      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildrenIgnoringErrors());
       str = strm.GetString();
       break;
 
@@ -1313,6 +1325,8 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
     }
 
+    // If the requested display style produced no output, try falling back to
+    // alternative presentations.
     if (str.empty()) {
       if (val_obj_display == eValueObjectRepresentationStyleValue)
         str = GetSummaryAsCString();
@@ -2319,7 +2333,9 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
-                root->GetSyntheticValue()->GetNumChildren() > index)
+                llvm::expectedToStdOptional(
+                    root->GetSyntheticValue()->GetNumChildren())
+                        .value_or(0) > index)
               child_valobj_sp =
                   root->GetSyntheticValue()->GetChildAtIndex(index);
           if (child_valobj_sp) {
@@ -2526,7 +2542,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
-  ValueObjectPrinter printer(this, &s, options);
+  ValueObjectPrinter printer(*this, &s, options);
   printer.PrintValueObject();
 }
 

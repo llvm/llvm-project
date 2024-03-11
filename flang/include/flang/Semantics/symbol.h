@@ -14,6 +14,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
+#include "flang/Semantics/module-dependences.h"
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include <array>
@@ -86,11 +87,16 @@ public:
   void set_scope(const Scope *);
   bool isDefaultPrivate() const { return isDefaultPrivate_; }
   void set_isDefaultPrivate(bool yes = true) { isDefaultPrivate_ = yes; }
+  std::optional<ModuleCheckSumType> moduleFileHash() const {
+    return moduleFileHash_;
+  }
+  void set_moduleFileHash(ModuleCheckSumType x) { moduleFileHash_ = x; }
 
 private:
   bool isSubmodule_;
   bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
+  std::optional<ModuleCheckSumType> moduleFileHash_;
 };
 
 class MainProgramDetails : public WithOmpDeclarative {
@@ -112,7 +118,8 @@ private:
   bool isExplicitBindName_{false};
 };
 
-class OpenACCRoutineInfo {
+// Device type specific OpenACC routine information
+class OpenACCRoutineDeviceTypeInfo {
 public:
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
@@ -124,12 +131,14 @@ public:
   void set_isGang(bool value = true) { isGang_ = value; }
   unsigned gangDim() const { return gangDim_; }
   void set_gangDim(unsigned value) { gangDim_ = value; }
-  bool isNohost() const { return isNohost_; }
-  void set_isNohost(bool value = true) { isNohost_ = value; }
   const std::string *bindName() const {
     return bindName_ ? &*bindName_ : nullptr;
   }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
+  void set_dType(Fortran::common::OpenACCDeviceType dType) {
+    deviceType_ = dType;
+  }
+  Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
 
 private:
   bool isSeq_{false};
@@ -137,8 +146,28 @@ private:
   bool isWorker_{false};
   bool isGang_{false};
   unsigned gangDim_{0};
-  bool isNohost_{false};
   std::optional<std::string> bindName_;
+  Fortran::common::OpenACCDeviceType deviceType_{
+      Fortran::common::OpenACCDeviceType::None};
+};
+
+// OpenACC routine information. Device independent info are stored on the
+// OpenACCRoutineInfo instance while device dependent info are stored
+// in as objects in the OpenACCRoutineDeviceTypeInfo list.
+class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
+public:
+  bool isNohost() const { return isNohost_; }
+  void set_isNohost(bool value = true) { isNohost_ = value; }
+  std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() {
+    return deviceTypeInfos_;
+  }
+  void add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo &info) {
+    deviceTypeInfos_.push_back(info);
+  }
+
+private:
+  std::list<OpenACCRoutineDeviceTypeInfo> deviceTypeInfos_;
+  bool isNohost_{false};
 };
 
 // A subroutine or function definition, or a subprogram interface defined
@@ -339,11 +368,10 @@ public:
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
-  bool CanBeAssumedShape() const {
+  bool IsAssumedShape() const {
     return isDummy() && shape_.CanBeAssumedShape();
   }
   bool CanBeDeferredShape() const { return shape_.CanBeDeferredShape(); }
-  bool IsAssumedSize() const { return isDummy() && shape_.CanBeAssumedSize(); }
   bool IsAssumedRank() const { return isDummy() && shape_.IsAssumedRank(); }
   std::optional<common::CUDADataAttr> cudaDataAttr() const {
     return cudaDataAttr_;
@@ -389,9 +417,12 @@ public:
   ProcEntityDetails(ProcEntityDetails &&) = default;
   ProcEntityDetails &operator=(const ProcEntityDetails &) = default;
 
+  const Symbol *rawProcInterface() const { return rawProcInterface_; }
   const Symbol *procInterface() const { return procInterface_; }
-  void set_procInterface(const Symbol &sym) { procInterface_ = &sym; }
-  bool IsInterfaceSet() { return procInterface_ || type(); }
+  void set_procInterfaces(const Symbol &raw, const Symbol &resolved) {
+    rawProcInterface_ = &raw;
+    procInterface_ = &resolved;
+  }
   inline bool HasExplicitInterface() const;
 
   // Be advised: !init().has_value() => uninitialized pointer,
@@ -403,6 +434,7 @@ public:
   void set_isCUDAKernel(bool yes = true) { isCUDAKernel_ = yes; }
 
 private:
+  const Symbol *rawProcInterface_{nullptr};
   const Symbol *procInterface_{nullptr};
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
@@ -615,7 +647,9 @@ public:
   const SymbolVector &uses() const { return uses_; }
 
   // specific and derivedType indicate a specific procedure or derived type
-  // with the same name as this generic. Only one of them may be set.
+  // with the same name as this generic. Only one of them may be set in
+  // a scope that declares them, but both can be set during USE association
+  // when generics are combined.
   Symbol *specific() { return specific_; }
   const Symbol *specific() const { return specific_; }
   void set_specific(Symbol &specific);
@@ -1011,7 +1045,7 @@ struct SymbolAddressCompare {
 // Symbol comparison is usually based on the order of cooked source
 // stream creation and, when both are from the same cooked source,
 // their positions in that cooked source stream.
-// Don't use this comparator or OrderedSymbolSet to hold
+// Don't use this comparator or SourceOrderedSymbolSet to hold
 // Symbols that might be subject to ReplaceName().
 struct SymbolSourcePositionCompare {
   // These functions are implemented in Evaluate/tools.cpp to

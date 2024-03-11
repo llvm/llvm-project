@@ -127,7 +127,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
       case llvm::Triple::IOS:
       case llvm::Triple::WatchOS:
       case llvm::Triple::TvOS:
-      // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+      case llvm::Triple::BridgeOS:
         break;
       // Only accept "vendor" for vendor if the host is Apple and it "unknown"
       // wasn't specified (it was just returned because it was NOT specified)
@@ -791,9 +791,10 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
-  Status error;
-  module_sp.reset();
+  assert(module_sp.get() == nullptr);
   UpdateKextandKernelsLocalScan();
+  if (did_create_ptr)
+    *did_create_ptr = false;
 
   // First try all kernel binaries that have a dSYM next to them
   for (auto possible_kernel : m_kernel_binaries_with_dsyms) {
@@ -803,22 +804,19 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
       module_sp.reset(new Module(kern_spec));
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(kern_spec)) {
-        // module_sp is an actual kernel binary we want to add.
-        if (process) {
-          const bool notify = false;
-          process->GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
-          error.Clear();
-          return error;
-        } else {
-          error = ModuleList::GetSharedModule(kern_spec, module_sp, nullptr,
-                                              nullptr, nullptr);
-          if (module_sp && module_sp->GetObjectFile() &&
-              module_sp->GetObjectFile()->GetType() !=
-                  ObjectFile::Type::eTypeCoreFile) {
-            return error;
-          }
-          module_sp.reset();
-        }
+        // The dSYM is next to the binary (that's the only
+        // way it ends up in the index), but it might be a
+        // .dSYM.yaa that needs to be expanded, don't just
+        // append ".dSYM" to the filename for the SymbolFile.
+        FileSpecList search_paths =
+            process->GetTarget().GetDebugFileSearchPaths();
+        FileSpec dsym_fspec =
+            PluginManager::LocateExecutableSymbolFile(kern_spec, search_paths);
+        if (FileSystem::Instance().Exists(dsym_fspec))
+          module_sp->SetSymbolFileFileSpec(dsym_fspec);
+        if (did_create_ptr)
+          *did_create_ptr = true;
+        return {};
       }
     }
   }
@@ -836,36 +834,18 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
       module_sp.reset(new Module(kern_spec));
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(kern_spec)) {
-        // module_sp is an actual kernel binary we want to add.
-        if (process) {
-          const bool notify = false;
-          process->GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
-          error.Clear();
-          return error;
-        } else {
-          error = ModuleList::GetSharedModule(kern_spec, module_sp, nullptr,
-                                              nullptr, nullptr);
-          if (module_sp && module_sp->GetObjectFile() &&
-              module_sp->GetObjectFile()->GetType() !=
-                  ObjectFile::Type::eTypeCoreFile) {
-            return error;
-          }
-          module_sp.reset();
-        }
+        if (did_create_ptr)
+          *did_create_ptr = true;
+        return {};
       }
     }
   }
 
-  // Give the generic methods, including possibly calling into  DebugSymbols
+  // Give the generic methods, including possibly calling into DebugSymbols
   // framework on macOS systems, a chance.
-  error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                          module_search_paths_ptr, old_modules,
-                                          did_create_ptr);
-  if (error.Success() && module_sp.get()) {
-    return error;
-  }
-
-  return error;
+  return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
+                                         module_search_paths_ptr, old_modules,
+                                         did_create_ptr);
 }
 
 std::vector<lldb_private::FileSpec>

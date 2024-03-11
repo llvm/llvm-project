@@ -6546,6 +6546,9 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     // Find first clause (skip seq_cst|acq_rel|aqcuire|release|relaxed clause,
     // if it is first).
     OpenMPClauseKind K = C->getClauseKind();
+    // TBD
+    if (K == OMPC_weak)
+      return;
     if (K == OMPC_seq_cst || K == OMPC_acq_rel || K == OMPC_acquire ||
         K == OMPC_release || K == OMPC_relaxed || K == OMPC_hint)
       continue;
@@ -7020,31 +7023,47 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
                                      S.getSingleClause<OMPUseClause>())) &&
          "OMPNowaitClause clause is used separately in OMPInteropDirective.");
 
-  if (const auto *C = S.getSingleClause<OMPInitClause>()) {
-    llvm::Value *InteropvarPtr =
-        EmitLValue(C->getInteropVar()).getPointer(*this);
-    llvm::omp::OMPInteropType InteropType = llvm::omp::OMPInteropType::Unknown;
-    if (C->getIsTarget()) {
-      InteropType = llvm::omp::OMPInteropType::Target;
-    } else {
-      assert(C->getIsTargetSync() && "Expected interop-type target/targetsync");
-      InteropType = llvm::omp::OMPInteropType::TargetSync;
+  auto ItOMPInitClause = S.getClausesOfKind<OMPInitClause>();
+  if (!ItOMPInitClause.empty()) {
+    // Look at the multiple init clauses
+    for (const OMPInitClause *C : ItOMPInitClause) {
+      llvm::Value *InteropvarPtr =
+          EmitLValue(C->getInteropVar()).getPointer(*this);
+      llvm::omp::OMPInteropType InteropType =
+          llvm::omp::OMPInteropType::Unknown;
+      if (C->getIsTarget()) {
+        InteropType = llvm::omp::OMPInteropType::Target;
+      } else {
+        assert(C->getIsTargetSync() &&
+               "Expected interop-type target/targetsync");
+        InteropType = llvm::omp::OMPInteropType::TargetSync;
+      }
+      OMPBuilder.createOMPInteropInit(Builder, InteropvarPtr, InteropType,
+                                      Device, NumDependences, DependenceList,
+                                      Data.HasNowaitClause);
     }
-    OMPBuilder.createOMPInteropInit(Builder, InteropvarPtr, InteropType, Device,
-                                    NumDependences, DependenceList,
-                                    Data.HasNowaitClause);
-  } else if (const auto *C = S.getSingleClause<OMPDestroyClause>()) {
-    llvm::Value *InteropvarPtr =
-        EmitLValue(C->getInteropVar()).getPointer(*this);
-    OMPBuilder.createOMPInteropDestroy(Builder, InteropvarPtr, Device,
-                                       NumDependences, DependenceList,
-                                       Data.HasNowaitClause);
-  } else if (const auto *C = S.getSingleClause<OMPUseClause>()) {
-    llvm::Value *InteropvarPtr =
-        EmitLValue(C->getInteropVar()).getPointer(*this);
-    OMPBuilder.createOMPInteropUse(Builder, InteropvarPtr, Device,
-                                   NumDependences, DependenceList,
-                                   Data.HasNowaitClause);
+  }
+  auto ItOMPDestroyClause = S.getClausesOfKind<OMPDestroyClause>();
+  if (!ItOMPDestroyClause.empty()) {
+    // Look at the multiple destroy clauses
+    for (const OMPDestroyClause *C : ItOMPDestroyClause) {
+      llvm::Value *InteropvarPtr =
+          EmitLValue(C->getInteropVar()).getPointer(*this);
+      OMPBuilder.createOMPInteropDestroy(Builder, InteropvarPtr, Device,
+                                         NumDependences, DependenceList,
+                                         Data.HasNowaitClause);
+    }
+  }
+  auto ItOMPUseClause = S.getClausesOfKind<OMPUseClause>();
+  if (!ItOMPUseClause.empty()) {
+    // Look at the multiple use clauses
+    for (const OMPUseClause *C : ItOMPUseClause) {
+      llvm::Value *InteropvarPtr =
+          EmitLValue(C->getInteropVar()).getPointer(*this);
+      OMPBuilder.createOMPInteropUse(Builder, InteropvarPtr, Device,
+                                     NumDependences, DependenceList,
+                                     Data.HasNowaitClause);
+    }
   }
 }
 

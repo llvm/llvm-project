@@ -35,6 +35,20 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+// As set of temporary options to help migrate how splats are represented.
+static cl::opt<bool> UseConstantIntForFixedLengthSplat(
+    "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantInt's native fixed-length vector splat support."));
+static cl::opt<bool> UseConstantFPForFixedLengthSplat(
+    "use-constant-fp-for-fixed-length-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantFP's native fixed-length vector splat support."));
+static cl::opt<bool> UseConstantIntForScalableSplat(
+    "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantInt's native scalable vector splat support."));
+static cl::opt<bool> UseConstantFPForScalableSplat(
+    "use-constant-fp-for-scalable-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantFP's native scalable vector splat support."));
+
 //===----------------------------------------------------------------------===//
 //                              Constant Class
 //===----------------------------------------------------------------------===//
@@ -825,9 +839,11 @@ bool Constant::isManifestConstant() const {
 //                                ConstantInt
 //===----------------------------------------------------------------------===//
 
-ConstantInt::ConstantInt(IntegerType *Ty, const APInt &V)
+ConstantInt::ConstantInt(Type *Ty, const APInt &V)
     : ConstantData(Ty, ConstantIntVal), Val(V) {
-  assert(V.getBitWidth() == Ty->getBitWidth() && "Invalid constant for type");
+  assert(V.getBitWidth() ==
+             cast<IntegerType>(Ty->getScalarType())->getBitWidth() &&
+         "Invalid constant for type");
 }
 
 ConstantInt *ConstantInt::getTrue(LLVMContext &Context) {
@@ -882,6 +898,26 @@ ConstantInt *ConstantInt::get(LLVMContext &Context, const APInt &V) {
     Slot.reset(new ConstantInt(ITy, V));
   }
   assert(Slot->getType() == IntegerType::get(Context, V.getBitWidth()));
+  return Slot.get();
+}
+
+// Get a ConstantInt vector with each lane set to the same APInt.
+ConstantInt *ConstantInt::get(LLVMContext &Context, ElementCount EC,
+                              const APInt &V) {
+  // Get an existing value or the insertion position.
+  std::unique_ptr<ConstantInt> &Slot =
+      Context.pImpl->IntSplatConstants[std::make_pair(EC, V)];
+  if (!Slot) {
+    IntegerType *ITy = IntegerType::get(Context, V.getBitWidth());
+    VectorType *VTy = VectorType::get(ITy, EC);
+    Slot.reset(new ConstantInt(VTy, V));
+  }
+
+#ifndef NDEBUG
+  IntegerType *ITy = IntegerType::get(Context, V.getBitWidth());
+  VectorType *VTy = VectorType::get(ITy, EC);
+  assert(Slot->getType() == VTy);
+#endif
   return Slot.get();
 }
 
@@ -1024,6 +1060,26 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
   return Slot.get();
 }
 
+// Get a ConstantFP vector with each lane set to the same APFloat.
+ConstantFP *ConstantFP::get(LLVMContext &Context, ElementCount EC,
+                            const APFloat &V) {
+  // Get an existing value or the insertion position.
+  std::unique_ptr<ConstantFP> &Slot =
+      Context.pImpl->FPSplatConstants[std::make_pair(EC, V)];
+  if (!Slot) {
+    Type *EltTy = Type::getFloatingPointTy(Context, V.getSemantics());
+    VectorType *VTy = VectorType::get(EltTy, EC);
+    Slot.reset(new ConstantFP(VTy, V));
+  }
+
+#ifndef NDEBUG
+  Type *EltTy = Type::getFloatingPointTy(Context, V.getSemantics());
+  VectorType *VTy = VectorType::get(EltTy, EC);
+  assert(Slot->getType() == VTy);
+#endif
+  return Slot.get();
+}
+
 Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   Constant *C = get(Ty->getContext(), APFloat::getInf(Semantics, Negative));
@@ -1036,7 +1092,7 @@ Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
 
 ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
-  assert(&V.getSemantics() == &Ty->getFltSemantics() &&
+  assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
 }
 
@@ -1356,11 +1412,13 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
+  bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
+  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
 
-  if (isZero || isUndef) {
+  if (isZero || isUndef || isSplatFP || isSplatInt) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
-        isZero = isUndef = isPoison = false;
+        isZero = isUndef = isPoison = isSplatFP = isSplatInt = false;
         break;
       }
   }
@@ -1371,6 +1429,12 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
     return PoisonValue::get(T);
   if (isUndef)
     return UndefValue::get(T);
+  if (isSplatFP)
+    return ConstantFP::get(C->getContext(), T->getElementCount(),
+                           cast<ConstantFP>(C)->getValue());
+  if (isSplatInt)
+    return ConstantInt::get(C->getContext(), T->getElementCount(),
+                            cast<ConstantInt>(C)->getValue());
 
   // Check to see if all of the elements are ConstantFP or ConstantInt and if
   // the element type is compatible with ConstantDataVector.  If so, use it.
@@ -1384,6 +1448,16 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (!EC.isScalable()) {
+    // Maintain special handling of zero.
+    if (!V->isNullValue()) {
+      if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
+        return ConstantInt::get(V->getContext(), EC,
+                                cast<ConstantInt>(V)->getValue());
+      if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
+        return ConstantFP::get(V->getContext(), EC,
+                               cast<ConstantFP>(V)->getValue());
+    }
+
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
     if ((isa<ConstantFP>(V) || isa<ConstantInt>(V)) &&
@@ -1392,6 +1466,16 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
     SmallVector<Constant *, 32> Elts(EC.getKnownMinValue(), V);
     return get(Elts);
+  }
+
+  // Maintain special handling of zero.
+  if (!V->isNullValue()) {
+    if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
+      return ConstantInt::get(V->getContext(), EC,
+                              cast<ConstantInt>(V)->getValue());
+    if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
+      return ConstantFP::get(V->getContext(), EC,
+                             cast<ConstantFP>(V)->getValue());
   }
 
   Type *VTy = VectorType::get(V->getType(), EC);

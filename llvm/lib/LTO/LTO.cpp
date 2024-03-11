@@ -124,9 +124,9 @@ void llvm::computeLTOCacheKey(
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
-  // RelaxELFRelocations. The clang driver can also pass FunctionSections,
+  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
   // DataSections and DebuggerTuning via command line flags.
-  AddUnsigned(Conf.Options.RelaxELFRelocations);
+  AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
   AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
@@ -1409,7 +1409,7 @@ public:
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
-  ThreadPool BackendThreadPool;
+  DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
   std::set<GlobalValue::GUID> CfiFunctionDefs;
@@ -1537,7 +1537,7 @@ public:
   }
 
   unsigned getThreadCount() override {
-    return BackendThreadPool.getThreadCount();
+    return BackendThreadPool.getMaxConcurrency();
   }
 };
 } // end anonymous namespace
@@ -1557,6 +1557,21 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
       };
 }
 
+StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
+  if (!TheTriple.isOSDarwin())
+    return "";
+  if (TheTriple.getArch() == Triple::x86_64)
+    return "core2";
+  if (TheTriple.getArch() == Triple::x86)
+    return "yonah";
+  if (TheTriple.isArm64e())
+    return "apple-a12";
+  if (TheTriple.getArch() == Triple::aarch64 ||
+      TheTriple.getArch() == Triple::aarch64_32)
+    return "cyclone";
+  return "";
+}
+
 // Given the original \p Path to an output file, replace any path
 // prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 // resulting directory if it does not yet exist.
@@ -1573,7 +1588,7 @@ std::string lto::getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
       llvm::errs() << "warning: could not create directory '" << ParentPath
                    << "': " << EC.message() << '\n';
   }
-  return std::string(NewPath.str());
+  return std::string(NewPath);
 }
 
 namespace {

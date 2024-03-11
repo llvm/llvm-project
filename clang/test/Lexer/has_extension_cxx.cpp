@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 -E %s -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 -E %s -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -std=c++20 -E %s -o - | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -std=c++23 -E %s -o - | FileCheck %s --check-prefix=CHECK23
 
 // CHECK: c_static_assert
 #if __has_extension(c_static_assert)
@@ -75,4 +77,18 @@ int has_variable_templates();
 // CHECK11: has_init_captures
 #if __has_extension(cxx_init_captures)
 int has_init_captures();
+#endif
+
+
+// CHECK11-NOT: has_generalized_nttp
+// CHECK20: has_generalized_nttp
+#if __has_extension(cxx_generalized_nttp)
+int has_generalized_nttp();
+#endif
+
+
+// CHECK20-NOT: has_explicit_this_parameter
+// CHECK23: has_explicit_this_parameter
+#if __has_extension(cxx_explicit_this_parameter)
+int has_explicit_this_parameter();
 #endif

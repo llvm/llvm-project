@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-macro-fusion-pred -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-PREDICATOR
+// RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-SUBTARGET
 
 include "llvm/Target/Target.td"
 
@@ -33,7 +34,13 @@ let Namespace = "Test" in {
 def Inst0 : TestInst<0>;
 def Inst1 : TestInst<1>;
 
-def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
+def BothFusionPredicate: BothFusionPredicateWithMCInstPredicate<CheckRegOperand<0, X0>>;
+def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusionPredicate",
+                                    "Test BothFusionPredicate",
+                                    [BothFusionPredicate]>;
+
+def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
+                             CheckOpcode<[Inst0]>,
                              CheckAll<[
                               CheckOpcode<[Inst1]>,
                               CheckRegOperand<0, X0>
@@ -43,6 +50,7 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
+// CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
@@ -52,6 +60,24 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_IMPL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
+// CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(
+// CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
+// CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = FirstMI;
+// CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
+// CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    return true;
+// CHECK-PREDICATOR-NEXT:  }
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -95,3 +121,16 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  #endif
+
+// Check that we have generated target subfeature.
+// CHECK-SUBTARGET: { "test-fusion", "Test Fusion", Test::TestFusion
+
+// Check that we have generated `getMacroFusions()` function.
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const override;
+
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
+// CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestBothFusionPredicate)) Fusions.push_back(llvm::isTestBothFusionPredicate); 
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFusion)) Fusions.push_back(llvm::isTestFusion);
+// CHECK-SUBTARGET-NEXT:   return Fusions;
+// CHECK-SUBTARGET-NEXT: }

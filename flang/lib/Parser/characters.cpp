@@ -235,7 +235,30 @@ template <Encoding ENCODING>
 DecodedCharacter DecodeCharacter(
     const char *cp, std::size_t bytes, bool backslashEscapes) {
   if (backslashEscapes && bytes >= 2 && *cp == '\\') {
-    return DecodeEscapedCharacters<ENCODING>(cp, bytes);
+    if (ENCODING == Encoding::UTF_8 && bytes >= 6 &&
+        ToLowerCaseLetter(cp[1]) == 'u' && IsHexadecimalDigit(cp[2]) &&
+        IsHexadecimalDigit(cp[3]) && IsHexadecimalDigit(cp[4]) &&
+        IsHexadecimalDigit(cp[5])) {
+      char32_t ch{
+          static_cast<char32_t>(4096 * HexadecimalDigitValue(cp[2]) +
+              256 * HexadecimalDigitValue(cp[3]) +
+              16 * HexadecimalDigitValue(cp[4]) + HexadecimalDigitValue(cp[5])),
+      };
+      if (bytes >= 10 && IsHexadecimalDigit(cp[6]) &&
+          IsHexadecimalDigit(cp[7]) && IsHexadecimalDigit(cp[8]) &&
+          IsHexadecimalDigit(cp[9])) {
+        return {(ch << 16) |
+                (4096 * HexadecimalDigitValue(cp[6]) +
+                    256 * HexadecimalDigitValue(cp[7]) +
+                    16 * HexadecimalDigitValue(cp[8]) +
+                    HexadecimalDigitValue(cp[9])),
+            10};
+      } else {
+        return {ch, 6};
+      }
+    } else {
+      return DecodeEscapedCharacters<ENCODING>(cp, bytes);
+    }
   } else {
     return DecodeRawCharacter<ENCODING>(cp, bytes);
   }

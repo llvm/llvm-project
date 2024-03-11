@@ -675,9 +675,10 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   ArrayRef<IteratorType> iteratorTypes) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
-  result.addAttribute(getIndexingMapsAttrName(result.name),
-                      builder.getAffineMapArrayAttr(
-                          AffineMap::inferFromExprList(indexingExprs)));
+  result.addAttribute(
+      getIndexingMapsAttrName(result.name),
+      builder.getAffineMapArrayAttr(
+          AffineMap::inferFromExprList(indexingExprs, builder.getContext())));
   result.addAttribute(
       getIteratorTypesAttrName(result.name),
       builder.getArrayAttr(llvm::to_vector(llvm::map_range(
@@ -2478,11 +2479,51 @@ public:
   }
 };
 
+/// Pattern to rewrite a fixed-size interleave via vector.shuffle to
+/// vector.interleave.
+class ShuffleInterleave : public OpRewritePattern<ShuffleOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+    if (resultType.isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp can't represent a scalable interleave");
+
+    if (resultType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp can't represent an n-D interleave");
+
+    VectorType sourceType = op.getV1VectorType();
+    if (sourceType != op.getV2VectorType() ||
+        sourceType.getNumElements() * 2 != resultType.getNumElements()) {
+      return rewriter.notifyMatchFailure(
+          op, "ShuffleOp types don't match an interleave");
+    }
+
+    ArrayAttr shuffleMask = op.getMask();
+    int64_t resultVectorSize = resultType.getNumElements();
+    for (int i = 0, e = resultVectorSize / 2; i < e; ++i) {
+      int64_t maskValueA = cast<IntegerAttr>(shuffleMask[i * 2]).getInt();
+      int64_t maskValueB = cast<IntegerAttr>(shuffleMask[(i * 2) + 1]).getInt();
+      if (maskValueA != i || maskValueB != (resultVectorSize / 2) + i)
+        return rewriter.notifyMatchFailure(op,
+                                           "ShuffleOp mask not interleaving");
+    }
+
+    rewriter.replaceOpWithNewOp<InterleaveOp>(op, op.getV1(), op.getV2());
+    return success();
+  }
+};
+
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, Canonicalize0DShuffleOp>(context);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2789,9 +2830,11 @@ isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
   return success();
 }
 
-// Returns true if all integers in `arrayAttr` are in the interval [min, max}.
-// interval. If `halfOpen` is true then the admissible interval is [min, max).
-// Otherwise, the admissible interval is [min, max].
+// Returns true if, for all indices i = 0..shape.size()-1, val is in the
+// [min, max} interval:
+//   val = `arrayAttr1[i]` + `arrayAttr2[i]`,
+// If `halfOpen` is true then the admissible interval is [min, max). Otherwise,
+// the admissible interval is [min, max].
 template <typename OpType>
 static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
     OpType op, ArrayAttr arrayAttr1, ArrayAttr arrayAttr2,
@@ -2845,8 +2888,8 @@ LogicalResult InsertStridedSliceOp::verify() {
   auto stridesName = InsertStridedSliceOp::getStridesAttrName();
   if (failed(isIntegerArrayAttrConfinedToShape(*this, offsets, destShape,
                                                offName)) ||
-      failed(isIntegerArrayAttrConfinedToRange(*this, strides, 1, 1,
-                                               stridesName,
+      failed(isIntegerArrayAttrConfinedToRange(*this, strides, /*min=*/1,
+                                               /*max=*/1, stridesName,
                                                /*halfOpen=*/false)) ||
       failed(isSumOfIntegerArrayAttrConfinedToShape(
           *this, offsets,
@@ -2854,6 +2897,26 @@ LogicalResult InsertStridedSliceOp::verify() {
           offName, "source vector shape",
           /*halfOpen=*/false, /*min=*/1)))
     return failure();
+
+  unsigned rankDiff = destShape.size() - sourceShape.size();
+  for (unsigned idx = 0; idx < sourceShape.size(); ++idx) {
+    if (sourceVectorType.getScalableDims()[idx] !=
+        destVectorType.getScalableDims()[idx + rankDiff]) {
+      return emitOpError("mismatching scalable flags (at source vector idx=")
+             << idx << ")";
+    }
+    if (sourceVectorType.getScalableDims()[idx]) {
+      auto sourceSize = sourceShape[idx];
+      auto destSize = destShape[idx + rankDiff];
+      if (sourceSize != destSize) {
+        return emitOpError("expected size at idx=")
+               << idx
+               << (" to match the corresponding base size from the input "
+                   "vector (")
+               << sourceSize << (" vs ") << destSize << (")");
+      }
+    }
+  }
 
   return success();
 }
@@ -3192,6 +3255,7 @@ void ReshapeOp::getFixedVectorSizes(SmallVectorImpl<int64_t> &results) {
 // Inference works as follows:
 //   1. Add 'sizes' from prefix of dims in 'offsets'.
 //   2. Add sizes from 'vectorType' for remaining dims.
+// Scalable flags are inherited from 'vectorType'.
 static Type inferStridedSliceOpResultType(VectorType vectorType,
                                           ArrayAttr offsets, ArrayAttr sizes,
                                           ArrayAttr strides) {
@@ -3204,7 +3268,8 @@ static Type inferStridedSliceOpResultType(VectorType vectorType,
   for (unsigned e = vectorType.getShape().size(); idx < e; ++idx)
     shape.push_back(vectorType.getShape()[idx]);
 
-  return VectorType::get(shape, vectorType.getElementType());
+  return VectorType::get(shape, vectorType.getElementType(),
+                         vectorType.getScalableDims());
 }
 
 void ExtractStridedSliceOp::build(OpBuilder &builder, OperationState &result,
@@ -3250,8 +3315,8 @@ LogicalResult ExtractStridedSliceOp::verify() {
       failed(isIntegerArrayAttrConfinedToShape(*this, sizes, shape, sizesName,
                                                /*halfOpen=*/false,
                                                /*min=*/1)) ||
-      failed(isIntegerArrayAttrConfinedToRange(*this, strides, 1, 1,
-                                               stridesName,
+      failed(isIntegerArrayAttrConfinedToRange(*this, strides, /*min=*/1,
+                                               /*max=*/1, stridesName,
                                                /*halfOpen=*/false)) ||
       failed(isSumOfIntegerArrayAttrConfinedToShape(*this, offsets, sizes,
                                                     shape, offName, sizesName,
@@ -3262,6 +3327,19 @@ LogicalResult ExtractStridedSliceOp::verify() {
                                                   offsets, sizes, strides);
   if (getResult().getType() != resultType)
     return emitOpError("expected result type to be ") << resultType;
+
+  for (unsigned idx = 0; idx < sizes.size(); ++idx) {
+    if (type.getScalableDims()[idx]) {
+      auto inputDim = type.getShape()[idx];
+      auto inputSize = llvm::cast<IntegerAttr>(sizes[idx]).getInt();
+      if (inputDim != inputSize)
+        return emitOpError("expected size at idx=")
+               << idx
+               << (" to match the corresponding base size from the input "
+                   "vector (")
+               << inputSize << (" vs ") << inputDim << (")");
+    }
+  }
 
   return success();
 }
@@ -4077,10 +4155,15 @@ struct TransferReadAfterWriteToBroadcast
     // final shape we want.
     ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
     SmallVector<int64_t> broadcastShape(destShape.size());
-    for (const auto &pos : llvm::enumerate(permutation))
+    SmallVector<bool> broadcastScalableFlags(destShape.size());
+    for (const auto &pos : llvm::enumerate(permutation)) {
       broadcastShape[pos.value()] = destShape[pos.index()];
+      broadcastScalableFlags[pos.value()] =
+          readOp.getVectorType().getScalableDims()[pos.index()];
+    }
     VectorType broadcastedType = VectorType::get(
-        broadcastShape, defWrite.getVectorType().getElementType());
+        broadcastShape, defWrite.getVectorType().getElementType(),
+        broadcastScalableFlags);
     vec = rewriter.create<vector::BroadcastOp>(loc, broadcastedType, vec);
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec,
@@ -4416,7 +4499,7 @@ public:
         writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
-        rewriter.updateRootInPlace(writeToModify, [&]() {
+        rewriter.modifyOpInPlace(writeToModify, [&]() {
           writeToModify.getSourceMutable().assign(defWrite.getSource());
         });
         return success();
@@ -4533,7 +4616,7 @@ public:
         transferOp.getLoc(), transferOp.getVector(), newExtractOp.getResult(),
         transferOp.getIndices(), transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
-    rewriter.updateRootInPlace(insertOp, [&]() {
+    rewriter.modifyOpInPlace(insertOp, [&]() {
       insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
     });
     return success();

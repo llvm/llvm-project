@@ -343,6 +343,10 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
       LV.merge(getTypeLinkageAndVisibility(Arg.getNullPtrType()));
       continue;
 
+    case TemplateArgument::StructuralValue:
+      LV.merge(getLVForValue(Arg.getAsStructuralValue(), computation));
+      continue;
+
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =
@@ -2461,7 +2465,7 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
 
   // OpenCL permits const integral variables to be used in constant
   // expressions, like in C++98.
-  if (!Lang.CPlusPlus && !Lang.OpenCL)
+  if (!Lang.CPlusPlus && !Lang.OpenCL && !Lang.C23)
     return false;
 
   // Function parameters are never usable in constant expressions.
@@ -2483,14 +2487,19 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   if (!getType().isConstant(C) || getType().isVolatileQualified())
     return false;
 
-  // In C++, const, non-volatile variables of integral or enumeration types
-  // can be used in constant expressions.
-  if (getType()->isIntegralOrEnumerationType())
+  // In C++, but not in C, const, non-volatile variables of integral or
+  // enumeration types can be used in constant expressions.
+  if (getType()->isIntegralOrEnumerationType() && !Lang.C23)
     return true;
 
+  // C23 6.6p7: An identifier that is:
+  // ...
+  // - declared with storage-class specifier constexpr and has an object type,
+  // is a named constant, ... such a named constant is a constant expression
+  // with the type and value of the declared object.
   // Additionally, in C++11, non-volatile constexpr variables can be used in
   // constant expressions.
-  return Lang.CPlusPlus11 && isConstexpr();
+  return (Lang.CPlusPlus11 || Lang.C23) && isConstexpr();
 }
 
 bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
@@ -2568,11 +2577,11 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
                                             IsConstantInitialization);
 
-  // In C++, this isn't a constant initializer if we produced notes. In that
+  // In C++/C23, this isn't a constant initializer if we produced notes. In that
   // case, we can't keep the result, because it may only be correct under the
   // assumption that the initializer is a constant context.
-  if (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus &&
-      !Notes.empty())
+  if (IsConstantInitialization &&
+      (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23) && !Notes.empty())
     Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
@@ -2630,7 +2639,9 @@ bool VarDecl::checkForConstantInitialization(
   // std::is_constant_evaluated()).
   assert(!Eval->WasEvaluated &&
          "already evaluated var value before checking for constant init");
-  assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
+  assert((getASTContext().getLangOpts().CPlusPlus ||
+          getASTContext().getLangOpts().C23) &&
+         "only meaningful in C++/C23");
 
   assert(!getInit()->isValueDependent());
 
@@ -3036,7 +3047,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
   FunctionDeclBits.IsVirtualAsWritten = false;
-  FunctionDeclBits.IsPure = false;
+  FunctionDeclBits.IsPureVirtual = false;
   FunctionDeclBits.HasInheritedPrototype = false;
   FunctionDeclBits.HasWrittenPrototype = true;
   FunctionDeclBits.IsDeleted = false;
@@ -3203,8 +3214,8 @@ void FunctionDecl::setBody(Stmt *B) {
     EndRangeLoc = B->getEndLoc();
 }
 
-void FunctionDecl::setPure(bool P) {
-  FunctionDeclBits.IsPure = P;
+void FunctionDecl::setIsPureVirtual(bool P) {
+  FunctionDeclBits.IsPureVirtual = P;
   if (P)
     if (auto *Parent = dyn_cast<CXXRecordDecl>(getDeclContext()))
       Parent->markedVirtualFunctionPure();
@@ -3533,8 +3544,21 @@ bool FunctionDecl::isTargetMultiVersion() const {
          (hasAttr<TargetAttr>() || hasAttr<TargetVersionAttr>());
 }
 
+bool FunctionDecl::isTargetMultiVersionDefault() const {
+  if (!isMultiVersion())
+    return false;
+  if (hasAttr<TargetAttr>())
+    return getAttr<TargetAttr>()->isDefaultVersion();
+  return hasAttr<TargetVersionAttr>() &&
+         getAttr<TargetVersionAttr>()->isDefaultVersion();
+}
+
 bool FunctionDecl::isTargetClonesMultiVersion() const {
   return isMultiVersion() && hasAttr<TargetClonesAttr>();
+}
+
+bool FunctionDecl::isTargetVersionMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetVersionAttr>();
 }
 
 void
@@ -4472,7 +4496,7 @@ unsigned FunctionDecl::getODRHash() {
   }
 
   class ODRHash Hash;
-  Hash.AddFunctionDecl(this);
+  Hash.AddFunctionDecl(this, /*SkipBody=*/shouldSkipCheckingODR());
   setHasODRHash(true);
   ODRHash = Hash.CalculateHash();
   return ODRHash;
@@ -5025,7 +5049,13 @@ void RecordDecl::completeDefinition() {
 
   // Layouts are dumped when computed, so if we are dumping for all complete
   // types, we need to force usage to get types that wouldn't be used elsewhere.
-  if (Ctx.getLangOpts().DumpRecordLayoutsComplete)
+  //
+  // If the type is dependent, then we can't compute its layout because there
+  // is no way for us to know the size or alignment of a dependent type. Also
+  // ignore declarations marked as invalid since 'getASTRecordLayout()' asserts
+  // on that.
+  if (Ctx.getLangOpts().DumpRecordLayoutsComplete && !isDependentType() &&
+      !isInvalidDecl())
     (void)Ctx.getASTRecordLayout(this);
 }
 
@@ -5369,16 +5399,23 @@ void CapturedDecl::setBody(Stmt *B) { BodyAndNothrow.setPointer(B); }
 bool CapturedDecl::isNothrow() const { return BodyAndNothrow.getInt(); }
 void CapturedDecl::setNothrow(bool Nothrow) { BodyAndNothrow.setInt(Nothrow); }
 
+EnumConstantDecl::EnumConstantDecl(const ASTContext &C, DeclContext *DC,
+                                   SourceLocation L, IdentifierInfo *Id,
+                                   QualType T, Expr *E, const llvm::APSInt &V)
+    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt *)E) {
+  setInitVal(C, V);
+}
+
 EnumConstantDecl *EnumConstantDecl::Create(ASTContext &C, EnumDecl *CD,
                                            SourceLocation L,
                                            IdentifierInfo *Id, QualType T,
                                            Expr *E, const llvm::APSInt &V) {
-  return new (C, CD) EnumConstantDecl(CD, L, Id, T, E, V);
+  return new (C, CD) EnumConstantDecl(C, CD, L, Id, T, E, V);
 }
 
 EnumConstantDecl *
 EnumConstantDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) EnumConstantDecl(nullptr, SourceLocation(), nullptr,
+  return new (C, ID) EnumConstantDecl(C, nullptr, SourceLocation(), nullptr,
                                       QualType(), nullptr, llvm::APSInt());
 }
 
@@ -5515,14 +5552,13 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
 void TopLevelStmtDecl::anchor() {}
 
 TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
-  assert(Statement);
   assert(C.getLangOpts().IncrementalExtensions &&
          "Must be used only in incremental mode");
 
-  SourceLocation BeginLoc = Statement->getBeginLoc();
+  SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, BeginLoc, Statement);
+  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
@@ -5533,6 +5569,12 @@ TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
 
 SourceRange TopLevelStmtDecl::getSourceRange() const {
   return SourceRange(getLocation(), Statement->getEndLoc());
+}
+
+void TopLevelStmtDecl::setStmt(Stmt *S) {
+  assert(S);
+  Statement = S;
+  setLocation(Statement->getBeginLoc());
 }
 
 void EmptyDecl::anchor() {}

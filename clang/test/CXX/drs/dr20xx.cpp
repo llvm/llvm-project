@@ -90,7 +90,7 @@ namespace dr2026 { // dr2026: 11
   }
 }
 
-namespace dr2049 { // dr2049: 18 drafting
+namespace dr2049 { // dr2049: 18 drafting P2308R1
 #if __cplusplus >= 202302L
 template <int* x = {}> struct X {};
 X<> a;
@@ -418,3 +418,5 @@ namespace dr2094 { // dr2094: 5
   static_assert(__is_trivially_assignable(A, const A&), "");
   static_assert(__is_trivially_assignable(B, const B&), "");
 }
+
+// dr2096: dup 2598

@@ -45,7 +45,7 @@ protected:
   struct Pair {
     Block *first, *second;
   };
-  Pair getLastBlocks() {
+  Pair get_last_blocks() {
     if (REVERSE_ORDER)
       return {current, current->next};
     Block *prev = nullptr;
@@ -56,20 +56,20 @@ protected:
     return {curr, prev};
   }
 
-  Block *getLastBlock() { return getLastBlocks().first; }
+  Block *get_last_block() { return get_last_blocks().first; }
 
 public:
   constexpr BlockStore() = default;
   ~BlockStore() = default;
 
-  class iterator {
+  class Iterator {
     Block *block;
     size_t index;
 
   public:
-    constexpr iterator(Block *b, size_t i) : block(b), index(i) {}
+    constexpr Iterator(Block *b, size_t i) : block(b), index(i) {}
 
-    iterator &operator++() {
+    Iterator &operator++() {
       if (REVERSE_ORDER) {
         if (index == 0)
           return *this;
@@ -98,11 +98,11 @@ public:
       return *reinterpret_cast<T *>(block->data + sizeof(T) * true_index);
     }
 
-    bool operator==(const iterator &rhs) const {
+    bool operator==(const Iterator &rhs) const {
       return block == rhs.block && index == rhs.index;
     }
 
-    bool operator!=(const iterator &rhs) const {
+    bool operator!=(const Iterator &rhs) const {
       return block != rhs.block || index != rhs.index;
     }
   };
@@ -138,7 +138,7 @@ public:
   }
 
   T &back() {
-    return *reinterpret_cast<T *>(getLastBlock()->data +
+    return *reinterpret_cast<T *>(get_last_block()->data +
                                   sizeof(T) * (fill_count - 1));
   }
 
@@ -146,7 +146,7 @@ public:
     fill_count--;
     if (fill_count || current == &first)
       return;
-    auto [last, prev] = getLastBlocks();
+    auto [last, prev] = get_last_blocks();
     if (REVERSE_ORDER) {
       LIBC_ASSERT(last == current);
       current = current->next;
@@ -162,18 +162,18 @@ public:
 
   bool empty() const { return current == &first && !fill_count; }
 
-  iterator begin() {
+  Iterator begin() {
     if (REVERSE_ORDER)
-      return iterator(current, fill_count);
+      return Iterator(current, fill_count);
     else
-      return iterator(&first, 0);
+      return Iterator(&first, 0);
   }
 
-  iterator end() {
+  Iterator end() {
     if (REVERSE_ORDER)
-      return iterator(&first, 0);
+      return Iterator(&first, 0);
     else
-      return iterator(current, fill_count);
+      return Iterator(current, fill_count);
   }
 };
 

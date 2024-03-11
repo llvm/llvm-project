@@ -239,11 +239,6 @@ static cl::opt<bool> EnableRedZone("aarch64-redzone",
                                    cl::desc("enable use of redzone on AArch64"),
                                    cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    ReverseCSRRestoreSeq("reverse-csr-restore-seq",
-                         cl::desc("reverse the CSR restore sequence"),
-                         cl::init(false), cl::Hidden);
-
 static cl::opt<bool> StackTaggingMergeSetTag(
     "stack-tagging-merge-settag",
     cl::desc("merge settag instruction in function epilog"), cl::init(true),
@@ -296,7 +291,7 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -306,8 +301,6 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   if (!MF.getFunction().hasMinSize())
     return false;
   if (!EnableHomogeneousPrologEpilog)
-    return false;
-  if (ReverseCSRRestoreSeq)
     return false;
   if (EnableRedZone)
     return false;
@@ -403,13 +396,16 @@ static unsigned getFixedObjectSize(const MachineFunction &MF,
   if (!IsWin64 || IsFunclet) {
     return AFI->getTailCallReservedStack();
   } else {
-    if (AFI->getTailCallReservedStack() != 0)
+    if (AFI->getTailCallReservedStack() != 0 &&
+        !MF.getFunction().getAttributes().hasAttrSomewhere(
+            Attribute::SwiftAsync))
       report_fatal_error("cannot generate ABI-changing tail call for Win64");
     // Var args are stored here in the primary function.
     const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
     // To support EH funclets we allocate an UnwindHelp object
     const unsigned UnwindHelpObject = (MF.hasEHFunclets() ? 8 : 0);
-    return alignTo(VarArgsArea + UnwindHelpObject, 16);
+    return AFI->getTailCallReservedStack() +
+           alignTo(VarArgsArea + UnwindHelpObject, 16);
   }
 }
 
@@ -1013,7 +1009,7 @@ static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
 // but we would then have to make sure that we were in fact saving at least one
 // callee-save register in the prologue, which is additional complexity that
 // doesn't seem worth the benefit.
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
@@ -1058,9 +1054,15 @@ bool AArch64FrameLowering::canUseAsPrologue(
       return false;
   }
 
+  // Certain stack probing sequences might clobber flags, then we can't use
+  // the block as a prologue if the flags register is a live-in.
+  if (MF->getInfo<AArch64FunctionInfo>()->hasStackProbing() &&
+      MBB.isLiveIn(AArch64::NZCV))
+    return false;
+
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.
-  if (!RegInfo->hasStackRealignment(*MF) && TLI->hasInlineStackProbe(*MF))
+  if (!RegInfo->hasStackRealignment(*MF) && !TLI->hasInlineStackProbe(*MF))
     return true;
   // Otherwise, we can use any block as long as it has a scratch register
   // available.
@@ -1281,6 +1283,30 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
               .setMIFlag(Flag);
     break;
   }
+  case AArch64::STPQi:
+  case AArch64::LDPQi: {
+    unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
+    unsigned Reg1 = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQP))
+              .addImm(Reg0)
+              .addImm(Reg1)
+              .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
+  case AArch64::LDPQpost:
+    Imm = -Imm;
+    LLVM_FALLTHROUGH;
+  case AArch64::STPQpre: {
+    unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+    unsigned Reg1 = RegInfo->getSEHRegNum(MBBI->getOperand(2).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQPX))
+              .addImm(Reg0)
+              .addImm(Reg1)
+              .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
   }
   auto I = MBB->insertAfter(MBBI, MIB);
   return I;
@@ -1299,6 +1325,8 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveReg:
   case AArch64::SEH_SaveFRegP:
   case AArch64::SEH_SaveFReg:
+  case AArch64::SEH_SaveAnyRegQP:
+  case AArch64::SEH_SaveAnyRegQPX:
     ImmOpnd = &MBBI->getOperand(ImmIdx);
     break;
   }
@@ -3082,7 +3110,27 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
-  auto EmitMI = [&](const RegPairInfo &RPI) -> MachineBasicBlock::iterator {
+  if (homogeneousPrologEpilog(MF, &MBB)) {
+    auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
+                   .setMIFlag(MachineInstr::FrameDestroy);
+    for (auto &RPI : RegPairs) {
+      MIB.addReg(RPI.Reg1, RegState::Define);
+      MIB.addReg(RPI.Reg2, RegState::Define);
+    }
+    return true;
+  }
+
+  // For performance reasons restore SVE register in increasing order
+  auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
+  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+  auto PPREnd = std::find_if_not(PPRBegin, RegPairs.end(), IsPPR);
+  std::reverse(PPRBegin, PPREnd);
+  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
+  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+  auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
+  std::reverse(ZPRBegin, ZPREnd);
+
+  for (const RegPairInfo &RPI : RegPairs) {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
 
@@ -3156,42 +3204,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
         MachineMemOperand::MOLoad, Size, Alignment));
     if (NeedsWinCFI)
       InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
-
-    return MIB->getIterator();
-  };
-
-  // SVE objects are always restored in reverse order.
-  for (const RegPairInfo &RPI : reverse(RegPairs))
-    if (RPI.isScalable())
-      EmitMI(RPI);
-
-  if (homogeneousPrologEpilog(MF, &MBB)) {
-    auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
-                   .setMIFlag(MachineInstr::FrameDestroy);
-    for (auto &RPI : RegPairs) {
-      MIB.addReg(RPI.Reg1, RegState::Define);
-      MIB.addReg(RPI.Reg2, RegState::Define);
-    }
-    return true;
-  }
-
-  if (ReverseCSRRestoreSeq) {
-    MachineBasicBlock::iterator First = MBB.end();
-    for (const RegPairInfo &RPI : reverse(RegPairs)) {
-      if (RPI.isScalable())
-        continue;
-      MachineBasicBlock::iterator It = EmitMI(RPI);
-      if (First == MBB.end())
-        First = It;
-    }
-    if (First != MBB.end())
-      MBB.splice(MBBI, &MBB, First);
-  } else {
-    for (const RegPairInfo &RPI : RegPairs) {
-      if (RPI.isScalable())
-        continue;
-      (void)EmitMI(RPI);
-    }
   }
 
   return true;
@@ -4313,8 +4325,10 @@ AArch64FrameLowering::inlineStackProbeLoopExactMultiple(
   ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
   MBB.addSuccessor(LoopMBB);
   // Update liveins.
-  recomputeLiveIns(*LoopMBB);
-  recomputeLiveIns(*ExitMBB);
+  bool anyChange = false;
+  do {
+    anyChange = recomputeLiveIns(*ExitMBB) || recomputeLiveIns(*LoopMBB);
+  } while (anyChange);
 
   return ExitMBB->begin();
 }

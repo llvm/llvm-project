@@ -232,7 +232,7 @@ define ptr @test8(ptr %A, i1 %b) {
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
 BB0:
@@ -1735,7 +1735,7 @@ define i1 @pr57488_icmp_of_phi(ptr %ptr.base, i64 %len) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ACCUM:%.*]] = phi i1 [ [[AND:%.*]], [[LOOP]] ], [ true, [[START:%.*]] ]
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LOOP]] ], [ [[PTR_BASE]], [[START]] ]
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR]], align 8
 ; CHECK-NEXT:    [[VAL_ZERO:%.*]] = icmp eq i64 [[VAL]], 0
 ; CHECK-NEXT:    [[AND]] = and i1 [[ACCUM]], [[VAL_ZERO]]

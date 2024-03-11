@@ -7,10 +7,24 @@ endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-# `llvm-project/llvm/CMakeLists.txt` adds the following directive
-# `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
-# We undo it to be able to precisely control what is getting included.
-set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
+if (LIBC_CMAKE_VERBOSE_LOGGING)
+  get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
+  foreach(OLD_DEF ${LIBC_OLD_PREPROCESSOR_DEFS})
+    message(STATUS "Undefining ${OLD_DEF}")
+  endforeach()
+endif()
+set_directory_properties(PROPERTIES
+  # `llvm-project/llvm/CMakeLists.txt` adds the following directive
+  # `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})` We
+  # undo it to be able to precisely control what is getting included.
+  INCLUDE_DIRECTORIES ""
+  # `llvm/cmake/modules/HandleLLVMOptions.cmake` uses `add_compile_definitions`
+  # to set a few preprocessor defines which we do not want.
+  COMPILE_DEFINITIONS ""
+)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_definitions("-D_DEBUG")
+endif()
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -25,33 +39,53 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
 # Defining a global namespace to enclose all libc functions.
-set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}"
+set(default_namespace "__llvm_libc")
+if(LLVM_VERSION_MAJOR)
+  set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}")
+endif()
+set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
     add_subdirectory(utils/LibcTableGenUtil)
     add_subdirectory(utils/HdrGen)
+    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
+    # PARENT_SCOPE which get lost until saved in the cache.
+    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
+    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
   else()
     message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
   endif()
 endif()
+# We will build the GPU utilities if we are not doing a runtimes build.
+if(LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD)
+  add_subdirectory(utils/gpu)
+endif()
 
+set(NEED_LIBC_HDRGEN FALSE)
+if(NOT LLVM_RUNTIMES_BUILD)
+  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(NEED_LIBC_HDRGEN TRUE)
+  else()
+    foreach(_name ${LLVM_RUNTIME_TARGETS})
+      if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+        set(NEED_LIBC_HDRGEN TRUE)
+        break()
+      endif()
+    endforeach()
+  endif()
+endif()
 option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
-if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR 
-   LIBC_HDRGEN_ONLY)
+if(LIBC_HDRGEN_ONLY OR NEED_LIBC_HDRGEN)
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
-
-  # Always make the RPC server availible to other projects for GPU mode.
-  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
-    add_subdirectory(utils/gpu/server)
-  endif()
   return()
 endif()
+unset(NEED_LIBC_HDRGEN)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
@@ -87,7 +121,7 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  if (LIBC_TARGET_OS_IS_GPU)
     message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
   else()
     set(COMPILER_RESOURCE_DIR OFF)
@@ -131,7 +165,7 @@ elseif(LIBC_CMAKE_VERBOSE_LOGGING)
   message(STATUS "Path for config files is: ${LIBC_CONFIG_PATH}")
 endif()
 
-# option(LIBC_ENABLE_WIDE_CHARACTERS 
+# option(LIBC_ENABLE_WIDE_CHARACTERS
 # "Whether to enable wide character functions on supported platforms. This may
 # also set flags to enable or disable wide character support within other
 # functions (e.g. printf)." ON)
@@ -185,11 +219,7 @@ foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
   load_libc_config(${config_path}/config.json ${cmd_line_conf})
 endforeach()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm)
-  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
   set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -204,10 +234,29 @@ else()
     set(LIBC_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
     set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
-  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+  if(LIBC_TARGET_OS_IS_GPU)
+    if(LLVM_RUNTIMES_TARGET)
+      set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_RUNTIMES_TARGET})
+    elseif(LIBC_TARGET_TRIPLE)
+      set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LIBC_TARGET_TRIPLE})
+    else()
+      set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+    endif()
+  else()
+    set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+  endif()
 endif()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_TRIPLE)
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBC_TARGET_TRIPLE})
+elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(LIBC_INSTALL_LIBRARY_DIR
+      lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
+else()
+  set(LIBC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX})
+endif()
+
+if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
@@ -322,26 +371,13 @@ set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(FIND ${entrypoint} "." last_dot_loc REVERSE)
   if(${last_dot_loc} EQUAL -1)
-    message(FATAL "Invalid entrypoint target name ${entrypoint}; Expected a '.' "
-                  "(dot) in the name.")
+    message(FATAL_ERROR "Invalid entrypoint target name ${entrypoint}; Expected"
+                        " a '.' (dot) in the name.")
   endif()
   math(EXPR name_loc "${last_dot_loc} + 1")
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
-
-set(LIBC_INSTALL_DEPENDS)
-if(LLVM_LIBC_FULL_BUILD)
-  set(LIBC_INSTALL_DEPENDS "install-libc-static-archives;install-libc-headers")
-  if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
-    # For now we will disable libc-startup installation for baremetal. The
-    # correct way to do it would be to make a hookable startup for baremetal
-    # and install it as part of the libc installation.
-    list(APPEND LIBC_INSTALL_DEPENDS "libc-startup")
-  endif()
-else()
-  set(LIBC_INSTALL_DEPENDS install-libc-static-archives)
-endif()
 
 add_subdirectory(include)
 add_subdirectory(config)
@@ -370,18 +406,3 @@ endif()
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
-
-
-if(LLVM_LIBC_FULL_BUILD)
-  add_llvm_install_targets(
-    install-libc-headers
-    DEPENDS libc-headers
-    COMPONENT libc-headers
-  )
-endif()
-
-add_llvm_install_targets(
-  install-libc
-  DEPENDS ${LIBC_INSTALL_DEPENDS}
-  COMPONENT libc
-)

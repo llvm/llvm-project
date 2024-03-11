@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -verify=expected,ext -Wundef -DTRIGRAPHS=1
-// RUN: %clang_cc1 %s -fsyntax-only -std=c2x -pedantic -verify=expected,ext -Wundef -DTRIGRAPHS=1
+// RUN: %clang_cc1 %s -fsyntax-only -std=c23 -pedantic -verify=expected,ext -Wundef -ftrigraphs -DTRIGRAPHS=1
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -fno-trigraphs
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++23 -pedantic -ftrigraphs -DTRIGRAPHS=1 -verify=expected,cxx23 -Wundef -Wpre-c++23-compat
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -ftrigraphs -DTRIGRAPHS=1

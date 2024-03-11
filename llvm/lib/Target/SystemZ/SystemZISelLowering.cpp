@@ -340,6 +340,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SHL_I128, nullptr);
   setLibcallName(RTLIB::SRA_I128, nullptr);
 
+  // Also expand 256 bit shifts if i128 is a legal type.
+  if (isTypeLegal(MVT::i128)) {
+    setOperationAction(ISD::SRL_PARTS, MVT::i128, Expand);
+    setOperationAction(ISD::SHL_PARTS, MVT::i128, Expand);
+    setOperationAction(ISD::SRA_PARTS, MVT::i128, Expand);
+  }
+
   // Handle bitcast from fp128 to i128.
   if (!isTypeLegal(MVT::i128))
     setOperationAction(ISD::BITCAST, MVT::i128, Custom);
@@ -1060,7 +1067,8 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!isInt<20>(AM.BaseOffs))
     return false;
 
-  bool RequireD12 = Subtarget.hasVector() && Ty->isVectorTy();
+  bool RequireD12 =
+      Subtarget.hasVector() && (Ty->isVectorTy() || Ty->isIntegerTy(128));
   AddressingMode SupportedAM(!RequireD12, true);
   if (I != nullptr)
     SupportedAM = supportedAddressingMode(I, Subtarget.hasVector());
@@ -1294,7 +1302,7 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   }
-  if (Constraint.size() > 0 && Constraint[0] == '{') {
+  if (Constraint.starts_with("{")) {
 
     // A clobber constraint (e.g. ~{f0}) will have MVT::Other which is illegal
     // to check the size on.
@@ -1915,7 +1923,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
         unsigned N = getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
         SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
       } else {
-        SlotVT = Outs[I].ArgVT;
+        SlotVT = Outs[I].VT;
       }
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
@@ -6039,8 +6047,7 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
   SDLoc DL(Op);
   MVT ResultVT = Op.getSimpleValueType();
   SDValue Arg = Op.getOperand(0);
-  auto CNode = cast<ConstantSDNode>(Op.getOperand(1));
-  unsigned Check = CNode->getZExtValue();
+  unsigned Check = Op.getConstantOperandVal(1);
 
   unsigned TDCMask = 0;
   if (Check & fcSNan)
@@ -9431,11 +9438,11 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitTransactionBegin(MI, MBB, SystemZ::TBEGIN, true);
   case SystemZ::TBEGINC:
     return emitTransactionBegin(MI, MBB, SystemZ::TBEGINC, true);
-  case SystemZ::LTEBRCompare_VecPseudo:
+  case SystemZ::LTEBRCompare_Pseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTEBR);
-  case SystemZ::LTDBRCompare_VecPseudo:
+  case SystemZ::LTDBRCompare_Pseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTDBR);
-  case SystemZ::LTXBRCompare_VecPseudo:
+  case SystemZ::LTXBRCompare_Pseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTXBR);
 
   case SystemZ::PROBED_ALLOCA:

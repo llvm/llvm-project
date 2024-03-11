@@ -367,14 +367,14 @@ define <4 x i32> @vec_add_const_const_sub_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_add_const_const_sub_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_add_const_const_sub_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = <4294967277,u,u,4294967290>
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [4294967277,u,u,4294967290]
 ; X86-NEXT:    psubd %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_add_const_const_sub_nonsplat:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = <4294967277,u,u,4294967290>
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [4294967277,u,u,4294967290]
 ; X64-NEXT:    psubd %xmm0, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -733,14 +733,14 @@ define <4 x i32> @vec_sub_const_const_sub_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_sub_const_const_sub_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_sub_const_const_sub_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = <23,u,u,10>
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [23,u,u,10]
 ; X86-NEXT:    psubd %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_sub_const_const_sub_nonsplat:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = <23,u,u,10>
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [23,u,u,10]
 ; X64-NEXT:    psubd %xmm0, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -867,14 +867,14 @@ define <4 x i32> @vec_const_sub_add_const_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_const_sub_add_const_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_const_sub_add_const_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = <23,u,u,10>
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [23,u,u,10]
 ; X86-NEXT:    psubd %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_sub_add_const_nonsplat:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = <23,u,u,10>
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [23,u,u,10]
 ; X64-NEXT:    psubd %xmm0, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -1001,14 +1001,14 @@ define <4 x i32> @vec_const_sub_sub_const_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_const_sub_sub_const_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_const_sub_sub_const_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = <19,u,u,6>
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [19,u,u,6]
 ; X86-NEXT:    psubd %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_sub_sub_const_nonsplat:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = <19,u,u,6>
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [19,u,u,6]
 ; X64-NEXT:    psubd %xmm0, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq

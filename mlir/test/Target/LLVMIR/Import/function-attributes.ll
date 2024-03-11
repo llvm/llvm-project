@@ -220,6 +220,39 @@ define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
 
 // -----
 
+; CHECK-LABEL: @arm_new_za_func
+; CHECK-SAME: attributes {arm_new_za}
+define void @arm_new_za_func() "aarch64_new_za" {
+  ret void
+}
+
+
+; CHECK-LABEL: @arm_in_za_func
+; CHECK-SAME: attributes {arm_in_za}
+define void @arm_in_za_func() "aarch64_in_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_out_za_func
+; CHECK-SAME: attributes {arm_out_za}
+define void @arm_out_za_func() "aarch64_out_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_inout_za_func
+; CHECK-SAME: attributes {arm_inout_za}
+define void @arm_inout_za_func() "aarch64_inout_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_preserves_za_func
+; CHECK-SAME: attributes {arm_preserves_za}
+define void @arm_preserves_za_func() "aarch64_preserves_za" {
+  ret void
+}
+
+// -----
+
 ; CHECK-LABEL: @section_func
 ; CHECK-SAME: attributes {section = ".section.name"}
 define void @section_func() section ".section.name" {
@@ -251,3 +284,63 @@ define void @align_func() align 2 {
 ; CHECK-LABEL: @align_decl
 ; CHECK-SAME: attributes {alignment = 64 : i64}
 declare void @align_decl() align 64
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math_true
+; CHECK-SAME: attributes {unsafe_fp_math = true}
+declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math_false
+; CHECK-SAME: attributes {unsafe_fp_math = false}
+declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math_true
+; CHECK-SAME: attributes {no_infs_fp_math = true}
+declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math_false
+; CHECK-SAME: attributes {no_infs_fp_math = false}
+declare void @func_attr_no_infs_fp_math_false() "no-infs-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math_true
+; CHECK-SAME: attributes {no_nans_fp_math = true}
+declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math_false
+; CHECK-SAME: attributes {no_nans_fp_math = false}
+declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math_true
+; CHECK-SAME: attributes {approx_func_fp_math = true}
+declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math_false
+; CHECK-SAME: attributes {approx_func_fp_math = false}
+declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_false
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = false}
+declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math"="false"

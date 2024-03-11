@@ -18,10 +18,6 @@
 #include <limits>
 #include <string>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
-#undef HUGE
-
 namespace llvm {
 class raw_ostream;
 }
@@ -170,8 +166,8 @@ public:
   // DIM(X,Y) = MAX(X-Y, 0)
   ValueWithRealFlags<Real> DIM(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
-  // MOD(x,y) = x - AINT(x/y)*y
-  // MODULO(x,y) = x - FLOOR(x/y)*y
+  // MOD(x,y) = x - AINT(x/y)*y (in the standard)
+  // MODULO(x,y) = x - FLOOR(x/y)*y (in the standard)
   ValueWithRealFlags<Real> MOD(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,

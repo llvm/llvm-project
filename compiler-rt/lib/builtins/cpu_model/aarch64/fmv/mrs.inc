@@ -109,6 +109,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SME_I64);
   if (hwcap2 & HWCAP2_SME_F64F64)
     setCPUFeature(FEAT_SME_F64);
+  if (hwcap2 & HWCAP2_MOPS)
+    setCPUFeature(FEAT_MOPS);
   if (hwcap & HWCAP_CPUID) {
     unsigned long ftr;
     getCPUFeature(ID_AA64PFR1_EL1, ftr);

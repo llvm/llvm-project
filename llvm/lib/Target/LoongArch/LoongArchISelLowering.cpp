@@ -265,6 +265,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
+    }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
@@ -306,6 +310,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction(
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
+    }
+    for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -960,6 +968,28 @@ static SDValue checkIntrinsicImmArg(SDValue Op, unsigned ImmOp,
   return SDValue();
 }
 
+static SDValue checkAndModifyXVPERMI_QIntrinsicImmArg(SDValue Op,
+                                                      SelectionDAG &DAG) {
+  SDValue Op3 = Op->getOperand(3);
+  uint64_t Imm = Op3->getAsZExtVal();
+  // Check the range of ImmArg.
+  if (!isUInt<8>(Imm)) {
+    DAG.getContext()->emitError(Op->getOperationName(0) +
+                                ": argument out of range.");
+    return DAG.getNode(ISD::UNDEF, SDLoc(Op), Op.getValueType());
+  }
+
+  // For instruction xvpermi.q, only [1:0] and [5:4] bits of operands[3]
+  // are used. The unused bits in operands[3] need to be set to 0 to avoid
+  // causing undefined behavior on LA464.
+  if ((Imm & 0x33) != Imm) {
+    Op3 = DAG.getTargetConstant(Imm & 0x33, SDLoc(Op), Op3.getValueType());
+    DAG.UpdateNodeOperands(Op.getNode(), Op->getOperand(0), Op->getOperand(1),
+                           Op->getOperand(2), Op3);
+  }
+  return SDValue();
+}
+
 SDValue
 LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
@@ -1217,13 +1247,14 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vextrins_d:
   case Intrinsic::loongarch_lasx_xvshuf4i_d:
   case Intrinsic::loongarch_lasx_xvpermi_w:
-  case Intrinsic::loongarch_lasx_xvpermi_q:
   case Intrinsic::loongarch_lasx_xvbitseli_b:
   case Intrinsic::loongarch_lasx_xvextrins_b:
   case Intrinsic::loongarch_lasx_xvextrins_h:
   case Intrinsic::loongarch_lasx_xvextrins_w:
   case Intrinsic::loongarch_lasx_xvextrins_d:
     return checkIntrinsicImmArg<8>(Op, 3, DAG);
+  case Intrinsic::loongarch_lasx_xvpermi_q:
+    return checkAndModifyXVPERMI_QIntrinsicImmArg(Op, DAG);
   case Intrinsic::loongarch_lsx_vrepli_b:
   case Intrinsic::loongarch_lsx_vrepli_h:
   case Intrinsic::loongarch_lsx_vrepli_w:
@@ -2335,7 +2366,9 @@ Retry:
     return DAG.getNode(
         LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
         DAG.getConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
-        DAG.getConstant((MaskIdx0 + MaskLen0 - 1), DL, GRLenVT),
+        DAG.getConstant(ValBits == 32 ? (MaskIdx0 + (MaskLen0 & 31) - 1)
+                                      : (MaskIdx0 + MaskLen0 - 1),
+                        DL, GRLenVT),
         DAG.getConstant(MaskIdx0, DL, GRLenVT));
   }
 
@@ -4931,4 +4964,9 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return !isa<ConstantSDNode>(Y);
+}
+
+ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
+  // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
+  return ISD::SIGN_EXTEND;
 }

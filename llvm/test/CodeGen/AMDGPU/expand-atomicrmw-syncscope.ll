@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}expand_atomicrmw_agent:
 ; GCN: global_atomic_cmpswap v{{[0-9]+}}, v[{{[0-9:]+}}], v[{{[0-9:]+}}], off glc{{$}}

@@ -31,7 +31,7 @@ public:
   void createDIETree(BumpPtrAllocator &Allocator);
 
   /// Emits resulting dwarf based on information from DIE tree.
-  Error finishCloningAndEmit(std::optional<Triple> TargetTriple);
+  Error finishCloningAndEmit(const Triple &TargetTriple);
 
   /// Returns global type pool.
   TypePool &getTypePool() { return Types; }

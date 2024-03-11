@@ -66,6 +66,7 @@ protected:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78AE,
     CortexA78C,
     CortexA710,
     CortexA8,
@@ -132,6 +133,7 @@ protected:
     ARMv92a,
     ARMv93a,
     ARMv94a,
+    ARMv95a,
   };
 
 public:
@@ -276,6 +278,13 @@ public:
   const ARMBaseRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo->getRegisterInfo();
   }
+
+  /// The correct instructions have been implemented to initialize undef
+  /// registers, therefore the ARM Architecture is supported by the Init Undef
+  /// Pass. This will return true as the pass needs to be supported for all
+  /// types of instructions. The pass will then perform more checks to ensure it
+  /// should be applying the Pseudo Instructions.
+  bool supportsInitUndef() const override { return true; }
 
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;

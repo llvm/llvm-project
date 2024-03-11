@@ -69,7 +69,6 @@ Information about LLVM's development process.
 
    Projects
    HowToReleaseLLVM
-   Packaging
    ReleaseProcess
    HowToAddABuilder
    ReleaseNotes
@@ -88,9 +87,6 @@ Information about LLVM's development process.
 
 :doc:`HowToAddABuilder`
    Instructions for adding new builder to LLVM buildbot master.
-
-:doc:`Packaging`
-   Advice on packaging LLVM into a distribution.
 
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
@@ -219,7 +215,7 @@ what to add to your calendar invite.
      - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
    * - LLVM SPIR-V Backend Working Group
-     - Every week on Thursday
+     - Every week on Monday
      -
      - `Meeting details/agenda <https://docs.google.com/document/d/1UjX-LAwPjJ75Nmb8a5jz-Qrm-pPtKtQw0k1S1Lop9jU/edit?usp=sharing>`__
    * - SYCL Upstream Working Group
@@ -230,6 +226,10 @@ what to add to your calendar invite.
      - Every 2nd Tuesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
+   * - Floating Point Working Group
+     - Every 3rd Wednesday of the month
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
 
 .. _office-hours:
 
@@ -241,10 +241,11 @@ on a regular schedule, to anyone who is looking for some guidance. Please find
 the list of who is available when, through which medium, and what their area of
 expertise is. Don't be too shy to dial in!
 
-The :doc:`CodeOfConduct` applies to all office hours.
+Office hours are also listed on the :ref:`llvm-community-calendar`. Of course,
+people take time off from time to time, so if you dial in and you don't find
+anyone present, chances are they happen to be off that day.
 
-Of course, people take time off from time to time, so if you dial in and you
-don't find anyone present, chances are they happen to be off that day.
+The :doc:`CodeOfConduct` applies to all office hours.
 
 .. list-table:: LLVM office hours
   :widths: 15 40 15 15 15
@@ -304,11 +305,6 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
     - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
     - English, Russian
-  * - Michal Paszkowski
-    - SPIR-V backend, IGC, OpenCL, and IR transformations
-    - Monthly, 3rd Thursday of the month at 21:00 Warsaw/Poland time, 1 hour slot.
-    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_ODRmN2UwYTgtODdiOS00N2VkLTgxZjgtNDUxYjI3YmNkM2Ri%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%220c2b140d-8412-4963-a118-0f7534426b65%22%7d>`__
-    - English, Polish
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
       Register allocation, etc.); Optimizations; MCA
@@ -326,6 +322,11 @@ don't find anyone present, chances are they happen to be off that day.
     - GlobalISel questions.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
+    - English
+  * - Rotating hosts
+    - Getting Started, beginner questions, new contributors.
+    - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.
+    - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
     - English
 
 
@@ -442,6 +443,11 @@ also be seen inline below:
 .. raw:: html
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+
+Note that the web view of the LLVM community calendar shows events in
+Coordinated Universal Time (UTC). If you use Google Calendar, consider
+subscribing to it with the + button in the bottom-right corner to view all
+events in your local timezone alongside your other calendars.
 
 .. _llvm-community-calendar-host-guidance:
 

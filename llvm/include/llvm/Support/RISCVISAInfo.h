@@ -18,17 +18,18 @@
 #include <vector>
 
 namespace llvm {
-struct RISCVExtensionInfo {
-  unsigned MajorVersion;
-  unsigned MinorVersion;
-};
-
 void riscvExtensionsHelp(StringMap<StringRef> DescMap);
 
 class RISCVISAInfo {
 public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
   RISCVISAInfo &operator=(const RISCVISAInfo &) = delete;
+
+  /// Represents the major and version number components of a RISC-V extension.
+  struct ExtensionVersion {
+    unsigned Major;
+    unsigned Minor;
+  };
 
   static bool compareExtension(const std::string &LHS, const std::string &RHS);
 
@@ -41,7 +42,7 @@ public:
 
   /// OrderedExtensionMap is std::map, it's specialized to keep entries
   /// in canonical order of extension.
-  typedef std::map<std::string, RISCVExtensionInfo, ExtensionComparator>
+  typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
       OrderedExtensionMap;
 
   RISCVISAInfo(unsigned XLen, OrderedExtensionMap &Exts)
@@ -71,10 +72,10 @@ public:
   std::vector<std::string> toFeatures(bool AddAllExtensions = false,
                                       bool IgnoreUnknown = true) const;
 
-  const OrderedExtensionMap &getExtensions() const { return Exts; };
+  const OrderedExtensionMap &getExtensions() const { return Exts; }
 
-  unsigned getXLen() const { return XLen; };
-  unsigned getFLen() const { return FLen; };
+  unsigned getXLen() const { return XLen; }
+  unsigned getFLen() const { return FLen; }
   unsigned getMinVLen() const { return MinVLen; }
   unsigned getMaxVLen() const { return 65536; }
   unsigned getMaxELen() const { return MaxELen; }
@@ -104,8 +105,7 @@ private:
 
   OrderedExtensionMap Exts;
 
-  void addExtension(StringRef ExtName, unsigned MajorVersion,
-                    unsigned MinorVersion);
+  void addExtension(StringRef ExtName, ExtensionVersion Version);
 
   Error checkDependency();
 

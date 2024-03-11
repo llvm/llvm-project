@@ -742,20 +742,15 @@ int main(int argc, char **argv) {
   // In the latter case, the general rule of thumb is to choose the value that
   // provides the most information.
   DumpInputValue DumpInput =
-      DumpInputs.empty()
-          ? DumpInputFail
-          : *std::max_element(DumpInputs.begin(), DumpInputs.end());
+      DumpInputs.empty() ? DumpInputFail : *llvm::max_element(DumpInputs);
   DumpInputFilterValue DumpInputFilter;
   if (DumpInputFilters.empty())
     DumpInputFilter = DumpInput == DumpInputAlways ? DumpInputFilterAll
                                                    : DumpInputFilterError;
   else
-    DumpInputFilter =
-        *std::max_element(DumpInputFilters.begin(), DumpInputFilters.end());
-  unsigned DumpInputContext = DumpInputContexts.empty()
-                                  ? 5
-                                  : *std::max_element(DumpInputContexts.begin(),
-                                                      DumpInputContexts.end());
+    DumpInputFilter = *llvm::max_element(DumpInputFilters);
+  unsigned DumpInputContext =
+      DumpInputContexts.empty() ? 5 : *llvm::max_element(DumpInputContexts);
 
   if (DumpInput == DumpInputHelp) {
     DumpInputAnnotationHelp(outs());

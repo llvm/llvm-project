@@ -12,7 +12,9 @@ unittest("ClangReplInterpreterTests") {
   ]
   sources = [
     "CodeCompletionTest.cpp",
+    "IncrementalCompilerBuilderTest.cpp",
     "IncrementalProcessingTest.cpp",
+    "InterpreterExtensionsTest.cpp",
     "InterpreterTest.cpp",
   ]
 

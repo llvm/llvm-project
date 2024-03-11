@@ -66,7 +66,7 @@ public:
 
   template <class LP> void run();
 
-  ThreadPool threadPool;
+  DefaultThreadPool threadPool;
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
@@ -720,6 +720,7 @@ static void addNonWeakDefinition(const Defined *defined) {
 
 void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
+  in.objcSelRefs->initialize();
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
@@ -736,8 +737,16 @@ void Writer::scanSymbols() {
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->getRefState());
     } else if (isa<Undefined>(sym)) {
-      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
+      if (ObjCStubsSection::isObjCStubSymbol(sym)) {
+        // When -dead_strip is enabled, we don't want to emit any dead stubs.
+        // Although this stub symbol is yet undefined, addSym() was called
+        // during MarkLive.
+        if (config->deadStrip) {
+          if (!sym->isLive())
+            continue;
+        }
         in.objcStubs->addEntry(sym);
+      }
     }
   }
 
@@ -1350,6 +1359,7 @@ void macho::createSyntheticSections() {
   in.got = make<GotSection>();
   in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
+  in.objcSelRefs = make<ObjCSelRefsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
