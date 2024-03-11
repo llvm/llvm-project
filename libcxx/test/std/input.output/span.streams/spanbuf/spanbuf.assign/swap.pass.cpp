@@ -18,7 +18,6 @@
 //     void swap(basic_spanbuf& rhs);
 
 #include <cassert>
-#include <concepts>
 #include <span>
 #include <spanstream>
 
