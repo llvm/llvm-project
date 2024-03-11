@@ -2665,8 +2665,8 @@ def : InstRW<[SPRWriteResGroup258, ReadAfterVecYLd], (instregex "^VALIGN(D|Q)Z((
                                                                 "^VPUNPCK(H|L)(BW|WD)Zrmk(z?)$")>;
 def : InstRW<[SPRWriteResGroup258, ReadAfterVecYLd], (instrs VPCMPGTQYrm)>;
 def : InstRW<[SPRWriteResGroup258, ReadAfterVecXLd], (instregex "^VPALIGNRZ128rmik(z?)$",
-                                                                "^VPCLMULQDQ(Y|Z)rm$")>;
-def : InstRW<[SPRWriteResGroup258, ReadAfterVecXLd], (instrs VPCLMULQDQZ256rm)>;
+                                                                "^VPCLMULQDQ(Y|Z)rmi$")>;
+def : InstRW<[SPRWriteResGroup258, ReadAfterVecXLd], (instrs VPCLMULQDQZ256rmi)>;
 
 def SPRWriteResGroup259 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11]> {
   let ReleaseAtCycles = [3, 1];
