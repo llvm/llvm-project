@@ -89,9 +89,8 @@ template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
                                   bool fromFDE) {
-  Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
-
   // If a symbol is referenced in a live section, it is used.
+  Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
