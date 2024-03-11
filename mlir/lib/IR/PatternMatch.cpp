@@ -122,7 +122,7 @@ void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
     rewriteListener->notifyOperationReplaced(op, newValues);
 
   // Replace all result uses. Also notifies the listener of modifications.
-  replaceAllUsesWith(op, newValues);
+  replaceAllOpUsesWith(op, newValues);
 
   // Erase op and notify listener.
   eraseOp(op);
@@ -141,7 +141,7 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
     rewriteListener->notifyOperationReplaced(op, newOp);
 
   // Replace all result uses. Also notifies the listener of modifications.
-  replaceAllUsesWith(op, newOp->getResults());
+  replaceAllOpUsesWith(op, newOp->getResults());
 
   // Erase op and notify listener.
   eraseOp(op);
