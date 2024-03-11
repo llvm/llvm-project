@@ -478,9 +478,6 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &S,
                                      const TargetMachine &TM,
                                      const MachineOperand &MO) {
   CodeModel::Model ModuleModel = TM.getCodeModel();
-  // Per global code model is only supported on AIX.
-  if (!S.isAIXABI())
-    return ModuleModel;
 
   // If the operand is not a global address then there is no
   // global variable to carry an attribute.
@@ -490,24 +487,7 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &S,
   const GlobalValue *GV = MO.getGlobal();
   assert(GV && "expected global for MO_GlobalAddress");
 
-  if (!isa<GlobalVariable>(GV))
-    return ModuleModel;
-
-  std::optional<CodeModel::Model> MaybeCodeModel =
-      cast<GlobalVariable>(GV)->getCodeModel();
-  if (MaybeCodeModel)
-    return *MaybeCodeModel;
-
-  return ModuleModel;
-}
-
-static std::optional<CodeModel::Model>
-getPerGlobalCodeModel(const GlobalValue *GV) {
-  // Symbols that aren't global variables cannot have the attribute.
-  if (!isa<GlobalVariable>(GV))
-    return std::nullopt;
-
-  return cast<GlobalVariable>(GV)->getCodeModel();
+  return S.getCodeModel(TM, GV);
 }
 
 static void setOptionalCodeModel(MCSymbolXCOFF *XSym, CodeModel::Model CM) {
@@ -772,11 +752,8 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
 static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
                                            AsmPrinter &AP) {
   switch (MO.getType()) {
-  case MachineOperand::MO_GlobalAddress: {
-    const GlobalValue *GV = MO.getGlobal();
-    MCSymbol *Sym = AP.getSymbol(GV);
-    return Sym;
-  }
+  case MachineOperand::MO_GlobalAddress:
+    return AP.getSymbol(MO.getGlobal());
   case MachineOperand::MO_ConstantPoolIndex:
     return AP.GetCPISymbol(MO.getIndex());
   case MachineOperand::MO_JumpTableIndex:
@@ -3043,8 +3020,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     }
 
     setCsectAlignment(&G);
-    std::optional<CodeModel::Model> OptionalCodeModel =
-        getPerGlobalCodeModel(&G);
+    std::optional<CodeModel::Model> OptionalCodeModel = G.getCodeModel();
     if (OptionalCodeModel)
       setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&G)),
                            *OptionalCodeModel);
@@ -3067,6 +3043,15 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
                              " is invalid because " + Aliasee->getName() +
                              " is common.",
                          false);
+    }
+
+    const GlobalVariable *GVar =
+        dyn_cast_or_null<GlobalVariable>(Alias.getAliaseeObject());
+    if (GVar) {
+      std::optional<CodeModel::Model> OptionalCodeModel = GVar->getCodeModel();
+      if (OptionalCodeModel)
+        setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&Alias)),
+                             *OptionalCodeModel);
     }
 
     GOAliasMap[Aliasee].push_back(&Alias);

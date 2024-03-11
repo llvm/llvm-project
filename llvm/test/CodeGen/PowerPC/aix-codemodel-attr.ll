@@ -17,6 +17,14 @@
 @e = external dso_local global i32, align 4
 @f = dso_local global i32 2748, align 4
 
+@large_aliasee = global i32 10, code_model "large", align 4
+@small_aliasee = global i32 171, code_model "small", align 4
+@normal_aliasee = global i32 2748, align 4
+
+@al = alias i32, ptr @large_aliasee
+@as = alias i32, ptr @small_aliasee
+@an = alias i32, ptr @normal_aliasee
+
 define i32 @A() local_unnamed_addr {
 entry:
   %0 = load i32, ptr @a, align 4
@@ -120,6 +128,23 @@ entry:
 ; CHECK64: ld 3, L..C[[TL_D]]@l([[HI]])
 ; CHECK:   blr
 
+define i32 @G() {
+   %tmp = load i32, ptr @al
+   ret i32 %tmp
+}
+; CHECK:   addis [[HI:[0-9]+]], L..C[[TL_AL:[0-9]+]]@u(2)
+; CHECK32: lwz [[ADDR:[0-9]+]], L..C[[TL_AL]]@l([[HI]])
+; CHECK64: ld  [[ADDR:[0-9]+]], L..C[[TL_AL]]@l([[HI]])
+; CHECK:   lwz 3, 0([[ADDR]])
+
+define i32 @H() {
+   %tmp = load i32, ptr @as
+   ret i32 %tmp
+}
+; CHECK32: lwz [[ADDR:[0-9]+]], L..C[[TL_AS:[0-9]+]](2)
+; CHECK64: ld [[ADDR:[0-9]+]], L..C[[TL_AS:[0-9]+]](2)
+; CHECK:   lwz 3, 0([[ADDR]])
+
 ;; Check TOC entires have correct storage mapping class
 ; CHECK:         L..C[[TL_A]]:
 ; CHECK:           .tc a[TC],a[UA]
@@ -135,3 +160,7 @@ entry:
 ; CHECK:         L..C[[TL_F]]:
 ; CHECK-SMALL:     .tc f[TC],f[RW]
 ; CHECK-LARGE:     .tc f[TE],f[RW]
+; CHECK:         L..C[[TL_AL]]:
+; CHECK:           .tc al[TE],al
+; CHECK:         L..C[[TL_AS]]:
+; CHECK:           .tc as[TC],as

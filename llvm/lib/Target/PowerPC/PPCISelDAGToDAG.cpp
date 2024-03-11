@@ -531,30 +531,15 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &Subtarget,
   // this will be the effective code model.
   CodeModel::Model ModuleModel = TM.getCodeModel();
 
-  // Initially support per global code model for AIX only.
-  if (!Subtarget.isAIXABI())
+  GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Node->getOperand(0));
+  if (!GA)
     return ModuleModel;
 
-  // If the operand is not a global address there is no
-  // GlobalVariable to query for an attribute.
-  SDValue Operand = Node->getOperand(0);
-  if (!isa<GlobalAddressSDNode>(Operand))
+  const GlobalValue *GV = GA->getGlobal();
+  if (!GV)
     return ModuleModel;
 
-  const GlobalValue *GV = cast<GlobalAddressSDNode>(Operand)->getGlobal();
-  if (!GV || !isa<GlobalVariable>(GV))
-    return ModuleModel;
-
-  std::optional<CodeModel::Model> MaybeCodeModel =
-      dyn_cast<GlobalVariable>(GV)->getCodeModel();
-  if (MaybeCodeModel) {
-    CodeModel::Model CM = *MaybeCodeModel;
-    assert((CM == CodeModel::Small || CM == CodeModel::Large) &&
-           "invalid code model for AIX");
-    return CM;
-  }
-
-  return ModuleModel;
+  return Subtarget.getCodeModel(TM, GV);
 }
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
