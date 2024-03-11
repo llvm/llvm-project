@@ -120,11 +120,12 @@ struct AMDGPUFunctionArgInfo {
     CLUSTER_NUM_WORKGROUPS_X = 20,
     CLUSTER_NUM_WORKGROUPS_Y = 21,
     CLUSTER_NUM_WORKGROUPS_Z = 22,
+    CLUSTER_FLAT_NUM_WORKGROUPS = 23,
 
     // VGPRS:
-    WORKITEM_ID_X       = 23,
-    WORKITEM_ID_Y       = 24,
-    WORKITEM_ID_Z       = 25,
+    WORKITEM_ID_X       = 24,
+    WORKITEM_ID_Y       = 25,
+    WORKITEM_ID_Z       = 26,
     FIRST_VGPR_VALUE    = WORKITEM_ID_X
   };
   // clang-format on
@@ -154,6 +155,7 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor ClusterNumWorkGroupsX;
   ArgDescriptor ClusterNumWorkGroupsY;
   ArgDescriptor ClusterNumWorkGroupsZ;
+  ArgDescriptor ClusterFlatNumWorkGroups;
 
   // Pointer with offset from kernargsegmentptr to where special ABI arguments
   // are passed to callable functions.

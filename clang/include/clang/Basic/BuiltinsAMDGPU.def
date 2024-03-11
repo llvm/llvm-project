@@ -42,6 +42,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cluster_num_workgroups_x, "Ui", "nc", "gfx12-10-
 TARGET_BUILTIN(__builtin_amdgcn_cluster_num_workgroups_y, "Ui", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cluster_num_workgroups_z, "Ui", "nc", "gfx12-10-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_cluster_flat_num_workgroups, "Ui", "nc", "gfx12-10-insts")
+
 BUILTIN(__builtin_amdgcn_workitem_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workitem_id_y, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workitem_id_z, "Ui", "nc")

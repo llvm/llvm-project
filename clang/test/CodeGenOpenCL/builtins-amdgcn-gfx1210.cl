@@ -831,6 +831,20 @@ void test_get_cluster_num_workgroups(int d, global int *out)
   }
 }
 
+// CHECK-LABEL: @test_get_cluster_flat_num_workgroups(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.cluster.flat.num.workgroups()
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_get_cluster_flat_num_workgroups(global int *out)
+{
+  *out = __builtin_amdgcn_cluster_flat_num_workgroups();
+}
+
 // CHECK-LABEL: @test_permlane16_swap(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
