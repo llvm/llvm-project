@@ -704,6 +704,12 @@ def HasV9_4aOps   : SubtargetFeature<"v9.4a", "HasV9_4aOps", "true",
                                    "Support ARM v9.4a instructions",
                                    [HasV8_9aOps, HasV9_3aOps]>;
 
+// Armv9.5-A is a v9-only architecture. From v9.5-A onwards there's no mapping
+// to an equivalent v8.x version.
+def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
+                                   "Support ARM v9.5a instructions",
+                                   [HasV9_4aOps]>;
+
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",
@@ -803,6 +809,8 @@ def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", []>;
 def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
                                    "Cortex-A78 ARM processors", []>;
+def ProcA78AE   : SubtargetFeature<"cortex-a78ae", "ARMProcFamily", "CortexA78AE",
+                                   "Cortex-A78AE ARM processors", []>;
 def ProcA78C    : SubtargetFeature<"a78c", "ARMProcFamily", "CortexA78C",
                                    "Cortex-A78C ARM processors", []>;
 def ProcA710    : SubtargetFeature<"cortex-a710", "ARMProcFamily",
@@ -1128,6 +1136,18 @@ def ARMv93a   : Architecture<"armv9.3-a", "ARMv93a",  [HasV9_3aOps,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
 def ARMv94a   : Architecture<"armv9.4-a", "ARMv94a",  [HasV9_4aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
+def ARMv95a   : Architecture<"armv9.5-a", "ARMv95a",  [HasV9_5aOps,
                                                        FeatureAClass,
                                                        FeatureDB,
                                                        FeatureFPARMv8,
@@ -1614,6 +1634,14 @@ def : ProcNoItin<"cortex-a78",                          [ARMv82a, ProcA78,
                                                          FeatureFullFP16,
                                                          FeatureDotProd]>;
 
+def : ProcNoItin<"cortex-a78ae",                        [ARMv82a, ProcA78AE,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
+
 def : ProcNoItin<"cortex-a78c",                         [ARMv82a, ProcA78C,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
@@ -1664,6 +1692,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
 
 def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
+                                                         FeatureFP16FML,
                                                          FeatureMatMulInt8]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,

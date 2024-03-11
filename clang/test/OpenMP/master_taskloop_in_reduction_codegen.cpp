@@ -339,7 +339,7 @@ int main(int argc, char **argv) {
 // CHECK1:       omp.arraycpy.body:
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi ptr [ [[TMP3]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi ptr [ [[TMP2]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    call void @_ZplRK1SS1_(ptr sret([[STRUCT_S]]) align 4 [[REF_TMP]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]])
+// CHECK1-NEXT:    call void @_ZplRK1SS1_(ptr dead_on_unwind writable sret([[STRUCT_S]]) align 4 [[REF_TMP]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]])
 // CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(4) ptr @_ZN1SaSERKS_(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr nonnull align 4 dereferenceable(4) [[REF_TMP]]) #[[ATTR3]]
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S]], ptr [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
@@ -351,7 +351,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZplRK1SS1_
-// CHECK1-SAME: (ptr noalias sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr nonnull align 4 dereferenceable(4) [[A:%.*]], ptr nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr nonnull align 4 dereferenceable(4) [[A:%.*]], ptr nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8

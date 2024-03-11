@@ -648,6 +648,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
                      Value clusterSizeY, Value clusterSizeZ) {
+  OpBuilder::InsertionGuard g(builder);
+
   // Add a WorkGroup attribution attribute. This attribute is required to
   // identify private attributions in the list of block argguments.
   result.addAttribute(getNumWorkgroupAttributionsAttrName(),
@@ -674,7 +676,7 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   // attributions, where the first kNumConfigRegionAttributes arguments have
   // `index` type and the rest have the same types as the data operands.
   Region *kernelRegion = result.addRegion();
-  Block *body = new Block();
+  Block *body = builder.createBlock(kernelRegion);
   // TODO: Allow passing in proper locations here.
   for (unsigned i = 0; i < kNumConfigRegionAttributes; ++i)
     body->addArgument(builder.getIndexType(), result.location);
@@ -683,7 +685,6 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     body->addArgument(argTy, result.location);
   for (Type argTy : privateAttributions)
     body->addArgument(argTy, result.location);
-  kernelRegion->push_back(body);
   // Fill OperandSegmentSize Attribute.
   SmallVector<int32_t, 11> segmentSizes(11, 1);
   segmentSizes.front() = asyncDependencies.size();
@@ -1325,6 +1326,8 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       TypeRange workgroupAttributions,
                       TypeRange privateAttributions,
                       ArrayRef<NamedAttribute> attrs) {
+  OpBuilder::InsertionGuard g(builder);
+
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
@@ -1333,7 +1336,7 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       builder.getI64IntegerAttr(workgroupAttributions.size()));
   result.addAttributes(attrs);
   Region *body = result.addRegion();
-  Block *entryBlock = new Block;
+  Block *entryBlock = builder.createBlock(body);
 
   // TODO: Allow passing in proper locations here.
   for (Type argTy : type.getInputs())
@@ -1342,8 +1345,6 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
     entryBlock->addArgument(argTy, result.location);
   for (Type argTy : privateAttributions)
     entryBlock->addArgument(argTy, result.location);
-
-  body->getBlocks().push_back(entryBlock);
 }
 
 /// Parses a GPU function memory attribution.
@@ -1724,19 +1725,24 @@ LogicalResult gpu::ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, ArrayAttr targets) {
+                        StringRef name, ArrayAttr targets,
+                        Attribute offloadingHandler) {
   ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 
+  Properties &props = result.getOrAddProperties<Properties>();
   if (targets)
-    result.getOrAddProperties<Properties>().targets = targets;
+    props.targets = targets;
+  props.offloadingHandler = offloadingHandler;
 }
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, ArrayRef<Attribute> targets) {
+                        StringRef name, ArrayRef<Attribute> targets,
+                        Attribute offloadingHandler) {
   build(builder, result, name,
-        targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets));
+        targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets),
+        offloadingHandler);
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1747,6 +1753,16 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
                              result.attributes))
     return failure();
 
+  Properties &props = result.getOrAddProperties<Properties>();
+
+  // Parse the optional offloadingHandler
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseAttribute(props.offloadingHandler))
+      return failure();
+    if (parser.parseGreater())
+      return failure();
+  }
+
   // Parse the optional array of target attributes.
   OptionalParseResult targetsAttrResult =
       parser.parseOptionalAttribute(targetsAttr, Type{});
@@ -1754,7 +1770,7 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
     if (failed(*targetsAttrResult)) {
       return failure();
     }
-    result.getOrAddProperties<Properties>().targets = targetsAttr;
+    props.targets = targetsAttr;
   }
 
   // If module attributes are present, parse them.
@@ -1775,15 +1791,22 @@ void GPUModuleOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
 
+  if (Attribute attr = getOffloadingHandlerAttr()) {
+    p << " <";
+    p.printAttribute(attr);
+    p << ">";
+  }
+
   if (Attribute attr = getTargetsAttr()) {
     p << ' ';
     p.printAttribute(attr);
     p << ' ';
   }
 
-  p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(),
-      {mlir::SymbolTable::getSymbolAttrName(), getTargetsAttrName()});
+  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                     {mlir::SymbolTable::getSymbolAttrName(),
+                                      getTargetsAttrName(),
+                                      getOffloadingHandlerAttrName()});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
@@ -2008,7 +2031,7 @@ public:
         continue;
       validOperands.push_back(operand);
     }
-    rewriter.updateRootInPlace(op, [&]() { op->setOperands(validOperands); });
+    rewriter.modifyOpInPlace(op, [&]() { op->setOperands(validOperands); });
     return success();
   }
 };

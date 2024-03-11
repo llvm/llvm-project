@@ -179,6 +179,19 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   return ParseRHSOfBinaryExpression(LHS, prec::Assignment);
 }
 
+ExprResult Parser::ParseConditionalExpression() {
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompleteExpression(getCurScope(),
+                                   PreferredType.get(Tok.getLocation()));
+    return ExprError();
+  }
+
+  ExprResult LHS = ParseCastExpression(
+      AnyCastExpr, /*isAddressOfOperand=*/false, NotTypeCast);
+  return ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+}
+
 /// Parse an assignment expression where part of an Objective-C message
 /// send has already been parsed.
 ///
@@ -1065,14 +1078,24 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     if (getLangOpts().CPlusPlus) {
       // Avoid the unnecessary parse-time lookup in the common case
       // where the syntax forbids a type.
-      const Token &Next = NextToken();
+      Token Next = NextToken();
+
+      if (Next.is(tok::ellipsis) && Tok.is(tok::identifier) &&
+          GetLookAheadToken(2).is(tok::l_square)) {
+        // Annotate the token and tail recurse.
+        // If the token is not annotated, then it might be an expression pack
+        // indexing
+        if (!TryAnnotateTypeOrScopeToken() &&
+            Tok.is(tok::annot_pack_indexing_type))
+          return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
+                                     isVectorLiteral, NotPrimaryExpression);
+      }
 
       // If this identifier was reverted from a token ID, and the next token
       // is a parenthesis, this is likely to be a use of a type trait. Check
       // those tokens.
-      if (Next.is(tok::l_paren) &&
-          Tok.is(tok::identifier) &&
-          Tok.getIdentifierInfo()->hasRevertedTokenIDToIdentifier()) {
+      else if (Next.is(tok::l_paren) && Tok.is(tok::identifier) &&
+               Tok.getIdentifierInfo()->hasRevertedTokenIDToIdentifier()) {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         // Build up the mapping of revertible type traits, for future use.
         if (RevertibleTypeTraits.empty()) {
@@ -1104,6 +1127,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_fundamental);
           REVERTIBLE_TYPE_TRAIT(__is_integral);
           REVERTIBLE_TYPE_TRAIT(__is_interface_class);
+          REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
           REVERTIBLE_TYPE_TRAIT(__is_literal);
           REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
           REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
@@ -1159,9 +1183,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         }
       }
 
-      if ((!ColonIsSacred && Next.is(tok::colon)) ||
-          Next.isOneOf(tok::coloncolon, tok::less, tok::l_paren,
-                       tok::l_brace)) {
+      else if ((!ColonIsSacred && Next.is(tok::colon)) ||
+               Next.isOneOf(tok::coloncolon, tok::less, tok::l_paren,
+                            tok::l_brace)) {
         // If TryAnnotateTypeOrScopeToken annotates the token, tail recurse.
         if (TryAnnotateTypeOrScopeToken())
           return ExprError();
@@ -1243,8 +1267,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
             Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                                       DeclaratorContext::TypeName);
-            TypeResult Ty = Actions.ActOnTypeName(getCurScope(),
-                                                  DeclaratorInfo);
+            TypeResult Ty = Actions.ActOnTypeName(DeclaratorInfo);
             if (Ty.isInvalid())
               break;
 
@@ -1290,6 +1313,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                  /*isVectorLiteral=*/false,
                                  NotPrimaryExpression);
     }
+    Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);
     break;
@@ -1452,8 +1476,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     return Res;
   }
   case tok::kw__Alignof:   // unary-expression: '_Alignof' '(' type-name ')'
-    if (!getLangOpts().C11)
-      Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+    diagnoseUseOfC11Keyword(Tok);
     [[fallthrough]];
   case tok::kw_alignof:    // unary-expression: 'alignof' '(' type-id ')'
   case tok::kw___alignof:  // unary-expression: '__alignof' unary-expression
@@ -1538,7 +1561,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
       Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                                 DeclaratorContext::TypeName);
-      TypeResult Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+      TypeResult Ty = Actions.ActOnTypeName(DeclaratorInfo);
       if (Ty.isInvalid())
         break;
 
@@ -1550,6 +1573,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     [[fallthrough]];
 
   case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
   case tok::kw_char:
   case tok::kw_wchar_t:
   case tok::kw_char8_t:
@@ -1598,7 +1622,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       if (TryAnnotateTypeOrScopeToken())
         return ExprError();
 
-      if (!Actions.isSimpleTypeSpecifier(Tok.getKind()))
+      if (!Tok.isSimpleTypeSpecifier(getLangOpts()))
         // We are trying to parse a simple-type-specifier but might not get such
         // a token after error recovery.
         return ExprError();
@@ -1974,10 +1998,11 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       PreferredType.enterSubscript(Actions, Tok.getLocation(), LHS.get());
 
       // We try to parse a list of indexes in all language mode first
-      // and, in we find 0 or one index, we try to parse an OpenMP array
+      // and, in we find 0 or one index, we try to parse an OpenMP/OpenACC array
       // section. This allow us to support C++23 multi dimensional subscript and
-      // OpenMp sections in the same language mode.
-      if (!getLangOpts().OpenMP || Tok.isNot(tok::colon)) {
+      // OpenMP/OpenACC sections in the same language mode.
+      if ((!getLangOpts().OpenMP && !AllowOpenACCArraySections) ||
+          Tok.isNot(tok::colon)) {
         if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
@@ -2001,7 +2026,18 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         }
       }
 
-      if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
+      // Handle OpenACC first, since 'AllowOpenACCArraySections' is only enabled
+      // when actively parsing a 'var' in a 'var-list' during clause/'cache'
+      // parsing, so it is the most specific, and best allows us to handle
+      // OpenACC and OpenMP at the same time.
+      if (ArgExprs.size() <= 1 && AllowOpenACCArraySections) {
+        ColonProtectionRAIIObject RAII(*this);
+        if (Tok.is(tok::colon)) {
+          // Consume ':'
+          ColonLocFirst = ConsumeToken();
+          Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        }
+      } else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
         ColonProtectionRAIIObject RAII(*this);
         if (Tok.is(tok::colon)) {
           // Consume ':'
@@ -2031,6 +2067,12 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (!LHS.isInvalid() && !HasError && !Length.isInvalid() &&
           !Stride.isInvalid() && Tok.is(tok::r_square)) {
         if (ColonLocFirst.isValid() || ColonLocSecond.isValid()) {
+          // FIXME: OpenACC hasn't implemented Sema/Array section handling at a
+          // semantic level yet. For now, just reuse the OpenMP implementation
+          // as it gets the parsing/type management mostly right, and we can
+          // replace this call to ActOnOpenACCArraySectionExpr in the future.
+          // Eventually we'll genericize the OPenMPArraySectionExpr type as
+          // well.
           LHS = Actions.ActOnOMPArraySectionExpr(
               LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
               ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
@@ -3078,7 +3120,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       TypeResult Ty;
       {
         InMessageExpressionRAIIObject InMessage(*this, false);
-        Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+        Ty = Actions.ActOnTypeName(DeclaratorInfo);
       }
       Result = ParseObjCMessageExpressionBody(SourceLocation(),
                                               SourceLocation(),
@@ -3093,7 +3135,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         TypeResult Ty;
         {
           InMessageExpressionRAIIObject InMessage(*this, false);
-          Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+          Ty = Actions.ActOnTypeName(DeclaratorInfo);
         }
         return ParseCompoundLiteralExpression(Ty.get(), OpenLoc, RParenLoc);
       }
@@ -3105,7 +3147,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
           TypeResult Ty;
           {
             InMessageExpressionRAIIObject InMessage(*this, false);
-            Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+            Ty = Actions.ActOnTypeName(DeclaratorInfo);
           }
           if(Ty.isInvalid())
           {
@@ -3152,7 +3194,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
           TypeResult Ty;
           {
             InMessageExpressionRAIIObject InMessage(*this, false);
-            Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+            Ty = Actions.ActOnTypeName(DeclaratorInfo);
           }
           CastTy = Ty.get();
           return ExprResult();
@@ -3360,8 +3402,8 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
 /// \endverbatim
 ExprResult Parser::ParseGenericSelectionExpression() {
   assert(Tok.is(tok::kw__Generic) && "_Generic keyword expected");
-  if (!getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+
+  diagnoseUseOfC11Keyword(Tok);
 
   SourceLocation KeyLoc = ConsumeToken();
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -3834,7 +3876,8 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     StringRef Platform =
         AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
-    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty()) {
+    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty() ||
+        (GivenPlatform.contains("xros") || GivenPlatform.contains("xrOS"))) {
       Diag(PlatformIdentifier->Loc,
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;

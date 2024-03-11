@@ -459,9 +459,24 @@ public:
       // Record all stack id indices actually used in the summary entries being
       // written, so that we can compact them in the case of distributed ThinLTO
       // indexes.
-      for (auto &CI : FS->callsites())
+      for (auto &CI : FS->callsites()) {
+        // If the stack id list is empty, this callsite info was synthesized for
+        // a missing tail call frame. Ensure that the callee's GUID gets a value
+        // id. Normally we only generate these for defined summaries, which in
+        // the case of distributed ThinLTO is only the functions already defined
+        // in the module or that we want to import. We don't bother to include
+        // all the callee symbols as they aren't normally needed in the backend.
+        // However, for the synthesized callsite infos we do need the callee
+        // GUID in the backend so that we can correlate the identified callee
+        // with this callsite info (which for non-tail calls is done by the
+        // ordering of the callsite infos and verified via stack ids).
+        if (CI.StackIdIndices.empty()) {
+          GUIDToValueIdMap[CI.Callee.getGUID()] = ++GlobalValueId;
+          continue;
+        }
         for (auto Idx : CI.StackIdIndices)
           StackIdIndices.push_back(Idx);
+      }
       for (auto &AI : FS->allocs())
         for (auto &MIB : AI.MIBs)
           for (auto Idx : MIB.StackIdIndices)
@@ -829,6 +844,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
   case Attribute::DeadOnUnwind:
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
+  case Attribute::Range:
+    return bitc::ATTR_KIND_RANGE;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -839,6 +856,39 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
   }
 
   llvm_unreachable("Trying to encode unknown attribute");
+}
+
+static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
+  if ((int64_t)V >= 0)
+    Vals.push_back(V << 1);
+  else
+    Vals.push_back((-V << 1) | 1);
+}
+
+static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
+  // We have an arbitrary precision integer value to write whose
+  // bit width is > 64. However, in canonical unsigned integer
+  // format it is likely that the high bits are going to be zero.
+  // So, we only write the number of active words.
+  unsigned NumWords = A.getActiveWords();
+  const uint64_t *RawData = A.getRawData();
+  for (unsigned i = 0; i < NumWords; i++)
+    emitSignedInt64(Vals, RawData[i]);
+}
+
+static void emitConstantRange(SmallVectorImpl<uint64_t> &Record,
+                              const ConstantRange &CR) {
+  unsigned BitWidth = CR.getBitWidth();
+  Record.push_back(BitWidth);
+  if (BitWidth > 64) {
+    Record.push_back(CR.getLower().getActiveWords() |
+                     (uint64_t(CR.getUpper().getActiveWords()) << 32));
+    emitWideAPInt(Record, CR.getLower());
+    emitWideAPInt(Record, CR.getUpper());
+  } else {
+    emitSignedInt64(Record, CR.getLower().getSExtValue());
+    emitSignedInt64(Record, CR.getUpper().getSExtValue());
+  }
 }
 
 void ModuleBitcodeWriter::writeAttributeGroupTable() {
@@ -874,13 +924,17 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
           Record.append(Val.begin(), Val.end());
           Record.push_back(0);
         }
-      } else {
-        assert(Attr.isTypeAttribute());
+      } else if (Attr.isTypeAttribute()) {
         Type *Ty = Attr.getValueAsType();
         Record.push_back(Ty ? 6 : 5);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         if (Ty)
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
+      } else {
+        assert(Attr.isConstantRangeAttribute());
+        Record.push_back(7);
+        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
+        emitConstantRange(Record, Attr.getValueAsConstantRange());
       }
     }
 
@@ -1600,8 +1654,8 @@ void ModuleBitcodeWriter::writeValueAsMetadata(
 void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev) {
-  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
-    Metadata *MD = N->getOperand(i);
+  for (const MDOperand &MDO : N->operands()) {
+    Metadata *MD = MDO;
     assert(!(MD && isa<LocalAsMetadata>(MD)) &&
            "Unexpected function-local metadata");
     Record.push_back(VE.getMetadataOrNullID(MD));
@@ -1699,24 +1753,6 @@ void ModuleBitcodeWriter::writeDIGenericSubrange(
 
   Stream.EmitRecord(bitc::METADATA_GENERIC_SUBRANGE, Record, Abbrev);
   Record.clear();
-}
-
-static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
-  if ((int64_t)V >= 0)
-    Vals.push_back(V << 1);
-  else
-    Vals.push_back((-V << 1) | 1);
-}
-
-static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
-  // We have an arbitrary precision integer value to write whose
-  // bit width is > 64. However, in canonical unsigned integer
-  // format it is likely that the high bits are going to be zero.
-  // So, we only write the number of active words.
-  unsigned NumWords = A.getActiveWords();
-  const uint64_t *RawData = A.getRawData();
-  for (unsigned i = 0; i < NumWords; i++)
-    emitSignedInt64(Vals, RawData[i]);
 }
 
 void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
@@ -2609,7 +2645,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;
-      Type *Ty = CFP->getType();
+      Type *Ty = CFP->getType()->getScalarType();
       if (Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() ||
           Ty->isDoubleTy()) {
         Record.push_back(CFP->getValueAPF().bitcastToAPInt().getZExtValue());

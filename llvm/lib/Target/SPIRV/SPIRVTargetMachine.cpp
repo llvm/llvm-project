@@ -43,6 +43,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -168,6 +169,7 @@ void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVStripConvergenceIntrinsicsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
@@ -187,6 +189,7 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
+  addPass(createSPIRVPostLegalizerPass());
   return false;
 }
 

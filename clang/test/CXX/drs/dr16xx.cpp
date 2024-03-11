@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -61,7 +61,7 @@ namespace dr1631 {  // dr1631: 3.7
     void f(B, int);           // TODO: expected- note {{candidate function}}
     void f(int, A);           // #dr1631-f
     void f(int, A, int = 0);  // #dr1631-f-int
-    
+
     void test() {
       f({0}, {{1}});
       // since-cxx11-error@-1 {{call to 'f' is ambiguous}}
@@ -99,7 +99,6 @@ namespace dr1638 { // dr1638: 3.1
 
   enum class A<unsigned>::E;
   // since-cxx11-error@-1 {{template specialization requires 'template<>'}}
-  // since-cxx11-error@-2 {{forward declaration of enum class cannot have a nested name specifier}}
   template enum class A<unsigned>::E;
   // since-cxx11-error@-1 {{enumerations cannot be explicitly instantiated}}
   enum class A<unsigned>::E *e;
@@ -108,6 +107,8 @@ namespace dr1638 { // dr1638: 3.1
   struct B {
     friend enum class A<unsigned>::E;
     // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+    // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+    // since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
   };
 #endif
 }
@@ -180,7 +181,7 @@ namespace dr1658 { // dr1658: 5
     // In all other cases, we are not so lucky.
     struct E : A { E(); virtual void foo() = 0; }; // #dr1658-E1
     E::E() = default; // #dr1658-E1-ctor
-    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}} 
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
     // cxx98-error@-2 {{base class 'A' has private default constructor}}
     //   cxx98-note@-3 {{in defaulted default constructor for 'dr1658::DefCtor::E' first required here}}
     //   cxx98-note@#dr1658-A1 {{implicitly declared private here}}
@@ -189,7 +190,7 @@ namespace dr1658 { // dr1658: 5
     struct F : virtual A { F(); }; // #dr1658-F1
     F::F() = default; // #dr1658-F1-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-2 {{inherited virtual base class 'A' has private default constructor}} 
+    // cxx98-error@-2 {{inherited virtual base class 'A' has private default constructor}}
     //   cxx98-note@-3 {{in defaulted default constructor for 'dr1658::DefCtor::F' first required here}}
     //   cxx98-note@#dr1658-A1 {{implicitly declared private here}}
     // since-cxx11-error@#dr1658-F1-ctor {{defaulting this default constructor would delete it after its first declaration}}
@@ -255,12 +256,12 @@ namespace dr1658 { // dr1658: 5
     struct A { A(A&); };
     struct B : virtual A { virtual void f() = 0; };
     struct C : virtual A { virtual void f(); };
-    struct D : A { virtual void f() = 0; };
+    struct D : A { virtual void f() = 0; }; // since-cxx23-note {{previous declaration is here}}
 
     struct X {
       friend B::B(const B&) throw();
       friend C::C(C&);
-      friend D::D(D&);
+      friend D::D(D&); // since-cxx23-error {{non-constexpr declaration of 'D' follows constexpr declaration}}
     };
   }
 
@@ -349,8 +350,8 @@ namespace dr1684 { // dr1684: 3.6
   };
   constexpr int f(NonLiteral &) { return 0; }
   constexpr int f(NonLiteral) { return 0; }
-  // since-cxx11-error@-1 {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
-  //   since-cxx11-note@#dr1684-struct {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+  // cxx11-20-error@-1 {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
+  //   cxx11-20-note@#dr1684-struct {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
 #endif
 }
 
@@ -472,7 +473,7 @@ namespace dr1696 { // dr1696: 7
     const A &a = A(); // #dr1696-D1-a
   };
   D1 d1 = {}; // #dr1696-d1
-  // since-cxx14-warning@-1 {{sorry, lifetime extension of temporary created by aggregate initialization using default member initializer is not supported; lifetime of temporary will end at the end of the full-expression}}
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}}
   //   since-cxx14-note@#dr1696-D1-a {{initializing field 'a' with default member initializer}}
 
   struct D2 {

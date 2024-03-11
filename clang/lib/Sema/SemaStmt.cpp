@@ -27,6 +27,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -526,6 +527,13 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     return StmtError();
   }
 
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(CaseLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
+  }
+
   auto *CS = CaseStmt::Create(Context, LHSVal.get(), RHSVal.get(),
                               CaseLoc, DotDotDotLoc, ColonLoc);
   getCurFunction()->SwitchStack.back().getPointer()->addSwitchCase(CS);
@@ -543,6 +551,13 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
   if (getCurFunction()->SwitchStack.empty()) {
     Diag(DefaultLoc, diag::err_default_not_in_switch);
     return SubStmt;
+  }
+
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(DefaultLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
   }
 
   DefaultStmt *DS = new (Context) DefaultStmt(DefaultLoc, ColonLoc, SubStmt);
@@ -565,6 +580,11 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
       !Context.getSourceManager().isInSystemHeader(IdentLoc))
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
+
+  // If this label is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
 
   // Otherwise, things are good.  Fill in the declaration and return it.
   LabelStmt *LS = new (Context) LabelStmt(IdentLoc, TheDecl, SubStmt);
@@ -783,6 +803,12 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
 
   if (CalleeType.Func->isVariadic() || CallerType.Func->isVariadic()) {
     Diag(St->getBeginLoc(), diag::err_musttail_no_variadic) << &MTA;
+    return false;
+  }
+
+  const auto *CalleeDecl = CE->getCalleeDecl();
+  if (CalleeDecl && CalleeDecl->hasAttr<CXX11NoReturnAttr>()) {
+    Diag(St->getBeginLoc(), diag::err_musttail_no_return) << &MTA;
     return false;
   }
 
@@ -2319,7 +2345,8 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
         FirstType = QualType();
         TemplateDeductionResult Result = DeduceAutoType(
             D->getTypeSourceInfo()->getTypeLoc(), DeducedInit, FirstType, Info);
-        if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+        if (Result != TemplateDeductionResult::Success &&
+            Result != TemplateDeductionResult::AlreadyDiagnosed)
           DiagnoseAutoDeductionFailure(D, DeducedInit);
         if (FirstType.isNull()) {
           D->setInvalidDecl();
@@ -2387,9 +2414,10 @@ static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
     SemaRef.Diag(Loc, DiagID) << Init->getType();
   } else {
     TemplateDeductionInfo Info(Init->getExprLoc());
-    Sema::TemplateDeductionResult Result = SemaRef.DeduceAutoType(
+    TemplateDeductionResult Result = SemaRef.DeduceAutoType(
         Decl->getTypeSourceInfo()->getTypeLoc(), Init, InitType, Info);
-    if (Result != Sema::TDK_Success && Result != Sema::TDK_AlreadyDiagnosed)
+    if (Result != TemplateDeductionResult::Success &&
+        Result != TemplateDeductionResult::AlreadyDiagnosed)
       SemaRef.Diag(Loc, DiagID) << Init->getType();
   }
 
@@ -2483,11 +2511,11 @@ static bool ObjCEnumerationCollection(Expr *Collection) {
 ///
 /// The body of the loop is not available yet, since it cannot be analysed until
 /// we have determined the type of the for-range-declaration.
-StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
-                                      SourceLocation CoawaitLoc, Stmt *InitStmt,
-                                      Stmt *First, SourceLocation ColonLoc,
-                                      Expr *Range, SourceLocation RParenLoc,
-                                      BuildForRangeKind Kind) {
+StmtResult Sema::ActOnCXXForRangeStmt(
+    Scope *S, SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
+    Stmt *First, SourceLocation ColonLoc, Expr *Range, SourceLocation RParenLoc,
+    BuildForRangeKind Kind,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   // FIXME: recover in order to allow the body to be parsed.
   if (!First)
     return StmtError();
@@ -2551,7 +2579,8 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
   StmtResult R = BuildCXXForRangeStmt(
       ForLoc, CoawaitLoc, InitStmt, ColonLoc, RangeDecl.get(),
       /*BeginStmt=*/nullptr, /*EndStmt=*/nullptr,
-      /*Cond=*/nullptr, /*Inc=*/nullptr, DS, RParenLoc, Kind);
+      /*Cond=*/nullptr, /*Inc=*/nullptr, DS, RParenLoc, Kind,
+      LifetimeExtendTemps);
   if (R.isInvalid()) {
     ActOnInitializerError(LoopVar);
     return StmtError();
@@ -2741,13 +2770,12 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
 }
 
 /// BuildCXXForRangeStmt - Build or instantiate a C++11 for-range statement.
-StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
-                                      SourceLocation CoawaitLoc, Stmt *InitStmt,
-                                      SourceLocation ColonLoc, Stmt *RangeDecl,
-                                      Stmt *Begin, Stmt *End, Expr *Cond,
-                                      Expr *Inc, Stmt *LoopVarDecl,
-                                      SourceLocation RParenLoc,
-                                      BuildForRangeKind Kind) {
+StmtResult Sema::BuildCXXForRangeStmt(
+    SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
+    SourceLocation ColonLoc, Stmt *RangeDecl, Stmt *Begin, Stmt *End,
+    Expr *Cond, Expr *Inc, Stmt *LoopVarDecl, SourceLocation RParenLoc,
+    BuildForRangeKind Kind,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   // FIXME: This should not be used during template instantiation. We should
   // pick up the set of unqualified lookup results for the != and + operators
   // in the initial parse.
@@ -2806,6 +2834,14 @@ StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
     if (RequireCompleteType(RangeLoc, RangeType,
                             diag::err_for_range_incomplete_type))
       return StmtError();
+
+    // P2718R0 - Lifetime extension in range-based for loops.
+    if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
+      InitializedEntity Entity =
+          InitializedEntity::InitializeVariable(RangeVar);
+      for (auto *MTE : LifetimeExtendTemps)
+        MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+    }
 
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).
@@ -3200,7 +3236,7 @@ static void DiagnoseForRangeConstVariableCopies(Sema &SemaRef,
   // (The function `getTypeSize` returns the size in bits.)
   ASTContext &Ctx = SemaRef.Context;
   if (Ctx.getTypeSize(VariableType) <= 64 * 8 &&
-      (VariableType.isTriviallyCopyableType(Ctx) ||
+      (VariableType.isTriviallyCopyConstructibleType(Ctx) ||
        hasTrivialABIAttr(VariableType)))
     return;
 
@@ -3287,6 +3323,12 @@ StmtResult Sema::ActOnGotoStmt(SourceLocation GotoLoc,
                                SourceLocation LabelLoc,
                                LabelDecl *TheDecl) {
   setFunctionHasBranchIntoScope();
+
+  // If this goto is in a compute construct scope, we need to make sure we check
+  // gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   TheDecl->markUsed(Context);
   return new (Context) GotoStmt(TheDecl, GotoLoc, LabelLoc);
 }
@@ -3315,6 +3357,11 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
 
   setFunctionHasIndirectGoto();
 
+  // If this goto is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
 
@@ -3339,6 +3386,15 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
     // initialization of that variable.
     return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
   }
+
+  // A 'continue' that would normally have execution continue on a block outside
+  // of a compute construct counts as 'branching out of' the compute construct,
+  // so diagnose here.
+  if (S->isOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ContinueLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
   return new (Context) ContinueStmt(ContinueLoc);
@@ -3354,6 +3410,21 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
+
+  // OpenACC doesn't allow 'break'ing from a compute construct, so diagnose if
+  // we are trying to do so.  This can come in 2 flavors: 1-the break'able thing
+  // (besides the compute construct) 'contains' the compute construct, at which
+  // point the 'break' scope will be the compute construct.  Else it could be a
+  // loop of some sort that has a direct parent of the compute construct.
+  // However, a 'break' in a 'switch' marked as a compute construct doesn't
+  // count as 'branch out of' the compute construct.
+  if (S->isOpenACCComputeConstructScope() ||
+      (S->isLoopScope() && S->getParent() &&
+       S->getParent()->isOpenACCComputeConstructScope()))
+    return StmtError(
+        Diag(BreakLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
 
   return new (Context) BreakStmt(BreakLoc);
@@ -3384,6 +3455,8 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E,
     return NamedReturnInfo();
   const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
   if (!VD)
+    return NamedReturnInfo();
+  if (VD->getInit() && VD->getInit()->containsErrors())
     return NamedReturnInfo();
   NamedReturnInfo Res = getNamedReturnInfo(VD);
   if (Res.Candidate && !E->isXValue() &&
@@ -3848,14 +3921,14 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     TemplateDeductionResult Res = DeduceAutoType(
         OrigResultType, RetExpr, Deduced, Info, /*DependentDeduction=*/false,
         /*IgnoreConstraints=*/false, &FailedTSC);
-    if (Res != TDK_Success && FD->isInvalidDecl())
+    if (Res != TemplateDeductionResult::Success && FD->isInvalidDecl())
       return true;
     switch (Res) {
-    case TDK_Success:
+    case TemplateDeductionResult::Success:
       break;
-    case TDK_AlreadyDiagnosed:
+    case TemplateDeductionResult::AlreadyDiagnosed:
       return true;
-    case TDK_Inconsistent: {
+    case TemplateDeductionResult::Inconsistent: {
       //  If a function with a declared return type that contains a placeholder
       //  type has multiple return statements, the return type is deduced for
       //  each return statement. [...] if the type deduced is not the same in
@@ -3906,6 +3979,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
   if (RetVal.isInvalid())
     return StmtError();
+
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ReturnLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*return*/ 1 << /*out of */ 0);
+
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
@@ -4364,6 +4443,7 @@ Sema::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc, Stmt *Body) {
 namespace {
 class CatchHandlerType {
   QualType QT;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
   // This is a special constructor to be used only with DenseMapInfo's

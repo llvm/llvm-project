@@ -191,8 +191,8 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
 
 bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
                                                   const Formula &F) {
-  if (F.isLiteral(true))
-    return true;
+  if (F.isLiteral(false))
+    return false;
 
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
@@ -298,7 +298,7 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
+  if (F->doesThisDeclarationHaveABody()) {
     auto CFCtx = ControlFlowContext::build(*F);
     // FIXME: Handle errors.
     assert(CFCtx);

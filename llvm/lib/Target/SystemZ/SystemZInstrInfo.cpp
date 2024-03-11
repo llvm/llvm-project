@@ -18,7 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -322,12 +322,12 @@ static int isSimpleMove(const MachineInstr &MI, int &FrameIndex,
   return 0;
 }
 
-unsigned SystemZInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register SystemZInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXLoad);
 }
 
-unsigned SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXStore);
 }
@@ -610,7 +610,7 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     .addImm(CCValid).addImm(CCMask);
 }
 
-bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
   unsigned DefOpc = DefMI.getOpcode();
@@ -1692,9 +1692,6 @@ unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {
   case SystemZ::LR:     return SystemZ::LTR;
   case SystemZ::LGFR:   return SystemZ::LTGFR;
   case SystemZ::LGR:    return SystemZ::LTGR;
-  case SystemZ::LER:    return SystemZ::LTEBR;
-  case SystemZ::LDR:    return SystemZ::LTDBR;
-  case SystemZ::LXR:    return SystemZ::LTXBR;
   case SystemZ::LCDFR:  return SystemZ::LCDBR;
   case SystemZ::LPDFR:  return SystemZ::LPDBR;
   case SystemZ::LNDFR:  return SystemZ::LNDBR;
@@ -1877,9 +1874,9 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
     }
   }
   if (CCLive) {
-    LivePhysRegs LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
+    LiveRegUnits LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
     LiveRegs.addLiveOuts(*MBB);
-    if (LiveRegs.contains(SystemZ::CC))
+    if (!LiveRegs.available(SystemZ::CC))
       return false;
   }
 

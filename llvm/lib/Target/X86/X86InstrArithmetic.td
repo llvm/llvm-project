@@ -1107,43 +1107,85 @@ def : Pat<(store (X86adc_flag GR64:$src, (loadi64 addr:$dst), EFLAGS),
 
 // Patterns for basic arithmetic ops with relocImm for the immediate field.
 multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode> {
-  def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
-            (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
-            (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
-            (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
-            (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+  let Predicates = [NoNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
+              (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
+              (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
+              (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
+              (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
-  def : Pat<(store (OpNode (load addr:$dst), relocImm8_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), relocImm16_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), relocImm32_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), i64relocImmSExt32_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), relocImm8_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), relocImm16_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), relocImm32_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), i64relocImmSExt32_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
+  let Predicates = [HasNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
+              (!cast<Instruction>(NAME#"8ri_ND") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
+              (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
+              (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
+              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+
+    def : Pat<(OpNode (load addr:$dst), relocImm8_su:$src),
+              (!cast<Instruction>(NAME#"8mi_ND") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(OpNode (load addr:$dst), relocImm16_su:$src),
+              (!cast<Instruction>(NAME#"16mi_ND") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(OpNode (load addr:$dst), relocImm32_su:$src),
+              (!cast<Instruction>(NAME#"32mi_ND") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(OpNode (load addr:$dst), i64relocImmSExt32_su:$src),
+              (!cast<Instruction>(NAME#"64mi32_ND") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
 }
 
 multiclass ArithBinOp_RFF_relocImm_Pats<SDNode OpNodeFlag> {
-  def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+  let Predicates = [NoNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
-  def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
+  let Predicates = [HasNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"8ri_ND") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+
+    def : Pat<(OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"8mi_ND") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"16mi_ND") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"32mi_ND") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"64mi32_ND") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
 }
 
 multiclass ArithBinOp_F_relocImm_Pats<SDNode OpNodeFlag> {
@@ -1270,42 +1312,48 @@ def : Pat<(X86testpat (loadi64 addr:$src1), i64relocImmSExt32_su:$src2),
 //===----------------------------------------------------------------------===//
 // ANDN Instruction
 //
-multiclass AndN<X86TypeInfo t, string suffix> {
+multiclass AndN<X86TypeInfo t, SDPatternOperator node, string suffix = ""> {
   defvar andn_rr_p =
-    [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
+    [(set t.RegClass:$dst, EFLAGS, (node (not t.RegClass:$src1),
      t.RegClass:$src2))];
   defvar andn_rm_p =
-    [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
+    [(set t.RegClass:$dst, EFLAGS, (node (not t.RegClass:$src1),
      (t.LoadNode addr:$src2)))];
   def rr#suffix : ITy<0xF2, MRMSrcReg, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1, t.RegClass:$src2), "andn",
-                      binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>,
-                     T8, DefEFLAGS;
+                      binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>, T8;
   def rm#suffix : ITy<0xF2, MRMSrcMem, t, (outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.MemOperand:$src2), "andn",
                        binop_ndd_args, andn_rm_p>, VVVV,
-                       Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>,
-                       T8, DefEFLAGS;
+                       Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, T8;
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let AddedComplexity = -6 in {
-defm ANDN32 : AndN<Xi32, "">, VEX, Requires<[HasBMI, NoEGPR]>;
-defm ANDN64 : AndN<Xi64, "">, VEX, REX_W, Requires<[HasBMI, NoEGPR]>;
-defm ANDN32 : AndN<Xi32, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>;
-defm ANDN64 : AndN<Xi64, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>;
+defm ANDN32 : AndN<Xi32, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN32 : AndN<Xi32, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN32 : AndN<Xi32, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
+defm ANDN64 : AndN<Xi64, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
 }
 
-let Predicates = [HasBMI], AddedComplexity = -6 in {
+multiclass Andn_Pats<string suffix> {
   def : Pat<(and (not GR32:$src1), GR32:$src2),
-            (ANDN32rr GR32:$src1, GR32:$src2)>;
+            (!cast<Instruction>(ANDN32rr#suffix) GR32:$src1, GR32:$src2)>;
   def : Pat<(and (not GR64:$src1), GR64:$src2),
-            (ANDN64rr GR64:$src1, GR64:$src2)>;
+            (!cast<Instruction>(ANDN64rr#suffix) GR64:$src1, GR64:$src2)>;
   def : Pat<(and (not GR32:$src1), (loadi32 addr:$src2)),
-            (ANDN32rm GR32:$src1, addr:$src2)>;
+            (!cast<Instruction>(ANDN32rm#suffix) GR32:$src1, addr:$src2)>;
   def : Pat<(and (not GR64:$src1), (loadi64 addr:$src2)),
-            (ANDN64rm GR64:$src1, addr:$src2)>;
+            (!cast<Instruction>(ANDN64rm#suffix) GR64:$src1, addr:$src2)>;
 }
+
+let Predicates = [HasBMI, NoEGPR], AddedComplexity = -6 in
+  defm : Andn_Pats<"">;
+
+let Predicates = [HasBMI, HasEGPR], AddedComplexity = -6 in
+  defm : Andn_Pats<"_EVEX">;
 
 //===----------------------------------------------------------------------===//
 // MULX Instruction

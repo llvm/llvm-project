@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,6 +33,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -2354,29 +2354,35 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
 using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
-static unsigned getSpillSlotSize(const MMOList &Accesses,
-                                 const MachineFrameInfo &MFI) {
-  unsigned Size = 0;
+static LocationSize getSpillSlotSize(const MMOList &Accesses,
+                                     const MachineFrameInfo &MFI) {
+  uint64_t Size = 0;
   for (const auto *A : Accesses)
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
-                ->getFrameIndex()))
-      Size += A->getSize();
+                ->getFrameIndex())) {
+      uint64_t S = A->getSize();
+      if (S == ~UINT64_C(0))
+        return LocationSize::beforeOrAfterPointer();
+      Size += S;
+    }
   return Size;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
   int FI;
   if (TII->isStoreToStackSlotPostFE(*this, FI)) {
     const MachineFrameInfo &MFI = getMF()->getFrameInfo();
-    if (MFI.isSpillSlotObjectIndex(FI))
-      return (*memoperands_begin())->getSize();
+    if (MFI.isSpillSlotObjectIndex(FI)) {
+      uint64_t Size = (*memoperands_begin())->getSize();
+      return Size == ~UINT64_C(0) ? LocationSize::beforeOrAfterPointer() : Size;
+    }
   }
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
   MMOList Accesses;
   if (TII->hasStoreToStackSlot(*this, Accesses))
@@ -2384,18 +2390,20 @@ MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getRestoreSize(const TargetInstrInfo *TII) const {
   int FI;
   if (TII->isLoadFromStackSlotPostFE(*this, FI)) {
     const MachineFrameInfo &MFI = getMF()->getFrameInfo();
-    if (MFI.isSpillSlotObjectIndex(FI))
-      return (*memoperands_begin())->getSize();
+    if (MFI.isSpillSlotObjectIndex(FI)) {
+      uint64_t Size = (*memoperands_begin())->getSize();
+      return Size == ~UINT64_C(0) ? LocationSize::beforeOrAfterPointer() : Size;
+    }
   }
   return std::nullopt;
 }
 
-std::optional<unsigned>
+std::optional<LocationSize>
 MachineInstr::getFoldedRestoreSize(const TargetInstrInfo *TII) const {
   MMOList Accesses;
   if (TII->hasLoadFromStackSlot(*this, Accesses))

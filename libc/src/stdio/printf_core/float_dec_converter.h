@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/UInt.h" // is_big_int_v
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
@@ -33,7 +34,8 @@ using ExponentString =
 
 // Returns true if value is divisible by 2^p.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>,
+                                       bool>
 multiple_of_power_of_2(T value, uint32_t p) {
   return (value & ((T(1) << p) - 1)) == 0;
 }
@@ -45,11 +47,8 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 // constexpr uint32_t MAX_BLOCK = 999999999999999999;
 constexpr char DECIMAL_POINT = '.';
 
-// This is used to represent which direction the number should be rounded.
-enum class RoundDirection { Up, Down, Even };
-
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
-                                               bool is_negative) {
+                                               fputil::Sign sign) {
   switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
@@ -59,18 +58,18 @@ LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
       return !truncated ? RoundDirection::Even : RoundDirection::Up;
     }
   case FE_DOWNWARD:
-    if (is_negative && (truncated || last_digit > 0)) {
+    if (sign.is_neg() && (truncated || last_digit > 0)) {
       return RoundDirection::Up;
     } else {
       return RoundDirection::Down;
     }
   case FE_UPWARD:
-    if (!is_negative && (truncated || last_digit > 0)) {
+    if (sign.is_pos() && (truncated || last_digit > 0)) {
       return RoundDirection::Up;
     } else {
       return RoundDirection::Down;
     }
-    return is_negative ? RoundDirection::Down : RoundDirection::Up;
+    return sign.is_neg() ? RoundDirection::Down : RoundDirection::Up;
   case FE_TOWARDZERO:
     return RoundDirection::Down;
   default:
@@ -79,7 +78,8 @@ LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
 }
 
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>,
+                                       bool>
 zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa,
                   const int32_t mant_width) {
   const int32_t required_twos = -base_2_exp - digits_after_point - 1;
@@ -474,12 +474,11 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
-  bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
 
   char sign_char = 0;
 
-  if (is_negative)
+  if (float_bits.is_neg())
     sign_char = '-';
   else if ((to_conv.flags & FormatFlags::FORCE_SIGN) == FormatFlags::FORCE_SIGN)
     sign_char = '+'; // FORCE_SIGN has precedence over SPACE_PREFIX
@@ -499,7 +498,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
 
   PaddingWriter padding_writer(to_conv, sign_char);
   FloatWriter float_writer(writer, has_decimal_point, padding_writer);
-  FloatToString<T> float_converter(static_cast<T>(float_bits));
+  FloatToString<T> float_converter(float_bits.get_val());
 
   const size_t positive_blocks = float_converter.get_positive_blocks();
 
@@ -567,7 +566,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         const bool truncated = !zero_after_digits(
             exponent - FRACTION_LEN, precision,
             float_bits.get_explicit_mantissa(), FRACTION_LEN);
-        round = get_round_direction(last_digit, truncated, is_negative);
+        round = get_round_direction(last_digit, truncated, float_bits.sign());
 
         RET_IF_RESULT_NEGATIVE(
             float_writer.write_last_block(digits, maximum, round));
@@ -587,7 +586,6 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
-  bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();
 
@@ -595,7 +593,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   char sign_char = 0;
 
-  if (is_negative)
+  if (float_bits.is_neg())
     sign_char = '-';
   else if ((to_conv.flags & FormatFlags::FORCE_SIGN) == FormatFlags::FORCE_SIGN)
     sign_char = '+'; // FORCE_SIGN has precedence over SPACE_PREFIX
@@ -610,7 +608,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   PaddingWriter padding_writer(to_conv, sign_char);
   FloatWriter float_writer(writer, has_decimal_point, padding_writer);
-  FloatToString<T> float_converter(static_cast<T>(float_bits));
+  FloatToString<T> float_converter(float_bits.get_val());
 
   size_t digits_written = 0;
   int final_exponent = 0;
@@ -735,7 +733,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
           float_bits.get_explicit_mantissa(), FRACTION_LEN);
     }
   }
-  round = get_round_direction(last_digit, truncated, is_negative);
+  round = get_round_direction(last_digit, truncated, float_bits.sign());
 
   RET_IF_RESULT_NEGATIVE(float_writer.write_last_block(
       digits, maximum, round, final_exponent, a + 'E' - 'A'));
@@ -750,7 +748,6 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                                              fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
-  bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();
 
@@ -770,7 +767,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   // it has style E, so here we calculate the precision we'll use in that case.
   const unsigned int exp_precision = init_precision - 1;
 
-  FloatToString<T> float_converter(static_cast<T>(float_bits));
+  FloatToString<T> float_converter(float_bits.get_val());
 
   // Here we would subtract 1 to account for the fact that block 0 counts as a
   // positive block, but the loop below accounts for this by starting with
@@ -983,7 +980,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
     }
   }
 
-  round = get_round_direction(last_digit, truncated, is_negative);
+  round = get_round_direction(last_digit, truncated, float_bits.sign());
 
   bool round_up;
   if (round == RoundDirection::Up) {

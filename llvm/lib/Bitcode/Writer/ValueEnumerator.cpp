@@ -1108,8 +1108,8 @@ void ValueEnumerator::purgeFunction() {
   /// Remove purged values from the ValueMap.
   for (unsigned i = NumModuleValues, e = Values.size(); i != e; ++i)
     ValueMap.erase(Values[i].first);
-  for (unsigned i = NumModuleMDs, e = MDs.size(); i != e; ++i)
-    MetadataMap.erase(MDs[i]);
+  for (const Metadata *MD : llvm::drop_begin(MDs, NumModuleMDs))
+    MetadataMap.erase(MD);
   for (const BasicBlock *BB : BasicBlocks)
     ValueMap.erase(BB);
 

@@ -24,9 +24,9 @@ define void @avoid_promotion_1_and(ptr nocapture noundef %arg, ptr %p) {
 ; CHECK-NEXT:    ldr w11, [x1, #76]
 ; CHECK-NEXT:    ldr w12, [x1]
 ; CHECK-NEXT:    eor w10, w10, w11
-; CHECK-NEXT:    and x10, x10, x12
+; CHECK-NEXT:    and w10, w10, w12
 ; CHECK-NEXT:    str w10, [x0, #32]
-; CHECK-NEXT:    strh w9, [x1, x10, lsl #1]
+; CHECK-NEXT:    strh w9, [x1, w10, uxtw #1]
 ; CHECK-NEXT:    b LBB0_1
 bb:
   %gep = getelementptr inbounds %struct.zot, ptr %arg, i64 0, i32 9
@@ -81,13 +81,13 @@ define void @avoid_promotion_2_and(ptr nocapture noundef %arg) {
 ; CHECK-NEXT:    ldrb w11, [x11, x12]
 ; CHECK-NEXT:    eor w10, w10, w11
 ; CHECK-NEXT:    ldur w11, [x8, #-24]
-; CHECK-NEXT:    and x10, x10, x14
+; CHECK-NEXT:    and w10, w10, w14
 ; CHECK-NEXT:    ldp x15, x14, [x8, #-16]
-; CHECK-NEXT:    lsl x13, x10, #1
+; CHECK-NEXT:    ubfiz x13, x10, #1, #32
 ; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    and x10, x11, x12
+; CHECK-NEXT:    and w10, w11, w12
 ; CHECK-NEXT:    ldrh w11, [x14, x13]
-; CHECK-NEXT:    strh w11, [x15, x10, lsl #1]
+; CHECK-NEXT:    strh w11, [x15, w10, uxtw #1]
 ; CHECK-NEXT:    strh w12, [x14, x13]
 ; CHECK-NEXT:    b LBB1_1
 ; CHECK-NEXT:  LBB1_4: ; %exit

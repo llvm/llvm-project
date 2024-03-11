@@ -160,7 +160,7 @@ int4 check_isfpclass_nan_strict_v4f32(float4 x) {
 }
 
 // CHECK-LABEL: define dso_local void @check_isfpclass_nan_v4f64
-// CHECK-SAME: (ptr noalias nocapture writeonly sret(<4 x i64>) align 16 [[AGG_RESULT:%.*]], ptr nocapture noundef readonly [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: (ptr dead_on_unwind noalias nocapture writable writeonly sret(<4 x i64>) align 16 [[AGG_RESULT:%.*]], ptr nocapture noundef readonly [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[TMP0]], align 16, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x double> [[X]], zeroinitializer

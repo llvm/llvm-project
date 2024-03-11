@@ -266,13 +266,6 @@ void PlatformTSDDtor(void *tsd) { AsanThread::TSDDtor(tsd); }
 // }}}
 
 // ---------------------- Various stuff ---------------- {{{
-void *AsanDoesNotSupportStaticLinkage() {
-#if defined(_DEBUG)
-#error Please build the runtime with a non-debug CRT: /MD or /MT
-#endif
-  return 0;
-}
-
 uptr FindDynamicShadowStart() {
   return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);

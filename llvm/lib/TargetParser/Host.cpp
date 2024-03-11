@@ -217,6 +217,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd0b", "cortex-a76")
         .Case("0xd0d", "cortex-a77")
         .Case("0xd41", "cortex-a78")
+        .Case("0xd42", "cortex-a78ae")
         .Case("0xd47", "cortex-a710")
         .Case("0xd4d", "cortex-a715")
         .Case("0xd81", "cortex-a720")
@@ -310,10 +311,18 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x6d") { // Microsoft Corporation.
+    // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
+    return StringSwitch<const char *>(Part)
+        .Case("0xd49", "neoverse-n2")
+        .Default("generic");
+  }
+
   if (Implementer == "0xc0") { // Ampere Computing
     return StringSwitch<const char *>(Part)
         .Case("0xac3", "ampere1")
         .Case("0xac4", "ampere1a")
+        .Case("0xac5", "ampere1b")
         .Default("generic");
   }
 
@@ -1457,6 +1466,8 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_VORTEX_TEMPEST 0x07d34b9f
 #define CPUFAMILY_ARM_LIGHTNING_THUNDER 0x462504d2
 #define CPUFAMILY_ARM_FIRESTORM_ICESTORM 0x1b588bb3
+#define CPUFAMILY_ARM_BLIZZARD_AVALANCHE 0xda33d83d
+#define CPUFAMILY_ARM_EVEREST_SAWTOOTH 0x8765edea
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
@@ -1482,9 +1493,13 @@ StringRef sys::getHostCPUName() {
     return "apple-a13";
   case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
     return "apple-m1";
+  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE:
+    return "apple-m2";
+  case CPUFAMILY_ARM_EVEREST_SAWTOOTH:
+    return "apple-m3";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m1";
+    return "apple-m3";
   }
 }
 #elif defined(_AIX)
@@ -1838,6 +1853,13 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
+  Features["egpr"] = HasAPXF;
+  Features["push2pop2"] = HasAPXF;
+  Features["ppx"] = HasAPXF;
+  Features["ndd"] = HasAPXF;
+  Features["ccmp"] = HasAPXF;
+  Features["cf"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

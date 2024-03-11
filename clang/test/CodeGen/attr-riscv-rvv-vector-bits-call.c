@@ -7,6 +7,8 @@
 
 typedef vint32m1_t fixed_int32m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vfloat64m1_t fixed_float64m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool1_t fixed_bool1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool4_t fixed_bool4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/4)));
 
 //===----------------------------------------------------------------------===//
 // Test caller/callee with VLST <-> VLAT
@@ -66,6 +68,24 @@ fixed_float64m1_t call_float64_ff(fixed_float64m1_t op1, fixed_float64m1_t op2) 
   return __riscv_vfadd(op1, op2, __riscv_v_fixed_vlen/64);
 }
 
+// CHECK-LABEL: @call_bool1_ff(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i1> @llvm.riscv.vmand.nxv64i1.i64(<vscale x 64 x i1> [[TMP0:%.*]], <vscale x 64 x i1> [[TMP1:%.*]], i64 256)
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP2]]
+//
+fixed_bool1_t call_bool1_ff(fixed_bool1_t op1, fixed_bool1_t op2) {
+  return __riscv_vmand(op1, op2, __riscv_v_fixed_vlen);
+}
+
+// CHECK-LABEL: @call_bool4_ff(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.riscv.vmand.nxv16i1.i64(<vscale x 16 x i1> [[TMP0:%.*]], <vscale x 16 x i1> [[TMP1:%.*]], i64 64)
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+//
+fixed_bool4_t call_bool4_ff(fixed_bool4_t op1, fixed_bool4_t op2) {
+  return __riscv_vmand(op1, op2, __riscv_v_fixed_vlen / 4);
+}
+
 //===----------------------------------------------------------------------===//
 // fixed, scalable
 //===----------------------------------------------------------------------===//
@@ -88,6 +108,24 @@ fixed_float64m1_t call_float64_fs(fixed_float64m1_t op1, vfloat64m1_t op2) {
   return __riscv_vfadd(op1, op2, __riscv_v_fixed_vlen/64);
 }
 
+// CHECK-LABEL: @call_bool1_fs(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 64 x i1> @llvm.riscv.vmand.nxv64i1.i64(<vscale x 64 x i1> [[TMP0:%.*]], <vscale x 64 x i1> [[OP2:%.*]], i64 256)
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+//
+fixed_bool1_t call_bool1_fs(fixed_bool1_t op1, vbool1_t op2) {
+  return __riscv_vmand(op1, op2, __riscv_v_fixed_vlen);
+}
+
+// CHECK-LABEL: @call_bool4_fs(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.riscv.vmand.nxv16i1.i64(<vscale x 16 x i1> [[TMP0:%.*]], <vscale x 16 x i1> [[OP2:%.*]], i64 64)
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+fixed_bool4_t call_bool4_fs(fixed_bool4_t op1, vbool4_t op2) {
+  return __riscv_vmand(op1, op2, __riscv_v_fixed_vlen / 4);
+}
+
 //===----------------------------------------------------------------------===//
 // scalable, scalable
 //===----------------------------------------------------------------------===//
@@ -108,4 +146,22 @@ fixed_int32m1_t call_int32_ss(vint32m1_t op1, vint32m1_t op2) {
 //
 fixed_float64m1_t call_float64_ss(vfloat64m1_t op1, vfloat64m1_t op2) {
   return __riscv_vfadd(op1, op2, __riscv_v_fixed_vlen/64);
+}
+
+// CHECK-LABEL: @call_bool1_ss(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 64 x i1> @llvm.riscv.vmand.nxv64i1.i64(<vscale x 64 x i1> [[OP1:%.*]], <vscale x 64 x i1> [[OP2:%.*]], i64 256)
+// CHECK-NEXT:    ret <vscale x 64 x i1> [[TMP0]]
+//
+fixed_bool1_t call_bool1_ss(vbool1_t op1, vbool1_t op2) {
+  return __riscv_vmand(op1, op2, __riscv_v_fixed_vlen);
+}
+
+// CHECK-LABEL: @call_bool4_ss(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.riscv.vmand.nxv16i1.i64(<vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[OP2:%.*]], i64 64)
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+//
+fixed_bool4_t call_bool4_ss(vbool4_t op1, vbool4_t op2) {
+  return __riscv_vmand(op1, op2, __riscv_v_fixed_vlen / 4);
 }

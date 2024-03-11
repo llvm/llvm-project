@@ -330,6 +330,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(X, X);
   }
 
+  {
+    Value *X, *Y;
+    // abs(X) * abs(Y) -> abs(X * Y)
+    if (I.hasNoSignedWrap() &&
+        match(Op0,
+              m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One()))) &&
+        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(Y), m_One()))))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(Intrinsic::abs,
+                                           Builder.CreateNSWMul(X, Y),
+                                           Builder.getTrue()));
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;
@@ -754,6 +767,9 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, FoldedMul);
 
   if (Instruction *R = foldFPSignBitOps(I))
+    return R;
+
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
     return R;
 
   // X * -1.0 --> -X
@@ -1286,9 +1302,6 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
-  // FIXME: missed optimization: if one of the hands of select is/contains
-  //        undef, just directly pick the other one.
-  // FIXME: can both hands contain undef?
   // FIXME: Require one use?
   if (SelectInst *SI = dyn_cast<SelectInst>(Op))
     if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth,
@@ -1585,9 +1598,11 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
 
   // nnan X / +0.0 -> copysign(inf, X)
-  if (I.hasNoNaNs() && match(I.getOperand(1), m_Zero())) {
+  // nnan nsz X / -0.0 -> copysign(inf, X)
+  if (I.hasNoNaNs() &&
+      (match(I.getOperand(1), m_PosZeroFP()) ||
+       (I.hasNoSignedZeros() && match(I.getOperand(1), m_AnyZeroFP())))) {
     IRBuilder<> B(&I);
-    // TODO: nnan nsz X / -0.0 -> copysign(inf, X)
     CallInst *CopySign = B.CreateIntrinsic(
         Intrinsic::copysign, {C->getType()},
         {ConstantFP::getInfinity(I.getType()), I.getOperand(0)}, &I);
@@ -1692,6 +1707,34 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
   }
   Value *Pow = Builder.CreateIntrinsic(IID, I.getType(), Args, &I);
   return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+}
+
+/// Convert div to mul if we have an sqrt divisor iff sqrt's operand is a fdiv
+/// instruction.
+static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
+                                        InstCombiner::BuilderTy &Builder) {
+  // X / sqrt(Y / Z) -->  X * sqrt(Z / Y)
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  auto *II = dyn_cast<IntrinsicInst>(Op1);
+  if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
+      !II->hasAllowReassoc() || !II->hasAllowReciprocal())
+    return nullptr;
+
+  Value *Y, *Z;
+  auto *DivOp = dyn_cast<Instruction>(II->getOperand(0));
+  if (!DivOp)
+    return nullptr;
+  if (!match(DivOp, m_FDiv(m_Value(Y), m_Value(Z))))
+    return nullptr;
+  if (!DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() ||
+      !DivOp->hasOneUse())
+    return nullptr;
+  Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
+  Value *NewSqrt =
+      Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), SwapDiv, II);
+  return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
 }
 
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
@@ -1799,6 +1842,9 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   }
 
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
+    return Mul;
+
+  if (Instruction *Mul = foldFDivSqrtDivisor(I, Builder))
     return Mul;
 
   // pow(X, Y) / X --> pow(X, Y-1)

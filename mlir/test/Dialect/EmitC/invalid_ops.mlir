@@ -80,6 +80,14 @@ func.func @dense_template_argument(%arg : i32) {
 
 // -----
 
+func.func @array_result() {
+    // expected-error @+1 {{'emitc.call_opaque' op cannot return array type}}
+    emitc.call_opaque "array_result"() : () -> !emitc.array<4xi32>
+    return
+}
+
+// -----
+
 func.func @empty_operator(%arg : i32) {
     // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
     %2 = emitc.apply ""(%arg) : (i32) -> !emitc.ptr<i32>
@@ -124,6 +132,14 @@ func.func @var_attribute_return_type_2() {
 func.func @cast_tensor(%arg : tensor<f32>) {
     // expected-error @+1 {{'emitc.cast' op operand type 'tensor<f32>' and result type 'tensor<f32>' are cast incompatible}}
     %1 = emitc.cast %arg: tensor<f32> to tensor<f32>
+    return
+}
+
+// -----
+
+func.func @cast_array(%arg : !emitc.array<4xf32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.array<4xf32>' and result type '!emitc.array<4xf32>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.array<4xf32> to !emitc.array<4xf32>
     return
 }
 
@@ -235,6 +251,15 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
 
 // -----
 
+func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi32>
+  // expected-error @+1 {{'emitc.assign' op cannot assign to array type}}
+  emitc.assign %arg1 : !emitc.array<4xi32> to %v : !emitc.array<4xi32>
+  return
+}
+
+// -----
+
 func.func @test_expression_no_yield() -> i32 {
   // expected-error @+1 {{'emitc.expression' op must yield a value at termination}}
   %r = emitc.expression : i32 {
@@ -288,4 +313,77 @@ func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
     emitc.yield %a : i32
   }
   return %r : i32
+}
+
+// -----
+
+// expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
+emitc.func @multiple_results(%0: i32) -> (i32, i32) {
+  emitc.return %0 : i32
+}
+
+// -----
+
+emitc.func @resulterror() -> i32 {
+^bb42:
+  emitc.return    // expected-error {{'emitc.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
+}
+
+// -----
+
+emitc.func @return_type_mismatch() -> i32 {
+  %0 = emitc.call_opaque "foo()"(): () -> f32
+  emitc.return %0 : f32  // expected-error {{type of the return operand ('f32') doesn't match function result type ('i32') in function @return_type_mismatch}}
+}
+
+// -----
+
+// expected-error@+1 {{'emitc.func' op cannot return array type}}
+emitc.func @return_type_array(%arg : !emitc.array<4xi32>) -> !emitc.array<4xi32> {
+  emitc.return %arg : !emitc.array<4xi32>
+}
+
+// -----
+
+func.func @return_inside_func.func(%0: i32) -> (i32) {
+  // expected-error@+1 {{'emitc.return' op expects parent op 'emitc.func'}}
+  emitc.return %0 : i32
+}
+// -----
+
+// expected-error@+1 {{expected non-function type}}
+emitc.func @func_variadic(...)
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op 'bar' does not reference a valid function}}
+emitc.declare_func @bar
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
+"emitc.declare_func"()  : () -> ()
+
+// -----
+
+func.func @logical_and_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_and' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_and"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_not_resulterror(%arg0: i32) {
+  // expected-error @+1 {{'emitc.logical_not' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_not"(%arg0) : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_or_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_or' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_or"(%arg0, %arg1) : (i32, i32) -> i32
+  return
 }

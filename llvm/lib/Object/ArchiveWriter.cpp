@@ -90,7 +90,7 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
     }
   }
 
-  return object::Archive::getDefaultKindForHost();
+  return object::Archive::getDefaultKind();
 }
 
 Expected<NewArchiveMember>
@@ -926,7 +926,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   ErrorOr<SmallString<128>> PathToOrErr = canonicalizePath(To);
   ErrorOr<SmallString<128>> DirFromOrErr = canonicalizePath(From);
   if (!PathToOrErr || !DirFromOrErr)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   const SmallString<128> &PathTo = *PathToOrErr;
   const SmallString<128> &DirFrom = sys::path::parent_path(*DirFromOrErr);
@@ -950,7 +950,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   for (auto ToE = sys::path::end(PathTo); ToI != ToE; ++ToI)
     sys::path::append(Relative, sys::path::Style::posix, *ToI);
 
-  return std::string(Relative.str());
+  return std::string(Relative);
 }
 
 static Error writeArchiveToStream(raw_ostream &Out,

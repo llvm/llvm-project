@@ -17,24 +17,24 @@ using namespace llvm;
 using namespace llvm::MachO;
 
 static ExportedSymbol TBDv2Symbols[] = {
-    {SymbolKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},
-    {SymbolKind::GlobalSymbol, "_sym1", false, false},
-    {SymbolKind::GlobalSymbol, "_sym2", false, false},
-    {SymbolKind::GlobalSymbol, "_sym3", false, false},
-    {SymbolKind::GlobalSymbol, "_sym4", false, false},
-    {SymbolKind::GlobalSymbol, "_sym5", false, false},
-    {SymbolKind::GlobalSymbol, "_tlv1", false, true},
-    {SymbolKind::GlobalSymbol, "_tlv2", false, true},
-    {SymbolKind::GlobalSymbol, "_tlv3", false, true},
-    {SymbolKind::GlobalSymbol, "_weak1", true, false},
-    {SymbolKind::GlobalSymbol, "_weak2", true, false},
-    {SymbolKind::GlobalSymbol, "_weak3", true, false},
-    {SymbolKind::ObjectiveCClass, "class1", false, false},
-    {SymbolKind::ObjectiveCClass, "class2", false, false},
-    {SymbolKind::ObjectiveCClass, "class3", false, false},
-    {SymbolKind::ObjectiveCInstanceVariable, "class1._ivar1", false, false},
-    {SymbolKind::ObjectiveCInstanceVariable, "class1._ivar2", false, false},
-    {SymbolKind::ObjectiveCInstanceVariable, "class1._ivar3", false, false},
+    {EncodeKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},
+    {EncodeKind::GlobalSymbol, "_sym1", false, false},
+    {EncodeKind::GlobalSymbol, "_sym2", false, false},
+    {EncodeKind::GlobalSymbol, "_sym3", false, false},
+    {EncodeKind::GlobalSymbol, "_sym4", false, false},
+    {EncodeKind::GlobalSymbol, "_sym5", false, false},
+    {EncodeKind::GlobalSymbol, "_tlv1", false, true},
+    {EncodeKind::GlobalSymbol, "_tlv2", false, true},
+    {EncodeKind::GlobalSymbol, "_tlv3", false, true},
+    {EncodeKind::GlobalSymbol, "_weak1", true, false},
+    {EncodeKind::GlobalSymbol, "_weak2", true, false},
+    {EncodeKind::GlobalSymbol, "_weak3", true, false},
+    {EncodeKind::ObjectiveCClass, "class1", false, false},
+    {EncodeKind::ObjectiveCClass, "class2", false, false},
+    {EncodeKind::ObjectiveCClass, "class3", false, false},
+    {EncodeKind::ObjectiveCInstanceVariable, "class1._ivar1", false, false},
+    {EncodeKind::ObjectiveCInstanceVariable, "class1._ivar2", false, false},
+    {EncodeKind::ObjectiveCInstanceVariable, "class1._ivar3", false, false},
 };
 
 namespace TBDv2 {
@@ -199,14 +199,14 @@ TEST(TBDv2, WriteFile) {
   File.setObjCConstraint(ObjCConstraintType::Retain_Release);
   File.addAllowableClient("clientA", Targets[1]);
   File.addReexportedLibrary("/usr/lib/libfoo.dylib", Targets[1]);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym1", {Targets[0]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym2", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_sym1", {Targets[0]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_sym2", {Targets[0]},
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::GlobalSymbol, "_sym3", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_sym3", {Targets[0]},
                  SymbolFlags::ThreadLocalValue);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", {Targets[1]});
-  File.addSymbol(SymbolKind::ObjectiveCClassEHType, "Class1", {Targets[1]});
-  File.addSymbol(SymbolKind::ObjectiveCInstanceVariable, "Class1._ivar1",
+  File.addSymbol(EncodeKind::ObjectiveCClass, "Class1", {Targets[1]});
+  File.addSymbol(EncodeKind::ObjectiveCClassEHType, "Class1", {Targets[1]});
+  File.addSymbol(EncodeKind::ObjectiveCInstanceVariable, "Class1._ivar1",
                  {Targets[1]});
 
   SmallString<4096> Buffer;

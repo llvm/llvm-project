@@ -2,8 +2,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN-NOHSA-SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN-HSA %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN-NOHSA-VI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=EG %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=CM %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=EG %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=CM %s
 
 ; FIXME: r600 is broken because the bigger testcases spill and it's not implemented
 
@@ -3478,19 +3478,19 @@ define amdgpu_kernel void @global_zextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v24, 16, v10
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v17, 0xffff, v15
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v15, 0xffff, v14
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v15, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v20, 0xffff, v13
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v18, 0xffff, v12
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v18, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v19, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(2)
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v9
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v8
@@ -3562,17 +3562,17 @@ define amdgpu_kernel void @global_zextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:80
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:32
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[23:26], off, s[0:3], 0 offset:48
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-NOHSA-SI-NEXT:    s_endpgm
@@ -3801,20 +3801,20 @@ define amdgpu_kernel void @global_zextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v16, 16, v14
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v17, 0xffff, v15
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v15, 0xffff, v14
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v15, off, s[88:91], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v15, off, s[88:91], 0 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v16, off, s[88:91], 0 offset:8 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v17, off, s[88:91], 0 offset:12 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v18, off, s[88:91], 0 offset:16 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v16, off, s[88:91], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v17, off, s[88:91], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v18, off, s[88:91], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v21, 16, v13
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v19, 16, v12
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v20, 0xffff, v13
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v18, 0xffff, v12
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v18, off, s[88:91], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v18, off, s[88:91], 0 offset:16 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v19, off, s[88:91], 0 offset:24 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v20, off, s[88:91], 0 offset:28 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v21, off, s[88:91], 0 offset:32 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v19, off, s[88:91], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v20, off, s[88:91], 0 offset:24 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v21, off, s[88:91], 0 offset:28 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v26, 16, v11
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v24, 16, v10
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v19, 16, v9
@@ -3885,16 +3885,16 @@ define amdgpu_kernel void @global_zextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:80
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:32
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[23:26], off, s[0:3], 0 offset:48
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 offset:20 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:24 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:28 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:32 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:20 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:24 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:28 ; 4-byte Folded Reload
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:8 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:12 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
@@ -4289,11 +4289,11 @@ define amdgpu_kernel void @global_sextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_ashrrev_i32_e32 v1, 16, v10
 ; GCN-NOHSA-SI-NEXT:    v_bfe_i32 v2, v11, 0, 16
 ; GCN-NOHSA-SI-NEXT:    v_bfe_i32 v0, v10, 0, 16
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v0, off, s[8:11], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v0, off, s[8:11], 0 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:8 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:12 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:16 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v2, off, s[8:11], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v3, off, s[8:11], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    v_ashrrev_i32_e32 v7, 16, v9
 ; GCN-NOHSA-SI-NEXT:    v_ashrrev_i32_e32 v5, 16, v8
 ; GCN-NOHSA-SI-NEXT:    v_bfe_i32 v6, v9, 0, 16
@@ -4370,10 +4370,10 @@ define amdgpu_kernel void @global_sextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:32
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:48
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:8 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[8:11], 0 offset:12 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[8:11], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[8:11], 0 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[8:11], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[8:11], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-NOHSA-SI-NEXT:    s_endpgm
@@ -4602,20 +4602,20 @@ define amdgpu_kernel void @global_sextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v16, 16, v14
 ; GCN-NOHSA-VI-NEXT:    v_bfe_i32 v17, v15, 0, 16
 ; GCN-NOHSA-VI-NEXT:    v_bfe_i32 v15, v14, 0, 16
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v15, off, s[88:91], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v15, off, s[88:91], 0 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v16, off, s[88:91], 0 offset:8 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v17, off, s[88:91], 0 offset:12 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v18, off, s[88:91], 0 offset:16 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v16, off, s[88:91], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v17, off, s[88:91], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v18, off, s[88:91], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v16, 16, v13
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v14, 16, v12
 ; GCN-NOHSA-VI-NEXT:    v_bfe_i32 v15, v13, 0, 16
 ; GCN-NOHSA-VI-NEXT:    v_bfe_i32 v13, v12, 0, 16
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v13, off, s[88:91], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v13, off, s[88:91], 0 offset:16 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v14, off, s[88:91], 0 offset:24 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v15, off, s[88:91], 0 offset:28 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    buffer_store_dword v16, off, s[88:91], 0 offset:32 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v14, off, s[88:91], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v15, off, s[88:91], 0 offset:24 ; 4-byte Folded Spill
+; GCN-NOHSA-VI-NEXT:    buffer_store_dword v16, off, s[88:91], 0 offset:28 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v19, 16, v11
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v17, 16, v10
 ; GCN-NOHSA-VI-NEXT:    v_bfe_i32 v18, v11, 0, 16
@@ -4686,16 +4686,16 @@ define amdgpu_kernel void @global_sextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:80
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[39:42], off, s[0:3], 0 offset:32
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:48
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 offset:20 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:24 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:28 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:32 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:20 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:24 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:28 ; 4-byte Folded Reload
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:8 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:12 ; 4-byte Folded Reload
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[88:91], 0 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v1, off, s[88:91], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[88:91], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v3, off, s[88:91], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
@@ -7270,11 +7270,11 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v16
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v14
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v0, 0xffff, v14
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v12, 0xffff, v16
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v14, v3
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v30, 0xffff, v15
@@ -7334,16 +7334,16 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v11, v39
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v13, v39
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v15, v39
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v12, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
+; GCN-NOHSA-SI-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(0)
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v12, off, s[12:15], 0 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v13, v39
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v15, v39
@@ -7363,10 +7363,10 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[46:49], off, s[0:3], 0 offset:128
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:96
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:64
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:32
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0

@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -262,10 +263,9 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_continue_C_tids(), m_continue_s_tids(), m_continue_S_tids(),
       m_max_memory_size(0), m_remote_stub_max_memory_size(0),
       m_addr_to_mmap_size(), m_thread_create_bp_sp(),
-      m_waiting_for_attach(false),
-      m_command_sp(), m_breakpoint_pc_offset(0),
+      m_waiting_for_attach(false), m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
-      m_erased_flash_ranges(), m_vfork_in_progress(false) {
+      m_erased_flash_ranges(), m_vfork_in_progress_count(0) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -1089,8 +1089,9 @@ Status ProcessGDBRemote::DoAttachToProcessWithID(
       const int packet_len =
           ::snprintf(packet, sizeof(packet), "vAttach;%" PRIx64, attach_pid);
       SetID(attach_pid);
-      m_async_broadcaster.BroadcastEvent(
-          eBroadcastBitAsyncContinue, new EventDataBytes(packet, packet_len));
+      auto data_sp =
+          std::make_shared<EventDataBytes>(llvm::StringRef(packet, packet_len));
+      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
     } else
       SetExitStatus(-1, error.AsCString());
   }
@@ -1127,9 +1128,8 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
                                endian::InlHostByteOrder(),
                                endian::InlHostByteOrder());
 
-      m_async_broadcaster.BroadcastEvent(
-          eBroadcastBitAsyncContinue,
-          new EventDataBytes(packet.GetString().data(), packet.GetSize()));
+      auto data_sp = std::make_shared<EventDataBytes>(packet.GetString());
+      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
     } else
       SetExitStatus(-1, error.AsCString());
@@ -1374,10 +1374,9 @@ Status ProcessGDBRemote::DoResume() {
         return error;
       }
 
-      m_async_broadcaster.BroadcastEvent(
-          eBroadcastBitAsyncContinue,
-          new EventDataBytes(continue_packet.GetString().data(),
-                             continue_packet.GetSize()));
+      auto data_sp =
+          std::make_shared<EventDataBytes>(continue_packet.GetString());
+      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
       if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
         error.SetErrorString("Resume timed out.");
@@ -1600,6 +1599,26 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // has no stop reason.
     thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+      // If a thread is stopped at a breakpoint site, set that as the stop
+      // reason even if it hasn't executed the breakpoint instruction yet.
+      // We will silently step over the breakpoint when we resume execution
+      // and miss the fact that this thread hit the breakpoint.
+      const size_t num_thread_ids = m_thread_ids.size();
+      for (size_t i = 0; i < num_thread_ids; i++) {
+        if (m_thread_ids[i] == thread->GetID() && m_thread_pcs.size() > i) {
+          addr_t pc = m_thread_pcs[i];
+          lldb::BreakpointSiteSP bp_site_sp =
+              thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+          if (bp_site_sp) {
+            if (bp_site_sp->ValidForThisThread(*thread)) {
+              thread->SetStopInfo(
+                  StopInfo::CreateStopReasonWithBreakpointSiteID(
+                      *thread, bp_site_sp->GetID()));
+              return true;
+            }
+          }
+        }
+      }
       thread->SetStopInfo(StopInfoSP());
     }
     return true;
@@ -1722,7 +1741,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     } else {
       bool handled = false;
       bool did_exec = false;
-      if (!reason.empty()) {
+      // debugserver can send reason = "none" which is equivalent
+      // to no reason.
+      if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
           addr_t pc = thread_sp->GetRegisterContext()->GetPC();
           lldb::BreakpointSiteSP bp_site_sp =
@@ -1864,11 +1885,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         lldb::BreakpointSiteSP bp_site_sp =
             thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
 
-        // If the current pc is a breakpoint site then the StopInfo should be
-        // set to Breakpoint even though the remote stub did not set it as such.
-        // This can happen when the thread is involuntarily interrupted (e.g.
-        // due to stops on other threads) just as it is about to execute the
-        // breakpoint instruction.
+        // If a thread is stopped at a breakpoint site, set that as the stop
+        // reason even if it hasn't executed the breakpoint instruction yet.
+        // We will silently step over the breakpoint when we resume execution
+        // and miss the fact that this thread hit the breakpoint.
         if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
               *thread_sp, bp_site_sp->GetID()));
@@ -3154,23 +3174,13 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   bool write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
   size_t size = wp_sp->GetByteSize();
 
-  // New WatchpointResources needed to implement this Watchpoint.
-  std::vector<WatchpointResourceSP> resources;
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  WatchpointHardwareFeature supported_features =
+      m_gdb_comm.GetSupportedWatchpointTypes();
 
-  // LWP_TODO: Break up the user's request into pieces that can be watched
-  // given the capabilities of the target cpu / stub software.
-  // As a default, breaking the watched region up into target-pointer-sized,
-  // aligned, groups.
-  //
-  // Beyond the default, a stub can / should inform us of its capabilities,
-  // e.g. a stub that can do AArch64 power-of-2 MASK watchpoints.
-  //
-  // And the cpu may have unique capabilities. AArch64 BAS watchpoints
-  // can watch any sequential bytes in a doubleword, but Intel watchpoints
-  // can only watch 1, 2, 4, 8 bytes within a doubleword.
-  WatchpointResourceSP wp_res_sp =
-      std::make_shared<WatchpointResource>(addr, size, read, write);
-  resources.push_back(wp_res_sp);
+  std::vector<WatchpointResourceSP> resources =
+      WatchpointAlgorithms::AtomizeWatchpointRequest(
+          addr, size, read, write, supported_features, target_arch);
 
   // LWP_TODO: Now that we know the WP Resources needed to implement this
   // Watchpoint, we need to look at currently allocated Resources in the
@@ -4189,52 +4199,55 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
       // Note that XML in general requires that each of these attributes only
       // appears once, so we don't have to handle that here.
       if (attr_name == "name") {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Found field node name \"{0}\"",
-                 attr_value.data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Found field node name \"{0}\"",
+            attr_value.data());
         name = attr_value;
       } else if (attr_name == "start") {
         unsigned parsed_start = 0;
         if (llvm::to_integer(attr_value, parsed_start)) {
           if (parsed_start > max_start_bit) {
-            LLDB_LOG(
-                log,
-                "ProcessGDBRemote::ParseFlags Invalid start {0} in field node, "
-                "cannot be > {1}",
-                parsed_start, max_start_bit);
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseFlagsFields Invalid start {0} in "
+                     "field node, "
+                     "cannot be > {1}",
+                     parsed_start, max_start_bit);
           } else
             start = parsed_start;
         } else {
-          LLDB_LOG(log,
-                   "ProcessGDBRemote::ParseFlags Invalid start \"{0}\" in "
-                   "field node",
-                   attr_value.data());
+          LLDB_LOG(
+              log,
+              "ProcessGDBRemote::ParseFlagsFields Invalid start \"{0}\" in "
+              "field node",
+              attr_value.data());
         }
       } else if (attr_name == "end") {
         unsigned parsed_end = 0;
         if (llvm::to_integer(attr_value, parsed_end))
           if (parsed_end > max_start_bit) {
-            LLDB_LOG(
-                log,
-                "ProcessGDBRemote::ParseFlags Invalid end {0} in field node, "
-                "cannot be > {1}",
-                parsed_end, max_start_bit);
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseFlagsFields Invalid end {0} in "
+                     "field node, "
+                     "cannot be > {1}",
+                     parsed_end, max_start_bit);
           } else
             end = parsed_end;
         else {
-          LLDB_LOG(
-              log,
-              "ProcessGDBRemote::ParseFlags Invalid end \"{0}\" in field node",
-              attr_value.data());
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseFlagsFields Invalid end \"{0}\" in "
+                   "field node",
+                   attr_value.data());
         }
       } else if (attr_name == "type") {
         // Type is a known attribute but we do not currently use it and it is
         // not required.
       } else {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Ignoring unknown attribute "
-                 "\"{0}\" in field node",
-                 attr_name.data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Ignoring unknown attribute "
+            "\"{0}\" in field node",
+            attr_name.data());
       }
 
       return true; // Walk all attributes of the field.
@@ -4242,10 +4255,11 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
 
     if (name && start && end) {
       if (*start > *end) {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Start {0} > end {1} in field "
-                 "\"{2}\", ignoring",
-                 *start, *end, name->data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Start {0} > end {1} in field "
+            "\"{2}\", ignoring",
+            *start, *end, name->data());
       } else {
         fields.push_back(RegisterFlags::Field(name->str(), *start, *end));
       }
@@ -4617,6 +4631,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       // We don't have any information about vendor or OS.
       arch_to_use.SetTriple(llvm::StringSwitch<std::string>(target_info.arch)
                                 .Case("i386:x86-64", "x86_64")
+                                .Case("riscv:rv64", "riscv64")
+                                .Case("riscv:rv32", "riscv32")
                                 .Default(target_info.arch) +
                             "--");
 
@@ -5276,8 +5292,10 @@ public:
           (ProcessGDBRemote *)m_interpreter.GetExecutionContext()
               .GetProcessPtr();
       if (process) {
-        StreamSP output_stream_sp(
-            m_interpreter.GetDebugger().GetAsyncOutputStream());
+        StreamSP output_stream_sp = result.GetImmediateOutputStream();
+        if (!output_stream_sp)
+          output_stream_sp =
+              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =
@@ -5337,8 +5355,7 @@ public:
             interpreter, "process plugin packet xfer-size",
             "Maximum size that lldb will try to read/write one one chunk.",
             nullptr) {
-    CommandArgumentData max_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({max_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
@@ -5380,8 +5397,7 @@ public:
                             "be added to the packet prior to sending and "
                             "stripped from the result.",
                             nullptr) {
-    CommandArgumentData packet_arg{eArgTypeNone, eArgRepeatStar};
-    m_arguments.push_back({packet_arg});
+    AddSimpleArgumentList(eArgTypeNone, eArgRepeatStar);
   }
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
@@ -5619,8 +5635,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   Log *log = GetLog(GDBRLog::Process);
 
-  assert(!m_vfork_in_progress);
-  m_vfork_in_progress = true;
+  LLDB_LOG(
+      log,
+      "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
+      child_pid, child_tid);
+  ++m_vfork_in_progress_count;
 
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5674,8 +5693,8 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 }
 
 void ProcessGDBRemote::DidVForkDone() {
-  assert(m_vfork_in_progress);
-  m_vfork_in_progress = false;
+  assert(m_vfork_in_progress_count > 0);
+  --m_vfork_in_progress_count;
 
   // Reenable all software breakpoints that were enabled before vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5685,7 +5704,9 @@ void ProcessGDBRemote::DidVForkDone() {
 void ProcessGDBRemote::DidExec() {
   // If we are following children, vfork is finished by exec (rather than
   // vforkdone that is submitted for parent).
-  if (GetFollowForkMode() == eFollowChild)
-    m_vfork_in_progress = false;
+  if (GetFollowForkMode() == eFollowChild) {
+    if (m_vfork_in_progress_count > 0)
+      --m_vfork_in_progress_count;
+  }
   Process::DidExec();
 }

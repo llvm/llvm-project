@@ -400,10 +400,11 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
       // C++11 [class.ctor]p6:
       //   If that user-written default constructor would satisfy the
-      //   requirements of a constexpr constructor, the implicitly-defined
-      //   default constructor is constexpr.
+      //   requirements of a constexpr constructor/function(C++23), the
+      //   implicitly-defined default constructor is constexpr.
       if (!BaseClassDecl->hasConstexprDefaultConstructor())
-        data().DefaultedDefaultConstructorIsConstexpr = false;
+        data().DefaultedDefaultConstructorIsConstexpr =
+            C.getLangOpts().CPlusPlus23;
 
       // C++1z [class.copy]p8:
       //   The implicitly-declared copy constructor for a class X will have
@@ -548,7 +549,8 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())
-    data().DefaultedDestructorIsConstexpr = false;
+    data().DefaultedDestructorIsConstexpr =
+        getASTContext().getLangOpts().CPlusPlus23;
 
   // C++20 [temp.param]p7:
   //   A structural type is [...] a literal class type [for which] the types
@@ -583,6 +585,19 @@ bool CXXRecordDecl::isTriviallyCopyable() const {
   if (hasNonTrivialMoveAssignment()) return false;
   //   -- has a trivial destructor.
   if (!hasTrivialDestructor()) return false;
+
+  return true;
+}
+
+bool CXXRecordDecl::isTriviallyCopyConstructible() const {
+
+  //   A trivially copy constructible class is a class that:
+  //   -- has no non-trivial copy constructors,
+  if (hasNonTrivialCopyConstructor())
+    return false;
+  //   -- has a trivial destructor.
+  if (!hasTrivialDestructor())
+    return false;
 
   return true;
 }
@@ -1284,7 +1299,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
             !FieldRec->hasConstexprDefaultConstructor() && !isUnion())
           // The standard requires any in-class initializer to be a constant
           // expression. We consider this to be a defect.
-          data().DefaultedDefaultConstructorIsConstexpr = false;
+          data().DefaultedDefaultConstructorIsConstexpr =
+              Context.getLangOpts().CPlusPlus23;
 
         // C++11 [class.copy]p8:
         //   The implicitly-declared copy constructor for a class X will have
@@ -1368,6 +1384,31 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (Using->getDeclName().getCXXOverloadedOperator() == OO_Equal)
       data().HasInheritedAssignment = true;
   }
+}
+
+bool CXXRecordDecl::isLiteral() const {
+  const LangOptions &LangOpts = getLangOpts();
+  if (!(LangOpts.CPlusPlus20 ? hasConstexprDestructor()
+                             : hasTrivialDestructor()))
+    return false;
+
+  if (hasNonLiteralTypeFieldsOrBases()) {
+    // CWG2598
+    // is an aggregate union type that has either no variant
+    // members or at least one variant member of non-volatile literal type,
+    if (!isUnion())
+      return false;
+    bool HasAtLeastOneLiteralMember =
+        fields().empty() || any_of(fields(), [this](const FieldDecl *D) {
+          return !D->getType().isVolatileQualified() &&
+                 D->getType()->isLiteralType(getASTContext());
+        });
+    if (!HasAtLeastOneLiteralMember)
+      return false;
+  }
+
+  return isAggregate() || (isLambda() && LangOpts.CPlusPlus17) ||
+         hasConstexprNonCopyMoveConstructor() || hasTrivialDefaultConstructor();
 }
 
 void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
@@ -2041,7 +2082,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
         //   A class is abstract if it contains or inherits at least one
         //   pure virtual function for which the final overrider is pure
         //   virtual.
-        if (SO->second.front().Method->isPure()) {
+        if (SO->second.front().Method->isPureVirtual()) {
           data().Abstract = true;
           Done = true;
           break;
@@ -2260,7 +2301,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // If the member function is marked 'final', we know that it can't be
   // overridden and can therefore devirtualize it unless it's pure virtual.
   if (hasAttr<FinalAttr>())
-    return isPure() ? nullptr : this;
+    return isPureVirtual() ? nullptr : this;
 
   // If Base is unknown, we cannot devirtualize.
   if (!Base)
@@ -2289,7 +2330,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // If that method is pure virtual, we can't devirtualize. If this code is
   // reached, the result would be UB, not a direct call to the derived class
   // function, and we can't assume the derived class function is defined.
-  if (DevirtualizedMethod->isPure())
+  if (DevirtualizedMethod->isPureVirtual())
     return nullptr;
 
   // If that method is marked final, we can devirtualize it.
@@ -2505,8 +2546,19 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
                                     const CXXRecordDecl *Decl) {
   ASTContext &C = Decl->getASTContext();
   QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
-  return C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
-                              : C.getPointerType(ObjectTy);
+
+  // Unlike 'const' and 'volatile', a '__restrict' qualifier must be
+  // attached to the pointer type, not the pointee.
+  bool Restrict = FPT->getMethodQuals().hasRestrict();
+  if (Restrict)
+    ObjectTy.removeLocalRestrict();
+
+  ObjectTy = C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                                  : C.getPointerType(ObjectTy);
+
+  if (Restrict)
+    ObjectTy.addRestrict();
+  return ObjectTy;
 }
 
 QualType CXXMethodDecl::getThisType() const {

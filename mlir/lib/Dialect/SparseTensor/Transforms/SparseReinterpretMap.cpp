@@ -373,7 +373,7 @@ public:
                           PatternRewriter &rewriter) const {
     // Only rewrite single output operations with pure (sparse) tensor
     // semantics.
-    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasTensorSemantics() ||
+    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
         !hasAnySparseOperandOrResult(linalgOp) ||
         !hasAnyNonIdentityOperandsOrResults(linalgOp))
       return failure();
@@ -389,14 +389,14 @@ public:
     auto stt = tryGetSparseTensorType(res);
     auto [idxMap, itTp] = *transMap;
 
-    rewriter.startRootUpdate(linalgOp);
+    rewriter.startOpModification(linalgOp);
     linalgOp.setIndexingMapsAttr(idxMap);
     linalgOp.setIteratorTypesAttr(itTp);
     // Use demapped arguments.
     linalgOp.getInputsMutable().assign(adaptor.getInputs());
     linalgOp.getDpsInitsMutable().assign(adaptor.getOutputs());
     res.setType(adaptor.getOutputs()[0].getType());
-    rewriter.finalizeRootUpdate(linalgOp);
+    rewriter.finalizeOpModification(linalgOp);
 
     rewriter.setInsertionPointAfter(linalgOp);
     if (stt && stt->hasEncoding()) {
@@ -411,7 +411,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
                                 PatternRewriter &rewriter) const override {
-    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasTensorSemantics() ||
+    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
         hasAnyNonIdentityOperandsOrResults(linalgOp) || // need demap first
         !hasAnySparseOperandOrResult(linalgOp)) {
       return failure();
@@ -458,7 +458,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     }
 
     // Marks the GenericOp to avoid recursive matching.
-    rewriter.updateRootInPlace(linalgOp, [&]() {
+    rewriter.modifyOpInPlace(linalgOp, [&]() {
       linalgOp->setAttr(sorted, rewriter.getBoolAttr(true));
     });
 
@@ -482,10 +482,10 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     for (AffineMap &idxMap : idxMaps)
       idxMap = idxMap.compose(order); // sorted loop -> lvl map
 
-    rewriter.startRootUpdate(linalgOp);
+    rewriter.startOpModification(linalgOp);
     linalgOp.setIndexingMapsAttr(rewriter.getAffineMapArrayAttr(idxMaps));
     linalgOp.setIteratorTypesAttr(rewriter.getArrayAttr(curItTypes));
-    rewriter.finalizeRootUpdate(linalgOp);
+    rewriter.finalizeOpModification(linalgOp);
 
     return success();
   }
@@ -570,7 +570,7 @@ private:
       rewriter.setInsertionPoint(linalgOp);
       RankedTensorType dstTp = stt.withDimToLvl(dimToLvl).getRankedTensorType();
       Value dst = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);
-      rewriter.updateRootInPlace(linalgOp, [&]() {
+      rewriter.modifyOpInPlace(linalgOp, [&]() {
         linalgOp->setOperand(t->getOperandNumber(), dst);
       });
       return success();
@@ -623,10 +623,10 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
     }
 
     assert(dynSz.empty()); // should have consumed all.
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     op->setOperands(dynLvlSzs);
     op.getResult().setType(stt.getDemappedType());
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     rewriter.setInsertionPointAfter(op);
 
     Value t = genRemap(rewriter, stt.getEncoding(), op.getResult());
@@ -656,6 +656,40 @@ struct TensorInsertDemapper
   }
 };
 
+struct SparseAssembleDemapper : public OpRewritePattern<AssembleOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(AssembleOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!hasAnyNonIdentityOperandsOrResults(op))
+      return failure();
+
+    assert(hasAnySparseResult(op));
+    auto stt = getSparseTensorType(op.getResult());
+    rewriter.modifyOpInPlace(
+        op, [&op, &stt]() { op.getResult().setType(stt.getDemappedType()); });
+    rewriter.setInsertionPointAfter(op);
+    Value out = genRemap(rewriter, stt.getEncoding(), op.getResult());
+    rewriter.replaceAllUsesExcept(op, out, out.getDefiningOp());
+    return success();
+  }
+};
+
+struct SparseDisassembleDemapper
+    : public DemapInsRewriter<SparseDisassembleDemapper, DisassembleOp> {
+  using DemapInsRewriter::DemapInsRewriter;
+  LogicalResult rewriteOp(DisassembleOp op, OpAdaptor adaptor,
+                          PatternRewriter &rewriter) const {
+    if (!hasAnyNonIdentityOperandsOrResults(op))
+      return failure();
+
+    assert(hasAnySparseOperandOrResult(op));
+    rewriter.modifyOpInPlace(op, [&op, &adaptor]() {
+      op.getTensorMutable().assign(adaptor.getTensor());
+    });
+    return success();
+  }
+};
+
 struct ForeachOpDemapper
     : public DemapInsRewriter<ForeachOpDemapper, ForeachOp> {
   using DemapInsRewriter::DemapInsRewriter;
@@ -676,7 +710,7 @@ struct ForeachOpDemapper
     auto srcStt = getSparseTensorType(op.getTensor());
     SmallVector<Type> prevRetTps(op.getResultTypes());
 
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     op.getTensorMutable().assign(adaptor.getTensor());
     op.getInitArgsMutable().assign(adaptor.getInitArgs());
     // Update results' types.
@@ -731,7 +765,7 @@ struct ForeachOpDemapper
         rewriter.eraseOp(yield);
       }
     }
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
 
     rewriter.setInsertionPointAfter(op);
     SmallVector<Value> outs =
@@ -758,7 +792,8 @@ void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kExceptGeneric) {
     patterns.add<TensorAllocDemapper<bufferization::AllocTensorOp>,
-                 TensorAllocDemapper<tensor::EmptyOp>, TensorInsertDemapper,
+                 TensorAllocDemapper<tensor::EmptyOp>, SparseAssembleDemapper,
+                 SparseDisassembleDemapper, TensorInsertDemapper,
                  ForeachOpDemapper>(patterns.getContext());
   }
 }

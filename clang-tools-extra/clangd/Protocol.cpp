@@ -1187,6 +1187,23 @@ bool fromJSON(const llvm::json::Value &Params, RenameParams &R,
          O.map("position", R.position) && O.map("newName", R.newName);
 }
 
+llvm::json::Value toJSON(const RenameParams &R) {
+  return llvm::json::Object{
+      {"textDocument", R.textDocument},
+      {"position", R.position},
+      {"newName", R.newName},
+  };
+}
+
+llvm::json::Value toJSON(const PrepareRenameResult &PRR) {
+  if (PRR.placeholder.empty())
+    return toJSON(PRR.range);
+  return llvm::json::Object{
+      {"range", toJSON(PRR.range)},
+      {"placeholder", PRR.placeholder},
+  };
+}
+
 llvm::json::Value toJSON(const DocumentHighlight &DH) {
   return llvm::json::Object{
       {"range", toJSON(DH.range)},
@@ -1395,7 +1412,7 @@ bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R,
 }
 
 llvm::json::Value toJSON(SymbolTag Tag) {
-  return llvm::json::Value{static_cast<int>(Tag)};
+  return llvm::json::Value(static_cast<int>(Tag));
 }
 
 llvm::json::Value toJSON(const CallHierarchyItem &I) {

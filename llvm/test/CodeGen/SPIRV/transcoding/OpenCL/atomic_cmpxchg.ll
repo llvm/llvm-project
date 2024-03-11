@@ -14,9 +14,8 @@
 ;; }
 
 ; CHECK-SPIRV:     OpName %[[#TEST:]] "test_atomic_cmpxchg"
-; CHECK-SPIRV-DAG: %[[#UCHAR:]] = OpTypeInt 8 0
 ; CHECK-SPIRV-DAG: %[[#UINT:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: %[[#UCHAR_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR]]
+; CHECK-SPIRV-DAG: %[[#UINT_PTR:]] = OpTypePointer CrossWorkgroup %[[#UINT]]
 
 ;; In SPIR-V, atomic_cmpxchg is represented as OpAtomicCompareExchange [2],
 ;; which also includes memory scope and two memory semantic arguments. The
@@ -31,7 +30,7 @@
 ; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstant %[[#UINT]] 0
 
 ; CHECK-SPIRV:     %[[#TEST]] = OpFunction %[[#]]
-; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UCHAR_PTR]]
+; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UINT_PTR]]
 ; CHECK-SPIRV:     %[[#CMP:]] = OpFunctionParameter %[[#UINT]]
 ; CHECK-SPIRV:     %[[#VAL:]] = OpFunctionParameter %[[#UINT]]
 ; CHECK-SPIRV:     %[[#]] = OpAtomicCompareExchange %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#RELAXED]] %[[#VAL]] %[[#CMP]]

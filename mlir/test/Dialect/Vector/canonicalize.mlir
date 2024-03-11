@@ -1302,6 +1302,24 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
 
 // -----
 
+// CHECK-LABEL: func @store_to_load_tensor_broadcast_scalable
+//  CHECK-SAME: (%[[ARG:.*]]: tensor<?xf32>, %[[V0:.*]]: vector<[4]xf32>)
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<[4]xf32> to vector<6x[4]xf32>
+//       CHECK:   return %[[B]] : vector<6x[4]xf32>
+func.func @store_to_load_tensor_broadcast_scalable(%arg0 : tensor<?xf32>,
+  %v0 : vector<[4]xf32>) -> vector<6x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+    vector<[4]xf32>, tensor<?xf32>
+  %0 = vector.transfer_read %w0[%c0], %cf0 {in_bounds = [true, true],
+  permutation_map = affine_map<(d0) -> (0, d0)>} :
+    tensor<?xf32>, vector<6x[4]xf32>
+  return %0 : vector<6x[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_to_load_tensor_perm_broadcast
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4x4xf32>, %[[V0:.*]]: vector<4x1xf32>)
 //       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x1xf32> to vector<100x5x4x1xf32>
@@ -2548,4 +2566,27 @@ func.func @load_store_forwarding_rank_mismatch(%v0: vector<4x1x1xf32>, %arg0: te
       permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
       tensor<4x4x4xf32>, vector<1x100x4x5xf32>
   return %r : vector<1x100x4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @rank_0_shuffle_to_interleave(
+//  CHECK-SAME:     %[[LHS:.*]]: vector<f64>, %[[RHS:.*]]: vector<f64>)
+func.func @rank_0_shuffle_to_interleave(%arg0: vector<f64>, %arg1: vector<f64>) -> vector<2xf64>
+{
+  // CHECK: %[[ZIP:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<f64>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.shuffle %arg0, %arg1 [0, 1] : vector<f64>, vector<f64>
+  return %0 : vector<2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @rank_1_shuffle_to_interleave(
+//  CHECK-SAME:     %[[LHS:.*]]: vector<6xi32>, %[[RHS:.*]]: vector<6xi32>)
+func.func @rank_1_shuffle_to_interleave(%arg0: vector<6xi32>, %arg1: vector<6xi32>) -> vector<12xi32> {
+  // CHECK: %[[ZIP:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<6xi32>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.shuffle %arg0, %arg1 [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11] : vector<6xi32>, vector<6xi32>
+  return %0 : vector<12xi32>
 }

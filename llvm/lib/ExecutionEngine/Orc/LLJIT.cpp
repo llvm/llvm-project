@@ -734,6 +734,12 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::aarch64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     case Triple::x86_64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
@@ -966,8 +972,8 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
 
   if (S.NumCompileThreads > 0) {
     InitHelperTransformLayer->setCloneToNewContextOnEmit(true);
-    CompileThreads =
-        std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
+    CompileThreads = std::make_unique<DefaultThreadPool>(
+        hardware_concurrency(S.NumCompileThreads));
     ES->setDispatchTask([this](std::unique_ptr<Task> T) {
       // FIXME: We should be able to use move-capture here, but ThreadPool's
       // AsyncTaskTys are std::functions rather than unique_functions

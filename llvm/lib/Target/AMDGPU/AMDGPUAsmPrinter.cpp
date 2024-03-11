@@ -123,8 +123,11 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+    getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
+        CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
+  }
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
@@ -152,6 +155,13 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
+
+  // TODO: We're checking this late, would be nice to check it earlier.
+  if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
+    report_fatal_error(
+        STM.getCPU() + " is only available on code object version 6 or better",
+        /*gen_crash_diag*/ false);
+  }
 
   // TODO: Which one is called first, emitStartOfAsmFile or
   // emitFunctionBodyStart?
@@ -194,7 +204,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (MFI.getNumKernargPreloadedSGPRs() > 0) {
     assert(AMDGPU::hasKernargPreload(STM));
-    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI());
+    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI(),
+                                                  STM.isAmdHsaOS());
   }
 }
 
@@ -230,8 +241,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
           IsaInfo::getNumExtraSGPRs(
               &STM, CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
               getTargetStreamer()->getTargetID()->isXnackOnOrAny()),
-      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
-      CodeObjectVersion);
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.popSection();
 }
@@ -323,7 +333,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
-  CodeObjectVersion = AMDGPU::getCodeObjectVersion(M);
+  CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
@@ -332,6 +342,9 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       break;
     case AMDGPU::AMDHSA_COV5:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
+      break;
+    case AMDGPU::AMDHSA_COV6:
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV6());
       break;
     default:
       report_fatal_error("Unexpected code object version");
@@ -631,8 +644,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   // In the beginning all features are either 'Any' or 'NotSupported',
   // depending on global target features. This will cover empty modules.
-  getTargetStreamer()->initializeTargetID(
-      *getGlobalSTI(), getGlobalSTI()->getFeatureString(), CodeObjectVersion);
+  getTargetStreamer()->initializeTargetID(*getGlobalSTI(),
+                                          getGlobalSTI()->getFeatureString());
 
   // If module is empty, we are done.
   if (M.empty())
@@ -855,8 +868,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.SGPRBlocks = IsaInfo::getNumSGPRBlocks(
       &STM, ProgInfo.NumSGPRsForWavesPerEU);
-  ProgInfo.VGPRBlocks = IsaInfo::getNumVGPRBlocks(
-      &STM, ProgInfo.NumVGPRsForWavesPerEU);
+  ProgInfo.VGPRBlocks =
+      IsaInfo::getEncodedNumVGPRBlocks(&STM, ProgInfo.NumVGPRsForWavesPerEU);
 
   const SIModeRegisterDefaults Mode = MFI->getMode();
 
@@ -981,8 +994,10 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 
     OutStreamer->emitInt32(R_00B860_COMPUTE_TMPRING_SIZE);
     OutStreamer->emitInt32(
-        STM.getGeneration() >= AMDGPUSubtarget::GFX11
-            ? S_00B860_WAVESIZE_GFX11Plus(CurrentProgramInfo.ScratchBlocks)
+        STM.getGeneration() >= AMDGPUSubtarget::GFX12
+            ? S_00B860_WAVESIZE_GFX12Plus(CurrentProgramInfo.ScratchBlocks)
+        : STM.getGeneration() == AMDGPUSubtarget::GFX11
+            ? S_00B860_WAVESIZE_GFX11(CurrentProgramInfo.ScratchBlocks)
             : S_00B860_WAVESIZE_PreGFX11(CurrentProgramInfo.ScratchBlocks));
 
     // TODO: Should probably note flat usage somewhere. SC emits a "FlatPtr32 =
@@ -993,8 +1008,10 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
                               S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks), 4);
     OutStreamer->emitInt32(R_0286E8_SPI_TMPRING_SIZE);
     OutStreamer->emitInt32(
-        STM.getGeneration() >= AMDGPUSubtarget::GFX11
-            ? S_0286E8_WAVESIZE_GFX11Plus(CurrentProgramInfo.ScratchBlocks)
+        STM.getGeneration() >= AMDGPUSubtarget::GFX12
+            ? S_0286E8_WAVESIZE_GFX12Plus(CurrentProgramInfo.ScratchBlocks)
+        : STM.getGeneration() == AMDGPUSubtarget::GFX11
+            ? S_0286E8_WAVESIZE_GFX11(CurrentProgramInfo.ScratchBlocks)
             : S_0286E8_WAVESIZE_PreGFX11(CurrentProgramInfo.ScratchBlocks));
   }
 

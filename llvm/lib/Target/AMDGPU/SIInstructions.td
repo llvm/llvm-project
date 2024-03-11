@@ -618,8 +618,8 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output register
 // in the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0, unknown:$callee),
-  [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
+  (outs), (ins SSrc_b64:$src0, unknown:$callee, unknown:$token),
+  [(AMDGPUcall i64:$src0, tglobaladdr:$callee, untyped:$token)]> {
   let Size = 4;
   let isCall = 1;
   let SchedRW = [WriteBranch];
@@ -629,8 +629,8 @@ def SI_CALL_ISEL : SPseudoInstSI <
 }
 
 def : GCNPat<
-  (AMDGPUcall i64:$src0, (i64 0)),
-  (SI_CALL_ISEL $src0, (i64 0))
+  (AMDGPUcall i64:$src0, (i64 0), untyped:$token),
+  (SI_CALL_ISEL $src0, (i64 0), untyped:$token)
 >;
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
@@ -895,7 +895,7 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
-  let UseNamedOperandTable = 1, SGPRSpill = 1, Uses = [EXEC] in {
+  let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
     def _SAVE : PseudoInstSI <
       (outs),
       (ins sgpr_class:$data, i32imm:$addr)> {
@@ -931,7 +931,7 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
-let SGPRSpill = 1, VALU = 1, isConvergent = 1 in {
+let Spill = 1, VALU = 1, isConvergent = 1 in {
 def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
   let Size = 4;
@@ -951,13 +951,13 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
   let mayLoad = 0;
   let mayStore = 0;
 }
-} // End SGPRSpill = 1, VALU = 1, isConvergent = 1
+} // End Spill = 1, VALU = 1, isConvergent = 1
 
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
-  let UseNamedOperandTable = 1, VGPRSpill = 1,
+  let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
@@ -983,7 +983,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
       // Size field is unsigned char and cannot fit more.
       let Size = !if(!le(MaxSize, 256), MaxSize, 252);
     }
-  } // End UseNamedOperandTable = 1, VGPRSpill = 1, SchedRW = [WriteVMEM]
+  } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
 }
 
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
@@ -1036,6 +1036,7 @@ let isConvergent = 1 in {
   defm SI_SPILL_WWM_AV32 : SI_SPILL_VGPR <AV_32, 1>;
 }
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr_lo, si_ga:$ptr_hi),
@@ -1862,7 +1863,10 @@ class ClampPat<Instruction inst, ValueType vt> : GCNPat <
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
+let SubtargetPredicate = isNotGFX12Plus in
 def : ClampPat<V_MAX_F64_e64, f64>;
+let SubtargetPredicate = isGFX12Plus in
+def : ClampPat<V_MAX_NUM_F64_e64, f64>;
 let SubtargetPredicate = NotHasTrue16BitInsts in
 def : ClampPat<V_MAX_F16_e64, f16>;
 let SubtargetPredicate = UseRealTrue16Insts in
@@ -2990,10 +2994,12 @@ def : GCNPat<
 }
 
 // TODO: Handle fneg like other types.
+let SubtargetPredicate = isNotGFX12Plus in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
   (V_MUL_F64_e64  0, CONST.FP64_ONE, $src_mods, $src)
 >;
+}
 } // End AddedComplexity = -5
 
 multiclass SelectCanonicalizeAsMax<
@@ -3009,7 +3015,13 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = f64_preds;
+    let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus]);
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+    (V_MAX_NUM_F64_e64  $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [isGFX12Plus]);
   }
 
   def : GCNPat<
@@ -3856,11 +3868,13 @@ def G_AMDGPU_BUFFER_ATOMIC_UMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_SMAX : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_UMAX : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_AND : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_OR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FADD_BF16 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 
@@ -3877,13 +3891,20 @@ def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
 // Wrapper around llvm.amdgcn.s.buffer.load. This is mostly needed as
 // a workaround for the intrinsic being defined as readnone, but
 // really needs a memory operand.
-def G_AMDGPU_S_BUFFER_LOAD : AMDGPUGenericInstruction {
+
+class SBufferLoadInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$rsrc, type2:$offset, untyped_imm_0:$cachepolicy);
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
 }
+
+def G_AMDGPU_S_BUFFER_LOAD : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_SBYTE : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
+def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
 
 def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

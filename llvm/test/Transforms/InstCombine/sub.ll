@@ -844,7 +844,7 @@ define <vscale x 2 x i32> @test44scalablevec(<vscale x 2 x i32> %x) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -32768, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[SUB]]
 ;
-  %sub = sub nsw <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
+  %sub = sub nsw <vscale x 2 x i32> %x, splat (i32 32768)
   ret <vscale x 2 x i32> %sub
 }
 
@@ -864,7 +864,7 @@ define <vscale x 2 x i16> @test44scalablevecminval(<vscale x 2 x i16> %x) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i16> [[X:%.*]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 -32768, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[SUB]]
 ;
-  %sub = sub nsw <vscale x 2 x i16> %x, shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -32768, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer)
+  %sub = sub nsw <vscale x 2 x i16> %x, splat (i16 -32768)
   ret <vscale x 2 x i16> %sub
 }
 
@@ -1124,7 +1124,7 @@ define i64 @test58(ptr %foo, i64 %i, i64 %j) {
 define i64 @test59(ptr %foo, i64 %i) {
 ; CHECK-LABEL: @test59(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO:%.*]], i64 0, i64 42, i64 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO]], i64 0, i64 42, i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
 ; CHECK-NEXT:    ret i64 [[I]]
@@ -1143,7 +1143,7 @@ define i64 @test59(ptr %foo, i64 %i) {
 define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO:%.*]], i64 0, i64 [[J:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO]], i64 0, i64 42, i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 4200
 ; CHECK-NEXT:    [[CAST1:%.*]] = ptrtoint ptr [[GEP1]] to i64
 ; CHECK-NEXT:    [[CAST2:%.*]] = ptrtoint ptr [[GEP2]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[CAST1]], [[CAST2]]
@@ -1162,7 +1162,7 @@ define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO:%.*]], i64 0, i64 42, i64 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 4200
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], ptr [[FOO]], i64 0, i64 [[J:%.*]], i64 [[I:%.*]]
 ; CHECK-NEXT:    [[CAST1:%.*]] = ptrtoint ptr [[GEP1]] to i64
 ; CHECK-NEXT:    [[CAST2:%.*]] = ptrtoint ptr [[GEP2]] to i64
@@ -2367,7 +2367,7 @@ define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector3(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 undef>
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> <i8 44, i8 44>, [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 44, i8 44>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x

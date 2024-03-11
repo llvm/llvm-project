@@ -289,6 +289,31 @@ def POSIX : StandardSpec<"POSIX"> {
              ArgSpec<SizeTType>,
              ArgSpec<IntType>]
         >,
+        FunctionSpec<
+          "mlock",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+          "munlock",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+          "mlockall",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "munlockall",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+          "msync",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
       ]
   >;
 
@@ -1299,12 +1324,27 @@ def POSIX : StandardSpec<"POSIX"> {
             "hsearch",
             RetValSpec<EntryTypePtr>,
             [
-                ArgSpec<EntryType>, 
+                ArgSpec<EntryType>,
                 ArgSpec<ActionType>
             ]
         >,
+        FunctionSpec<
+            "insque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>,
+                ArgSpec<VoidPtr>
+            ]
+        >,
+        FunctionSpec<
+            "remque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>
+            ]
+        >,
     ]
-  >; 
+  >;
 
   HeaderSpec Termios = HeaderSpec<
     "termios.h",

@@ -9,11 +9,13 @@
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
 #include "Error.h"
+#include "ValidationEvent.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -192,6 +194,27 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = false;
 };
 
+template <>
+struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
+  static void inputOne(IO &Io, StringRef KeyStr,
+                       std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    Expected<exegesis::ValidationEvent> Key =
+        exegesis::getValidationEventByName(KeyStr);
+    if (!Key) {
+      Io.setError("Key is not a valid validation event");
+      return;
+    }
+    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+  }
+
+  static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    for (auto &IndividualVI : VI) {
+      Io.mapRequired(exegesis::getValidationEventName(IndividualVI.first),
+                     IndividualVI.second);
+    }
+  }
+};
+
 // exegesis::Measure is rendererd as a flow instead of a list.
 // e.g. { "key": "the key", "value": 0123 }
 template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
@@ -203,6 +226,7 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
     }
     Io.mapRequired("value", Obj.PerInstructionValue);
     Io.mapOptional("per_snippet_value", Obj.PerSnippetValue);
+    Io.mapOptional("validation_counters", Obj.ValidationCounters);
   }
   static const bool flow = true;
 };
@@ -293,7 +317,17 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
-    Io.mapRequired("num_repetitions", Obj.NumRepetitions);
+    // Optionally map num_repetitions and min_instructions to the same
+    // value to preserve backwards compatibility.
+    // TODO(boomanaiden154): Move min_instructions to mapRequired and
+    // remove num_repetitions once num_repetitions is ready to be removed
+    // completely.
+    if (Io.outputting())
+      Io.mapRequired("min_instructions", Obj.MinInstructions);
+    else {
+      Io.mapOptional("num_repetitions", Obj.MinInstructions);
+      Io.mapOptional("min_instructions", Obj.MinInstructions);
+    }
     Io.mapRequired("measurements", Obj.Measurements);
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);
@@ -407,7 +441,6 @@ bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
   return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
          std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
 }
-
 
 } // namespace exegesis
 } // namespace llvm

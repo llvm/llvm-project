@@ -47,9 +47,9 @@ void FixRelaxations::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void FixRelaxations::runOnFunctions(BinaryContext &BC) {
+Error FixRelaxations::runOnFunctions(BinaryContext &BC) {
   if (!BC.isAArch64() || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -58,6 +58,7 @@ void FixRelaxations::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun, nullptr,
       "FixRelaxations");
+  return Error::success();
 }
 
 } // namespace bolt

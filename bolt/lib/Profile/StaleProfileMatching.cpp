@@ -418,6 +418,7 @@ void matchWeightsByHashes(BinaryContext &BC,
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
+      const BinaryBasicBlock *BB = BlockOrder[MatchedBlock->Index - 1];
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
       BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
       LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
@@ -433,6 +434,8 @@ void matchWeightsByHashes(BinaryContext &BC,
       } else {
         LLVM_DEBUG(dbgs() << "  loose match\n");
       }
+      if (YamlBB.NumInstructions == BB->size())
+        ++BC.Stats.NumStaleBlocksWithEqualIcount;
     } else {
       LLVM_DEBUG(
           dbgs() << "Couldn't match yaml block (bid = " << YamlBB.Index << ")"
