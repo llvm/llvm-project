@@ -49,6 +49,7 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
 
+private:
   _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
     _Tp* __ptr = std::addressof(__val);
 #  if __has_builtin(__builtin_clear_padding)
