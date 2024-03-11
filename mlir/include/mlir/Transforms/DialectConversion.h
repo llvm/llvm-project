@@ -697,9 +697,6 @@ public:
       Region *region, const TypeConverter &converter,
       ArrayRef<TypeConverter::SignatureConversion> blockConversions);
 
-  /// Replace all the uses of the block argument `from` with value `to`.
-  void replaceUsesOfBlockArgument(BlockArgument from, Value to);
-
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
   /// of failure, the remapped value otherwise.
@@ -719,6 +716,11 @@ public:
   /// Recovery is supported via rollback, allowing for continued processing of
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
+
+  /// Find uses of `from` and replace them with `to`.
+  ///
+  /// Note: This function does not convert types.
+  void replaceAllUsesWith(Value from, Value to) override;
 
   /// PatternRewriter hook for replacing an operation.
   void replaceOp(Operation *op, ValueRange newValues) override;

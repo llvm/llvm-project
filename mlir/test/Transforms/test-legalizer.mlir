@@ -427,3 +427,21 @@ func.func @use_of_replaced_bbarg(%arg0: i64) {
   }) : (i64) -> (i64)
   "test.invalid"(%0) : (i64) -> ()
 }
+
+// -----
+
+// CHECK: notifyOperationInserted: test.legal_op_b, was unlinked
+// CHECK: notifyOperationModified: test.valid
+// CHECK: notifyOperationModified: test.illegal_op_h
+
+// CHECK-LABEL: func @replace_all_uses_with()
+func.func @replace_all_uses_with() {
+  // CHECK: %[[legal:.*]] = "test.legal_op_b"() : () -> i32
+  // CHECK: %[[illegal:.*]] = "test.illegal_op_h"() {not_illegal} : () -> i64
+  %result = "test.illegal_op_h"() : () -> (i64)
+
+  // replaceAllUsesWith does not perform any type conversion. The uses are
+  // directly updated during the commit phase.
+  // CHECK: "test.valid"(%[[legal]]) : (i32) -> ()
+  "test.valid"(%result) : (i64) -> ()
+}

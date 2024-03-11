@@ -310,7 +310,7 @@ static void modifyFuncOpToUseBarePtrCallingConv(
     Location loc = funcOp.getLoc();
     auto placeholder = rewriter.create<LLVM::UndefOp>(
         loc, typeConverter.convertType(memrefTy));
-    rewriter.replaceUsesOfBlockArgument(arg, placeholder);
+    rewriter.replaceAllUsesWith(arg, placeholder);
 
     Value desc = MemRefDescriptor::fromStaticShape(rewriter, loc, typeConverter,
                                                    memrefTy, arg);
