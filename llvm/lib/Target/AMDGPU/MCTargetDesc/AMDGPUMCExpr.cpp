@@ -27,8 +27,7 @@ AMDGPUVariadicMCExpr::create(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
   // Will result in an asan failure if allocated on the heap (e.g., through
   // SmallVector's grow).
   const MCExpr **CtxArgs = new (Ctx) const MCExpr *[Args.size()];
-  for (size_t i = 0; i < Args.size(); ++i)
-    CtxArgs[i] = Args[i];
+  std::copy(Args.begin(), Args.end(), CtxArgs);
   return new (Ctx) AMDGPUVariadicMCExpr(Kind, ArrayRef(CtxArgs, Args.size()));
 }
 
