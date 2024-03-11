@@ -15,4 +15,10 @@
 
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
+namespace llvm::omp {
+bool isLeafConstruct(Directive D);
+bool isCompositeConstruct(Directive D);
+bool isCombinedConstruct(Directive D);
+} // namespace llvm::omp
+
 #endif // LLVM_FRONTEND_OPENMP_OMP_H
