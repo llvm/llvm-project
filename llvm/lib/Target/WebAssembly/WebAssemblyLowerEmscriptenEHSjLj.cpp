@@ -1311,24 +1311,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
 
   // Setjmp preparation
 
-  // This instruction effectively means %setjmpTableSize = 4.
-  // We create this as an instruction intentionally, and we don't want to fold
-  // this instruction to a constant 4, because this value will be used in
-  // SSAUpdater.AddAvailableValue(...) later.
   BasicBlock *Entry = &F.getEntryBlock();
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   SplitBlock(Entry, &*Entry->getFirstInsertionPt());
 
-  BinaryOperator *SetjmpTableSize = BinaryOperator::Create(
-      Instruction::Add, IRB.getInt32(4), IRB.getInt32(0), "setjmpTableSize",
-      Entry->getTerminator()->getIterator());
-  SetjmpTableSize->setDebugLoc(FirstDL);
-  // setjmpTable = (int *) malloc(40);
-  Type *IntPtrTy = getAddrIntType(&M);
-  Constant *size = ConstantInt::get(IntPtrTy, 40);
-  IRB.SetInsertPoint(SetjmpTableSize);
+  BinaryOperator *SetjmpTableSize;
   Instruction *SetjmpTable;
   if (EnableWasmAltSjLj) {
+    IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
     // This alloca'ed pointer is used by the runtime to identify function
     // inovactions. It's just for pointer comparisons. It will never
     // be dereferenced.
@@ -1336,6 +1326,18 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     SetjmpTable->setDebugLoc(FirstDL);
     SetjmpTableInsts.push_back(SetjmpTable);
   } else {
+    // This instruction effectively means %setjmpTableSize = 4.
+    // We create this as an instruction intentionally, and we don't want to fold
+    // this instruction to a constant 4, because this value will be used in
+    // SSAUpdater.AddAvailableValue(...) later.
+    SetjmpTableSize = BinaryOperator::Create(Instruction::Add, IRB.getInt32(4),
+                                             IRB.getInt32(0), "setjmpTableSize",
+                                             Entry->getTerminator()->getIterator());
+    SetjmpTableSize->setDebugLoc(FirstDL);
+    IRB.SetInsertPoint(SetjmpTableSize);
+    // setjmpTable = (int *) malloc(40);
+    Type *IntPtrTy = getAddrIntType(&M);
+    Constant *size = ConstantInt::get(IntPtrTy, 40);
     SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size, nullptr,
                                    nullptr, "setjmpTable");
     SetjmpTable->setDebugLoc(FirstDL);
