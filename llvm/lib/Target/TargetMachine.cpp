@@ -160,8 +160,7 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   llvm_unreachable("invalid TLS model");
 }
 
-bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
-                                         const GlobalValue *GV) const {
+bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
   const Triple &TT = getTargetTriple();
   Reloc::Model RM = getRelocationModel();
 
@@ -225,7 +224,7 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
   Reloc::Model RM = getRelocationModel();
   bool IsSharedLibrary = RM == Reloc::PIC_ && !IsPIE;
-  bool IsLocal = shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool IsLocal = shouldAssumeDSOLocal(GV);
 
   TLSModel::Model Model;
   if (IsSharedLibrary) {

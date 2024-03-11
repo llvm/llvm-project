@@ -641,7 +641,7 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     // It's not safe to merge globals that may be preempted
-    if (TM && !TM->shouldAssumeDSOLocal(M, &GV))
+    if (TM && !TM->shouldAssumeDSOLocal(&GV))
       continue;
 
     if (!(Opt.MergeExternal && GV.hasExternalLinkage()) &&
