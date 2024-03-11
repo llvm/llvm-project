@@ -8963,14 +8963,12 @@ class BuiltinOperatorOverloadBuilder {
          S.Context.getAuxTargetInfo()->hasInt128Type()))
       ArithmeticTypes.push_back(S.Context.UnsignedInt128Ty);
 
-    /// _BitInt overloads are a bit special. We don't want to add candidates
-    /// for the entire family of _BitInt types, so instead we only add
-    /// candidates for the unique, unqualified _BitInt types present in the
-    /// candidate type set. The candidate set already handled ensuring the type
-    /// is unqualified and canonical, but because we're adding from N different
-    /// sets, we need to do some extra work to unique things. Copy the
-    /// candidates into a unique set, then copy from that set into the list of
-    /// arithmetic types.
+    /// We add candidates for the unique, unqualified _BitInt types present in
+    /// the candidate type set. The candidate set already handled ensuring the
+    /// type is unqualified and canonical, but because we're adding from N
+    /// different sets, we need to do some extra work to unique things. Insert
+    /// the candidates into a unique set, then move from that set into the list
+    /// of arithmetic types.
     llvm::SmallSetVector<CanQualType, 2> BitIntCandidates;
     llvm::for_each(CandidateTypes, [&BitIntCandidates](
                                        BuiltinCandidateTypeSet &Candidate) {
