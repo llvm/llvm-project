@@ -28926,6 +28926,9 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
 // supported by the Subtarget
 static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
                                         unsigned Opcode) {
+  assert((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
+         "Unexpected shift opcode");
+
   if (!VT.isSimple())
     return false;
 
@@ -28959,6 +28962,9 @@ bool supportedVectorShiftWithBaseAmnt(EVT VT, const X86Subtarget &Subtarget,
 // natively supported by the Subtarget
 static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
                                     unsigned Opcode) {
+  assert((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
+         "Unexpected shift opcode");
+
   if (!VT.isSimple())
     return false;
 
