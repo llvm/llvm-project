@@ -73,6 +73,13 @@ exit:
 ; NOHWPF-LABEL: loop2:
 ; NOHWPF-NEXT: phi
 ; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
+; NOHWPF-NEXT: phi
 ; NOHWPF-NEXT: getelementptr
 ; NOHWPF-NEXT: load
 ; NOHWPF-NEXT: add
@@ -106,11 +113,21 @@ exit:
 ; NOHWPF-NEXT: add
 ; NOHWPF-NEXT: add
 ; NOHWPF-NEXT: icmp
+; NOHWPF-NEXT: add
+; NOHWPF-NEXT: add
+; NOHWPF-NEXT: add
+; NOHWPF-NEXT: add
+; NOHWPF-NEXT: add
+; NOHWPF-NEXT: add
+; NOHWPF-NEXT: add
 ; NOHWPF-NEXT: br
 ; NOHWPF-NEXT-LABEL: exit2:
 ;
 ; CHECK-LABEL: @unroll2(
 ; CHECK-LABEL: loop2:
+; CHECK-NEXT: phi
+; CHECK-NEXT: phi
+; CHECK-NEXT: phi
 ; CHECK-NEXT: phi
 ; CHECK-NEXT: phi
 ; CHECK-NEXT: getelementptr
@@ -130,6 +147,9 @@ exit:
 ; CHECK-NEXT: add
 ; CHECK-NEXT: add
 ; CHECK-NEXT: icmp
+; CHECK-NEXT: add
+; CHECK-NEXT: add
+; CHECK-NEXT: add
 ; CHECK-NEXT: br
 ; CHECK-NEXT-LABEL: exit2:
 

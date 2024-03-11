@@ -14,21 +14,23 @@ define double @test(ptr %A, ptr %B, i64 %nb) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    lsl x8, x2, #4
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x10, x0, x9, lsl #3
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr d2, [x1]
+; CHECK-NEXT:    ldr d5, [x1, x2, lsl #3]
 ; CHECK-NEXT:    add x9, x9, #2
-; CHECK-NEXT:    cmp x9, #1000
-; CHECK-NEXT:    ldp d2, d3, [x10]
-; CHECK-NEXT:    fmadd d0, d1, d2, d0
-; CHECK-NEXT:    ldr d1, [x1, x2, lsl #3]
 ; CHECK-NEXT:    add x1, x1, x8
-; CHECK-NEXT:    fmadd d0, d1, d3, d0
+; CHECK-NEXT:    ldp d3, d4, [x10]
+; CHECK-NEXT:    cmp x9, #1000
+; CHECK-NEXT:    fmadd d0, d2, d3, d0
+; CHECK-NEXT:    fmadd d1, d5, d4, d1
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
 entry:
   br label %loop
