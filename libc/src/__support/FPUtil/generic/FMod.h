@@ -178,7 +178,7 @@ private:
       return false;
 
     if (sx.is_nan() || sy.is_nan()) {
-      if (sx.is_signalling_nan() || sy.is_signalling())
+      if (sx.is_signaling_nan() || sy.is_signaling_nan())
         fputil::raise_except_if_required(FE_INVALID);
       out = quiet_nan;
       return true;
