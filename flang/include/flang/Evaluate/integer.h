@@ -152,7 +152,7 @@ public:
       } else {
         // Avoid left shifts of negative signed values (that's an undefined
         // behavior in C++).
-        auto signExtension = std::make_unsigned_t<INT>(n < 0);
+        auto signExtension{std::make_unsigned_t<INT>(n < 0)};
         signExtension = ~signExtension + 1;
         static_assert(nBits >= partBits);
         if constexpr (nBits > partBits) {
