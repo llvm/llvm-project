@@ -1140,7 +1140,6 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
       InsertBB->insertDPValueBefore(DPL, InsertBefore->getIterator());
     else if (InsertBB)
       InsertBB->insertDPValueBefore(DPL, InsertBB->end());
-    // FIXME: Use smart pointers for DbgRecord ownership management.
     return DPL;
   }
 

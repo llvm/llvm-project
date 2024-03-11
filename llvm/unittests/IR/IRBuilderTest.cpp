@@ -998,7 +998,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
   // Test in new-debug mode.
   // Reset the test then call convertToNewDbgValues to flip the flag
-  // on the test's Module, Funciton and BasicBlock.
+  // on the test's Module, Function and BasicBlock.
   TearDown();
   SetUp();
   M->convertToNewDbgValues();

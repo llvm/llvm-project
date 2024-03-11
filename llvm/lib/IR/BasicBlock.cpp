@@ -1036,7 +1036,7 @@ void BasicBlock::insertDPValueAfter(DbgRecord *DPV, Instruction *I) {
 
 void BasicBlock::insertDPValueBefore(DbgRecord *DPV,
                                      InstListType::iterator Where) {
-  assert(Where == end() || Where->getParent() == this);
+  assert(Where->getParent() == this);
   bool InsertAtHead = Where.getHeadBit();
   DPMarker *M = createMarker(Where);
   M->insertDPValue(DPV, InsertAtHead);
