@@ -73,7 +73,7 @@ commands below.
 ::
 
   $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
+  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
   $ pkg install swig python libxml2
   $ pkgin install swig python36 cmake ninja-build
   $ brew install swig cmake ninja
