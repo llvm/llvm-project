@@ -30,6 +30,22 @@ There are two significant changes to be aware of. Firstly, we're adding a single
 
 The second matter is that if you transfer sequences of instructions from one place to another manually, i.e. repeatedly using `moveBefore` where you might have used `splice`, then you should instead use the method `moveBeforePreserving`. `moveBeforePreserving` will transfer debug info records with the instruction they're attached to. This is something that happens automatically today -- if you use `moveBefore` on every element of an instruction sequence, then debug intrinsics will be moved in the normal course of your code, but we lose this behaviour with non-instruction debug info.
 
+# C-API changes
+
+```
+LLVMDIBuilderInsertDeclareBefore            # Changed - Inserts a non-instruction debug record.
+LLVMDIBuilderInsertDeclareAtEnd             # Changed - Inserts a non-instruction debug record.
+LLVMDIBuilderInsertDbgValueBefore           # Changed - Inserts a non-instruction debug record.
+LLVMDIBuilderInsertDbgValueAtEnd            # Changed - Inserts a non-instruction debug record.
+
+LLVMIsNewDbgInfoFormat                      # New - Returns true if the module is in the new non-instruction mode.  Will be deprecated in future.
+LLVMDIBuilderInsertDeclareIntrinsicBefore   # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
+LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
+LLVMDIBuilderInsertDbgValueIntrinsicBefore  # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
+LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # New - Old behaviour of the changed functions above, i.e., insert a dbg intrinsic call. Will be deprecated in future.
+```
+
+
 # Anything else?
 
 Not really, but here's an "old vs new" comparison of how to do certain things and quickstart for how this "new" debug info is structured.
