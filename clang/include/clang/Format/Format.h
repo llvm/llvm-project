@@ -4728,7 +4728,7 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
-  /// Works only when TableGenBreakInsideDAGArg is true.
+  /// Works only when TableGenBreakInsideDAGArg is not DontBreak.
   /// The string list needs to consist of identifiers in TableGen.
   /// If any identifier is specified, this limits the line breaks by
   /// TableGenBreakInsideDAGArg option only on DAGArg values beginning with
@@ -4736,7 +4736,7 @@ struct FormatStyle {
   ///
   /// For example the configuration,
   /// \code
-  ///   TableGenBreakInsideDAGArg: true
+  ///   TableGenBreakInsideDAGArg: BreakAll
   ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
   /// \endcode
   ///
@@ -4778,7 +4778,7 @@ struct FormatStyle {
     DAS_BreakAll,
   };
 
-  /// Insert the line break for each element of DAGArg list in TableGen.
+  /// The styles of the line break inside the DAGArg in TableGen.
   /// \version 19
   DAGArgStyle TableGenBreakInsideDAGArg;
 

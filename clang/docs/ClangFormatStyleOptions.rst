@@ -6161,7 +6161,7 @@ the configuration (without a prefix: ``Auto``).
 .. _TableGenBreakInsideDAGArg:
 
 **TableGenBreakInsideDAGArg** (``DAGArgStyle``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArg>`
-  Insert the line break for each element of DAGArg list in TableGen.
+  The styles of the line break inside the DAGArg in TableGen.
 
   Possible values:
 
@@ -6196,7 +6196,7 @@ the configuration (without a prefix: ``Auto``).
 .. _TableGenBreakingDAGArgOperators:
 
 **TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakingDAGArgOperators>`
-  Works only when TableGenBreakInsideDAGArg is true.
+  Works only when TableGenBreakInsideDAGArg is not DontBreak.
   The string list needs to consist of identifiers in TableGen.
   If any identifier is specified, this limits the line breaks by
   TableGenBreakInsideDAGArg option only on DAGArg values beginning with
@@ -6206,7 +6206,7 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    TableGenBreakInsideDAGArg: true
+    TableGenBreakInsideDAGArg: BreakAll
     TableGenBreakingDAGArgOperators: ['ins', 'outs']
 
   makes the line break only occurs inside DAGArgs beginning with the
