@@ -18,10 +18,6 @@
 #include <limits>
 #include <string>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
-#undef HUGE
-
 namespace llvm {
 class raw_ostream;
 }
