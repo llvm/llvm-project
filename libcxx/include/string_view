@@ -310,9 +310,10 @@ public:
       : __data_(__s),
         __size_(__len) {
 #if _LIBCPP_STD_VER >= 14
-    // This will result in creating an invalid `string_view` object -- some calculations involving `size` would
-    // overflow, making it effectively truncated.
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+    // Allocations must fit in `ptrdiff_t` for pointer arithmetic to work. If `__len` exceeds it, the input
+    // range could not have been valid. Most likely the caller underflowed some arithmetic and inadvertently
+    // passed in a negative length.
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
         __len <= static_cast<size_type>(numeric_limits<difference_type>::max()),
         "string_view::string_view(_CharT *, size_t): length does not fit in difference_type");
     _LIBCPP_ASSERT_NON_NULL(
