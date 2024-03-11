@@ -432,11 +432,22 @@ public:
     /// Note: This notification is not triggered when unlinking an operation.
     virtual void notifyOperationErased(Operation *op) {}
 
-    /// Notify the listener that the pattern failed to match the given
-    /// operation, and provide a callback to populate a diagnostic with the
-    /// reason why the failure occurred. This method allows for derived
-    /// listeners to optionally hook into the reason why a rewrite failed, and
-    /// display it to users.
+    /// Notify the listener that the specified pattern is about to be applied
+    /// at the specified root operation.
+    virtual void notifyPatternBegin(const Pattern &pattern, Operation *op) {}
+
+    /// Notify the listener that a pattern application finished with the
+    /// specified status. "success" indicates that the pattern was applied
+    /// successfully. "failure" indicates that the pattern could not be
+    /// applied. The pattern may have communicated the reason for the failure
+    /// with `notifyMatchFailure`.
+    virtual void notifyPatternEnd(const Pattern &pattern,
+                                  LogicalResult status) {}
+
+    /// Notify the listener that the pattern failed to match, and provide a
+    /// callback to populate a diagnostic with the reason why the failure
+    /// occurred. This method allows for derived listeners to optionally hook
+    /// into the reason why a rewrite failed, and display it to users.
     virtual void
     notifyMatchFailure(Location loc,
                        function_ref<void(Diagnostic &)> reasonCallback) {}
@@ -477,6 +488,15 @@ public:
     void notifyOperationErased(Operation *op) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
         rewriteListener->notifyOperationErased(op);
+    }
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyPatternBegin(pattern, op);
+    }
+    void notifyPatternEnd(const Pattern &pattern,
+                          LogicalResult status) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyPatternEnd(pattern, status);
     }
     void notifyMatchFailure(
         Location loc,

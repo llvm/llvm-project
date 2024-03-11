@@ -1338,7 +1338,7 @@ class Base_VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
                  string opName = ps.OpName, VOPProfile p = ps.Pfl> :
     VOP2_DPP<op, ps, opName, p, 1> {
   let AssemblerPredicate = HasDPP16;
-  let SubtargetPredicate = HasDPP16;
+  let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates = !listconcat(ps.OtherPredicates,
       !if(p.HasExt64BitDPP, [HasDPALU_DPP], []),
       !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []));
@@ -1375,6 +1375,7 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
   let Inst{30-25} = op;
   let Inst{31}    = 0x0;
 
+  let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates = ps.OtherPredicates;
 }
 

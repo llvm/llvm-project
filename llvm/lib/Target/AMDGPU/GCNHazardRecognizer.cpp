@@ -2238,6 +2238,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
     const int SMFMA32x32WritesVGPROverlappedSrcABWaitStates = 19;
     const int DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates = 6;
     const int DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 11;
+    const int GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 19;
     const int DMFMA4x4WritesVGPRFullSrcCWaitStates = 4;
     const int GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates = 2;
     const int MaxWaitStates = 19;
@@ -2343,7 +2344,10 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
       case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
       case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
       case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-        NeedWaitStates = DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
+        NeedWaitStates =
+            ST.hasGFX950Insts()
+                ? GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates
+                : DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
         break;
       case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
       case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
