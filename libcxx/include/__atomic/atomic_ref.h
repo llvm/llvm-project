@@ -44,7 +44,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct __atomic_ref_base {
+protected:
   _Tp* __ptr_;
+
+  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
 
   _LIBCPP_HIDE_FROM_ABI static _Tp* __clear_padding(_Tp& __val) noexcept {
     _Tp* __ptr = std::addressof(__val);
@@ -54,8 +57,44 @@ struct __atomic_ref_base {
     return __ptr;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
+  _LIBCPP_HIDE_FROM_ABI static bool __compare_exchange(
+      _Tp* __ptr, _Tp* __expected, _Tp* __desired, bool __is_weak, int __success, int __failure) noexcept {
+    if constexpr (
+#  if __has_builtin(__builtin_clear_padding)
+        has_unique_object_representations_v<_Tp> || same_as<_Tp, float> || same_as<_Tp, double>
+#  else
+        true // NOLINT(readability-simplify-boolean-expr)
+#  endif
+    ) {
+      return __atomic_compare_exchange(__ptr, __expected, __desired, __is_weak, __success, __failure);
+    } else { // _Tp has padding bits and __builtin_clear_padding is available
+      __clear_padding(*__desired);
+      _Tp __copy = *__expected;
+      __clear_padding(__copy);
+      // The algorithm we use here is basically to perform `__atomic_compare_exchange` on the
+      // values until it has either succeeded, or failed because the value representation of the
+      // objects involved was different. This is why we loop around __atomic_compare_exchange:
+      // we basically loop until its failure is caused by the value representation of the objects
+      // being different, not only their object representation.
+      while (true) {
+        _Tp __prev = __copy;
+        if (__atomic_compare_exchange(__ptr, std::addressof(__copy), __desired, __is_weak, __success, __failure)) {
+          return true;
+        }
+        _Tp __curr = __copy;
+        if (std::memcmp(__clear_padding(__prev), __clear_padding(__curr), sizeof(_Tp)) != 0) {
+          // Value representation without padding bits do not compare equal ->
+          // write the current content of *ptr into *expected
+          std::memcpy(__expected, std::addressof(__copy), sizeof(_Tp));
+          return false;
+        }
+      }
+    }
+  }
 
+  friend struct __atomic_waitable_traits<__atomic_ref_base<_Tp>>;
+
+public:
   using value_type = _Tp;
 
   static constexpr size_t required_alignment = alignof(_Tp);
@@ -97,41 +136,6 @@ struct __atomic_ref_base {
     auto* __ret = reinterpret_cast<_Tp*>(__mem);
     __atomic_exchange(__ptr_, __clear_padding(__desired), __ret, std::__to_gcc_order(__order));
     return *__ret;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static bool __compare_exchange(
-      _Tp* __ptr, _Tp* __expected, _Tp* __desired, bool __is_weak, int __success, int __failure) noexcept {
-    if constexpr (
-#  if __has_builtin(__builtin_clear_padding)
-        has_unique_object_representations_v<_Tp> || same_as<_Tp, float> || same_as<_Tp, double>
-#  else
-        true // NOLINT(readability-simplify-boolean-expr)
-#  endif
-    ) {
-      return __atomic_compare_exchange(__ptr, __expected, __desired, __is_weak, __success, __failure);
-    } else { // _Tp has padding bits and __builtin_clear_padding is available
-      __clear_padding(*__desired);
-      _Tp __copy = *__expected;
-      __clear_padding(__copy);
-      // The algorithm we use here is basically to perform `__atomic_compare_exchange` on the
-      // values until it has either succeeded, or failed because the value representation of the
-      // objects involved was different. This is why we loop around __atomic_compare_exchange:
-      // we basically loop until its failure is caused by the value representation of the objects
-      // being different, not only their object representation.
-      while (true) {
-        _Tp __prev = __copy;
-        if (__atomic_compare_exchange(__ptr, std::addressof(__copy), __desired, __is_weak, __success, __failure)) {
-          return true;
-        }
-        _Tp __curr = __copy;
-        if (std::memcmp(__clear_padding(__prev), __clear_padding(__curr), sizeof(_Tp)) != 0) {
-          // Value representation without padding bits do not compare equal ->
-          // write the current content of *ptr into *expected
-          std::memcpy(__expected, std::addressof(__copy), sizeof(_Tp));
-          return false;
-        }
-      }
-    }
   }
 
   _LIBCPP_HIDE_FROM_ABI bool
