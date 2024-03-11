@@ -149,13 +149,13 @@ int overflowOrUnderflow(int arg) {
 
 char TwoElements[2] = {11, 22};
 char overflowOrUnderflowConcrete(int arg) {
-  // expected-note@+6 {{Assuming 'arg' is < 3}}
-  // expected-note@+5 {{Left side of '||' is false}}
-  // expected-note@+4 {{Assuming 'arg' is not equal to 0}}
-  // expected-note@+3 {{Left side of '||' is false}}
-  // expected-note@+2 {{Assuming 'arg' is not equal to 1}}
-  // expected-note@+1 {{Taking false branch}}
-  if (arg >= 3 || arg == 0 || arg == 1)
+  // expected-note@#cond {{Assuming 'arg' is < 3}}
+  // expected-note@#cond {{Left side of '||' is false}}
+  // expected-note@#cond {{Assuming 'arg' is not equal to 0}}
+  // expected-note@#cond {{Left side of '||' is false}}
+  // expected-note@#cond {{Assuming 'arg' is not equal to 1}}
+  // expected-note@#cond {{Taking false branch}}
+  if (arg >= 3 || arg == 0 || arg == 1) // #cond
     return 0;
 
   return TwoElements[arg];
