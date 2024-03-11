@@ -343,29 +343,30 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
     return;
   }
 
-  assert(!CGM.getASTContext().getAsArrayType(E->getType()) &&
-         "array types NYI");
-
-  clang::CXXCtorType Type = Ctor_Complete;
-  bool ForVirtualBase = false;
-  bool Delegating = false;
-
-  switch (E->getConstructionKind()) {
-  case CXXConstructionKind::Complete:
-    Type = Ctor_Complete;
-    break;
-  case CXXConstructionKind::Delegating:
+  if (const ArrayType *arrayType = getContext().getAsArrayType(E->getType())) {
     llvm_unreachable("NYI");
-    break;
-  case CXXConstructionKind::VirtualBase:
-    ForVirtualBase = true;
-    [[fallthrough]];
-  case CXXConstructionKind::NonVirtualBase:
-    Type = Ctor_Base;
-    break;
-  }
+  } else {
+    clang::CXXCtorType Type = Ctor_Complete;
+    bool ForVirtualBase = false;
+    bool Delegating = false;
 
-  buildCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
+    switch (E->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      Type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      llvm_unreachable("NYI");
+      break;
+    case CXXConstructionKind::VirtualBase:
+      ForVirtualBase = true;
+      [[fallthrough]];
+    case CXXConstructionKind::NonVirtualBase:
+      Type = Ctor_Base;
+      break;
+    }
+
+    buildCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
+  }
 }
 
 namespace {
