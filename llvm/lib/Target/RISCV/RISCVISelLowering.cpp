@@ -13657,6 +13657,9 @@ struct NodeExtensionHelper {
       unsigned ScalarBits = VT.getScalarSizeInBits();
       unsigned NarrowScalarBits = NarrowVT.getScalarSizeInBits();
 
+      assert(
+          Subtarget.getTargetLowering()->isTypeLegal(NarrowElt.getValueType()));
+
       // Ensure the extension's semantic is equivalent to rvv vzext or vsext.
       if (ScalarBits != NarrowScalarBits * 2)
         break;
