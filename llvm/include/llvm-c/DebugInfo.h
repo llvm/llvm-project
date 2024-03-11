@@ -1264,7 +1264,7 @@ LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
 /**
  * Soon to be deprecated.
  * Only use in "old debug mode" (LLVMIsNewDbgFormat() is false).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.declare intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
@@ -1280,7 +1280,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
 /**
  * Soon to be deprecated.
  * Only use in "new debug mode" (LLVMIsNewDbgFormat() is true).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a Declare DbgRecord before the given instruction.
  * \param Builder     The DIBuilder.
@@ -1311,7 +1311,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
 /**
  * Soon to be deprecated.
  * Only use in "old debug mode" (LLVMIsNewDbgFormat() is false).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a new llvm.dbg.declare intrinsic call at the end of the given basic
  * block. If the basic block has a terminator instruction, the intrinsic is
@@ -1329,7 +1329,7 @@ LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
 /**
  * Soon to be deprecated.
  * Only use in "new debug mode" (LLVMIsNewDbgFormat() is true).
- * See https://llvm.org/docs/RemoveDIsDebugInfo.html
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
  *
  * Insert a Declare DbgRecord at the end of the given basic block. If the basic
  * block has a terminator instruction, the record is inserted before that
