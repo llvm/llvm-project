@@ -3,15 +3,13 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@global = external global ptr addrspace(1), align 8
-
 ; PR 81872 explains the issue.
 
 ; If we vectorize, we have a miscompile where array IV and thereby value stored in (arr[99],
 ; arr[98]) is calculated incorrectly since disjoint or was only disjoint because
 ; of dominating conditions. Dropping the disjoint to avoid poison still changes
 ; the behaviour since now the or is no longer equivalent to the add.
-; Function Attrs: uwtable
+;
 define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noundef align 8 dereferenceable_or_null(16) [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -45,43 +43,43 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK-NEXT:    br i1 true, label [[BB6:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 87, [[MIDDLE_BLOCK]] ], [ 99, [[BB5:%.*]] ]
-; CHECK-NEXT:    br label [[BB15:%.*]]
-; CHECK:       bb15:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[BB20:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 1
 ; CHECK-NEXT:    [[ICMP17:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    br i1 [[ICMP17]], label [[BB18:%.*]], label [[BB20]], !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP17]], label [[BB18:%.*]], label [[LOOP_LATCH]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-NEXT:    [[GETELEMENTPTR19:%.*]] = getelementptr inbounds i64, ptr [[ARR]], i64 [[OR]]
 ; CHECK-NEXT:    store i64 1, ptr [[GETELEMENTPTR19]], align 8
-; CHECK-NEXT:    br label [[BB20]]
-; CHECK:       bb20:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[ICMP22:%.*]] = icmp eq i64 [[IV_NEXT]], 90
-; CHECK-NEXT:    br i1 [[ICMP22]], label [[BB6]], label [[BB15]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP22]], label [[BB6]], label [[LOOP_HEADER]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
 bb5:
-  br label %bb15
+  br label %loop.header
 
-bb15:                                             ; preds = %bb20, %bb8
-  %iv = phi i64 [ 99, %bb5 ], [ %iv.next, %bb20 ]
+loop.header:                                             ; preds = %loop.latch, %bb8
+  %iv = phi i64 [ 99, %bb5 ], [ %iv.next, %loop.latch ]
   %and = and i64 %iv, 1
   %icmp17 = icmp eq i64 %and, 0
-  br i1 %icmp17, label %bb18, label %bb20, !prof !21
+  br i1 %icmp17, label %bb18, label %loop.latch, !prof !21
 
-bb18:                                             ; preds = %bb15
+bb18:                                             ; preds = %loop.header
   %or = or disjoint i64 %iv, 1
   %getelementptr19 = getelementptr inbounds i64, ptr %arr, i64 %or
   store i64 1, ptr %getelementptr19, align 8
-  br label %bb20
+  br label %loop.latch
 
-bb20:                                             ; preds = %bb18, %bb15
+loop.latch:                                             ; preds = %bb18, %loop.header
   %iv.next = add nsw i64 %iv, -1
   %icmp22 = icmp eq i64 %iv.next, 90
-  br i1 %icmp22, label %bb6, label %bb15, !prof !22
+  br i1 %icmp22, label %bb6, label %loop.header, !prof !22
 
 bb6:
   ret void

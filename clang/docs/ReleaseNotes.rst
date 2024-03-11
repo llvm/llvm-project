@@ -183,6 +183,9 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
+  ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
+  ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
 Removed Compiler Flags
 -------------------------
