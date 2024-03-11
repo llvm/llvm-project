@@ -673,6 +673,16 @@ public:
   /// fragment. See [module.global.frag]p3,4 for details.
   bool isDiscardedInGlobalModuleFragment() const { return false; }
 
+  /// Check if we should skip checking ODRHash for declaration \param D.
+  ///
+  /// The existing ODRHash mechanism seems to be not stable enough and
+  /// the false positive ODR violation reports are annoying and we rarely see
+  /// true ODR violation reports. Also we learned that MSVC disabled ODR checks
+  /// for declarations in GMF. So we try to disable ODR checks in the GMF to
+  /// get better user experiences before we make the ODR violation checks stable
+  /// enough.
+  bool shouldSkipCheckingODR() const;
+
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
   bool hasDefiningAttr() const;
