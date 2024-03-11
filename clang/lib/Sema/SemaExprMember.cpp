@@ -747,16 +747,13 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
   QualType ObjectType = SS.isSet() ? QualType() : RTy;
   if (HasTemplateArgs || TemplateKWLoc.isValid()) {
     bool MOUS;
-    bool Invalid = SemaRef.LookupTemplateName(R,
+    return SemaRef.LookupTemplateName(R,
                                       /*S=*/nullptr,
                                       SS,
                                       ObjectType,
                                       /*EnteringContext=*/false,
                                       MOUS,
                                       TemplateKWLoc);
-    if (MOUS)
-      R.setNotFoundInCurrentInstantiation();
-    return Invalid;
   }
   #if 1
   SemaRef.LookupParsedName(R, /*S=*/nullptr, &SS, ObjectType);

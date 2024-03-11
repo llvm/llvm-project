@@ -214,6 +214,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                          &AssumedTemplate,
                          /*AllowTypoCorrection=*/!Disambiguation))
     return TNK_Non_template;
+  MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
 
   if (AssumedTemplate != AssumedTemplateKind::None) {
     TemplateResult = TemplateTy::make(Context.getAssumedTemplateName(TName));
@@ -559,6 +560,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   if (Found.empty()) {
     if (IsDependent) {
       MemberOfUnknownSpecialization = true;
+      Found.setNotFoundInCurrentInstantiation();
       return false;
     }
 
