@@ -103,7 +103,7 @@ New checks
 - New :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check.
 
-  Checks for mathematical expressions that involve operators
+  Check for mising parantheses in mathematical expressions that involve operators
   of different priorities.
 
 New check aliases

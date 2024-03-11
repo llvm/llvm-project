@@ -11,8 +11,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
-#include <set>
-#include <stack>
+#include "clang/Rewrite/Core/Rewriter.h"
+#include <iostream>
+using namespace std;
 
 using namespace clang::ast_matchers;
 
@@ -24,124 +25,25 @@ void MathMissingParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("binOp"),
                      this);
 }
-static int precedenceCheck(const char op) {
-  if (op == '/' || op == '*' || op == '%')
-    return 5;
 
-  else if (op == '+' || op == '-')
-    return 4;
+void addParantheses(const BinaryOperator *BinOp, clang::Rewriter &Rewrite,
+                    const BinaryOperator *ParentBinOp, bool &NeedToDiagnose) {
+  if (!BinOp)
+    return;
+  if (ParentBinOp != nullptr &&
+      ParentBinOp->getOpcode() != BinOp->getOpcode()) {
+    NeedToDiagnose = true;
+  }
+  clang::SourceLocation StartLoc = BinOp->getLHS()->getBeginLoc();
+  clang::SourceLocation EndLoc = BinOp->getRHS()->getEndLoc();
+  Rewrite.InsertText(StartLoc, "(");
+  Rewrite.InsertTextAfterToken(EndLoc, ")");
+  addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()), Rewrite, BinOp,
+                 NeedToDiagnose);
+  addParantheses(dyn_cast<BinaryOperator>(BinOp->getRHS()), Rewrite, BinOp,
+                 NeedToDiagnose);
+}
 
-  else if (op == '&')
-    return 3;
-  else if (op == '^')
-    return 2;
-
-  else if (op == '|')
-    return 1;
-
-  else
-    return 0;
-}
-static bool isOperand(const char c) {
-  if (c >= 'a' && c <= 'z')
-    return true;
-  else if (c >= 'A' && c <= 'Z')
-    return true;
-  else if (c >= '0' && c <= '9')
-    return true;
-  else if (c == '$')
-    return true;
-  else
-    return false;
-}
-static bool conditionForNegative(const std::string s, int i,
-                                 const std::string CurStr) {
-  if (CurStr[0] == '-') {
-    if (i == 0) {
-      return true;
-    } else {
-      while (s[i - 1] == ' ') {
-        i--;
-      }
-      if (!isOperand(s[i - 1])) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  } else {
-    return false;
-  }
-}
-static std::string getOperationOrder(std::string s, std::set<char> &Operators) {
-  std::stack<std::string> StackOne;
-  std::string TempStr = "";
-  for (int i = 0; i < s.length(); i++) {
-    std::string CurStr = "";
-    CurStr += s[i];
-    if (CurStr == " ")
-      continue;
-    else {
-      if (isOperand(CurStr[0]) || conditionForNegative(s, i, CurStr)) {
-        while (i < s.length() && (isOperand(s[i]) || s[i] == '-')) {
-          if (s[i] == '-') {
-            TempStr += "$";
-          } else {
-            TempStr += CurStr;
-          }
-          i++;
-          CurStr = s[i];
-        }
-        TempStr += " ";
-      } else if (CurStr == "(") {
-        StackOne.push("(");
-      } else if (CurStr == ")") {
-        while (StackOne.top() != "(") {
-          TempStr += StackOne.top();
-          StackOne.pop();
-        }
-        StackOne.pop();
-      } else {
-        while (!StackOne.empty() && precedenceCheck(CurStr[0]) <=
-                                        precedenceCheck((StackOne.top())[0])) {
-          TempStr += StackOne.top();
-          StackOne.pop();
-        }
-        StackOne.push(CurStr);
-      }
-    }
-  }
-  while (!StackOne.empty()) {
-    TempStr += StackOne.top();
-    StackOne.pop();
-  }
-  std::stack<std::string> StackTwo;
-  for (int i = 0; i < TempStr.length(); i++) {
-    if (TempStr[i] == ' ')
-      continue;
-    else if (isOperand(TempStr[i])) {
-      std::string CurStr = "";
-      while (i < TempStr.length() && isOperand(TempStr[i])) {
-        if (TempStr[i] == '$') {
-          CurStr += "-";
-        } else {
-          CurStr += TempStr[i];
-        }
-        i++;
-      }
-      StackTwo.push(CurStr);
-    } else {
-      std::string OperandOne = StackTwo.top();
-      StackTwo.pop();
-      std::string OperandTwo = StackTwo.top();
-      StackTwo.pop();
-      Operators.insert(TempStr[i]);
-      StackTwo.push("(" + OperandTwo + " " + TempStr[i] + " " + OperandOne +
-                    ")");
-    }
-  }
-  return StackTwo.top();
-}
 void MathMissingParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
@@ -149,18 +51,17 @@ void MathMissingParenthesesCheck::check(
     return;
   clang::SourceManager &SM = *Result.SourceManager;
   clang::LangOptions LO = Result.Context->getLangOpts();
-  clang::CharSourceRange Range =
-      clang::CharSourceRange::getTokenRange(BinOp->getSourceRange());
-  std::string Expression = clang::Lexer::getSourceText(Range, SM, LO).str();
-  std::set<char> Operators;
-  std::string FinalExpression = getOperationOrder(Expression, Operators);
-  if (Operators.size() > 1) {
-    if (FinalExpression.length() > 2) {
-      FinalExpression = FinalExpression.substr(1, FinalExpression.length() - 2);
-    }
-    diag(BinOp->getBeginLoc(),
-         "add parantheses to clarify the precedence of operations")
-        << FixItHint::CreateReplacement(Range, FinalExpression);
+  Rewriter Rewrite(SM, LO);
+  bool NeedToDiagnose = false;
+  addParantheses(BinOp, Rewrite, nullptr, NeedToDiagnose);
+  clang::SourceLocation StartLoc = BinOp->getLHS()->getBeginLoc();
+  clang::SourceLocation EndLoc =
+      BinOp->getRHS()->getEndLoc().getLocWithOffset(1);
+  clang::SourceRange range(StartLoc, EndLoc);
+  std::string NewExpression = Rewrite.getRewrittenText(range);
+  if (NeedToDiagnose) {
+    diag(StartLoc, "add parantheses to clarify the precedence of operations")
+        << FixItHint::CreateReplacement(range, NewExpression);
   }
 }
 
