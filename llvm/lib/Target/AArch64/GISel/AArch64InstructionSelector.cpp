@@ -5934,7 +5934,7 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
 
   // Keep track of the last MI we inserted. Later on, we might be able to save
   // a copy using it.
-  MachineInstr *PrevMI = nullptr;
+  MachineInstr *PrevMI = ScalarToVec;
   for (unsigned i = 2, e = DstSize / EltSize + 1; i < e; ++i) {
     // Note that if we don't do a subregister copy, we can end up making an
     // extra register.
@@ -5975,21 +5975,28 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
     MachineOperand &RegOp = I.getOperand(1);
     RegOp.setReg(Reg);
     RBI.constrainGenericRegister(DstReg, *RC, MRI);
-  } else if (PrevMI) {
-    // PrevMI is not nullptr, so we have generated inserts and don't need a
-    // subregister copy. Save a copy by re-using the destination register on the
-    // final insert.
+  } else {
+    // We either have a vector with all elements (except the first one) undef or
+    // at least one non-undef non-first element. In the first case, we need to
+    // constrain the output register ourselves as we may have generated an
+    // INSERT_SUBREG operation which is a generic operation for which the
+    // output regclass cannot be automatically chosen.
+    //
+    // In the second case, there is no need to do this as it may generate an
+    // instruction like INSvi32gpr where the regclass can be automatically
+    // chosen.
+    //
+    // Also, we save a copy by re-using the destination register on the final
+    // insert.
     PrevMI->getOperand(0).setReg(I.getOperand(0).getReg());
     constrainSelectedInstRegOperands(*PrevMI, TII, TRI, RBI);
-  } else {
-    // All the operands (except the first one) to the G_BUILD_VECTOR were
-    // undef, so PrevMI is nullptr. Emit a copy to the destination register
-    // from the first operand.
-    const TargetRegisterClass *RC =
-        getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DstVec, MRI, TRI));
-    Register DstReg = I.getOperand(0).getReg();
-    MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {}).addReg(DstVec, 0);
-    RBI.constrainGenericRegister(DstReg, *RC, MRI);
+
+    Register DstReg = PrevMI->getOperand(0).getReg();
+    if (PrevMI == ScalarToVec && DstReg.isVirtual()) {
+      const TargetRegisterClass *RC =
+          getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DstVec, MRI, TRI));
+      RBI.constrainGenericRegister(DstReg, *RC, MRI);
+    }
   }
 
   I.eraseFromParent();

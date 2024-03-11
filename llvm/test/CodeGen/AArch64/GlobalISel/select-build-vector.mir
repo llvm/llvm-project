@@ -267,8 +267,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK: %val:gpr32all = COPY $w0
     ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %val, %subreg.ssub
-    ; CHECK: $q0 = COPY [[INSERT_SUBREG]]
+    ; CHECK: %bv:fpr128 = INSERT_SUBREG [[DEF]], %val, %subreg.ssub
+    ; CHECK: $q0 = COPY %bv
     ; CHECK: RET_ReallyLR implicit $q0
     %val:gpr(s32) = COPY $w0
     %undef:gpr(s32) = G_IMPLICIT_DEF
