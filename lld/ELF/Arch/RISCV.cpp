@@ -1084,7 +1084,7 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
   }
 }
 
-static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
+static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
                         const InputSectionBase *oldSection,
                         const InputSectionBase *newSection, unsigned int oldTag,
                         unsigned int newTag) {
@@ -1093,15 +1093,14 @@ static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
   if (oldTag == newTag || newTag == AtomicABI::UNKNOWN)
     return;
 
-  auto attr = RISCVAttrs::ATOMIC_ABI;
   switch (oldTag) {
   case AtomicABI::UNKNOWN:
-    intAttr[attr] = newTag;
+    it->getSecond() = newTag;
     return;
   case AtomicABI::A6C:
     switch (newTag) {
     case AtomicABI::A6S:
-      intAttr[attr] = AtomicABI::A6C;
+      it->getSecond() = AtomicABI::A6C;
       return;
     case AtomicABI::A7:
       errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
@@ -1113,17 +1112,17 @@ static void mergeAtomic(DenseMap<unsigned, unsigned> &intAttr,
   case AtomicABI::A6S:
     switch (newTag) {
     case AtomicABI::A6C:
-      intAttr[attr] = AtomicABI::A6C;
+      it->getSecond() = AtomicABI::A6C;
       return;
     case AtomicABI::A7:
-      intAttr[attr] = AtomicABI::A7;
+      it->getSecond() = AtomicABI::A7;
       return;
     };
 
   case AtomicABI::A7:
     switch (newTag) {
     case AtomicABI::A6S:
-      intAttr[attr] = AtomicABI::A7;
+      it->getSecond() = AtomicABI::A7;
       return;
     case AtomicABI::A6C:
       errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
@@ -1194,8 +1193,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
           if (r.second) {
             firstAtomicAbi = sec;
           } else {
-            mergeAtomic(merged.intAttr, firstAtomicAbi, sec,
-                        r.first->getSecond(), *i);
+
+            mergeAtomic(r.first, firstAtomicAbi, sec, r.first->getSecond(), *i);
           }
         }
         continue;
