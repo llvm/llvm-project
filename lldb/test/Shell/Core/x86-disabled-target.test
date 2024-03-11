@@ -8,4 +8,3 @@
 # `int main() {}`
 
 # RUN: %lldb -b -c %p/Inputs/x86-disabled-target.core
-
