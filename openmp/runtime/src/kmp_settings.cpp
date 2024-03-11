@@ -4889,9 +4889,6 @@ static void __kmp_stg_parse_spin_backoff_params(const char *name,
       if (num <= 0) { // The number of retries should be > 0
         msg = KMP_I18N_STR(ValueTooSmall);
         num = 1;
-      } else if (num > KMP_INT_MAX) {
-        msg = KMP_I18N_STR(ValueTooLarge);
-        num = KMP_INT_MAX;
       }
       if (msg != NULL) {
         // Message is not empty. Print warning.
@@ -4988,9 +4985,6 @@ static void __kmp_stg_parse_adaptive_lock_props(const char *name,
       if (num < 0) { // The number of retries should be >= 0
         msg = KMP_I18N_STR(ValueTooSmall);
         num = 1;
-      } else if (num > KMP_INT_MAX) {
-        msg = KMP_I18N_STR(ValueTooLarge);
-        num = KMP_INT_MAX;
       }
       if (msg != NULL) {
         // Message is not empty. Print warning.
