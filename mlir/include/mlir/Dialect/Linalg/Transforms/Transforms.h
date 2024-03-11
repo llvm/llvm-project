@@ -481,6 +481,10 @@ struct ControlDropUnitDims {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
     }
+    if (auto padOp = dyn_cast_or_null<tensor::PadOp>(op)) {
+      return llvm::to_vector(
+          llvm::seq<unsigned>(0, padOp.getSourceType().getRank()));
+    }
     return SmallVector<unsigned>{};
   };
 };
