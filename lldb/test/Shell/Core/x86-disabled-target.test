@@ -1,0 +1,11 @@
+# UNSUPPORTED: x86
+
+# Check that there is no nullptr dereference of LLVMDisasmContext pointer
+# on x86-disabled llvm when loading an x86 core file.
+
+# The core file is generated from the dummy executable compiled from the
+# following code when stopped on breakpoint main:
+# `int main() {}`
+
+# RUN: %lldb -b -c %p/Inputs/x86-disabled-target.core
+
