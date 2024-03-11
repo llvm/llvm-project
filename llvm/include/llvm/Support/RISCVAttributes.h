@@ -50,10 +50,13 @@ enum AtomicABI : unsigned {
 
 namespace RISCVX3RegUse {
 enum X3RegUsage : unsigned {
+  // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_x3_reg_usage-16-uleb128value
   UNKNOWN = 0,
-  GP = 0,
-  SCS = 0,
-  TMP = 0,
+  GP = 1,
+  SCS = 2,
+  TMP = 3,
+  // 4-1023 reserved for future standard defined platform register.
+  // 1024-2047 reserved for nonstandard defined platform register.
 };
 } // namespace RISCVX3RegUse
 
