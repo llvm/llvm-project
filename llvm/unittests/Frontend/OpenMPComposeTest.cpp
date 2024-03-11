@@ -39,3 +39,29 @@ TEST(Composition, GetCompoundConstruct) {
   Directive C7 = getCompoundConstruct({OMPD_parallel_for, OMPD_simd});
   ASSERT_EQ(C7, OMPD_parallel_for_simd);
 }
+
+TEST(Composition, IsLeafConstruct) {
+  ASSERT_TRUE(isLeafConstruct(OMPD_loop));
+  ASSERT_TRUE(isLeafConstruct(OMPD_teams));
+  ASSERT_FALSE(isLeafConstruct(OMPD_for_simd));
+  ASSERT_FALSE(isLeafConstruct(OMPD_distribute_simd));
+}
+
+TEST(Composition, IsCompositeConstruct) {
+  ASSERT_TRUE(isCompositeConstruct(OMPD_distribute_simd));
+  ASSERT_FALSE(isCompositeConstruct(OMPD_for));
+  ASSERT_TRUE(isCompositeConstruct(OMPD_for_simd));
+  // directive-name-A = "parallel", directive-name-B = "for simd",
+  // only directive-name-A is loop-associated, so this is not a
+  // composite construct, even though "for simd" is.
+  ASSERT_FALSE(isCompositeConstruct(OMPD_parallel_for_simd));
+}
+
+TEST(Composition, IsCombinedConstruct) {
+  // "parallel for simd" is a combined construct, see comment in
+  // IsCompositeConstruct.
+  ASSERT_TRUE(isCombinedConstruct(OMPD_parallel_for_simd));
+  ASSERT_FALSE(isCombinedConstruct(OMPD_for_simd));
+  ASSERT_TRUE(isCombinedConstruct(OMPD_parallel_for));
+  ASSERT_FALSE(isCombinedConstruct(OMPD_parallel));
+}
