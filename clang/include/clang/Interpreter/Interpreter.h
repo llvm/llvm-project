@@ -169,6 +169,7 @@ public:
 
 private:
   size_t getEffectivePTUSize() const;
+  void markUserCodeStart();
 
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
