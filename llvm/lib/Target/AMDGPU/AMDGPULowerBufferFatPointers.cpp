@@ -1671,7 +1671,7 @@ PtrParts SplitPtrStructs::visitSelectInst(SelectInst &SI) {
   auto [TrueRsrc, TrueOff] = getPtrParts(True);
   auto [FalseRsrc, FalseOff] = getPtrParts(False);
 
-  Value *RsrcRes = RsrcRes =
+  Value *RsrcRes =
       IRB.CreateSelect(Cond, TrueRsrc, FalseRsrc, SI.getName() + ".rsrc", &SI);
   copyMetadata(RsrcRes, &SI);
   Conditionals.push_back(&SI);
