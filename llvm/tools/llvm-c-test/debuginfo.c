@@ -136,7 +136,7 @@ int llvm_test_dibuilder(void) {
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
                                          42, Int64Ty, true, 0);
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderInsertDeclareRecordAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
@@ -148,7 +148,7 @@ int llvm_test_dibuilder(void) {
                                          42, Int64Ty, true, 0);
 
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderInsertDeclareRecordAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
@@ -160,7 +160,7 @@ int llvm_test_dibuilder(void) {
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "c", 1, 3, File,
                                          42, VectorTy, true, 0);
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDeclareAtEnd(
+    LLVMDIBuilderInsertDeclareRecordAtEnd(
         DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar3,
         FooParamExpression, FooParamLocation, FooEntryBlock);
   else
@@ -184,8 +184,8 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooVarValueExpr =
     LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
   if (LLVMIsNewDbgInfoFormat(M))
-    LLVMDIBuilderInsertDbgValueAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
-                                     FooVarsLocation, FooVarBlock);
+    LLVMDIBuilderInsertDbgValueRecordAtEnd(
+        DIB, FooVal1, FooVar1, FooVarValueExpr, FooVarsLocation, FooVarBlock);
   else
     LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
         DIB, FooVal1, FooVar1, FooVarValueExpr, FooVarsLocation, FooVarBlock);
