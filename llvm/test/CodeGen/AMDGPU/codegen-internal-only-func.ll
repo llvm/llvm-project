@@ -7,4 +7,3 @@
 define internal i32 @func() {
   ret i32 0
 }
-

@@ -13,11 +13,26 @@
 
 namespace llvm {
 
+template <typename T>
+DbgRecordParamRef<T>::DbgRecordParamRef(const T *Param)
+    : Ref(const_cast<T *>(Param)) {}
+template <typename T>
+DbgRecordParamRef<T>::DbgRecordParamRef(const MDNode *Param)
+    : Ref(const_cast<MDNode *>(Param)) {}
+
+template <typename T> T *DbgRecordParamRef<T>::get() const {
+  return cast<T>(Ref);
+}
+
+template class DbgRecordParamRef<DIExpression>;
+template class DbgRecordParamRef<DILabel>;
+template class DbgRecordParamRef<DILocalVariable>;
+
 DPValue::DPValue(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
       DebugValueUser({DVI->getRawLocation(), nullptr, nullptr}),
       Variable(DVI->getVariable()), Expression(DVI->getExpression()),
-      AddressExpression(nullptr) {
+      AddressExpression() {
   switch (DVI->getIntrinsicID()) {
   case Intrinsic::dbg_value:
     Type = LocationType::Value;
@@ -121,6 +136,38 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
     return cast<DPLabel>(this)->createDebugIntrinsic(M, InsertBefore);
   };
   llvm_unreachable("unsupported DbgRecord kind");
+}
+
+DPLabel::DPLabel(MDNode *Label, MDNode *DL)
+    : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
+  assert(Label && "Unexpected nullptr");
+  assert((isa<DILabel>(Label) || Label->isTemporary()) &&
+         "Label type must be or resolve to a DILabel");
+}
+DPLabel::DPLabel(DILabel *Label, DebugLoc DL)
+    : DbgRecord(LabelKind, DL), Label(Label) {
+  assert(Label && "Unexpected nullptr");
+}
+
+DPLabel *DPLabel::createUnresolvedDPLabel(MDNode *Label, MDNode *DL) {
+  return new DPLabel(Label, DL);
+}
+
+DPValue::DPValue(DPValue::LocationType Type, Metadata *Val, MDNode *Variable,
+                 MDNode *Expression, MDNode *AssignID, Metadata *Address,
+                 MDNode *AddressExpression, MDNode *DI)
+    : DbgRecord(ValueKind, DebugLoc(DI)),
+      DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
+      Expression(Expression), AddressExpression(AddressExpression) {}
+
+DPValue *DPValue::createUnresolvedDPValue(DPValue::LocationType Type,
+                                          Metadata *Val, MDNode *Variable,
+                                          MDNode *Expression, MDNode *AssignID,
+                                          Metadata *Address,
+                                          MDNode *AddressExpression,
+                                          MDNode *DI) {
+  return new DPValue(Type, Val, Variable, Expression, AssignID, Address,
+                     AddressExpression, DI);
 }
 
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
@@ -331,7 +378,9 @@ DbgRecord *DbgRecord::clone() const {
 
 DPValue *DPValue::clone() const { return new DPValue(*this); }
 
-DPLabel *DPLabel::clone() const { return new DPLabel(Label, getDebugLoc()); }
+DPLabel *DPLabel::clone() const {
+  return new DPLabel(getLabel(), getDebugLoc());
+}
 
 DbgVariableIntrinsic *
 DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {

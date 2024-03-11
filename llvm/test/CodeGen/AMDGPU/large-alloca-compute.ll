@@ -70,4 +70,4 @@ define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
 attributes #0 = { nounwind  }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

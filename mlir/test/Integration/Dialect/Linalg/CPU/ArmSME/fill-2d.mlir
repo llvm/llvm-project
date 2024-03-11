@@ -88,7 +88,7 @@ func.func @entry() {
   }
 
   // CHECK: SME: END OF TEST OUTPUT
-  vector.print str "SME: END OF TEST OUTPUT"
+  vector.print str "SME: END OF TEST OUTPUT\n"
 
   return
 }

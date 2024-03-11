@@ -1947,11 +1947,18 @@ function(add_lit_target target comment)
     list(APPEND LIT_COMMAND --param ${param})
   endforeach()
   if (ARG_UNPARSED_ARGUMENTS)
-    add_custom_target(${target}
-      COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
-      COMMENT "${comment}"
-      USES_TERMINAL
-      )
+    if (LLVM_PARALLEL_LIT)
+     add_custom_target(${target}
+       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
+       COMMENT "${comment}"
+       )
+    else()
+     add_custom_target(${target}
+       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
+       COMMENT "${comment}"
+       USES_TERMINAL
+       )
+    endif()
   else()
     add_custom_target(${target}
       COMMAND ${CMAKE_COMMAND} -E echo "${target} does nothing, no tools built.")
@@ -2500,15 +2507,5 @@ function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
   if(LLVM_USE_HOST_TOOLS AND NOT ${setting_name})
     build_native_tool(${tool_name} exe_name DEPENDS ${tool_name})
     add_custom_target(${target_var_name} DEPENDS ${exe_name})
-  endif()
-endfunction()
-
-# Adds the unittests folder if gtest is available.
-function(llvm_add_unittests tests_added)
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
-    add_subdirectory(unittests)
-    set(${tests_added} ON PARENT_SCOPE)
-  else()
-    message(WARNING "gtest not found, unittests will not be available")
   endif()
 endfunction()

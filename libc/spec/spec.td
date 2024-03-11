@@ -51,6 +51,7 @@ def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
 def UnsignedCharType : NamedType<"unsigned char">;
 def UnsignedShortType : NamedType<"unsigned short">;
+def BoolType : NamedType<"bool">;
 
 def Float128Type : NamedType<"float128">;
 
@@ -110,6 +111,7 @@ def IntPtr : PtrType<IntType>;
 def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
+def Float128Ptr : PtrType<Float128Type>;
 def UnsignedCharPtr : PtrType<UnsignedCharType>;
 
 def SigHandlerT : NamedType<"__sighandler_t">;

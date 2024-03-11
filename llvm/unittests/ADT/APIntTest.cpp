@@ -1379,6 +1379,23 @@ TEST(APIntTest, toString) {
   EXPECT_EQ(std::string(S), "0");
   S.clear();
 
+  // with separators
+  APInt(64, 140).toString(S, 2, false, true, false, true);
+  EXPECT_EQ(std::string(S), "0b1000'1100");
+  S.clear();
+  APInt(64, 1024).toString(S, 8, false, true, false, true);
+  EXPECT_EQ(std::string(S), "02'000");
+  S.clear();
+  APInt(64, 1000000).toString(S, 10, false, true, false, true);
+  EXPECT_EQ(std::string(S), "1'000'000");
+  S.clear();
+  APInt(64, 1000000).toString(S, 16, false, true, true, true);
+  EXPECT_EQ(std::string(S), "0xF'4240");
+  S.clear();
+  APInt(64, 1'000'000'000).toString(S, 36, false, false, false, true);
+  EXPECT_EQ(std::string(S), "gj'dgxs");
+  S.clear();
+
   isSigned = false;
   APInt(8, 255, isSigned).toString(S, 2, isSigned, true);
   EXPECT_EQ(std::string(S), "0b11111111");
@@ -1414,6 +1431,24 @@ TEST(APIntTest, toString) {
   S.clear();
   APInt(8, 255, isSigned).toString(S, 36, isSigned, false);
   EXPECT_EQ(std::string(S), "-1");
+  S.clear();
+
+  // negative with separators
+  APInt(64, -140, isSigned).toString(S, 2, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-0b1000'1100");
+  S.clear();
+  APInt(64, -1024, isSigned).toString(S, 8, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-02'000");
+  S.clear();
+  APInt(64, -1000000, isSigned).toString(S, 10, isSigned, true, false, true);
+  EXPECT_EQ(std::string(S), "-1'000'000");
+  S.clear();
+  APInt(64, -1000000, isSigned).toString(S, 16, isSigned, true, true, true);
+  EXPECT_EQ(std::string(S), "-0xF'4240");
+  S.clear();
+  APInt(64, -1'000'000'000, isSigned)
+      .toString(S, 36, isSigned, false, false, true);
+  EXPECT_EQ(std::string(S), "-gj'dgxs");
   S.clear();
 }
 

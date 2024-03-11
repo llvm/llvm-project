@@ -52,6 +52,11 @@ struct CodeGenHwModes {
     assert(Id != 0 && "Mode id of 0 is reserved for the default mode");
     return Modes[Id - 1];
   }
+  StringRef getModeName(unsigned Id, bool IncludeDefault = false) const {
+    if (IncludeDefault && Id == CodeGenHwModes::DefaultMode)
+      return DefaultModeName;
+    return getMode(Id).Name;
+  }
   const HwModeSelect &getHwModeSelect(Record *R) const;
   const std::map<Record *, HwModeSelect> &getHwModeSelects() const {
     return ModeSelects;

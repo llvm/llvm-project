@@ -9,6 +9,7 @@
 #include "Options.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/InstallAPI/FileList.h"
 #include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -68,6 +69,8 @@ bool Options::processDriverOptions(InputArgList &Args) {
     }
   }
 
+  DriverOpts.Verbose = Args.hasArgNoClaim(OPT_v);
+
   return true;
 }
 
@@ -104,10 +107,23 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
 
   if (!processLinkerOptions(ArgList))
     return;
+
+  /// Any remaining arguments should be handled by invoking the clang frontend.
+  for (const Arg *A : ArgList) {
+    if (A->isClaimed())
+      continue;
+
+    FrontendArgs.emplace_back(A->getSpelling());
+    llvm::copy(A->getValues(), std::back_inserter(FrontendArgs));
+  }
+  FrontendArgs.push_back("-fsyntax-only");
 }
 
 InstallAPIContext Options::createContext() {
   InstallAPIContext Ctx;
+  Ctx.FM = FM;
+  Ctx.Diags = Diags;
+
   // InstallAPI requires two level namespacing.
   Ctx.BA.TwoLevelNamespace = true;
 
@@ -116,6 +132,21 @@ InstallAPIContext Options::createContext() {
   Ctx.BA.AppExtensionSafe = LinkerOpts.AppExtensionSafe;
   Ctx.FT = DriverOpts.OutFT;
   Ctx.OutputLoc = DriverOpts.OutputPath;
+
+  // Process inputs.
+  for (const std::string &ListPath : DriverOpts.FileLists) {
+    auto Buffer = FM->getBufferForFile(ListPath);
+    if (auto Err = Buffer.getError()) {
+      Diags->Report(diag::err_cannot_open_file) << ListPath;
+      return Ctx;
+    }
+    if (auto Err = FileListReader::loadHeaders(std::move(Buffer.get()),
+                                               Ctx.InputHeaders)) {
+      Diags->Report(diag::err_cannot_open_file) << ListPath;
+      return Ctx;
+    }
+  }
+
   return Ctx;
 }
 

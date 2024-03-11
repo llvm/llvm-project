@@ -33,7 +33,6 @@ Types:
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>

@@ -72,11 +72,10 @@
 #  endif
 #endif
 
-// Availability markup is disabled when building the library, or when the compiler
+// Availability markup is disabled when building the library, or when a non-Clang
+// compiler is used because only Clang supports the necessary attributes.
 // doesn't support the proper attributes.
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) ||                                       \
-    !__has_feature(attribute_availability_with_strict) || !__has_feature(attribute_availability_in_templates) ||       \
-    !__has_extension(pragma_clang_attribute_external_declaration)
+#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) || !defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if !defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 #    define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
 #  endif

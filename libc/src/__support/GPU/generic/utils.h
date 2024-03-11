@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_IO_H
-#define LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_UTILS_H
 
 #include "src/__support/common.h"
 
@@ -78,4 +78,4 @@ LIBC_INLINE uint32_t get_cluster_id() { return 0; }
 } // namespace gpu
 } // namespace LIBC_NAMESPACE
 
-#endif
+#endif // LLVM_LIBC_SRC___SUPPORT_GPU_GENERIC_UTILS_H

@@ -189,6 +189,7 @@ class SiFive7AnyToGPRBypass<SchedRead read, int cycles = 2>
                                  WriteREV8, WriteORCB, WriteSFB,
                                  WriteIMul, WriteIMul32,
                                  WriteIDiv, WriteIDiv32,
+                                 WriteIRem, WriteIRem32,
                                  WriteLDB, WriteLDH, WriteLDW, WriteLDD]>;
 
 // SiFive7 machine model for scheduling and other instruction cost heuristics.
@@ -198,6 +199,7 @@ def SiFive7Model : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 3;
   let CompleteModel = 0;
+  let PostRAScheduler = true;
   let EnableIntervals = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
@@ -268,6 +270,16 @@ def : WriteRes<WriteIDiv, [SiFive7PipeB, SiFive7IDiv]> {
   let ReleaseAtCycles = [1, 65];
 }
 def : WriteRes<WriteIDiv32,  [SiFive7PipeB, SiFive7IDiv]> {
+  let Latency = 34;
+  let ReleaseAtCycles = [1, 33];
+}
+
+// Integer remainder
+def : WriteRes<WriteIRem, [SiFive7PipeB, SiFive7IDiv]> {
+  let Latency = 66;
+  let ReleaseAtCycles = [1, 65];
+}
+def : WriteRes<WriteIRem32,  [SiFive7PipeB, SiFive7IDiv]> {
   let Latency = 34;
   let ReleaseAtCycles = [1, 33];
 }
@@ -945,6 +957,8 @@ def : SiFive7AnyToGPRBypass<ReadShiftReg>;
 def : SiFive7AnyToGPRBypass<ReadShiftReg32>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;

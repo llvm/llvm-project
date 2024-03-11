@@ -2732,13 +2732,15 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       insertDAGNode(*CurDAG, N, Zext);
       SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, ShlAmt);
       insertDAGNode(*CurDAG, N, NewShl);
+      CurDAG->ReplaceAllUsesWith(N, NewShl);
+      CurDAG->RemoveDeadNode(N.getNode());
 
       // Convert the shift to scale factor.
       AM.Scale = 1 << ShAmtV;
-      AM.IndexReg = Zext;
-
-      CurDAG->ReplaceAllUsesWith(N, NewShl);
-      CurDAG->RemoveDeadNode(N.getNode());
+      // If matchIndexRecursively is not called here,
+      // Zext may be replaced by other nodes but later used to call a builder
+      // method
+      AM.IndexReg = matchIndexRecursively(Zext, AM, Depth + 1);
       return false;
     }
 

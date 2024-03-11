@@ -784,7 +784,7 @@ void DWARFRewriter::updateDebugInfo() {
     }
   } else {
     // Update unit debug info in parallel
-    ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
+    ThreadPoolInterface &ThreadPool = ParallelUtilities::getThreadPool();
     for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
       ThreadPool.async(processUnitDIE, CU.get(), &DIEBlder);
     ThreadPool.wait();
