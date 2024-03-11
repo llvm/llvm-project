@@ -6985,7 +6985,7 @@ Instruction *InstCombinerImpl::foldICmpPHIWithMinMax(ICmpInst &Cmp) {
   if (PHINode *PNOp0 = dyn_cast<PHINode>(Op0))
     return foldICmpPHIWithMinMaxHelper(*PNOp0, Cmp, Op1, Cmp.getPredicate());
   // case 2: icmp <op> %intrinsic, %phi
-  else if (PHINode *PNOp1 = dyn_cast<PHINode>(Op1))
+  if (PHINode *PNOp1 = dyn_cast<PHINode>(Op1))
     return foldICmpPHIWithMinMaxHelper(*PNOp1, Cmp, Op0,
                                        Cmp.getSwappedPredicate());
 
