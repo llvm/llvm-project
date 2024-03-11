@@ -4373,8 +4373,8 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
                                          void *data) {
   size_t length;
   const char *ptr = value;
-  SKIP_WS(ptr);
-  if (value) {
+  if (ptr) {
+    SKIP_WS(ptr);
     length = KMP_STRLEN(value);
     if (length) {
       if (value[length - 1] == '"' || value[length - 1] == '\'')
