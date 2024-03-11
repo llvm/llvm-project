@@ -8,10 +8,10 @@
 ; CHECK-NEXT:   [+1]:   store i32 42, ptr addrspace(5) %simpleuser, align 4
 ; CHECK-NEXT:   => Final Score:1
 ; CHECK-NEXT: Scoring:   %manyusers = alloca [4 x i64], align 4, addrspace(5)
-; CHECK-NEXT:   [+1]:   %v0 = load i8, ptr addrspace(5) %manyusers.1, align 1
 ; CHECK-NEXT:   [+1]:   store i32 %v0.ext, ptr addrspace(5) %manyusers.1, align 4
-; CHECK-NEXT:   [+1]:   %v1 = load i8, ptr addrspace(5) %manyusers.2, align 1
+; CHECK-NEXT:   [+1]:   %v0 = load i8, ptr addrspace(5) %manyusers.1, align 1
 ; CHECK-NEXT:   [+1]:   store i32 %v1.ext, ptr addrspace(5) %manyusers.2, align 4
+; CHECK-NEXT:   [+1]:   %v1 = load i8, ptr addrspace(5) %manyusers.2, align 1
 ; CHECK-NEXT:   => Final Score:4
 ; CHECK-NEXT: After sorting allocas:
 ; CHECK-NEXT:     %manyusers = alloca [4 x i64], align 4, addrspace(5)
@@ -39,12 +39,12 @@ entry:
 }
 
 ; CHECK:      Scoring:   %stack = alloca [4 x i64], align 4, addrspace(5)
-; CHECK-NEXT:   [+5]:   %outer.cmp = load i1, ptr addrspace(5) %stack.1, align 1
-; CHECK-NEXT:   [+9]:   store i32 32, ptr addrspace(5) %stack.1, align 4
-; CHECK-NEXT:   [+9]:   %inner.cmp = load i1, ptr addrspace(5) %stack.2, align 1
-; CHECK-NEXT:   [+1]:   store i32 64, ptr addrspace(5) %stack.2, align 4
-; CHECK-NEXT:   [+1]:   store i32 42, ptr addrspace(5) %stack, align 4
 ; CHECK-NEXT:   [+5]:   store i32 32, ptr addrspace(5) %stack, align 4
+; CHECK-NEXT:   [+1]:   store i32 42, ptr addrspace(5) %stack, align 4
+; CHECK-NEXT:   [+9]:   store i32 32, ptr addrspace(5) %stack.1, align 4
+; CHECK-NEXT:   [+5]:   %outer.cmp = load i1, ptr addrspace(5) %stack.1, align 1
+; CHECK-NEXT:   [+1]:   store i32 64, ptr addrspace(5) %stack.2, align 4
+; CHECK-NEXT:   [+9]:   %inner.cmp = load i1, ptr addrspace(5) %stack.2, align 1
 ; CHECK-NEXT:   => Final Score:30
 define amdgpu_kernel void @loop_users_alloca(i1 %x, i2) #0 {
 entry:

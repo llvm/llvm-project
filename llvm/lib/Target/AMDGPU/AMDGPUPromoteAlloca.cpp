@@ -249,6 +249,20 @@ FunctionPass *llvm::createAMDGPUPromoteAllocaToVector() {
   return new AMDGPUPromoteAllocaToVector();
 }
 
+static void collectAllocaUses(AllocaInst &Alloca,
+                              SmallVectorImpl<Use *> &Uses) {
+  SmallVector<Instruction *, 4> WorkList({&Alloca});
+  while (!WorkList.empty()) {
+    auto *Cur = WorkList.pop_back_val();
+    for (auto &U : Cur->uses()) {
+      Uses.push_back(&U);
+
+      if (isa<GetElementPtrInst>(U.getUser()) || isa<BitCastInst>(U.getUser()))
+        WorkList.push_back(cast<Instruction>(U.getUser()));
+    }
+  }
+}
+
 void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     SmallVectorImpl<AllocaInst *> &Allocas) {
   DenseMap<AllocaInst *, unsigned> Scores;
@@ -261,17 +275,12 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     LLVM_DEBUG(dbgs() << "Scoring: " << *Alloca << "\n");
     unsigned &Score = Scores[Alloca];
     // Increment score by one for each user + a bonus for users within loops.
-    //
-    // Look through GEPs for additional users.
-    SmallVector<User *, 8> WorkList(Alloca->user_begin(), Alloca->user_end());
-    while (!WorkList.empty()) {
-      auto *Inst = cast<Instruction>(WorkList.pop_back_val());
-
-      if (isa<GetElementPtrInst>(Inst)) {
-        WorkList.append(Inst->user_begin(), Inst->user_end());
+    SmallVector<Use *, 8> Uses;
+    collectAllocaUses(*Alloca, Uses);
+    for (auto *U : Uses) {
+      Instruction *Inst = cast<Instruction>(U->getUser());
+      if (isa<GetElementPtrInst>(Inst) || isa<BitCastInst>(Inst))
         continue;
-      }
-
       unsigned UserScore =
           1 + (LoopUserWeight * LI.getLoopDepth(Inst->getParent()));
       LLVM_DEBUG(dbgs() << "  [+" << UserScore << "]:\t" << *Inst << "\n");
@@ -280,7 +289,7 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     LLVM_DEBUG(dbgs() << "  => Final Score:" << Score << "\n");
   }
 
-  sort(Allocas, [&](AllocaInst *A, AllocaInst *B) {
+  stable_sort(Allocas, [&](AllocaInst *A, AllocaInst *B) {
     return Scores.at(A) > Scores.at(B);
   });
 
@@ -748,7 +757,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   SmallVector<Instruction *> WorkList;
   SmallVector<Instruction *> UsersToRemove;
   SmallVector<Instruction *> DeferredInsts;
-  SmallVector<Use *, 8> Uses;
   DenseMap<MemTransferInst *, MemTransferInfo> TransferInfo;
 
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
@@ -757,15 +765,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     return false;
   };
 
-  for (Use &U : Alloca.uses())
-    Uses.push_back(&U);
+  SmallVector<Use *, 8> Uses;
+  collectAllocaUses(Alloca, Uses);
 
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
   unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
-  while (!Uses.empty()) {
-    Use *U = Uses.pop_back_val();
+  for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
     if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
@@ -809,8 +816,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
       GEPVectorIdx[GEP] = Index;
-      for (Use &U : Inst->uses())
-        Uses.push_back(&U);
       UsersToRemove.push_back(Inst);
       continue;
     }
