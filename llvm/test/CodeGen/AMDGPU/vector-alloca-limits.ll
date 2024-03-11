@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' < %s | FileCheck -check-prefix=OPT %s
-; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' -amdgpu-promote-alloca-to-vector-limit=32 < %s | FileCheck -check-prefix=LIMIT32 %s
+; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' -promote-alloca-vector-whole-function=0 < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' -promote-alloca-vector-whole-function=0 -amdgpu-promote-alloca-to-vector-limit=32 < %s | FileCheck -check-prefix=LIMIT32 %s
 
 target datalayout = "A5"
 
