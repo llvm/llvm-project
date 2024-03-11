@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Sema.h"
