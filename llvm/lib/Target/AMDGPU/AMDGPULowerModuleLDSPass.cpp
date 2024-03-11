@@ -340,15 +340,25 @@ public:
 
     // Get uses from the current function, excluding uses by called functions
     // Two output variables to avoid walking the globals list twice
+    std::optional<bool> HasAbsoluteGVs;
     for (auto &GV : M.globals()) {
       if (!AMDGPU::isLDSVariableToLower(GV)) {
         continue;
       }
 
-      if (GV.isAbsoluteSymbolRef()) {
-        report_fatal_error(
-            "LDS variables with absolute addresses are unimplemented.");
-      }
+      // Check if the module is consistent: either all GVs are absolute (happens
+      // when we run the pass more than once), or none are.
+      const bool IsAbsolute = GV.isAbsoluteSymbolRef();
+      if (HasAbsoluteGVs.has_value()) {
+        if (*HasAbsoluteGVs != IsAbsolute) {
+          report_fatal_error(
+              "Module cannot mix absolute and non-absolute LDS GVs");
+        }
+      } else
+        HasAbsoluteGVs = IsAbsolute;
+
+      if (IsAbsolute)
+        continue;
 
       for (User *V : GV.users()) {
         if (auto *I = dyn_cast<Instruction>(V)) {
