@@ -9067,15 +9067,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
   // preserve the CFG and is temporarily leaving constant conditions
   // in place.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(ExitCond)) {
-    if (ExitIfTrue == !CI->getZExtValue()) {
+    if (ExitIfTrue == !CI->getZExtValue())
       // The backedge is always taken.
       return getCouldNotCompute();
-    }
+
     // The backedge is never taken.
     return getZero(CI->getType());
   }
-
-  // block was never executed in MustExitScalarEvolution code
 
   // If we're exiting based on the overflow flag of an x.with.overflow
   // intrinsic with a constant step, we can form an equivalent icmp predicate
