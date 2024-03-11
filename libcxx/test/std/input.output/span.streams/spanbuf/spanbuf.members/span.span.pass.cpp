@@ -19,7 +19,6 @@
 //     void span(std::span<charT> s) noexcept;
 
 #include <cassert>
-#include <concepts>
 #include <span>
 #include <spanstream>
 
