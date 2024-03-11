@@ -2026,8 +2026,7 @@ APInt APInt::sfloordiv_ov(const APInt &RHS, bool &Overflow) const {
   auto quotient = sdiv_ov(RHS, Overflow);
   if ((quotient * RHS != *this) && (isNegative() != RHS.isNegative()))
     return quotient - 1;
-  else
-    return quotient;
+  return quotient;
 }
 
 APInt APInt::sadd_sat(const APInt &RHS) const {
