@@ -665,12 +665,10 @@ public:
     return hasGFX90AInsts() || hasGFX12_10Insts();
   }
 
-  bool hasMTBUFInsts() const {
-    return !hasGFX12_10Insts();
-  }
+  bool hasMTBUFInsts() const { return GFX13Insts || !hasGFX12_10Insts(); }
 
   bool hasFormattedMUBUFInsts() const {
-    return !hasGFX12_10Insts();
+    return GFX13Insts || !hasGFX12_10Insts();
   }
 
   bool hasExportInsts() const {
