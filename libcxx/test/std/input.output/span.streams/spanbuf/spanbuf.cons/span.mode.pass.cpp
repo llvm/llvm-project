@@ -20,7 +20,6 @@
 //                            ios_base::openmode which = ios_base::in | ios_base::out);
 
 #include <cassert>
-#include <concepts>
 #include <span>
 #include <spanstream>
 #include <utility>

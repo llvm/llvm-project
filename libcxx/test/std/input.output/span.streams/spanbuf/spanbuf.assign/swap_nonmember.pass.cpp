@@ -14,7 +14,6 @@
 //     void swap(basic_spanbuf<charT, traits>& x, basic_spanbuf<charT, traits>& y);
 
 #include <cassert>
-#include <concepts>
 #include <span>
 #include <spanstream>
 
