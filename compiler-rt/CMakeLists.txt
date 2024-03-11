@@ -502,7 +502,10 @@ append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 #
 # Note that this type of issue was discovered with lsan, but can apply to other
 # sanitizers.
-append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+# Disable PowerPC because of https://github.com/llvm/llvm-project/issues/84654.
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
+  append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+endif()
 
 # Set common link flags.
 # TODO: We should consider using the same model as libc++, that is use either

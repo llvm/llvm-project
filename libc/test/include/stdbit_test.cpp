@@ -91,6 +91,20 @@ unsigned stdc_bit_width_us(unsigned short) noexcept { return 0x4BU; }
 unsigned stdc_bit_width_ui(unsigned) noexcept { return 0x4CU; }
 unsigned stdc_bit_width_ul(unsigned long) noexcept { return 0x4DU; }
 unsigned stdc_bit_width_ull(unsigned long long) noexcept { return 0x4EU; }
+unsigned char stdc_bit_floor_uc(unsigned char) noexcept { return 0x5AU; }
+unsigned short stdc_bit_floor_us(unsigned short) noexcept { return 0x5BU; }
+unsigned stdc_bit_floor_ui(unsigned) noexcept { return 0x5CU; }
+unsigned long stdc_bit_floor_ul(unsigned long) noexcept { return 0x5DU; }
+unsigned long long stdc_bit_floor_ull(unsigned long long) noexcept {
+  return 0x5EU;
+}
+unsigned char stdc_bit_ceil_uc(unsigned char) noexcept { return 0x6AU; }
+unsigned short stdc_bit_ceil_us(unsigned short) noexcept { return 0x6BU; }
+unsigned stdc_bit_ceil_ui(unsigned) noexcept { return 0x6CU; }
+unsigned long stdc_bit_ceil_ul(unsigned long) noexcept { return 0x6DU; }
+unsigned long long stdc_bit_ceil_ull(unsigned long long) noexcept {
+  return 0x6EU;
+}
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -189,4 +203,24 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroBitWidth) {
   EXPECT_EQ(stdc_bit_width(1U), 0x4CU);
   EXPECT_EQ(stdc_bit_width(1UL), 0x4DU);
   EXPECT_EQ(stdc_bit_width(1ULL), 0x4EU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroBitFloor) {
+  EXPECT_EQ(stdc_bit_floor(static_cast<unsigned char>(0U)),
+            static_cast<unsigned char>(0x5AU));
+  EXPECT_EQ(stdc_bit_floor(static_cast<unsigned short>(0U)),
+            static_cast<unsigned short>(0x5BU));
+  EXPECT_EQ(stdc_bit_floor(0U), 0x5CU);
+  EXPECT_EQ(stdc_bit_floor(0UL), 0x5DUL);
+  EXPECT_EQ(stdc_bit_floor(0ULL), 0x5EULL);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroBitCeil) {
+  EXPECT_EQ(stdc_bit_ceil(static_cast<unsigned char>(0U)),
+            static_cast<unsigned char>(0x6AU));
+  EXPECT_EQ(stdc_bit_ceil(static_cast<unsigned short>(0U)),
+            static_cast<unsigned short>(0x6BU));
+  EXPECT_EQ(stdc_bit_ceil(0U), 0x6CU);
+  EXPECT_EQ(stdc_bit_ceil(0UL), 0x6DUL);
+  EXPECT_EQ(stdc_bit_ceil(0ULL), 0x6EULL);
 }

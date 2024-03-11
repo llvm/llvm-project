@@ -1301,6 +1301,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (OffsetTy.isPointerOrPointerVector())
       report("gep offset operand must not be a pointer", MI);
 
+    if (PtrTy.isPointerOrPointerVector()) {
+      const DataLayout &DL = MF->getDataLayout();
+      unsigned AS = PtrTy.getAddressSpace();
+      unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
+      if (OffsetTy.getScalarSizeInBits() != IndexSizeInBits) {
+        report("gep offset operand must match index size for address space",
+               MI);
+      }
+    }
+
     // TODO: Is the offset allowed to be a scalar with a vector?
     break;
   }
@@ -1637,6 +1647,24 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       if (Idx >= 2 * SrcNumElts)
         report("Out of bounds shuffle index", MI);
     }
+
+    break;
+  }
+
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+
+    if (!DstTy.isScalableVector())
+      report("Destination type must be a scalable vector", MI);
+
+    if (!SrcTy.isScalar())
+      report("Source type must be a scalar", MI);
+
+    if (DstTy.getScalarType() != SrcTy)
+      report("Element type of the destination must be the same type as the "
+             "source type",
+             MI);
 
     break;
   }

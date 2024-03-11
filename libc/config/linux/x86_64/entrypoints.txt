@@ -51,6 +51,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.memset_explicit
     libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
@@ -152,6 +153,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_bit_width_ui
     libc.src.stdbit.stdc_bit_width_ul
     libc.src.stdbit.stdc_bit_width_ull
+    libc.src.stdbit.stdc_bit_floor_uc
+    libc.src.stdbit.stdc_bit_floor_us
+    libc.src.stdbit.stdc_bit_floor_ui
+    libc.src.stdbit.stdc_bit_floor_ul
+    libc.src.stdbit.stdc_bit_floor_ull
+    libc.src.stdbit.stdc_bit_ceil_uc
+    libc.src.stdbit.stdc_bit_ceil_us
+    libc.src.stdbit.stdc_bit_ceil_ui
+    libc.src.stdbit.stdc_bit_ceil_ul
+    libc.src.stdbit.stdc_bit_ceil_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
@@ -217,6 +228,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munlock
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
+    libc.src.sys.mman.msync
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -462,6 +474,12 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.logbf128
+    libc.src.math.llrintf128
+    libc.src.math.llroundf128
+    libc.src.math.lrintf128
+    libc.src.math.lroundf128
+    libc.src.math.modff128
+    libc.src.math.rintf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
@@ -477,6 +495,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.abslk
     libc.src.stdfix.abslr
+    libc.src.stdfix.exphk
+    libc.src.stdfix.expk
     libc.src.stdfix.roundhk
     libc.src.stdfix.roundhr
     libc.src.stdfix.roundk
@@ -495,6 +515,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtur
     # libc.src.stdfix.sqrtulk
     libc.src.stdfix.sqrtulr
+    libc.src.stdfix.uhksqrtus
+    libc.src.stdfix.uksqrtui
   )
 endif()
 

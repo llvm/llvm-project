@@ -1028,22 +1028,14 @@ false:
   ret i32 %tmp.0
 }
 
-; Re-aligned stack pointer with all caller-save regs live.
+; Re-aligned stack pointer with all caller-save regs live.  See bug
+; 26642.  In this case we currently avoid shrink wrapping because
+; ensuring we have a scratch register to re-align the stack pointer is
+; too complicated.  Output should be the same for both enabled and
+; disabled shrink wrapping.
 define void @stack_realign2(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5, ptr %ptr6) {
 ; ENABLE-LABEL: stack_realign2:
 ; ENABLE:       ; %bb.0:
-; ENABLE-NEXT:    lsl w8, w1, w0
-; ENABLE-NEXT:    lsr w9, w0, w1
-; ENABLE-NEXT:    lsl w14, w0, w1
-; ENABLE-NEXT:    lsr w11, w1, w0
-; ENABLE-NEXT:    add w15, w1, w0
-; ENABLE-NEXT:    sub w10, w8, w9
-; ENABLE-NEXT:    subs w17, w1, w0
-; ENABLE-NEXT:    add w16, w14, w8
-; ENABLE-NEXT:    add w12, w9, w11
-; ENABLE-NEXT:    add w13, w11, w15
-; ENABLE-NEXT:    b.le LBB14_2
-; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    stp x28, x27, [sp, #-96]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x26, x25, [sp, #16] ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x24, x23, [sp, #32] ; 16-byte Folded Spill
@@ -1051,8 +1043,8 @@ define void @stack_realign2(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr
 ; ENABLE-NEXT:    stp x20, x19, [sp, #64] ; 16-byte Folded Spill
 ; ENABLE-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
 ; ENABLE-NEXT:    add x29, sp, #80
-; ENABLE-NEXT:    sub x18, sp, #32
-; ENABLE-NEXT:    and sp, x18, #0xffffffffffffffe0
+; ENABLE-NEXT:    sub x9, sp, #32
+; ENABLE-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
@@ -1066,17 +1058,22 @@ define void @stack_realign2(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr
 ; ENABLE-NEXT:    .cfi_offset w26, -80
 ; ENABLE-NEXT:    .cfi_offset w27, -88
 ; ENABLE-NEXT:    .cfi_offset w28, -96
+; ENABLE-NEXT:    lsl w8, w1, w0
+; ENABLE-NEXT:    lsr w9, w0, w1
+; ENABLE-NEXT:    lsl w14, w0, w1
+; ENABLE-NEXT:    lsr w11, w1, w0
+; ENABLE-NEXT:    add w15, w1, w0
+; ENABLE-NEXT:    sub w10, w8, w9
+; ENABLE-NEXT:    subs w17, w1, w0
+; ENABLE-NEXT:    add w16, w14, w8
+; ENABLE-NEXT:    add w12, w9, w11
+; ENABLE-NEXT:    add w13, w11, w15
+; ENABLE-NEXT:    b.le LBB14_2
+; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    str w0, [sp]
 ; ENABLE-NEXT:    ; InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ; InlineAsm End
-; ENABLE-NEXT:    sub sp, x29, #80
-; ENABLE-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x22, x21, [sp, #48] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x24, x23, [sp, #32] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x26, x25, [sp, #16] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x28, x27, [sp], #96 ; 16-byte Folded Reload
 ; ENABLE-NEXT:  LBB14_2: ; %false
 ; ENABLE-NEXT:    str w14, [x2]
 ; ENABLE-NEXT:    str w8, [x3]
@@ -1087,6 +1084,13 @@ define void @stack_realign2(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr
 ; ENABLE-NEXT:    stp w0, w1, [x2, #4]
 ; ENABLE-NEXT:    stp w16, w10, [x2, #12]
 ; ENABLE-NEXT:    stp w12, w13, [x2, #20]
+; ENABLE-NEXT:    sub sp, x29, #80
+; ENABLE-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
+; ENABLE-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
+; ENABLE-NEXT:    ldp x22, x21, [sp, #48] ; 16-byte Folded Reload
+; ENABLE-NEXT:    ldp x24, x23, [sp, #32] ; 16-byte Folded Reload
+; ENABLE-NEXT:    ldp x26, x25, [sp, #16] ; 16-byte Folded Reload
+; ENABLE-NEXT:    ldp x28, x27, [sp], #96 ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: stack_realign2:

@@ -268,6 +268,8 @@ private:
 
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
+  bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
+                             const BinaryOperator *E);
 
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);
