@@ -81,7 +81,7 @@ static void propagateValueOrStorageLocation(const Expr &From, const Expr &To,
     propagateValue(From, To, Env);
 }
 
-namespace bool_model {
+namespace sat_bool_model {
 
 BoolValue &freshBoolValue(Environment &Env) {
   return Env.makeAtomicBoolValue();
@@ -110,15 +110,145 @@ BoolValue &neOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
 BoolValue &notOp(BoolValue &Sub, Environment &Env) { return Env.makeNot(Sub); }
 
 void transferBranch(bool BranchVal, BoolValue &CondVal, Environment &Env) {
-  if (BranchVal)
-    Env.assume(CondVal.formula());
-  else
-    // The condition must be inverted for the successor that encompasses the
-    // "else" branch, if such exists.
-    Env.assume(Env.makeNot(CondVal).formula());
+  // The condition must be inverted for the successor that encompasses the
+  // "else" branch, if such exists.
+  BoolValue &AssertedVal = BranchVal ? CondVal : Env.makeNot(CondVal);
+  Env.assume(AssertedVal.formula());
 }
 
-} // namespace bool_model
+} // namespace sat_bool_model
+
+namespace simple_bool_model {
+
+std::optional<bool> getLiteralValue(const Formula &F, const Environment &Env) {
+  switch (F.kind()) {
+  case Formula::AtomRef:
+    return Env.getAtomValue(F.getAtom());
+  case Formula::Literal:
+    return F.literal();
+  case Formula::Not: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 1);
+    if (std::optional<bool> Maybe = getLiteralValue(*Operands[0], Env))
+      return !*Maybe;
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
+BoolValue &freshBoolValue(Environment &Env) {
+  return Env.makeAtomicBoolValue();
+}
+
+BoolValue &rValueFromLValue(BoolValue &V, Environment &Env) {
+  return unpackValue(V, Env);
+}
+
+BoolValue &logicalOrOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  // FIXME: check if these optimizations are already built in to the formula
+  // generation.
+  if (auto V = getLiteralValue(LHS.formula(), Env))
+    return *V ? Env.getBoolLiteralValue(true) : RHS;
+  if (auto V = getLiteralValue(RHS.formula(), Env))
+    return *V ? Env.getBoolLiteralValue(true) : LHS;
+  return Env.makeOr(LHS, RHS);
+}
+
+BoolValue &logicalAndOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  if (auto V = getLiteralValue(LHS.formula(), Env))
+    return *V ? RHS : Env.getBoolLiteralValue(false);
+  if (auto V = getLiteralValue(RHS.formula(), Env))
+    return *V ? LHS : Env.getBoolLiteralValue(false);
+  return Env.makeAnd(LHS, RHS);
+}
+
+BoolValue &eqOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  if (&LHS.formula() == &RHS.formula())
+    return Env.getBoolLiteralValue(true);
+  if (auto V = getLiteralValue(LHS.formula(), Env))
+    return *V ? RHS : Env.makeNot(RHS);
+  if (auto V = getLiteralValue(RHS.formula(), Env))
+    return *V ? LHS : Env.makeNot(LHS);
+  return Env.makeIff(LHS, RHS);
+}
+
+// FIXME: i think this could be implemented in terms of eqOp.
+BoolValue &neOp(BoolValue &LHS, BoolValue &RHS, Environment &Env) {
+  if (&LHS.formula() == &RHS.formula())
+    return Env.getBoolLiteralValue(false);
+  if (auto V = getLiteralValue(LHS.formula(), Env))
+    return *V ? Env.makeNot(RHS) : RHS;
+  if (auto V = getLiteralValue(RHS.formula(), Env))
+    return *V ? Env.makeNot(LHS) : LHS;
+  return Env.makeNot(Env.makeIff(LHS, RHS));
+}
+
+BoolValue &notOp(BoolValue &Sub, Environment &Env) { return Env.makeNot(Sub); }
+
+// Updates atom settings in `Env` based on the formula. `AtomVal` indicates the
+// value to use for atoms encountered in the formula.
+static void assumeFormula(bool AtomVal, const Formula &F, Environment &Env) {
+  // TODO: handle literals directly rather than calling getLiteralValue.
+  std::optional<bool> Lit = getLiteralValue(F, Env);
+  if (Lit.has_value())
+    // FIXME: Nothing to do. Could verify no contradiction, but not sure what
+    // we'd do with that here. Need to poison the Env.
+    return;
+
+  switch (F.kind()) {
+  case Formula::AtomRef:
+    // FIXME: check for contradictions
+    Env.setAtomValue(F.getAtom(), AtomVal);
+    break;
+  case Formula::Not: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 1);
+    assumeFormula(!AtomVal, *Operands[0], Env);
+    break;
+  }
+  case Formula::And: {
+    if (AtomVal == true) {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      assumeFormula(true, *Operands[0], Env);
+      assumeFormula(true, *Operands[1], Env);
+    }
+    break;
+  }
+  case Formula::Or: {
+    if (AtomVal == false) {
+      // Interpret the negated "or" as "and" of negated operands.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      assumeFormula(false, *Operands[0], Env);
+      assumeFormula(false, *Operands[1], Env);
+    }
+    break;
+  }
+  case Formula::Equal: {
+    ArrayRef<const Formula *> Operands = F.operands();
+    assert(Operands.size() == 2);
+    auto &LHS = *Operands[0];
+    auto &RHS = *Operands[1];
+    if (auto V = getLiteralValue(LHS, Env)) {
+      assumeFormula(AtomVal == *V, RHS, Env);
+    } else if (auto V = getLiteralValue(RHS, Env)) {
+      assumeFormula(AtomVal == *V, LHS, Env);
+    }
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+void transferBranch(bool BranchVal, BoolValue &CondVal, Environment &Env) {
+  assumeFormula(BranchVal, CondVal.formula(), Env);
+}
+
+} // namespace simple_bool_model
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
 // value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,

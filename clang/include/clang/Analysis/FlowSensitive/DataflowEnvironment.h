@@ -500,6 +500,9 @@ public:
     return cast_or_null<T>(getValue(E));
   }
 
+  std::optional<bool> getAtomValue(Atom A) const;
+  void setAtomValue(Atom A, bool);
+
   // FIXME: should we deprecate the following & call arena().create() directly?
 
   /// Creates a `T` (some subclass of `Value`), forwarding `args` to the
@@ -720,6 +723,7 @@ private:
   // deterministic sequence. This in turn produces deterministic SAT formulas.
   llvm::MapVector<const Expr *, Value *> ExprToVal;
   llvm::MapVector<const StorageLocation *, Value *> LocToVal;
+  llvm::MapVector<Atom, bool> AtomToVal;
 
   Atom FlowConditionToken;
 };

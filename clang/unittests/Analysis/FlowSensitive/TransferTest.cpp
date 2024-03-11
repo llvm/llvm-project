@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -35,6 +36,7 @@ using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::Ne;
 using ::testing::NotNull;
+using ::testing::Optional;
 using ::testing::UnorderedElementsAre;
 
 // Declares a minimal coroutine library.
@@ -4412,12 +4414,12 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
     bool foo();
 
     void target() {
-       do {
+      do {
         bool Bar = foo();
         if (Bar) break;
         (void)Bar;
         /*[[p]]*/
-      } while (true);
+     } while (true);
     }
   )";
   // The key property that we are verifying is implicit in `runDataflow` --
@@ -4434,6 +4436,8 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarVal = getFormula(*BarDecl, Env);
+        ASSERT_EQ(BarVal.kind(), Formula::AtomRef);
+        ASSERT_THAT(Env.getAtomValue(BarVal.getAtom()), Optional(false));
         EXPECT_TRUE(Env.proves(Env.arena().makeNot(BarVal)));
       });
 }

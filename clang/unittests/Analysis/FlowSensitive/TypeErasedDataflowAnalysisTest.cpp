@@ -286,6 +286,10 @@ TEST_F(DiscardExprStateTest, BooleanOperator) {
   const auto &AndOpState = blockStateForStmt(BlockStates, AndOp);
   EXPECT_EQ(AndOpState.Env.getValue(*AndOp.getLHS()), LHSValue);
   EXPECT_EQ(AndOpState.Env.getValue(*AndOp.getRHS()), RHSValue);
+  // FIXME: this test is too strict. We want to check equivalence not equality;
+  // as is, its a change detector test. Notice that we only evaluate `b1 && b2`
+  // in a context where we know that `b1 is true, so there's a potential
+  // optimization to store only `RHSValue` as the operation's value.
   EXPECT_EQ(AndOpState.Env.getValue(AndOp),
             &AndOpState.Env.makeAnd(*LHSValue, *RHSValue));
 
