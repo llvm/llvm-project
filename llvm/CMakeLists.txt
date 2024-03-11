@@ -182,6 +182,10 @@ foreach(_name ${LLVM_RUNTIME_TARGETS})
     endif()
   endif()
 endforeach()
+if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
+   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
+  set(LLVM_LIBC_GPU_BUILD ON)
+endif()
 if(NEED_LIBC_HDRGEN)
   # To build the libc runtime, we need to be able to build few libc build
   # tools from the "libc" project. So, we add it to the list of enabled
