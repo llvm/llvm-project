@@ -113,6 +113,11 @@ struct __atomic_ref_base {
       __clear_padding(*__desired);
       _Tp __copy = *__expected;
       __clear_padding(__copy);
+      // The algorithm we use here is basically to perform `__atomic_compare_exchange` on the
+      // values until it has either succeeded, or failed because the value representation of the
+      // objects involved was different. This is why we loop around __atomic_compare_exchange:
+      // we basically loop until its failure is caused by the value representation of the objects
+      // being different, not only their object representation.
       while (true) {
         _Tp __prev = __copy;
         if (__atomic_compare_exchange(__ptr, std::addressof(__copy), __desired, __is_weak, __success, __failure)) {
