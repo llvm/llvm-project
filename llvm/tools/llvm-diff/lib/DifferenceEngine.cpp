@@ -389,6 +389,12 @@ class FunctionDifferenceEngine {
         if (Complain) Engine.log("different predicates");
         return true;
       }
+    } else if (isa<LoadInst>(L)) {
+      if (cast<LoadInst>(L)->getType() != cast<LoadInst>(R)->getType()) {
+        if (Complain)
+          Engine.log("load types differ");
+        return true;
+      }
     } else if (isa<CallInst>(L)) {
       return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain);
     } else if (isa<PHINode>(L)) {
