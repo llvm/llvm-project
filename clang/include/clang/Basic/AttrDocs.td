@@ -4153,10 +4153,16 @@ non-underscored keywords. For example:
     @end
 
 As well as built-in pointer types, the nullability attributes can be attached
-to C++ classes marked with the ``_Nullable`` attribute, as well as the C++
-standard library types ``unique_ptr``, ``shared_ptr``, ``auto_ptr``,
-``exception_ptr``, ``function``, ``move_only_function`` and
-``coroutine_handle``.
+to C++ classes marked with the ``_Nullable`` attribute.
+
+The following C++ standard library types are considered nullable:
+``unique_ptr``, ``shared_ptr``, ``auto_ptr``, ``exception_ptr``, ``function``,
+``move_only_function`` and ``coroutine_handle``.
+
+Types should be marked nullable only where the type itself leaves nullability
+ambiguous. For example, ``std::optional`` is not marked ``_Nullable``, because
+``optional<int> _Nullable`` is redundant and ``optional<int> _Nonnull`` is
+not a useful type.
   }];
 }
 
