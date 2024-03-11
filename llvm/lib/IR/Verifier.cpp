@@ -5245,7 +5245,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(DestTy->isIntOrIntVectorTy(), "[u]scmp only produces integers", Call);
     Check(DestTy->getScalarSizeInBits() >= 2, "DestTy must be at least 2 bits wide", Call);
 
-    auto isDestTypeVector = DestTy->isVectorTy();
+    bool isDestTypeVector = DestTy->isVectorTy();
     if (isDestTypeVector) {
       Check(SrcTy->isVectorTy() == isDestTypeVector,
         "[u]scmp source and destination must both be a vector or neither", Call);
