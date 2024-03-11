@@ -813,8 +813,8 @@ LogicalResult emitc::ArrayType::verify(
   if (shape.empty())
     return emitError() << "shape must not be empty";
 
-  for (auto d : shape) {
-    if (d <= 0)
+  for (int64_t dim : shape) {
+    if (dim <= 0)
       return emitError() << "dimensions must have positive size";
   }
 
