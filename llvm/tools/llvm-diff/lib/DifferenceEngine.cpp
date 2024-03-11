@@ -377,6 +377,9 @@ class FunctionDifferenceEngine {
       return true;
     }
 
+    if (!L->hasSameSpecialState(R))
+      return true;
+
     if (isa<CmpInst>(L)) {
       if (cast<CmpInst>(L)->getPredicate()
             != cast<CmpInst>(R)->getPredicate()) {
@@ -527,20 +530,6 @@ class FunctionDifferenceEngine {
           Difference = true;
         }
       return Difference;
-    } else if (isa<AllocaInst>(L)) {
-      const AllocaInst *LI = cast<AllocaInst>(L);
-      const AllocaInst *RI = cast<AllocaInst>(R);
-
-      if (LI->getAllocatedType() != RI->getAllocatedType()) {
-        if (Complain)
-          Engine.log("alloca allocated type differ");
-        return true;
-      }
-      if (LI->getAlign() != RI->getAlign()) {
-        if (Complain)
-          Engine.log("alloca alignment differ");
-        return true;
-      }
     } else if (isa<UnreachableInst>(L)) {
       return false;
     }
