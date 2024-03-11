@@ -138,7 +138,7 @@ void TokenSequence::Put(
 void TokenSequence::Put(const CharBlock &t, Provenance provenance) {
   // Avoid t[0] if t is empty: it would create a reference to nullptr,
   // which is UB.
-  const char *addr = t.size() ? &t[0] : nullptr;
+  const char *addr{t.size() ? &t[0] : nullptr};
   Put(addr, t.size(), provenance);
 }
 
