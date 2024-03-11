@@ -23,7 +23,7 @@
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "test_convertible.h"
+#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -33,20 +33,78 @@ void test() {
   CharT arr[4];
   std::span<CharT> sp{arr};
 
-  // TODO:
-
-  // Mode: default
+  // Mode: default (`in` | `out`)
   {
-    SpBuf rhsSpBuf{sp};
-    SpBuf spBuf(std::span<CharT>{});
-    spBuf.swap(rhsSpBuf);
-    // assert(spBuf.span().data() == arr);
-    // assert(!spBuf.span().empty());
-    // assert(spBuf.span().size() == 4);
+    SpBuf spBuf{sp};
+    assert(spBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.pubsetbuf(nullptr, 0);
+    assert(spBuf.span().data() == nullptr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+  }
+  // Mode: `ios_base::in`
+  {
+    SpBuf spBuf{sp, std::ios_base::in};
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
+
+    spBuf.pubsetbuf(nullptr, 0);
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+  }
+  // Mode `ios_base::out`
+  {
+    SpBuf spBuf{sp, std::ios_base::out};
+    assert(spBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.pubsetbuf(nullptr, 0);
+    assert(spBuf.span().data() == nullptr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+  }
+  // Mode: multiple
+  {
+    SpBuf spBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    assert(spBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+
+    spBuf.pubsetbuf(nullptr, 0);
+    assert(spBuf.span().data() == nullptr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
+  }
+  // Mode: `ios_base::ate`
+  {
+    SpBuf spBuf{sp, std::ios_base::out | std::ios_base::ate};
+    assert(spBuf.span().data() == arr);
+    assert(!spBuf.span().empty());
+    assert(spBuf.span().size() == 4);
+
+    spBuf.pubsetbuf(nullptr, 0);
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().empty());
+    assert(spBuf.span().size() == 0);
   }
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
