@@ -533,8 +533,7 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                          threadPool);
   };
   return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
-                               config.shouldSplitInputFile(),
-                               /*insertMarkerInOutput=*/true);
+                               config.shouldSplitInputFile());
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv,

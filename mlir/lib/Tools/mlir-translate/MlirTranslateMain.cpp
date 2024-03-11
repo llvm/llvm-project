@@ -80,6 +80,14 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
 
+  static llvm::cl::opt<std::string> inputSplitMarker(
+      "input-split-marker", llvm::cl::desc("Split marker to use for the input"),
+      llvm::cl::init(kDefaultSplitMarker));
+
+  static llvm::cl::opt<std::string> outputSplitMarker(
+      "output-split-marker",
+      llvm::cl::desc("Split marker to use for the ouput"), llvm::cl::init(""));
+
   llvm::InitLLVM y(argc, argv);
 
   // Add flags for all the registered translations.
@@ -176,7 +184,8 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   };
 
   if (failed(splitAndProcessBuffer(std::move(input), processBuffer,
-                                   output->os(), splitInputFile)))
+                                   output->os(), splitInputFile,
+                                   inputSplitMarker, outputSplitMarker)))
     return failure();
 
   output->keep();

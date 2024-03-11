@@ -15,6 +15,8 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+
 #include <memory>
 
 namespace llvm {
@@ -29,20 +31,21 @@ using ChunkBufferHandler = function_ref<LogicalResult(
 
 extern inline const char *const kDefaultSplitMarker = "// -----";
 
-/// Splits the specified buffer on a marker (`// -----`), processes each chunk
-/// independently according to the normal `processChunkBuffer` logic, and writes
-/// all results to `os`.
+/// Splits the specified buffer on a marker (`// -----` by default), processes
+/// each chunk independently according to the normal `processChunkBuffer` logic,
+/// and writes all results to `os`.
 ///
 /// This is used to allow a large number of small independent tests to be put
 /// into a single file. `enableSplitting` can be used to toggle if splitting
 /// should be enabled, e.g. to allow for merging split and non-split code paths.
-/// When `insertMarkerInOutput` is true, split markers (`//-----`) are placed
-/// between each of the processed output chunks.
+/// Output split markers (`//-----` by default) are placed between each of the
+/// processed output chunks.
 LogicalResult
 splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                       ChunkBufferHandler processChunkBuffer, raw_ostream &os,
                       bool enableSplitting = true,
-                      bool insertMarkerInOutput = false);
+                      llvm::StringRef inputSplitMarker = kDefaultSplitMarker,
+                      llvm::StringRef outputSplitMarker = kDefaultSplitMarker);
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_TOOLUTILITIES_H
