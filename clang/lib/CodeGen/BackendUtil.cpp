@@ -759,6 +759,8 @@ static void addSanitizers(const Triple &TargetTriple,
         [](FunctionPassManager &FPM, OptimizationLevel Level) {
           // RemoveTrapsPass expects trap blocks preceded by conditional
           // branches, which usually is not the case without SimplifyCFG.
+          // TODO: Remove `SimplifyCFGPass` after switching to dedicated
+          // intrinsic.
           FPM.addPass(SimplifyCFGPass());
           FPM.addPass(RemoveTrapsPass());
         });

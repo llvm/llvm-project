@@ -237,8 +237,6 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
     return T::signaling_nan(sign);
   case FP::QUIET_NAN:
     return T::quiet_nan(sign);
-  default:
-    __builtin_unreachable();
   }
 }
 

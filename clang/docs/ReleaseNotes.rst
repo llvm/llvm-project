@@ -183,6 +183,9 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
+  ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
+  ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
 Removed Compiler Flags
 -------------------------
@@ -250,6 +253,9 @@ Bug Fixes in This Version
 - Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
   for logical operators in C23.
   Fixes (#GH64356).
+
+- ``__is_trivially_relocatable`` no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH77091).
 
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.

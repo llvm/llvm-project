@@ -3269,8 +3269,8 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
 
   // Otherwise, completely fold the op into a constant.
   auto resultIt = std::is_same<T, AffineMinOp>::value
-                      ? std::min_element(results.begin(), results.end())
-                      : std::max_element(results.begin(), results.end());
+                      ? llvm::min_element(results)
+                      : llvm::max_element(results);
   if (resultIt == results.end())
     return {};
   return IntegerAttr::get(IndexType::get(op.getContext()), *resultIt);
