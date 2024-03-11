@@ -1614,11 +1614,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_VSCALE: {
-    if (!MI->getOperand(1).isImm()) {
-      report("G_VSCALE operand #1 must be an immediate", MI);
+    if (!MI->getOperand(1).isCImm()) {
+      report("G_VSCALE operand must be cimm", MI);
       break;
     }
-    if (MI->getOperand(1).getImm() == 0) {
+    if (MI->getOperand(1).getCImm()->isZero()) {
       report("G_VSCALE immediate cannot be zero", MI);
       break;
     }

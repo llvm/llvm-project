@@ -7,7 +7,7 @@ body: |
 
   %1:_(s32) = G_CONSTANT 4
 
-  ; CHECK: G_VSCALE operand #1 must be an immediate
+  ; CHECK: G_VSCALE operand must be cimm
   %2:_(s32) = G_VSCALE %1
 
   ; CHECK: G_VSCALE immediate cannot be zero

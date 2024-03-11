@@ -1294,7 +1294,7 @@ def G_MERGE_VALUES : GenericInstruction {
 // operand into the destination register.
 def G_VSCALE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins untyped_imm_0:$src);
+  let InOperandList = (ins unknown:$src);
   let hasSideEffects = false;
 }
 

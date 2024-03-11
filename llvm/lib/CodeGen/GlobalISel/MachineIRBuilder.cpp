@@ -795,7 +795,20 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
                                                   unsigned MinElts) {
-  return buildInstr(TargetOpcode::G_VSCALE, {Res}, {uint64_t(MinElts)});
+
+  auto IntN = IntegerType::get(getMF().getFunction().getContext(),
+                               Res.getLLTTy(*getMRI()).getScalarSizeInBits());
+  ConstantInt *CI = ConstantInt::get(IntN, MinElts);
+  return buildVScale(Res, *CI);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  const ConstantInt &MinElts) {
+  auto VScale = buildInstr(TargetOpcode::G_VSCALE);
+  VScale->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), VScale);
+  VScale.addCImm(&MinElts);
+  return VScale;
 }
 
 static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
