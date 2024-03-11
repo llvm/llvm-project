@@ -1692,6 +1692,18 @@ def int_coro_promise : Intrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_i32_ty, llvm_i1_ty],
                                  [IntrNoMem, NoCapture<ArgIndex<0>>]>;
 
+def int_coro_await_suspend_void : Intrinsic<[],
+                                       [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+                                       [Throws]>;
+
+def int_coro_await_suspend_bool : Intrinsic<[llvm_i1_ty],
+                                            [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+                                            [Throws]>;
+
+def int_coro_await_suspend_handle : Intrinsic<[llvm_ptr_ty],
+                                              [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+                                              [Throws]>;
+
 // Coroutine Lowering Intrinsics. Used internally by coroutine passes.
 
 def int_coro_subfn_addr : DefaultAttrsIntrinsic<
