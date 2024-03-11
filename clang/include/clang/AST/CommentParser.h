@@ -100,6 +100,9 @@ public:
   ArrayRef<Comment::Argument>
   parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
 
+  ArrayRef<Comment::Argument>
+  parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
+
   BlockCommandComment *parseBlockCommand();
   InlineCommandComment *parseInlineCommand();
 

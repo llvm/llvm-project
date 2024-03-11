@@ -75,6 +75,25 @@ class TextTokenRetokenizer {
     return *Pos.BufferPtr;
   }
 
+  char peekNext(unsigned offset) const {
+    assert(!isEnd());
+    assert(Pos.BufferPtr != Pos.BufferEnd);
+    if (Pos.BufferPtr + offset <= Pos.BufferEnd) {
+      return *(Pos.BufferPtr + offset);
+    } else {
+      return '\0';
+    }
+  }
+
+  void peekNextToken(SmallString<32> &WordText) const {
+    unsigned offset = 1;
+    char C = peekNext(offset++);
+    while (!isWhitespace(C) && C != '\0') {
+      WordText.push_back(C);
+      C = peekNext(offset++);
+    }
+  }
+
   void consumeChar() {
     assert(!isEnd());
     assert(Pos.BufferPtr != Pos.BufferEnd);
@@ -87,6 +106,29 @@ class TextTokenRetokenizer {
       assert(!isEnd());
       setupBuffer();
     }
+  }
+
+  /// Extract a template type
+  bool lexTemplateType(SmallString<32> &WordText) {
+    unsigned IncrementCounter = 0;
+    while (!isEnd()) {
+      const char C = peek();
+      WordText.push_back(C);
+      consumeChar();
+      switch (C) {
+      default:
+        break;
+      case '<': {
+        IncrementCounter++;
+      } break;
+      case '>': {
+        IncrementCounter--;
+        if (!IncrementCounter)
+          return true;
+      } break;
+      }
+    }
+    return false;
   }
 
   /// Add a token.
@@ -147,6 +189,76 @@ public:
       Allocator(Allocator), P(P), NoMoreInterestingTokens(false) {
     Pos.CurToken = 0;
     addToken();
+  }
+
+  /// Extract a type argument
+  bool lexDataType(Token &Tok) {
+    if (isEnd())
+      return false;
+    Position SavedPos = Pos;
+    consumeWhitespace();
+    SmallString<32> NextToken;
+    SmallString<32> WordText;
+    const char *WordBegin = Pos.BufferPtr;
+    SourceLocation Loc = getSourceLocation();
+    StringRef ConstVal = StringRef("const");
+    bool ConstPointer = false;
+
+    while (!isEnd()) {
+      const char C = peek();
+      if (!isWhitespace(C)) {
+        if (C == '<') {
+          if (!lexTemplateType(WordText))
+            return false;
+        } else {
+          WordText.push_back(C);
+          consumeChar();
+        }
+      } else {
+        if (WordText.equals(ConstVal)) {
+          WordText.push_back(C);
+          consumeChar();
+        } else if (WordText.ends_with(StringRef("*")) ||
+                   WordText.ends_with(StringRef("&"))) {
+          NextToken.clear();
+          peekNextToken(NextToken);
+          if (NextToken.equals(ConstVal)) {
+            ConstPointer = true;
+            WordText.push_back(C);
+            consumeChar();
+          } else {
+            consumeChar();
+            break;
+          }
+        } else {
+          NextToken.clear();
+          peekNextToken(NextToken);
+          if ((NextToken.ends_with(StringRef("*")) ||
+               NextToken.ends_with(StringRef("&"))) &&
+              !ConstPointer) {
+            WordText.push_back(C);
+            consumeChar();
+          } else {
+            consumeChar();
+            break;
+          }
+        }
+      }
+    }
+
+    const unsigned Length = WordText.size();
+    if (Length == 0) {
+      Pos = SavedPos;
+      return false;
+    }
+
+    char *TextPtr = Allocator.Allocate<char>(Length + 1);
+
+    memcpy(TextPtr, WordText.c_str(), Length + 1);
+    StringRef Text = StringRef(TextPtr, Length);
+
+    formTokenWithChars(Tok, Loc, WordBegin, Length, Text);
+    return true;
   }
 
   /// Extract a word -- sequence of non-whitespace characters.
@@ -295,7 +407,25 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
       Comment::Argument[NumArgs];
   unsigned ParsedArgs = 0;
   Token Arg;
+
   while (ParsedArgs < NumArgs && Retokenizer.lexWord(Arg)) {
+    Args[ParsedArgs] = Comment::Argument{
+        SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
+    ParsedArgs++;
+  }
+
+  return llvm::ArrayRef(Args, ParsedArgs);
+}
+
+ArrayRef<Comment::Argument>
+Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
+                              unsigned NumArgs) {
+  auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
+      Comment::Argument[NumArgs];
+  unsigned ParsedArgs = 0;
+  Token Arg;
+
+  while (ParsedArgs < NumArgs && Retokenizer.lexDataType(Arg)) {
     Args[ParsedArgs] = Comment::Argument{
         SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
     ParsedArgs++;
@@ -356,6 +486,9 @@ BlockCommandComment *Parser::parseBlockCommand() {
       parseParamCommandArgs(PC, Retokenizer);
     else if (TPC)
       parseTParamCommandArgs(TPC, Retokenizer);
+    else if (Info->IsThrowsCommand)
+      S.actOnBlockCommandArgs(
+          BC, parseThrowCommandArgs(Retokenizer, Info->NumArgs));
     else
       S.actOnBlockCommandArgs(BC, parseCommandArgs(Retokenizer, Info->NumArgs));
 

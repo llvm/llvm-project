@@ -1427,8 +1427,241 @@ TEST_F(CommentParserTest, Deprecated) {
   }
 }
 
+TEST_F(CommentParserTest, ThrowsCommandHasArg1) {
+  const char *Sources[] = {
+      "/// @throws int This function throws an integer",
+      ("/// @throws\n"
+       "/// int This function throws an integer"),
+      ("/// @throws \n"
+       "/// int This function throws an integer"),
+      ("/// @throws\n"
+       "/// int\n"
+       "/// This function throws an integer"),
+      ("/// @throws \n"
+       "/// int \n"
+       "/// This function throws an integer"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "int");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg2) {
+  const char *Sources[] = {
+      "/// @throws const int This function throws a const integer",
+      ("/// @throws\n"
+       "/// const int This function throws a const integer"),
+      ("/// @throws \n"
+       "/// const int This function throws a const integer"),
+      ("/// @throws\n"
+       "/// const int\n"
+       "/// This function throws a const integer"),
+      ("/// @throws \n"
+       "/// const int \n"
+       "/// This function throws a const integer"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "const int");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg3) {
+  const char *Sources[] = {
+      "/// @throws const int * This function throws a pointer to a const "
+      "integer\n",
+      ("/// @throws\n"
+       "/// const int * This function throws a pointer to a const integer"),
+      ("/// @throws \n"
+       "/// const int * This function throws a pointer to a const integer"),
+      ("/// @throws\n"
+       "/// const int *\n"
+       "/// This function throws a pointer to a const integer"),
+      ("/// @throws \n"
+       "/// const int *\n"
+       "/// This function throws a pointer to a const integer"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "const int *");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg4) {
+  const char *Sources[] = {
+      "/// @throws const int * const This function throws a const pointer to a "
+      "const integer",
+      ("/// @throws\n"
+       "/// const int * const This function throws a const pointer to a const "
+       "integer"),
+      ("/// @throws \n"
+       "/// const int * const This function throws a const pointer to a const "
+       "integer"),
+      ("/// @throws\n"
+       "/// const int * const\n"
+       "/// This function throws a const pointer to a const integer"),
+      ("/// @throws \n"
+       "/// const int * const\n"
+       "/// This function throws a const pointer to a const integer"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "const int * const");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg5) {
+  const char *Sources[] = {
+      "/// @throws int** This function throws a double pointer to an integer",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "int**");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg6) {
+  const char *Sources[] = {
+      "/// @throws const char ** double pointer to a constant char pointer",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "const char **");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg7) {
+  const char *Sources[] = {
+      "/// @throws Error<T> error of type Error<T>",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 3)); // Extra children because <T> is parsed
+                                         // as a series of TextComments
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Error<T>");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg8) {
+  const char *Sources[] = {
+      "/// @throws Error<Container<T>> nested templates",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Error<Container<T>>");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg9) {
+  const char *Sources[] = {
+      "/// @throws Error<Ts...> variadic templates",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Error<Ts...>");
+    }
+  }
+}
+
 } // unnamed namespace
 
 } // end namespace comments
 } // end namespace clang
-
