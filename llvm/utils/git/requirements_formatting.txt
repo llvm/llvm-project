@@ -18,7 +18,7 @@ charset-normalizer==3.2.0
     # via requests
 click==8.1.7
     # via black
-cryptography==41.0.3
+cryptography==41.0.6
     # via pyjwt
 darker==1.7.2
     # via -r llvm/utils/git/requirements_formatting.txt.in
