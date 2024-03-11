@@ -56,7 +56,14 @@ using namespace CodeGen;
 // Experiment to make sanitizers easier to debug
 static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
     "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check"),
+    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."),
+    llvm::cl::init(false));
+
+// TODO: Introduce frontend options to enabled per sanitizers, similar to
+// `fsanitize-trap`.
+static llvm::cl::opt<bool> ClSanitizeExpHot(
+    "ubsan-exp-hot", llvm::cl::Optional,
+    llvm::cl::desc("Pass UBSAN checks if `llvm.experimental.hot()` is true."),
     llvm::cl::init(false));
 
 //===--------------------------------------------------------------------===//
@@ -3804,6 +3811,12 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
+
+  if (ClSanitizeExpHot) {
+    Checked =
+        Builder.CreateOr(Checked, Builder.CreateCall(CGM.getIntrinsic(
+                                      llvm::Intrinsic::experimental_hot)));
+  }
 
   // If we're optimizing, collapse all calls to trap down to just one per
   // check-type per function to save on code size.
