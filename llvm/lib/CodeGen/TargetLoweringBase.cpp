@@ -2336,7 +2336,7 @@ bool TargetLoweringBase::isLoadBitCastBeneficial(
 }
 
 void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 }
 
 MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
