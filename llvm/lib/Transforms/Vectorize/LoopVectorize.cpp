@@ -8696,9 +8696,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                 CM.foldTailByMasking() || isa<TruncInst>(Instr)) &&
                "unexpected recipe needs moving");
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-        Recipe->getVPSingleValue()->setName(Instr->getName());
       } else
-        VPBB->appendRecipe(Recipe, Instr->getName());
+        VPBB->appendRecipe(Recipe);
     }
 
     VPBlockUtils::insertBlockAfter(new VPBasicBlock(), VPBB);

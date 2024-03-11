@@ -2647,16 +2647,13 @@ public:
     return V->getVPBlockID() == VPBlockBase::VPBasicBlockSC;
   }
 
-  void insert(VPRecipeBase *Recipe, iterator InsertPt) {
-    assert(Recipe && "No recipe to append.");
-    assert(!Recipe->Parent && "Recipe already in VPlan");
-    Recipe->Parent = this;
-    Recipes.insert(InsertPt, Recipe);
-  }
+  void insert(VPRecipeBase *Recipe, iterator InsertPt);
 
   /// Augment the existing recipes of a VPBasicBlock with an additional
   /// \p Recipe as the last recipe.
-  void appendRecipe(VPRecipeBase *Recipe, const Twine &Name = "");
+  void appendRecipe(VPRecipeBase *Recipe, const Twine &Name = "") {
+    insert(Recipe, end());
+  }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
@@ -3063,6 +3060,14 @@ public:
     return VPValue2Name.lookup(V);
 #else
     return "";
+#endif
+  }
+
+  bool hasName(const VPValue *V) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    return VPValue2Name.contains(V);
+#else
+    return false;
 #endif
   }
 

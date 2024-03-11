@@ -606,13 +606,19 @@ bool VPBasicBlock::isExiting() const {
   return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
-void VPBasicBlock::appendRecipe(VPRecipeBase *Recipe, const Twine &Name) {
-  insert(Recipe, end());
-  if (Recipe->getNumDefinedValues() == 1)
-    Recipe->getVPSingleValue()->setName(Name);
-  else
-    assert(Name.str().empty() && "Provided a name for a recipe that does not "
-                                 "define exactly a single VPValue");
+void VPBasicBlock::insert(VPRecipeBase *Recipe, iterator InsertPt) {
+  assert(Recipe && "No recipe to append.");
+  assert(!Recipe->Parent && "Recipe already in VPlan");
+  Recipe->Parent = this;
+  Recipes.insert(InsertPt, Recipe);
+
+  if (Recipe->getNumDefinedValues() == 1) {
+    VPValue *VPV = Recipe->getVPSingleValue();
+    Value *UV = VPV->getUnderlyingValue();
+    VPlan *ParentPlan = getPlan();
+    if (UV && ParentPlan && !ParentPlan->hasName(VPV))
+      VPV->setName(UV->getName());
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1140,7 +1146,6 @@ void VPlan::setName(const VPValue *V, const Twine &Name) {
   std::string N = Name.str();
   if (N.empty())
     return;
-  assert(!VPValue2Name.contains(V));
   std::string CurrName = N;
 
   if (UsedNames.contains(N))

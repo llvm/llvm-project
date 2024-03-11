@@ -163,8 +163,6 @@ static bool sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      if (!I->getName().empty())
-        Clone->setName(I->getName() + ".cloned");
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
       });
