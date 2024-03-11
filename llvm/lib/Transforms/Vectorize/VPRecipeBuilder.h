@@ -118,6 +118,8 @@ public:
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
+    assert(!Ingredient2Recipe.contains(I) &&
+           "Cannot reset recipe for instruction.");
     Ingredient2Recipe[I] = R;
   }
 
@@ -159,17 +161,17 @@ public:
   /// recurrence cross-iteration phis.
   void fixHeaderPhis();
 
-  /// Returns a range mapping the values the range \p Operands to their
+  /// Returns a range mapping the values of the range \p Operands to their
   /// corresponding VPValues.
   iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
   mapToVPValues(User::op_range Operands, VPlan &Plan);
 
-  VPValue *getVPValue(Value *V, VPlan &Plan) {
+  VPValue *getVPValueOrAddLiveIn(Value *V, VPlan &Plan) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
     }
-    return Plan.getOrAddLiveIn(V);
+    return Plan.getVPValueOrAddLiveIn(V);
   }
 };
 } // end namespace llvm
