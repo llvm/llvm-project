@@ -68,12 +68,15 @@ static cl::opt<unsigned> PromoteAllocaToVectorLimit(
 
 static cl::opt<bool> PromoteAllocaWholeFn(
     "promote-alloca-vector-whole-function",
-    cl::desc("Collect, analyze and sort all allocas within a function before promoting them to vector. When disabled, allocas are promoted one by one in isolation"),
+    cl::desc("Collect, analyze and sort all allocas within a function before "
+             "promoting them to vector. When disabled, allocas are promoted "
+             "one by one in isolation"),
     cl::init(true));
 static cl::opt<unsigned>
     LoopUserWeight("promote-alloca-vector-loop-user-weight",
                    cl::desc("The bonus weight of users of allocas within loop "
-                            "when sorting profitable alloca for whole-function alloca promotion to vector"),
+                            "when sorting profitable alloca for whole-function "
+                            "alloca promotion to vector"),
                    cl::init(4));
 
 // Shared implementation which can do both promotion to vector and to LDS.
