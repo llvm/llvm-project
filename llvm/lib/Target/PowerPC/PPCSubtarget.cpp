@@ -189,7 +189,7 @@ bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
-  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return false;
   return true;
 }
