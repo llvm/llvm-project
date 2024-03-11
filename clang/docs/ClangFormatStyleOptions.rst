@@ -6158,33 +6158,55 @@ the configuration (without a prefix: ``Auto``).
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
 
-.. _TableGenBreakInsideDAGArgList:
+.. _TableGenBreakInsideDAGArg:
 
-**TableGenBreakInsideDAGArgList** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArgList>`
+**TableGenBreakInsideDAGArg** (``DAGArgStyle``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArg>`
   Insert the line break for each element of DAGArg list in TableGen.
 
+  Possible values:
 
-  .. code-block:: c++
+  * ``DAS_DontBreak`` (in configuration: ``DontBreak``)
+    Never break inside DAGArg.
 
-    let DAGArgIns = (ins
-        i32:$src1,
-        i32:$src2
-    );
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1, i32:$src2);
+
+  * ``DAS_BreakElements`` (in configuration: ``BreakElements``)
+    Break inside DAGArg after each list element but for the last.
+    This aligns to the first element.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1,
+                           i32:$src2);
+
+  * ``DAS_BreakAll`` (in configuration: ``BreakAll``)
+    Break inside DAGArg after the operator and the all elements.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins
+          i32:$src1,
+          i32:$src2
+      );
+
+
 
 .. _TableGenBreakingDAGArgOperators:
 
 **TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakingDAGArgOperators>`
-  Works only when TableGenBreakInsideDAGArgList is true.
+  Works only when TableGenBreakInsideDAGArg is true.
   The string list needs to consist of identifiers in TableGen.
   If any identifier is specified, this limits the line breaks by
-  TableGenBreakInsideDAGArgList option only on DAGArg values beginning with
+  TableGenBreakInsideDAGArg option only on DAGArg values beginning with
   the specified identifiers.
 
   For example the configuration,
 
   .. code-block:: c++
 
-    TableGenBreakInsideDAGArgList: true
+    TableGenBreakInsideDAGArg: true
     TableGenBreakingDAGArgOperators: ['ins', 'outs']
 
   makes the line break only occurs inside DAGArgs beginning with the

@@ -822,6 +822,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
       Previous.isNot(TT_TableGenDAGArgOpener) &&
+      Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
@@ -1444,7 +1445,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       Style.BreakInheritanceList == FormatStyle::BILS_AfterColon) {
     return CurrentState.Indent;
   }
-  if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
+  if (Previous.is(tok::r_paren) &&
+      Previous.isNot(TT_TableGenDAGArgOperatorToBreak) &&
+      !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
   }
@@ -1842,6 +1845,19 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     NewIndent =
         Style.ContinuationIndentWidth +
         std::max(CurrentState.LastSpace, CurrentState.StartOfFunctionCall);
+
+    if (Style.isTableGen()) {
+      if (Current.is(TT_TableGenDAGArgOpenerToBreak) &&
+          Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
+        // For the case the next token is a TableGen DAGArg operator identifier
+        // that is not marked to have a line break after it.
+        // In this case the option DAS_BreakElements requires to align the
+        // DAGArg elements to the operator.
+        const FormatToken *Next = Current.Next;
+        if (Next && Next->is(TT_TableGenDAGArgOperatorID))
+          NewIndent = State.Column + Next->TokenText.size() + 2;
+      }
+    }
 
     // Ensure that different different brackets force relative alignment, e.g.:
     // void SomeFunction(vector<  // break

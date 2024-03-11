@@ -4728,15 +4728,15 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
-  /// Works only when TableGenBreakInsideDAGArgList is true.
+  /// Works only when TableGenBreakInsideDAGArg is true.
   /// The string list needs to consist of identifiers in TableGen.
   /// If any identifier is specified, this limits the line breaks by
-  /// TableGenBreakInsideDAGArgList option only on DAGArg values beginning with
+  /// TableGenBreakInsideDAGArg option only on DAGArg values beginning with
   /// the specified identifiers.
   ///
   /// For example the configuration,
   /// \code
-  ///   TableGenBreakInsideDAGArgList: true
+  ///   TableGenBreakInsideDAGArg: true
   ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
   /// \endcode
   ///
@@ -4754,16 +4754,33 @@ struct FormatStyle {
   /// \version 19
   std::vector<std::string> TableGenBreakingDAGArgOperators;
 
+  /// Different ways to control the format inside TableGen DAGArg.
+  enum DAGArgStyle : int8_t {
+    /// Never break inside DAGArg.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1, i32:$src2);
+    /// \endcode
+    DAS_DontBreak,
+    /// Break inside DAGArg after each list element but for the last.
+    /// This aligns to the first element.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1,
+    ///                        i32:$src2);
+    /// \endcode
+    DAS_BreakElements,
+    /// Break inside DAGArg after the operator and the all elements.
+    /// \code
+    ///   let DAGArgIns = (ins
+    ///       i32:$src1,
+    ///       i32:$src2
+    ///   );
+    /// \endcode
+    DAS_BreakAll,
+  };
+
   /// Insert the line break for each element of DAGArg list in TableGen.
-  ///
-  /// \code
-  ///   let DAGArgIns = (ins
-  ///       i32:$src1,
-  ///       i32:$src2
-  ///   );
-  /// \endcode
   /// \version 19
-  bool TableGenBreakInsideDAGArgList;
+  DAGArgStyle TableGenBreakInsideDAGArg;
 
   /// The number of columns used for tab stops.
   /// \version 3.7
@@ -5020,7 +5037,7 @@ struct FormatStyle {
            StatementMacros == R.StatementMacros &&
            TableGenBreakingDAGArgOperators ==
                R.TableGenBreakingDAGArgOperators &&
-           TableGenBreakInsideDAGArgList == R.TableGenBreakInsideDAGArgList &&
+           TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==

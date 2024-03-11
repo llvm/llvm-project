@@ -332,7 +332,7 @@ TEST_F(FormatTestTableGen, Assert) {
   verifyFormat("assert !le(DefVar1, 0), \"Assert1\";\n");
 }
 
-TEST_F(FormatTestTableGen, DAGArgBreakInside) {
+TEST_F(FormatTestTableGen, DAGArgBreakElements) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
   Style.ColumnLimit = 60;
   // By default, the DAGArg does not have a break inside.
@@ -341,13 +341,49 @@ TEST_F(FormatTestTableGen, DAGArgBreakInside) {
                "}\n",
                Style);
   // This option forces to break inside the DAGArg.
-  Style.TableGenBreakInsideDAGArgList = true;
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakElements;
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins a:$src1,\n"
+               "                    aa:$src2,\n"
+               "                    aaa:$src3);\n"
+               "}\n",
+               Style);
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (other a:$src1,\n"
+               "                      aa:$src2,\n"
+               "                      aaa:$src3);\n"
+               "}\n",
+               Style);
+  // Then, limit the DAGArg operator only to "ins".
+  Style.TableGenBreakingDAGArgOperators = {"ins"};
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins a:$src1,\n"
+               "                    aa:$src2,\n"
+               "                    aaa:$src3);\n"
+               "}\n",
+               Style);
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (other a:$src1, aa:$src2, aaa:$src3)\n"
+               "}\n",
+               Style);
+}
+
+TEST_F(FormatTestTableGen, DAGArgBreakAll) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
+  Style.ColumnLimit = 60;
+  // By default, the DAGArg does not have a break inside.
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins a:$src1, aa:$src2, aaa:$src3)\n"
+               "}\n",
+               Style);
+  // This option forces to break inside the DAGArg.
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakAll;
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (ins\n"
                "      a:$src1,\n"
                "      aa:$src2,\n"
                "      aaa:$src3\n"
-               "  )\n"
+               "  );\n"
                "}\n",
                Style);
   verifyFormat("def Def : Parent {\n"
@@ -355,7 +391,7 @@ TEST_F(FormatTestTableGen, DAGArgBreakInside) {
                "      a:$src1,\n"
                "      aa:$src2,\n"
                "      aaa:$src3\n"
-               "  )\n"
+               "  );\n"
                "}\n",
                Style);
   // Then, limit the DAGArg operator only to "ins".
@@ -365,11 +401,11 @@ TEST_F(FormatTestTableGen, DAGArgBreakInside) {
                "      a:$src1,\n"
                "      aa:$src2,\n"
                "      aaa:$src3\n"
-               "  )\n"
+               "  );\n"
                "}\n",
                Style);
   verifyFormat("def Def : Parent {\n"
-               "  let dagarg = (other a:$src1, aa:$src2, aaa:$src3)\n"
+               "  let dagarg = (other a:$src1, aa:$src2, aaa:$src3);\n"
                "}\n",
                Style);
 }

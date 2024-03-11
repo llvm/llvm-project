@@ -157,7 +157,9 @@ namespace format {
   TYPE(TableGenDAGArgListComma)                                                \
   TYPE(TableGenDAGArgListCommaToBreak)                                         \
   TYPE(TableGenDAGArgOpener)                                                   \
-  TYPE(TableGenDAGArgOperatorIDToBreak)                                        \
+  TYPE(TableGenDAGArgOpenerToBreak)                                            \
+  TYPE(TableGenDAGArgOperatorID)                                               \
+  TYPE(TableGenDAGArgOperatorToBreak)                                          \
   TYPE(TableGenListCloser)                                                     \
   TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \

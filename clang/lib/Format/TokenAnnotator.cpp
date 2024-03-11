@@ -1017,13 +1017,25 @@ private:
     if (!parseTableGenDAGArg())
       return false;
     bool BreakInside = false;
-    // Specialized detection for DAGArgOperatorID, a single identifier DAGArg
-    // operator that leads the line break for this DAGArg elements.
-    if (Style.TableGenBreakInsideDAGArgList &&
-        isTableGenDAGArgBreakingOperator(*FirstTok)) {
-      // Special case for identifier DAGArg operator.
-      BreakInside = true;
-      FirstTok->setType(TT_TableGenDAGArgOperatorIDToBreak);
+    if (Style.TableGenBreakInsideDAGArg != FormatStyle::DAS_DontBreak) {
+      // Specialized detection for DAGArgOperator, that determines the way of
+      // line break for this DAGArg elements.
+      if (isTableGenDAGArgBreakingOperator(*FirstTok)) {
+        // Special case for identifier DAGArg operator.
+        BreakInside = true;
+        Opener->setType(TT_TableGenDAGArgOpenerToBreak);
+        if (FirstTok->isOneOf(TT_TableGenBangOperator,
+                              TT_TableGenCondOperator)) {
+          // Special case for bang/cond operators. Set the whole operator as
+          // the DAGArg operator. Always break after it.
+          CurrentToken->Previous->setType(TT_TableGenDAGArgOperatorToBreak);
+        } else if (FirstTok->is(tok::identifier)) {
+          if (Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakAll)
+            FirstTok->setType(TT_TableGenDAGArgOperatorToBreak);
+          else
+            FirstTok->setType(TT_TableGenDAGArgOperatorID);
+        }
+      }
     }
     // Parse the [DagArgList] part
     bool FirstDAGArgListElm = true;
@@ -5116,7 +5128,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     }
     if (Right.is(TT_TableGenCondOperatorColon))
       return false;
-    if (Left.is(TT_TableGenDAGArgOperatorIDToBreak) &&
+    if (Left.isOneOf(TT_TableGenDAGArgOperatorID,
+                     TT_TableGenDAGArgOperatorToBreak) &&
         Right.isNot(TT_TableGenDAGArgCloser)) {
       return true;
     }
@@ -5496,17 +5509,17 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     //       case2:0);
     if (Left.is(TT_TableGenCondOperatorComma))
       return true;
-    if (Left.is(TT_TableGenDAGArgOperatorIDToBreak) &&
+    if (Left.is(TT_TableGenDAGArgOperatorToBreak) &&
         Right.isNot(TT_TableGenDAGArgCloser)) {
       return true;
     }
     if (Left.is(TT_TableGenDAGArgListCommaToBreak))
       return true;
     if (Right.is(TT_TableGenDAGArgCloser) && Right.MatchingParen &&
-        Right.MatchingParen->Next->is(TT_TableGenDAGArgOperatorIDToBreak) &&
+        Right.MatchingParen->is(TT_TableGenDAGArgOpenerToBreak) &&
         &Left != Right.MatchingParen->Next) {
       // Check to avoid empty DAGArg such as (ins).
-      return Style.TableGenBreakInsideDAGArgList;
+      return Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakAll;
     }
   }
 
@@ -5921,6 +5934,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     // Avoid to break around paste operator.
     if (Left.is(tok::hash) || Right.is(tok::hash))
+      return false;
+    if (Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator))
       return false;
   }
 

@@ -2335,23 +2335,53 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
 
   // DAGArg breaking options. They use different token types depending on what
   // is specified.
-  Style.TableGenBreakInsideDAGArgList = true;
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakElements;
 
-  // Using only TableGenBreakInsideDAGArgList makes all the DAGArg to have line
-  // break.
+  // When TableGenBreakInsideDAGArg is DAS_BreakElements and
+  // TableGenBreakingDAGArgOperators is not specified, it makes all the DAGArg
+  // elements to have line break.
   Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
   EXPECT_TOKEN(Tokens[1], tok::identifier,
-               TT_TableGenDAGArgOperatorIDToBreak); // ins
+               TT_TableGenDAGArgOperatorID); // ins
   EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
 
   Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
   EXPECT_TOKEN(Tokens[1], tok::identifier,
-               TT_TableGenDAGArgOperatorIDToBreak); // other
+               TT_TableGenDAGArgOperatorID); // other
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  // For non-identifier operators, breaks after the operator.
+  Tokens = AnnotateValue("(!cast<Type>(\"Name\") type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_TableGenDAGArgOperatorToBreak);
+  EXPECT_TOKEN(Tokens[11], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[15], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakAll;
+
+  // When TableGenBreakInsideDAGArg is DAS_BreakAll and
+  // TableGenBreakingDAGArgOperators is not specified, it makes all the DAGArg
+  // to have line break inside it.
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // ins
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // other
   EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
 
@@ -2360,9 +2390,9 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Style.TableGenBreakingDAGArgOperators = {"ins", "outs"};
   Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
   EXPECT_TOKEN(Tokens[1], tok::identifier,
-               TT_TableGenDAGArgOperatorIDToBreak); // ins
+               TT_TableGenDAGArgOperatorToBreak); // ins
   EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
 
