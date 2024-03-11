@@ -16,7 +16,7 @@
 ; RUN: -r=%t/c.o,_Znwm \
 ; RUN: -r=%t/main.o,_Z1bv \
 ; RUN: -r=%t/main.o,_Z1cv \
-; RUN: -r=%t/main.o,_Z3fooIiET_S0_S0_ -enable-import-metadata=true 
+; RUN: -r=%t/main.o,_Z3fooIiET_S0_S0_ 
 
 ;; foo has two copys:
 ;; foo in b.ll is prevailing and inlines bar.
