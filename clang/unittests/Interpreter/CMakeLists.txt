@@ -10,6 +10,7 @@ add_clang_unittest(ClangReplInterpreterTests
   IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
   InterpreterTest.cpp
+  InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
   )
 target_link_libraries(ClangReplInterpreterTests PUBLIC
