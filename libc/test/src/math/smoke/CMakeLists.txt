@@ -1794,6 +1794,42 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmodl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodl_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.errno.errno
+    libc.src.math.fmodl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmodf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodf128_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.errno.errno
+    libc.src.math.fmodf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   coshf_test
   SUITE
     libc-math-smoke-tests

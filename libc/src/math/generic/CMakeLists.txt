@@ -1859,7 +1859,6 @@ add_entrypoint_object(
   HDRS
     ../fmod.h
   DEPENDS
-    libc.include.math
     libc.src.__support.FPUtil.generic.fmod
   COMPILE_OPTIONS
     -O3
@@ -1872,7 +1871,31 @@ add_entrypoint_object(
   HDRS
     ../fmodf.h
   DEPENDS
-    libc.include.math
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmodl
+  SRCS
+    fmodl.cpp
+  HDRS
+    ../fmodl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmodf128
+  SRCS
+    fmodf128.cpp
+  HDRS
+    ../fmodf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.fmod
   COMPILE_OPTIONS
     -O3

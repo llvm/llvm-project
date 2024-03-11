@@ -353,7 +353,7 @@ bool ARMSubtarget::isRWPI() const {
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(GV))
     return true;
 
   // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
