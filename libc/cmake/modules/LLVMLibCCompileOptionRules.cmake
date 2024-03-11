@@ -2,10 +2,10 @@ function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
-    check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${flags})
+    check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
-  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${flags})
-  check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${flags})
+  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${ARGN})
+  check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     if(ADD_FMA_FLAG)

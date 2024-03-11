@@ -768,7 +768,12 @@ private:
 
     // get number of children
     const bool omit_empty_base_classes = true;
-    uint32_t n = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
+    auto n_or_err = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
+    if (!n_or_err) {
+      LLDB_LOG_ERROR(m_log, n_or_err.takeError(), LOG_PREFIX "{0}");
+      return {};
+    }
+    uint32_t n = *n_or_err;
     if (!n) {
       LLDB_LOG(m_log, LOG_PREFIX "No children found in struct");
       return {};

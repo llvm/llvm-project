@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck --check-prefix=GFX950 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck --check-prefix=GFX950 %s
 
 v_prng_b32 v5, v1
 // GFX950: v_prng_b32_e32 v5, v1                   ; encoding: [0x01,0xb1,0x0a,0x7e]

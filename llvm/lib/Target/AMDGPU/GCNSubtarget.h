@@ -677,8 +677,8 @@ public:
     return GFX13Insts || (!hasGFX940Insts() && !hasGFX12_10Insts());
   }
 
-  bool hasInterpInsts() const {
-    return GFX13Insts || !hasGFX12_10Insts();
+  bool hasVINTERPEncoding() const {
+    return GFX13Insts && !hasGFX12_10Insts();
   }
 
   // DS_ADD_F64/DS_ADD_RTN_F64

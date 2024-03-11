@@ -1830,29 +1830,29 @@ multiclass sse12_cmp_scalar<RegisterClass RC, X86MemOperand x86memop,
                             PatFrag ld_frag, string asm,
                             X86FoldableSchedWrite sched,
                             PatFrags mem_frags> {
-  def rr_Int : SIi8<0xC2, MRMSrcReg, (outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src2, u8imm:$cc), asm,
-                    [(set VR128:$dst, (OpNode (VT VR128:$src1),
-                                              VR128:$src2, timm:$cc))]>,
-           Sched<[sched]>, SIMD_EXC;
+  def rri_Int : SIi8<0xC2, MRMSrcReg, (outs VR128:$dst),
+                     (ins VR128:$src1, VR128:$src2, u8imm:$cc), asm,
+                     [(set VR128:$dst, (OpNode (VT VR128:$src1),
+                                               VR128:$src2, timm:$cc))]>,
+                     Sched<[sched]>, SIMD_EXC;
   let mayLoad = 1 in
-  def rm_Int : SIi8<0xC2, MRMSrcMem, (outs VR128:$dst),
-                    (ins VR128:$src1, memop:$src2, u8imm:$cc), asm,
-                    [(set VR128:$dst, (OpNode (VT VR128:$src1),
-                                              (mem_frags addr:$src2), timm:$cc))]>,
-           Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+  def rmi_Int : SIi8<0xC2, MRMSrcMem, (outs VR128:$dst),
+                     (ins VR128:$src1, memop:$src2, u8imm:$cc), asm,
+                     [(set VR128:$dst, (OpNode (VT VR128:$src1),
+                                               (mem_frags addr:$src2), timm:$cc))]>,
+                     Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
 
   let isCodeGenOnly = 1 in {
     let isCommutable = 1 in
-    def rr : SIi8<0xC2, MRMSrcReg,
-                  (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc), asm,
-                  [(set RC:$dst, (OpNode RC:$src1, RC:$src2, timm:$cc))]>,
-                  Sched<[sched]>, SIMD_EXC;
-    def rm : SIi8<0xC2, MRMSrcMem,
-                  (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm,
-                  [(set RC:$dst, (OpNode RC:$src1,
-                                         (ld_frag addr:$src2), timm:$cc))]>,
-                  Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+    def rri : SIi8<0xC2, MRMSrcReg,
+                   (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc), asm,
+                   [(set RC:$dst, (OpNode RC:$src1, RC:$src2, timm:$cc))]>,
+                   Sched<[sched]>, SIMD_EXC;
+    def rmi : SIi8<0xC2, MRMSrcMem,
+                   (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm,
+                   [(set RC:$dst, (OpNode RC:$src1,
+                                          (ld_frag addr:$src2), timm:$cc))]>,
+                   Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
   }
 }
 
@@ -2023,11 +2023,11 @@ let Predicates = [HasAVX] in {
 
   def : Pat<(f64 (X86cmps (loadf64 addr:$src2), FR64:$src1,
                           CommutableCMPCC:$cc)),
-            (VCMPSDrm FR64:$src1, addr:$src2, timm:$cc)>;
+            (VCMPSDrmi FR64:$src1, addr:$src2, timm:$cc)>;
 
   def : Pat<(f32 (X86cmps (loadf32 addr:$src2), FR32:$src1,
                           CommutableCMPCC:$cc)),
-            (VCMPSSrm FR32:$src1, addr:$src2, timm:$cc)>;
+            (VCMPSSrmi FR32:$src1, addr:$src2, timm:$cc)>;
 }
 
 let Predicates = [UseSSE2] in {
@@ -2037,7 +2037,7 @@ let Predicates = [UseSSE2] in {
 
   def : Pat<(f64 (X86cmps (loadf64 addr:$src2), FR64:$src1,
                           CommutableCMPCC:$cc)),
-            (CMPSDrm FR64:$src1, addr:$src2, timm:$cc)>;
+            (CMPSDrmi FR64:$src1, addr:$src2, timm:$cc)>;
 }
 
 let Predicates = [UseSSE1] in {
@@ -2047,7 +2047,7 @@ let Predicates = [UseSSE1] in {
 
   def : Pat<(f32 (X86cmps (loadf32 addr:$src2), FR32:$src1,
                           CommutableCMPCC:$cc)),
-            (CMPSSrm FR32:$src1, addr:$src2, timm:$cc)>;
+            (CMPSSrmi FR32:$src1, addr:$src2, timm:$cc)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6561,12 +6561,12 @@ let Constraints = "$src1 = $dst" in
 //===----------------------------------------------------------------------===//
 
 multiclass pcmpistrm_SS42AI<string asm> {
-  def rr : SS42AI<0x62, MRMSrcReg, (outs),
+  def rri : SS42AI<0x62, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrM]>;
   let mayLoad = 1 in
-  def rm :SS42AI<0x62, MRMSrcMem, (outs),
+  def rmi :SS42AI<0x62, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrM.Folded, WritePCmpIStrM.ReadAfterFold]>;
@@ -6579,12 +6579,12 @@ let Defs = [XMM0, EFLAGS], hasSideEffects = 0 in {
 }
 
 multiclass SS42AI_pcmpestrm<string asm> {
-  def rr : SS42AI<0x60, MRMSrcReg, (outs),
+  def rri : SS42AI<0x60, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrM]>;
   let mayLoad = 1 in
-  def rm : SS42AI<0x60, MRMSrcMem, (outs),
+  def rmi : SS42AI<0x60, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrM.Folded, WritePCmpEStrM.ReadAfterFold]>;
@@ -6597,12 +6597,12 @@ let Defs = [XMM0, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 }
 
 multiclass SS42AI_pcmpistri<string asm> {
-  def rr : SS42AI<0x63, MRMSrcReg, (outs),
+  def rri : SS42AI<0x63, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrI]>;
   let mayLoad = 1 in
-  def rm : SS42AI<0x63, MRMSrcMem, (outs),
+  def rmi : SS42AI<0x63, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrI.Folded, WritePCmpIStrI.ReadAfterFold]>;
@@ -6615,12 +6615,12 @@ let Defs = [ECX, EFLAGS], hasSideEffects = 0 in {
 }
 
 multiclass SS42AI_pcmpestri<string asm> {
-  def rr : SS42AI<0x61, MRMSrcReg, (outs),
+  def rri : SS42AI<0x61, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrI]>;
   let mayLoad = 1 in
-  def rm : SS42AI<0x61, MRMSrcMem, (outs),
+  def rmi : SS42AI<0x61, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrI.Folded, WritePCmpEStrI.ReadAfterFold]>;

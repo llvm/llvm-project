@@ -4999,6 +4999,9 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::seh_scope_end ||
                 F->getIntrinsicID() == Intrinsic::coro_resume ||
                 F->getIntrinsicID() == Intrinsic::coro_destroy ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_void ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_bool ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||

@@ -3788,10 +3788,10 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
           *LHS_Instr->getMetadata(LLVMContext::MD_range));
 
       if (LHS_CR.icmp(Pred, RHS_CR))
-        return ConstantInt::getTrue(RHS->getContext());
+        return ConstantInt::getTrue(ITy);
 
       if (LHS_CR.icmp(CmpInst::getInversePredicate(Pred), RHS_CR))
-        return ConstantInt::getFalse(RHS->getContext());
+        return ConstantInt::getFalse(ITy);
     }
   }
 

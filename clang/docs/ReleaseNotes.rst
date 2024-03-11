@@ -100,6 +100,7 @@ C++23 Feature Support
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+- Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
@@ -250,6 +251,9 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (#GH64356).
 
+- ``__is_trivially_relocatable`` no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH77091).
+
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
@@ -388,6 +392,8 @@ Arm and AArch64 Support
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-A78AE (cortex-a78ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -406,7 +412,7 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- PTX is no longer included by default when compiling for CUDA. Using 
+- PTX is no longer included by default when compiling for CUDA. Using
   ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support

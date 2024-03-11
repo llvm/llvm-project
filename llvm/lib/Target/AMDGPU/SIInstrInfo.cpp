@@ -3825,8 +3825,28 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
     updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
+    if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      // SlotIndex of defs needs to be updated when converting to early-clobber
+      MachineOperand &Def = MIB->getOperand(0);
+      if (Def.isEarlyClobber() && Def.isReg() &&
+          LIS->hasInterval(Def.getReg())) {
+        SlotIndex OldIndex = LIS->getInstructionIndex(*MIB).getRegSlot(false);
+        SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
+        auto &LI = LIS->getInterval(Def.getReg());
+        auto UpdateDefIndex = [&](LiveRange &LR) {
+          auto S = LR.find(OldIndex);
+          if (S != LR.end() && S->start == OldIndex) {
+            assert(S->valno && S->valno->def == OldIndex);
+            S->start = NewIndex;
+            S->valno->def = NewIndex;
+          }
+        };
+        UpdateDefIndex(LI);
+        for (auto &SR : LI.subranges())
+          UpdateDefIndex(SR);
+      }
+    }
     return MIB;
   }
 
@@ -5980,7 +6000,10 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
 
   if (Opc == AMDGPU::V_PERMLANE16_B32_e64 ||
       Opc == AMDGPU::V_PERMLANEX16_B32_e64 ||
-      Opc == AMDGPU::V_PERMLANE_BCAST_B32_e64) {
+      Opc == AMDGPU::V_PERMLANE_BCAST_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_UP_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_DOWN_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_XOR_B32_e64) {
     // src1 and src2 must be scalar
     MachineOperand &Src1 = MI.getOperand(VOP3Idx[1]);
     MachineOperand &Src2 = MI.getOperand(VOP3Idx[2]);
