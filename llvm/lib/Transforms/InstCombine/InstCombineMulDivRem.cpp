@@ -198,6 +198,20 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
+  // mul (sext X)), Y -> select X, -Y, 0
+  // mul Y, (sext X)) -> select X, -Y, 0
+  Value *SExtOp;
+  if (match(Op0, m_SExt(m_Value(SExtOp))) &&
+      SExtOp->getType()->isIntOrIntVectorTy(1)) {
+    return SelectInst::Create(SExtOp, Builder.CreateNeg(Op1),
+                              ConstantInt::getNullValue(Op1->getType()));
+  }
+  if (match(Op1, m_SExt(m_Value(SExtOp))) &&
+      SExtOp->getType()->isIntOrIntVectorTy(1)) {
+    return SelectInst::Create(SExtOp, Builder.CreateNeg(Op0),
+                              ConstantInt::getNullValue(Op0->getType()));
+  }
+
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
