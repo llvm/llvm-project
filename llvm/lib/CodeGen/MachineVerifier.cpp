@@ -1622,7 +1622,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_VSCALE immediate cannot be zero", MI);
       break;
     }
-
+    break;
+  }
   case TargetOpcode::G_INSERT_SUBVECTOR: {
     const MachineOperand &Src0Op = MI->getOperand(1);
     if (!Src0Op.isReg()) {
