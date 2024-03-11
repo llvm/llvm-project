@@ -8920,7 +8920,7 @@ class BuiltinOperatorOverloadBuilder {
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
-  static constexpr int ArithmeticTypesCap = 24;
+  static constexpr int ArithmeticTypesCap = 26;
   SmallVector<CanQualType, ArithmeticTypesCap> ArithmeticTypes;
 
   // Define some indices used to iterate over the arithmetic types in
@@ -8996,7 +8996,11 @@ class BuiltinOperatorOverloadBuilder {
     // End of integral types.
     // FIXME: What about complex? What about half?
 
-    assert(ArithmeticTypes.size() <= ArithmeticTypesCap &&
+    // We don't know for sure how many bit-precise candidates were involved, so
+    // we subtract those from the total when testing whether we're under the
+    // cap or not.
+    assert(ArithmeticTypes.size() - BitIntCandidates.size() <=
+               ArithmeticTypesCap &&
            "Enough inline storage for all arithmetic types.");
   }
 
