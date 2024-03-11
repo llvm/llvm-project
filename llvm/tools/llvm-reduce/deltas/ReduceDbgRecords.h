@@ -1,4 +1,4 @@
-//===- ReduceDPValues.h -----------------------------------------*- C++ -*-===//
+//===- ReduceDbgRecords.h ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEDPVALUES_H
-#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEDPVALUES_H
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEDBGRECORDS_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEDBGRECORDS_H
 
 #include "Delta.h"
 #include "llvm/IR/BasicBlock.h"

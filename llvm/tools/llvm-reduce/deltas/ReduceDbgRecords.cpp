@@ -1,4 +1,4 @@
-//===- ReduceDPValues.cpp - Specialized Delta Pass ------------------------===//
+//===- ReduceDbgRecords.cpp - Specialized Delta Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,13 +17,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ReduceDPValues.h"
+#include "ReduceDbgRecords.h"
 #include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
 
-static void extractDPValuesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+static void extractDbgRecordsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &M = WorkItem.getModule();
 
   for (auto &F : M)
@@ -35,5 +35,5 @@ static void extractDPValuesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceDbgRecordDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDPValuesFromModule, "Reducing DbgRecords");
+  runDeltaPass(Test, extractDbgRecordsFromModule, "Reducing DbgRecords");
 }
