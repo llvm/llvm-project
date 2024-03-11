@@ -525,16 +525,7 @@ it supports. Such code objects may not perform as well as those for the non-gene
 
 Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
 
-Generic processor code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
-The version of non-generic code objects is always set to 0.
-
-For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
-so it can continue to execute on the previously supported processors as well as on the new one.
-When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
-
-Each supported processor of a generic target is mapped to the version it was introduced in.
-A generic code object can execute on a supported processor if the version of the code object being loaded is
-greater than or equal to the version in which the processor was added to the generic target.
+Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor-versioning` for more information on how versioning works.
 
   .. table:: AMDGPU Generic Processors
      :name: amdgpu-generic-processor-table
@@ -621,6 +612,21 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                 - ``gfx1151``
      ==================== ============== ================= ================== ================= =================================
 
+.. _amdgpu-generic-processor-versioning:
+
+Generic Processor Versioning
+----------------------------
+
+Generic processor (see :ref:`amdgpu-generic-processor-table`) code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
+The version of non-generic code objects is always set to 0.
+
+For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
+so it can continue to execute on the previously supported processors as well as on the new one.
+When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
+
+Each supported processor of a generic target is mapped to the version it was introduced in.
+A generic code object can execute on a supported processor if the version of the code object being loaded is
+greater than or equal to the version in which the processor was added to the generic target.
 
 .. _amdgpu-target-features:
 
@@ -1803,7 +1809,7 @@ The AMDGPU backend uses the following ELF header:
                                                              mask. This is a value between 1 and 255,
                                                              stored in the most significant byte
                                                              of EFLAGS.
-                                                             See :ref:`amdgpu-generic-processor-table`
+                                                             See :ref:`amdgpu-generic-processor-versioning`
      ============================================ ========== =========================================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
