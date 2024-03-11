@@ -659,15 +659,3 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   }
   return false;
 }
-
-bool MachineRegisterInfo::isArgumentRegister(MCRegister Reg) const {
-  return getTargetRegisterInfo()->isArgumentRegister(*MF, Reg);
-}
-
-bool MachineRegisterInfo::isFixedRegister(MCRegister Reg) const {
-  return getTargetRegisterInfo()->isFixedRegister(*MF, Reg);
-}
-
-bool MachineRegisterInfo::isGeneralPurposeRegister(MCRegister Reg) const {
-  return getTargetRegisterInfo()->isGeneralPurposeRegister(*MF, Reg);
-}
