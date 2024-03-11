@@ -21,6 +21,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
@@ -2474,6 +2475,49 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     return true;
   }
+
+  case Intrinsic::experimental_vector_interleave2: {
+    Value *Src0 = CI.getOperand(0);
+    Value *Src1 = CI.getOperand(1);
+
+    // Canonicalize fixed-width vector types to G_SHUFFLE_VECTOR
+    // (similar to SelectionDAG)
+    LLT OpType = getLLTForType(*Src0->getType(), MIRBuilder.getDataLayout());
+    if (!OpType.isFixedVector())
+      break;
+
+    Register Op0 = getOrCreateVReg(*Src0);
+    Register Op1 = getOrCreateVReg(*Src1);
+    Register Res = getOrCreateVReg(CI);
+
+    MIRBuilder.buildShuffleVector(
+        Res, Op0, Op1, createInterleaveMask(OpType.getNumElements(), 2));
+
+    return true;
+  }
+
+  case Intrinsic::experimental_vector_deinterleave2: {
+    Value *Src = CI.getOperand(0);
+
+    // Canonicalize fixed-width vector types to shuffles that extract
+    // sub-vectors (similar to SelectionDAG)
+    ArrayRef<Register> Res = getOrCreateVRegs(CI);
+    LLT ResTy = MRI->getType(Res[0]);
+    if (!ResTy.isFixedVector())
+      break;
+
+    Register Op = getOrCreateVReg(*Src);
+    LLT OpType = getLLTForType(*Src->getType(), MIRBuilder.getDataLayout());
+
+    auto Undef = MIRBuilder.buildUndef(OpType);
+    MIRBuilder.buildShuffleVector(
+        Res[0], Op, Undef, createStrideMask(0, 2, ResTy.getNumElements()));
+    MIRBuilder.buildShuffleVector(
+        Res[1], Op, Undef, createStrideMask(1, 2, ResTy.getNumElements()));
+
+    return true;
+  }
+
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
