@@ -6911,14 +6911,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
-    TTI::OperandValueInfo Op1Info{TargetTransformInfo::OK_AnyValue,
-                                  TargetTransformInfo::OP_None};
-    if (I->getOpcode() == Instruction::FRem)
-      return TTI.getFRemInstrCost(TLI, VectorTy, CostKind, Op1Info, Op2Info,
-                                  Operands, I);
-
-    return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, CostKind,
-                                      Op1Info, Op2Info, Operands, I);
+    return TTI.getArithmeticInstrCost(
+        I->getOpcode(), VectorTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        Op2Info, Operands, I, TLI);
   }
   case Instruction::FNeg: {
     return TTI.getArithmeticInstrCost(
