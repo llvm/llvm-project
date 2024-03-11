@@ -3239,6 +3239,21 @@ SDValue SITargetLowering::LowerCallResult(
       Val = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), VA.getLocVT(), InGlue);
       Chain = Val.getValue(1);
       InGlue = Val.getValue(2);
+
+      // For i1 return value allocated to an SGPR, we want the dst reg for the
+      // above CopyFromReg not to be of VReg_1 when emitting machine code.
+      // This requires creating an addional CopyToReg followed by another
+      // CopyFromReg.
+      if (RVLocs.size() == 1 && VA.getLocVT() == MVT::i1) {
+        const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+        MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+
+        if (TRI->isSGPRReg(MRI, VA.getLocReg())) {
+          Register TmpVReg = MRI.createVirtualRegister(TRI->getBoolRC());
+          SDValue TmpCopyTo = DAG.getCopyToReg(Chain, DL, TmpVReg, Val);
+          Val = DAG.getCopyFromReg(TmpCopyTo, DL, TmpVReg, MVT::i1);
+        }
+      }
     } else if (VA.isMemLoc()) {
       report_fatal_error("TODO: return values in memory");
     } else
@@ -15995,6 +16010,21 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   return false;
 }
 
+LLVM_ATTRIBUTE_UNUSED
+static bool isCopyFromRegForI1Return(const SDNode *N) {
+  assert(N->getOpcode() == ISD::CopyFromReg);
+  SDNode *N1 = N->getOperand(0).getNode();
+  if (N1->getOpcode() != ISD::CopyToReg)
+    return false;
+  SDNode *N2 = N1->getOperand(0).getNode();
+  if (N2->getOpcode() != ISD::CopyFromReg)
+    return false;
+  SDNode *N3 = N2->getOperand(0).getNode();
+  if (N3->getOpcode() != ISD::CALLSEQ_END)
+    return false;
+  return true;
+}
+
 bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
                                                   FunctionLoweringInfo *FLI,
                                                   UniformityInfo *UA) const {
@@ -16012,7 +16042,8 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
       return UA->isDivergent(V);
 
-    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
+    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N) ||
+           isCopyFromRegForI1Return(N));
     return !TRI->isSGPRReg(MRI, Reg);
   }
   case ISD::LOAD: {

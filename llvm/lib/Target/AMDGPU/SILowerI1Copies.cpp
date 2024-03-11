@@ -689,14 +689,6 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       assert(!MI.getOperand(1).getSubReg());
 
       if (!SrcReg.isVirtual() || (!isLaneMaskReg(SrcReg) && !isVreg1(SrcReg))) {
-        if (!SrcReg.isVirtual() &&
-            TII->getRegisterInfo().getRegSizeInBits(SrcReg, *MRI) == 64) {
-          // When calling convention allocates SGPR for i1, for GPUs with
-          // wavefront size 64, i1 return value is put in 64b SGPR.
-          assert(ST->isWave64());
-          continue;
-        }
-
         assert(TII->getRegisterInfo().getRegSizeInBits(SrcReg, *MRI) == 32);
         Register TmpReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_CMP_NE_U32_e64), TmpReg)
