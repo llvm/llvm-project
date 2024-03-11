@@ -124,7 +124,7 @@ public:
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
         "atomic_ref: memory order argument to atomic load operation is invalid");
-    alignas(_Tp) unsigned char __mem[sizeof(_Tp)];
+    alignas(_Tp) byte __mem[sizeof(_Tp)];
     auto* __ret = reinterpret_cast<_Tp*>(__mem);
     __atomic_load(__ptr_, __ret, std::__to_gcc_order(__order));
     return *__ret;
@@ -133,7 +133,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI operator _Tp() const noexcept { return load(); }
 
   _LIBCPP_HIDE_FROM_ABI _Tp exchange(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
-    alignas(_Tp) unsigned char __mem[sizeof(_Tp)];
+    alignas(_Tp) byte __mem[sizeof(_Tp)];
     auto* __ret = reinterpret_cast<_Tp*>(__mem);
     __atomic_exchange(__ptr_, __clear_padding(__desired), __ret, std::__to_gcc_order(__order));
     return *__ret;
