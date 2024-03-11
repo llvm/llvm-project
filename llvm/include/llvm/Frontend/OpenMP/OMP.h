@@ -15,4 +15,9 @@
 
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
+namespace llvm::omp {
+bool isCompositeConstruct(Directive D);
+bool isCombinedConstruct(Directive D);
+} // namespace llvm::omp
+
 #endif // LLVM_FRONTEND_OPENMP_OMP_H
