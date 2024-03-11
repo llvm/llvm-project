@@ -6561,12 +6561,12 @@ let Constraints = "$src1 = $dst" in
 //===----------------------------------------------------------------------===//
 
 multiclass pcmpistrm_SS42AI<string asm> {
-  def rr : SS42AI<0x62, MRMSrcReg, (outs),
+  def rri : SS42AI<0x62, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrM]>;
   let mayLoad = 1 in
-  def rm :SS42AI<0x62, MRMSrcMem, (outs),
+  def rmi :SS42AI<0x62, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrM.Folded, WritePCmpIStrM.ReadAfterFold]>;
@@ -6579,12 +6579,12 @@ let Defs = [XMM0, EFLAGS], hasSideEffects = 0 in {
 }
 
 multiclass SS42AI_pcmpestrm<string asm> {
-  def rr : SS42AI<0x60, MRMSrcReg, (outs),
+  def rri : SS42AI<0x60, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrM]>;
   let mayLoad = 1 in
-  def rm : SS42AI<0x60, MRMSrcMem, (outs),
+  def rmi : SS42AI<0x60, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrM.Folded, WritePCmpEStrM.ReadAfterFold]>;
@@ -6597,12 +6597,12 @@ let Defs = [XMM0, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 }
 
 multiclass SS42AI_pcmpistri<string asm> {
-  def rr : SS42AI<0x63, MRMSrcReg, (outs),
+  def rri : SS42AI<0x63, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrI]>;
   let mayLoad = 1 in
-  def rm : SS42AI<0x63, MRMSrcMem, (outs),
+  def rmi : SS42AI<0x63, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
     !strconcat(asm, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
     []>, Sched<[WritePCmpIStrI.Folded, WritePCmpIStrI.ReadAfterFold]>;
@@ -6615,12 +6615,12 @@ let Defs = [ECX, EFLAGS], hasSideEffects = 0 in {
 }
 
 multiclass SS42AI_pcmpestri<string asm> {
-  def rr : SS42AI<0x61, MRMSrcReg, (outs),
+  def rri : SS42AI<0x61, MRMSrcReg, (outs),
     (ins VR128:$src1, VR128:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrI]>;
   let mayLoad = 1 in
-  def rm : SS42AI<0x61, MRMSrcMem, (outs),
+  def rmi : SS42AI<0x61, MRMSrcMem, (outs),
     (ins VR128:$src1, i128mem:$src3, u8imm:$src5),
     !strconcat(asm, "\t{$src5, $src3, $src1|$src1, $src3, $src5}"),
     []>, Sched<[WritePCmpEStrI.Folded, WritePCmpEStrI.ReadAfterFold]>;
