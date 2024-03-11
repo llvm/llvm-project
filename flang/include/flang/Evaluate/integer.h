@@ -27,10 +27,6 @@
 #include <string>
 #include <type_traits>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
-#undef HUGE
-
 namespace Fortran::evaluate::value {
 
 // Implements an integer as an assembly of smaller host integer parts
