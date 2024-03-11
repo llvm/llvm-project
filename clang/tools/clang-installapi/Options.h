@@ -62,15 +62,22 @@ struct LinkerOptions {
   bool IsDylib = false;
 };
 
+struct FrontendOptions {
+  /// \brief The language mode to parse headers in.
+  Language LangMode = Language::ObjC;
+};
+
 class Options {
 private:
   bool processDriverOptions(llvm::opt::InputArgList &Args);
   bool processLinkerOptions(llvm::opt::InputArgList &Args);
+  bool processFrontendOptions(llvm::opt::InputArgList &Args);
 
 public:
   /// The various options grouped together.
   DriverOptions DriverOpts;
   LinkerOptions LinkerOpts;
+  FrontendOptions FEOpts;
 
   Options() = delete;
 

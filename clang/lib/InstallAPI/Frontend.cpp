@@ -137,9 +137,9 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
     else
       OS << "#import ";
     if (H.useIncludeName())
-      OS << "<" << H.getIncludeName() << ">";
+      OS << "<" << H.getIncludeName() << ">\n";
     else
-      OS << "\"" << H.getPath() << "\"";
+      OS << "\"" << H.getPath() << "\"\n";
 
     Ctx.addKnownHeader(H);
   }
