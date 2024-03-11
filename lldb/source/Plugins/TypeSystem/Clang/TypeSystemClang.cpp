@@ -8572,7 +8572,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
 static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
                           const DataExtractor &data, lldb::offset_t byte_offset,
                           size_t byte_size, uint32_t bitfield_bit_offset,
-                          uint32_t bitfield_bit_size) {
+                          uint32_t bitfield_bit_size, bool always_show_value) {
   const clang::EnumType *enutype =
       llvm::cast<clang::EnumType>(qual_type.getTypePtr());
   const clang::EnumDecl *enum_decl = enutype->getDecl();
@@ -8599,7 +8599,11 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
     ++num_enumerators;
     if (val == enum_svalue) {
       // Found an exact match, that's all we need to do.
-      s.PutCString(enumerator->getNameAsString());
+      if (always_show_value)
+        s.Printf("%s (%" PRIi64 ")", enumerator->getNameAsString().c_str(),
+                 enum_svalue);
+      else
+        s.PutCString(enumerator->getNameAsString());
       return true;
     }
   }
@@ -8634,17 +8638,23 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
                      return llvm::popcount(a.first) > llvm::popcount(b.first);
                    });
 
+  bool found_enumerator = false;
   for (const auto &val : values) {
     if ((remaining_value & val.first) != val.first)
       continue;
+    found_enumerator = true;
     remaining_value &= ~val.first;
     s.PutCString(val.second);
+    if (always_show_value)
+      s.Printf(" (0x%" PRIx64 ")", val.first);
     if (remaining_value)
       s.PutCString(" | ");
   }
 
   // If there is a remainder that is not covered by the value, print it as hex.
-  if (remaining_value)
+  // If we found no matching values but were asked to always print a value,
+  // print it as hex.
+  if (remaining_value || (!found_enumerator && always_show_value))
     s.Printf("0x%" PRIx64, remaining_value);
 
   return true;
@@ -8666,8 +8676,9 @@ bool TypeSystemClang::DumpTypeValue(
 
     if (type_class == clang::Type::Elaborated) {
       qual_type = llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
-      return DumpTypeValue(qual_type.getAsOpaquePtr(), s, format, data, byte_offset, byte_size,
-                           bitfield_bit_size, bitfield_bit_offset, exe_scope);
+      return DumpTypeValue(qual_type.getAsOpaquePtr(), s, format, data,
+                           byte_offset, byte_size, bitfield_bit_size,
+                           bitfield_bit_offset, exe_scope);
     }
 
     switch (type_class) {
@@ -8699,10 +8710,12 @@ bool TypeSystemClang::DumpTypeValue(
     case clang::Type::Enum:
       // If our format is enum or default, show the enumeration value as its
       // enumeration string value, else just display it as requested.
-      if ((format == eFormatEnum || format == eFormatDefault) &&
+      if ((format == eFormatEnum || format == eFormatEnumWithValues ||
+           format == eFormatDefault) &&
           GetCompleteType(type))
         return DumpEnumValue(qual_type, s, data, byte_offset, byte_size,
-                             bitfield_bit_offset, bitfield_bit_size);
+                             bitfield_bit_offset, bitfield_bit_size,
+                             format == eFormatEnumWithValues);
       // format was not enum, just fall through and dump the value as
       // requested....
       [[fallthrough]];
@@ -8722,6 +8735,7 @@ bool TypeSystemClang::DumpTypeValue(
         case eFormatCString: // NULL terminated C strings
         case eFormatDecimal:
         case eFormatEnum:
+        case eFormatEnumWithValues:
         case eFormatHex:
         case eFormatHexUppercase:
         case eFormatFloat:

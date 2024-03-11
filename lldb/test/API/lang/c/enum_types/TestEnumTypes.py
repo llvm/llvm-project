@@ -23,13 +23,28 @@ class EnumTypesTestCase(TestBase):
         )
 
         self.expect("fr var a", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = A$"])
+        self.expect(
+            'fr var --format "enumeration with values" -- a',
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            patterns=[" = A \(1\)$"],
+        )
         self.expect("fr var b", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = B$"])
         self.expect("fr var c", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = C$"])
         self.expect("fr var ab", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = AB$"])
         self.expect(
             "fr var ac", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = A \| C$"]
         )
+        self.expect(
+            'fr var --format "enumeration with values" -- ac',
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            patterns=[" = A \(0x1\) | C \(0x4\)$"],
+        )
         self.expect("fr var all", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = ALL$"])
+        self.expect(
+            'fr var --format "enumeration with values" -- all',
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            patterns=[" = ALL \(7\)$"],
+        )
         # Test that an enum that doesn't match the heuristic we use in
         # TypeSystemClang::DumpEnumValue, gets printed as a raw integer.
         self.expect("fr var omega", DATA_TYPES_DISPLAYED_CORRECTLY, patterns=[" = 7$"])
@@ -40,6 +55,11 @@ class EnumTypesTestCase(TestBase):
             "expression (enum bitfield)nonsense",
             DATA_TYPES_DISPLAYED_CORRECTLY,
             patterns=[" = B \| C \| 0x10$"],
+        )
+        self.expect(
+            'expression --format "enumeration with values" -- (enum bitfield)nonsense',
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            patterns=[" = B \(0x2\) \| C \(0x4\) \| 0x10$"],
         )
 
         # Break inside the main.

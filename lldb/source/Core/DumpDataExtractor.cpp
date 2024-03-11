@@ -496,6 +496,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
     case eFormatEnum: // Print enum value as a signed integer when we don't get
                       // the enum type
+    case eFormatEnumWithValues:
     case eFormatDecimal:
       if (item_byte_size <= 8)
         s->Printf("%" PRId64,

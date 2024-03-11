@@ -115,6 +115,7 @@ static CompilerType GetCompilerTypeForFormat(lldb::Format format,
   case lldb::eFormatComplexInteger:
   case lldb::eFormatDecimal:
   case lldb::eFormatEnum:
+  case lldb::eFormatEnumWithValues:
   case lldb::eFormatInstruction:
   case lldb::eFormatOSType:
   case lldb::eFormatVoid:
@@ -150,6 +151,7 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
   case lldb::eFormatComplexInteger:
   case lldb::eFormatDecimal:
   case lldb::eFormatEnum:
+  case lldb::eFormatEnumWithValues:
   case lldb::eFormatInstruction:
   case lldb::eFormatOSType:
   case lldb::eFormatVoid:

@@ -1189,7 +1189,8 @@ bool ValueObject::DumpPrintableRepresentation(
         return !error.Fail();
       }
 
-      if (custom_format == eFormatEnum)
+      if (custom_format == eFormatEnum ||
+          custom_format == eFormatEnumWithValues)
         return false;
 
       // this only works for arrays, because I have no way to know when the
