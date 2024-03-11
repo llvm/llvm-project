@@ -1081,6 +1081,11 @@ private:
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
   };
+  static_assert(sizeof(AllocationRingBuffer) %
+                        alignof(typename AllocationRingBuffer::Entry) ==
+                    0,
+                "invalid alignment");
+
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
   atomic_uptr RingBufferAddress = {};
@@ -1585,10 +1590,6 @@ private:
 
     atomic_store(&RingBufferAddress, reinterpret_cast<uptr>(RB),
                  memory_order_release);
-    static_assert(sizeof(AllocationRingBuffer) %
-                          alignof(typename AllocationRingBuffer::Entry) ==
-                      0,
-                  "invalid alignment");
   }
 
   void unmapRingBuffer() {
