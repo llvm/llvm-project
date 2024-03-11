@@ -1947,18 +1947,11 @@ function(add_lit_target target comment)
     list(APPEND LIT_COMMAND --param ${param})
   endforeach()
   if (ARG_UNPARSED_ARGUMENTS)
-    if (LLVM_PARALLEL_LIT)
-     add_custom_target(${target}
-       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
-       COMMENT "${comment}"
-       )
-    else()
-     add_custom_target(${target}
-       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
-       COMMENT "${comment}"
-       USES_TERMINAL
-       )
-    endif()
+    add_custom_target(${target}
+      COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
+      COMMENT "${comment}"
+      USES_TERMINAL
+      )
   else()
     add_custom_target(${target}
       COMMAND ${CMAKE_COMMAND} -E echo "${target} does nothing, no tools built.")
