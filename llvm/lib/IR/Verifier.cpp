@@ -5241,8 +5241,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Type *SrcTy = Call.getOperand(0)->getType();
     Type *DestTy = Call.getType();
 
-    Check(SrcTy->isIntOrIntVectorTy(), "[u]scmp only operates on integers", Call);
-    Check(DestTy->isIntOrIntVectorTy(), "[u]scmp only produces integers", Call);
     Check(DestTy->getScalarSizeInBits() >= 2, "DestTy must be at least 2 bits wide", Call);
 
     bool isDestTypeVector = DestTy->isVectorTy();
