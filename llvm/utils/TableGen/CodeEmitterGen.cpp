@@ -434,10 +434,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
 
-  if (any_of(NumberedInstructions, [](const CodeGenInstruction *CGI) {
-        Record *R = CGI->TheDef;
-        return R->getValue("Inst") && isa<DagInit>(R->getValueInit("Inst"));
-      })) {
+  if (Target.hasVariableLengthEncodings()) {
     emitVarLenCodeEmitter(Records, o);
   } else {
     const CodeGenHwModes &HWM = Target.getHwModes();

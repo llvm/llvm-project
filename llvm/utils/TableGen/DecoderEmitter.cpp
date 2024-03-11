@@ -2499,8 +2499,8 @@ void DecoderEmitter::run(raw_ostream &o) {
   const auto &NumberedInstructions = Target.getInstructionsByEnumValue();
   NumberedEncodings.reserve(NumberedInstructions.size());
   for (const auto &NumberedInstruction : NumberedInstructions) {
-    if (const RecordVal *RV =
-            NumberedInstruction->TheDef->getValue("EncodingInfos")) {
+    const Record *InstDef = NumberedInstruction->TheDef;
+    if (const RecordVal *RV = InstDef->getValue("EncodingInfos")) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (auto &KV : EBM)
@@ -2513,12 +2513,11 @@ void DecoderEmitter::run(raw_ostream &o) {
     // This instruction is encoded the same on all HwModes. Emit it for all
     // HwModes by default, otherwise leave it in a single common table.
     if (DecoderEmitterSuppressDuplicates) {
-      NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
-                                     NumberedInstruction, "AllModes");
+      NumberedEncodings.emplace_back(InstDef, NumberedInstruction, "AllModes");
     } else {
       for (StringRef HwModeName : HwModeNames)
-        NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
-                                       NumberedInstruction, HwModeName);
+        NumberedEncodings.emplace_back(InstDef, NumberedInstruction,
+                                       HwModeName);
     }
   }
   for (const auto &NumberedAlias :
@@ -2531,12 +2530,7 @@ void DecoderEmitter::run(raw_ostream &o) {
       OpcMap;
   std::map<unsigned, std::vector<OperandInfo>> Operands;
   std::vector<unsigned> InstrLen;
-
-  bool IsVarLenInst =
-      any_of(NumberedInstructions, [](const CodeGenInstruction *CGI) {
-        RecordVal *RV = CGI->TheDef->getValue("Inst");
-        return RV && isa<DagInit>(RV->getValue());
-      });
+  bool IsVarLenInst = Target.hasVariableLengthEncodings();
   unsigned MaxInstLen = 0;
 
   for (unsigned i = 0; i < NumberedEncodings.size(); ++i) {
