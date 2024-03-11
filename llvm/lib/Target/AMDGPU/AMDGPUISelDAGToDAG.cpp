@@ -3327,35 +3327,41 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
 
   // 16 bit splat
   SDValue SplatSrc32 = stripBitcast(In);
-  if (auto *SplatSrc32BV = dyn_cast<BuildVectorSDNode>(SplatSrc32)) {
+  if (auto *SplatSrc32BV = dyn_cast<BuildVectorSDNode>(SplatSrc32))
     if (SDValue Splat32 = SplatSrc32BV->getSplatValue()) {
       SDValue SplatSrc16 = stripBitcast(Splat32);
-      if (auto *SplatSrc16BV = dyn_cast<BuildVectorSDNode>(SplatSrc16)) {
+      if (auto *SplatSrc16BV = dyn_cast<BuildVectorSDNode>(SplatSrc16))
         if (SDValue Splat = SplatSrc16BV->getSplatValue()) {
+          const SIInstrInfo *TII = Subtarget->getInstrInfo();
+          std::optional<APInt> RawValue;
+          if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat))
+            RawValue = C->getValueAPF().bitcastToAPInt();
+          else if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat))
+            RawValue = C->getAPIntValue();
 
-          // f16
-          if (isInlineImmediate(Splat.getNode())) {
-            const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat);
-            int64_t Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
-            Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i16);
-            return true;
-          }
-
-          // bf16
-          if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
-            const SIInstrInfo *TII = Subtarget->getInstrInfo();
-            APInt BF16Value = C->getAPIntValue();
-            APInt F32Value = BF16Value.zext(32).shl(16);
-            if (TII->isInlineConstant(F32Value)) {
-              int64_t Imm = F32Value.getSExtValue();
-              Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
-              return true;
-            }
+          if (RawValue.has_value()) {
+            EVT VT = In.getValueType().getScalarType();
+            if (VT.getSimpleVT() == MVT::f16 || VT.getSimpleVT() == MVT::bf16) {
+              APFloat FloatVal(VT.getSimpleVT() == MVT::f16
+                                   ? APFloatBase::IEEEhalf()
+                                   : APFloatBase::BFloat(),
+                               RawValue.value());
+              if (TII->isInlineConstant(FloatVal)) {
+                Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
+                                                MVT::i16);
+                return true;
+              }
+            } else if (VT.getSimpleVT() == MVT::i16) {
+              if (TII->isInlineConstant(RawValue.value())) {
+                Src = CurDAG->getTargetConstant(RawValue.value(), SDLoc(In),
+                                                MVT::i16);
+                return true;
+              }
+            } else
+              llvm_unreachable("unknown 16-bit type");
           }
         }
-      }
     }
-  }
 
   return false;
 }

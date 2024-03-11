@@ -599,7 +599,7 @@ v_mad_i16_e64 v5, -1, v2, v3
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_i16 v5, v1, -4.0, v3
-// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// VI: v_mad_i16 v5, v1, -4.0, v3 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0xef,0x0d,0x04]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_i16 v5, v1, v2, 0
@@ -615,7 +615,7 @@ v_mad_u16 v5, v1, 0, v3
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mad_u16 v5, v1, v2, -4.0
-// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// VI: v_mad_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x05,0xde,0x03]
 // NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ///===---------------------------------------------------------------------===//
