@@ -60,6 +60,10 @@ if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
     message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
   endif()
 endif()
+# We will build the GPU utilities if we are not doing a runtimes build.
+if(LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD)
+  add_subdirectory(utils/gpu)
+endif()
 
 set(NEED_LIBC_HDRGEN FALSE)
 if(NOT LLVM_RUNTIMES_BUILD)
@@ -79,11 +83,6 @@ if(LIBC_HDRGEN_ONLY OR NEED_LIBC_HDRGEN)
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
-
-  # Always make the RPC server availible to other projects for GPU mode.
-  if(LLVM_LIBC_GPU_BUILD)
-    add_subdirectory(utils/gpu/server)
-  endif()
   return()
 endif()
 unset(NEED_LIBC_HDRGEN)
