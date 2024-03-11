@@ -87,7 +87,7 @@ class StepOverBreakpointsTestCase(TestBase):
                     self.thread.GetFrameAtIndex(0).GetLineEntry().GetLine(), self.line4
                 )
                 # breakpoint_2 and _3 should not affect step count
-                self.assertTrue(step_count >= steps_expected)
+                self.assertGreaterEqual(step_count, steps_expected)
                 break
 
         # Run the process until termination

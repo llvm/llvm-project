@@ -197,7 +197,7 @@ static Error unbundleImages() {
 
       if (Error E = writeArchive(
               Args["file"], Members, SymtabWritingMode::NormalSymtab,
-              Archive::getDefaultKindForHost(), true, false, nullptr))
+              Archive::getDefaultKind(), true, false, nullptr))
         return E;
     } else if (Args.count("file")) {
       if (Extracted.size() > 1)

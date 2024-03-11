@@ -362,6 +362,7 @@ enum {
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
   ELFOSABI_AMDGPU_MESA3D = 66, // AMD GCN GPUs (GFX6+) for MESA runtime
   ELFOSABI_ARM = 97,           // ARM
+  ELFOSABI_ARM_FDPIC = 65,     // ARM FDPIC
   ELFOSABI_C6000_ELFABI = 64,  // Bare-metal TMS320C6000
   ELFOSABI_C6000_LINUX = 65,   // Linux TMS320C6000
   ELFOSABI_STANDALONE = 255,   // Standalone (embedded) application

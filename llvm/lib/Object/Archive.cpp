@@ -969,8 +969,8 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForHost() {
-  Triple HostTriple(sys::getProcessTriple());
+object::Archive::Kind Archive::getDefaultKind() {
+  Triple HostTriple(sys::getDefaultTargetTriple());
   return HostTriple.isOSDarwin()
              ? object::Archive::K_DARWIN
              : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG

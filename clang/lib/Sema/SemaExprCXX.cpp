@@ -890,6 +890,12 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
+  // Exceptions that escape a compute construct are ill-formed.
+  if (getLangOpts().OpenACC && getCurScope() &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::TryScope))
+    Diag(OpLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*throw*/ 2 << /*out of*/ 0;
+
   if (Ex && !Ex->isTypeDependent()) {
     // Initialize the exception result.  This implicitly weeds out
     // abstract types or types with inaccessible copy constructors.
@@ -1220,7 +1226,7 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
                     : nullptr;
     }
   }
-  return ASTCtx.getPointerType(ClassType);
+  return ThisTy;
 }
 
 QualType Sema::getCurrentThisType() {
@@ -1408,7 +1414,8 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
   return false;
 }
 
-ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
+ExprResult Sema::ActOnCXXThis(SourceLocation Loc,
+                              bool ThisRefersToClosureObject) {
   /// C++ 9.3.2: In the body of a non-static member function, the keyword this
   /// is a non-lvalue expression whose value is the address of the object for
   /// which the function is called.
@@ -1428,13 +1435,18 @@ ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
     return Diag(Loc, diag::err_invalid_this_use) << 0;
   }
 
-  return BuildCXXThisExpr(Loc, ThisTy, /*IsImplicit=*/false);
+  return BuildCXXThisExpr(Loc, ThisTy, /*IsImplicit=*/false,
+                          ThisRefersToClosureObject);
 }
 
-Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
-                             bool IsImplicit) {
+Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit,
+                             bool ThisRefersToClosureObject) {
   auto *This = CXXThisExpr::Create(Context, Loc, Type, IsImplicit);
-  MarkThisReferenced(This);
+
+  if (!ThisRefersToClosureObject) {
+    MarkThisReferenced(This);
+  }
+
   return This;
 }
 
@@ -4843,7 +4855,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                  .get();
       break;
     case ICK_Floating_Integral:
-      if (ToType->isRealFloatingType())
+      if (ToType->hasFloatingRepresentation())
         From =
             ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
                               /*BasePath=*/nullptr, CCK)
@@ -6010,6 +6022,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
 
     llvm_unreachable("unhandled type trait");
     return false;
+  }
+  case BTT_IsLayoutCompatible: {
+    return Self.IsLayoutCompatible(LhsT, RhsT);
   }
     default: llvm_unreachable("not a BTT");
   }

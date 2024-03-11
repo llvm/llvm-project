@@ -56,6 +56,7 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
+class ConstantRangeAttributeImpl;
 struct DiagnosticHandler;
 class DPMarker;
 class ElementCount;
@@ -1488,8 +1489,12 @@ public:
   DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
   DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntOneConstants;
   DenseMap<APInt, std::unique_ptr<ConstantInt>> IntConstants;
+  DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantInt>>
+      IntSplatConstants;
 
   DenseMap<APFloat, std::unique_ptr<ConstantFP>> FPConstants;
+  DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
+      FPSplatConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
   FoldingSet<AttributeListImpl> AttrsLists;
@@ -1558,6 +1563,8 @@ public:
 
   BumpPtrAllocator Alloc;
   UniqueStringSaver Saver{Alloc};
+  SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
+      ConstantRangeAttributeAlloc;
 
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 

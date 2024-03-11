@@ -468,6 +468,7 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
 bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
   int LatchIdx = PN->getBasicBlockIndex(LatchBlock);
+  assert(LatchIdx != -1 && "LatchBlock is not a case in this PHINode");
   Value *IncV = PN->getIncomingValue(LatchIdx);
 
   for (User *U : PN->users())
@@ -632,8 +633,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
         // RemoveDIs: do the same as below for DPValues.
         if (Block->IsNewDbgInfoFormat) {
-          for (DPValue &DPV :
-               llvm::make_early_inc_range(I.getDbgValueRange())) {
+          for (DPValue &DPV : llvm::make_early_inc_range(
+                   DPValue::filter(I.getDbgValueRange()))) {
             DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                               DPV.getDebugLoc().get());
             if (!DeadDebugSet.insert(Key).second)

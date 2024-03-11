@@ -128,7 +128,7 @@ class ChangeValueAPITestCase(TestBase):
             "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
         )
         stdout = process.GetSTDOUT(1000)
-        self.assertTrue(expected_value in stdout, "STDOUT showed changed values.")
+        self.assertIn(expected_value, stdout, "STDOUT showed changed values.")
 
         # Finally, change the stack pointer to 0, and we should not make it to
         # our end breakpoint.
@@ -150,8 +150,8 @@ class ChangeValueAPITestCase(TestBase):
 
         self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread is None,
+        self.assertIsNone(
+            thread,
             "We should not have managed to hit our second breakpoint with sp == 1",
         )
 

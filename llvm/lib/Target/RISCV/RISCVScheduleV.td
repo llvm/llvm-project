@@ -88,20 +88,25 @@ multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
     let ReleaseAtCycles = noPredReleaseCycles;
   }
 
+  // Define SchedVars
+  def nameMX # PredSchedVar
+      : SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>;
+  def nameMX # NoPredSchedVar
+      : SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX #"_NoPred")]>;
+  // Allow multiclass to refer to SchedVars -- need to have NAME prefix.
+  defvar PredSchedVar = !cast<SchedVar>(NAME # nameMX # PredSchedVar);
+  defvar NoPredSchedVar = !cast<SchedVar>(NAME # nameMX # NoPredSchedVar);
+
   // Tie behavior to predicate
-  def NAME # nameMX # "_Variant" : SchedWriteVariant<[
-    SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
-    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
-  ]>;
+  def NAME # nameMX # "_Variant"
+      : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
   def : SchedAlias<
     !cast<SchedReadWrite>(nameMX),
     !cast<SchedReadWrite>(NAME # nameMX # "_Variant")>;
 
   if IsWorstCase then {
-    def NAME # name # "_WorstCase_Variant" : SchedWriteVariant<[
-      SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
-      SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
-    ]>;
+    def NAME # name # "_WorstCase_Variant"
+      : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
     def : SchedAlias<
       !cast<SchedReadWrite>(name # "_WorstCase"),
       !cast<SchedReadWrite>(NAME # name # "_WorstCase_Variant")>;

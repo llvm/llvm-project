@@ -46,7 +46,7 @@ class ExprCommandWithThrowTestCase(TestBase):
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
         self.assertTrue(value.IsValid())
-        self.assertEqual(value.GetError().Success(), False)
+        self.assertFalse(value.GetError().Success())
 
         self.check_after_call()
 
@@ -55,7 +55,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         handler_bkpt = target.BreakpointCreateBySourceRegex(
             "I felt like it", self.main_source_spec
         )
-        self.assertTrue(handler_bkpt.GetNumLocations() > 0)
+        self.assertGreater(handler_bkpt.GetNumLocations(), 0)
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)
 
@@ -69,7 +69,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         exception_bkpt = target.BreakpointCreateForException(
             lldb.eLanguageTypeObjC, False, True
         )
-        self.assertTrue(exception_bkpt.GetNumLocations() > 0)
+        self.assertGreater(exception_bkpt.GetNumLocations(), 0)
 
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)

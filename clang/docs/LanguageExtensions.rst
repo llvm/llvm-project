@@ -833,6 +833,7 @@ to ``float``; see below for more information on this emulation.
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
+  * NVPTX (natively)
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
@@ -1582,6 +1583,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_integral`` (C++, Embarcadero)
 * ``__is_interface_class`` (Microsoft):
   Returns ``false``, even for types defined with ``__interface``.
+* ``__is_layout_compatible`` (C++, GNU, Microsoft)
 * ``__is_literal`` (Clang):
   Synonym for ``__is_literal_type``.
 * ``__is_literal_type`` (C++, GNU, Microsoft):
@@ -2797,6 +2799,34 @@ counter's true frequency will need to be provided by the user.
 
 Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 
+``__builtin_cpu_supports``
+--------------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_cpu_supports(const char *features);
+
+**Example of Use:**:
+
+.. code-block:: c++
+
+  if (__builtin_cpu_supports("sve"))
+    sve_code();
+
+**Description**:
+
+The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
+features specified in string argument. It returns a positive integer if all
+features are supported and 0 otherwise. Feature names are target specific. On
+AArch64 features are combined using ``+`` like this
+``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
+If a feature name is not supported, Clang will issue a warning and replace
+builtin by the constant 0.
+
+Query for this feature with ``__has_builtin(__builtin_cpu_supports)``.
+
 ``__builtin_dump_struct``
 -------------------------
 
@@ -3470,6 +3500,37 @@ builtin, the mangler emits their usual pattern without any special treatment.
 
   // Computes a unique stable name for the given type.
   constexpr const char * __builtin_sycl_unique_stable_name( type-id );
+
+``__builtin_popcountg``
+-----------------------
+
+``__builtin_popcountg`` returns the number of 1 bits in the argument. The
+argument can be of any unsigned integer type.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_popcountg(type x)
+
+**Examples**:
+
+.. code-block:: c++
+
+  unsigned int x = 1;
+  int x_pop = __builtin_popcountg(x);
+
+  unsigned long y = 3;
+  int y_pop = __builtin_popcountg(y);
+
+  unsigned _BitInt(128) z = 7;
+  int z_pop = __builtin_popcountg(z);
+
+**Description**:
+
+``__builtin_popcountg`` is meant to be a type-generic alternative to the
+``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
+such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -5317,6 +5378,7 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_popcount``
 * ``__builtin_popcountl``
 * ``__builtin_popcountll``
+* ``__builtin_popcountg``
 * ``__builtin_rotateleft8``
 * ``__builtin_rotateleft16``
 * ``__builtin_rotateleft32``

@@ -742,6 +742,67 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
     Reqs.addRequirements(SPIRV::Capability::ImageBasic);
 }
 
+// Add requirements for handling atomic float instructions
+#define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
+  "The atomic float instruction requires the following SPIR-V "                \
+  "extension: SPV_EXT_shader_atomic_float" ExtName
+static void AddAtomicFloatRequirements(const MachineInstr &MI,
+                                       SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST) {
+  assert(MI.getOperand(1).isReg() &&
+         "Expect register operand in atomic float instruction");
+  Register TypeReg = MI.getOperand(1).getReg();
+  SPIRVType *TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
+  if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
+    report_fatal_error("Result type of an atomic float instruction must be a "
+                       "floating-point type scalar");
+
+  unsigned BitWidth = TypeDef->getOperand(1).getImm();
+  unsigned Op = MI.getOpcode();
+  if (Op == SPIRV::OpAtomicFAddEXT) {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add))
+      report_fatal_error(ATOM_FLT_REQ_EXT_MSG("_add"), false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add);
+    switch (BitWidth) {
+    case 16:
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
+        report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      break;
+    case 32:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat32AddEXT);
+      break;
+    case 64:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat64AddEXT);
+      break;
+    default:
+      report_fatal_error(
+          "Unexpected floating-point type width in atomic float instruction");
+    }
+  } else {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max))
+      report_fatal_error(ATOM_FLT_REQ_EXT_MSG("_min_max"), false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max);
+    switch (BitWidth) {
+    case 16:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      break;
+    case 32:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat32MinMaxEXT);
+      break;
+    case 64:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat64MinMaxEXT);
+      break;
+    default:
+      report_fatal_error(
+          "Unexpected floating-point type width in atomic float instruction");
+    }
+  }
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::RequirementHandler &Reqs,
                           const SPIRVSubtarget &ST) {
@@ -1002,16 +1063,66 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
+  case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes);
+      Reqs.addCapability(SPIRV::Capability::USMStorageClassesINTEL);
+    }
+    break;
   case SPIRV::OpConstantFunctionPointerINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
     break;
+  case SPIRV::OpGroupNonUniformRotateKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
+      report_fatal_error("OpGroupNonUniformRotateKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_subgroup_rotate",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformRotateKHR);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
+    break;
+  case SPIRV::OpGroupIMulKHR:
+  case SPIRV::OpGroupFMulKHR:
+  case SPIRV::OpGroupBitwiseAndKHR:
+  case SPIRV::OpGroupBitwiseOrKHR:
+  case SPIRV::OpGroupBitwiseXorKHR:
+  case SPIRV::OpGroupLogicalAndKHR:
+  case SPIRV::OpGroupLogicalOrKHR:
+  case SPIRV::OpGroupLogicalXorKHR:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_uniform_group_instructions);
+      Reqs.addCapability(SPIRV::Capability::GroupUniformArithmeticKHR);
+    }
+    break;
   case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
+  case SPIRV::OpAtomicFAddEXT:
+  case SPIRV::OpAtomicFMinEXT:
+  case SPIRV::OpAtomicFMaxEXT:
+    AddAtomicFloatRequirements(MI, Reqs, ST);
+    break;
+  case SPIRV::OpConvertBF16ToFINTEL:
+  case SPIRV::OpConvertFToBF16INTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
+    }
+    break;
+  case SPIRV::OpVariableLengthArrayINTEL:
+  case SPIRV::OpSaveMemoryINTEL:
+  case SPIRV::OpRestoreMemoryINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
+      Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
     }
     break;
   default:
@@ -1039,6 +1150,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
+    // SPV_KHR_float_controls is not available until v1.4
+    bool RequireFloatControls = false, VerLower14 = !ST.isAtLeastSPIRVVer(14);
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       const MDOperand &MDOp = MDN->getOperand(1);
@@ -1048,9 +1161,22 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           auto EM = Const->getZExtValue();
           MAI.Reqs.getAndAddRequirements(
               SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+          // add SPV_KHR_float_controls if the version is too low
+          switch (EM) {
+          case SPIRV::ExecutionMode::DenormPreserve:
+          case SPIRV::ExecutionMode::DenormFlushToZero:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+          case SPIRV::ExecutionMode::RoundingModeRTE:
+          case SPIRV::ExecutionMode::RoundingModeRTZ:
+            RequireFloatControls = VerLower14;
+            break;
+          }
         }
       }
     }
+    if (RequireFloatControls &&
+        ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;

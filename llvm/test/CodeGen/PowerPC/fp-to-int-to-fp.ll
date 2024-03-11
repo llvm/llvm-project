@@ -66,61 +66,60 @@ define float @fooul(float %X) #0 {
 ; PPC64-LABEL: fooul:
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; PPC64-NEXT:    li 4, 1
 ; PPC64-NEXT:    lfs 0, .LCPI2_0@toc@l(3)
-; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    fsubs 2, 1, 0
 ; PPC64-NEXT:    fcmpu 0, 1, 0
 ; PPC64-NEXT:    fctidz 2, 2
 ; PPC64-NEXT:    stfd 2, -8(1)
 ; PPC64-NEXT:    fctidz 2, 1
 ; PPC64-NEXT:    stfd 2, -16(1)
+; PPC64-NEXT:    blt 0, .LBB2_2
+; PPC64-NEXT:  # %bb.1: # %entry
 ; PPC64-NEXT:    ld 3, -8(1)
-; PPC64-NEXT:    ld 5, -16(1)
+; PPC64-NEXT:    li 4, 1
+; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    xor 3, 3, 4
-; PPC64-NEXT:    bc 12, 0, .LBB2_1
-; PPC64-NEXT:    b .LBB2_2
-; PPC64-NEXT:  .LBB2_1: # %entry
-; PPC64-NEXT:    addi 3, 5, 0
-; PPC64-NEXT:  .LBB2_2: # %entry
+; PPC64-NEXT:    b .LBB2_3
+; PPC64-NEXT:  .LBB2_2:
+; PPC64-NEXT:    ld 3, -16(1)
+; PPC64-NEXT:  .LBB2_3: # %entry
 ; PPC64-NEXT:    sradi 4, 3, 53
-; PPC64-NEXT:    rldicl 5, 3, 63, 1
 ; PPC64-NEXT:    addi 4, 4, 1
-; PPC64-NEXT:    clrldi 6, 3, 63
 ; PPC64-NEXT:    cmpldi 4, 1
-; PPC64-NEXT:    clrldi 4, 3, 53
-; PPC64-NEXT:    or 6, 6, 5
-; PPC64-NEXT:    clrldi 7, 6, 53
-; PPC64-NEXT:    addi 4, 4, 2047
-; PPC64-NEXT:    addi 7, 7, 2047
-; PPC64-NEXT:    or 4, 4, 3
-; PPC64-NEXT:    or 5, 7, 5
-; PPC64-NEXT:    rldicl 7, 3, 10, 54
-; PPC64-NEXT:    rldicr 4, 4, 0, 52
-; PPC64-NEXT:    addi 7, 7, 1
-; PPC64-NEXT:    bc 12, 1, .LBB2_4
-; PPC64-NEXT:  # %bb.3: # %entry
-; PPC64-NEXT:    ori 4, 3, 0
-; PPC64-NEXT:    b .LBB2_4
-; PPC64-NEXT:  .LBB2_4: # %entry
-; PPC64-NEXT:    rldicl 5, 5, 53, 11
-; PPC64-NEXT:    std 4, -32(1)
-; PPC64-NEXT:    rldicl 4, 5, 11, 1
-; PPC64-NEXT:    cmpldi 7, 1
-; PPC64-NEXT:    bc 12, 1, .LBB2_6
-; PPC64-NEXT:  # %bb.5: # %entry
-; PPC64-NEXT:    ori 4, 6, 0
+; PPC64-NEXT:    bgt 0, .LBB2_5
+; PPC64-NEXT:  # %bb.4: # %entry
+; PPC64-NEXT:    mr 4, 3
 ; PPC64-NEXT:    b .LBB2_6
+; PPC64-NEXT:  .LBB2_5:
+; PPC64-NEXT:    clrldi 4, 3, 53
+; PPC64-NEXT:    addi 4, 4, 2047
+; PPC64-NEXT:    or 4, 4, 3
+; PPC64-NEXT:    rldicr 4, 4, 0, 52
 ; PPC64-NEXT:  .LBB2_6: # %entry
+; PPC64-NEXT:    rldicl 5, 3, 10, 54
+; PPC64-NEXT:    clrldi 6, 3, 63
+; PPC64-NEXT:    std 4, -32(1)
+; PPC64-NEXT:    addi 5, 5, 1
+; PPC64-NEXT:    cmpldi 5, 1
+; PPC64-NEXT:    rldicl 5, 3, 63, 1
+; PPC64-NEXT:    or 4, 6, 5
+; PPC64-NEXT:    ble 0, .LBB2_8
+; PPC64-NEXT:  # %bb.7:
+; PPC64-NEXT:    clrldi 4, 4, 53
+; PPC64-NEXT:    addi 4, 4, 2047
+; PPC64-NEXT:    or 4, 4, 5
+; PPC64-NEXT:    rldicl 4, 4, 53, 11
+; PPC64-NEXT:    rldicl 4, 4, 11, 1
+; PPC64-NEXT:  .LBB2_8: # %entry
 ; PPC64-NEXT:    cmpdi 3, 0
 ; PPC64-NEXT:    std 4, -24(1)
-; PPC64-NEXT:    bc 12, 0, .LBB2_8
-; PPC64-NEXT:  # %bb.7: # %entry
+; PPC64-NEXT:    bc 12, 0, .LBB2_10
+; PPC64-NEXT:  # %bb.9: # %entry
 ; PPC64-NEXT:    lfd 0, -32(1)
 ; PPC64-NEXT:    fcfid 0, 0
 ; PPC64-NEXT:    frsp 1, 0
 ; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB2_8:
+; PPC64-NEXT:  .LBB2_10:
 ; PPC64-NEXT:    lfd 0, -24(1)
 ; PPC64-NEXT:    fcfid 0, 0
 ; PPC64-NEXT:    frsp 0, 0
@@ -148,34 +147,34 @@ define double @fooudl(double %X) #0 {
 ; PPC64-LABEL: fooudl:
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; PPC64-NEXT:    li 4, 1
 ; PPC64-NEXT:    lfs 0, .LCPI3_0@toc@l(3)
-; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    fsub 2, 1, 0
 ; PPC64-NEXT:    fcmpu 0, 1, 0
 ; PPC64-NEXT:    fctidz 2, 2
 ; PPC64-NEXT:    stfd 2, -8(1)
 ; PPC64-NEXT:    fctidz 2, 1
 ; PPC64-NEXT:    stfd 2, -16(1)
+; PPC64-NEXT:    blt 0, .LBB3_2
+; PPC64-NEXT:  # %bb.1: # %entry
 ; PPC64-NEXT:    ld 3, -8(1)
-; PPC64-NEXT:    ld 5, -16(1)
+; PPC64-NEXT:    li 4, 1
+; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    xor 3, 3, 4
-; PPC64-NEXT:    li 4, 1107
-; PPC64-NEXT:    rldic 4, 4, 52, 1
-; PPC64-NEXT:    bc 12, 0, .LBB3_1
-; PPC64-NEXT:    b .LBB3_2
-; PPC64-NEXT:  .LBB3_1: # %entry
-; PPC64-NEXT:    addi 3, 5, 0
-; PPC64-NEXT:  .LBB3_2: # %entry
-; PPC64-NEXT:    rldicl 5, 3, 32, 32
+; PPC64-NEXT:    b .LBB3_3
+; PPC64-NEXT:  .LBB3_2:
+; PPC64-NEXT:    ld 3, -16(1)
+; PPC64-NEXT:  .LBB3_3: # %entry
+; PPC64-NEXT:    li 5, 1107
+; PPC64-NEXT:    rldicl 4, 3, 32, 32
+; PPC64-NEXT:    rldic 5, 5, 52, 1
 ; PPC64-NEXT:    clrldi 3, 3, 32
-; PPC64-NEXT:    or 4, 5, 4
-; PPC64-NEXT:    addis 5, 2, .LCPI3_1@toc@ha
+; PPC64-NEXT:    or 4, 4, 5
+; PPC64-NEXT:    li 5, 1075
 ; PPC64-NEXT:    std 4, -24(1)
-; PPC64-NEXT:    li 4, 1075
-; PPC64-NEXT:    rldic 4, 4, 52, 1
+; PPC64-NEXT:    addis 4, 2, .LCPI3_1@toc@ha
+; PPC64-NEXT:    lfd 0, .LCPI3_1@toc@l(4)
+; PPC64-NEXT:    rldic 4, 5, 52, 1
 ; PPC64-NEXT:    or 3, 3, 4
-; PPC64-NEXT:    lfd 0, .LCPI3_1@toc@l(5)
 ; PPC64-NEXT:    std 3, -32(1)
 ; PPC64-NEXT:    lfd 1, -24(1)
 ; PPC64-NEXT:    lfd 2, -32(1)
@@ -269,12 +268,10 @@ define double @si1_to_f64(i1 %X) #0 {
 ; PPC64-LABEL: si1_to_f64:
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    andi. 3, 3, 1
-; PPC64-NEXT:    li 4, -1
+; PPC64-NEXT:    li 3, -1
+; PPC64-NEXT:    bc 12, 1, .LBB6_2
+; PPC64-NEXT:  # %bb.1: # %entry
 ; PPC64-NEXT:    li 3, 0
-; PPC64-NEXT:    bc 12, 1, .LBB6_1
-; PPC64-NEXT:    b .LBB6_2
-; PPC64-NEXT:  .LBB6_1: # %entry
-; PPC64-NEXT:    addi 3, 4, 0
 ; PPC64-NEXT:  .LBB6_2: # %entry
 ; PPC64-NEXT:    std 3, -8(1)
 ; PPC64-NEXT:    lfd 0, -8(1)

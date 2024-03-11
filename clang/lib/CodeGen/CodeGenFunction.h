@@ -352,6 +352,25 @@ public:
     return isCoroutine() && CurCoro.InSuspendBlock;
   }
 
+  // Holds FramePtr for await_suspend wrapper generation,
+  // so that __builtin_coro_frame call can be lowered
+  // directly to value of its second argument
+  struct AwaitSuspendWrapperInfo {
+    llvm::Value *FramePtr = nullptr;
+  };
+  AwaitSuspendWrapperInfo CurAwaitSuspendWrapper;
+
+  // Generates wrapper function for `llvm.coro.await.suspend.*` intrinisics.
+  // It encapsulates SuspendExpr in a function, to separate it's body
+  // from the main coroutine to avoid miscompilations. Intrinisic
+  // is lowered to this function call in CoroSplit pass
+  // Function signature is:
+  // <type> __await_suspend_wrapper_<name>(ptr %awaiter, ptr %hdl)
+  // where type is one of (void, i1, ptr)
+  llvm::Function *generateAwaitSuspendWrapper(Twine const &CoroName,
+                                              Twine const &SuspendPointName,
+                                              CoroutineSuspendExpr const &S);
+
   /// CurGD - The GlobalDecl for the current function being compiled.
   GlobalDecl CurGD;
 
@@ -1545,7 +1564,7 @@ public:
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
         !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
-      PGO.emitCounterIncrement(Builder, S, StepV);
+      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
 
@@ -4405,6 +4424,7 @@ public:
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -5013,9 +5033,9 @@ private:
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *
   FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
-
 
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {

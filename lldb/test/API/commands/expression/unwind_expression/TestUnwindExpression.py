@@ -70,8 +70,9 @@ class UnwindFromExpressionTest(TestBase):
 
         self.assertTrue(val.GetError().Fail(), "We did not complete the execution.")
         error_str = val.GetError().GetCString()
-        self.assertTrue(
-            "Execution was interrupted, reason: breakpoint" in error_str,
+        self.assertIn(
+            "Execution was interrupted, reason: breakpoint",
+            error_str,
             "And the reason was right.",
         )
 

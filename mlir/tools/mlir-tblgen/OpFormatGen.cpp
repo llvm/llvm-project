@@ -1414,7 +1414,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     }
     body.unindent() << "}\n";
     body.unindent();
-  } else if (dyn_cast<PropDictDirective>(element)) {
+  } else if (isa<PropDictDirective>(element)) {
     body << "  if (parseProperties(parser, result))\n"
          << "    return ::mlir::failure();\n";
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
@@ -2239,7 +2239,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
   }
 
   // Emit the attribute dictionary.
-  if (dyn_cast<PropDictDirective>(element)) {
+  if (isa<PropDictDirective>(element)) {
     genPropDictPrinter(*this, op, body);
     lastWasPunctuation = false;
     return;

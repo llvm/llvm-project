@@ -808,6 +808,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_cabs);
     TLI.setUnavailable(LibFunc_cabsf);
     TLI.setUnavailable(LibFunc_cabsl);
+    TLI.setUnavailable(LibFunc_erf);
+    TLI.setUnavailable(LibFunc_erff);
+    TLI.setUnavailable(LibFunc_erfl);
     TLI.setUnavailable(LibFunc_ffs);
     TLI.setUnavailable(LibFunc_flockfile);
     TLI.setUnavailable(LibFunc_fseeko);

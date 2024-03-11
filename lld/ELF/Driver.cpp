@@ -1436,6 +1436,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->zInterpose = hasZOption(args, "interpose");
   config->zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
+  config->zLrodataAfterBss =
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
   config->zNodefaultlib = hasZOption(args, "nodefaultlib");
   config->zNodelete = hasZOption(args, "nodelete");
   config->zNodlopen = hasZOption(args, "nodlopen");
@@ -2300,9 +2302,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
+    sym = &s->file->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
+    sym = &s->file->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 

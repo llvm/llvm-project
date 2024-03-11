@@ -24,9 +24,11 @@ namespace mlir {
 // Forward declarations.
 class Attribute;
 class Block;
+struct ConversionConfig;
 class ConversionPatternRewriter;
 class MLIRContext;
 class Operation;
+struct OperationConverter;
 class Type;
 class Value;
 
@@ -657,12 +659,13 @@ struct ConversionPatternRewriterImpl;
 /// hooks.
 class ConversionPatternRewriter final : public PatternRewriter {
 public:
-  explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
 
   /// Apply a signature conversion to the entry block of the given region. This
   /// replaces the entry block with a new block containing the updated
   /// signature. The new entry block to the region is returned for convenience.
+  /// If no block argument types are changing, the entry original block will be
+  /// left in place and returned.
   ///
   /// If provided, `converter` will be used for any materializations.
   Block *
@@ -671,8 +674,11 @@ public:
                            const TypeConverter *converter = nullptr);
 
   /// Convert the types of block arguments within the given region. This
-  /// replaces each block with a new block containing the updated signature. The
-  /// entry block may have a special conversion if `entryConversion` is
+  /// replaces each block with a new block containing the updated signature. If
+  /// an updated signature would match the current signature, the respective
+  /// block is left in place as is.
+  ///
+  /// The entry block may have a special conversion if `entryConversion` is
   /// provided. On success, the new entry block to the region is returned for
   /// convenience. Otherwise, failure is returned.
   FailureOr<Block *> convertRegionTypes(
@@ -681,7 +687,8 @@ public:
 
   /// Convert the types of block arguments within the given region except for
   /// the entry region. This replaces each non-entry block with a new block
-  /// containing the updated signature.
+  /// containing the updated signature. If an updated signature would match the
+  /// current signature, the respective block is left in place as is.
   ///
   /// If special conversion behavior is needed for the non-entry blocks (for
   /// example, we need to convert only a subset of a BB arguments), such
@@ -713,12 +720,6 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing an operation when the given functor
-  /// returns "true".
-  void replaceOpWithIf(
-      Operation *op, ValueRange newValues, bool *allUsesReplaced,
-      llvm::unique_function<bool(OpOperand &) const> functor) override;
-
   /// PatternRewriter hook for replacing an operation.
   void replaceOp(Operation *op, ValueRange newValues) override;
 
@@ -734,9 +735,6 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook for splitting a block into two parts.
-  Block *splitBlock(Block *block, Block::iterator before) override;
-
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
                          ValueRange argValues = std::nullopt) override;
@@ -744,8 +742,8 @@ public:
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
-  /// and not nested regions. Updates to regions will still require
-  /// notification through other more specific hooks above.
+  /// and not nested regions. Updates to regions will still require notification
+  /// through other more specific hooks above.
   void startOpModification(Operation *op) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
@@ -758,6 +756,15 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  // Allow OperationConverter to construct new rewriters.
+  friend struct OperationConverter;
+
+  /// Conversion pattern rewriters must not be used outside of dialect
+  /// conversions. They apply some IR rewrites in a delayed fashion and could
+  /// bring the IR into an inconsistent state when used standalone.
+  explicit ConversionPatternRewriter(MLIRContext *ctx,
+                                     const ConversionConfig &config);
+
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
 
@@ -1057,6 +1064,63 @@ public:
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 //===----------------------------------------------------------------------===//
+// ConversionConfig
+//===----------------------------------------------------------------------===//
+
+/// Dialect conversion configuration.
+struct ConversionConfig {
+  /// An optional callback used to notify about match failure diagnostics during
+  /// the conversion. Diagnostics reported to this callback may only be
+  /// available in debug mode.
+  function_ref<void(Diagnostic &)> notifyCallback = nullptr;
+
+  /// Partial conversion only. All operations that are found not to be
+  /// legalizable are placed in this set. (Note that if there is an op
+  /// explicitly marked as illegal, the conversion terminates and the set will
+  /// not necessarily be complete.)
+  DenseSet<Operation *> *unlegalizedOps = nullptr;
+
+  /// Analysis conversion only. All operations that are found to be legalizable
+  /// are placed in this set. Note that no actual rewrites are applied to the
+  /// IR during an analysis conversion and only pre-existing operations are
+  /// added to the set.
+  DenseSet<Operation *> *legalizableOps = nullptr;
+
+  /// An optional listener that is notified about all IR modifications in case
+  /// dialect conversion succeeds. If the dialect conversion fails and no IR
+  /// modifications are visible (i.e., they were all rolled back), no
+  /// notifications are sent.
+  ///
+  /// Note: Notifications are sent in a delayed fashion, when the dialect
+  /// conversion is guaranteed to succeed. At that point, some IR modifications
+  /// may already have been materialized. Consequently, operations/blocks that
+  /// are passed to listener callbacks should not be accessed. (Ops/blocks are
+  /// guaranteed to be valid pointers and accessing op names is allowed. But
+  /// there are no guarantees about the state of ops/blocks at the time that a
+  /// callback is triggered.)
+  ///
+  /// Example: Consider a dialect conversion a new op ("test.foo") is created
+  /// and inserted, and later moved to another block. (Moving ops also triggers
+  /// "notifyOperationInserted".)
+  ///
+  /// (1) notifyOperationInserted: "test.foo" (into block "b1")
+  /// (2) notifyOperationInserted: "test.foo" (moved to another block "b2")
+  ///
+  /// When querying "op->getBlock()" during the first "notifyOperationInserted",
+  /// "b2" would be returned because "moving an op" is a kind of rewrite that is
+  /// immediately performed by the dialect conversion (and rolled back upon
+  /// failure).
+  //
+  // Note: When receiving a "notifyBlockInserted"/"notifyOperationInserted"
+  // callback, the previous region/block is provided to the callback, but not
+  // the iterator pointing to the exact location within the region/block. That
+  // is because these notifications are sent with a delay (after the IR has
+  // already been modified) and iterators into past IR state cannot be
+  // represented at the moment.
+  RewriterBase::Listener *listener = nullptr;
+};
+
+//===----------------------------------------------------------------------===//
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
@@ -1069,19 +1133,16 @@ public:
 /// Apply a partial conversion on the given operations and all nested
 /// operations. This method converts as many operations to the target as
 /// possible, ignoring operations that failed to legalize. This method only
-/// returns failure if there ops explicitly marked as illegal. If an
-/// `unconvertedOps` set is provided, all operations that are found not to be
-/// legalizable to the given `target` are placed within that set. (Note that if
-/// there is an op explicitly marked as illegal, the conversion terminates and
-/// the `unconvertedOps` set will not necessarily be complete.)
+/// returns failure if there ops explicitly marked as illegal.
 LogicalResult
-applyPartialConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
+applyPartialConversion(ArrayRef<Operation *> ops,
+                       const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
-                       DenseSet<Operation *> *unconvertedOps = nullptr);
+                       ConversionConfig config = ConversionConfig());
 LogicalResult
 applyPartialConversion(Operation *op, const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
-                       DenseSet<Operation *> *unconvertedOps = nullptr);
+                       ConversionConfig config = ConversionConfig());
 
 /// Apply a complete conversion on the given operations, and all nested
 /// operations. This method returns failure if the conversion of any operation
@@ -1089,31 +1150,27 @@ applyPartialConversion(Operation *op, const ConversionTarget &target,
 /// within 'ops'.
 LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
                                   const ConversionTarget &target,
-                                  const FrozenRewritePatternSet &patterns);
+                                  const FrozenRewritePatternSet &patterns,
+                                  ConversionConfig config = ConversionConfig());
 LogicalResult applyFullConversion(Operation *op, const ConversionTarget &target,
-                                  const FrozenRewritePatternSet &patterns);
+                                  const FrozenRewritePatternSet &patterns,
+                                  ConversionConfig config = ConversionConfig());
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
 /// converted to the target if a conversion was applied. All operations that
 /// were found to be legalizable to the given 'target' are placed within the
-/// provided 'convertedOps' set; note that no actual rewrites are applied to the
-/// operations on success and only pre-existing operations are added to the set.
-/// This method only returns failure if there are unreachable blocks in any of
-/// the regions nested within 'ops'. There's an additional argument
-/// `notifyCallback` which is used for collecting match failure diagnostics
-/// generated during the conversion. Diagnostics are only reported to this
-/// callback may only be available in debug mode.
-LogicalResult applyAnalysisConversion(
-    ArrayRef<Operation *> ops, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns,
-    DenseSet<Operation *> &convertedOps,
-    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
-LogicalResult applyAnalysisConversion(
-    Operation *op, ConversionTarget &target,
-    const FrozenRewritePatternSet &patterns,
-    DenseSet<Operation *> &convertedOps,
-    function_ref<void(Diagnostic &)> notifyCallback = nullptr);
+/// provided 'config.legalizableOps' set; note that no actual rewrites are
+/// applied to the operations on success. This method only returns failure if
+/// there are unreachable blocks in any of the regions nested within 'ops'.
+LogicalResult
+applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+                        const FrozenRewritePatternSet &patterns,
+                        ConversionConfig config = ConversionConfig());
+LogicalResult
+applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                        const FrozenRewritePatternSet &patterns,
+                        ConversionConfig config = ConversionConfig());
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_
