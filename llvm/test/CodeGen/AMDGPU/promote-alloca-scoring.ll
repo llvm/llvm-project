@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -debug-only=amdgpu-promote-alloca -amdgpu-promote-alloca-to-vector-limit=512 -promote-alloca-vector-whole-function -passes=amdgpu-promote-alloca %s -o - 2>&1 | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -debug-only=amdgpu-promote-alloca -amdgpu-promote-alloca-to-vector-limit=512 -passes=amdgpu-promote-alloca %s -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK:      Before sorting allocas:
@@ -30,7 +30,7 @@ entry:
   %v0.ext = zext i8 %v0 to i32
   store i32 %v0.ext, ptr addrspace(5) %manyusers.1
 
-  %manyusers.2 = bitcast ptr addrspace(5) %manyusers to ptr addrspace(5)
+  %manyusers.2 = getelementptr i8, ptr addrspace(5) %manyusers, i64 1
   %v1 = load i8, ptr addrspace(5)  %manyusers.2
   %v1.ext = zext i8 %v0 to i32
   store i32 %v1.ext, ptr addrspace(5) %manyusers.2

@@ -66,17 +66,10 @@ static cl::opt<unsigned> PromoteAllocaToVectorLimit(
     cl::desc("Maximum byte size to consider promote alloca to vector"),
     cl::init(0));
 
-static cl::opt<bool> PromoteAllocaWholeFn(
-    "promote-alloca-vector-whole-function",
-    cl::desc("Collect, analyze and sort all allocas within a function before "
-             "promoting them to vector. When disabled, allocas are promoted "
-             "one by one in isolation"),
-    cl::init(true));
 static cl::opt<unsigned>
     LoopUserWeight("promote-alloca-vector-loop-user-weight",
                    cl::desc("The bonus weight of users of allocas within loop "
-                            "when sorting profitable alloca for whole-function "
-                            "alloca promotion to vector"),
+                            "when sorting profitable allocas"),
                    cl::init(4));
 
 // Shared implementation which can do both promotion to vector and to LDS.
@@ -269,15 +262,12 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     unsigned &Score = Scores[Alloca];
     // Increment score by one for each user + a bonus for users within loops.
     //
-    // Look through GEPs and bitcasts for additional users.
-    SmallVector<User *, 8> WorkList;
-    WorkList.append(Alloca->user_begin(), Alloca->user_end());
+    // Look through GEPs for additional users.
+    SmallVector<User *, 8> WorkList(Alloca->user_begin(), Alloca->user_end());
     while (!WorkList.empty()) {
-      auto *Inst = dyn_cast<Instruction>(WorkList.pop_back_val());
-      if (!Inst)
-        continue;
+      auto *Inst = cast<Instruction>(WorkList.pop_back_val());
 
-      if (isa<BitCastInst>(Inst) || isa<GetElementPtrInst>(Inst)) {
+      if (isa<GetElementPtrInst>(Inst)) {
         WorkList.append(Inst->user_begin(), Inst->user_end());
         continue;
       }
@@ -329,8 +319,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     }
   }
 
-  if (PromoteAllocaWholeFn)
-    sortAllocasToPromote(Allocas);
+  sortAllocasToPromote(Allocas);
 
   bool Changed = false;
   for (AllocaInst *AI : Allocas) {
@@ -343,17 +332,13 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
 
     if (tryPromoteAllocaToVector(*AI)) {
       Changed = true;
-      if (PromoteAllocaWholeFn) {
-        // When PromoteAllocaWholeFn is enabled, the budget applies for the
-        // whole function. Otherwise it's per alloca.
-        assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
-               "Underflow!");
-        VectorizationBudget -= AllocaCost;
-        LLVM_DEBUG(dbgs() << "  Remaining vectorization budget:"
-                          << VectorizationBudget << "\n");
-        if (VectorizationBudget == 0)
-          break;
-      }
+      assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
+             "Underflow!");
+      VectorizationBudget -= AllocaCost;
+      LLVM_DEBUG(dbgs() << "  Remaining vectorization budget:"
+                        << VectorizationBudget << "\n");
+      if (VectorizationBudget == 0)
+        break;
     } else if (PromoteToLDS && tryPromoteAllocaToLDS(*AI, SufficientLDS))
       Changed = true;
   }
