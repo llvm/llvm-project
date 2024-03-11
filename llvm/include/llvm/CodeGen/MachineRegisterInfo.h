@@ -244,14 +244,13 @@ public:
   bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
 
   /// Returns true if a register can be used as an argument to a function.
-  bool isArgumentRegister(const MachineFunction &MF, MCRegister Reg) const;
+  bool isArgumentRegister(MCRegister Reg) const;
 
   /// Returns true if a register is a fixed register.
-  bool isFixedRegister(const MachineFunction &MF, MCRegister Reg) const;
+  bool isFixedRegister(MCRegister Reg) const;
 
   /// Returns true if a register is a general purpose register.
-  bool isGeneralPurposeRegister(const MachineFunction &MF,
-                                MCRegister Reg) const;
+  bool isGeneralPurposeRegister(MCRegister Reg) const;
 
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
@@ -930,7 +929,7 @@ public:
 
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
-  void freezeReservedRegs(const MachineFunction&);
+  void freezeReservedRegs();
 
   /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
   /// will not suggest using it. This should not be used during the middle

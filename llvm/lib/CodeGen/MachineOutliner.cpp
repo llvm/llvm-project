@@ -759,7 +759,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
   MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
   MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 
   // Compute live-in set for outlined fn
   const MachineRegisterInfo &MRI = MF.getRegInfo();

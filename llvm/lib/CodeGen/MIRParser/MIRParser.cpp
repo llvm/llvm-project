@@ -574,7 +574,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   // FIXME: This is a temporary workaround until the reserved registers can be
   // serialized.
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  MRI.freezeReservedRegs(MF);
+  MRI.freezeReservedRegs();
 
   computeFunctionProperties(MF);
 
