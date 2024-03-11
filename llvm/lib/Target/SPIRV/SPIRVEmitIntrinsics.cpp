@@ -280,7 +280,7 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   // varying element types. In case of IR coming from older versions of LLVM
   // such bitcasts do not provide sufficient information, should be just skipped
   // here, and handled in insertPtrCastOrAssignTypeInstr.
-  if (I.getType()->isPointerTy()) {
+  if (isPointerTy(I.getType())) {
     I.replaceAllUsesWith(Source);
     I.eraseFromParent();
     return nullptr;
@@ -356,7 +356,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       ValueAsMetadata::getConstant(ExpectedElementTypeConst);
   MDTuple *TyMD = MDNode::get(F->getContext(), CM);
   MetadataAsValue *VMD = MetadataAsValue::get(F->getContext(), TyMD);
-  unsigned AddressSpace = Pointer->getType()->getPointerAddressSpace();
+  unsigned AddressSpace = getPointerAddressSpace(Pointer->getType());
   bool FirstPtrCastOrAssignPtrType = true;
 
   // Do not emit new spv_ptrcast if equivalent one already exists or when
@@ -419,7 +419,7 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
   // Handle basic instructions:
   StoreInst *SI = dyn_cast<StoreInst>(I);
   if (SI && F->getCallingConv() == CallingConv::SPIR_KERNEL &&
-      SI->getValueOperand()->getType()->isPointerTy() &&
+      isPointerTy(SI->getValueOperand()->getType()) &&
       isa<Argument>(SI->getValueOperand())) {
     return replacePointerOperandWithPtrCast(
         I, SI->getValueOperand(), IntegerType::getInt8Ty(F->getContext()), 0,
@@ -639,14 +639,14 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
 void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
                                                    IRBuilder<> &B) {
   reportFatalOnTokenType(I);
-  if (!I->getType()->isPointerTy() || !requireAssignType(I) ||
+  if (!isPointerTy(I->getType()) || !requireAssignType(I) ||
       isa<BitCastInst>(I))
     return;
 
   setInsertPointSkippingPhis(B, I->getNextNode());
 
   Constant *EltTyConst;
-  unsigned AddressSpace = I->getType()->getPointerAddressSpace();
+  unsigned AddressSpace = getPointerAddressSpace(I->getType());
   if (auto *AI = dyn_cast<AllocaInst>(I))
     EltTyConst = UndefValue::get(AI->getAllocatedType());
   else if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
@@ -662,7 +662,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
                                                 IRBuilder<> &B) {
   reportFatalOnTokenType(I);
   Type *Ty = I->getType();
-  if (!Ty->isVoidTy() && !Ty->isPointerTy() && requireAssignType(I)) {
+  if (!Ty->isVoidTy() && !isPointerTy(Ty) && requireAssignType(I)) {
     setInsertPointSkippingPhis(B, I->getNextNode());
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
