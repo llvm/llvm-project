@@ -332,7 +332,7 @@ add_perf_binary(
     -fno-builtin
 )
 
-add_diff_binary(
+add_perf_binary(
   fmodl_perf
   SRCS
     fmodl_perf.cpp
@@ -343,7 +343,7 @@ add_diff_binary(
     -fno-builtin
 )
 
-add_diff_binary(
+add_perf_binary(
   fmodf128_perf
   SRCS
     fmodf128_perf.cpp
