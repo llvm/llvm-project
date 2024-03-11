@@ -29,7 +29,9 @@ using namespace llvm;
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
-  bool IsCMPCCXADD = X86::isCMPCCXADD(MI->getOpcode());
+  unsigned Opc = MI->getOpcode();
+  bool IsCMPCCXADD = X86::isCMPCCXADD(Opc);
+  bool IsCCMPOrCTEST = X86::isCCMPCC(Opc) || X86::isCTESTCC(Opc);
 
   // clang-format off
   switch (Imm) {
@@ -44,14 +46,35 @@ void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
   case    7: O << (IsCMPCCXADD ? "nbe" : "a"); break;
   case    8: O << "s";  break;
   case    9: O << "ns"; break;
-  case  0xa: O << "p";  break;
-  case  0xb: O << "np"; break;
+  case  0xa: O << (IsCCMPOrCTEST ? "t" : "p");  break;
+  case  0xb: O << (IsCCMPOrCTEST ? "f" : "np"); break;
   case  0xc: O << "l";  break;
   case  0xd: O << (IsCMPCCXADD ? "nl" : "ge"); break;
   case  0xe: O << "le"; break;
   case  0xf: O << (IsCMPCCXADD ? "nle" : "g"); break;
   }
   // clang-format on
+}
+
+void X86InstPrinterCommon::printCondFlags(const MCInst *MI, unsigned Op,
+                                          raw_ostream &O) {
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  int64_t Imm = MI->getOperand(Op).getImm();
+  assert(Imm >= 0 && Imm < 16 && "Invalid condition flags");
+  O << "{dfv=";
+  std::string Flags;
+  if (Imm & 0x8)
+    Flags += "of,";
+  if (Imm & 0x4)
+    Flags += "sf,";
+  if (Imm & 0x2)
+    Flags += "zf,";
+  if (Imm & 0x1)
+    Flags += "cf,";
+  StringRef SimplifiedFlags = StringRef(Flags).rtrim(",");
+  O << SimplifiedFlags << "}";
 }
 
 void X86InstPrinterCommon::printSSEAVXCC(const MCInst *MI, unsigned Op,
@@ -249,24 +272,24 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPPSZrrib:    case X86::VCMPPSZrribk:
     OS << "ps\t";
     break;
-  case X86::CMPSDrm:        case X86::CMPSDrr:
-  case X86::CMPSDrm_Int:    case X86::CMPSDrr_Int:
-  case X86::VCMPSDrm:       case X86::VCMPSDrr:
-  case X86::VCMPSDrm_Int:   case X86::VCMPSDrr_Int:
-  case X86::VCMPSDZrm:      case X86::VCMPSDZrr:
-  case X86::VCMPSDZrm_Int:  case X86::VCMPSDZrr_Int:
-  case X86::VCMPSDZrm_Intk: case X86::VCMPSDZrr_Intk:
-  case X86::VCMPSDZrrb_Int: case X86::VCMPSDZrrb_Intk:
+  case X86::CMPSDrmi:        case X86::CMPSDrri:
+  case X86::CMPSDrmi_Int:    case X86::CMPSDrri_Int:
+  case X86::VCMPSDrmi:       case X86::VCMPSDrri:
+  case X86::VCMPSDrmi_Int:   case X86::VCMPSDrri_Int:
+  case X86::VCMPSDZrmi:      case X86::VCMPSDZrri:
+  case X86::VCMPSDZrmi_Int:  case X86::VCMPSDZrri_Int:
+  case X86::VCMPSDZrmi_Intk: case X86::VCMPSDZrri_Intk:
+  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrrib_Intk:
     OS << "sd\t";
     break;
-  case X86::CMPSSrm:        case X86::CMPSSrr:
-  case X86::CMPSSrm_Int:    case X86::CMPSSrr_Int:
-  case X86::VCMPSSrm:       case X86::VCMPSSrr:
-  case X86::VCMPSSrm_Int:   case X86::VCMPSSrr_Int:
-  case X86::VCMPSSZrm:      case X86::VCMPSSZrr:
-  case X86::VCMPSSZrm_Int:  case X86::VCMPSSZrr_Int:
-  case X86::VCMPSSZrm_Intk: case X86::VCMPSSZrr_Intk:
-  case X86::VCMPSSZrrb_Int: case X86::VCMPSSZrrb_Intk:
+  case X86::CMPSSrmi:        case X86::CMPSSrri:
+  case X86::CMPSSrmi_Int:    case X86::CMPSSrri_Int:
+  case X86::VCMPSSrmi:       case X86::VCMPSSrri:
+  case X86::VCMPSSrmi_Int:   case X86::VCMPSSrri_Int:
+  case X86::VCMPSSZrmi:      case X86::VCMPSSZrri:
+  case X86::VCMPSSZrmi_Int:  case X86::VCMPSSZrri_Int:
+  case X86::VCMPSSZrmi_Intk: case X86::VCMPSSZrri_Intk:
+  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrrib_Intk:
     OS << "ss\t";
     break;
   case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
@@ -281,10 +304,10 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPPHZrrib:    case X86::VCMPPHZrribk:
     OS << "ph\t";
     break;
-  case X86::VCMPSHZrm:      case X86::VCMPSHZrr:
-  case X86::VCMPSHZrm_Int:  case X86::VCMPSHZrr_Int:
-  case X86::VCMPSHZrrb_Int: case X86::VCMPSHZrrb_Intk:
-  case X86::VCMPSHZrm_Intk: case X86::VCMPSHZrr_Intk:
+  case X86::VCMPSHZrmi:      case X86::VCMPSHZrri:
+  case X86::VCMPSHZrmi_Int:  case X86::VCMPSHZrri_Int:
+  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
+  case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
     OS << "sh\t";
     break;
   }

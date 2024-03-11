@@ -7246,25 +7246,25 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select c, -1, y) -> -c | y
     if (isAllOnesConstant(TrueV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, -1) -> (c-1) | y
     if (isAllOnesConstant(FalseV)) {
       SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
                                 DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
     // (select c, 0, y) -> (c-1) & y
     if (isNullConstant(TrueV)) {
       SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
                                 DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, 0) -> -c & y
     if (isNullConstant(FalseV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
   }
 
@@ -7290,13 +7290,13 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select !x, x, y) -> x & y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, TrueV)) {
       return DAG.getNode(*MatchResult ? ISD::OR : ISD::AND, DL, VT, TrueV,
-                         FalseV);
+                         DAG.getFreeze(FalseV));
     }
     // (select x, y, x) -> x & y
     // (select !x, y, x) -> x | y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, FalseV)) {
-      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT, TrueV,
-                         FalseV);
+      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT,
+                         DAG.getFreeze(TrueV), FalseV);
     }
   }
 
@@ -9080,15 +9080,20 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue Result, Chain;
 
     // TODO: We restrict this to unmasked loads currently in consideration of
-    // the complexity of hanlding all falses masks.
-    if (IsUnmasked && isNullConstant(Stride)) {
-      MVT ScalarVT = ContainerVT.getVectorElementType();
+    // the complexity of handling all falses masks.
+    MVT ScalarVT = ContainerVT.getVectorElementType();
+    if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger()) {
       SDValue ScalarLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
                          ScalarVT, Load->getMemOperand());
       Chain = ScalarLoad.getValue(1);
       Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,
                                 Subtarget);
+    } else if (IsUnmasked && isNullConstant(Stride) && isTypeLegal(ScalarVT)) {
+      SDValue ScalarLoad = DAG.getLoad(ScalarVT, DL, Load->getChain(), Ptr,
+                                       Load->getMemOperand());
+      Chain = ScalarLoad.getValue(1);
+      Result = DAG.getSplat(ContainerVT, DL, ScalarLoad);
     } else {
       SDValue IntID = DAG.getTargetConstant(
           IsUnmasked ? Intrinsic::riscv_vlse : Intrinsic::riscv_vlse_mask, DL,

@@ -2039,6 +2039,11 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     Check((Val & ~static_cast<unsigned>(fcAllFlags)) == 0,
           "Invalid value for 'nofpclass' test mask", V);
   }
+  if (Attrs.hasAttribute(Attribute::Range)) {
+    auto CR = Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
+    Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
+          "Range bit width must match type bit width!", V);
+  }
 }
 
 void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
@@ -4994,6 +4999,9 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::seh_scope_end ||
                 F->getIntrinsicID() == Intrinsic::coro_resume ||
                 F->getIntrinsicID() == Intrinsic::coro_destroy ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_void ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_bool ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||

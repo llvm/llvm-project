@@ -193,7 +193,7 @@ template <typename T>
 bit_ceil(T value) {
   if (value < 2)
     return 1;
-  return T(1) << cpp::bit_width<T>(value - 1u);
+  return static_cast<T>(T(1) << cpp::bit_width(value - 1U));
 }
 
 // Rotate algorithms make use of "Safe, Efficient, and Portable Rotate in C/C++"
@@ -269,14 +269,12 @@ first_trailing_one(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0 : countr_zero(value) + 1;
 }
 
-/// Count number of 1's aka population count or hamming weight.
+/// Count number of 1's aka population count or Hamming weight.
 ///
 /// Only unsigned integral types are allowed.
-// TODO: rename as 'popcount' to follow the standard
-// https://en.cppreference.com/w/cpp/numeric/popcount
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
-count_ones(T value) {
+popcount(T value) {
   int count = 0;
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     if ((value >> i) & 0x1)
@@ -285,7 +283,7 @@ count_ones(T value) {
 }
 #define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
   template <>                                                                  \
-  [[nodiscard]] LIBC_INLINE constexpr int count_ones<TYPE>(TYPE value) {       \
+  [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {         \
     return BUILTIN(value);                                                     \
   }
 ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
@@ -300,7 +298,7 @@ ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 count_zeros(T value) {
-  return count_ones<T>(static_cast<T>(~value));
+  return popcount<T>(static_cast<T>(~value));
 }
 
 } // namespace LIBC_NAMESPACE::cpp

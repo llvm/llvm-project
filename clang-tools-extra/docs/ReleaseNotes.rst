@@ -152,7 +152,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unused-return-value
   <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
-  parameter `CheckedFunctions` to support regexp.
+  parameter `CheckedFunctions` to support regexp, avoiding false positive for
+  function with the same prefix as the default argument, e.g. ``std::unique_ptr``
+  and ``std::unique``, avoiding false positive for assignment operator overloading.
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
@@ -233,7 +235,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
-  mode by resolving symbolic links to header files.
+  mode by resolving symbolic links to header files. Fixed handling of Hungarian
+  Prefix when configured to `LowerCase`.
 
 Removed checks
 ^^^^^^^^^^^^^^
