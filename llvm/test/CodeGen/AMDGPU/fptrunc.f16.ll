@@ -531,7 +531,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX1210-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
 ; GFX1210-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
@@ -744,7 +744,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1210-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
 ; GFX1210-GISEL-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v2
+; GFX1210-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v2
 ; GFX1210-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm

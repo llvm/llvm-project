@@ -44,14 +44,8 @@ define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_s(<2 x float> inreg %src) {
 define amdgpu_ps float @v_test_cvt_f32_bf16_v(float %src) {
 ; GCN-LABEL: v_test_cvt_f32_bf16_v:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bfe_u32 v1, v0, 16, 1
-; GCN-NEXT:    v_or_b32_e32 v2, 0x400000, v0
-; GCN-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_cvt_f32_bf16_e32 v0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %trunc = fptrunc float %src to bfloat
@@ -71,3 +65,121 @@ define amdgpu_ps float @v_test_cvt_v2f64_v2bf16_v(<2 x double> %src) {
   %cast = bitcast <2 x bfloat> %res to float
   ret float %cast
 }
+
+define amdgpu_ps float @fptrunc_f32_f32_to_v2bf16(float %a, float %b) {
+; GCN-LABEL: fptrunc_f32_f32_to_v2bf16:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GCN-NEXT:    ; return to shader part epilog
+entry:
+  %a.cvt = fptrunc float %a to bfloat
+  %b.cvt = fptrunc float %b to bfloat
+  %v2.1 = insertelement <2 x bfloat> undef, bfloat %a.cvt, i32 0
+  %v2.2 = insertelement <2 x bfloat> %v2.1, bfloat %b.cvt, i32 1
+  %ret = bitcast <2 x bfloat> %v2.2 to float
+  ret float %ret
+}
+
+define amdgpu_ps float @fptrunc_f32_f32_to_v2bf16_mods(float %a, float %b) {
+; GCN-LABEL: fptrunc_f32_f32_to_v2bf16_mods:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, -v0, |v1|
+; GCN-NEXT:    ; return to shader part epilog
+entry:
+  %a.neg = fneg float %a
+  %a.cvt = fptrunc float %a.neg to bfloat
+  %b.abs = call float @llvm.fabs.f32(float %b)
+  %b.cvt = fptrunc float %b.abs to bfloat
+  %v2.1 = insertelement <2 x bfloat> undef, bfloat %a.cvt, i32 0
+  %v2.2 = insertelement <2 x bfloat> %v2.1, bfloat %b.cvt, i32 1
+  %ret = bitcast <2 x bfloat> %v2.2 to float
+  ret float %ret
+}
+
+define amdgpu_ps void @fptrunc_f32_to_bf16(float %a, ptr %out) {
+; GCN-LABEL: fptrunc_f32_to_bf16:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GCN-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %a.cvt = fptrunc float %a to bfloat
+  store bfloat %a.cvt, ptr %out
+  ret void
+}
+
+define amdgpu_ps void @fptrunc_f32_to_bf16_abs(float %a, ptr %out) {
+; GCN-LABEL: fptrunc_f32_to_bf16_abs:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, |v0|, s0
+; GCN-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %a.abs = call float @llvm.fabs.f32(float %a)
+  %a.cvt = fptrunc float %a.abs to bfloat
+  store bfloat %a.cvt, ptr %out
+  ret void
+}
+
+define amdgpu_ps void @fptrunc_f32_to_bf16_neg(float %a, ptr %out) {
+; GCN-LABEL: fptrunc_f32_to_bf16_neg:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, -v0, s0
+; GCN-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %a.neg = fneg float %a
+  %a.cvt = fptrunc float %a.neg to bfloat
+  store bfloat %a.cvt, ptr %out
+  ret void
+}
+
+define amdgpu_ps void @fptrunc_f64_to_bf16(double %a, ptr %out) {
+; GCN-LABEL: fptrunc_f64_to_bf16:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GCN-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %a.cvt = fptrunc double %a to bfloat
+  store bfloat %a.cvt, ptr %out
+  ret void
+}
+
+define amdgpu_ps void @fptrunc_f64_to_bf16_neg(double %a, ptr %out) {
+; GCN-LABEL: fptrunc_f64_to_bf16_neg:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_cvt_f32_f64_e64 v0, -v[0:1]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GCN-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %a.neg = fneg double %a
+  %a.cvt = fptrunc double %a.neg to bfloat
+  store bfloat %a.cvt, ptr %out
+  ret void
+}
+
+define amdgpu_ps void @fptrunc_f64_to_bf16_abs(double %a, ptr %out) {
+; GCN-LABEL: fptrunc_f64_to_bf16_abs:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_cvt_f32_f64_e64 v0, |v[0:1]|
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GCN-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %a.abs = call double @llvm.fabs.f64(double %a)
+  %a.cvt = fptrunc double %a.abs to bfloat
+  store bfloat %a.cvt, ptr %out
+  ret void
+}
+
+declare float @llvm.fabs.f32(float)
+declare double @llvm.fabs.f64(double)

@@ -4,50 +4,7 @@
 
 ; FIXME: GlobalISel does not work with bf16
 
-declare <2 x bfloat> @llvm.amdgcn.cvt.pk.bf16.f32(float, float) #0
 declare <2 x bfloat> @llvm.amdgcn.cvt.sr.pk.bf16.f32(float, float, i32) #0
-
-define amdgpu_ps float @cvt_pk_bf16_f32_vv(float %src0, float %src1) #1 {
-; GCN-LABEL: cvt_pk_bf16_f32_vv:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GCN-NEXT:    ; return to shader part epilog
-  %cvt = call <2 x bfloat> @llvm.amdgcn.cvt.pk.bf16.f32(float %src0, float %src1) #0
-  %ret = bitcast <2 x bfloat> %cvt to float
-  ret float %ret
-}
-
-define amdgpu_ps float @cvt_pk_bf16_f32_ss(float inreg %src0, float inreg %src1) #1 {
-; GCN-LABEL: cvt_pk_bf16_f32_ss:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, s0, s1
-; GCN-NEXT:    ; return to shader part epilog
-  %cvt = call <2 x bfloat> @llvm.amdgcn.cvt.pk.bf16.f32(float %src0, float %src1) #0
-  %ret = bitcast <2 x bfloat> %cvt to float
-  ret float %ret
-}
-
-define amdgpu_ps float @cvt_pk_bf16_f32_vi(float %src0) #1 {
-; GCN-LABEL: cvt_pk_bf16_f32_vi:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, 0x42c80000
-; GCN-NEXT:    ; return to shader part epilog
-  %cvt = call <2 x bfloat> @llvm.amdgcn.cvt.pk.bf16.f32(float %src0, float 100.0) #0
-  %ret = bitcast <2 x bfloat> %cvt to float
-  ret float %ret
-}
-
-define amdgpu_ps float @cvt_pk_bf16_f32_vv_mods(float %src0, float %src1) #1 {
-; GCN-LABEL: cvt_pk_bf16_f32_vv_mods:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, -v0, |v1|
-; GCN-NEXT:    ; return to shader part epilog
-  %s0 = fneg float %src0
-  %s1 = call float @llvm.fabs.f32(float %src1) #0
-  %cvt = call <2 x bfloat> @llvm.amdgcn.cvt.pk.bf16.f32(float %s0, float %s1) #0
-  %ret = bitcast <2 x bfloat> %cvt to float
-  ret float %ret
-}
 
 define amdgpu_ps float @cvt_sr_pk_bf16_f32_vvv(float %src0, float %src1, i32 %src2) #1 {
 ; GCN-LABEL: cvt_sr_pk_bf16_f32_vvv:
