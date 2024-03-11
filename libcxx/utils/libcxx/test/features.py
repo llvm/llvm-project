@@ -195,12 +195,12 @@ DEFAULT_FEATURES = [
         ),
     ),
     Feature(
-        name="has-large-atomics",
+        name="has-1024-bit-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
             """
             #include <atomic>
-            struct Large { int storage[128]; };
+            struct Large { int storage[1024/8]; };
             std::atomic<Large> x;
             int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
