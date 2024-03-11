@@ -4,7 +4,7 @@
 %struct.Large = type { [16 x double] }
 
 ; CHECK: .param .u64 .ptr .global .align 16 func_align_param_0,
-; CHECK: .param .u64 func_align_param_1,
+; CHECK: .param .u64 .ptr .global func_align_param_1,
 ; CHECK: .param .u32 func_align_param_2
 define void @func_align(ptr nocapture readonly align 16 %input, ptr nocapture %out, i32 %n) {
 entry:
@@ -16,8 +16,8 @@ entry:
   ret void
 }
 
-; CHECK: .param .u64 func_param_0,
-; CHECK: .param .u64 func_param_1,
+; CHECK: .param .ptr .global .u64 func_param_0,
+; CHECK: .param .ptr .global .u64 func_param_1,
 ; CHECK: .param .u32 func_param_2
 define void @func(ptr nocapture readonly %input, ptr nocapture %out, i32 %n) {
 entry:

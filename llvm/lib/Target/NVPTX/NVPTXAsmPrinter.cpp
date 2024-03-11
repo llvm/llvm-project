@@ -1597,8 +1597,16 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           int addrSpace = PTy->getAddressSpace();
           if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
               NVPTX::CUDA) {
+            // Special handling for pointer arguments to kernel
+            // CUDA kernels assume that pointers are in global address space
+            // See:
+            // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parameter-state-space
             assert(addrSpace == 0 && "Invalid address space");
             O << ".ptr .global ";
+            if (I->getParamAlign().valueOrOne() != 1) {
+              Align ParamAlign = I->getParamAlign().value();
+              O << ".align " << ParamAlign.value() << " ";
+            }
           } else {
             switch (addrSpace) {
             default:
@@ -1614,9 +1622,9 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
               O << ".ptr .global ";
               break;
             }
+            Align ParamAlign = I->getParamAlign().valueOrOne();
+            O << ".align " << ParamAlign.value() << " ";
           }
-          Align ParamAlign = I->getParamAlign().valueOrOne();
-          O << ".align " << ParamAlign.value() << " ";
           O << TLI->getParamName(F, paramIndex);
           continue;
         }
