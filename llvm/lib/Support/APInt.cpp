@@ -2022,6 +2022,14 @@ APInt APInt::ushl_ov(unsigned ShAmt, bool &Overflow) const {
   return *this << ShAmt;
 }
 
+APInt APInt::sfloordiv_ov(const APInt &RHS, bool &Overflow) const {
+  auto quotient = sdiv_ov(RHS, Overflow);
+  if ((quotient * RHS != *this) && (isNegative() != RHS.isNegative()))
+    return quotient - 1;
+  else
+    return quotient;
+}
+
 APInt APInt::sadd_sat(const APInt &RHS) const {
   bool Overflow;
   APInt Res = sadd_ov(RHS, Overflow);

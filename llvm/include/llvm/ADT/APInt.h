@@ -996,6 +996,7 @@ public:
   APInt sshl_ov(unsigned Amt, bool &Overflow) const;
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
   APInt ushl_ov(unsigned Amt, bool &Overflow) const;
+  APInt sfloordiv_ov(const APInt &RHS, bool &Overflow) const;
 
   // Operations that saturate
   APInt sadd_sat(const APInt &RHS) const;

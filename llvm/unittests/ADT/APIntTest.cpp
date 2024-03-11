@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include <array>
 #include <climits>
+#include <limits>
 #include <optional>
 
 using namespace llvm;
@@ -3046,6 +3047,43 @@ TEST(APIntTest, smul_ov) {
         EXPECT_EQ(Wide.trunc(Bits), Narrow);
         EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
       }
+}
+
+TEST(APIntTest, sfloordiv_ov) {
+  // test negative quotient
+  {
+    APInt divisor(32, -3, true);
+    APInt dividend(32, 2, true);
+    bool Overflow = false;
+    auto quotient = divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_FALSE(Overflow);
+    EXPECT_EQ(-2, quotient.getSExtValue());
+  }
+  // test positive quotient
+  {
+    APInt divisor(32, 3, true);
+    APInt dividend(32, 2, true);
+    bool Overflow = false;
+    auto quotient = divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_FALSE(Overflow);
+    EXPECT_EQ(1, quotient.getSExtValue());
+  }
+  // test overflow
+  {
+    auto check_overflow_one = [](auto arg) {
+      using IntTy = decltype(arg);
+      APInt divisor(8 * sizeof(arg), std::numeric_limits<IntTy>::lowest(),
+                    true);
+      APInt dividend(8 * sizeof(arg), IntTy(-1), true);
+      bool Overflow = false;
+      [[maybe_unused]] auto quotient = divisor.sfloordiv_ov(dividend, Overflow);
+      EXPECT_TRUE(Overflow);
+    };
+    auto check_overflow_all = [&](auto... args) {
+      (void)std::initializer_list<int>{(check_overflow_one(args), 0)...};
+    };
+    std::apply(check_overflow_all, std::tuple<char, short, int, int64_t>());
+  }
 }
 
 TEST(APIntTest, SolveQuadraticEquationWrap) {
