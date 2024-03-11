@@ -36,10 +36,17 @@ struct NoThrowT {
   NoThrowT(int) noexcept(true) {}
 };
 
-struct AnyConstructible { template <typename T> AnyConstructible(T&&) {} };
-struct NoConstructible { NoConstructible() = delete; };
+struct AnyConstructible {
+  template <typename T>
+  AnyConstructible(T&&) {}
+};
+struct NoConstructible {
+  NoConstructible() = delete;
+};
 template <class T>
-struct RValueConvertibleFrom { RValueConvertibleFrom(T&&) {} };
+struct RValueConvertibleFrom {
+  RValueConvertibleFrom(T&&) {}
+};
 
 void test_T_ctor_noexcept() {
   {
@@ -59,12 +66,11 @@ void test_T_ctor_sfinae() {
   }
   {
     using V = std::variant<std::string, std::string>;
-    static_assert(!std::is_constructible<V, const char *>::value, "ambiguous");
+    static_assert(!std::is_constructible<V, const char*>::value, "ambiguous");
   }
   {
-    using V = std::variant<std::string, void *>;
-    static_assert(!std::is_constructible<V, int>::value,
-                  "no matching constructor");
+    using V = std::variant<std::string, void*>;
+    static_assert(!std::is_constructible<V, int>::value, "no matching constructor");
   }
   {
     using V = std::variant<std::string, float>;
@@ -72,8 +78,7 @@ void test_T_ctor_sfinae() {
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
-    static_assert(!std::is_constructible<V, std::unique_ptr<char>>::value,
-                  "no explicit bool in constructor");
+    static_assert(!std::is_constructible<V, std::unique_ptr<char>>::value, "no explicit bool in constructor");
     struct X {
       operator void*();
     };
@@ -86,20 +91,13 @@ void test_T_ctor_sfinae() {
       operator X();
     };
     using V = std::variant<X>;
-    static_assert(std::is_constructible<V, Y>::value,
-                  "regression on user-defined conversions in constructor");
+    static_assert(std::is_constructible<V, Y>::value, "regression on user-defined conversions in constructor");
   }
   {
     using V = std::variant<AnyConstructible, NoConstructible>;
-    static_assert(
-        !std::is_constructible<V, std::in_place_type_t<NoConstructible>>::value,
-        "no matching constructor");
-    static_assert(!std::is_constructible<V, std::in_place_index_t<1>>::value,
-                  "no matching constructor");
+    static_assert(!std::is_constructible<V, std::in_place_type_t<NoConstructible>>::value, "no matching constructor");
+    static_assert(!std::is_constructible<V, std::in_place_index_t<1>>::value, "no matching constructor");
   }
-
-
-
 }
 
 void test_T_ctor_basic() {
@@ -137,7 +135,7 @@ void test_T_ctor_basic() {
     std::variant<RValueConvertibleFrom<int>> v1 = 42;
     assert(v1.index() == 0);
 
-    int x = 42;
+    int x                                                         = 42;
     std::variant<RValueConvertibleFrom<int>, AnyConstructible> v2 = x;
     assert(v2.index() == 1);
   }
@@ -145,7 +143,9 @@ void test_T_ctor_basic() {
 
 struct BoomOnAnything {
   template <class T>
-  constexpr BoomOnAnything(T) { static_assert(!std::is_same<T, T>::value, ""); }
+  constexpr BoomOnAnything(T) {
+    static_assert(!std::is_same<T, T>::value, "");
+  }
 };
 
 void test_no_narrowing_check_for_class_types() {
