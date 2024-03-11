@@ -174,13 +174,11 @@ private:
     const T quiet_nan = FPB::quiet_nan().get_val();
     FPB sx(x), sy(y);
     if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
-                    !sx.is_inf_or_nan())) {
+                    !sx.is_inf_or_nan()))
       return false;
-    }
 
     if (sx.is_nan() || sy.is_nan()) {
-      if ((sx.is_nan() && !sx.is_quiet_nan()) ||
-          (sy.is_nan() && !sy.is_quiet_nan()))
+      if (sx.is_signalling_nan() || sy.is_signalling())
         fputil::raise_except_if_required(FE_INVALID);
       out = quiet_nan;
       return true;
@@ -193,12 +191,6 @@ private:
       return true;
     }
 
-    if (sy.is_inf()) {
-      out = x;
-      return true;
-    }
-
-    // case where x == 0
     out = x;
     return true;
   }
