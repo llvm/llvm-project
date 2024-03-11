@@ -994,7 +994,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
     error("non-RELA relocations are not allowed with memtag globals");
 
   for (const typename ELFT::Rela &rel : rels.relas) {
-    Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
     // Linker-synthesized symbols such as __executable_start may be referenced
     // as tagged in input objfiles, and we don't want them to be tagged. A
     // cheap way to exclude them is the type check, but their type is

@@ -347,7 +347,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
   uint64_t index = std::min<uint64_t>(offset / 8, relas.size() - 1);
   for (;;) {
     if (relas[index].r_offset == offset) {
-      Symbol &sym = tocSec->getFile<ELFT>()->getRelocTargetSym(relas[index]);
+      Symbol &sym = tocSec->file->getRelocTargetSym(relas[index]);
       return {dyn_cast<Defined>(&sym), getAddend<ELFT>(relas[index])};
     }
     if (relas[index].r_offset < offset || index == 0)
