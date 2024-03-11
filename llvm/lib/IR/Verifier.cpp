@@ -5246,9 +5246,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(DestTy->getScalarSizeInBits() >= 2, "DestTy must be at least 2 bits wide", Call);
 
     bool isDestTypeVector = DestTy->isVectorTy();
-    if (isDestTypeVector) {
-      Check(SrcTy->isVectorTy() == isDestTypeVector,
+    Check(SrcTy->isVectorTy() == isDestTypeVector,
         "[u]scmp source and destination must both be a vector or neither", Call);
+    if (isDestTypeVector) {
       Check(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements(),
         "the return type the first arg type must have the same number of elements", Call);
     }
