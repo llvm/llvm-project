@@ -27,6 +27,8 @@ struct LogicalResult;
 using ChunkBufferHandler = function_ref<LogicalResult(
     std::unique_ptr<llvm::MemoryBuffer> chunkBuffer, raw_ostream &os)>;
 
+extern inline const char *const kDefaultSplitMarker = "// -----";
+
 /// Splits the specified buffer on a marker (`// -----`), processes each chunk
 /// independently according to the normal `processChunkBuffer` logic, and writes
 /// all results to `os`.

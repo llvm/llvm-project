@@ -27,8 +27,7 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
   if (!enableSplitting)
     return processChunkBuffer(std::move(originalBuffer), os);
 
-  const char splitMarkerConst[] = "// -----";
-  StringRef splitMarker(splitMarkerConst);
+  StringRef splitMarker(kDefaultSplitMarker);
   const int splitMarkerLen = splitMarker.size();
 
   auto *origMemBuffer = originalBuffer.get();
@@ -89,7 +88,9 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
       hadFailure = true;
   };
   llvm::interleave(sourceBuffers, os, interleaveFn,
-                   insertMarkerInOutput ? "\n// -----\n" : "");
+                   insertMarkerInOutput
+                       ? (llvm::Twine("\n") + kDefaultSplitMarker + "\n").str()
+                       : "");
 
   // If any fails, then return a failure of the tool.
   return failure(hadFailure);
