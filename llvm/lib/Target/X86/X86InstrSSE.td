@@ -6266,27 +6266,27 @@ multiclass SS41I_quaternary_avx<bits<8> opc, string OpcodeStr, RegisterClass RC,
                                 X86MemOperand x86memop, ValueType VT,
                                 PatFrag mem_frag, SDNode OpNode,
                                 X86FoldableSchedWrite sched> {
-  def rr : Ii8Reg<opc, MRMSrcReg, (outs RC:$dst),
-                  (ins RC:$src1, RC:$src2, RC:$src3),
-                  !strconcat(OpcodeStr,
-                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                  [(set RC:$dst, (VT (OpNode RC:$src3, RC:$src2, RC:$src1)))],
-                  SSEPackedInt>, TA, PD, VEX, VVVV,
-                Sched<[sched]>;
+  def rrr : Ii8Reg<opc, MRMSrcReg, (outs RC:$dst),
+                   (ins RC:$src1, RC:$src2, RC:$src3),
+                   !strconcat(OpcodeStr,
+                     "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
+                   [(set RC:$dst, (VT (OpNode RC:$src3, RC:$src2, RC:$src1)))],
+                   SSEPackedInt>, TA, PD, VEX, VVVV,
+                 Sched<[sched]>;
 
-  def rm : Ii8Reg<opc, MRMSrcMem, (outs RC:$dst),
-                  (ins RC:$src1, x86memop:$src2, RC:$src3),
-                  !strconcat(OpcodeStr,
-                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                  [(set RC:$dst,
-                        (OpNode RC:$src3, (mem_frag addr:$src2),
-                                RC:$src1))], SSEPackedInt>, TA, PD, VEX, VVVV,
-                Sched<[sched.Folded, sched.ReadAfterFold,
-                       // x86memop:$src2
-                       ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                       ReadDefault,
-                       // RC::$src3
-                       sched.ReadAfterFold]>;
+  def rmr : Ii8Reg<opc, MRMSrcMem, (outs RC:$dst),
+                   (ins RC:$src1, x86memop:$src2, RC:$src3),
+                   !strconcat(OpcodeStr,
+                     "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
+                   [(set RC:$dst,
+                         (OpNode RC:$src3, (mem_frag addr:$src2),
+                                 RC:$src1))], SSEPackedInt>, TA, PD, VEX, VVVV,
+                 Sched<[sched.Folded, sched.ReadAfterFold,
+                        // x86memop:$src2
+                        ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                        ReadDefault,
+                        // RC::$src3
+                        sched.ReadAfterFold]>;
 }
 
 let Predicates = [HasAVX] in {
@@ -6320,16 +6320,16 @@ defm VPBLENDVBY : SS41I_quaternary_avx<0x4C, "vpblendvb", VR256, i256mem,
 let Predicates = [HasAVX] in {
   def : Pat<(v4i32 (X86Blendv (v4i32 VR128:$mask), (v4i32 VR128:$src1),
                               (v4i32 VR128:$src2))),
-            (VBLENDVPSrr VR128:$src2, VR128:$src1, VR128:$mask)>;
+            (VBLENDVPSrrr VR128:$src2, VR128:$src1, VR128:$mask)>;
   def : Pat<(v2i64 (X86Blendv (v2i64 VR128:$mask), (v2i64 VR128:$src1),
                               (v2i64 VR128:$src2))),
-            (VBLENDVPDrr VR128:$src2, VR128:$src1, VR128:$mask)>;
+            (VBLENDVPDrrr VR128:$src2, VR128:$src1, VR128:$mask)>;
   def : Pat<(v8i32 (X86Blendv (v8i32 VR256:$mask), (v8i32 VR256:$src1),
                               (v8i32 VR256:$src2))),
-            (VBLENDVPSYrr VR256:$src2, VR256:$src1, VR256:$mask)>;
+            (VBLENDVPSYrrr VR256:$src2, VR256:$src1, VR256:$mask)>;
   def : Pat<(v4i64 (X86Blendv (v4i64 VR256:$mask), (v4i64 VR256:$src1),
                               (v4i64 VR256:$src2))),
-            (VBLENDVPDYrr VR256:$src2, VR256:$src1, VR256:$mask)>;
+            (VBLENDVPDYrrr VR256:$src2, VR256:$src1, VR256:$mask)>;
 }
 
 // Prefer a movss or movsd over a blendps when optimizing for size. these were
