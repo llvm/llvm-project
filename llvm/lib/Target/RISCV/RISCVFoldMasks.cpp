@@ -203,11 +203,8 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   for (const MachineBasicBlock &MBB : MF) {
     const MachineInstr *CurrentV0Def = nullptr;
     for (const MachineInstr &MI : MBB) {
-      auto IsV0 = [](const auto &MO) {
-        return MO.isReg() && MO.getReg() == RISCV::V0;
-      };
-      if (any_of(MI.uses(), IsV0))
-        V0Defs[&MI] = CurrentV0Def;
+      if (MI.readsRegister(RISCV::V0, TRI))
+	V0Defs[&MI] = CurrentV0Def;
 
       if (MI.definesRegister(RISCV::V0, TRI))
         CurrentV0Def = &MI;
