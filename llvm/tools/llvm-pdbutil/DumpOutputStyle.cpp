@@ -1070,7 +1070,7 @@ Error DumpOutputStyle::dumpStringTableFromPdb() {
     if (IS->name_ids().empty())
       P.formatLine("Empty");
     else {
-      auto MaxID = llvm::max_element(IS->name_ids(), IS->name_ids());
+      auto MaxID = llvm::max_element(IS->name_ids());
       uint32_t Digits = NumDigits(*MaxID);
 
       P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
