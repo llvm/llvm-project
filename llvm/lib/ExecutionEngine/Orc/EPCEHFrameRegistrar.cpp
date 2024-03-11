@@ -18,30 +18,31 @@ namespace orc {
 
 Expected<std::unique_ptr<EPCEHFrameRegistrar>>
 EPCEHFrameRegistrar::Create(ExecutionSession &ES) {
+  auto &EPC = ES.getExecutorProcessControl();
 
   // Lookup addresseses of the registration/deregistration functions in the
   // bootstrap map.
   ExecutorAddr RegisterEHFrameSectionWrapper;
   ExecutorAddr DeregisterEHFrameSectionWrapper;
-  if (auto Err = ES.getExecutorProcessControl().getBootstrapSymbols(
-          {{RegisterEHFrameSectionWrapper,
-            rt::RegisterEHFrameSectionWrapperName},
-           {DeregisterEHFrameSectionWrapper,
-            rt::DeregisterEHFrameSectionWrapperName}}))
+  if (auto Err =
+          EPC.getBootstrapSymbols({{RegisterEHFrameSectionWrapper,
+                                    rt::RegisterEHFrameSectionWrapperName},
+                                   {DeregisterEHFrameSectionWrapper,
+                                    rt::DeregisterEHFrameSectionWrapperName}}))
     return std::move(Err);
 
   return std::make_unique<EPCEHFrameRegistrar>(
-      ES, RegisterEHFrameSectionWrapper, DeregisterEHFrameSectionWrapper);
+      EPC, RegisterEHFrameSectionWrapper, DeregisterEHFrameSectionWrapper);
 }
 
 Error EPCEHFrameRegistrar::registerEHFrames(ExecutorAddrRange EHFrameSection) {
-  return ES.callSPSWrapper<void(SPSExecutorAddrRange)>(
+  return EPC.callSPSWrapper<void(SPSExecutorAddrRange)>(
       RegisterEHFrameSectionWrapper, EHFrameSection);
 }
 
 Error EPCEHFrameRegistrar::deregisterEHFrames(
     ExecutorAddrRange EHFrameSection) {
-  return ES.callSPSWrapper<void(SPSExecutorAddrRange)>(
+  return EPC.callSPSWrapper<void(SPSExecutorAddrRange)>(
       DeregisterEHFrameSectionWrapper, EHFrameSection);
 }
 

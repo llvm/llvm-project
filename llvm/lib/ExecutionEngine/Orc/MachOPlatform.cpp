@@ -769,7 +769,8 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
         inconvertibleErrorCode());
 
   Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
+  auto &EPC = ES.getExecutorProcessControl();
+  if (auto Err = EPC.callSPSWrapper<SPSExpected<uint64_t>(void)>(
           CreatePThreadKey.Addr, Result))
     return std::move(Err);
   return Result;

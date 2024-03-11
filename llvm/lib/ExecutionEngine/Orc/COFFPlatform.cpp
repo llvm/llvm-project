@@ -707,21 +707,22 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
     return Err;
 
   // Call bootstrap functions
-  if (auto Err = ES.callSPSWrapper<void()>(orc_rt_coff_platform_bootstrap))
+  auto &EPC = ES.getExecutorProcessControl();
+  if (auto Err = EPC.callSPSWrapper<void()>(orc_rt_coff_platform_bootstrap))
     return Err;
 
   // Do the pending jitdylib registration actions that we couldn't do
   // because orc runtime was not linked fully.
   for (auto KV : JDBootstrapStates) {
     auto &JDBState = KV.second;
-    if (auto Err = ES.callSPSWrapper<void(SPSString, SPSExecutorAddr)>(
+    if (auto Err = EPC.callSPSWrapper<void(SPSString, SPSExecutorAddr)>(
             orc_rt_coff_register_jitdylib, JDBState.JDName,
             JDBState.HeaderAddr))
       return Err;
 
     for (auto &ObjSectionMap : JDBState.ObjectSectionsMaps)
-      if (auto Err = ES.callSPSWrapper<void(SPSExecutorAddr,
-                                            SPSCOFFObjectSectionsMap, bool)>(
+      if (auto Err = EPC.callSPSWrapper<void(SPSExecutorAddr,
+                                             SPSCOFFObjectSectionsMap, bool)>(
               orc_rt_coff_register_object_sections, JDBState.HeaderAddr,
               ObjSectionMap, false))
         return Err;

@@ -614,9 +614,10 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
 
   if (auto WrapperAddr = ES.lookup(
           MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
-    return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                           DSOHandles[&JD], JD.getName(),
-                                           int32_t(ORC_RT_RTLD_LAZY));
+    auto &EPC = ES.getExecutorProcessControl();
+    return EPC.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
+                                            DSOHandles[&JD], JD.getName(),
+                                            int32_t(ORC_RT_RTLD_LAZY));
   } else
     return WrapperAddr.takeError();
 }
@@ -632,8 +633,9 @@ Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
   if (auto WrapperAddr = ES.lookup(
           MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
     int32_t result;
-    auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-        WrapperAddr->getAddress(), result, DSOHandles[&JD]);
+    auto &EPC = ES.getExecutorProcessControl();
+    auto E = EPC.callSPSWrapper<SPSDLCloseSig>(WrapperAddr->getAddress(),
+                                               result, DSOHandles[&JD]);
     if (E)
       return E;
     else if (result)

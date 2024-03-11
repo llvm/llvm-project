@@ -39,7 +39,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperTemplate) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   int32_t Result;
-  EXPECT_THAT_ERROR(ES.callSPSWrapper<int32_t(int32_t, int32_t)>(
+  auto &EPC = ES.getExecutorProcessControl();
+  EXPECT_THAT_ERROR(EPC.callSPSWrapper<int32_t(int32_t, int32_t)>(
                         ExecutorAddr::fromPtr(addWrapper), Result, 2, 3),
                     Succeeded());
   EXPECT_EQ(Result, 5);
@@ -50,10 +51,11 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunVoidWrapperAsyncTemplate) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   std::promise<MSVCPError> RP;
-  ES.callSPSWrapperAsync<void()>(ExecutorAddr::fromPtr(voidWrapper),
-                                 [&](Error SerializationErr) {
-                                   RP.set_value(std::move(SerializationErr));
-                                 });
+  auto &EPC = ES.getExecutorProcessControl();
+  EPC.callSPSWrapperAsync<void()>(ExecutorAddr::fromPtr(voidWrapper),
+                                  [&](Error SerializationErr) {
+                                    RP.set_value(std::move(SerializationErr));
+                                  });
   Error Err = RP.get_future().get();
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
   cantFail(ES.endSession());
@@ -63,7 +65,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RunNonVoidWrapperAsyncTemplate) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   std::promise<MSVCPExpected<int32_t>> RP;
-  ES.callSPSWrapperAsync<int32_t(int32_t, int32_t)>(
+  auto &EPC = ES.getExecutorProcessControl();
+  EPC.callSPSWrapperAsync<int32_t(int32_t, int32_t)>(
       ExecutorAddr::fromPtr(addWrapper),
       [&](Error SerializationErr, int32_t R) {
         if (SerializationErr)

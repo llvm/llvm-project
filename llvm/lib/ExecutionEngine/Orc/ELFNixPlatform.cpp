@@ -507,7 +507,8 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
   if (!PJDDSOHandle)
     return PJDDSOHandle.takeError();
 
-  if (auto Err = ES.callSPSWrapper<void(uint64_t)>(
+  auto &EPC = ES.getExecutorProcessControl();
+  if (auto Err = EPC.callSPSWrapper<void(uint64_t)>(
           orc_rt_elfnix_platform_bootstrap,
           PJDDSOHandle->getAddress().getValue()))
     return Err;
@@ -574,7 +575,8 @@ Error ELFNixPlatform::registerPerObjectSections(
                                    inconvertibleErrorCode());
 
   Error ErrResult = Error::success();
-  if (auto Err = ES.callSPSWrapper<shared::SPSError(
+  auto &EPC = ES.getExecutorProcessControl();
+  if (auto Err = EPC.callSPSWrapper<shared::SPSError(
                      SPSELFPerObjectSectionsToRegister)>(
           orc_rt_elfnix_register_object_sections, ErrResult, POSR))
     return Err;
@@ -589,7 +591,8 @@ Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
         inconvertibleErrorCode());
 
   Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
+  auto &EPC = ES.getExecutorProcessControl();
+  if (auto Err = EPC.callSPSWrapper<SPSExpected<uint64_t>(void)>(
           orc_rt_elfnix_create_pthread_key, Result))
     return std::move(Err);
   return Result;

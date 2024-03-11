@@ -20,6 +20,7 @@ namespace llvm {
 namespace orc {
 
 class ExecutionSession;
+class ExecutorProcessControl;
 
 /// Register/Deregisters EH frames in a remote process via a
 /// ExecutorProcessControl instance.
@@ -37,17 +38,17 @@ public:
 
   /// Create a EPCEHFrameRegistrar with the given ExecutorProcessControl
   /// object and registration/deregistration function addresses.
-  EPCEHFrameRegistrar(ExecutionSession &ES,
+  EPCEHFrameRegistrar(ExecutorProcessControl &EPC,
                       ExecutorAddr RegisterEHFrameSectionWrapper,
                       ExecutorAddr DeregisterEHFRameSectionWrapper)
-      : ES(ES), RegisterEHFrameSectionWrapper(RegisterEHFrameSectionWrapper),
+      : EPC(EPC), RegisterEHFrameSectionWrapper(RegisterEHFrameSectionWrapper),
         DeregisterEHFrameSectionWrapper(DeregisterEHFRameSectionWrapper) {}
 
   Error registerEHFrames(ExecutorAddrRange EHFrameSection) override;
   Error deregisterEHFrames(ExecutorAddrRange EHFrameSection) override;
 
 private:
-  ExecutionSession &ES;
+  ExecutorProcessControl &EPC;
   ExecutorAddr RegisterEHFrameSectionWrapper;
   ExecutorAddr DeregisterEHFrameSectionWrapper;
 };

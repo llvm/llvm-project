@@ -51,7 +51,8 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
 
 Error EPCDebugObjectRegistrar::registerDebugObject(ExecutorAddrRange TargetMem,
                                                    bool AutoRegisterCode) {
-  return ES.callSPSWrapper<void(shared::SPSExecutorAddrRange, bool)>(
+  auto &EPC = ES.getExecutorProcessControl();
+  return EPC.callSPSWrapper<void(shared::SPSExecutorAddrRange, bool)>(
       RegisterFn, TargetMem, AutoRegisterCode);
 }
 

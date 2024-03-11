@@ -2284,14 +2284,15 @@ static Expected<ExecutorSymbolDef> getEntryPoint(Session &S) {
 
 static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
   StringRef DemangledEntryPoint = EntryPointName;
-  if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO &&
+  auto &EPC = S.ES.getExecutorProcessControl();
+  if (EPC.getTargetTriple().getObjectFormat() == Triple::MachO &&
       DemangledEntryPoint.front() == '_')
     DemangledEntryPoint = DemangledEntryPoint.drop_front();
   using llvm::orc::shared::SPSString;
   using SPSRunProgramSig =
       int64_t(SPSString, SPSString, shared::SPSSequence<SPSString>);
   int64_t Result;
-  if (auto Err = S.ES.callSPSWrapper<SPSRunProgramSig>(
+  if (auto Err = EPC.callSPSWrapper<SPSRunProgramSig>(
           EntryPointAddr, Result, S.MainJD->getName(), DemangledEntryPoint,
           static_cast<std::vector<std::string> &>(InputArgv)))
     return std::move(Err);
@@ -2300,7 +2301,8 @@ static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
 
 static Expected<int> runWithoutRuntime(Session &S,
                                        ExecutorAddr EntryPointAddr) {
-  return S.ES.getExecutorProcessControl().runAsMain(EntryPointAddr, InputArgv);
+  auto &EPC = S.ES.getExecutorProcessControl();
+  return EPC.runAsMain(EntryPointAddr, InputArgv);
 }
 
 namespace {
