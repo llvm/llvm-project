@@ -14587,7 +14587,7 @@ Arguments:
 
 The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
-type must be at least as wide as ``i2``, to uphold the three possible return values.
+type must be at least as wide as ``i2``, to hold the three possible return values.
 
 .. _int_memcpy:
 
