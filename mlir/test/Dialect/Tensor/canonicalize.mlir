@@ -1,5 +1,42 @@
 // RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
+
+// CHECK-LABEL: expand_shape_identity_fold
+// CHECK-NEXT: return
+func.func @expand_shape_identity_fold(%arg0 : tensor<5xf32>) -> tensor<5xf32> {
+  %0 = tensor.expand_shape %arg0 [[0]] : tensor<5xf32> into tensor<5xf32>
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: expand_shape_rank0_identity_fold
+// CHECK-NEXT: return
+func.func @expand_shape_rank0_identity_fold(%arg0 : tensor<f32>) -> tensor<f32> {
+  %0 = tensor.expand_shape %arg0 [] : tensor<f32> into tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: collapse_shape_identity_fold
+// CHECK-NEXT: return
+func.func @collapse_shape_identity_fold(%arg0 : tensor<5x4xf32>) -> tensor<5x4xf32> {
+  %0 = tensor.collapse_shape %arg0 [[0], [1]] : tensor<5x4xf32> into tensor<5x4xf32>
+  return %0 : tensor<5x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: collapse_shape_rank0_identity_fold
+// CHECK-NEXT: return
+func.func @collapse_shape_rank0_identity_fold(%arg0 : tensor<f32>) -> tensor<f32> {
+  %0 = tensor.collapse_shape %arg0 [] : tensor<f32> into tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
 // CHECK-LABEL: @tensor_bitcast_chain_ok
 // CHECK-SAME: %[[IN:.*]]: tensor<2xi32>
 func.func @tensor_bitcast_chain_ok(%input: tensor<2xi32>) -> tensor<2xf32> {
@@ -2092,7 +2129,7 @@ func.func @unpack_pack(%t: tensor<128x128xf32>) -> tensor<128x128xf32> {
 
 // Chain: NC -> NCnc -> NCnc -> NC
 // CHECK: func.func @unpack_pack(
-// CHECK-SAME: %[[T:.+]]: tensor<128x128xf32>, 
+// CHECK-SAME: %[[T:.+]]: tensor<128x128xf32>,
 // CHECK: return %[[T]] : tensor<128x128xf32>
 func.func @unpack_pack(%t: tensor<128x128xf32>, %tile1: index, %tile2: index) -> tensor<128x128xf32> {
   %tensor_empty = tensor.empty(%tile1, %tile2) : tensor<16x16x?x?xf32>
