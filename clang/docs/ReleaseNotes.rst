@@ -265,6 +265,9 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Clang now correctly generates overloads for bit-precise integer types for
+  builtin operators in C++. Fixes #GH82998.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
