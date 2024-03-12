@@ -1,7 +1,7 @@
 
 /*
    This is the default presets for LLVM, if you want to add your own
-   custom one, create a CMakeUserPreset.json instead.
+   custom one, create a CMakeUserPresets.json instead.
 */
 
 {
