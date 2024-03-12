@@ -2718,7 +2718,7 @@ static void EmitComplexRangeDiag(const Driver &D,
           Option == "-fno-cx-limited-range";
     }
     if (Option.empty() ||
-        !Option.empty() && !NegateFortranOption && !NegateLimitedOption)
+        (!Option.empty() && !NegateFortranOption && !NegateLimitedOption))
       D.Diag(clang::diag::warn_drv_overriding_option)
           << EnumComplexRangeToStr(Range1, Option)
           << EnumComplexRangeToStr(Range2, Option);
