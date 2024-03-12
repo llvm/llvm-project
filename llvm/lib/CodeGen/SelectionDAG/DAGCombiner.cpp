@@ -2841,16 +2841,17 @@ static SDValue combineFixedwidthToAVG(SDNode *N, SelectionDAG &DAG) {
   ConstantSDNode *N1C = isConstOrConstSplat(Lshr.getOperand(1));
   if (!N1C || N1C->getAPIntValue() != 1)
     return SDValue();
-  EVT VT = And.getValueType();
+  EVT VT = And1.getValueType();
+  EVT NVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
   if (VT.isVector())
-    return SDValue();
+    VT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
+  else
+    VT = NVT;
   SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isOperationLegalOrCustom(ISD::AVGFLOORU, VT))
     return SDValue();
-  return DAG.getNode(ISD::AVGFLOORU, DL, VT,
-                     DAG.getExtOrTrunc(false, And1, DL, VT),
-                     DAG.getExtOrTrunc(false, And2, DL, VT));
+  return DAG.getNode(ISD::AVGFLOORU, DL, VT, And1, And2);
 }
 
 SDValue DAGCombiner::visitADD(SDNode *N) {
