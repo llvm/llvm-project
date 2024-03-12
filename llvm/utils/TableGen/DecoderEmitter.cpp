@@ -52,13 +52,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "decoder-emitter"
 
-extern cl::OptionCategory DisassemblerEmitterCat;
-
-cl::opt<bool> DecoderEmitterSuppressDuplicates(
-    "suppress-per-hwmode-duplicates",
-    cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
-    cl::init(false), cl::cat(DisassemblerEmitterCat));
-
 namespace {
 
 STATISTIC(NumEncodings, "Number of encodings considered");
@@ -128,6 +121,8 @@ struct EncodingIDAndOpcode {
 };
 
 using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
+using NamespacesHwModesMap =
+    std::map<std::string, std::map<StringRef, unsigned>>;
 
 raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
   if (Value.EncodingDef != Value.Inst->TheDef)
@@ -2451,14 +2446,23 @@ static void emitCheck(formatted_raw_ostream &OS) {
 
 // Collect all HwModes referenced by the target for encoding purposes,
 // returning a vector of corresponding names.
-static void
-collectHwModesReferencedForEncodings(const CodeGenHwModes &HWM,
-                                     std::vector<StringRef> &Names) {
+static void collectHwModesReferencedForEncodings(
+    const CodeGenHwModes &HWM, std::vector<StringRef> &Names,
+    NamespacesHwModesMap &NamespacesWithHwModes) {
   SmallBitVector BV(HWM.getNumModeIds());
   for (const auto &MS : HWM.getHwModeSelects()) {
     for (const HwModeSelect::PairType &P : MS.second.Items) {
-      if (P.second->isSubClassOf("InstructionEncoding"))
+      if (P.second->isSubClassOf("InstructionEncoding")) {
+        std::string DecoderNamespace =
+            std::string(P.second->getValueAsString("DecoderNamespace"));
+        if (P.first == DefaultMode) {
+          NamespacesWithHwModes[DecoderNamespace][""] = 1;
+        } else {
+          NamespacesWithHwModes[DecoderNamespace][HWM.getMode(P.first).Name] =
+              1;
+        }
         BV.set(P.first);
+      }
     }
   }
   transform(BV.set_bits(), std::back_inserter(Names), [&HWM](const int &M) {
@@ -2489,10 +2493,12 @@ void DecoderEmitter::run(raw_ostream &o) {
   // Parameterize the decoders based on namespace and instruction width.
 
   // First, collect all encoding-related HwModes referenced by the target.
+  // Also collect the namespaces which contain valid hwmodes.
   // If HwModeNames is empty, add the empty string so we always have one HwMode.
   const CodeGenHwModes &HWM = Target.getHwModes();
   std::vector<StringRef> HwModeNames;
-  collectHwModesReferencedForEncodings(HWM, HwModeNames);
+  NamespacesHwModesMap NamespacesWithHwModes;
+  collectHwModesReferencedForEncodings(HWM, HwModeNames, NamespacesWithHwModes);
   if (HwModeNames.empty())
     HwModeNames.push_back("");
 
@@ -2503,21 +2509,34 @@ void DecoderEmitter::run(raw_ostream &o) {
     if (const RecordVal *RV = InstDef->getValue("EncodingInfos")) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (auto &KV : EBM)
-          NumberedEncodings.emplace_back(
-              KV.second, NumberedInstruction,
-              HWM.getModeName(KV.first, /*IncludeDefault=*/true));
+        for (auto &[ModeId, Encoding] : EBM) {
+          // DecoderTable with DefaultMode should not have any suffix
+          if (ModeId == DefaultMode) {
+            NumberedEncodings.emplace_back(Encoding, NumberedInstruction, "");
+          } else {
+            NumberedEncodings.emplace_back(Encoding, NumberedInstruction,
+                                           HWM.getMode(ModeId).Name);
+          }
+        }
         continue;
       }
     }
-    // This instruction is encoded the same on all HwModes. Emit it for all
-    // HwModes by default, otherwise leave it in a single common table.
-    if (DecoderEmitterSuppressDuplicates) {
-      NumberedEncodings.emplace_back(InstDef, NumberedInstruction, "AllModes");
-    } else {
-      for (StringRef HwModeName : HwModeNames)
-        NumberedEncodings.emplace_back(InstDef, NumberedInstruction,
-                                       HwModeName);
+    // This instruction is encoded the same on all HwModes.
+    // If this instruction shares a DecoderNamespace with instructions who have
+    // the encodingByHwMode attribute, emit it for all HwModes. Otherwise,
+    // only emit encoding once.
+    std::string DecoderNamespace = std::string(
+        NumberedInstruction->TheDef->getValueAsString("DecoderNamespace"));
+    for (StringRef HwModeName : HwModeNames) {
+      if (NamespacesWithHwModes.count(DecoderNamespace) > 0) {
+        if (NamespacesWithHwModes[DecoderNamespace].count(HwModeName) > 0) {
+          NumberedEncodings.emplace_back(InstDef, NumberedInstruction,
+                                         HwModeName);
+        }
+      } else {
+        NumberedEncodings.emplace_back(InstDef, NumberedInstruction, "");
+        break;
+      }
     }
   }
   for (const auto &NumberedAlias :

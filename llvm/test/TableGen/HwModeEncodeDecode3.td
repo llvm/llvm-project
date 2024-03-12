@@ -2,8 +2,6 @@
 // RUN:     FileCheck %s --check-prefix=ENCODER
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | \
 // RUN:     FileCheck %s --check-prefix=DECODER
-// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates -I \
-// RUN:     %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS
 
 include "llvm/Target/Target.td"
 
@@ -20,8 +18,8 @@ def Myi32 : Operand<i32> {
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>;
-def ModeB : HwMode<"+b", [HasB]>;
+def ModeA : HwMode<"+a", [HasA]>; // hwmode ID 1
+def ModeB : HwMode<"+b", [HasB]>; // hwmode ID 2
 
 
 def fooTypeEncDefault : InstructionEncoding {
@@ -98,17 +96,24 @@ def unrelated: Instruction {
   let AsmString = "unrelated  $factor";
 }
 
-
-// DECODER-LABEL: DecoderTableAlt_DefaultMode32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeA32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeB32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTable_DefaultMode32[] =
-// DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_DefaultMode64[] =
+// DecoderTable64 is assigned with 'DefaultMode',
+// the table name should remain the same as before.
+// DECODER-LABEL: DecoderTable64[] =
 // DECODER-DAG: Opcode: fooTypeEncDefault:foo
+
+// DecoderTable without any valid HwModes
+// should not have any suffix in table name.
+// The table should remain the same as before.
+// DECODER-LABEL: DecoderTableAlt32[] =
+// DECODER-DAG: Opcode: unrelated
+// DECODER-NOT: DecoderTableAlt_ModeA32[]
+// DECODER-NOT: DecoderTableAlt_ModeB32[]
+
+// The DecoderTable32 contains two valid hwmodes, we will
+// generate two tables corresponding to these hwmodes.
+// Still want to say we didn't assign 'DefaultMode' to DecoderTable32,
+// instead we assign 'DefaultMode' to DecoderTable64, so
+// DecoderTable32 won't appear here.
 // DECODER-LABEL: DecoderTable_ModeA32[] =
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
@@ -118,30 +123,24 @@ def unrelated: Instruction {
 // DECODER-DAG: Opcode: bar
 
 
-// DECODER-SUPPRESS-LABEL: DecoderTableAlt_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: unrelated
-// DECODER-SUPPRESS-LABEL: DecoderTable_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_DefaultMode64[] =
-// DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32[] =
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:foo
-// DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeB32[] =
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncB:foo
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:baz
-// DECODER-SUPPRESS-NOT: Opcode: bar
-
-// ENCODER-LABEL:   static const uint64_t InstBits_DefaultMode[] = {
+// For 'bar' and 'unrelated', we didn't assign any hwmodes for them,
+// they should keep the same in the following three tables.
+// For 'foo' we assigned three hwmodes(includes 'DefaultMode')
+// it's encodings should be different in the following three tables.
+// For 'baz' we only assigned ModeB for it, to avoid empty encoding
+// we assigned the encoding of ModeB to ModeA and DefaultMode(Even though
+// they will not be used).
+// ENCODER-LABEL:   static const uint64_t InstBits[] = {
 // ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
+// To avoid empty encoding, we choose the encoding of ModeB for baz here
+// ENCODER:         UINT64_C(12),        // baz
 // ENCODER:         UINT64_C(8),        // foo
 // ENCODER:         UINT64_C(2),        // unrelated
 
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeA[] = {
 // ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
+// To avoid empty encoding, we choose the encoding of ModeB for baz here
+// ENCODER:         UINT64_C(12),        // baz
 // ENCODER:         UINT64_C(12),       // foo
 // ENCODER:         UINT64_C(2),        // unrelated
 
@@ -151,18 +150,39 @@ def unrelated: Instruction {
 // ENCODER:         UINT64_C(3),        // foo
 // ENCODER:         UINT64_C(2),        // unrelated
 
+// Sink the logic of hwmodes selection to per instruction level.
+// ENCODER-LABEL: case ::bar:
+// ENCODER: op = getMachineOpValue
+// ENCODER-LABEL: case ::baz: {
 // ENCODER:  unsigned HwMode = STI.getHwMode();
+// ENCODER:  HwMode &= 2;
 // ENCODER:  switch (HwMode) {
 // ENCODER:  default: llvm_unreachable("Unknown hardware mode!"); break;
-// ENCODER:  case 0: InstBits = InstBits_DefaultMode; break;
-// ENCODER:  case 1: InstBits = InstBits_ModeA; break;
-// ENCODER:  case 2: InstBits = InstBits_ModeB; break;
+// ENCODER:  case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER:  };
+// ENCODER:  Value = InstBitsByHw[opcode];
+// ENCODER:  switch (HwMode) {
+// ENCODER:  default: llvm_unreachable("Unhandled HwMode");
+// ENCODER:  case 2: {
+// ENCODER:  op = getMachineOpValue
+// ENCODER-LABEL: case ::foo: {
+// ENCODER:  unsigned HwMode = STI.getHwMode();
+// ENCODER:  HwMode &= 3;
+// ENCODER:  switch (HwMode) {
+// ENCODER:  default: llvm_unreachable("Unknown hardware mode!"); break;
+// ENCODER:  case 0: InstBitsByHw = InstBits; break;
+// ENCODER:  case 1: InstBitsByHw = InstBits_ModeA; break;
+// ENCODER:  case 2: InstBitsByHw = InstBits_ModeB; break;
+// ENCODER:  };
+// ENCODER:  Value = InstBitsByHw[opcode];
+// ENCODER:  switch (HwMode) {
+// ENCODER:  default: llvm_unreachable("Unhandled HwMode");
+// ENCODER:  case 0: {
+// ENCODER:  op = getMachineOpValue
+// ENCODER:  case 1: {
+// ENCODER:  op = getMachineOpValue
+// ENCODER:  case 2: {
+// ENCODER:  op = getMachineOpValue
 
-// ENCODER:     case ::foo: {
-// ENCODER:      switch (HwMode) {
-// ENCODER:      default: llvm_unreachable("Unhandled HwMode");
-// ENCODER:      case 0: {
-// ENCODER:      case 1: {
-// ENCODER:      case 2: {
+
 

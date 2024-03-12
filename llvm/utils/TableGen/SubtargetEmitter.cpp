@@ -1782,12 +1782,15 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
     return;
 
   OS << "unsigned " << ClassName << "::getHwMode() const {\n";
+  OS << "  // Collect Hw Modes and store them in bits\n";
+  OS << "  unsigned Modes = 0;\n";
   for (unsigned M = 1, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
     const HwMode &HM = CGH.getMode(M);
-    OS << "  if (checkFeatures(\"" << HM.Features << "\")) return " << M
-       << ";\n";
+    // Since mode Id >= 1, So -1 is safe here
+    OS << "  if (checkFeatures(\"" << HM.Features << "\")) Modes |= (1 << "
+       << (M - 1) << ");\n";
   }
-  OS << "  return 0;\n}\n";
+  OS << "  return Modes;\n}\n";
 }
 
 void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,

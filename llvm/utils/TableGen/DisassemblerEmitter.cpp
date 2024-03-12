@@ -131,7 +131,5 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   EmitDecoder(Records, OS, PredicateNamespace);
 }
 
-cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
-
 static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
                                 "Generate disassembler");

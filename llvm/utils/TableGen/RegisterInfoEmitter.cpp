@@ -1640,6 +1640,46 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   EmitRegMappingTables(OS, Regs, true);
 
+  // By using bitwise AND operations, we collect the HwModes
+  // who are controlling the RegInfos.
+  unsigned RegHwModesInBits = 0;
+  for (const auto &RC : RegisterClasses) {
+    Record *Def = RC.getDef();
+    if (!Def)
+      continue;
+
+    if (const RecordVal *RV = Def->getValue("RegInfos")) {
+      if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+        RegSizeInfoByHwMode RSI(DI->getDef(), CGH);
+        for (auto &[ModeId, RegInfo] : RSI) {
+          // Default mode is 0, and skip it.
+          if (ModeId)
+            RegHwModesInBits |= (1 << (ModeId - 1));
+        }
+      }
+    }
+  }
+
+  OS << "static unsigned getRegInfosHwModeId(unsigned HwModesInBits) {\n"
+     << "  HwModesInBits &= " << RegHwModesInBits << ";\n"
+     << "  unsigned RegsHwModeId = 0;\n"
+     << "\n"
+     << "  for (unsigned Idx = 1; Idx <= 32; Idx ++) {\n"
+     << "    if (HwModesInBits & (1 << (Idx - 1))) {\n"
+     << "      // One subtarget can only own one regs HwMode\n"
+     << "      if (RegsHwModeId != 0) {\n"
+     << "        llvm_unreachable(\"One subtarget only can own one kind of "
+        "regs hwmode\");\n"
+     << "      } else {\n"
+     << "        RegsHwModeId = Idx;\n"
+     << "        // Don't break, continue checking\n"
+     << "      }\n"
+     << "    }\n"
+     << "  }\n"
+     << "\n"
+     << "  return RegsHwModeId;\n"
+     << "}\n\n";
+
   OS << ClassName << "::\n"
      << ClassName
      << "(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour,\n"
@@ -1649,7 +1689,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable,\n"
      << "             ";
   printMask(OS, RegBank.CoveringLanes);
-  OS << ", RegClassInfos, VTLists, HwMode) {\n"
+  OS << ", RegClassInfos, VTLists, getRegInfosHwModeId(HwMode)) {\n"
      << "  InitMCRegisterInfo(" << TargetName << "RegDesc, " << Regs.size() + 1
      << ", RA, PC,\n                     " << TargetName
      << "MCRegisterClasses, " << RegisterClasses.size() << ",\n"

@@ -1,7 +1,5 @@
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | \
 // RUN:     FileCheck %s --check-prefix=DECODER
-// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates -I \
-// RUN:     %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS
 
 // Test duplicate table suppression for per-HwMode decoders.
 
@@ -76,10 +74,8 @@ let OutOperandList = (outs) in {
     let AsmString = "foo  $factor";
   }
 
-  // Encoding not overridden, different namespace:
-  // In the default case, this instruction is duplicated into two Alt decoder
-  // tables (ModeA and ModeB).
-  // In the suppressed case, this instruction appears in a single decoder table.
+  // Instructions whose DecoderNamespace doesn't contain valid
+  // EncodingInfos attribute, should remain the same as before.
   def unrelated: Instruction {
     let DecoderNamespace = "Alt";
     let InOperandList = (ins i32imm:$factor);
@@ -93,9 +89,7 @@ let OutOperandList = (outs) in {
   }
 }
 
-// DECODER-LABEL: DecoderTableAlt_ModeA32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeB32[] =
+// DECODER-LABEL: DecoderTableAlt32[] =
 // DECODER-DAG: Opcode: unrelated
 // DECODER-LABEL: DecoderTable_ModeA32[] =
 // DECODER-DAG: Opcode: fooTypeEncA:foo
@@ -104,16 +98,3 @@ let OutOperandList = (outs) in {
 // DECODER-DAG: Opcode: fooTypeEncB:foo
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar
-
-
-// DECODER-SUPPRESS-LABEL: DecoderTableAlt_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: unrelated
-// DECODER-SUPPRESS-LABEL: DecoderTable_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32[] =
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:foo
-// DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeB32[] =
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncB:foo
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:baz
-// DECODER-SUPPRESS-NOT: Opcode: bar
