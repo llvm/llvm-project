@@ -113,7 +113,6 @@ public:
       : basic_streambuf<_CharT, _Traits>{std::move(__rhs)},
         __mode_{std::move(__rhs.__mode_)},
         __buf_{std::move(__rhs.__buf_)} {}
-  // __buf_{std::exchange(__rhs.__buf_, {})} {}
 
   // [spanbuf.assign], assignment and swap
 
@@ -187,7 +186,7 @@ protected:
       break;
 
     case ios_base::end:
-      if ((__which & ios_base::out) && !(__which & ios_base::in))
+      if ((__mode_ & ios_base::out) && !(__mode_ & ios_base::in))
         __baseoff = this->pptr() - this->pbase();
       else
         __baseoff = __buf_.size();
