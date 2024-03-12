@@ -1231,11 +1231,10 @@ multiclass VOP1_Real_gfx10<bits<9> op> :
   VOP1_Real_sdwa_gfx10<op>, VOP1_Real_dpp_gfx10<op>,
   VOP1_Real_dpp8_gfx10<op>;
 
-multiclass VOP1_Real_gfx10_FULL_gfx11_gfx12_gfx13<bits<9> op> :
+multiclass VOP1_Real_gfx10_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_gfx10<op>,
   VOP1_Real_FULL<GFX11Gen, op>,
-  VOP1_Real_FULL<GFX12Gen, op>,
-  VOP1_Real_FULL<GFX13Gen, op>;
+  VOP1_Real_FULL<GFX12Gen, op>;
 
 multiclass VOP1_Real_gfx10_NO_DPP_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1_Real_gfx10<op>,
@@ -1243,14 +1242,17 @@ multiclass VOP1_Real_gfx10_NO_DPP_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1_Real_NO_DPP<GFX12Gen, op>,
   VOP1_Real_NO_DPP<GFX13Gen, op>;
 
-multiclass VOP1Only_Real_gfx10_gfx11_gfx12_gfx13<bits<9> op> :
+multiclass VOP1Only_Real_gfx10_gfx11_gfx12<bits<9> op> :
   VOP1Only_Real_gfx10<op>,
   VOP1Only_Real<GFX11Gen, op>,
-  VOP1Only_Real<GFX12Gen, op>,
+  VOP1Only_Real<GFX12Gen, op>;
+
+multiclass VOP1Only_Real_gfx10_gfx11_gfx12_gfx13<bits<9> op> :
+  VOP1Only_Real_gfx10_gfx11_gfx12<op>,
   VOP1Only_Real<GFX13Gen, op>;
 
 defm V_PIPEFLUSH         : VOP1_Real_gfx10_NO_DPP_gfx11_gfx12_gfx13<0x01b>;
-defm V_MOVRELSD_2_B32    : VOP1_Real_gfx10_FULL_gfx11_gfx12_gfx13<0x048>;
+defm V_MOVRELSD_2_B32    : VOP1_Real_gfx10_FULL_gfx11_gfx12<0x048>;
 defm V_CVT_F16_U16       : VOP1_Real_gfx10<0x050>;
 defm V_CVT_F16_I16       : VOP1_Real_gfx10<0x051>;
 defm V_CVT_U16_F16       : VOP1_Real_gfx10<0x052>;
@@ -1274,7 +1276,7 @@ defm V_CVT_NORM_I16_F16  : VOP1_Real_gfx10<0x063>;
 defm V_CVT_NORM_U16_F16  : VOP1_Real_gfx10<0x064>;
 
 defm V_SWAP_B32          : VOP1Only_Real_gfx10_gfx11_gfx12_gfx13<0x065>;
-defm V_SWAPREL_B32       : VOP1Only_Real_gfx10_gfx11_gfx12_gfx13<0x068>;
+defm V_SWAPREL_B32       : VOP1Only_Real_gfx10_gfx11_gfx12<0x068>;
 
 //===----------------------------------------------------------------------===//
 // GFX7, GFX10, GFX11, GFX12
@@ -1336,9 +1338,13 @@ multiclass VOP1_Real_gfx6_gfx7<bits<9> op> :
 multiclass VOP1_Real_gfx6_gfx7_gfx10<bits<9> op> :
   VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10<op>;
 
-multiclass VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<bits<9> op> :
+multiclass VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_FULL<GFX11Gen, op>,
-  VOP1_Real_FULL<GFX12Gen, op>, VOP1_Real_FULL<GFX13Gen, op>;
+  VOP1_Real_FULL<GFX12Gen, op>;
+
+multiclass VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<bits<9> op> :
+  VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<op>,
+  VOP1_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
@@ -1408,9 +1414,9 @@ defm V_FRACT_F64         : VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_with_DPP16_gfx
 defm V_FREXP_EXP_I32_F32 : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<0x03f>;
 defm V_FREXP_MANT_F32    : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<0x040>;
 defm V_CLREXCP           : VOP1_Real_gfx6_gfx7_gfx10<0x041>;
-defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<0x042>;
-defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<0x043>;
-defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<0x044>;
+defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x042>;
+defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x043>;
+defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x044>;
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).
