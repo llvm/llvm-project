@@ -652,10 +652,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // check to see if the pointer is guaranteed to not be modified from entry of
   // the function to each of the load instructions.
 
-  // Because there could be several/many load instructions, remember which
-  // blocks we know to be transparent to the load.
-  df_iterator_default_set<BasicBlock *, 16> TranspBlocks;
-
   for (LoadInst *Load : Loads) {
     // Check to see if the load is invalidated from the start of the block to
     // the load itself.
@@ -669,7 +665,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     // To do this, we perform a depth first search on the inverse CFG from the
     // loading block.
     for (BasicBlock *P : predecessors(BB)) {
-      for (BasicBlock *TranspBB : inverse_depth_first_ext(P, TranspBlocks))
+      for (BasicBlock *TranspBB : inverse_depth_first(P))
         if (AAR.canBasicBlockModify(*TranspBB, Loc))
           return false;
     }
