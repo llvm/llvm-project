@@ -43,7 +43,7 @@ int test_load_field3(Foo *ptr) {
 
 // CHECK: cir.func @_Z16test_load_field3P3Foo
 // CHECK:   %[[MemberAddr:.+]] = cir.get_member
-// CHECK:   %{{.+}} = cir.load volatile %[[MemberAddr]]
+// CHECK:   %{{.+}} = cir.get_bitfield(#bfi_z, %[[MemberAddr:.+]] {is_volatile}
 
 void test_store_field1(volatile Foo *ptr) {
   ptr->x = 42;
@@ -67,4 +67,4 @@ void test_store_field3(Foo *ptr) {
 
 // CHECK: cir.func @_Z17test_store_field3P3Foo
 // CHECK:   %[[MemberAddr:.+]] = cir.get_member
-// CHECK:   cir.store volatile %{{.+}}, %[[MemberAddr]]
+// CHECK:   cir.set_bitfield(#bfi_z, %[[MemberAddr:.+]] : !cir.ptr<!u8i>, %1 : !s32i) {is_volatile}

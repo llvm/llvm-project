@@ -1470,7 +1470,7 @@ public:
   }
 
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
-                                   unsigned index, unsigned size);
+                                   mlir::Type fieldType, unsigned index);
 
   /// Given an opaque value expression, return its LValue mapping if it exists,
   /// otherwise create one.
