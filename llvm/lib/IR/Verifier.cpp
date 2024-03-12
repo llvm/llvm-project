@@ -5246,7 +5246,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(SrcTy->isVectorTy() == isDestTypeVector,
         "[us]cmp source and destination must both be a vector or neither", Call);
     if (isDestTypeVector) {
-      Check(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements(),
+      auto srcVecLen = cast<VectorType>(SrcTy)->getElementCount();
+      auto destVecLen = cast<VectorType>(DestTy)->getElementCount();
+      Check(srcVecLen == destVecLen,
         "the return type the first arg type must have the same number of elements", Call);
     }
     break;
