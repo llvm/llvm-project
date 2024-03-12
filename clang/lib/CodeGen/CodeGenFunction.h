@@ -3831,6 +3831,8 @@ private:
     Expr *NextLB = nullptr;
     /// Update of UB after a whole chunk has been executed
     Expr *NextUB = nullptr;
+    /// Distinguish between the for distribute and sections
+    OpenMPDirectiveKind DKind = llvm::omp::OMPD_unknown;
     OMPLoopArguments() = default;
     OMPLoopArguments(Address LB, Address UB, Address ST, Address IL,
                      llvm::Value *Chunk = nullptr, Expr *EUB = nullptr,
