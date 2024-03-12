@@ -261,6 +261,7 @@ Bug Fixes in This Version
 
 - Clang no longer fails to codegen static ``const`` variables whose initialiser performs
   a floating-point division by 0 in C23.
+  Fixes (#GH84784).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
