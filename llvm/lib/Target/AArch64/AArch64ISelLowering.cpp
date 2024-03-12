@@ -7758,8 +7758,8 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
           (AArch64::GPR32RegClass.contains(MO.getReg()) ||
            AArch64::GPR64RegClass.contains(MO.getReg())))
         MI.removeOperand(I);
-    // If the instruction or pseudo changes PSTATE.SM, then add VG as a Use and
-    // Def.
+
+    // The SVE vector length can change when entering/leaving streaming mode.
     if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
         MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
