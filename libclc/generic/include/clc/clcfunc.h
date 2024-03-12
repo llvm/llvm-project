@@ -8,7 +8,7 @@
 #define _CLC_DEF
 #elif defined(CLC_CLSPV) || defined(CLC_CLSPV64)
 #define _CLC_DEF                                                               \
-  __attribute__((noinline)) __attribute__((assume("clspv_libclc_builtin")))
+  __attribute__((noinline)) __attribute__((__omp_assume__("clspv_libclc_builtin")))
 #else
 #define _CLC_DEF __attribute__((always_inline))
 #endif

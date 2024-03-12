@@ -656,7 +656,8 @@ bool Sema::CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs) {
 ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
-    Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+    Diag(A.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << A.getAttrName() << 1 << Range;
     return ExprError();
   }
 

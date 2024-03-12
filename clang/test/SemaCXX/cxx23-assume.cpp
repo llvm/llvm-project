@@ -56,6 +56,10 @@ void g(int x) {
   [[assume(true)]] while (false) {} // expected-error {{only applies to empty statements}}
   [[assume(true)]] label:; // expected-error {{cannot be applied to a declaration}}
   [[assume(true)]] goto label; // expected-error {{only applies to empty statements}}
+
+  // Also check variant spellings.
+  __attribute__((assume(true))) {}; // expected-error {{only applies to empty statements}}
+  [[clang::assume(true)]] {}; // expected-error {{only applies to empty statements}}
 }
 
 // Check that 'x' is ODR-used here.

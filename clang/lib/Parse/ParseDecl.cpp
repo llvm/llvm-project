@@ -629,6 +629,9 @@ void Parser::ParseGNUAttributeArgs(
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, ScopeName,
                               ScopeLoc, Form);
     return;
+  } else if (AttrKind == ParsedAttr::AT_CXXAssume) {
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc);
+    return;
   }
 
   // These may refer to the function arguments, but need to be parsed early to
@@ -682,6 +685,10 @@ unsigned Parser::ParseClangAttributeArgs(
   case ParsedAttr::AT_TypeTagForDatatype:
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Form);
+    break;
+
+  case ParsedAttr::AT_CXXAssume:
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc);
     break;
   }
   return !Attrs.empty() ? Attrs.begin()->getNumArgs() : 0;

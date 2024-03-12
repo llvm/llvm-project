@@ -2,8 +2,8 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s
 ; RUN: opt -S -passes=openmp-opt -openmp-opt-disable-spmdization < %s | FileCheck %s --check-prefix=CHECK-DISABLED
 ;
-;    void pure(void) __attribute__((pure, assume("ompx_spmd_amenable")));
-;    int no_openmp(int *) __attribute__((assume("omp_no_openmp","ompx_spmd_amenable")));
+;    [[omp::assume("ompx_spmd_amenable")]] void pure(void) __attribute__((pure));
+;    [[omp::assume("omp_no_openmp","ompx_spmd_amenable")]] int no_openmp(int *);
 ;
 ;    void sequential_loop(int *x, int N) {
 ;    #pragma omp target teams
