@@ -2687,8 +2687,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
-  StringRef RangeStr = "";
+static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range,
+                                       StringRef Option) {
   switch (Range) {
   case LangOptions::ComplexRangeKind::CX_Limited:
     return "-fcx-limited-range";
@@ -2697,17 +2697,32 @@ static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
     return "-fcx-fortran-rules";
     break;
   default:
-    return RangeStr;
+    return Option;
     break;
   }
 }
 
 static void EmitComplexRangeDiag(const Driver &D,
                                  LangOptions::ComplexRangeKind Range1,
-                                 LangOptions::ComplexRangeKind Range2) {
-  if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None)
-    D.Diag(clang::diag::warn_drv_overriding_option)
-        << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
+                                 LangOptions::ComplexRangeKind Range2,
+                                 StringRef Option = StringRef()) {
+  if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None) {
+    bool NegateFortranOption = false;
+    bool NegateLimitedOption = false;
+    if (!Option.empty()) {
+      NegateFortranOption =
+          Range1 == LangOptions::ComplexRangeKind::CX_Fortran &&
+          Option == "-fno-cx-fortran-rules";
+      NegateLimitedOption =
+          Range1 == LangOptions::ComplexRangeKind::CX_Limited &&
+          Option == "-fno-cx-limited-range";
+    }
+    if (Option.empty() ||
+        !Option.empty() && !NegateFortranOption && !NegateLimitedOption)
+      D.Diag(clang::diag::warn_drv_overriding_option)
+          << EnumComplexRangeToStr(Range1, Option)
+          << EnumComplexRangeToStr(Range2, Option);
+  }
 }
 
 static std::string
@@ -2815,7 +2830,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
     case options::OPT_fno_cx_limited_range:
-      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full,
+                           "-fno-cx-limited-range");
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcx_fortran_rules: {
@@ -2824,7 +2840,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
     case options::OPT_fno_cx_fortran_rules:
-      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full,
+                           "-fno-cx-fortran-rules");
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_ffp_model_EQ: {
