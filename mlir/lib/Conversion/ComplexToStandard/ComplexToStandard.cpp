@@ -845,6 +845,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     auto type = cast<ComplexType>(op.getType());
     Type elementType = type.getElementType();
     Value arg = adaptor.getComplex();
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value zero =
         b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
@@ -852,14 +853,14 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
 
-    Value absLhs = b.create<math::AbsFOp>(real);
-    Value absArg = b.create<complex::AbsOp>(elementType, arg);
-    Value addAbs = b.create<arith::AddFOp>(absLhs, absArg);
+    Value absLhs = b.create<math::AbsFOp>(real, fmf);
+    Value absArg = b.create<complex::AbsOp>(elementType, arg, fmf);
+    Value addAbs = b.create<arith::AddFOp>(absLhs, absArg, fmf);
 
     Value half = b.create<arith::ConstantOp>(elementType,
                                              b.getFloatAttr(elementType, 0.5));
-    Value halfAddAbs = b.create<arith::MulFOp>(addAbs, half);
-    Value sqrtAddAbs = b.create<math::SqrtOp>(halfAddAbs);
+    Value halfAddAbs = b.create<arith::MulFOp>(addAbs, half, fmf);
+    Value sqrtAddAbs = b.create<math::SqrtOp>(halfAddAbs, fmf);
 
     Value realIsNegative =
         b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, real, zero);
@@ -869,7 +870,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value resultReal = sqrtAddAbs;
 
     Value imagDivTwoResultReal = b.create<arith::DivFOp>(
-        imag, b.create<arith::AddFOp>(resultReal, resultReal));
+        imag, b.create<arith::AddFOp>(resultReal, resultReal, fmf), fmf);
 
     Value negativeResultReal = b.create<arith::NegFOp>(resultReal);
 
@@ -882,7 +883,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     resultReal = b.create<arith::SelectOp>(
         realIsNegative,
         b.create<arith::DivFOp>(
-            imag, b.create<arith::AddFOp>(resultImag, resultImag)),
+            imag, b.create<arith::AddFOp>(resultImag, resultImag, fmf), fmf),
         resultReal);
 
     Value realIsZero =
