@@ -38,7 +38,7 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // llvm-lit. Additionally add the TID so that downstream consumers
   // using multiple threads don't run into conflicts.
   std::string AuxiliaryMemoryName =
-      llvm::formatv("/{0}auxmem{1}", getCurrentTID(), ProcessID);
+      formatv("/{0}auxmem{1}", getCurrentTID(), ProcessID);
   int AuxiliaryMemoryFD = shm_open(AuxiliaryMemoryName.c_str(),
                                    O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFD == -1)
@@ -58,7 +58,7 @@ Error SubprocessMemory::addMemoryDefinition(
     pid_t ProcessPID) {
   SharedMemoryNames.reserve(MemoryDefinitions.size());
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string SharedMemoryName = llvm::formatv(
+    std::string SharedMemoryName = formatv(
         "/{0}t{1}memdef{2}", ProcessPID, getCurrentTID(), MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
@@ -95,7 +95,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
     pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
   std::string AuxiliaryMemoryName =
-      llvm::formatv("/{0}auxmem{1}", ParentTID, ParentPID);
+      formatv("/{0}auxmem{1}", ParentTID, ParentPID);
   int AuxiliaryMemoryFileDescriptor =
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
@@ -109,9 +109,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string MemoryValueName = "/" + std::to_string(ParentPID) + "t" +
-                                  std::to_string(ParentTID) + "memdef" +
-                                  std::to_string(MemVal.Index);
+    std::string MemoryValueName = formatv("/{0}t{1}memdef{2}", ParentPID, ParentTID, MemVal.Index);
     AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] =
         shm_open(MemoryValueName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
     if (AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] == -1)
