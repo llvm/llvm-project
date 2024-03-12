@@ -297,7 +297,6 @@ public:
 
   /// Returns true if there is LoopInfo on the stack.
   bool hasInfo() const { return !Active.empty(); }
-
   /// Return the LoopInfo for the current loop. HasInfo should be called
   /// first to ensure LoopInfo is present.
   const LoopInfo &getInfo() const { return *Active.back(); }
