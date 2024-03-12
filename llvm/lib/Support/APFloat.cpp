@@ -3670,7 +3670,7 @@ double IEEEFloat::convertToDouble() const {
   return api.bitsToDouble();
 }
 
-long double IEEEFloat::convertToQuad() const {
+float128 IEEEFloat::convertToQuad() const {
   assert(semantics == (const llvm::fltSemantics *)&semIEEEquad &&
          "Float semantics are not IEEEquads");
   APInt api = bitcastToAPInt();
@@ -3965,7 +3965,7 @@ IEEEFloat::IEEEFloat(double d) {
   initFromAPInt(&semIEEEdouble, APInt::doubleToBits(d));
 }
 
-IEEEFloat::IEEEFloat(long double ld) {
+IEEEFloat::IEEEFloat(float128 ld) {
   initFromAPInt(&semIEEEquad, APInt::longDoubleToBits(ld));
 }
 
@@ -5276,7 +5276,7 @@ double APFloat::convertToDouble() const {
   return Temp.getIEEE().convertToDouble();
 }
 
-long double APFloat::convertToQuad() const {
+float128 APFloat::convertToQuad() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
     return getIEEE().convertToQuad();
   assert(getSemantics().isRepresentableBy(semIEEEquad) &&

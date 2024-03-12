@@ -1760,7 +1760,7 @@ inline bool llvm_fenv_testexcept() {
 
 Constant *ConstantFoldLogf128(const APFloat &V, Type *Ty) {
 #ifdef HAS_LOGF128
-  long double l = logf128(V.convertToQuad());
+  float128 l = logf128(V.convertToQuad());
   return ConstantFP::get128(Ty, l);
 #else
   return nullptr;

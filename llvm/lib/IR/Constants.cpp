@@ -976,7 +976,7 @@ Constant *ConstantFP::get(Type *Ty, double V) {
   return C;
 }
 
-Constant *ConstantFP::get128(Type *Ty, long double V) {
+Constant *ConstantFP::get128(Type *Ty, float128 V) {
   LLVMContext &Context = Ty->getContext();
 
   APFloat FV(V);
