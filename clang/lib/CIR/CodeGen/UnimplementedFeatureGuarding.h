@@ -167,6 +167,12 @@ struct UnimplementedFeature {
   static bool escapedLocals() { return false; }
   static bool deferredReplacements() { return false; }
   static bool shouldInstrumentFunction() { return false; }
+
+  // Inline assembly
+  static bool asm_goto() { return false; }
+  static bool asm_unwind_clobber() { return false; }
+  static bool asm_memory_effects() { return false; }
+  static bool asm_vector_type() { return false; }
 };
 } // namespace cir
 

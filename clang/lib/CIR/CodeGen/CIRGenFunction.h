@@ -951,13 +951,14 @@ public:
 
   mlir::LogicalResult buildAsmStmt(const clang::AsmStmt &S);
 
-  mlir::Value buildAsmInputLValue(const TargetInfo::ConstraintInfo &Info,
-                                  LValue InputValue, QualType InputType,
-                                  std::string &ConstraintStr,
-                                  SourceLocation Loc);
+  std::pair<mlir::Value, mlir::Type>
+  buildAsmInputLValue(const TargetInfo::ConstraintInfo &Info, LValue InputValue,
+                      QualType InputType, std::string &ConstraintStr,
+                      SourceLocation Loc);
 
-  mlir::Value buildAsmInput(const TargetInfo::ConstraintInfo &Info,
-                            const Expr *InputExpr, std::string &ConstraintStr);
+  std::pair<mlir::Value, mlir::Type>
+  buildAsmInput(const TargetInfo::ConstraintInfo &Info, const Expr *InputExpr,
+                std::string &ConstraintStr);
 
   mlir::LogicalResult buildIfStmt(const clang::IfStmt &S);
 
