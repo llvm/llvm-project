@@ -34,3 +34,11 @@ func.func @arith_ops(%arg0: f32, %arg1: f32) {
 
   return
 }
+
+// -----
+
+func.func @arith_select(%arg0: i1, %arg1: tensor<8xi32>, %arg2: tensor<8xi32>) -> () {
+  // CHECK: [[V0:[^ ]*]] = emitc.conditional %arg0, %arg1, %arg2 : tensor<8xi32>
+  %0 = arith.select %arg0, %arg1, %arg2 : i1, tensor<8xi32>
+  return
+}
