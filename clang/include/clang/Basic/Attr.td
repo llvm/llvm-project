@@ -2054,6 +2054,13 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUMaxNumWorkGroups : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_max_num_work_groups", 0>];
+  let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
+  let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
 def AMDGPUKernelCall : DeclOrTypeAttr {
   let Spellings = [Clang<"amdgpu_kernel">];
   let Documentation = [Undocumented];
