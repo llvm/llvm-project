@@ -14,5 +14,6 @@ add_mlir_dialect_library(MLIRComplexDialect
   MLIRArithDialect
   MLIRDialect
   MLIRInferTypeOpInterface
+  MLIRInlinerInterface
   MLIRIR
   )

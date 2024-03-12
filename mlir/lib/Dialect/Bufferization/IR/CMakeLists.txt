@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRDialect
   MLIRFuncDialect
   MLIRFunctionInterfaces
+  MLIRInlinerInterface
   MLIRIR
   MLIRSparseTensorDialect
   MLIRSubsetOpInterface

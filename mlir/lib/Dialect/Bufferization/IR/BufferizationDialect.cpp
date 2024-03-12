@@ -12,7 +12,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Interfaces/InlinerInterface.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;

@@ -11,7 +11,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Interfaces/InlinerInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;

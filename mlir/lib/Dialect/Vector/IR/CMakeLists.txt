@@ -17,6 +17,7 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRDataLayoutInterfaces
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
+  MLIRInlinerInterface
   MLIRIR
   MLIRMaskableOpInterface
   MLIRMaskingOpInterface

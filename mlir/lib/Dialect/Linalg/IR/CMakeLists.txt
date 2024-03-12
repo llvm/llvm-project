@@ -23,6 +23,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRDialectUtils
   MLIRFunctionInterfaces
   MLIRInferTypeOpInterface
+  MLIRInlinerInterface
   MLIRIR
   MLIRParser
   MLIRShardingInterface

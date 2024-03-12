@@ -10,7 +10,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Interfaces/InlinerInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;

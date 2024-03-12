@@ -9,5 +9,6 @@ add_mlir_dialect_library(MLIRUBDialect
   MLIRUBOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRInlinerInterface
   MLIRIR
   )

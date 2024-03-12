@@ -28,8 +28,9 @@ add_mlir_dialect_library(MLIRTensorDialect
   MLIRComplexDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
-  MLIRIR
   MLIRInferTypeOpInterface
+  MLIRInlinerInterface
+  MLIRIR
   MLIRParallelCombiningOpInterface
   MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces

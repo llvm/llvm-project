@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRDLTIDialect
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
+  MLIRInlinerInterface
   MLIRInferIntRangeInterface
   MLIRIR
   MLIRMemRefDialect

@@ -3891,6 +3891,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
+        ":InlinerInterface",
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":ShapedOpInterfaces",
@@ -4298,6 +4299,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":ParallelCombiningOpInterface",
@@ -4365,6 +4367,16 @@ cc_library(
         ":DataLayoutInterfacesIncGen",
         ":IR",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "InlinerInterface",
+    srcs = ["lib/Interfaces/InlinerInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/InlinerInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
     ],
 )
 
@@ -4545,6 +4557,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":MLIRShapeCanonicalizationIncGen",
         ":ShapeOpsIncGen",
         ":SideEffectInterfaces",
@@ -4708,6 +4721,7 @@ cc_library(
         ":ControlFlowOpsIncGen",
         ":ConvertToLLVMInterface",
         ":IR",
+        ":InlinerInterface",
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:Support",
@@ -4744,7 +4758,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/Dialect/Func/IR/*.h",
         "include/mlir/Dialect/Func/Utils/*.h",
-    ]) + ["include/mlir/Transforms/InliningUtils.h"],
+    ]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -4758,6 +4772,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:Support",
@@ -4774,6 +4789,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":MeshShardingInterface",
     ],
 )
@@ -4930,6 +4946,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":MaskableOpInterface",
         ":MaskingOpInterface",
         ":MemRefDialect",
@@ -5338,7 +5355,6 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
         ],
     ) + [
-        "include/mlir/Transforms/InliningUtils.h",
         "include/mlir/Transforms/Mem2Reg.h",
     ],
     includes = ["include"],
@@ -5349,6 +5365,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":LLVMDialectInterfaceIncGen",
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
@@ -5555,6 +5572,7 @@ cc_library(
         ":IR",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":LLVMDialect",
         ":MemRefDialect",
         ":SCFDialect",
@@ -6889,7 +6907,7 @@ cc_library(
     srcs = glob([
         "lib/Dialect/SPIRV/IR/*.cpp",
         "lib/Dialect/SPIRV/IR/*.h",
-    ]) + ["include/mlir/Transforms/InliningUtils.h"],
+    ]),
     hdrs = glob([
         "include/mlir/Dialect/SPIRV/IR/*.h",
     ]),
@@ -6901,6 +6919,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":Parser",
         ":SPIRVAttrUtilsGen",
         ":SPIRVAttributesIncGen",
@@ -7305,7 +7324,6 @@ gentbl_cc_library(
 cc_library(
     name = "TensorDialect",
     srcs = [
-        "include/mlir/Transforms/InliningUtils.h",
         "lib/Dialect/Tensor/IR/TensorDialect.cpp",
         "lib/Dialect/Tensor/IR/TensorOps.cpp",
         "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
@@ -7326,6 +7344,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":LoopLikeInterface",
         ":ParallelCombiningOpInterface",
         ":ShapedOpInterfaces",
@@ -7521,9 +7540,7 @@ cc_library(
         "lib/Transforms/Utils/*.h",
     ]),
     hdrs = glob(
-        [
-            "include/mlir/Transforms/*.h",
-        ],
+        include = ["include/mlir/Transforms/*.h"],
         exclude = ["include/mlir/Transforms/Passes.h"],
     ),
     includes = ["include"],
@@ -7532,6 +7549,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
+        ":InlinerInterface",
         ":LoopLikeInterface",
         ":MemorySlotInterfaces",
         ":Pass",
@@ -7861,6 +7879,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
+        ":InlinerInterface",
         ":LoopLikeInterface",
         ":MemorySlotInterfaces",
         ":Pass",
@@ -10957,6 +10976,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":LinalgEnumsIncGen",
         ":LinalgInterfacesIncGen",
         ":LinalgNamedStructuredOpsYamlIncGen",
@@ -12317,6 +12337,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":SideEffectInterfaces",
         "//llvm:Support",
     ],
@@ -12568,7 +12589,6 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Arith/IR/Arith.h",
-        "include/mlir/Transforms/InliningUtils.h",
     ],
     includes = ["include"],
     deps = [
@@ -12583,6 +12603,7 @@ cc_library(
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":Support",
         ":UBDialect",
         ":VectorInterfaces",
@@ -12744,6 +12765,7 @@ cc_library(
         ":ConvertToLLVMInterface",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":MathBaseIncGen",
         ":MathOpsIncGen",
         ":SideEffectInterfaces",
@@ -12892,6 +12914,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":MemorySlotInterfaces",
@@ -13515,6 +13538,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
+        ":InlinerInterface",
         ":MemRefDialect",
         ":SparseTensorDialect",
         ":SubsetOpInterface",
@@ -13912,7 +13936,6 @@ gentbl_cc_library(
 cc_library(
     name = "UBDialect",
     srcs = [
-        "include/mlir/Transforms/InliningUtils.h",
         "lib/Dialect/UB/IR/UBOps.cpp",
     ],
     hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
@@ -13920,6 +13943,7 @@ cc_library(
     deps = [
         ":ConvertToLLVMInterface",
         ":IR",
+        ":InlinerInterface",
         ":SideEffectInterfaces",
         ":UBOpsIncGen",
         ":UBOpsInterfacesIncGen",

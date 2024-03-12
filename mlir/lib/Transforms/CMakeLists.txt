@@ -30,6 +30,7 @@ add_mlir_library(MLIRTransforms
   MLIRAnalysis
   MLIRCopyOpInterface
   MLIRFunctionInterfaces
+  MLIRInlinerInterface
   MLIRLoopLikeInterface
   MLIRMemorySlotInterfaces
   MLIRPass

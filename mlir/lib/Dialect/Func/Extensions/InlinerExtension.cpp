@@ -10,7 +10,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Interfaces/InlinerInterface.h"
 
 using namespace mlir;
 using namespace mlir::func;

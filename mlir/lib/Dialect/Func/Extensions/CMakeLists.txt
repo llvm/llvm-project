@@ -12,6 +12,7 @@ add_mlir_extension_library(MLIRFuncInlinerExtension
 
   LINK_LIBS PUBLIC
   MLIRControlFlowDialect
+  MLIRInlinerInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRFuncDialect

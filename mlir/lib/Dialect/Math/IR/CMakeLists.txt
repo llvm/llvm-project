@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRMathDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRDialect
+  MLIRInlinerInterface
   MLIRIR
   MLIRUBDialect
   )

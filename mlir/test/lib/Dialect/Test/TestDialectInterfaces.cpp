@@ -8,8 +8,8 @@
 
 #include "TestDialect.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "mlir/Interfaces/InlinerInterface.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
-#include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
 using namespace test;
