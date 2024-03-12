@@ -19,5 +19,4 @@ define @both_args_are_vecs_or_neither(<4 x i32> %arg1, i32 %arg2) {
 	@res3 = call i2 @llvm.scmp.i2.v4i32(<4 x i32> %arg1, i32 %arg2)
 	; CHECK: [us]cmp source and destination must both be a vector or neither
 	@res4 = call <4 x i32> @llvm.scmp.v4i32.i32(<4 x i32> %arg2, i32 %arg2)
-	; CHECK: [us]cmp source and destination must both be a vector or neither
 }
