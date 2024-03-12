@@ -3999,11 +3999,11 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // Set the bottom-up policy based on the state of the current bottom zone and
   // the instructions outside the zone, including the top zone.
   CandPolicy BotPolicy;
-  setPolicy(BotPolicy, /*IsPostRA=*/false, Bot, &Top);
+  setPolicy(BotPolicy, /*IsPostRA=*/true, Bot, &Top);
   // Set the top-down policy based on the state of the current top zone and
   // the instructions outside the zone, including the bottom zone.
   CandPolicy TopPolicy;
-  setPolicy(TopPolicy, /*IsPostRA=*/false, Top, &Bot);
+  setPolicy(TopPolicy, /*IsPostRA=*/true, Top, &Bot);
 
   // See if BotCand is still valid (because we previously scheduled from Top).
   LLVM_DEBUG(dbgs() << "Picking from Bot:\n");
