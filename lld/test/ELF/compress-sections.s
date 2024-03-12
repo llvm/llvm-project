@@ -39,7 +39,7 @@
 # CHECK2-NEXT: 02000000 00000000 38000000 00000000
 # CHECK2-NEXT: 01000000 00000000 {{.*}}
 
-## --compress-debug-sections takes precedence.
+## --compress-debug-sections=none takes precedence.
 # RUN: ld.lld a.o --compress-debug-sections=none --compress-sections .debug_str=zstd -o out3
 # RUN: llvm-readelf -S out3 | FileCheck %s --check-prefix=CHECK3
 

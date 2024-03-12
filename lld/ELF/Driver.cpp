@@ -1517,7 +1517,7 @@ static void readConfigs(opt::InputArgList &args) {
     }
   }
 
-  for (opt::Arg *arg : args.filtered(OPT_compress_nonalloc_sections)) {
+  for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
     SmallVector<StringRef, 0> fields;
     StringRef(arg->getValue()).split(fields, '=');
     if (fields.size() != 2 || fields[1].empty()) {
