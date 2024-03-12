@@ -84,7 +84,7 @@ LogicalResult CreateNdDescOp::verify() {
   auto memrefTy = getSourceType().dyn_cast<MemRefType>();
   if (memrefTy) {
     invalidRank |= (memrefTy.getRank() != rank);
-    invalidElemTy |= memrefTy.getElementType() != getElementType(); 
+    invalidElemTy |= memrefTy.getElementType() != getElementType();
   }
 
   // check result type matches the rank
@@ -102,7 +102,6 @@ LogicalResult CreateNdDescOp::verify() {
   if (invalidElemTy)
     return emitOpError("TensorDesc should have the same element "
                        "type with the source if it is a memref.\n");
-
 
   return success();
 }
