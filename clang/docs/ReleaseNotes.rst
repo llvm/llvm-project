@@ -192,8 +192,6 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
-- Added support for the `[[omp::assume]]` attribute.
-
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -492,6 +490,11 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+
+OpenMP Support
+--------------
+
+- Added support for the `[[omp::assume]]` attribute.
 
 Additional Information
 ======================
