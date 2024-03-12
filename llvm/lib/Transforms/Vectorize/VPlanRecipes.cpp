@@ -127,6 +127,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case Instruction::Select:
     case Instruction::Add:
     case Instruction::FAdd:
+    case Instruction::Sub:
+    case Instruction::FSub:
     case Instruction::Mul:
     case Instruction::FMul:
     case VPInstruction::Not:

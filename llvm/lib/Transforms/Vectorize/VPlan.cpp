@@ -88,15 +88,6 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def, Type *Ty)
     Def->addDefinedValue(this);
 }
 
-Type *VPValue::getElementType() {
-  return const_cast<Type *>(
-      const_cast<const VPValue *>(this)->getElementType());
-}
-
-const Type *VPValue::getElementType() const {
-  return UnderlyingVal ? UnderlyingVal->getType() : UnderlyingTy;
-}
-
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
   if (Def)
@@ -794,7 +785,6 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
-  Type *TCType = TripCount->getType();
   // Create empty VPRegionBlock, to be filled during processing later.
   auto *TopRegion = new VPRegionBlock("vector loop", false /*isReplicator*/);
   VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
@@ -822,17 +812,18 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   VFxUF.setUnderlyingValue(
       createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
 
-  if (WidenVFxUF.getNumUsers() > 0)
-    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
-      Value *Step =
-          createStepForVF(Builder, TripCountV->getType(), State.VF, Part + 1);
-      if (State.VF.isScalar())
-        State.set(&WidenVFxUF, Step, Part);
-      else
+  if (WidenVFxUF.getNumUsers() > 0) {
+    if (State.VF.isScalar())
+      WidenVFxUF.setUnderlyingValue(VFxUF.getUnderlyingValue());
+    else
+      for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
+        Value *Step =
+            createStepForVF(Builder, TripCountV->getType(), State.VF, Part + 1);
         State.set(&WidenVFxUF,
                   Builder.CreateVectorSplat(State.VF, Step, "widen.vfxuf"),
                   Part);
-    }
+      }
+  }
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.

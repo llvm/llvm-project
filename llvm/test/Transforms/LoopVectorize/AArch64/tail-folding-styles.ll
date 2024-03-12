@@ -119,21 +119,29 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX]], 1
 ; DATA_NO_LANEMASK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_NO_LANEMASK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 4
-; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; DATA_NO_LANEMASK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; DATA_NO_LANEMASK-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 4
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP12]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; DATA_NO_LANEMASK-NEXT:    [[TMP14:%.*]] = add <vscale x 4 x i64> [[TMP13]], zeroinitializer
+; DATA_NO_LANEMASK-NEXT:    [[TMP22:%.*]] = mul <vscale x 4 x i64> [[TMP14]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+; DATA_NO_LANEMASK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP22]]
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DATA_NO_LANEMASK:       vector.body:
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VECTOR_BODY]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
-; DATA_NO_LANEMASK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX1]], 0
-; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; DATA_NO_LANEMASK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP16]]
+; DATA_NO_LANEMASK-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX1]], 0
+; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT1]]
+; DATA_NO_LANEMASK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP23]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[TMP18]], i32 0
-; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT3]], ptr [[TMP19]], i32 4, <vscale x 4 x i1> [[TMP17]])
-; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT4]] = add i64 [[INDEX1]], [[TMP10]]
-; DATA_NO_LANEMASK-NEXT:    [[TMP20]] = add <vscale x 4 x i64> [[VEC_IND]], [[WIDEN_VFXUF_SPLAT]]
+; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP19]], i32 4, <vscale x 4 x i1> [[TMP17]])
+; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT4]] = add i64 [[INDEX1]], [[TMP16]]
+; DATA_NO_LANEMASK-NEXT:    [[TMP20]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT4]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_NO_LANEMASK:       middle.block:

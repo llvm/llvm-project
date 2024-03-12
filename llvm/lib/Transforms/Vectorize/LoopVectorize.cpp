@@ -8288,7 +8288,8 @@ VPRecipeBuilder::createWidenStep(VPWidenIntOrFpInductionRecipe &WIV,
   const InductionDescriptor &IndDesc = WIV.getInductionDescriptor();
   VPValue *ScalarStep =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
-  Type *VFxUFTy = Plan.getVFxUF().getElementType();
+  VPTypeAnalysis TypeInfo(nullptr, SE.getContext());
+  Type *VFxUFTy = TypeInfo.inferScalarType(Plan.getTripCount());
   Type *StepTy = IndDesc.getStep()->getType();
   VPValue *WidenVFxUF = &Plan.getWidenVFxUF();
   VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();

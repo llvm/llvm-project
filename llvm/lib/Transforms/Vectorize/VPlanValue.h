@@ -85,9 +85,6 @@ public:
   Value *getUnderlyingValue() { return UnderlyingVal; }
   const Value *getUnderlyingValue() const { return UnderlyingVal; }
 
-  Type *getElementType();
-  const Type *getElementType() const;
-
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
