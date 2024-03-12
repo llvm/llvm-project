@@ -1943,7 +1943,8 @@ static bool swapICmpOperandsToExposeCSEOpportunities(CmpInst *Cmp) {
   return false;
 }
 
-static bool foldFCmpToFPClassTest(CmpInst *Cmp) {
+static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
+                                  const DataLayout &DL) {
   FCmpInst *FCmp = dyn_cast<FCmpInst>(Cmp);
   if (!FCmp)
     return false;
@@ -1955,16 +1956,21 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp) {
   auto [ClassVal, ClassTest] =
       fcmpToClassTest(FCmp->getPredicate(), *FCmp->getParent()->getParent(),
                       FCmp->getOperand(0), FCmp->getOperand(1));
-  if (ClassVal && (ShouldReverseTransform(ClassTest) ||
-                   ShouldReverseTransform(~ClassTest))) {
-    IRBuilder<> Builder(Cmp);
-    Value *IsFPClass = Builder.createIsFPClass(ClassVal, ClassTest);
-    Cmp->replaceAllUsesWith(IsFPClass);
-    RecursivelyDeleteTriviallyDeadInstructions(Cmp);
-    return true;
-  }
+  if (!ClassVal)
+    return false;
 
-  return false;
+  if (!ShouldReverseTransform(ClassTest) && !ShouldReverseTransform(~ClassTest))
+    return false;
+
+  // Don't fold if the target offers free fabs.
+  if (TLI.isFAbsFree(TLI.getValueType(DL, ClassVal->getType())))
+    return false;
+
+  IRBuilder<> Builder(Cmp);
+  Value *IsFPClass = Builder.createIsFPClass(ClassVal, ClassTest);
+  Cmp->replaceAllUsesWith(IsFPClass);
+  RecursivelyDeleteTriviallyDeadInstructions(Cmp);
+  return true;
 }
 
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
@@ -1983,7 +1989,7 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (swapICmpOperandsToExposeCSEOpportunities(Cmp))
     return true;
 
-  if (foldFCmpToFPClassTest(Cmp))
+  if (foldFCmpToFPClassTest(Cmp, *TLI, *DL))
     return true;
 
   return false;
