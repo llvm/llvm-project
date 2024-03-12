@@ -401,133 +401,18 @@ public:
       reportOutOfMemory(NeededSize);
     }
 
-    const uptr BlockUptr = reinterpret_cast<uptr>(Block);
-    const uptr UnalignedUserPtr = BlockUptr + Chunk::getHeaderSize();
-    const uptr UserPtr = roundUp(UnalignedUserPtr, Alignment);
+    const uptr UserPtr = roundUp(
+        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize(), Alignment);
+    const uptr SizeOrUnusedBytes =
+        ClassId ? Size : SecondaryBlockEnd - (UserPtr + Size);
 
-    void *Ptr = reinterpret_cast<void *>(UserPtr);
-    void *TaggedPtr = Ptr;
-    if (LIKELY(ClassId)) {
-      // We only need to zero or tag the contents for Primary backed
-      // allocations. We only set tags for primary allocations in order to avoid
-      // faulting potentially large numbers of pages for large secondary
-      // allocations. We assume that guard pages are enough to protect these
-      // allocations.
-      //
-      // FIXME: When the kernel provides a way to set the background tag of a
-      // mapping, we should be able to tag secondary allocations as well.
-      //
-      // When memory tagging is enabled, zeroing the contents is done as part of
-      // setting the tag.
-      if (UNLIKELY(useMemoryTagging<Config>(Options))) {
-        uptr PrevUserPtr;
-        Chunk::UnpackedHeader Header;
-        const uptr BlockSize = PrimaryT::getSizeByClassId(ClassId);
-        const uptr BlockEnd = BlockUptr + BlockSize;
-        // If possible, try to reuse the UAF tag that was set by deallocate().
-        // For simplicity, only reuse tags if we have the same start address as
-        // the previous allocation. This handles the majority of cases since
-        // most allocations will not be more aligned than the minimum alignment.
-        //
-        // We need to handle situations involving reclaimed chunks, and retag
-        // the reclaimed portions if necessary. In the case where the chunk is
-        // fully reclaimed, the chunk's header will be zero, which will trigger
-        // the code path for new mappings and invalid chunks that prepares the
-        // chunk from scratch. There are three possibilities for partial
-        // reclaiming:
-        //
-        // (1) Header was reclaimed, data was partially reclaimed.
-        // (2) Header was not reclaimed, all data was reclaimed (e.g. because
-        //     data started on a page boundary).
-        // (3) Header was not reclaimed, data was partially reclaimed.
-        //
-        // Case (1) will be handled in the same way as for full reclaiming,
-        // since the header will be zero.
-        //
-        // We can detect case (2) by loading the tag from the start
-        // of the chunk. If it is zero, it means that either all data was
-        // reclaimed (since we never use zero as the chunk tag), or that the
-        // previous allocation was of size zero. Either way, we need to prepare
-        // a new chunk from scratch.
-        //
-        // We can detect case (3) by moving to the next page (if covered by the
-        // chunk) and loading the tag of its first granule. If it is zero, it
-        // means that all following pages may need to be retagged. On the other
-        // hand, if it is nonzero, we can assume that all following pages are
-        // still tagged, according to the logic that if any of the pages
-        // following the next page were reclaimed, the next page would have been
-        // reclaimed as well.
-        uptr TaggedUserPtr;
-        if (getChunkFromBlock(BlockUptr, &PrevUserPtr, &Header) &&
-            PrevUserPtr == UserPtr &&
-            (TaggedUserPtr = loadTag(UserPtr)) != UserPtr) {
-          uptr PrevEnd = TaggedUserPtr + Header.SizeOrUnusedBytes;
-          const uptr NextPage = roundUp(TaggedUserPtr, getPageSizeCached());
-          if (NextPage < PrevEnd && loadTag(NextPage) != NextPage)
-            PrevEnd = NextPage;
-          TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
-          resizeTaggedChunk(PrevEnd, TaggedUserPtr + Size, Size, BlockEnd);
-          if (UNLIKELY(FillContents != NoFill && !Header.OriginOrWasZeroed)) {
-            // If an allocation needs to be zeroed (i.e. calloc) we can normally
-            // avoid zeroing the memory now since we can rely on memory having
-            // been zeroed on free, as this is normally done while setting the
-            // UAF tag. But if tagging was disabled per-thread when the memory
-            // was freed, it would not have been retagged and thus zeroed, and
-            // therefore it needs to be zeroed now.
-            memset(TaggedPtr, 0,
-                   Min(Size, roundUp(PrevEnd - TaggedUserPtr,
-                                     archMemoryTagGranuleSize())));
-          } else if (Size) {
-            // Clear any stack metadata that may have previously been stored in
-            // the chunk data.
-            memset(TaggedPtr, 0, archMemoryTagGranuleSize());
-          }
-        } else {
-          const uptr OddEvenMask =
-              computeOddEvenMaskForPointerMaybe(Options, BlockUptr, ClassId);
-          TaggedPtr = prepareTaggedChunk(Ptr, Size, OddEvenMask, BlockEnd);
-        }
-        storePrimaryAllocationStackMaybe(Options, Ptr);
-      } else {
-        Block = addHeaderTag(Block);
-        Ptr = addHeaderTag(Ptr);
-        if (UNLIKELY(FillContents != NoFill)) {
-          // This condition is not necessarily unlikely, but since memset is
-          // costly, we might as well mark it as such.
-          memset(Block, FillContents == ZeroFill ? 0 : PatternFillByte,
-                 PrimaryT::getSizeByClassId(ClassId));
-        }
-      }
+    if (LIKELY(!useMemoryTagging<Config>(Options))) {
+      return initChunk(ClassId, Origin, Block, UserPtr, SizeOrUnusedBytes,
+                       FillContents);
     } else {
-      Block = addHeaderTag(Block);
-      Ptr = addHeaderTag(Ptr);
-      if (UNLIKELY(useMemoryTagging<Config>(Options))) {
-        storeTags(reinterpret_cast<uptr>(Block), reinterpret_cast<uptr>(Ptr));
-        storeSecondaryAllocationStackMaybe(Options, Ptr, Size);
-      }
+      return initChunkWithMemoryTagging(ClassId, Origin, Block, UserPtr, Size,
+                                        SizeOrUnusedBytes, FillContents);
     }
-
-    Chunk::UnpackedHeader Header = {};
-    if (UNLIKELY(UnalignedUserPtr != UserPtr)) {
-      const uptr Offset = UserPtr - UnalignedUserPtr;
-      DCHECK_GE(Offset, 2 * sizeof(u32));
-      // The BlockMarker has no security purpose, but is specifically meant for
-      // the chunk iteration function that can be used in debugging situations.
-      // It is the only situation where we have to locate the start of a chunk
-      // based on its block address.
-      reinterpret_cast<u32 *>(Block)[0] = BlockMarker;
-      reinterpret_cast<u32 *>(Block)[1] = static_cast<u32>(Offset);
-      Header.Offset = (Offset >> MinAlignmentLog) & Chunk::OffsetMask;
-    }
-    Header.ClassId = ClassId & Chunk::ClassIdMask;
-    Header.State = Chunk::State::Allocated;
-    Header.OriginOrWasZeroed = Origin & Chunk::OriginMask;
-    Header.SizeOrUnusedBytes =
-        (ClassId ? Size : SecondaryBlockEnd - (UserPtr + Size)) &
-        Chunk::SizeOrUnusedBytesMask;
-    Chunk::storeHeader(Cookie, Ptr, &Header);
-
-    return TaggedPtr;
   }
 
   NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize = 0,
@@ -583,7 +468,8 @@ public:
         reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
     }
 
-    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
+    quarantineOrDeallocateChunk(Options, TaggedPtr, /*HeaderTaggedPtr=*/Ptr,
+                                &Header, Size);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -682,7 +568,8 @@ public:
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
-      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr,
+                                  /*HeaderTaggedPtr=*/OldPtr, &Header, OldSize);
     }
     return NewPtr;
   }
@@ -1148,10 +1035,176 @@ private:
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
   }
 
+  ALWAYS_INLINE void *initChunk(const uptr ClassId, const Chunk::Origin Origin,
+                                void *Block, const uptr UserPtr,
+                                const uptr SizeOrUnusedBytes,
+                                const FillContentsMode FillContents) {
+    Block = addHeaderTag(Block);
+    // Only do content fill when it's from primary allocator because secondary
+    // allocator has filled the content.
+    if (ClassId != 0 && UNLIKELY(FillContents != NoFill)) {
+      // This condition is not necessarily unlikely, but since memset is
+      // costly, we might as well mark it as such.
+      memset(Block, FillContents == ZeroFill ? 0 : PatternFillByte,
+             PrimaryT::getSizeByClassId(ClassId));
+    }
+
+    Chunk::UnpackedHeader Header = {};
+
+    const uptr DefaultAlignedPtr =
+        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
+    if (UNLIKELY(DefaultAlignedPtr != UserPtr)) {
+      const uptr Offset = UserPtr - DefaultAlignedPtr;
+      DCHECK_GE(Offset, 2 * sizeof(u32));
+      // The BlockMarker has no security purpose, but is specifically meant for
+      // the chunk iteration function that can be used in debugging situations.
+      // It is the only situation where we have to locate the start of a chunk
+      // based on its block address.
+      reinterpret_cast<u32 *>(Block)[0] = BlockMarker;
+      reinterpret_cast<u32 *>(Block)[1] = static_cast<u32>(Offset);
+      Header.Offset = (Offset >> MinAlignmentLog) & Chunk::OffsetMask;
+    }
+
+    Header.ClassId = ClassId & Chunk::ClassIdMask;
+    Header.State = Chunk::State::Allocated;
+    Header.OriginOrWasZeroed = Origin & Chunk::OriginMask;
+    Header.SizeOrUnusedBytes = SizeOrUnusedBytes & Chunk::SizeOrUnusedBytesMask;
+    Chunk::storeHeader(Cookie, reinterpret_cast<void *>(addHeaderTag(UserPtr)),
+                       &Header);
+
+    return reinterpret_cast<void *>(UserPtr);
+  }
+
+  NOINLINE void *
+  initChunkWithMemoryTagging(const uptr ClassId, const Chunk::Origin Origin,
+                             void *Block, const uptr UserPtr, const uptr Size,
+                             const uptr SizeOrUnusedBytes,
+                             const FillContentsMode FillContents) {
+    const Options Options = Primary.Options.load();
+    DCHECK(useMemoryTagging<Config>(Options));
+
+    void *Ptr = reinterpret_cast<void *>(UserPtr);
+    void *TaggedPtr = Ptr;
+
+    if (LIKELY(ClassId)) {
+      // We only need to zero or tag the contents for Primary backed
+      // allocations. We only set tags for primary allocations in order to avoid
+      // faulting potentially large numbers of pages for large secondary
+      // allocations. We assume that guard pages are enough to protect these
+      // allocations.
+      //
+      // FIXME: When the kernel provides a way to set the background tag of a
+      // mapping, we should be able to tag secondary allocations as well.
+      //
+      // When memory tagging is enabled, zeroing the contents is done as part of
+      // setting the tag.
+
+      uptr PrevUserPtr;
+      Chunk::UnpackedHeader Header;
+      const uptr BlockSize = PrimaryT::getSizeByClassId(ClassId);
+      const uptr BlockUptr = reinterpret_cast<uptr>(Block);
+      const uptr BlockEnd = BlockUptr + BlockSize;
+      // If possible, try to reuse the UAF tag that was set by deallocate().
+      // For simplicity, only reuse tags if we have the same start address as
+      // the previous allocation. This handles the majority of cases since
+      // most allocations will not be more aligned than the minimum alignment.
+      //
+      // We need to handle situations involving reclaimed chunks, and retag
+      // the reclaimed portions if necessary. In the case where the chunk is
+      // fully reclaimed, the chunk's header will be zero, which will trigger
+      // the code path for new mappings and invalid chunks that prepares the
+      // chunk from scratch. There are three possibilities for partial
+      // reclaiming:
+      //
+      // (1) Header was reclaimed, data was partially reclaimed.
+      // (2) Header was not reclaimed, all data was reclaimed (e.g. because
+      //     data started on a page boundary).
+      // (3) Header was not reclaimed, data was partially reclaimed.
+      //
+      // Case (1) will be handled in the same way as for full reclaiming,
+      // since the header will be zero.
+      //
+      // We can detect case (2) by loading the tag from the start
+      // of the chunk. If it is zero, it means that either all data was
+      // reclaimed (since we never use zero as the chunk tag), or that the
+      // previous allocation was of size zero. Either way, we need to prepare
+      // a new chunk from scratch.
+      //
+      // We can detect case (3) by moving to the next page (if covered by the
+      // chunk) and loading the tag of its first granule. If it is zero, it
+      // means that all following pages may need to be retagged. On the other
+      // hand, if it is nonzero, we can assume that all following pages are
+      // still tagged, according to the logic that if any of the pages
+      // following the next page were reclaimed, the next page would have been
+      // reclaimed as well.
+      uptr TaggedUserPtr;
+      if (getChunkFromBlock(BlockUptr, &PrevUserPtr, &Header) &&
+          PrevUserPtr == UserPtr &&
+          (TaggedUserPtr = loadTag(UserPtr)) != UserPtr) {
+        uptr PrevEnd = TaggedUserPtr + Header.SizeOrUnusedBytes;
+        const uptr NextPage = roundUp(TaggedUserPtr, getPageSizeCached());
+        if (NextPage < PrevEnd && loadTag(NextPage) != NextPage)
+          PrevEnd = NextPage;
+        TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
+        resizeTaggedChunk(PrevEnd, TaggedUserPtr + Size, Size, BlockEnd);
+        if (UNLIKELY(FillContents != NoFill && !Header.OriginOrWasZeroed)) {
+          // If an allocation needs to be zeroed (i.e. calloc) we can normally
+          // avoid zeroing the memory now since we can rely on memory having
+          // been zeroed on free, as this is normally done while setting the
+          // UAF tag. But if tagging was disabled per-thread when the memory
+          // was freed, it would not have been retagged and thus zeroed, and
+          // therefore it needs to be zeroed now.
+          memset(TaggedPtr, 0,
+                 Min(Size, roundUp(PrevEnd - TaggedUserPtr,
+                                   archMemoryTagGranuleSize())));
+        } else if (Size) {
+          // Clear any stack metadata that may have previously been stored in
+          // the chunk data.
+          memset(TaggedPtr, 0, archMemoryTagGranuleSize());
+        }
+      } else {
+        const uptr OddEvenMask =
+            computeOddEvenMaskForPointerMaybe(Options, BlockUptr, ClassId);
+        TaggedPtr = prepareTaggedChunk(Ptr, Size, OddEvenMask, BlockEnd);
+      }
+      storePrimaryAllocationStackMaybe(Options, Ptr);
+    } else {
+      Block = addHeaderTag(Block);
+      Ptr = addHeaderTag(Ptr);
+      storeTags(reinterpret_cast<uptr>(Block), reinterpret_cast<uptr>(Ptr));
+      storeSecondaryAllocationStackMaybe(Options, Ptr, Size);
+    }
+
+    Chunk::UnpackedHeader Header = {};
+
+    const uptr DefaultAlignedPtr =
+        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
+    if (UNLIKELY(DefaultAlignedPtr != UserPtr)) {
+      const uptr Offset = UserPtr - DefaultAlignedPtr;
+      DCHECK_GE(Offset, 2 * sizeof(u32));
+      // The BlockMarker has no security purpose, but is specifically meant for
+      // the chunk iteration function that can be used in debugging situations.
+      // It is the only situation where we have to locate the start of a chunk
+      // based on its block address.
+      reinterpret_cast<u32 *>(Block)[0] = BlockMarker;
+      reinterpret_cast<u32 *>(Block)[1] = static_cast<u32>(Offset);
+      Header.Offset = (Offset >> MinAlignmentLog) & Chunk::OffsetMask;
+    }
+
+    Header.ClassId = ClassId & Chunk::ClassIdMask;
+    Header.State = Chunk::State::Allocated;
+    Header.OriginOrWasZeroed = Origin & Chunk::OriginMask;
+    Header.SizeOrUnusedBytes = SizeOrUnusedBytes & Chunk::SizeOrUnusedBytesMask;
+    Chunk::storeHeader(Cookie, Ptr, &Header);
+
+    return TaggedPtr;
+  }
+
   void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
+                                   void *HeaderTaggedPtr,
                                    Chunk::UnpackedHeader *Header,
                                    uptr Size) NO_THREAD_SAFETY_ANALYSIS {
-    void *Ptr = getHeaderTaggedPointer(TaggedPtr);
+    void *Ptr = HeaderTaggedPtr;
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
     // This purposefully underflows for Size == 0.
@@ -1162,31 +1215,23 @@ private:
       Header->State = Chunk::State::Available;
     else
       Header->State = Chunk::State::Quarantined;
-    Header->OriginOrWasZeroed = useMemoryTagging<Config>(Options) &&
-                                Header->ClassId &&
-                                !TSDRegistry.getDisableMemInit();
+
+    void *BlockBegin;
+    if (UNLIKELY(useMemoryTagging<Config>(Options))) {
+      Header->OriginOrWasZeroed =
+          Header->ClassId && !TSDRegistry.getDisableMemInit();
+      BlockBegin = unTagBlock(Options, TaggedPtr, HeaderTaggedPtr, Header, Size,
+                              BypassQuarantine);
+    } else {
+      Header->OriginOrWasZeroed = 0U;
+      if (BypassQuarantine && allocatorSupportsMemoryTagging<Config>())
+        Ptr = untagPointer(Ptr);
+      BlockBegin = getBlockBegin(Ptr, Header);
+    }
+
     Chunk::storeHeader(Cookie, Ptr, Header);
 
-    if (UNLIKELY(useMemoryTagging<Config>(Options))) {
-      u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
-      storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
-      if (Header->ClassId) {
-        if (!TSDRegistry.getDisableMemInit()) {
-          uptr TaggedBegin, TaggedEnd;
-          const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
-              Options, reinterpret_cast<uptr>(getBlockBegin(Ptr, Header)),
-              Header->ClassId);
-          // Exclude the previous tag so that immediate use after free is
-          // detected 100% of the time.
-          setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
-                       &TaggedEnd);
-        }
-      }
-    }
     if (BypassQuarantine) {
-      if (allocatorSupportsMemoryTagging<Config>())
-        Ptr = untagPointer(Ptr);
-      void *BlockBegin = getBlockBegin(Ptr, Header);
       const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
         bool CacheDrained;
@@ -1201,9 +1246,6 @@ private:
         if (CacheDrained)
           Primary.tryReleaseToOS(ClassId, ReleaseToOS::Normal);
       } else {
-        if (UNLIKELY(useMemoryTagging<Config>(Options)))
-          storeTags(reinterpret_cast<uptr>(BlockBegin),
-                    reinterpret_cast<uptr>(Ptr));
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
@@ -1211,6 +1253,38 @@ private:
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
     }
+  }
+
+  NOINLINE void *unTagBlock(const Options &Options, void *TaggedPtr,
+                            void *HeaderTaggedPtr,
+                            Chunk::UnpackedHeader *Header, const uptr Size,
+                            bool BypassQuarantine) {
+    DCHECK(useMemoryTagging<Config>(Options));
+    void *Ptr = HeaderTaggedPtr;
+
+    const u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
+    storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
+    if (Header->ClassId) {
+      if (!TSDRegistry.getDisableMemInit()) {
+        uptr TaggedBegin, TaggedEnd;
+        const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
+            Options, reinterpret_cast<uptr>(getBlockBegin(Ptr, Header)),
+            Header->ClassId);
+        // Exclude the previous tag so that immediate use after free is
+        // detected 100% of the time.
+        setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
+                     &TaggedEnd);
+      }
+    }
+
+    Ptr = untagPointer(Ptr);
+    void *BlockBegin = getBlockBegin(Ptr, Header);
+    if (BypassQuarantine && !Header->ClassId) {
+      storeTags(reinterpret_cast<uptr>(BlockBegin),
+                reinterpret_cast<uptr>(Ptr));
+    }
+
+    return BlockBegin;
   }
 
   bool getChunkFromBlock(uptr Block, uptr *Chunk,
