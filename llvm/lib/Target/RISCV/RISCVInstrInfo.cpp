@@ -495,10 +495,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         RISCV::VRN4M1RegClass, RISCV::VRN4M2RegClass, RISCV::VRN5M1RegClass,
         RISCV::VRN6M1RegClass, RISCV::VRN7M1RegClass, RISCV::VRN8M1RegClass}) {
     if (RegClass.contains(DstReg, SrcReg)) {
-      copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc,
-                        getLMul(RegClass.TSFlags),
-                        /*NF=*/
-                        getNF(RegClass.TSFlags));
+      copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RegClass);
       return;
     }
   }
