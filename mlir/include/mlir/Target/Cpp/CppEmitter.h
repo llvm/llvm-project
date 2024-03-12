@@ -14,13 +14,8 @@
 #define MLIR_TARGET_CPP_CPPEMITTER_H
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Value.h"
-#include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/Support/raw_ostream.h"
-#include <stack>
 
 namespace mlir {
-namespace emitc {
 
 /// Translates the given operation to C++ code. The operation or operations in
 /// the region of 'op' need almost all be in EmitC dialect. The parameter
@@ -28,7 +23,6 @@ namespace emitc {
 /// arguments are declared at the beginning of the function.
 LogicalResult translateToCpp(Operation *op, raw_ostream &os,
                              bool declareVariablesAtTop = false);
-} // namespace emitc
 } // namespace mlir
 
 #endif // MLIR_TARGET_CPP_CPPEMITTER_H

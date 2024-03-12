@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
-#include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
+#include "mlir/Target/Cpp/Dialect/All.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -34,17 +32,14 @@ void registerToCppTranslation() {
   TranslateFromMLIRRegistration reg(
       "mlir-to-cpp", "translate from mlir to cpp",
       [](Operation *op, raw_ostream &output) {
-        return emitc::translateToCpp(
-            op, output,
-            /*declareVariablesAtTop=*/declareVariablesAtTop);
+        return translateToCpp(op, output,
+                              /*declareVariablesAtTop=*/declareVariablesAtTop);
       },
       [](DialectRegistry &registry) {
         // clang-format off
-        registry.insert<cf::ControlFlowDialect,
-                        emitc::EmitCDialect,
-                        func::FuncDialect,
-                        math::MathDialect,
+        registry.insert<math::MathDialect,
                         scf::SCFDialect>();
+        registerAllToCppTranslations(registry);
         // clang-format on
       });
 }

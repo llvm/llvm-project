@@ -11,7 +11,7 @@ func.func @multiple_blocks() {
 // -----
 
 func.func @unsupported_std_op(%arg0: f64) -> f64 {
-  // expected-error@+1 {{'math.absf' op unable to find printer for op}}
+  // expected-error@+1 {{cannot be converted to Cpp: missing `CppTranslationDialectInterface` registration for dialect for op: math.absf}}
   %0 = math.absf %arg0 : f64
   return %0 : f64
 }
