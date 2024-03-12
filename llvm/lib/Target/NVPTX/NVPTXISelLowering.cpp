@@ -2210,6 +2210,21 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
 SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                      SelectionDAG &DAG) const {
+
+  if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+
+    DiagnosticInfoUnsupported NoDynamicAlloca(
+        Fn,
+        "Support for dynamic alloca introduced in PTX ISA version 7.3 and "
+        "requires target sm_52.",
+        SDLoc(Op).getDebugLoc());
+    DAG.getContext()->diagnose(NoDynamicAlloca);
+    auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()),
+                Op.getOperand(0)};
+    return DAG.getMergeValues(Ops, SDLoc());
+  }
+
   SDValue Chain = Op.getOperand(0);
   SDValue Size = Op.getOperand(1);
   uint64_t Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();

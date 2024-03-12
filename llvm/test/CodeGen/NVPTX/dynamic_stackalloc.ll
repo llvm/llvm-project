@@ -1,10 +1,15 @@
+; RUN: not llc < %s -march=nvptx -mattr=+ptx72 -mcpu=sm_52 2>&1 | FileCheck %s --check-prefixes=CHECK-FAILS
+; RUN: not llc < %s -march=nvptx -mattr=+ptx73 -mcpu=sm_50 2>&1 | FileCheck %s --check-prefixes=CHECK-FAILS
 
-; RUN: llc < %s -march=nvptx -mattr=+ptx73 | FileCheck %s --check-prefixes=CHECK,CHECK-32
-; RUN: llc < %s -march=nvptx64 -mattr=+ptx73 | FileCheck %s --check-prefixes=CHECK,CHECK-64
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mattr=+ptx73 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mattr=+ptx73 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK,CHECK-32
+; RUN: llc < %s -march=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK,CHECK-64
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
+
+; CHECK-FAILS: in function test_dynamic_stackalloc{{.*}}: Support for dynamic alloca introduced in PTX ISA version 7.3 and requires target sm_52.
 
 ; CHECK-LABEL: .visible .func  (.param .b32 func_retval0) test_dynamic_stackalloc(
+; CHECK-NOT: __local_depot
 
 ; CHECK-32:       ld.param.u32  %r[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
 ; CHECK-32-NEXT:  mad.lo.s32 %r[[SIZE2:[0-9]]], %r[[SIZE]], 1, 7;
