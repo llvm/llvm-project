@@ -1541,15 +1541,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_VectorSplat: {
     // Create a vector object and fill all elements with the same scalar value.
     assert(DestTy->isVectorType() && "CK_VectorSplat to non-vector type");
-    mlir::Value Value = Visit(E);
-    SmallVector<mlir::Value, 16> Elements;
-    auto VecType = CGF.getCIRType(DestTy).dyn_cast<mlir::cir::VectorType>();
-    auto NumElements = VecType.getSize();
-    for (uint64_t Index = 0; Index < NumElements; ++Index) {
-      Elements.push_back(Value);
-    }
-    return CGF.getBuilder().create<mlir::cir::VecCreateOp>(
-        CGF.getLoc(E->getSourceRange()), VecType, Elements);
+    return CGF.getBuilder().create<mlir::cir::VecSplatOp>(
+        CGF.getLoc(E->getSourceRange()), CGF.getCIRType(DestTy), Visit(E));
   }
   case CK_FixedPointCast:
     llvm_unreachable("NYI");

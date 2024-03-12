@@ -51,6 +51,13 @@ void vector_int_test(int x) {
   // CHECK: %[[#bbval:]] = llvm.bitcast %[[#bval]] : vector<4xi32> to vector<2xf64>
   // CHECK: llvm.store %[[#bbval]], %[[#bbmem:]] : vector<2xf64>, !llvm.ptr
 
+  // Scalar to vector conversion, a.k.a. vector splat.
+  b = a + 7;
+  // CHECK: %[[#undef:]] = llvm.mlir.undef : vector<4xi32>
+  // CHECK: %[[#zeroInt:]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[#inserted:]] = llvm.insertelement %[[#seven:]], %[[#undef]][%[[#zeroInt]] : i64] : vector<4xi32>
+  // CHECK: %[[#shuffled:]] = llvm.shufflevector %[[#inserted]], %[[#undef]] [0, 0, 0, 0] : vector<4xi32>
+
   // Extract element.
   int c = a[x];
   // CHECK: %[[#T58:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>

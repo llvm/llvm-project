@@ -1319,6 +1319,37 @@ public:
   }
 };
 
+class CIRVectorSplatLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecSplatOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecSplatOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecSplatOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // Vector splat can be implemented with an `insertelement` and a
+    // `shufflevector`, which is better than an `insertelement` for each
+    // element in vector.  Start with an undef vector.  Insert the value into
+    // the first element.  Then use a `shufflevector` with a mask of all 0 to
+    // fill out the entire vector with that value.
+    auto vecTy = op.getType().dyn_cast<mlir::cir::VectorType>();
+    assert(vecTy && "result type of cir.vec.splat op is not VectorType");
+    auto llvmTy = typeConverter->convertType(vecTy);
+    auto loc = op.getLoc();
+    mlir::Value undef = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+    mlir::Value indexValue =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+    mlir::Value elementValue = adaptor.getValue();
+    mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
+        loc, undef, elementValue, indexValue);
+    SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
+    mlir::Value shuffled = rewriter.create<mlir::LLVM::ShuffleVectorOp>(
+        loc, oneElement, undef, zeroValues);
+    rewriter.replaceOp(op, shuffled);
+    return mlir::success();
+  }
+};
+
 class CIRVectorTernaryLowering
     : public mlir::OpConversionPattern<mlir::cir::VecTernaryOp> {
 public:
@@ -2565,7 +2596,7 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
-      CIRVectorExtractLowering, CIRVectorCmpOpLowering,
+      CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRStackSaveLowering, CIRStackRestoreLowering,
       CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering>(
       converter, patterns.getContext());
