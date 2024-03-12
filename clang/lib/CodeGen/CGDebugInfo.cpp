@@ -32,6 +32,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
@@ -3515,7 +3516,7 @@ CGDebugInfo::CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
                                          StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
   // frame.
-  const char *Prefix = "__llvm_verbose_trap";
+  const char *Prefix = CLANG_VERBOSE_TRAP_PREFIX;
   SmallString<64> FuncName(Prefix);
   if (!FailureMsg.empty()) {
     FuncName += ": ";
