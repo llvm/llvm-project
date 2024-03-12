@@ -772,9 +772,7 @@ define dso_local i1 @load_bool() #0 {
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: load_bool:
 ; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
-; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; MEDIUM-SMALL-DATA-PIC-NEXT:    movabsq $bool@GOTOFF, %rcx
-; MEDIUM-SMALL-DATA-PIC-NEXT:    movzbl (%rax,%rcx), %eax
+; MEDIUM-SMALL-DATA-PIC-NEXT:    movzbl bool(%rip), %eax
 ; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
 ;
 ; MEDIUM-PIC-LABEL: load_bool:

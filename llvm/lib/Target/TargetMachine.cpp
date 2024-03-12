@@ -92,7 +92,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__stop_")))
       return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
-    uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
 
