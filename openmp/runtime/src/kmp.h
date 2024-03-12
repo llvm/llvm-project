@@ -1392,8 +1392,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   kmp_cpuinfo_flags_t flags;
   int apic_id;
-  int physical_id;
-  int logical_id;
   kmp_uint64 frequency; // Nominal CPU frequency in Hz.
   char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
 } kmp_cpuinfo_t;
