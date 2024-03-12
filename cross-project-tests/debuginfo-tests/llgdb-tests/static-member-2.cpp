@@ -2,7 +2,6 @@
 // RUN: %clangxx %target_itanium_abi_host_triple %t -o %t.out
 // RUN: %test_debuginfo %s %t.out
 // XFAIL: gdb-clang-incompatibility
-// XFAIL: system-darwin
 
 // DEBUGGER: delete breakpoints
 // DEBUGGER: break static-member.cpp:33
