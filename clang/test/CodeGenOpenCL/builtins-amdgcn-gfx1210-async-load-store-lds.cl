@@ -124,3 +124,13 @@ void test_amdgcn_global_store_async_from_lds_b128(global v4i* gaddr, local v4i* 
 {
   __builtin_amdgcn_global_store_async_from_lds_b128(gaddr, laddr, 0);
 }
+
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_atomic_async_barrier_arrive_b64(
+// CHECK-GFX1210-NEXT:  entry:
+// CHECK-GFX1210-NEXT:    tail call void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3) [[ADDR:%.*]])
+// CHECK-GFX1210-NEXT:    ret void
+//
+void test_amdgcn_ds_atomic_async_barrier_arrive_b64(local long* addr)
+{
+  __builtin_amdgcn_ds_atomic_async_barrier_arrive_b64(addr);
+}
