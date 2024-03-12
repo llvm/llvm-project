@@ -223,6 +223,8 @@ struct Config {
   bool checkSections;
   bool checkDynamicRelocs;
   llvm::DebugCompressionType compressDebugSections;
+  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
+      compressNonAllocSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
