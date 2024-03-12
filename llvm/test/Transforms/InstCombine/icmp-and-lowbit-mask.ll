@@ -456,11 +456,10 @@ define i1 @src_is_notmask_shl(i8 %x_in, i8 %y, i1 %cond) {
 define i1 @src_is_notmask_x_xor_neg_x(i8 %x_in, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @src_is_notmask_x_xor_neg_x(
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
-; CHECK-NEXT:    [[NEG_Y:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[NEG_Y:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[NOTMASK0:%.*]] = xor i8 [[NEG_Y]], [[Y]]
-; CHECK-NEXT:    [[NOTMASK:%.*]] = select i1 [[COND:%.*]], i8 [[NOTMASK0]], i8 -8
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NOTMASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i8 [[NOTMASK0]], i8 7
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123

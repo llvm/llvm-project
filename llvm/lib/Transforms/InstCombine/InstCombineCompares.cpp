@@ -4113,9 +4113,12 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
     if (match(V, m_Not(m_Value(X))))
       return isMaskOrZero(X, !Not, Q, Depth);
 
+    // (X ^ -X) is a ~Mask
+    if (Not)
+      return match(V, m_c_Xor(m_Value(X), m_Neg(m_Deferred(X))));
     // (X ^ (X - 1)) is a Mask
-    return !Not &&
-           match(V, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
+    else
+      return match(V, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
   case Instruction::Select:
     // c ? Mask0 : Mask1 is a Mask.
     return isMaskOrZero(I->getOperand(1), Not, Q, Depth) &&
