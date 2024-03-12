@@ -16641,9 +16641,20 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           return false;
       }
       {
-        // Non-undef constants come next.
-        bool C1 = isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]);
-        bool C2 = isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]);
+        // Sort by undefs next.
+        bool U1 = isa<UndefValue>(Opcodes1[I]);
+        bool U2 = isa<UndefValue>(Opcodes2[I]);
+        if (U1 && U2)
+          continue;
+        if (U1)
+          return true;
+        if (U2)
+          return false;
+      }
+      {
+        // Sort by non-undef constants next.
+        bool C1 = isa<Constant>(Opcodes1[I]);
+        bool C2 = isa<Constant>(Opcodes2[I]);
         if (C1 && C2)
           continue;
         if (C1)
@@ -16651,28 +16662,17 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         if (C2)
           return false;
       }
-      bool U1 = isa<UndefValue>(Opcodes1[I]);
-      bool U2 = isa<UndefValue>(Opcodes2[I]);
       {
-        // Non-constant non-instructions come next.
-        if (!U1 && !U2) {
-          auto ValID1 = Opcodes1[I]->getValueID();
-          auto ValID2 = Opcodes2[I]->getValueID();
-          if (ValID1 == ValID2)
-            continue;
-          if (ValID1 < ValID2)
-            return true;
-          if (ValID1 > ValID2)
-            return false;
-        }
-        if (!U1)
+        // Sort the rest by ValueID.
+        auto ValID1 = Opcodes1[I]->getValueID();
+        auto ValID2 = Opcodes2[I]->getValueID();
+        if (ValID1 == ValID2)
+          continue;
+        if (ValID1 < ValID2)
           return true;
-        if (!U2)
+        if (ValID1 > ValID2)
           return false;
       }
-      // Undefs come last.
-      assert(U1 && U2 && "The only thing left should be undef & undef.");
-      continue;
     }
     return false;
   };
