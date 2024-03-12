@@ -825,7 +825,7 @@ class kmp_affinity_raii_t {
 
 public:
   kmp_affinity_raii_t(const kmp_affin_mask_t *new_mask = nullptr)
-      : restored(false) {
+      : mask(nullptr), restored(false) {
     if (KMP_AFFINITY_CAPABLE()) {
       KMP_CPU_ALLOC(mask);
       KMP_ASSERT(mask != NULL);
@@ -835,7 +835,7 @@ public:
     }
   }
   void restore() {
-    if (!restored && KMP_AFFINITY_CAPABLE()) {
+    if (mask && KMP_AFFINITY_CAPABLE() && !restored) {
       __kmp_set_system_affinity(mask, /*abort_on_error=*/true);
       KMP_CPU_FREE(mask);
     }
