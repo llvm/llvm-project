@@ -2453,9 +2453,9 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ sep -start -ec BR_INST_RETIRED.NEAR_TAKEN:precise=yes:pdir -lbr no_filter:usr -perf-script ip,brstack -app ./code
+     $ sep -start -out code.tb7 -ec BR_INST_RETIRED.NEAR_TAKEN:precise=yes:pdir -lbr no_filter:usr -perf-script brstack -app ./code
 
-   This produces a ``perf.data.script`` output which can be used with
+   This produces a ``code.perf.data.script`` output which can be used with
    ``llvm-profgen``'s ``--perfscript`` input option.
 
 3. Convert the collected profile data to LLVM's sample profile format.
