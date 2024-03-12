@@ -26,8 +26,8 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
           Op<XeGPU_Dialect, mnemonic, traits>;
 
 
-def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, 
-  AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
+def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface, 
+                        AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
 
   let summary = "create nd tensor descriptor operation";
   let description = [{
@@ -130,11 +130,12 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     }
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    /// If source is integer it will simply return an array of 
-    /// ShapedType::kDynamic representing dynamic shape encoded 
-    /// in the `shape` argument will be used.
+    /// If source is IntegerType and `shape` is filled, it will 
+    /// return an array of ShapedType::kDynamic representing dynamic 
+    /// shape encoded in the `shape` argument will be used. Presence
+    /// of `shape` overides static shape from source memref type.
     SmallVector<int64_t> getStaticSizes() {
-      if (getSourceType().dyn_cast<IntegerType>()) {
+      if (getSourceType().isa<IntegerType>() || getShape().size()) {
         auto dims = getMixedOffsets().size();
         return SmallVector<int64_t>(dims, ShapedType::kDynamic);
       }
@@ -143,11 +144,12 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     }
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
-    /// If source is integer it will simply return an array of 
-    /// ShapedType::kDynamic representing dynamic strides encoded 
-    /// in the `strides` argument will be used.
+    /// If source is IntegerType or `strides` is filled, it will 
+    /// return an array of ShapedType::kDynamic representing dynamic 
+    /// strides encoded in the `strides` argument will be used. Presence
+    /// of `strides` overides static strides from source memref type.
     SmallVector<int64_t> getStaticStrides() {
-      if (getSourceType().dyn_cast<IntegerType>()) {
+      if (getSourceType().isa<IntegerType>() || getStrides().size()) {
         auto dims = getMixedOffsets().size();
         return SmallVector<int64_t>(dims, ShapedType::kDynamic);
       }
@@ -171,6 +173,8 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     /// Return the number of leading operands before the `offsets`, 
     /// `shape` and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+
+    mlir::Value getViewSource() { return getSource(); }
   }];
 }
 

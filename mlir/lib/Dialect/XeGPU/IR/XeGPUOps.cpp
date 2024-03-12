@@ -76,20 +76,31 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 
 LogicalResult CreateNdDescOp::verify() {
   auto rank = getMixedOffsets().size();
-  bool invalid = (rank != 2);
+  bool invalidRank = (rank != 2);
+  bool invalidElemTy = false;
 
+  // check source type matches the rank if it is a memref
   auto memrefTy = getSourceType().dyn_cast<MemRefType>();
-  if (memrefTy)
-    invalid |= (memrefTy.getRank() != rank);
+  if (memrefTy) {
+    invalidRank |= (memrefTy.getRank() != rank);
+    // TensorDesc should have the same element type with memref.
+    invalidElemTy != memrefTy.getElementType() != getElementType(); 
+  }
 
-  invalid = (getTensorDescType().getRank() != rank);
+  // check result type matches the rank
+  invalidRank = (getType().getRank() != rank);
 
-  if (invalid) {
+  if (invalidRank)
     return emitOpError(
         "Expecting the rank of shape, strides, offsets, "
         "source memref type (if source is a memref) and TensorDesc "
         "should match with each other. They currenlty are 2D.");
-  }
+
+  if (invalidElemTy)
+    return emitOpError("TensorDesc should have the same element "
+                       "type with the source if it is a memref.\n");
+
+
   return success();
 }
 
