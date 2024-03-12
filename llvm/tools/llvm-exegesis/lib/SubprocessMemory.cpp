@@ -9,6 +9,7 @@
 #include "SubprocessMemory.h"
 #include "Error.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cerrno>
 
 #ifdef __linux__
@@ -36,8 +37,8 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // This comes up particularly often when running the exegesis tests with
   // llvm-lit. Additionally add the TID so that downstream consumers
   // using multiple threads don't run into conflicts.
-  std::string AuxiliaryMemoryName = "/" + std::to_string(getCurrentTID()) +
-                                    "auxmem" + std::to_string(ProcessID);
+  std::string AuxiliaryMemoryName =
+      llvm::formatv("/{0}auxmem{1}", getCurrentTID(), ProcessID);
   int AuxiliaryMemoryFD = shm_open(AuxiliaryMemoryName.c_str(),
                                    O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFD == -1)
@@ -57,9 +58,8 @@ Error SubprocessMemory::addMemoryDefinition(
     pid_t ProcessPID) {
   SharedMemoryNames.reserve(MemoryDefinitions.size());
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string SharedMemoryName = "/" + std::to_string(ProcessPID) + "t" +
-                                   std::to_string(getCurrentTID()) + "memdef" +
-                                   std::to_string(MemVal.Index);
+    std::string SharedMemoryName = llvm::formatv(
+        "/{0}t{1}memdef{2}", ProcessPID, getCurrentTID(), MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -95,7 +95,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
     pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
   std::string AuxiliaryMemoryName =
-      "/" + std::to_string(ParentTID) + "auxmem" + std::to_string(ParentPID);
+      llvm::formatv("/{0}auxmem{1}", ParentTID, ParentPID);
   int AuxiliaryMemoryFileDescriptor =
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
