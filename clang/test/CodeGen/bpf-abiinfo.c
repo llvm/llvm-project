@@ -22,3 +22,13 @@ int foo_int(void) {
         if (bar_int() != 10) return 0; else return 1;
 }
 // CHECK: %call = call i32 @bar_int()
+
+void sprog1(short, int, int);
+void mprog1() {
+  sprog1(-3, 4, -5);
+// CHECK: call void @sprog1(i16 noundef signext -3, i32 noundef signext 4, i32 noundef signext -5)
+}
+void mprog2(long a, long b) {
+  sprog1(a, b, b);
+// CHECK: call void @sprog1(i16 noundef signext %{{[0-9a-z]+}}, i32 noundef signext %{{[0-9a-z]+}}, i32 noundef signext %{{[0-9a-z]+}})
+}
