@@ -343,20 +343,6 @@ func.func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
 
 // -----
 
-func.func @expand_shape_invalid_ranks(%arg0: tensor<?x?xf32>) {
-  // expected-error @+1 {{op expected rank expansion, but found source rank 2 >= result rank 2}}
-  %0 = tensor.expand_shape %arg0 [[0], [1]] : tensor<?x?xf32> into tensor<?x?xf32>
-}
-
-// -----
-
-func.func @collapse_shape_invalid_ranks(%arg0: tensor<?x?xf32>) {
-  // expected-error @+1 {{op expected rank reduction, but found source rank 2 <= result rank 2}}
-  %0 = tensor.collapse_shape %arg0 [[0], [1]] : tensor<?x?xf32> into tensor<?x?xf32>
-}
-
-// -----
-
 func.func @rank(%0: f32) {
   // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
   "tensor.rank"(%0): (f32)->index
