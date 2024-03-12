@@ -20,6 +20,6 @@ endif()
 # (https://github.com/mozilla/sccache?tab=readme-ov-file#usage)
 # avoiding “fatal error C1041: cannot open program database; if
 # multiple CL.EXE write to the same .PDB file, please use /FS"
-+if(POLICY CMP0141)
-+  cmake_policy(SET CMP0141 NEW)
-+endif()
+if(POLICY CMP0141)
+  cmake_policy(SET CMP0141 NEW)
+endif()
