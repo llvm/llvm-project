@@ -928,8 +928,8 @@ def checkPexpectSupport():
         try:
             import pexpect
         except:
-            print(
-                "Warning: pexpect is not installed, but pexpect tests are not being skipped."
+            raise Exception(
+                "pexpect is not installed, but pexpect tests are not being skipped."
             )
 
 
