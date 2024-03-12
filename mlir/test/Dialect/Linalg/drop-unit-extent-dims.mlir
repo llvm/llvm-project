@@ -946,3 +946,90 @@ func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
 // CHECK-SLICES-LABEL: func @drop_all_loops
 //       CHECK-SLICES:   memref.subview %{{.*}}[0, 0] [1, 1] [1, 1] : memref<1x1xf32, 3> to memref<f32, strided<[]>, 3>
 //       CHECK-SLICES:   linalg.generic{{.*}}memref<f32, strided<[]>, 3>
+
+// -----
+
+func.func @drop_unit_pad_dims(%arg0: tensor<1x1x3x1x1xf32>) -> tensor<1x2x3x1x3xf32>
+{
+  %c0 = arith.constant 0 : index
+  %cst0 = arith.constant 0.0 : f32
+  %0 = tensor.pad %arg0 low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index):
+      tensor.yield %cst0 : f32
+  } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+  return %0 : tensor<1x2x3x1x3xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dims
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3], [4]{{\]}} : tensor<1x1x3x1x1xf32> into tensor<1x3x1xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[1, 0, 0] high[0, 0, 2]
+//       CHECK:   } : tensor<1x3x1xf32> to tensor<2x3x3xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3], [4]{{\]}} : tensor<2x3x3xf32> into tensor<1x2x3x1x3xf32>
+
+// CHECK-SLICES-LABEL: func @drop_unit_pad_dims
+//       CHECK-SLICES:   %[[EXTRACT:.+]] = tensor.extract_slice
+//  CHECK-SLICES-SAME:     [0, 0, 0, 0, 0] [1, 1, 3, 1, 1] [1, 1, 1, 1, 1] : tensor<1x1x3x1x1xf32> to tensor<1x3x1xf32>
+//       CHECK-SLICES:   %[[PADDED:.+]] = tensor.pad %[[EXTRACT]] low[1, 0, 0] high[0, 0, 2]
+//       CHECK-SLICES:   } : tensor<1x3x1xf32> to tensor<2x3x3xf32>
+//       CHECK-SLICES:   tensor.insert_slice %[[PADDED]]
+//  CHECK-SLICES-SAME:     [0, 0, 0, 0, 0] [1, 2, 3, 1, 3] [1, 1, 1, 1, 1] : tensor<2x3x3xf32> into tensor<1x2x3x1x3xf32>
+
+// -----
+
+func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
+{
+  %c0 = arith.constant 0 : index
+  %cst0 = arith.constant 0.0 : f32
+  %0 = tensor.pad %arg0 low[0, 5] high[0, 6] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %cst0 : f32
+  } : tensor<1x?xf32> to tensor<1x?xf32>
+  return %0 : tensor<1x?xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dynamic_dims
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1]{{\]}} : tensor<1x?xf32> into tensor<?xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[5] high[6]
+//       CHECK:   } : tensor<?xf32> to tensor<?xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1]{{\]}} : tensor<?xf32> into tensor<1x?xf32>
+
+// CHECK-SLICES: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 + 11)>
+
+// CHECK-SLICES-LABEL: func @drop_unit_pad_dynamic_dims
+//  CHECK-SLICES-SAME:   %[[ARG0:[A-Za-z0-9]+]]: tensor<1x?xf32>
+//       CHECK-SLICES:   %[[DIM:.+]] = tensor.dim %[[ARG0]], %c1
+//       CHECK-SLICES:   %[[EXTRACT:.+]] = tensor.extract_slice
+//  CHECK-SLICES-SAME:     [0, 0] [1, %[[DIM]]] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
+//       CHECK-SLICES:   %[[PADDED:.+]] = tensor.pad %[[EXTRACT]] low[5] high[6]
+//       CHECK-SLICES:   } : tensor<?xf32> to tensor<?xf32>
+//       CHECK-SLICES:   %[[PADDED_DIM:.+]] = affine.apply #[[$MAP]]()[%[[DIM]]]
+//       CHECK-SLICES:   %[[EMPTY:.+]] = tensor.empty(%[[PADDED_DIM]]) : tensor<1x?xf32>
+//       CHECK-SLICES:   tensor.insert_slice %[[PADDED]] into %[[EMPTY]]
+//  CHECK-SLICES-SAME:     [0, 0] [1, %[[PADDED_DIM]]] [1, 1] : tensor<?xf32> into tensor<1x?xf32>
+
+// -----
+
+func.func @do_not_drop_non_constant_padding(%arg0: tensor<1x1x3x1x1xf32>, %pad: f32) -> tensor<1x2x3x1x3xf32>
+{
+  %c0 = arith.constant 0 : index
+  %0 = tensor.pad %arg0 low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index):
+      %0 = arith.index_cast %arg3 : index to i64
+      %1 = arith.sitofp %0 : i64 to f32
+      %add = arith.addf %pad, %1 : f32
+      tensor.yield %add : f32
+  } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+  return %0 : tensor<1x2x3x1x3xf32>
+}
+
+// CHECK-LABEL: func @do_not_drop_non_constant_padding
+//       CHECK:   tensor.pad %{{.*}} low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2]
+//       CHECK:   } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+
+// CHECK-SLICES-LABEL: func @do_not_drop_non_constant_padding
+//       CHECK-SLICES:   tensor.pad %{{.*}} low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2]
+//       CHECK-SLICES:   } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
