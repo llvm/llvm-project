@@ -97,16 +97,16 @@ public:
   /// instruction of this block. These are equivalent to dbg.value intrinsics
   /// that exist at the end of a basic block with no terminator (a transient
   /// state that occurs regularly).
-  void setTrailingDPValues(DPMarker *M);
+  void setTrailingDbgRecords(DPMarker *M);
 
   /// Fetch the collection of DPValues that "trail" after the last instruction
-  /// of this block, see \ref setTrailingDPValues. If there are none, returns
+  /// of this block, see \ref setTrailingDbgRecords. If there are none, returns
   /// nullptr.
-  DPMarker *getTrailingDPValues();
+  DPMarker *getTrailingDbgRecords();
 
   /// Delete any trailing DPValues at the end of this block, see
-  /// \ref setTrailingDPValues.
-  void deleteTrailingDPValues();
+  /// \ref setTrailingDbgRecords.
+  void deleteTrailingDbgRecords();
 
   void dumpDbgValues() const;
 
@@ -121,10 +121,10 @@ public:
   DPMarker *getNextMarker(Instruction *I);
 
   /// Insert a DPValue into a block at the position given by \p I.
-  void insertDPValueAfter(DbgRecord *DPV, Instruction *I);
+  void insertDbgRecordAfter(DbgRecord *DPV, Instruction *I);
 
   /// Insert a DPValue into a block at the position given by \p Here.
-  void insertDPValueBefore(DbgRecord *DPV, InstListType::iterator Here);
+  void insertDbgRecordBefore(DbgRecord *DPV, InstListType::iterator Here);
 
   /// Eject any debug-info trailing at the end of a block. DPValues can
   /// transiently be located "off the end" of a block if the blocks terminator
@@ -137,8 +137,8 @@ public:
   /// happens in RemoveDIs debug-info mode, some special patching-up needs to
   /// occur: inserting into the middle of a sequence of dbg.value intrinsics
   /// does not have an equivalent with DPValues.
-  void reinsertInstInDPValues(Instruction *I,
-                              std::optional<DbgRecord::self_iterator> Pos);
+  void reinsertInstInDbgRecords(Instruction *I,
+                                std::optional<DbgRecord::self_iterator> Pos);
 
 private:
   void setParent(Function *parent);
