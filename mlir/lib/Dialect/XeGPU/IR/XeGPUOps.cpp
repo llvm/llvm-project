@@ -44,8 +44,8 @@ static std::string makeString(T array, bool breakline = false) {
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> offsets) {
-  auto ty = llvm::dyn_cast_if_present<MemRefType>(source.getType());
-  assert(ty && ty.hasStaticShape() && offsets.size() == ty.getRank());
+  auto ty = source.getType();
+  assert(ty && ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
 
   llvm::SmallVector<int64_t> staticOffsets;
   llvm::SmallVector<Value> dynamicOffsets;
@@ -75,21 +75,24 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  auto rank = getMixedOffsets().size();
+  auto rank = (int64_t)getMixedOffsets().size();
   bool invalidRank = (rank != 2);
   bool invalidElemTy = false;
 
-  // check source type matches the rank if it is a memref
+  // check source type matches the rank if it is a memref.
+  // It also should have the same ElementType as TensorDesc.
   auto memrefTy = getSourceType().dyn_cast<MemRefType>();
   if (memrefTy) {
     invalidRank |= (memrefTy.getRank() != rank);
-    // TensorDesc should have the same element type with memref.
-    invalidElemTy != memrefTy.getElementType() != getElementType(); 
+    invalidElemTy |= memrefTy.getElementType() != getElementType(); 
   }
 
   // check result type matches the rank
   invalidRank = (getType().getRank() != rank);
 
+  // mismatches among shape, strides, and offsets are
+  // already handeled by OffsetSizeAndStrideOpInterface.
+  // So they are not check here.
   if (invalidRank)
     return emitOpError(
         "Expecting the rank of shape, strides, offsets, "
