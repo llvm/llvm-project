@@ -513,11 +513,6 @@ bool MipsLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::trap: {
-    MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
-    MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Trap, TII, TRI, RBI);
-  }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
     LLT PtrTy = LLT::pointer(0, 32);

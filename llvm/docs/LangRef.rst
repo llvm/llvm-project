@@ -26869,6 +26869,8 @@ Arguments:
 
 The argument should be an MDTuple containing any number of MDStrings.
 
+.. _llvm.trap:
+
 '``llvm.trap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26896,6 +26898,8 @@ This intrinsic is lowered to the target dependent trap instruction. If
 the target does not have a trap instruction, this intrinsic will be
 lowered to a call of the ``abort()`` function.
 
+.. _llvm.debugtrap:
+
 '``llvm.debugtrap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26922,6 +26926,8 @@ Semantics:
 This intrinsic is lowered to code which is intended to cause an
 execution trap with the intention of requesting the attention of a
 debugger.
+
+.. _llvm.ubsantrap:
 
 '``llvm.ubsantrap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

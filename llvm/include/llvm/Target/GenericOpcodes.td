@@ -1567,6 +1567,28 @@ def G_BZERO : GenericInstruction {
 }
 
 //------------------------------------------------------------------------------
+// Trap intrinsics
+//------------------------------------------------------------------------------
+def G_TRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+  let mayStore = true;
+}
+
+def G_DEBUGTRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_UBSANTRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins untyped_imm_0:$kind);
+  let hasSideEffects = true;
+}
+
+//------------------------------------------------------------------------------
 // Bitfield extraction.
 //------------------------------------------------------------------------------
 

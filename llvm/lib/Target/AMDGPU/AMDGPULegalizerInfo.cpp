@@ -2030,6 +2030,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();
 
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
+
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
@@ -2134,6 +2136,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeGetFPEnv(MI, MRI, B);
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
+  case TargetOpcode::G_TRAP:
+    return legalizeTrapIntrinsic(MI, MRI, B);
+  case TargetOpcode::G_DEBUGTRAP:
+    return legalizeDebugTrapIntrinsic(MI, MRI, B);
   default:
     return false;
   }
@@ -2925,7 +2931,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       // functions that use local objects. However, if these dead functions are
       // not eliminated, we don't want a compile time error. Just emit a warning
       // and a trap, since there should be no callable path here.
-      B.buildIntrinsic(Intrinsic::trap, ArrayRef<Register>());
+      B.buildTrap();
       B.buildUndef(DstReg);
       MI.eraseFromParent();
       return true;
@@ -7270,10 +7276,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return legalizeBufferAtomic(MI, B, IntrID);
-  case Intrinsic::trap:
-    return legalizeTrapIntrinsic(MI, MRI, B);
-  case Intrinsic::debugtrap:
-    return legalizeDebugTrapIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_ds_fadd:
