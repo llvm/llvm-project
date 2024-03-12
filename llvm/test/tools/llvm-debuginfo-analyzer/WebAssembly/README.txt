@@ -16,13 +16,13 @@ Use clang to generate the '.s'.
   clang --target=wasm32 -S -g Inputs/pr-46466.cpp    -o Inputs/pr-46466-clang.s
   clang --target=wasm32 -S -g Inputs/test.cpp        -o Inputs/test-clang.s
 
-How to generate .wasm from .s
+How to generate .o from .s
 --------------------------------
 Each test executes one of the following commands in order to generate
 the binary '.wasm' used by that specific test:
 
-  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/hello-world-clang.s -o hello-world-clang.wasm
-  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/pr-43860-clang.s    -o pr-43860-clang.wasm
-  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/pr-44884-clang.s    -o pr-44884-clang.wasm
-  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/pr-46466-clang.s    -o pr-46466-clang.wasm
-  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/test-clang.s        -o test-clang.wasm
+  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/hello-world-clang.s -o hello-world-clang.o
+  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/pr-43860-clang.s    -o pr-43860-clang.o
+  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/pr-44884-clang.s    -o pr-44884-clang.o
+  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/pr-46466-clang.s    -o pr-46466-clang.o
+  llvm-mc -arch=wasm32 -filetype=obj %p/Inputs/test-clang.s        -o test-clang.o

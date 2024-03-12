@@ -149,7 +149,7 @@ protected:
   // locations. With WebAssembly, the .debug_line section maps Code
   // section-relative instruction offsets to source locations.
   //
-  //  EXAMPLE: DW_AT_* ATTRIBUTES
+  // EXAMPLE: DW_AT_* ATTRIBUTES
   // For entities with a single associated code address, DWARF uses
   // the DW_AT_low_pc attribute to specify the associated code address value.
   // For WebAssembly, the DW_AT_low_pc's value is a Code section-relative
@@ -162,7 +162,7 @@ protected:
   //
   // For entities with multiple ranges of code, DWARF uses the DW_AT_ranges
   // attribute, which refers to the array located at the .debug_ranges section.
-  LVAddress WasmOffset = 0;
+  LVAddress WasmCodeSectionOffset = 0;
 
   // Loads all info for the architecture of the provided object file.
   Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures);

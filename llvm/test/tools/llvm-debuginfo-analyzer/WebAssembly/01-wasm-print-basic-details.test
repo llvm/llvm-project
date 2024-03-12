@@ -19,22 +19,22 @@
 ; level and debug info format.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.wasm
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=scopes,symbols,types,lines,instructions \
-; RUN:                         %t.test-clang.wasm 2>&1 | \
+; RUN:                         %t.test-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=elements \
-; RUN:                         %t.test-clang.wasm 2>&1 | \
+; RUN:                         %t.test-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
-; ONE-NEXT: [000]           {File} '{{.*}}test-clang.wasm' -> WASM
+; ONE-NEXT: [000]           {File} '{{.*}}test-clang.o' -> WASM
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'

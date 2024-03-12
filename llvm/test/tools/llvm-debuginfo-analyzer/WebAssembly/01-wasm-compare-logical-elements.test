@@ -18,21 +18,21 @@
 ; giving more context by swapping the reference and target object files.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.wasm
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --compare=types \
 ; RUN:                         --report=view \
 ; RUN:                         --print=symbols,types \
-; RUN:                         %t.test-clang.wasm \
+; RUN:                         %t.test-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
-; ONE:      Reference: '{{.*}}test-clang.wasm'
+; ONE:      Reference: '{{.*}}test-clang.o'
 ; ONE-NEXT: Target:    'test-dwarf-gcc.o'
 ; ONE-EMPTY:
 ; ONE-NEXT: Logical View:
-; ONE-NEXT:  [000]           {File} '{{.*}}test-clang.wasm'
+; ONE-NEXT:  [000]           {File} '{{.*}}test-clang.o'
 ; ONE-EMPTY:
 ; ONE-NEXT:  [001]             {CompileUnit} 'test.cpp'
 ; ONE-NEXT:  [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
@@ -53,11 +53,11 @@
 ; RUN:                         --compare=types \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types,summary \
-; RUN:                         %t.test-clang.wasm \
+; RUN:                         %t.test-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
-; TWO:      Reference: '{{.*}}test-clang.wasm'
+; TWO:      Reference: '{{.*}}test-clang.o'
 ; TWO-NEXT: Target:    'test-dwarf-gcc.o'
 ; TWO-EMPTY:
 ; TWO-NEXT: (1) Missing Types:
@@ -83,11 +83,11 @@
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types,summary \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o \
-; RUN:                         %t.test-clang.wasm 2>&1 | \
+; RUN:                         %t.test-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=THR %s
 
 ; THR:      Reference: 'test-dwarf-gcc.o'
-; THR-NEXT: Target:    '{{.*}}test-clang.wasm'
+; THR-NEXT: Target:    '{{.*}}test-clang.o'
 ; THR-EMPTY:
 ; THR-NEXT: (1) Missing Types:
 ; THR-NEXT: -[004]     4     {TypeAlias} 'INTEGER' -> 'int'

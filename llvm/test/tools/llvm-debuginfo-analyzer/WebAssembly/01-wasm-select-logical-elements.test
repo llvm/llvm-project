@@ -19,18 +19,18 @@
 ; and given the number of matches.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.wasm
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --select-nocase --select-regex \
 ; RUN:                         --select=BLOCK --select=.store \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types,instructions,summary \
-; RUN:                         %t.test-clang.wasm 2>&1 | \
+; RUN:                         %t.test-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
-; ONE-NEXT: [000]           {File} '{{.*}}test-clang.wasm'
+; ONE-NEXT: [000]           {File} '{{.*}}test-clang.o'
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]           {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [003]           {Code} 'block'
@@ -57,12 +57,12 @@
 ; RUN:                         --select=INTe \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols,types \
-; RUN:                         %t.test-clang.wasm \
+; RUN:                         %t.test-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
 ; TWO:      Logical View:
-; TWO-NEXT: [000]           {File} '{{.*}}test-clang.wasm'
+; TWO-NEXT: [000]           {File} '{{.*}}test-clang.o'
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
 ; TWO-NEXT: [003]     4     {TypeAlias} 'INTEGER' -> 'int'

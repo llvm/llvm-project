@@ -191,7 +191,7 @@ void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
       // If the object is WebAssembly, update the address offset that
       // will be added to DWARF DW_AT_* attributes.
       if (Obj.isWasm())
-        WasmOffset = Section.getAddress();
+        WasmCodeSectionOffset = Section.getAddress();
     }
   }
 

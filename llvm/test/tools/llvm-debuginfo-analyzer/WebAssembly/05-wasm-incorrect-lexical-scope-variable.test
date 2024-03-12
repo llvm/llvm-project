@@ -32,17 +32,17 @@
 ; lexical scope: '3' and '4' respectively.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/pr-43860-clang.s -o %t.pr-43860-clang.wasm
+; RUN:         %p/Inputs/pr-43860-clang.s -o %t.pr-43860-clang.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols \
-; RUN:                         %t.pr-43860-clang.wasm \
+; RUN:                         %t.pr-43860-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/pr-43860-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
-; ONE-NEXT: [000]           {File} '{{.*}}pr-43860-clang.wasm' -> WASM
+; ONE-NEXT: [000]           {File} '{{.*}}pr-43860-clang.o' -> WASM
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-43860.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 19{{.*}}'
@@ -91,12 +91,12 @@
 ; RUN:                         --select=Var \
 ; RUN:                         --report=list \
 ; RUN:                         --print=symbols \
-; RUN:                         %t.pr-43860-clang.wasm \
+; RUN:                         %t.pr-43860-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/pr-43860-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
 ; TWO:      Logical View:
-; TWO-NEXT: [000]           {File} '{{.*}}pr-43860-clang.wasm' -> WASM
+; TWO-NEXT: [000]           {File} '{{.*}}pr-43860-clang.o' -> WASM
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]           {CompileUnit} 'pr-43860.cpp'
 ; TWO-NEXT: [004]           {Variable} 'Var_1' -> 'int'

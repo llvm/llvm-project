@@ -26,17 +26,17 @@
 ; by GCC, does include such references.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/pr-46466-clang.s -o %t.pr-46466-clang.wasm
+; RUN:         %p/Inputs/pr-46466-clang.s -o %t.pr-46466-clang.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols,types \
-; RUN:                         %t.pr-46466-clang.wasm \
+; RUN:                         %t.pr-46466-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/pr-46466-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
-; ONE-NEXT: [000]           {File} '{{.*}}pr-46466-clang.wasm' -> WASM
+; ONE-NEXT: [000]           {File} '{{.*}}pr-46466-clang.o' -> WASM
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 19{{.*}}'
@@ -66,12 +66,12 @@
 ; RUN:                         --select-types=Enumerator \
 ; RUN:                         --report=parents \
 ; RUN:                         --print=types \
-; RUN:                         %t.pr-46466-clang.wasm \
+; RUN:                         %t.pr-46466-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/pr-46466-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
 
 ; TWO:      Logical View:
-; TWO-NEXT: [000]           {File} '{{.*}}pr-46466-clang.wasm' -> WASM
+; TWO-NEXT: [000]           {File} '{{.*}}pr-46466-clang.o' -> WASM
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; TWO-EMPTY:
@@ -93,12 +93,12 @@
 ; RUN:                         --output-sort=name \
 ; RUN:                         --select-types=Enumerator \
 ; RUN:                         --print=types,summary \
-; RUN:                         %t.pr-46466-clang.wasm \
+; RUN:                         %t.pr-46466-clang.o \
 ; RUN:                         %p/../DWARF/Inputs/pr-46466-dwarf-gcc.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=THR %s
 
 ; THR:      Logical View:
-; THR-NEXT: [000]           {File} '{{.*}}pr-46466-clang.wasm' -> WASM
+; THR-NEXT: [000]           {File} '{{.*}}pr-46466-clang.o' -> WASM
 ; THR-EMPTY:
 ; THR-NEXT: [001]           {CompileUnit} 'pr-46466.cpp'
 ; THR-EMPTY:

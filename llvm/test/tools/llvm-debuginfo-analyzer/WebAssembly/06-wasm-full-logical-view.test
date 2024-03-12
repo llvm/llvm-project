@@ -19,15 +19,15 @@
 ; operands, linkage names, etc.
 
 ; RUN: llvm-mc -arch=wasm32 -filetype=obj \
-; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.wasm
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=all \
 ; RUN:                         --print=all \
-; RUN:                         %t.test-clang.wasm 2>&1 | \
+; RUN:                         %t.test-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
 ; ONE:      Logical View:
-; ONE-NEXT: [0x0000000000][000]            {File} '{{.*}}test-clang.wasm' -> WASM
+; ONE-NEXT: [0x0000000000][000]            {File} '{{.*}}test-clang.o' -> WASM
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x000000000b][001]              {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [0x000000000b][002]                {Producer} 'clang version 19{{.*}}'
