@@ -877,6 +877,12 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
     res.getDefaultKinds().set_sizeIntegerKind(8);
 
+  // -fcuda
+  if (args.hasArg(clang::driver::options::OPT_fcuda)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::CUDA);
+  }
+
   // -fopenmp and -fopenacc
   if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
     res.getFrontendOpts().features.Enable(
