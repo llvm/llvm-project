@@ -265,6 +265,9 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Clang now correctly generates overloads for bit-precise integer types for
+  builtin operators in C++. Fixes #GH82998.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -496,6 +499,11 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+
+OpenMP Support
+--------------
+
+- Added support for the `[[omp::assume]]` attribute.
 
 Additional Information
 ======================
