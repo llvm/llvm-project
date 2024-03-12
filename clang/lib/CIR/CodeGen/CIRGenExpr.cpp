@@ -226,19 +226,15 @@ static bool isAAPCS(const TargetInfo &TargetInfo) {
 
 Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
                                                  const FieldDecl *field,
-                                                 unsigned index,
-                                                 unsigned size) {
+                                                 mlir::Type fieldType,
+                                                 unsigned index) {
   if (index == 0)
     return base.getAddress();
-
   auto loc = getLoc(field->getLocation());
-  auto fieldType = builder.getUIntNTy(size);
-
   auto fieldPtr =
       mlir::cir::PointerType::get(getBuilder().getContext(), fieldType);
   auto sea = getBuilder().createGetMember(loc, fieldPtr, base.getPointer(),
                                           field->getName(), index);
-
   return Address(sea, CharUnits::One());
 }
 
@@ -268,14 +264,11 @@ LValue CIRGenFunction::buildLValueForBitField(LValue base,
     llvm_unreachable("NYI");
   }
 
-  const unsigned SS = useVolatile ? info.VolatileStorageSize : info.StorageSize;
-  Address Addr = getAddrOfBitFieldStorage(base, field, Idx, SS);
-  // Get the access type.
-  mlir::Type FieldIntTy = builder.getUIntNTy(SS);
+  Address Addr = getAddrOfBitFieldStorage(base, field, info.StorageType, Idx);
 
   auto loc = getLoc(field->getLocation());
-  if (Addr.getElementType() != FieldIntTy)
-    Addr = builder.createElementBitCast(loc, Addr, FieldIntTy);
+  if (Addr.getElementType() != info.StorageType)
+    Addr = builder.createElementBitCast(loc, Addr, info.StorageType);
 
   QualType fieldType =
       field->getType().withCVRQualifiers(base.getVRQualifiers());

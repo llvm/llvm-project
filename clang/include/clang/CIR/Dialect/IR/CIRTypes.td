@@ -53,6 +53,18 @@ def CIR_IntType : CIR_Type<"Int", "int",
     std::string getAlias() const {
       return (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
     };
+
+    /// Returns a minimum bitwidth of cir::IntType
+    static unsigned minBitwidth() { return 8; }
+    /// Returns a maximum bitwidth of cir::IntType
+    static unsigned maxBitwidth() { return 64; }
+
+    /// Returns true if cir::IntType can be constructed from the provided bitwidth
+    static bool isValidBitwidth(unsigned width) {
+      return width >= minBitwidth()
+        && width <= maxBitwidth()
+        && llvm::isPowerOf2_32(width);
+    }
   }];
   let genVerifyDecl = 1;
 }

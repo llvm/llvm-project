@@ -151,6 +151,20 @@ struct CIRRecordLowering final {
                                            numberOfChars.getQuantity());
   }
 
+  // This is different from LLVM traditional codegen because CIRGen uses arrays
+  // of bytes instead of arbitrary-sized integers. This is important for packed
+  // structures support.
+  mlir::Type getBitfieldStorageType(unsigned numBits) {
+    unsigned alignedBits = llvm::alignTo(numBits, astContext.getCharWidth());
+    if (mlir::cir::IntType::isValidBitwidth(alignedBits)) {
+      return builder.getUIntNTy(alignedBits);
+    } else {
+      mlir::Type type = getCharType();
+      return mlir::cir::ArrayType::get(type.getContext(), type,
+                                       alignedBits / astContext.getCharWidth());
+    }
+  }
+
   // Gets the llvm Basesubobject type from a CXXRecordDecl.
   mlir::Type getStorageType(const CXXRecordDecl *RD) {
     return cirGenTypes.getCIRGenRecordLayout(RD).getBaseSubobjectCIRType();
@@ -228,6 +242,7 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *FD,
   Info.Size = FD->getBitWidthValue(astContext);
   Info.StorageSize = getSizeInBits(StorageType).getQuantity();
   Info.StorageOffset = StartOffset;
+  Info.StorageType = StorageType;
   Info.Name = FD->getName();
 
   if (Info.Size > Info.StorageSize)
@@ -502,12 +517,6 @@ void CIRRecordLowering::accumulateBitFields(
   auto IsBetterAsSingleFieldRun = [&](uint64_t OffsetInRecord,
                                       uint64_t StartBitOffset,
                                       uint64_t nextTail = 0) {
-    if (OffsetInRecord >= 64 ||
-        (nextTail > StartBitOffset &&
-         nextTail - StartBitOffset >= 64)) { // See IntType::verify
-      return true;
-    }
-
     if (!cirGenTypes.getModule().getCodeGenOpts().FineGrainedBitfieldAccesses)
       return false;
     llvm_unreachable("NYI");
@@ -567,7 +576,8 @@ void CIRRecordLowering::accumulateBitFields(
     }
 
     // We've hit a break-point in the run and need to emit a storage field.
-    auto Type = getUIntNType(Tail - StartBitOffset);
+    auto Type = getBitfieldStorageType(Tail - StartBitOffset);
+
     // Add the storage member to the record and set the bitfield info for all of
     // the bitfields in the run. Bitfields get the offset of their storage but
     // come afterward and remain there after a stable sort.

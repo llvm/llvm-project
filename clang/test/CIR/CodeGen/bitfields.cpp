@@ -21,67 +21,32 @@ typedef struct {
   int d : 2;
   int e : 15;
   unsigned f; // type other than int above, not a bitfield
-} S; 
+} S;
 
 typedef struct {
   int a : 3;  // one bitfield with size < 8
   unsigned b;
-} T; 
-// CHECK: !ty_22S22 = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.int<u, 32>, !cir.int<u, 16>, !cir.int<u, 32>}>
+} T;
 // CHECK: !ty_22T22 = !cir.struct<struct "T" {!cir.int<u, 8>, !cir.int<u, 32>} #cir.record.decl.ast>
 // CHECK: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_22S22 = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.array<!cir.int<u, 8> x 3>, !cir.int<u, 16>, !cir.int<u, 32>}>
 // CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
 
 // CHECK: cir.func @_Z11store_field
-// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>,
+// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>
 // CHECK:   [[TMP1:%.*]] = cir.const(#cir.int<3> : !s32i) : !s32i
 // CHECK:   [[TMP2:%.*]] = cir.cast(bitcast, [[TMP0]] : !cir.ptr<!ty_22S22>), !cir.ptr<!u32i>
-// CHECK:   [[TMP3:%.*]] = cir.cast(integral, [[TMP1]] : !s32i), !u32i
-// CHECK:   [[TMP4:%.*]] = cir.load [[TMP2]] : cir.ptr <!u32i>, !u32i
-// CHECK:   [[TMP5:%.*]] = cir.const(#cir.int<15> : !u32i) : !u32i
-// CHECK:   [[TMP6:%.*]] = cir.binop(and, [[TMP3]], [[TMP5]]) : !u32i
-// CHECK:   [[TMP7:%.*]] = cir.const(#cir.int<4294967280> : !u32i) : !u32i
-// CHECK:   [[TMP8:%.*]] = cir.binop(and, [[TMP4]], [[TMP7]]) : !u32i
-// CHECK:   [[TMP9:%.*]] = cir.binop(or, [[TMP8]], [[TMP6]]) : !u32i
-// CHECK:   cir.store [[TMP9]], [[TMP2]] : !u32i, cir.ptr <!u32i>
+// CHECK:   cir.set_bitfield(#bfi_a, [[TMP2]] : !cir.ptr<!u32i>, [[TMP1]] : !s32i)
 void store_field() {
   S s;
   s.a = 3;
 }
 
-// CHECK: cir.func @_Z15store_neg_field
-// CHECK:  [[TMP0:%.*]]  = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>
-// CHECK:  [[TMP1:%.*]]  = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK:  [[TMP2:%.*]]  = cir.unary(minus, [[TMP1]]) : !s32i, !s32i
-// CHECK:  [[TMP3:%.*]]  = cir.get_member [[TMP0]][1] {name = "d"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u32i>
-// CHECK:  [[TMP4:%.*]]  = cir.cast(integral, [[TMP2]] : !s32i), !u32i
-// CHECK:  [[TMP5:%.*]]  = cir.load [[TMP3]] : cir.ptr <!u32i>, !u32i
-// CHECK:  [[TMP6:%.*]]  = cir.const(#cir.int<3> : !u32i) : !u32i
-// CHECK:  [[TMP7:%.*]]  = cir.binop(and, [[TMP4]], [[TMP6]]) : !u32i
-// CHECK:  [[TMP8:%.*]]  = cir.const(#cir.int<17> : !u32i) : !u32i
-// CHECK:  [[TMP9:%.*]] = cir.shift(left, [[TMP7]] : !u32i, [[TMP8]] : !u32i) -> !u32i
-// CHECK:  [[TMP10:%.*]] = cir.const(#cir.int<4294574079> : !u32i) : !u32i
-// CHECK:  [[TMP11:%.*]] = cir.binop(and, [[TMP5]], [[TMP10]]) : !u32i
-// CHECK:  [[TMP12:%.*]] = cir.binop(or, [[TMP11]], [[TMP9]]) : !u32i
-// CHECK:  cir.store [[TMP12]], [[TMP3]] : !u32i, cir.ptr <!u32i>
-void store_neg_field() {
-  S s;
-  s.d = -1;
-}
-
 // CHECK: cir.func @_Z10load_field
-// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>>
-// CHECK:   [[TMP2:%.*]] = cir.load [[TMP0]] : cir.ptr <!cir.ptr<!ty_22S22>>, !cir.ptr<!ty_22S22>
-// CHECK:   [[TMP3:%.*]] = cir.get_member [[TMP2]][1] {name = "d"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u32i>
-// CHECK:   [[TMP4:%.*]] = cir.load [[TMP3]] : cir.ptr <!u32i>, !u32i
-// CHECK:   [[TMP5:%.*]] = cir.cast(integral, [[TMP4]] : !u32i), !s32i
-// CHECK:   [[TMP6:%.*]] = cir.const(#cir.int<13> : !s32i) : !s32i
-// CHECK:   [[TMP7:%.*]] = cir.shift(left, [[TMP5]] : !s32i, [[TMP6]] : !s32i) -> !s32i
-// CHECK:   [[TMP8:%.*]] = cir.const(#cir.int<30> : !s32i) : !s32i
-// CHECK:   [[TMP9:%.*]] = cir.shift( right, [[TMP7]] : !s32i, [[TMP8]] : !s32i) -> !s32i
-// CHECK:   [[TMP10:%.*]] = cir.cast(integral, [[TMP9]] : !s32i), !s32i
-// CHECK:   cir.store [[TMP10]], [[TMP1]] : !s32i, cir.ptr <!s32i>
-// CHECK:   [[TMP11:%.*]] = cir.load [[TMP1]] : cir.ptr <!s32i>, !s32i
+// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>>, ["s", init]
+// CHECK:   [[TMP1:%.*]] = cir.load [[TMP0]] : cir.ptr <!cir.ptr<!ty_22S22>>, !cir.ptr<!ty_22S22>
+// CHECK:   [[TMP2:%.*]] = cir.get_member [[TMP1]][1] {name = "d"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!cir.array<!u8i x 3>>
+// CHECK:   [[TMP3:%.*]] = cir.get_bitfield(#bfi_d, [[TMP2]] : !cir.ptr<!cir.array<!u8i x 3>>) -> !s32i
 int load_field(S& s) {
   return s.d;
 }

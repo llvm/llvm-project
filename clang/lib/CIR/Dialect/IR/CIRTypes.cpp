@@ -642,8 +642,9 @@ mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                 unsigned width, bool isSigned) {
 
-  if (width < 8 || width > 64) {
-    emitError() << "IntType only supports widths from 8 up to 64";
+  if (width < IntType::minBitwidth() || width > IntType::maxBitwidth()) {
+    emitError() << "IntType only supports widths from "
+                << IntType::minBitwidth() << "up to " << IntType::maxBitwidth();
     return mlir::failure();
   }
   if (width % 8 != 0) {

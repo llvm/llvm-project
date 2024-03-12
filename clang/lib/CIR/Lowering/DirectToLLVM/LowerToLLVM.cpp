@@ -9,6 +9,7 @@
 // This file implements lowering of CIR operations to LLVMIR.
 //
 //===----------------------------------------------------------------------===//
+#include "LoweringHelpers.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -2579,6 +2580,136 @@ class CIRInlineAsmOpLowering
   }
 };
 
+class CIRSetBitfieldLowering
+    : public mlir::OpConversionPattern<mlir::cir::SetBitfieldOp> {
+public:
+  using OpConversionPattern<mlir::cir::SetBitfieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::SetBitfieldOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(op);
+
+    auto info = op.getBitfieldInfo();
+    auto size = info.getSize();
+    auto offset = info.getOffset();
+    auto storageType = info.getStorageType();
+    auto context = storageType.getContext();
+
+    unsigned storageSize = 0;
+
+    if (auto arTy = storageType.dyn_cast<mlir::cir::ArrayType>())
+      storageSize = arTy.getSize() * 8;
+    else if (auto intTy = storageType.dyn_cast<mlir::cir::IntType>())
+      storageSize = intTy.getWidth();
+    else
+      llvm_unreachable(
+          "Either ArrayType or IntType expected for bitfields storage");
+
+    auto intType = mlir::IntegerType::get(context, storageSize);
+    auto srcVal = createIntCast(rewriter, adaptor.getSrc(), intType);
+    auto srcWidth = storageSize;
+    auto resultVal = srcVal;
+
+    if (storageSize != size) {
+      assert(storageSize > size && "Invalid bitfield size.");
+
+      mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
+          op.getLoc(), intType, adaptor.getDst(), /* alignment */ 0,
+          op.getIsVolatile());
+
+      srcVal = createAnd(rewriter, srcVal,
+                         llvm::APInt::getLowBitsSet(srcWidth, size));
+      resultVal = srcVal;
+      srcVal = createShL(rewriter, srcVal, offset);
+
+      // Mask out the original value.
+      val =
+          createAnd(rewriter, val,
+                    ~llvm::APInt::getBitsSet(srcWidth, offset, offset + size));
+
+      // Or together the unchanged values and the source value.
+      srcVal = rewriter.create<mlir::LLVM::OrOp>(op.getLoc(), val, srcVal);
+    }
+
+    rewriter.create<mlir::LLVM::StoreOp>(op.getLoc(), srcVal, adaptor.getDst(),
+                                         /* alignment */ 0, op.getIsVolatile());
+
+    auto resultTy = getTypeConverter()->convertType(op.getType());
+
+    resultVal =
+        createIntCast(rewriter, resultVal, resultTy.cast<mlir::IntegerType>());
+
+    if (info.getIsSigned()) {
+      assert(size <= storageSize);
+      unsigned highBits = storageSize - size;
+
+      if (highBits) {
+        resultVal = createShL(rewriter, resultVal, highBits);
+        resultVal = createAShR(rewriter, resultVal, highBits);
+      }
+    }
+
+    rewriter.replaceOp(op, resultVal);
+    return mlir::success();
+  }
+};
+
+class CIRGetBitfieldLowering
+    : public mlir::OpConversionPattern<mlir::cir::GetBitfieldOp> {
+public:
+  using OpConversionPattern<mlir::cir::GetBitfieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::GetBitfieldOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(op);
+
+    auto info = op.getBitfieldInfo();
+    auto size = info.getSize();
+    auto offset = info.getOffset();
+    auto storageType = info.getStorageType();
+    auto context = storageType.getContext();
+    unsigned storageSize = 0;
+
+    if (auto arTy = storageType.dyn_cast<mlir::cir::ArrayType>())
+      storageSize = arTy.getSize() * 8;
+    else if (auto intTy = storageType.dyn_cast<mlir::cir::IntType>())
+      storageSize = intTy.getWidth();
+    else
+      llvm_unreachable(
+          "Either ArrayType or IntType expected for bitfields storage");
+
+    auto intType = mlir::IntegerType::get(context, storageSize);
+
+    mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
+        op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());
+    val = rewriter.create<mlir::LLVM::BitcastOp>(op.getLoc(), intType, val);
+
+    if (info.getIsSigned()) {
+      assert(static_cast<unsigned>(offset + size) <= storageSize);
+      unsigned highBits = storageSize - offset - size;
+      val = createShL(rewriter, val, highBits);
+      val = createAShR(rewriter, val, offset + highBits);
+    } else {
+      val = createLShR(rewriter, val, offset);
+
+      if (static_cast<unsigned>(offset) + size < storageSize)
+        val = createAnd(rewriter, val,
+                        llvm::APInt::getLowBitsSet(storageSize, size));
+    }
+
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto newOp = createIntCast(rewriter, val, resTy.cast<mlir::IntegerType>(),
+                               info.getIsSigned());
+    rewriter.replaceOp(op, newOp);
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -2598,8 +2729,9 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRStackSaveLowering, CIRStackRestoreLowering,
-      CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering>(
-      converter, patterns.getContext());
+      CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering,
+      CIRSetBitfieldLowering, CIRGetBitfieldLowering>(converter,
+                                                      patterns.getContext());
 }
 
 namespace {
