@@ -22,7 +22,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {

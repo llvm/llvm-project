@@ -14,8 +14,8 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include <fenv.h>
-#include <math.h>
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #if defined(__APPLE__)
