@@ -626,6 +626,23 @@ public:
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
   void buildCXXDeleteExpr(const CXXDeleteExpr *E);
 
+  void buildCXXAggrConstructorCall(const CXXConstructorDecl *D,
+                                   const clang::ArrayType *ArrayTy,
+                                   Address ArrayPtr, const CXXConstructExpr *E,
+                                   bool NewPointerIsChecked,
+                                   bool ZeroInitialization = false);
+
+  void buildCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
+                                   mlir::Value numElements, Address arrayBase,
+                                   const CXXConstructExpr *E,
+                                   bool NewPointerIsChecked,
+                                   bool zeroInitialize);
+
+  /// Compute the length of an array, even if it's a VLA, and drill down to the
+  /// base element type.
+  mlir::Value buildArrayLength(const clang::ArrayType *arrayType,
+                               QualType &baseType, Address &addr);
+
   void buildDeleteCall(const FunctionDecl *DeleteFD, mlir::Value Ptr,
                        QualType DeleteTy, mlir::Value NumElements = nullptr,
                        CharUnits CookieSize = CharUnits());
@@ -1673,6 +1690,21 @@ public:
     assert(isInConditionalBranch());
     llvm_unreachable("NYI");
   }
+
+  void pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                        Address arrayEndPointer,
+                                        QualType elementType,
+                                        CharUnits elementAlign,
+                                        Destroyer *destroyer);
+  void pushRegularPartialArrayCleanup(mlir::Value arrayBegin,
+                                      mlir::Value arrayEnd,
+                                      QualType elementType,
+                                      CharUnits elementAlign,
+                                      Destroyer *destroyer);
+  void buildArrayDestroy(mlir::Value begin, mlir::Value end,
+                         QualType elementType, CharUnits elementAlign,
+                         Destroyer *destroyer, bool checkZeroLength,
+                         bool useEHCleanup);
 
   // Points to the outermost active conditional control. This is used so that
   // we know if a temporary should be destroyed conditionally.

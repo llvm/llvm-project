@@ -1533,3 +1533,115 @@ CIRGenModule::getDynamicOffsetAlignment(clang::CharUnits actualBaseAlign,
   // the two alignments.
   return std::min(actualBaseAlign, expectedTargetAlign);
 }
+
+/// Emit a loop to call a particular constructor for each of several members of
+/// an array.
+///
+/// \param ctor the constructor to call for each element
+/// \param arrayType the type of the array to initialize
+/// \param arrayBegin an arrayType*
+/// \param zeroInitialize true if each element should be
+///   zero-initialized before it is constructed
+void CIRGenFunction::buildCXXAggrConstructorCall(
+    const CXXConstructorDecl *ctor, const clang::ArrayType *arrayType,
+    Address arrayBegin, const CXXConstructExpr *E, bool NewPointerIsChecked,
+    bool zeroInitialize) {
+  QualType elementType;
+  auto numElements = buildArrayLength(arrayType, elementType, arrayBegin);
+  buildCXXAggrConstructorCall(ctor, numElements, arrayBegin, E,
+                              NewPointerIsChecked, zeroInitialize);
+}
+
+/// Emit a loop to call a particular constructor for each of several members of
+/// an array.
+///
+/// \param ctor the constructor to call for each element
+/// \param numElements the number of elements in the array;
+///   may be zero
+/// \param arrayBase a T*, where T is the type constructed by ctor
+/// \param zeroInitialize true if each element should be
+///   zero-initialized before it is constructed
+void CIRGenFunction::buildCXXAggrConstructorCall(
+    const CXXConstructorDecl *ctor, mlir::Value numElements, Address arrayBase,
+    const CXXConstructExpr *E, bool NewPointerIsChecked, bool zeroInitialize) {
+  // It's legal for numElements to be zero.  This can happen both
+  // dynamically, because x can be zero in 'new A[x]', and statically,
+  // because of GCC extensions that permit zero-length arrays.  There
+  // are probably legitimate places where we could assume that this
+  // doesn't happen, but it's not clear that it's worth it.
+  // llvm::BranchInst *zeroCheckBranch = nullptr;
+
+  // Optimize for a constant count.
+  auto constantCount =
+      dyn_cast<mlir::cir::ConstantOp>(numElements.getDefiningOp());
+  if (constantCount) {
+    auto constIntAttr = constantCount.getValue().dyn_cast<mlir::cir::IntAttr>();
+    // Just skip out if the constant count is zero.
+    if (constIntAttr && constIntAttr.getUInt() == 0)
+      return;
+    // Otherwise, emit the check.
+  } else {
+    llvm_unreachable("NYI");
+  }
+
+  auto arrayTy = arrayBase.getElementType().dyn_cast<mlir::cir::ArrayType>();
+  assert(arrayTy && "expected array type");
+  auto elementType = arrayTy.getEltType();
+  auto ptrToElmType = builder.getPointerTo(elementType);
+
+  // Tradional LLVM codegen emits a loop here.
+  // TODO(cir): Lower to a loop as part of LoweringPrepare.
+
+  // The alignment of the base, adjusted by the size of a single element,
+  // provides a conservative estimate of the alignment of every element.
+  // (This assumes we never start tracking offsetted alignments.)
+  //
+  // Note that these are complete objects and so we don't need to
+  // use the non-virtual size or alignment.
+  QualType type = getContext().getTypeDeclType(ctor->getParent());
+  CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
+      getContext().getTypeSizeInChars(type));
+
+  // Zero initialize the storage, if requested.
+  if (zeroInitialize) {
+    llvm_unreachable("NYI");
+  }
+
+  // C++ [class.temporary]p4:
+  // There are two contexts in which temporaries are destroyed at a different
+  // point than the end of the full-expression. The first context is when a
+  // default constructor is called to initialize an element of an array.
+  // If the constructor has one or more default arguments, the destruction of
+  // every temporary created in a default argument expression is sequenced
+  // before the construction of the next array element, if any.
+  {
+    RunCleanupsScope Scope(*this);
+
+    // Evaluate the constructor and its arguments in a regular
+    // partial-destroy cleanup.
+    if (getLangOpts().Exceptions &&
+        !ctor->getParent()->hasTrivialDestructor()) {
+      llvm_unreachable("NYI");
+    }
+
+    // Wmit the constructor call that will execute for every array element.
+    builder.create<mlir::cir::ArrayCtor>(
+        *currSrcLoc, arrayBase.getPointer(),
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+          Address curAddr = Address(arg, ptrToElmType, eltAlignment);
+          auto currAVS = AggValueSlot::forAddr(
+              curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+              AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+              AggValueSlot::DoesNotOverlap, AggValueSlot::IsNotZeroed,
+              NewPointerIsChecked ? AggValueSlot::IsSanitizerChecked
+                                  : AggValueSlot::IsNotSanitizerChecked);
+          buildCXXConstructorCall(ctor, Ctor_Complete, /*ForVirtualBase=*/false,
+                                  /*Delegating=*/false, currAVS, E);
+          builder.create<mlir::cir::YieldOp>(loc);
+        });
+  }
+
+  if (constantCount.use_empty())
+    constantCount.erase();
+}

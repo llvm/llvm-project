@@ -966,6 +966,128 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                      useEHCleanupForArray);
 }
 
+namespace {
+/// A cleanup which performs a partial array destroy where the end pointer is
+/// regularly determined and does not need to be loaded from a local.
+class RegularPartialArrayDestroy final : public EHScopeStack::Cleanup {
+  mlir::Value ArrayBegin;
+  mlir::Value ArrayEnd;
+  QualType ElementType;
+  [[maybe_unused]] CIRGenFunction::Destroyer *Destroyer;
+  CharUnits ElementAlign;
+
+public:
+  RegularPartialArrayDestroy(mlir::Value arrayBegin, mlir::Value arrayEnd,
+                             QualType elementType, CharUnits elementAlign,
+                             CIRGenFunction::Destroyer *destroyer)
+      : ArrayBegin(arrayBegin), ArrayEnd(arrayEnd), ElementType(elementType),
+        Destroyer(destroyer), ElementAlign(elementAlign) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+};
+
+/// A cleanup which performs a partial array destroy where the end pointer is
+/// irregularly determined and must be loaded from a local.
+class IrregularPartialArrayDestroy final : public EHScopeStack::Cleanup {
+  mlir::Value ArrayBegin;
+  Address ArrayEndPointer;
+  QualType ElementType;
+  [[maybe_unused]] CIRGenFunction::Destroyer *Destroyer;
+  CharUnits ElementAlign;
+
+public:
+  IrregularPartialArrayDestroy(mlir::Value arrayBegin, Address arrayEndPointer,
+                               QualType elementType, CharUnits elementAlign,
+                               CIRGenFunction::Destroyer *destroyer)
+      : ArrayBegin(arrayBegin), ArrayEndPointer(arrayEndPointer),
+        ElementType(elementType), Destroyer(destroyer),
+        ElementAlign(elementAlign) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+};
+} // end anonymous namespace
+
+/// Push an EH cleanup to destroy already-constructed elements of the given
+/// array.  The cleanup may be popped with DeactivateCleanupBlock or
+/// PopCleanupBlock.
+///
+/// \param elementType - the immediate element type of the array;
+///   possibly still an array type
+void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                                      Address arrayEndPointer,
+                                                      QualType elementType,
+                                                      CharUnits elementAlign,
+                                                      Destroyer *destroyer) {
+  pushFullExprCleanup<IrregularPartialArrayDestroy>(
+      EHCleanup, arrayBegin, arrayEndPointer, elementType, elementAlign,
+      destroyer);
+}
+
+/// Push an EH cleanup to destroy already-constructed elements of the given
+/// array.  The cleanup may be popped with DeactivateCleanupBlock or
+/// PopCleanupBlock.
+///
+/// \param elementType - the immediate element type of the array;
+///   possibly still an array type
+void CIRGenFunction::pushRegularPartialArrayCleanup(mlir::Value arrayBegin,
+                                                    mlir::Value arrayEnd,
+                                                    QualType elementType,
+                                                    CharUnits elementAlign,
+                                                    Destroyer *destroyer) {
+  pushFullExprCleanup<RegularPartialArrayDestroy>(
+      EHCleanup, arrayBegin, arrayEnd, elementType, elementAlign, destroyer);
+}
+
+/// Destroys all the elements of the given array, beginning from last to first.
+/// The array cannot be zero-length.
+///
+/// \param begin - a type* denoting the first element of the array
+/// \param end - a type* denoting one past the end of the array
+/// \param elementType - the element type of the array
+/// \param destroyer - the function to call to destroy elements
+/// \param useEHCleanup - whether to push an EH cleanup to destroy
+///   the remaining elements in case the destruction of a single
+///   element throws
+void CIRGenFunction::buildArrayDestroy(mlir::Value begin, mlir::Value end,
+                                       QualType elementType,
+                                       CharUnits elementAlign,
+                                       Destroyer *destroyer,
+                                       bool checkZeroLength,
+                                       bool useEHCleanup) {
+  assert(!elementType->isArrayType());
+  if (checkZeroLength) {
+    llvm_unreachable("NYI");
+  }
+
+  // Differently from LLVM traditional codegen, use a higher level
+  // representation instead of lowering directly to a loop.
+  mlir::Type cirElementType = convertTypeForMem(elementType);
+  auto ptrToElmType = builder.getPointerTo(cirElementType);
+
+  // Emit the dtor call that will execute for every array element.
+  builder.create<mlir::cir::ArrayDtor>(
+      *currSrcLoc, begin, [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+        Address curAddr = Address(arg, ptrToElmType, elementAlign);
+        if (useEHCleanup) {
+          pushRegularPartialArrayCleanup(arg, arg, elementType, elementAlign,
+                                         destroyer);
+        }
+
+        // Perform the actual destruction there.
+        destroyer(*this, curAddr, elementType);
+
+        if (useEHCleanup)
+          PopCleanupBlock();
+
+        builder.create<mlir::cir::YieldOp>(loc);
+      });
+}
+
 /// Immediately perform the destruction of the given object.
 ///
 /// \param addr - the address of the object; a type*
@@ -983,7 +1105,32 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
   if (!arrayType)
     return destroyer(*this, addr, type);
 
-  llvm_unreachable("Array destroy NYI");
+  auto length = buildArrayLength(arrayType, type, addr);
+
+  CharUnits elementAlign = addr.getAlignment().alignmentOfArrayElement(
+      getContext().getTypeSizeInChars(type));
+
+  // Normally we have to check whether the array is zero-length.
+  bool checkZeroLength = true;
+
+  // But if the array length is constant, we can suppress that.
+  auto constantCount = dyn_cast<mlir::cir::ConstantOp>(length.getDefiningOp());
+  if (constantCount) {
+    auto constIntAttr = constantCount.getValue().dyn_cast<mlir::cir::IntAttr>();
+    // ...and if it's constant zero, we can just skip the entire thing.
+    if (constIntAttr && constIntAttr.getUInt() == 0)
+      return;
+    checkZeroLength = false;
+  } else {
+    llvm_unreachable("NYI");
+  }
+
+  auto begin = addr.getPointer();
+  mlir::Value end; // Use this for future non-constant counts.
+  buildArrayDestroy(begin, end, type, elementAlign, destroyer, checkZeroLength,
+                    useEHCleanupForArray);
+  if (constantCount.use_empty())
+    constantCount.erase();
 }
 
 CIRGenFunction::Destroyer *
