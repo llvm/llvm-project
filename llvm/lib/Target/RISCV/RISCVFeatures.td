@@ -1074,6 +1074,14 @@ def HasVendorXSiFivecflushdlone
       AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
                          "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
 
+def FeatureVendorXSfcease
+    : SubtargetFeature<"xsfcease", "HasVendorXSfcease", "true",
+                       "'XSfcease' (SiFive sf.cease Instruction)", []>;
+def HasVendorXSfcease
+    : Predicate<"Subtarget->hasVendorXSfcease()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfcease),
+                         "'XSfcease' (SiFive sf.cease Instruction)">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw

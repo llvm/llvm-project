@@ -866,6 +866,7 @@ R"(All available -march extensions for RISC-V
     xcvmac               1.0
     xcvmem               1.0
     xcvsimd              1.0
+    xsfcease             1.0
     xsfvcp               1.0
     xsfvfnrclipxfqf      1.0
     xsfvfwmaccqqq        1.0

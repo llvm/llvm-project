@@ -56,6 +56,7 @@
 // CHECK-NOT: __riscv_xcvmac {{.*$}}
 // CHECK-NOT: __riscv_xcvmem {{.*$}}
 // CHECK-NOT: __riscv_xcvsimd {{.*$}}
+// CHECK-NOT: __riscv_xsfcease {{.*$}}
 // CHECK-NOT: __riscv_xsfvcp {{.*$}}
 // CHECK-NOT: __riscv_xsfvfnrclipxfqf {{.*$}}
 // CHECK-NOT: __riscv_xsfvfwmaccqqq {{.*$}}
@@ -518,6 +519,14 @@
 // RUN:   -march=rv64ixcvsimd -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XCVSIMD-EXT %s
 // CHECK-XCVSIMD-EXT: __riscv_xcvsimd 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfcease -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFCEASE-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfcease -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFCEASE-EXT %s
+// CHECK-XSFCEASE-EXT: __riscv_xsfcease 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixsfvcp -E -dM %s \
