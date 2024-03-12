@@ -194,6 +194,15 @@ public:
         return End - 1;
     return npos;
   }
+
+  // Finds the frist character not equal to c in this view, starting at position
+  // From.
+  LIBC_INLINE size_t find_first_not_of(const char c, size_t From = 0) const {
+    for (size_t Pos = From; Pos < size(); ++Pos)
+      if ((*this)[Pos] != c)
+        return Pos;
+    return npos;
+  }
 };
 
 } // namespace cpp
