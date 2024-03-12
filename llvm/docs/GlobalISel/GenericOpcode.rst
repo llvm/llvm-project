@@ -780,7 +780,7 @@ Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
 operands.
 
 |all_g_atomicrmw|
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 .. |all_g_atomicrmw| replace:: G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
                                G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
