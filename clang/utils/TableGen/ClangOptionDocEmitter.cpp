@@ -362,14 +362,19 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   std::string Description;
 
   // Prefer a program specific help string.
+  // This is a list of visibilities -> string pairs.
   std::vector<Record *> VisibilitiesHelp =
       R->getValueAsListOfDefs("HelpTextForVisibilities");
   for (Record *VisibilityHelp : VisibilitiesHelp) {
-    std::string VisibilityStr =
-        VisibilityHelp->getValue("Visibility")->getValue()->getAsString();
+    // This is a list of visibilities.
+    std::vector<StringRef> Visibilities =
+        VisibilityHelp->getValueAsListOfStrings("Visibilities");
 
-    for (StringRef Mask : DocInfo->getValueAsListOfStrings("VisibilityMask")) {
-      if (VisibilityStr == Mask) {
+    // See if any of the program's visibilities are in the list.
+    for (StringRef DocInfoMask :
+         DocInfo->getValueAsListOfStrings("VisibilityMask")) {
+      if (std::find(Visibilities.begin(), Visibilities.end(), DocInfoMask) !=
+          Visibilities.end()) {
         Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
         break;
       }

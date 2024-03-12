@@ -93,8 +93,8 @@ class OptionGroup<string name> {
 
 // Define the option class.
 
-class HelpTextForVisibility<OptionVisibility visibility, string text> {
-  OptionVisibility Visibility = visibility;
+class HelpTextForVisibility<list<OptionVisibility> visibilities, string text> {
+  list<OptionVisibility> Visibilities = visibilities;
   string Text = text;
 }
 

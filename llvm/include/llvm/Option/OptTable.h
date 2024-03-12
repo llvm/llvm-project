@@ -58,12 +58,13 @@ public:
     ArrayRef<StringLiteral> Prefixes;
     StringLiteral PrefixedName;
     const char *HelpText;
-    // Help text for specific visibilities. If there is no entry here for
-    // the visibility of the program, HelpText is used instead.
-    // This cannot be std::vector because OptTable is used in constexpr
-    // contexts. Increase the size of this array if you need more help text
-    // variants.
-    std::array<std::pair<unsigned int, const char *>, 2>
+    // Help text for specific visibilities. A list of pairs, where each pair
+    // is a list of visibilities and a specific help string for those
+    // visibilities. If no help text is found in this list for the visibility of
+    // the program, HelpText is used instead. This type cannot use std::vector
+    // because OptTable is used in constexpr contexts. Increase the array sizes
+    // here if you need more entries.
+    std::array<std::pair<std::array<unsigned int, 2>, const char *>, 1>
         HelpTextForVisibilities;
     const char *MetaVar;
     unsigned ID;
@@ -161,9 +162,10 @@ public:
   const char *getOptionHelpText(OptSpecifier id,
                                 Visibility VisibilityMask) const {
     auto Info = getInfo(id);
-    for (auto [Visibility, Text] : Info.HelpTextForVisibilities)
-      if (VisibilityMask & Visibility)
-        return Text;
+    for (auto [Visibilities, Text] : Info.HelpTextForVisibilities)
+      for (auto Visibility : Visibilities)
+        if (VisibilityMask & Visibility)
+          return Text;
     return Info.HelpText;
   }
 

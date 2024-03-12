@@ -313,8 +313,8 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << ", nullptr";
 
     // Not using Visibility specific text for group help.
-    OS << ", (std::array<std::pair<unsigned, const char*>, 2>{{"
-       << "std::make_pair(0, nullptr), std::make_pair(0, nullptr)}})";
+    OS << ", (std::array<std::pair<std::array<unsigned, 2>, const char*>, 1>{{"
+       << "std::make_pair(std::array<unsigned, 2>{{0, 0}}, nullptr)}})";
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
@@ -414,9 +414,12 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     } else
       OS << ", nullptr";
 
-    const unsigned MaxVisibilityHelp = 2;
-    OS << ", (std::array<std::pair<unsigned, const char*>, "
-       << MaxVisibilityHelp << ">{{";
+    const unsigned MaxVisibilityHelp = 1;
+    const unsigned MaxVisibilityPerHelp = 2;
+    OS << ", (std::array<std::pair<std::array<unsigned, "
+       << MaxVisibilityPerHelp << ">, const char*>, " << MaxVisibilityHelp
+       << ">{{ ";
+
     unsigned NumVisibilityHelpEmitted = 0;
 
     std::vector<Record *> VisibilitiesHelp =
@@ -429,12 +432,34 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
              VisibilitiesHelp.begin();
          VisibilityHelp != VisibilitiesHelp.end();
          ++VisibilityHelp, ++NumVisibilityHelpEmitted) {
-      const RecordVal *Visibility = (*VisibilityHelp)->getValue("Visibility");
-      Init *VisibilityInit = Visibility->getValue();
-      std::string VisibilityStr = VisibilityInit->getAsString();
+      ListInit *Visibilities =
+          (*VisibilityHelp)->getValueAsListInit("Visibilities");
+      ArrayRef<Init *> VisibilitiesValues = Visibilities->getValues();
+      assert(VisibilitiesValues.size() <= MaxVisibilityPerHelp &&
+             "Too many visibilities to store in an "
+             "OptTable::HelpTextForVisibilities entry");
+
+      OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
+         << ">{{";
+      unsigned NumVisibilitiesEmitted = 0;
+      for (auto Visibility = VisibilitiesValues.begin();
+           Visibility != VisibilitiesValues.end();
+           ++Visibility, ++NumVisibilitiesEmitted) {
+        OS << (*Visibility)->getAsUnquotedString();
+        if (std::next(Visibility) != VisibilitiesValues.end())
+          OS << ", ";
+      }
+      // Init unused elements.
+      for (; NumVisibilitiesEmitted < MaxVisibilityPerHelp;
+           ++NumVisibilitiesEmitted) {
+        OS << "0";
+        if ((NumVisibilitiesEmitted + 1) != MaxVisibilityPerHelp)
+          OS << ", ";
+      }
+      OS << "}}, ";
+
       StringRef Text = (*VisibilityHelp)->getValueAsString("Text");
-      OS << "std::make_pair(options::" << VisibilityStr << ", \"" << Text
-         << "\")";
+      OS << "\"" << Text << "\")";
 
       if (std::next(VisibilityHelp) != VisibilitiesHelp.end())
         OS << ", ";
@@ -442,11 +467,20 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // Init any unused elements.
     for (; NumVisibilityHelpEmitted < MaxVisibilityHelp;
          ++NumVisibilityHelpEmitted) {
-      OS << "std::make_pair(0, nullptr)";
+      OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
+         << ">{{";
+      for (unsigned NumVisibilitiesEmitted = 0;
+           NumVisibilitiesEmitted != MaxVisibilityPerHelp;
+           ++NumVisibilitiesEmitted) {
+        OS << "0";
+        if ((NumVisibilitiesEmitted + 1) != MaxVisibilityPerHelp)
+          OS << ", ";
+      }
+      OS << "}}, nullptr)";
       if ((NumVisibilityHelpEmitted + 1) != MaxVisibilityHelp)
         OS << ", ";
     }
-    OS << "}})";
+    OS << " }})";
 
     // The option meta-variable name.
     OS << ", ";

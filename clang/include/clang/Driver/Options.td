@@ -3392,8 +3392,7 @@ def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<OpenMPVersionHelp<"Clang", "51">.str>,
   HelpTextForVisibilities<[
-    HelpTextForVisibility<FlangOption, OpenMPVersionHelp<"Flang", "11">.str>,
-    HelpTextForVisibility<FC1Option,   OpenMPVersionHelp<"Flang", "11">.str>,
+    HelpTextForVisibility<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "11">.str>
   ]>;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
