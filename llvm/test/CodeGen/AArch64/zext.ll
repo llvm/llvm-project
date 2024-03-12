@@ -249,10 +249,8 @@ define <3 x i16> @zext_v3i8_v3i16(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.s[2], w2
 ; CHECK-GI-NEXT:    mov v2.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.s[3], w8
-; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    mov v2.h[3], v0.h[0]
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -280,8 +278,6 @@ define <3 x i32> @zext_v3i8_v3i32(<3 x i8> %a) {
 ; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    mov v0.s[2], w2
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -341,7 +337,6 @@ define <3 x i32> @zext_v3i16_v3i32(<3 x i16> %a) {
 ; CHECK-GI-NEXT:    umov w8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.s[1], w9
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w8
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -420,10 +415,8 @@ define <3 x i16> @zext_v3i10_v3i16(<3 x i10> %a) {
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.s[2], w2
 ; CHECK-GI-NEXT:    mov v2.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.s[3], w8
-; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    mov v2.h[3], v0.h[0]
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -451,8 +444,6 @@ define <3 x i32> @zext_v3i10_v3i32(<3 x i10> %a) {
 ; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    mov v0.s[2], w2
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:

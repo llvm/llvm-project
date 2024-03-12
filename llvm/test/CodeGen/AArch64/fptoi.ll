@@ -2708,7 +2708,6 @@ define <3 x i16> @fptos_v3f32_v3i16(<3 x float> %a) {
 ; CHECK-GI-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2730,7 +2729,6 @@ define <3 x i16> @fptou_v3f32_v3i16(<3 x float> %a) {
 ; CHECK-GI-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3243,8 +3241,6 @@ define <2 x i64> @fptos_v2f16_v2i64(<2 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    fcvtzs v0.2d, v0.2d
@@ -3292,8 +3288,6 @@ define <2 x i64> @fptou_v2f16_v2i64(<2 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    fcvtzu v0.2d, v0.2d
@@ -4996,8 +4990,6 @@ define <2 x i32> @fptos_v2f16_v2i32(<2 x half> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NEXT:    fcvtzs v0.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
@@ -5019,8 +5011,6 @@ define <2 x i32> @fptou_v2f16_v2i32(<2 x half> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
@@ -5276,8 +5266,6 @@ define <2 x i16> @fptos_v2f16_v2i16(<2 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtzs v0.2s, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -5306,8 +5294,6 @@ define <2 x i16> @fptou_v2f16_v2i16(<2 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -5344,7 +5330,6 @@ define <3 x i16> @fptos_v3f16_v3i16(<3 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -5378,7 +5363,6 @@ define <3 x i16> @fptou_v3f16_v3i16(<3 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -5756,8 +5740,6 @@ define <2 x i8> @fptos_v2f16_v2i8(<2 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtzs v0.2s, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    ret
@@ -5786,8 +5768,6 @@ define <2 x i8> @fptou_v2f16_v2i8(<2 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    ret

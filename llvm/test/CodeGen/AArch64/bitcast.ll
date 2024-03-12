@@ -21,7 +21,6 @@ define <4 x i16> @foo1(<2 x i32> %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #58712 // =0xe558
 ; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    zip1 v0.2s, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    rev32 v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
@@ -42,7 +41,6 @@ define <4 x i16> @foo2(<2 x i32> %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #712 // =0x2c8
 ; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    zip1 v0.2s, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    rev32 v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
