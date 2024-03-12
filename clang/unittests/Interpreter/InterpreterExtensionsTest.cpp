@@ -27,6 +27,30 @@
 using namespace clang;
 namespace {
 
+class TestCreateResetExecutor : public Interpreter {
+public:
+  TestCreateResetExecutor(std::unique_ptr<CompilerInstance> CI,
+                          llvm::Error &Err)
+      : Interpreter(std::move(CI), Err) {}
+
+  llvm::Error testCreateExecutor() { return Interpreter::CreateExecutor(); }
+
+  void resetExecutor() { Interpreter::ResetExecutor(); }
+};
+
+TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
+  clang::IncrementalCompilerBuilder CB;
+  llvm::Error ErrOut = llvm::Error::success();
+  TestCreateResetExecutor Interp(cantFail(CB.CreateCpp()), ErrOut);
+  cantFail(std::move(ErrOut));
+  cantFail(Interp.testCreateExecutor());
+  Interp.resetExecutor();
+  cantFail(Interp.testCreateExecutor());
+  EXPECT_THAT_ERROR(Interp.testCreateExecutor(),
+                    llvm::FailedWithMessage("Operation failed. "
+                                            "Execution engine exists"));
+}
+
 class RecordRuntimeIBMetrics : public Interpreter {
   struct NoopRuntimeInterfaceBuilder : public RuntimeInterfaceBuilder {
     NoopRuntimeInterfaceBuilder(Sema &S) : S(S) {}
