@@ -8,6 +8,7 @@
 
 #include "src/sys/epoll/epoll_wait.h"
 
+#include "include/llvm-libc-macros/signal-macros.h" // for NSIG TODO: MOVE TO /hdr
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_epoll_event.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.

@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "include/llvm-libc-macros/linux/sys-epoll-macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/sys/epoll/epoll_create1.h"
 #include "src/sys/epoll/epoll_ctl.h"
@@ -12,8 +13,6 @@
 #include "src/unistd/pipe.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/epoll.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
