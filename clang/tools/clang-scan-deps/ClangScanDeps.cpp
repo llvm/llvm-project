@@ -886,7 +886,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Format == ScanningOutputFormat::Full)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
 
-  auto ScanningTask = [&](DependencyScanningTool &WorkerTool) {
+  auto ScanningTask = [&](DependencyScanningService &Service) {
+    DependencyScanningTool WorkerTool(Service);
+
     llvm::DenseSet<ModuleID> AlreadySeenModules;
     while (auto MaybeInputIndex = GetNextInputIndex()) {
       size_t LocalIndex = *MaybeInputIndex;
@@ -977,13 +979,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   T.startTimer();
 
   if (Inputs.size() == 1) {
-    DependencyScanningTool WorkerTool(Service);
-    ScanningTask(WorkerTool);
+    ScanningTask(Service);
   } else {
     llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
-    std::vector<DependencyScanningTool> WorkerTools;
-    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
-      WorkerTools.emplace_back(Service);
 
     if (Verbose) {
       llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
@@ -991,10 +989,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                    << " workers\n";
     }
 
-    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I) {
-      Pool.async(
-          [ScanningTask, &WorkerTools, I]() { ScanningTask(WorkerTools[I]); });
-    }
+    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
+      Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
+
     Pool.wait();
   }
 
