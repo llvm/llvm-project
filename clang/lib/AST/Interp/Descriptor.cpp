@@ -233,9 +233,10 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
-      MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), IsConst(IsConst),
-      IsMutable(IsMutable), IsTemporary(IsTemporary), CtorFn(getCtorPrim(Type)),
-      DtorFn(getDtorPrim(Type)), MoveFn(getMovePrim(Type)) {
+      MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), PrimT(Type),
+      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
+      CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)),
+      MoveFn(getMovePrim(Type)) {
   assert(AllocSize >= Size);
   assert(Source && "Missing source");
 }
@@ -246,7 +247,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
       MDSize(MD.value_or(0)),
-      AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)),
+      AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {

@@ -122,6 +122,9 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, const APSInt &IntValue);
 
+/// Copy the contents of Src into Dest.
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+
 /// Checks if the shift operation is legal.
 template <typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
@@ -1485,6 +1488,16 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
+}
+
+inline bool Memcpy(InterpState &S, CodePtr OpPC) {
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  Pointer &Dest = S.Stk.peek<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Src))
+    return false;
+
+  return DoMemcpy(S, OpPC, Src, Dest);
 }
 
 //===----------------------------------------------------------------------===//

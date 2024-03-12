@@ -720,3 +720,5 @@ def CheckNonNullArg : Opcode {
   let Types = [PtrTypeClass];
   let HasGroup = 1;
 }
+
+def Memcpy : Opcode;
