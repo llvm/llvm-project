@@ -5940,7 +5940,7 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
     // extra register.
     Register OpReg = I.getOperand(i).getReg();
     // Do not emit inserts for undefs
-    if (!getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, OpReg, MRI)) {
+    if (!getOpcodeDef<GImplicitDef>(OpReg, MRI)) {
       PrevMI = &*emitLaneInsert(std::nullopt, DstVec, OpReg, i - 1, RB, MIB);
       DstVec = PrevMI->getOperand(0).getReg();
     }
