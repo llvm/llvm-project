@@ -1402,6 +1402,29 @@ def CXX11NoReturn : InheritableAttr {
   let Documentation = [CXX11NoReturnDocs];
 }
 
+def NoLock : DeclOrTypeAttr {
+  let Spellings = [CXX11<"clang", "nolock">,
+                   C2x<"clang", "nolock">,
+                   GNU<"clang_nolock">];
+
+  // Subjects - not needed?
+  //let Subjects = SubjectList<[FunctionLike, Block, TypedefName], ErrorDiag>;
+  let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
+  let HasCustomParsing = 0;
+  let Documentation = [NoLockNoAllocDocs];
+}
+
+def NoAlloc : DeclOrTypeAttr {
+  let Spellings = [CXX11<"clang", "noalloc">,
+                   C2x<"clang", "noalloc">,
+                   GNU<"clang_noalloc">];
+  // Subjects - not needed?
+  //let Subjects = SubjectList<[FunctionLike, Block, TypedefName], ErrorDiag>;
+  let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
+  let HasCustomParsing = 0;
+  let Documentation = [NoLockNoAllocDocs];
+}
+
 // Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
 // the specification does not expose them with one currently.
 def OpenCLKernel : InheritableAttr {

@@ -4502,11 +4502,13 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers>(
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, 
+      FunctionEffectSet, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.FunctionEffects ? 1 : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
@@ -10435,6 +10437,15 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     allRTypes = false;
 
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
+  FunctionEffectSet FromFX, ToFX;
+  std::optional<FunctionEffectSet> MergedFX;
+
+  if (lproto) ToFX = lproto->getFunctionEffects();
+  if (rproto) FromFX = rproto->getFunctionEffects();
+  if (ToFX != FromFX) {
+    // We want the intersection of the effects...
+    MergedFX = FunctionEffectSet::create(FromFX & ToFX);
+  }
 
   if (lproto && rproto) { // two C99 style function prototypes
     assert((AllowCXX ||
@@ -10487,13 +10498,18 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
         allRTypes = false;
     }
 
-    if (allLTypes) return lhs;
-    if (allRTypes) return rhs;
+    if (!MergedFX) { // effects changed so we can't return either side unaltered
+      if (allLTypes) return lhs;
+      if (allRTypes) return rhs;
+    }
 
     FunctionProtoType::ExtProtoInfo EPI = lproto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
     EPI.ExtParameterInfos =
         newParamInfos.empty() ? nullptr : newParamInfos.data();
+    if (MergedFX) {
+      EPI.FunctionEffects = *MergedFX;
+    }
     return getFunctionType(retType, types, EPI);
   }
 
@@ -10526,11 +10542,16 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
         return {};
     }
 
-    if (allLTypes) return lhs;
-    if (allRTypes) return rhs;
+    if (!MergedFX) { // effects changed so we can't return either side unaltered
+      if (allLTypes) return lhs;
+      if (allRTypes) return rhs;
+    }
 
     FunctionProtoType::ExtProtoInfo EPI = proto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
+    if (MergedFX) {
+      EPI.FunctionEffects = *MergedFX;
+    }
     return getFunctionType(retType, proto->getParamTypes(), EPI);
   }
 

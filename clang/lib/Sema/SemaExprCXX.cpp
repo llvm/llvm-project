@@ -4945,10 +4945,16 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   // If this conversion sequence succeeded and involved implicitly converting a
   // _Nullable type to a _Nonnull one, complain.
-  if (!isCast(CCK))
+  if (!isCast(CCK)) {
     diagnoseNullableToNonnullConversion(ToType, InitialFromType,
                                         From->getBeginLoc());
 
+    // TODO: This generates a redundant diagnostic for:
+    // void (^nl_block0)() NOLOCK = ^(){};
+    // if (!From->isNullPointerConstant(Context, Expr::NPC_NeverValueDependent /* ???*/))
+    //   diagnoseFunctionEffectConversion(ToType, InitialFromType,
+    //                                         From->getBeginLoc());
+  }
   return From;
 }
 

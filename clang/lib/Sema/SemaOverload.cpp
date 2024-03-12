@@ -1786,6 +1786,9 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 /// type.
 bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                                 QualType &ResultTy) {
+
+  llvm::outs() << "IsFunctionConversion " << FromType << " " << ToType << "\n";
+
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1866,6 +1869,30 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       FromFn = QT->getAs<FunctionType>();
       Changed = true;
     }
+
+#if 1
+    // NOTE (TEMP): this works for C++ to allow dropping effects.
+    // For plain C, however, this creates an error when dropping effects!
+
+    // Transparently add/drop effects; here we are concerned with
+    // language rules/canonicalization. Adding/dropping effects is a warning.
+    auto FromFX = FromFPT->getFunctionEffects();
+    auto ToFX = ToFPT->getFunctionEffects();
+    if (FromFX != ToFX) {
+      llvm::outs() << "IsFunctionConversion effects change " << FromType << " -> " << ToType << "\n";
+
+      //const auto MergedFX = FunctionEffectSet::getIntersection(FromFX, ToFX);
+      // TODO: diagnose conflicts
+
+      FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
+      ExtInfo.FunctionEffects = ToFX;
+      QualType QT = Context.getFunctionType(FromFPT->getReturnType(),
+                                            FromFPT->getParamTypes(), ExtInfo);
+      FromFn = QT->getAs<FunctionType>();
+      llvm::outs() << "  produced " << QT << "\n";
+      Changed = true;
+    }
+#endif
   }
 
   if (!Changed)

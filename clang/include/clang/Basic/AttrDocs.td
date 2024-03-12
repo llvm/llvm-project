@@ -7973,3 +7973,20 @@ requirement:
   }
   }];
 }
+
+def NoLockNoAllocDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``nolock`` and ``noalloc`` attributes can be attached to functions, blocks, 
+function pointers, lambdas, and member functions. The attributes identify code
+which must not allocate memory or lock, and the compiler uses the attributes to
+verify these requirements.
+
+Like ``noexcept``, ``nolock`` and ``noalloc`` have an optional argument, a
+compile-time constant boolean expression. By default, the argument is true, so
+``[[clang::nolock(true)]]`` is equivalent to ``[[clang::nolock]]``, and declares
+the function type as never locking.
+
+TODO: how much of the RFC to include here? Make it a separate page?
+  }];
+}

@@ -3922,6 +3922,40 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
+  const auto OldFX = Old->getFunctionEffects();
+  const auto NewFX = New->getFunctionEffects();  
+  if (OldFX != NewFX) {
+    const auto diffs = FunctionEffectSet::differences(OldFX, NewFX);
+    for (const auto& item : diffs) {
+      const FunctionEffect* effect = item.first;
+      const bool adding = item.second;
+      if (effect->diagnoseRedeclaration(adding, *Old, OldFX, *New, NewFX)) {
+        Diag(New->getLocation(), diag::warn_mismatched_func_effect_redeclaration) << effect->name();
+        Diag(Old->getLocation(), diag::note_previous_declaration);
+      }
+    }
+
+    const auto MergedFX = OldFX | NewFX;
+
+    // Having diagnosed any problems, prevent further errors by applying the merged set of effects
+    // to both declarations.
+    auto applyMergedFX = [&](FunctionDecl* FD) {
+      const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.FunctionEffects = MergedFX;
+      QualType ModQT = Context.getFunctionType(FD->getReturnType(),
+                                                  FPT->getParamTypes(), EPI);
+
+      FD->setType(ModQT);
+    };
+
+    applyMergedFX(Old);
+    applyMergedFX(New);
+
+    OldQType = Old->getType();
+    NewQType = New->getType();
+  }
+
   if (getLangOpts().CPlusPlus) {
     OldQType = Context.getCanonicalType(Old->getType());
     NewQType = Context.getCanonicalType(New->getType());
@@ -11100,6 +11134,49 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
   return nullptr;
 }
 
+// Should only be called when getFunctionEffects() returns a non-empty set.
+// Decl should be a FunctionDecl or BlockDecl.
+void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX)
+{
+  if (!D->hasBody()) {
+    if (const auto *FD = D->getAsFunction()) {
+      if (!FD->willHaveBody()) {
+        return;
+      }
+    }
+  }
+
+  if (Diags.getIgnoreAllWarnings() ||
+      (Diags.getSuppressSystemWarnings() &&
+        SourceMgr.isInSystemHeader(D->getLocation())))
+    return;
+
+  if (hasUncompilableErrorOccurred())
+    return;
+
+  // For code in dependent contexts, we'll do this at instantiation time
+  // (??? This was copied from something else in AnalysisBasedWarnings ???)
+  if (cast<DeclContext>(D)->isDependentContext()) {
+    return;
+  }
+
+  // Filter out declarations that the FunctionEffect analysis should skip
+  // and not verify. (??? Is this the optimal order in which to test ???)
+  bool effectsNeedVerification = false;
+  for (const auto *Effect : FX) {
+    if (Effect->getFlags() & FunctionEffect::kRequiresVerification) {
+      AllEffectsToVerify.insert(Effect);
+      effectsNeedVerification = true;
+    }
+  }
+  if (!effectsNeedVerification) {
+    return;
+  }
+
+  // Record the declaration for later analysis.
+  DeclsWithUnverifiedEffects.push_back(D);
+}
+
 /// Determines if we can perform a correct type check for \p D as a
 /// redeclaration of \p PrevDecl. If not, we can generally still perform a
 /// best-effort check.
@@ -15712,6 +15789,12 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   else
     FD = cast<FunctionDecl>(D);
 
+  auto *Canon = FD->getCanonicalDecl();
+
+  // llvm::outs() << "** ActOnStartOfFunctionDef " << FD->getName() << 
+  //   " " << FD << " " << Canon << " " << FD->getType() << "\n";
+  // getNameForDiagnostic
+
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
   if (!isLambdaCallOperator(FD))
@@ -15911,6 +15994,12 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCCategoryImpl &&
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
+
+  const auto FX = FD->getCanonicalDecl()->getFunctionEffects();
+  llvm::outs() << "^^ " << FX.size() << " effects\n";
+  if (FX) {
+    CheckAddCallableWithEffects(FD, FX);
+  }
 
   return D;
 }

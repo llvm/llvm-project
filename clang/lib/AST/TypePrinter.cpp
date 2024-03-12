@@ -984,7 +984,14 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     OS << " &&";
     break;
   }
+
   T->printExceptionSpecification(OS, Policy);
+
+  if (auto effects = T->getFunctionEffects()) {
+    for (const auto* effect : effects) {
+      OS << " " << effect->attribute();
+    }
+  }
 
   if (T->hasTrailingReturn()) {
     OS << " -> ";
@@ -1904,6 +1911,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
   case attr::AMDGPUKernelCall: OS << "amdgpu_kernel"; break;
   case attr::IntelOclBicc: OS << "inteloclbicc"; break;
+
   case attr::PreserveMost:
     OS << "preserve_most";
     break;
@@ -1929,6 +1937,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   // Nothing to print for this attribute.
   case attr::HLSLParamModifier:
+    break;
+  case attr::NoLock:
+    OS << "clang_nolock(false)";
+    break;
+  case attr::NoAlloc:
+    OS << "clang_noalloc(false)";
     break;
   }
   OS << "))";

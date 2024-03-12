@@ -721,6 +721,12 @@ public:
   /// Load weak undeclared identifiers from the external source.
   void LoadExternalWeakUndeclaredIdentifiers();
 
+  /// All functions/lambdas/blocks which have bodies and which have a non-empty
+  /// FunctionEffectSet to be verified.
+  SmallVector<const Decl *> DeclsWithUnverifiedEffects;
+  /// The union of all effects present on DeclsWithUnverifiedEffects.
+  MutableFunctionEffectSet AllEffectsToVerify;
+
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
@@ -939,6 +945,10 @@ public:
 
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
+
+  /// Warn when implicitly changing function effects.
+  void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                        SourceLocation Loc);
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);
@@ -3132,6 +3142,9 @@ public:
                               QualType T, TypeSourceInfo *TSInfo,
                               StorageClass SC);
 
+  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithUnverifiedEffects.
+  void CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX);
+
   // Contexts where using non-trivial C union types can be disallowed. This is
   // passed to err_non_trivial_c_union_in_invalid_context.
   enum NonTrivialCUnionContext {
@@ -3738,6 +3751,9 @@ public:
   bool checkStringLiteralArgumentAttr(const ParsedAttr &Attr, unsigned ArgNum,
                                       StringRef &Str,
                                       SourceLocation *ArgLocation = nullptr);
+
+  bool checkBoolExprArgumentAttr(const ParsedAttr &Attr, unsigned ArgNum,
+                                 bool &Value);
 
   /// Determine if type T is a valid subject for a nonnull and similar
   /// attributes. By default, we look through references (the behavior used by

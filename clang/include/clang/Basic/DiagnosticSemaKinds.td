@@ -10778,6 +10778,101 @@ def warn_imp_cast_drops_unaligned : Warning<
   "implicit cast from type %0 to type %1 drops __unaligned qualifier">,
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
+def warn_func_effect_allocates : Warning<
+  "'%0' function '%1' must not allocate or deallocate memory">,
+  InGroup<FunctionEffects>;
+
+def note_func_effect_allocates : Note<
+  "'%1' cannot be inferred '%0' because it allocates/deallocates memory">;
+
+def warn_func_effect_throws_or_catches : Warning<
+  "'%0' function '%1' must not throw or catch exceptions">,
+  InGroup<FunctionEffects>;
+
+def note_func_effect_throws_or_catches : Note<
+  "'%1' cannot be inferred '%0' because it throws or catches exceptions">;
+
+def warn_func_effect_has_static_local : Warning<
+  "'%0' function '%1' must not have static locals">,
+  InGroup<FunctionEffects>;
+
+def note_func_effect_has_static_local : Note<
+  "'%1' cannot be inferred '%0' because it has a static local">;
+
+def warn_func_effect_uses_thread_local : Warning<
+  "'%0' function '%1' must not use thread-local variables">,
+  InGroup<FunctionEffects>;
+
+def note_func_effect_uses_thread_local : Note<
+  "'%1' cannot be inferred '%0' because it uses a thread-local variable">;
+
+def warn_func_effect_calls_objc : Warning<
+  "'%0' function '%1' must not access an ObjC method or property">,
+  InGroup<FunctionEffects>;
+
+def note_func_effect_calls_objc : Note<
+  "'%1' cannot be inferred '%0' because it accesses an ObjC method or property">;
+
+def warn_func_effect_calls_disallowed_func : Warning<
+  "'%0' function '%1' must not call non-'%0' function '%2'">,
+  InGroup<FunctionEffects>;
+
+// UNTESTED
+def warn_func_effect_calls_disallowed_expr : Warning<
+  "'%0' function '%1' must not call non-'%0' expression">,
+  InGroup<FunctionEffects>;
+
+def note_func_effect_calls_disallowed_func : Note<
+  "'%1' cannot be inferred '%0' because it calls non-'%0' function '%2'">;
+
+def note_func_effect_call_extern : Note<
+  "'%1' cannot be inferred '%0' because it has no definition in this translation unit">;
+
+def note_func_effect_call_not_inferrable : Note<
+  "'%1' does not permit inference of '%0'">;
+
+def note_func_effect_call_virtual : Note<
+  "'%1' cannot be inferred '%0' because it is virtual">;
+
+def note_func_effect_call_func_ptr : Note<
+  "'%1' cannot be inferred '%0' because it is a function pointer">;
+
+// TODO: Not currently being generated
+def warn_perf_annotation_implies_noexcept : Warning<
+  "'%0' function should be declared noexcept">,
+  InGroup<PerfAnnotationImpliesNoexcept>;
+
+// TODO: Not currently being generated
+def warn_func_effect_false_on_type : Warning<
+  "only functions/methods/blocks may be declared %0(false)">,
+  InGroup<FunctionEffects>;
+
+// TODO: can the usual template expansion notes be used?
+def note_func_effect_from_template : Note<
+  "in template expansion here">;
+
+// TODO: Needs to be tested
+def warn_incompatible_func_effects : Warning<
+  "attributes '%0' and '%1' are incompatible">,
+  InGroup<FunctionEffects>;
+
+// spoofing nolock/noalloc
+def warn_invalid_add_func_effects : Warning<
+  "attribute '%0' should not be added via type conversion">,
+  InGroup<FunctionEffects>;
+
+def warn_invalid_remove_func_effects : Warning<
+  "attribute '%0' should not be removed via type conversion">,
+  InGroup<FunctionEffects>;
+
+def warn_mismatched_func_effect_override : Warning<
+  "attribute '%0' on overriding function does not match base version">,
+  InGroup<FunctionEffects>;
+
+def warn_mismatched_func_effect_redeclaration : Warning<
+  "attribute '%0' on function does not match previous declaration">,
+  InGroup<FunctionEffects>;
+
 } // end of sema category
 
 let CategoryName = "API Notes Issue" in {

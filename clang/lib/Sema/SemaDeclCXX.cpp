@@ -18321,6 +18321,26 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
     return true;
   }
 
+  // Virtual overrides must have the same or stronger performance annotation.
+  const auto OldFX = Old->getFunctionEffects();
+  const auto NewFX = New->getFunctionEffects();
+
+  if (OldFX != NewFX) {
+    const auto diffs = FunctionEffectSet::differences(OldFX, NewFX);
+    bool AnyDiags = false;
+
+    for (const auto& item : diffs) {
+      const FunctionEffect* effect = item.first;
+      const bool adding = item.second;
+      if (effect->diagnoseMethodOverride(adding, *Old, OldFX, *New, NewFX)) {
+        Diag(New->getLocation(), diag::warn_mismatched_func_effect_override) << effect->name();
+        Diag(Old->getLocation(), diag::note_overridden_virtual_function);
+        AnyDiags = true;
+      }
+    }
+    if (AnyDiags) return true;
+  }
+
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();
 
   // If the calling conventions match, everything is fine
