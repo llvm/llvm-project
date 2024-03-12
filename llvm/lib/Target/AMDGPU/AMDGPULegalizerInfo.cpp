@@ -2137,9 +2137,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
   case TargetOpcode::G_TRAP:
-    return legalizeTrapIntrinsic(MI, MRI, B);
+    return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
-    return legalizeDebugTrapIntrinsic(MI, MRI, B);
+    return legalizeDebugTrap(MI, MRI, B);
   default:
     return false;
   }
