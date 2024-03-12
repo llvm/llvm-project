@@ -567,6 +567,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"sizeof",
+     &I::genSizeOf,
+     {{{"a", asBox}}},
+     /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
     {"spread",
@@ -5944,6 +5948,20 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// SIZEOF
+fir::ExtendedValue
+IntrinsicLibrary::genSizeOf(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value box = fir::getBase(args[0]);
+  mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, resultType, box);
+  if (!fir::isArray(args[0]))
+    return eleSize;
+  mlir::Value arraySize = builder.createConvert(
+      loc, resultType, fir::runtime::genSize(builder, loc, box));
+  return builder.create<mlir::arith::MulIOp>(loc, eleSize, arraySize);
 }
 
 // TAND
