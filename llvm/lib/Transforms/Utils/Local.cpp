@@ -1649,9 +1649,9 @@ static void insertDbgValueOrDPValue(DIBuilder &Builder, Value *DV,
                                     const DebugLoc &NewLoc,
                                     BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertBefore(Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
@@ -1667,9 +1667,9 @@ static void insertDbgValueOrDPValueAfter(DIBuilder &Builder, Value *DV,
                                          const DebugLoc &NewLoc,
                                          BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertAfter(&*Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.

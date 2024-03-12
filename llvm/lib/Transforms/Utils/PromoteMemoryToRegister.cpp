@@ -101,21 +101,20 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
 
 namespace {
 
-static DPValue *createDebugValue(DIBuilder &DIB, Value *NewValue,
-                                 DILocalVariable *Variable,
-                                 DIExpression *Expression, const DILocation *DI,
-                                 DPValue *InsertBefore) {
+static void createDebugValue(DIBuilder &DIB, Value *NewValue,
+                             DILocalVariable *Variable,
+                             DIExpression *Expression, const DILocation *DI,
+                             DPValue *InsertBefore) {
+  // FIXME: Merge these two functions now that DIBuilder supports DPValues.
+  // We neeed the API to accept DPValues as an insert point for that to work.
   (void)DIB;
-  return DPValue::createDPValue(NewValue, Variable, Expression, DI,
-                                *InsertBefore);
+  DPValue::createDPValue(NewValue, Variable, Expression, DI, *InsertBefore);
 }
-static DbgValueInst *createDebugValue(DIBuilder &DIB, Value *NewValue,
-                                      DILocalVariable *Variable,
-                                      DIExpression *Expression,
-                                      const DILocation *DI,
-                                      Instruction *InsertBefore) {
-  return static_cast<DbgValueInst *>(DIB.insertDbgValueIntrinsic(
-      NewValue, Variable, Expression, DI, InsertBefore));
+static void createDebugValue(DIBuilder &DIB, Value *NewValue,
+                             DILocalVariable *Variable,
+                             DIExpression *Expression, const DILocation *DI,
+                             Instruction *InsertBefore) {
+  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI, InsertBefore);
 }
 
 /// Helper for updating assignment tracking debug info when promoting allocas.
