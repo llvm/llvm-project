@@ -44,6 +44,9 @@ class StrBoolAttr<string S> : Attr<S, []>;
 /// Arbitrary string attribute.
 class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
+/// ConstantRange attribute.
+class ConstantRangeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+
 /// Target-independent enum attributes.
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
@@ -218,6 +221,9 @@ def OptimizeNone : EnumAttr<"optnone", [FnAttr]>;
 /// Similar to byval but without a copy.
 def Preallocated : TypeAttr<"preallocated", [FnAttr, ParamAttr]>;
 
+/// Parameter or return value is within the specified range.
+def Range : ConstantRangeAttr<"range", [ParamAttr, RetAttr]>;
+
 /// Function does not access memory.
 def ReadNone : EnumAttr<"readnone", [ParamAttr]>;
 
@@ -371,6 +377,7 @@ def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;
 def : CompatRule<"isEqual<NoProfileAttr>">;
 def : CompatRule<"checkDenormMode">;
+def : CompatRule<"checkStrictFP">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address-key">;
 def : CompatRuleStrAttr<"isEqual", "branch-protection-pauth-lr">;

@@ -736,7 +736,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   // C++23 features.
   if (LangOpts.CPlusPlus23) {
-    Builder.defineMacro("__cpp_implicit_move", "202011L");
+    Builder.defineMacro("__cpp_implicit_move", "202207L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");

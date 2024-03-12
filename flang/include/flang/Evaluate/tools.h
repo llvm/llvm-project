@@ -1094,7 +1094,7 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
     const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible,
-    std::optional<std::string> &warning);
+    std::optional<std::string> &warning, bool ignoreImplicitVsExplicit);
 
 // Scalar constant expansion
 class ScalarConstantExpander {

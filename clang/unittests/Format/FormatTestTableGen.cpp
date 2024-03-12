@@ -44,6 +44,13 @@ protected:
   static void verifyFormat(llvm::StringRef Result, llvm::StringRef MessedUp) {
     EXPECT_EQ(Result, format(MessedUp));
   }
+
+  static void verifyFormat(llvm::StringRef Code, const FormatStyle &Style) {
+    EXPECT_EQ(Code.str(), format(Code, 0, Code.size(), Style))
+        << "Expected code is not stable";
+    auto MessUp = test::messUp(Code);
+    EXPECT_EQ(Code.str(), format(MessUp, 0, MessUp.size(), Style));
+  }
 };
 
 TEST_F(FormatTestTableGen, FormatStringBreak) {
@@ -323,6 +330,34 @@ TEST_F(FormatTestTableGen, If) {
 
 TEST_F(FormatTestTableGen, Assert) {
   verifyFormat("assert !le(DefVar1, 0), \"Assert1\";\n");
+}
+
+TEST_F(FormatTestTableGen, CondOperatorAlignment) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
+  Style.ColumnLimit = 60;
+  verifyFormat("let CondOpe1 = !cond(!eq(size, 1): 1,\n"
+               "                     !eq(size, 16): 1,\n"
+               "                     true: 0);\n",
+               Style);
+  Style.AlignConsecutiveTableGenCondOperatorColons.Enabled = true;
+  verifyFormat("let CondOpe1 = !cond(!eq(size, 1) : 1,\n"
+               "                     !eq(size, 16): 1,\n"
+               "                     true         : 0);\n",
+               Style);
+}
+
+TEST_F(FormatTestTableGen, DefAlignment) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
+  Style.ColumnLimit = 60;
+  verifyFormat("def Def : Parent {}\n"
+               "def DefDef : Parent {}\n"
+               "def DefDefDef : Parent {}\n",
+               Style);
+  Style.AlignConsecutiveTableGenDefinitionColons.Enabled = true;
+  verifyFormat("def Def       : Parent {}\n"
+               "def DefDef    : Parent {}\n"
+               "def DefDefDef : Parent {}\n",
+               Style);
 }
 
 } // namespace format

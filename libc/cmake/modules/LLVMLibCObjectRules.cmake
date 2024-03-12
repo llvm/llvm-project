@@ -307,7 +307,7 @@ function(create_entrypoint_object fq_target_name)
     ${fq_target_name}
     PROPERTIES
       ENTRYPOINT_NAME ${ADD_ENTRYPOINT_OBJ_NAME}
-      TARGET_TYPE ${ENTRYPOINT_OBJ_TARGET_TYPE}
+      TARGET_TYPE ${entrypoint_target_type}
       OBJECT_FILE "$<TARGET_OBJECTS:${fq_target_name}>"
       CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPS "${fq_deps_list}"

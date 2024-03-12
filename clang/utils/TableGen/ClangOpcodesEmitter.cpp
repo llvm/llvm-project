@@ -274,7 +274,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
 
   // Emit the prototype of the group emitter in the header.
   OS << "#if defined(GET_EVAL_PROTO) || defined(GET_LINK_PROTO)\n";
-  OS << "bool " << EmitFuncName << "(";
+  OS << "[[nodiscard]] bool " << EmitFuncName << "(";
   for (size_t I = 0, N = Types->size(); I < N; ++I)
     OS << "PrimType, ";
   for (auto *Arg : Args)

@@ -157,6 +157,7 @@ static void ParseArgs(int argc, char **argv) {
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
             .Case("vfs", ScanningOptimizations::VFS)
+            .Case("canonicalize-macros", ScanningOptimizations::Macros)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -868,7 +869,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
                                     EagerLoadModules);
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
+  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));

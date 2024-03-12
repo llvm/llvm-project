@@ -9,8 +9,8 @@ subroutine internal
   call takes_array(x)
 end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFtest_explicit_shape_arrayPinternal(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func.func private @_QFtest_explicit_shape_arrayPinternal(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.box<!fir.array<?xf32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<?xf32>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
@@ -27,8 +27,8 @@ subroutine internal
   call takes_array(x)
 end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFtest_assumed_shapePinternal(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func.func private @_QFtest_assumed_shapePinternal(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.box<!fir.array<?xf32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<?xf32>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
@@ -44,8 +44,8 @@ subroutine internal()
   call bar(c)
 end subroutine
 end subroutine
-! CHECK-LABEL:   func.func @_QFtest_scalar_charPinternal(
-! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL:   func.func private @_QFtest_scalar_charPinternal(
+! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.boxchar<1>>

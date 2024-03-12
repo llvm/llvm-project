@@ -815,7 +815,7 @@ def G_FMAXNUM_IEEE : GenericInstruction {
 
 // FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
 // as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2018 draft semantics.
+// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
 def G_FMINIMUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
@@ -1426,6 +1426,20 @@ def G_WRITE_REGISTER : GenericInstruction {
 // Vector ops
 //------------------------------------------------------------------------------
 
+// Generic insert subvector.
+def G_INSERT_SUBVECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type1:$src1, untyped_imm_0:$idx);
+  let hasSideEffects = false;
+}
+
+// Generic extract subvector.
+def G_EXTRACT_SUBVECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, untyped_imm_0:$idx);
+  let hasSideEffects = false;
+}
+
 // Generic insertelement.
 def G_INSERT_VECTOR_ELT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1447,6 +1461,13 @@ def G_EXTRACT_VECTOR_ELT : GenericInstruction {
 def G_SHUFFLE_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$v1, type1:$v2, unknown:$mask);
+  let hasSideEffects = false;
+}
+
+// Generic splatvector.
+def G_SPLAT_VECTOR: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$val);
   let hasSideEffects = false;
 }
 

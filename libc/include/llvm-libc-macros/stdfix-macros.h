@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_STDFIX_MACROS_H
-#define __LLVM_LIBC_MACROS_STDFIX_MACROS_H
+#ifndef LLVM_LIBC_MACROS_STDFIX_MACROS_H
+#define LLVM_LIBC_MACROS_STDFIX_MACROS_H
 
 #ifdef __FRACT_FBIT__
 // _Fract and _Accum types are available
@@ -325,4 +325,4 @@
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
-#endif // __LLVM_LIBC_MACROS_STDFIX_MACROS_H
+#endif // LLVM_LIBC_MACROS_STDFIX_MACROS_H

@@ -56,6 +56,7 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
+class ConstantRangeAttributeImpl;
 struct DiagnosticHandler;
 class DPMarker;
 class ElementCount;
@@ -1562,6 +1563,8 @@ public:
 
   BumpPtrAllocator Alloc;
   UniqueStringSaver Saver{Alloc};
+  SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
+      ConstantRangeAttributeAlloc;
 
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 
@@ -1684,18 +1687,16 @@ public:
   SmallDenseMap<BasicBlock *, DPMarker *> TrailingDPValues;
 
   // Set, get and delete operations for TrailingDPValues.
-  void setTrailingDPValues(BasicBlock *B, DPMarker *M) {
+  void setTrailingDbgRecords(BasicBlock *B, DPMarker *M) {
     assert(!TrailingDPValues.count(B));
     TrailingDPValues[B] = M;
   }
 
-  DPMarker *getTrailingDPValues(BasicBlock *B) {
+  DPMarker *getTrailingDbgRecords(BasicBlock *B) {
     return TrailingDPValues.lookup(B);
   }
 
-  void deleteTrailingDPValues(BasicBlock *B) {
-    TrailingDPValues.erase(B);
-  }
+  void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDPValues.erase(B); }
 };
 
 } // end namespace llvm

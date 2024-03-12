@@ -1493,27 +1493,71 @@ def : Pat<(xor GR32:$src1, -2147483648),
 
 // Odd encoding trick: -128 fits into an 8-bit immediate field while
 // +128 doesn't, so in this special case use a sub instead of an add.
-def : Pat<(add GR16:$src1, 128),
-          (SUB16ri GR16:$src1, -128)>;
+let Predicates = [NoNDD] in {
+  def : Pat<(add GR16:$src1, 128),
+            (SUB16ri GR16:$src1, -128)>;
+  def : Pat<(add GR32:$src1, 128),
+            (SUB32ri GR32:$src1, -128)>;
+  def : Pat<(add GR64:$src1, 128),
+            (SUB64ri32 GR64:$src1, -128)>;
+
+  def : Pat<(X86add_flag_nocf GR16:$src1, 128),
+            (SUB16ri GR16:$src1, -128)>;
+  def : Pat<(X86add_flag_nocf GR32:$src1, 128),
+            (SUB32ri GR32:$src1, -128)>;
+  def : Pat<(X86add_flag_nocf GR64:$src1, 128),
+            (SUB64ri32 GR64:$src1, -128)>;
+}
+let Predicates = [HasNDD] in {
+  def : Pat<(add GR16:$src1, 128),
+            (SUB16ri_ND GR16:$src1, -128)>;
+  def : Pat<(add GR32:$src1, 128),
+            (SUB32ri_ND GR32:$src1, -128)>;
+  def : Pat<(add GR64:$src1, 128),
+            (SUB64ri32_ND GR64:$src1, -128)>;
+
+  def : Pat<(X86add_flag_nocf GR16:$src1, 128),
+            (SUB16ri_ND GR16:$src1, -128)>;
+  def : Pat<(X86add_flag_nocf GR32:$src1, 128),
+            (SUB32ri_ND GR32:$src1, -128)>;
+  def : Pat<(X86add_flag_nocf GR64:$src1, 128),
+            (SUB64ri32_ND GR64:$src1, -128)>;
+}
 def : Pat<(store (add (loadi16 addr:$dst), 128), addr:$dst),
           (SUB16mi addr:$dst, -128)>;
-
-def : Pat<(add GR32:$src1, 128),
-          (SUB32ri GR32:$src1, -128)>;
 def : Pat<(store (add (loadi32 addr:$dst), 128), addr:$dst),
           (SUB32mi addr:$dst, -128)>;
-
-def : Pat<(add GR64:$src1, 128),
-          (SUB64ri32 GR64:$src1, -128)>;
 def : Pat<(store (add (loadi64 addr:$dst), 128), addr:$dst),
           (SUB64mi32 addr:$dst, -128)>;
+let Predicates = [HasNDD] in {
+  def : Pat<(add (loadi16 addr:$src), 128),
+            (SUB16mi_ND addr:$src, -128)>;
+  def : Pat<(add (loadi32 addr:$src), 128),
+            (SUB32mi_ND addr:$src, -128)>;
+  def : Pat<(add (loadi64 addr:$src), 128),
+            (SUB64mi32_ND addr:$src, -128)>;
+}
 
-def : Pat<(X86add_flag_nocf GR16:$src1, 128),
-          (SUB16ri GR16:$src1, -128)>;
-def : Pat<(X86add_flag_nocf GR32:$src1, 128),
-          (SUB32ri GR32:$src1, -128)>;
-def : Pat<(X86add_flag_nocf GR64:$src1, 128),
-          (SUB64ri32 GR64:$src1, -128)>;
+// The same trick applies for 32-bit immediate fields in 64-bit
+// instructions.
+let Predicates = [NoNDD] in {
+  def : Pat<(add GR64:$src1, 0x0000000080000000),
+            (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
+  def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
+            (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
+}
+let Predicates = [HasNDD] in {
+  def : Pat<(add GR64:$src1, 0x0000000080000000),
+            (SUB64ri32_ND GR64:$src1, 0xffffffff80000000)>;
+  def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
+            (SUB64ri32_ND GR64:$src1, 0xffffffff80000000)>;
+}
+def : Pat<(store (add (loadi64 addr:$dst), 0x0000000080000000), addr:$dst),
+          (SUB64mi32 addr:$dst, 0xffffffff80000000)>;
+let Predicates = [HasNDD] in {
+  def : Pat<(add(loadi64 addr:$src), 0x0000000080000000),
+            (SUB64mi32_ND addr:$src, 0xffffffff80000000)>;
+}
 
 // Depositing value to 8/16 bit subreg:
 def : Pat<(or (and GR64:$dst, -256), 
@@ -1531,15 +1575,6 @@ def : Pat<(or (and GR64:$dst, -65536),
 def : Pat<(or (and GR32:$dst, -65536), 
               (i32 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>; 
-
-// The same trick applies for 32-bit immediate fields in 64-bit
-// instructions.
-def : Pat<(add GR64:$src1, 0x0000000080000000),
-          (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
-def : Pat<(store (add (loadi64 addr:$dst), 0x0000000080000000), addr:$dst),
-          (SUB64mi32 addr:$dst, 0xffffffff80000000)>;
-def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
-          (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at

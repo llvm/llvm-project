@@ -456,80 +456,92 @@ define i64 @fcvt_l_bf16(bfloat %a) nounwind {
 define i64 @fcvt_l_bf16_sat(bfloat %a) nounwind {
 ; RV32IZFBFMIN-LABEL: fcvt_l_bf16_sat:
 ; RV32IZFBFMIN:       # %bb.0: # %start
-; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
-; RV32IZFBFMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZFBFMIN-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IZFBFMIN-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    addi sp, sp, -32
+; RV32IZFBFMIN-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    fsw fs0, 8(sp) # 4-byte Folded Spill
+; RV32IZFBFMIN-NEXT:    lui a0, %hi(.LCPI10_0)
+; RV32IZFBFMIN-NEXT:    flw fa5, %lo(.LCPI10_0)(a0)
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fs0, fa0
+; RV32IZFBFMIN-NEXT:    flt.s s0, fa5, fs0
+; RV32IZFBFMIN-NEXT:    neg s1, s0
 ; RV32IZFBFMIN-NEXT:    lui a0, 913408
 ; RV32IZFBFMIN-NEXT:    fmv.w.x fa5, a0
-; RV32IZFBFMIN-NEXT:    fle.s s0, fa5, fs0
+; RV32IZFBFMIN-NEXT:    fle.s s2, fa5, fs0
+; RV32IZFBFMIN-NEXT:    neg s3, s2
 ; RV32IZFBFMIN-NEXT:    fmv.s fa0, fs0
 ; RV32IZFBFMIN-NEXT:    call __fixsfdi
+; RV32IZFBFMIN-NEXT:    and a0, s3, a0
+; RV32IZFBFMIN-NEXT:    or a0, s1, a0
+; RV32IZFBFMIN-NEXT:    feq.s a2, fs0, fs0
+; RV32IZFBFMIN-NEXT:    neg a2, a2
 ; RV32IZFBFMIN-NEXT:    lui a4, 524288
-; RV32IZFBFMIN-NEXT:    lui a2, 524288
-; RV32IZFBFMIN-NEXT:    beqz s0, .LBB10_2
+; RV32IZFBFMIN-NEXT:    lui a3, 524288
+; RV32IZFBFMIN-NEXT:    beqz s2, .LBB10_2
 ; RV32IZFBFMIN-NEXT:  # %bb.1: # %start
-; RV32IZFBFMIN-NEXT:    mv a2, a1
+; RV32IZFBFMIN-NEXT:    mv a3, a1
 ; RV32IZFBFMIN-NEXT:  .LBB10_2: # %start
-; RV32IZFBFMIN-NEXT:    lui a1, %hi(.LCPI10_0)
-; RV32IZFBFMIN-NEXT:    flw fa5, %lo(.LCPI10_0)(a1)
-; RV32IZFBFMIN-NEXT:    flt.s a3, fa5, fs0
-; RV32IZFBFMIN-NEXT:    beqz a3, .LBB10_4
+; RV32IZFBFMIN-NEXT:    and a0, a2, a0
+; RV32IZFBFMIN-NEXT:    beqz s0, .LBB10_4
 ; RV32IZFBFMIN-NEXT:  # %bb.3:
-; RV32IZFBFMIN-NEXT:    addi a2, a4, -1
+; RV32IZFBFMIN-NEXT:    addi a3, a4, -1
 ; RV32IZFBFMIN-NEXT:  .LBB10_4: # %start
-; RV32IZFBFMIN-NEXT:    feq.s a1, fs0, fs0
-; RV32IZFBFMIN-NEXT:    neg a4, a1
-; RV32IZFBFMIN-NEXT:    and a1, a4, a2
-; RV32IZFBFMIN-NEXT:    neg a2, a3
-; RV32IZFBFMIN-NEXT:    neg a3, s0
-; RV32IZFBFMIN-NEXT:    and a0, a3, a0
-; RV32IZFBFMIN-NEXT:    or a0, a2, a0
-; RV32IZFBFMIN-NEXT:    and a0, a4, a0
-; RV32IZFBFMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZFBFMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IZFBFMIN-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
-; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
+; RV32IZFBFMIN-NEXT:    and a1, a2, a3
+; RV32IZFBFMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IZFBFMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IZFBFMIN-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IZFBFMIN-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IZFBFMIN-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32IZFBFMIN-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
+; RV32IZFBFMIN-NEXT:    addi sp, sp, 32
 ; RV32IZFBFMIN-NEXT:    ret
 ;
 ; R32IDZFBFMIN-LABEL: fcvt_l_bf16_sat:
 ; R32IDZFBFMIN:       # %bb.0: # %start
-; R32IDZFBFMIN-NEXT:    addi sp, sp, -16
-; R32IDZFBFMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; R32IDZFBFMIN-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; R32IDZFBFMIN-NEXT:    addi sp, sp, -32
+; R32IDZFBFMIN-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; R32IDZFBFMIN-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; R32IDZFBFMIN-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; R32IDZFBFMIN-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; R32IDZFBFMIN-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; R32IDZFBFMIN-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; R32IDZFBFMIN-NEXT:    lui a0, %hi(.LCPI10_0)
+; R32IDZFBFMIN-NEXT:    flw fa5, %lo(.LCPI10_0)(a0)
 ; R32IDZFBFMIN-NEXT:    fcvt.s.bf16 fs0, fa0
+; R32IDZFBFMIN-NEXT:    flt.s s0, fa5, fs0
+; R32IDZFBFMIN-NEXT:    neg s1, s0
 ; R32IDZFBFMIN-NEXT:    lui a0, 913408
 ; R32IDZFBFMIN-NEXT:    fmv.w.x fa5, a0
-; R32IDZFBFMIN-NEXT:    fle.s s0, fa5, fs0
+; R32IDZFBFMIN-NEXT:    fle.s s2, fa5, fs0
+; R32IDZFBFMIN-NEXT:    neg s3, s2
 ; R32IDZFBFMIN-NEXT:    fmv.s fa0, fs0
 ; R32IDZFBFMIN-NEXT:    call __fixsfdi
+; R32IDZFBFMIN-NEXT:    and a0, s3, a0
+; R32IDZFBFMIN-NEXT:    or a0, s1, a0
+; R32IDZFBFMIN-NEXT:    feq.s a2, fs0, fs0
+; R32IDZFBFMIN-NEXT:    neg a2, a2
 ; R32IDZFBFMIN-NEXT:    lui a4, 524288
-; R32IDZFBFMIN-NEXT:    lui a2, 524288
-; R32IDZFBFMIN-NEXT:    beqz s0, .LBB10_2
+; R32IDZFBFMIN-NEXT:    lui a3, 524288
+; R32IDZFBFMIN-NEXT:    beqz s2, .LBB10_2
 ; R32IDZFBFMIN-NEXT:  # %bb.1: # %start
-; R32IDZFBFMIN-NEXT:    mv a2, a1
+; R32IDZFBFMIN-NEXT:    mv a3, a1
 ; R32IDZFBFMIN-NEXT:  .LBB10_2: # %start
-; R32IDZFBFMIN-NEXT:    lui a1, %hi(.LCPI10_0)
-; R32IDZFBFMIN-NEXT:    flw fa5, %lo(.LCPI10_0)(a1)
-; R32IDZFBFMIN-NEXT:    flt.s a3, fa5, fs0
-; R32IDZFBFMIN-NEXT:    beqz a3, .LBB10_4
+; R32IDZFBFMIN-NEXT:    and a0, a2, a0
+; R32IDZFBFMIN-NEXT:    beqz s0, .LBB10_4
 ; R32IDZFBFMIN-NEXT:  # %bb.3:
-; R32IDZFBFMIN-NEXT:    addi a2, a4, -1
+; R32IDZFBFMIN-NEXT:    addi a3, a4, -1
 ; R32IDZFBFMIN-NEXT:  .LBB10_4: # %start
-; R32IDZFBFMIN-NEXT:    feq.s a1, fs0, fs0
-; R32IDZFBFMIN-NEXT:    neg a4, a1
-; R32IDZFBFMIN-NEXT:    and a1, a4, a2
-; R32IDZFBFMIN-NEXT:    neg a2, a3
-; R32IDZFBFMIN-NEXT:    neg a3, s0
-; R32IDZFBFMIN-NEXT:    and a0, a3, a0
-; R32IDZFBFMIN-NEXT:    or a0, a2, a0
-; R32IDZFBFMIN-NEXT:    and a0, a4, a0
-; R32IDZFBFMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; R32IDZFBFMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; R32IDZFBFMIN-NEXT:    and a1, a2, a3
+; R32IDZFBFMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; R32IDZFBFMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; R32IDZFBFMIN-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; R32IDZFBFMIN-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; R32IDZFBFMIN-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; R32IDZFBFMIN-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
-; R32IDZFBFMIN-NEXT:    addi sp, sp, 16
+; R32IDZFBFMIN-NEXT:    addi sp, sp, 32
 ; R32IDZFBFMIN-NEXT:    ret
 ;
 ; RV32ID-LABEL: fcvt_l_bf16_sat:

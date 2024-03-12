@@ -199,7 +199,6 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__iterator/distance.h>

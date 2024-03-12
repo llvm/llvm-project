@@ -43,6 +43,9 @@ struct DriverOptions {
 
   /// \brief File encoding to print.
   llvm::MachO::FileType OutFT = llvm::MachO::FileType::TBD_V5;
+
+  /// \brief Print verbose output.
+  bool Verbose = false;
 };
 
 struct LinkerOptions {
@@ -59,15 +62,22 @@ struct LinkerOptions {
   bool IsDylib = false;
 };
 
+struct FrontendOptions {
+  /// \brief The language mode to parse headers in.
+  Language LangMode = Language::ObjC;
+};
+
 class Options {
 private:
   bool processDriverOptions(llvm::opt::InputArgList &Args);
   bool processLinkerOptions(llvm::opt::InputArgList &Args);
+  bool processFrontendOptions(llvm::opt::InputArgList &Args);
 
 public:
   /// The various options grouped together.
   DriverOptions DriverOpts;
   LinkerOptions LinkerOpts;
+  FrontendOptions FEOpts;
 
   Options() = delete;
 
@@ -78,9 +88,14 @@ public:
   Options(clang::DiagnosticsEngine &Diag, FileManager *FM,
           llvm::opt::InputArgList &Args);
 
+  /// \brief Get CC1 arguments after extracting out the irrelevant
+  /// ones.
+  std::vector<std::string> &getClangFrontendArgs() { return FrontendArgs; }
+
 private:
   DiagnosticsEngine *Diags;
   FileManager *FM;
+  std::vector<std::string> FrontendArgs;
 };
 
 } // namespace installapi

@@ -2983,7 +2983,7 @@ class TypePromotionTransaction {
           Inst->insertBefore(*Point.BB, Position);
       }
 
-      Inst->getParent()->reinsertInstInDPValues(Inst, BeforeDPValue);
+      Inst->getParent()->reinsertInstInDbgRecords(Inst, BeforeDPValue);
     }
   };
 
@@ -4130,7 +4130,7 @@ private:
         PHINode *CurrentPhi = cast<PHINode>(Current);
         unsigned PredCount = CurrentPhi->getNumIncomingValues();
         PHINode *PHI =
-            PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi);
+            PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi->getIterator());
         Map[Current] = PHI;
         ST.insertNewPhi(PHI);
         append_range(Worklist, CurrentPhi->incoming_values());
@@ -6436,7 +6436,7 @@ bool CodeGenPrepare::optimizePhiType(
   }
   for (PHINode *Phi : PhiNodes)
     ValMap[Phi] = PHINode::Create(ConvertTy, Phi->getNumIncomingValues(),
-                                  Phi->getName() + ".tc", Phi);
+                                  Phi->getName() + ".tc", Phi->getIterator());
   // Pipe together all the PhiNodes.
   for (PHINode *Phi : PhiNodes) {
     PHINode *NewPhi = cast<PHINode>(ValMap[Phi]);
@@ -8506,7 +8506,7 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
 
 bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
   bool AnyChange = false;
-  for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+  for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange()))
     AnyChange |= fixupDPValue(DPV);
   return AnyChange;
 }
@@ -8550,9 +8550,9 @@ static void DbgInserterHelper(DPValue *DPV, Instruction *VI) {
   DPV->removeFromParent();
   BasicBlock *VIBB = VI->getParent();
   if (isa<PHINode>(VI))
-    VIBB->insertDPValueBefore(DPV, VIBB->getFirstInsertionPt());
+    VIBB->insertDbgRecordBefore(DPV, VIBB->getFirstInsertionPt());
   else
-    VIBB->insertDPValueAfter(DPV, VI);
+    VIBB->insertDbgRecordAfter(DPV, VI);
 }
 
 // A llvm.dbg.value may be using a value before its definition, due to
@@ -8620,7 +8620,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
       // If this isn't a dbg.value, process any attached DPValue records
       // attached to this instruction.
       for (DPValue &DPV : llvm::make_early_inc_range(
-               DPValue::filter(Insn.getDbgValueRange()))) {
+               DPValue::filter(Insn.getDbgRecordRange()))) {
         if (DPV.Type != DPValue::LocationType::Value)
           continue;
         DbgProcessor(&DPV, &Insn);

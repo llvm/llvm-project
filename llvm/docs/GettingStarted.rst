@@ -90,11 +90,11 @@ Getting the Source Code and Building LLVM
        is installed on your system. This can dramatically speed up link times
        if the default linker is slow.
 
-     * ``-DLLVM_PARALLEL_{COMPILE,LINK}_JOBS=N`` --- Limit the number of
-       compile/link jobs running in parallel at the same time. This is
+     * ``-DLLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS=N`` --- Limit the number of
+       compile/link/tablegen jobs running in parallel at the same time. This is
        especially important for linking since linking can use lots of memory. If
        you run into memory issues building LLVM, try setting this to limit the
-       maximum number of compile/link jobs running at the same time.
+       maximum number of compile/link/tablegen jobs running at the same time.
 
    * ``cmake --build build [--target <target>]`` or the build system specified
      above directly.
@@ -295,8 +295,9 @@ Package                                                     Version      Notes
 
 .. note::
 
-   #. Only needed if you want to run the automated test suite in the
-      ``llvm/test`` directory.
+   #. Only needed if you want to run the automated test suite. Python 3.8.0
+      or later is needed on Windows if a substitute (virtual) drive is used
+      to access LLVM source code due to ``MAX_PATH`` limitations.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.

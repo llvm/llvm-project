@@ -542,8 +542,14 @@ static void readConfigs(opt::InputArgList &args) {
   config->initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
+  config->noGrowableMemory = args.hasArg(OPT_no_growable_memory);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
+
+  if (config->maxMemory != 0 && config->noGrowableMemory) {
+    // Erroring out here is simpler than defining precedence rules.
+    error("--max-memory is incompatible with --no-growable-memory");
+  }
 
   // Default value of exportDynamic depends on `-shared`
   config->exportDynamic =
