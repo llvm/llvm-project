@@ -744,9 +744,6 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
     return nullptr;
   }
 
-  // Only 1 threads is required if P1689 per file mode.
-  NumThreads = 1;
-
   // There might be multiple jobs for a compilation. Extract the specified
   // output filename from the last job.
   auto LastCmd = C->getJobs().end();
