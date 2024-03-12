@@ -14,6 +14,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -542,7 +543,10 @@ void Fortran::lower::HostAssociations::addSymbolsToBind(
          "must be initially empty");
   this->hostScope = &hostScope;
   for (const auto *s : symbols)
-    if (Fortran::lower::symbolIsGlobal(*s)) {
+    // GlobalOp are created for non-global threadprivate variable,
+    //  so considering them as globals.
+    if (Fortran::lower::symbolIsGlobal(*s) ||
+        (*s).test(Fortran::semantics::Symbol::Flag::OmpThreadprivate)) {
       // The ultimate symbol is stored here so that global symbols from the
       // host scope can later be searched in this set.
       globalSymbols.insert(&s->GetUltimate());
@@ -590,9 +594,15 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
     for (auto &hostVariable : pft::getScopeVariableList(*hostScope))
       if ((hostVariable.isAggregateStore() && hostVariable.isGlobal()) ||
           (hostVariable.hasSymbol() &&
-           globalSymbols.contains(&hostVariable.getSymbol().GetUltimate())))
+           globalSymbols.contains(&hostVariable.getSymbol().GetUltimate()))) {
         Fortran::lower::instantiateVariable(converter, hostVariable, symMap,
                                             storeMap);
+        // Generate threadprivate Op for host associated variables.
+        if (hostVariable.hasSymbol() &&
+            hostVariable.getSymbol().test(
+                Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+          Fortran::lower::genThreadprivateOp(converter, hostVariable);
+      }
   }
   if (tupleSymbols.empty())
     return;
