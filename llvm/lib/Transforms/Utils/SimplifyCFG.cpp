@@ -1535,7 +1535,7 @@ static bool shouldHoistCommonInstructions(Instruction *I1, Instruction *I2,
 static void
 hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
                                SmallVectorImpl<Instruction *> &OtherInsts) {
-  if (!I1->hasDbgValues())
+  if (!I1->hasDbgRecords())
     return;
   using CurrentAndEndIt =
       std::pair<DbgRecord::self_iterator, DbgRecord::self_iterator>;
@@ -1557,12 +1557,12 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
 
   // Collect the iterators.
   Itrs.push_back(
-      {I1->getDbgValueRange().begin(), I1->getDbgValueRange().end()});
+      {I1->getDbgRecordRange().begin(), I1->getDbgRecordRange().end()});
   for (Instruction *Other : OtherInsts) {
-    if (!Other->hasDbgValues())
+    if (!Other->hasDbgRecords())
       return;
     Itrs.push_back(
-        {Other->getDbgValueRange().begin(), Other->getDbgValueRange().end()});
+        {Other->getDbgRecordRange().begin(), Other->getDbgRecordRange().end()});
   }
 
   // Iterate in lock-step until any of the DbgRecord lists are exausted. If
@@ -1576,7 +1576,7 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
       DbgRecord &DR = *Pair.first++;
       if (HoistDPVs) {
         DR.removeFromParent();
-        TI->getParent()->insertDPValueBefore(&DR, TI->getIterator());
+        TI->getParent()->insertDbgRecordBefore(&DR, TI->getIterator());
       }
     }
   }
@@ -3207,10 +3207,10 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // instructions, in the same way that dbg.value intrinsics are dropped at the
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    for (DbgRecord &DR : make_early_inc_range(It.getDbgValueRange()))
+    for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
       // Drop all records except assign-kind DPValues (dbg.assign equivalent).
       if (DPValue *DPV = dyn_cast<DPValue>(&DR); !DPV || !DPV->isDbgAssign())
-        It.dropOneDbgValue(&DR);
+        It.dropOneDbgRecord(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
@@ -3849,7 +3849,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   if (PredBlock->IsNewDbgInfoFormat) {
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
     for (DPValue &DPV :
-         DPValue::filter(PredBlock->getTerminator()->getDbgValueRange())) {
+         DPValue::filter(PredBlock->getTerminator()->getDbgRecordRange())) {
       RemapDPValue(M, &DPV, VMap,
                    RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
@@ -5308,7 +5308,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
 
   // Debug-info records on the unreachable inst itself should be deleted, as
   // below we delete everything past the final executable instruction.
-  UI->dropDbgValues();
+  UI->dropDbgRecords();
 
   // If there are any instructions immediately before the unreachable that can
   // be removed, do so.
@@ -5328,7 +5328,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
 
     // If we're deleting this, we're deleting any subsequent dbg.values, so
     // delete DPValue records of variable information.
-    BBI->dropDbgValues();
+    BBI->dropDbgRecords();
 
     // Delete this instruction (any uses are guaranteed to be dead)
     BBI->replaceAllUsesWith(PoisonValue::get(BBI->getType()));
