@@ -54,6 +54,26 @@ public:
     return success();
   }
 };
+
+class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
+public:
+  using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SelectOp selectOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    if (!selectOp.getCondition().getType().isInteger())
+      return rewriter.notifyMatchFailure(
+          selectOp, "can only converted if condition is a scalar of type i1");
+
+    rewriter.replaceOpWithNewOp<emitc::ConditionalOp>(
+        selectOp, selectOp.getType(), adaptor.getOperands());
+
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -70,7 +90,8 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::AddFOp, emitc::AddOp>,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
-    ArithOpConversion<arith::SubFOp, emitc::SubOp>
+    ArithOpConversion<arith::SubFOp, emitc::SubOp>,
+    SelectOpConversion
   >(typeConverter, ctx);
   // clang-format on
 }
