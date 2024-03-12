@@ -574,7 +574,9 @@ public:
 
   /// Returns true if MachineLoopInfo should analyze the given physreg
   /// for loop invariance.
-  virtual bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const { return false; }
+  virtual bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const {
+    return false;
+  }
 
   /// Physical registers that may be modified within a function but are
   /// guaranteed to be restored before any uses. This is useful for targets that
