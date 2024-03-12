@@ -73,6 +73,7 @@ class AUI_ENC    : AUI_FM;
 class AUIPC_ENC  : PCREL16_FM<OPCODE5_AUIPC>;
 
 class BAL_ENC   : BAL_FM;
+class NAL_ENC   : NAL_FM;
 class BALC_ENC  : BRANCH_OFF26_FM<0b111010>;
 class BC_ENC    : BRANCH_OFF26_FM<0b110010>;
 class BEQC_ENC  : CMP_BRANCH_2R_OFF16_FM<OPGROUP_ADDI>,
@@ -381,6 +382,12 @@ class BC_DESC_BASE<string instr_asm, DAGOperand opnd> : BRANCH_DESC_BASE,
   bit isCTI = 1;
 }
 
+class NAL_DESC_BASE<string instr_asm> : BRANCH_DESC_BASE,
+    MipsR6Arch<instr_asm> {
+  string AsmString = instr_asm;
+  bit isCTI = 1;
+}
+
 class CMP_BC_DESC_BASE<string instr_asm, DAGOperand opnd,
                        RegisterOperand GPROpnd> : BRANCH_DESC_BASE,
                                                   MipsR6Arch<instr_asm> {
@@ -419,6 +426,12 @@ class CMP_CBR_RT_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
 
 class BAL_DESC : BC_DESC_BASE<"bal", brtarget> {
   bit isCall = 1;
+  bit hasDelaySlot = 1;
+  list<Register> Defs = [RA];
+  bit isCTI = 1;
+}
+
+class NAL_DESC : NAL_DESC_BASE<"nal"> {
   bit hasDelaySlot = 1;
   list<Register> Defs = [RA];
   bit isCTI = 1;
@@ -868,6 +881,8 @@ def AUI : R6MMR6Rel, AUI_ENC, AUI_DESC, ISA_MIPS32R6;
 def AUIPC : R6MMR6Rel, AUIPC_ENC, AUIPC_DESC, ISA_MIPS32R6;
 def BAL : BAL_ENC, BAL_DESC, ISA_MIPS32R6;
 def BALC : R6MMR6Rel, BALC_ENC, BALC_DESC, ISA_MIPS32R6;
+def NAL : NAL_ENC, NAL_DESC, ISA_MIPS32R6;
+
 let AdditionalPredicates = [NotInMicroMips] in {
   def BC1EQZ : BC1EQZ_ENC, BC1EQZ_DESC, ISA_MIPS32R6, HARDFLOAT;
   def BC1NEZ : BC1NEZ_ENC, BC1NEZ_DESC, ISA_MIPS32R6, HARDFLOAT;
@@ -948,7 +963,6 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def MUL_R6 : R6MMR6Rel, MUL_R6_ENC, MUL_R6_DESC, ISA_MIPS32R6;
   def MULU   : R6MMR6Rel, MULU_ENC, MULU_DESC, ISA_MIPS32R6;
 }
-def NAL; // BAL with rd=0
 let AdditionalPredicates = [NotInMicroMips] in {
   def PREF_R6 : R6MMR6Rel, PREF_ENC, PREF_DESC, ISA_MIPS32R6;
   def RINT_D : RINT_D_ENC, RINT_D_DESC, ISA_MIPS32R6, HARDFLOAT;
