@@ -434,21 +434,20 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
              VisibilitiesHelp.begin();
          VisibilityHelp != VisibilitiesHelp.end();
          ++VisibilityHelp, ++NumVisibilityHelpEmitted) {
-      ListInit *Visibilities =
-          (*VisibilityHelp)->getValueAsListInit("Visibilities");
-      ArrayRef<Init *> VisibilitiesValues = Visibilities->getValues();
-      assert(VisibilitiesValues.size() <= MaxVisibilityPerHelp &&
+      ArrayRef<Init *> Visibilities =
+          (*VisibilityHelp)->getValueAsListInit("Visibilities")->getValues();
+      assert(Visibilities.size() <= MaxVisibilityPerHelp &&
              "Too many visibilities to store in an "
              "OptTable::HelpTextForVisibilities entry");
 
       OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
          << ">{{";
       unsigned NumVisibilitiesEmitted = 0;
-      for (auto Visibility = VisibilitiesValues.begin();
-           Visibility != VisibilitiesValues.end();
+      for (auto Visibility = Visibilities.begin();
+           Visibility != Visibilities.end();
            ++Visibility, ++NumVisibilitiesEmitted) {
         OS << (*Visibility)->getAsUnquotedString();
-        if (std::next(Visibility) != VisibilitiesValues.end())
+        if (std::next(Visibility) != Visibilities.end())
           OS << ", ";
       }
       // Init unused elements.

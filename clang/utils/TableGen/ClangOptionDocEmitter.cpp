@@ -367,17 +367,21 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
       R->getValueAsListOfDefs("HelpTextForVisibilities");
   for (Record *VisibilityHelp : VisibilitiesHelp) {
     // This is a list of visibilities.
-    std::vector<StringRef> Visibilities =
-        VisibilityHelp->getValueAsListOfStrings("Visibilities");
+    ArrayRef<Init *> Visibilities =
+        VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
 
     // See if any of the program's visibilities are in the list.
     for (StringRef DocInfoMask :
          DocInfo->getValueAsListOfStrings("VisibilityMask")) {
-      if (std::find(Visibilities.begin(), Visibilities.end(), DocInfoMask) !=
-          Visibilities.end()) {
-        Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
-        break;
+      for (Init *Visibility : Visibilities) {
+        if (Visibility->getAsUnquotedString() == DocInfoMask) {
+          // Use the first one we find.
+          Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
+          break;
+        }
       }
+      if (!Description.empty())
+        break;
     }
 
     if (!Description.empty())
