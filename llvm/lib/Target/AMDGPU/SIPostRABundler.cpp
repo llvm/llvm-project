@@ -133,7 +133,8 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     bool HasIGLPInstrs = llvm::any_of(MBB.instrs(), [](MachineInstr &MI) {
       unsigned Opc = MI.getOpcode();
-      return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+      return Opc == AMDGPU::SCHED_GROUP_BARRIER ||
+             Opc == AMDGPU::SCHED_GROUP_BARRIER_RULE || Opc == AMDGPU::IGLP_OPT;
     });
 
     // Don't cluster with IGLP instructions.

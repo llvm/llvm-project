@@ -248,6 +248,7 @@ public:
 static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
   assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
          SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE ||
          SU.getInstr()->getOpcode() == AMDGPU::IGLP_OPT);
 
   while (!SU.Preds.empty())
@@ -399,7 +400,8 @@ void PipelineSolver::reset() {
       SmallVector<SUnit *, 32> TempCollection = SG.Collection;
       SG.Collection.clear();
       auto SchedBarr = llvm::find_if(TempCollection, [](SUnit *SU) {
-        return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER;
+        return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+               SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE;
       });
       if (SchedBarr != TempCollection.end())
         SG.Collection.push_back(*SchedBarr);
@@ -457,7 +459,8 @@ void PipelineSolver::makePipeline() {
                         << " has: \n");
       SUnit *SGBarr = nullptr;
       for (auto &SU : SG.Collection) {
-        if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+        if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+            SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE)
           SGBarr = SU;
         LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ")\n");
       }
@@ -496,7 +499,6 @@ int PipelineSolver::linkSUnit(
 int PipelineSolver::addEdges(
     SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
-
   // For IsBottomUp, the first SchedGroup in SyncPipeline contains the
   // instructions that are the ultimate successors in the resultant mutation.
   // Therefore, in such a configuration, the SchedGroups occurring before the
@@ -2337,6 +2339,12 @@ private:
 
   ScheduleDAGMI *DAG;
 
+  // An array of rule constuctors. These are to be used by
+  // SCHED_GROUP_BARRIER_RULE with the RuleID argument being
+  // an index into this array.
+  std::vector<function_ref<std::shared_ptr<InstructionRule>(unsigned)>>
+      SchedGroupBarrierRuleCallBacks;
+
   // Organize lists of SchedGroups by their SyncID. SchedGroups /
   // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
   // between then.
@@ -2368,6 +2376,10 @@ private:
 public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
+  // Define the rules to be used with sched_group_barrier rules and register
+  // the constructors.
+  void addSchedGroupBarrierRules();
+
   // The order in which the PipelineSolver should process the candidate
   // SchedGroup for a PipelineInstr. BOTTOM_UP will try to add SUs to the last
   // created SchedGroup first, and will consider that as the ultimate
@@ -2379,7 +2391,9 @@ public:
   AMDGPU::SchedulingPhase Phase = AMDGPU::SchedulingPhase::Initial;
 
   IGroupLPDAGMutation() = default;
-  IGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) : Phase(Phase) {}
+  IGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) : Phase(Phase) {
+    addSchedGroupBarrierRules();
+  }
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -2456,7 +2470,8 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
   int MissedEdges = 0;
   for (auto *A : Collection) {
     SUnit *B = &SU;
-    if (A == B || A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+    if (A == B || A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+        A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE)
       continue;
     if (MakePred)
       std::swap(A, B);
@@ -2479,7 +2494,8 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
 void SchedGroup::link(SUnit &SU, bool MakePred) {
   for (auto *A : Collection) {
     SUnit *B = &SU;
-    if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+    if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+        A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE)
       continue;
     if (MakePred)
       std::swap(A, B);
@@ -2578,7 +2594,8 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     if (Opc == AMDGPU::SCHED_BARRIER) {
       addSchedBarrierEdges(*R);
       FoundSB = true;
-    } else if (Opc == AMDGPU::SCHED_GROUP_BARRIER) {
+    } else if (Opc == AMDGPU::SCHED_GROUP_BARRIER ||
+               Opc == AMDGPU::SCHED_GROUP_BARRIER_RULE) {
       initSchedGroupBarrierPipelineStage(R);
       FoundSB = true;
     } else if (Opc == AMDGPU::IGLP_OPT) {
@@ -2658,21 +2675,96 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   return InvertedMask;
 }
 
+void IGroupLPDAGMutation::addSchedGroupBarrierRules() {
+  /// Whether or not the instruction has no true data predecessors
+  /// with opcode \p Opc.
+  class NoOpcDataPred : public InstructionRule {
+  protected:
+    unsigned Opc;
+
+  public:
+    bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
+               SmallVectorImpl<SchedGroup> &SyncPipe) override {
+      return !std::any_of(
+          SU->Preds.begin(), SU->Preds.end(), [this](const SDep &Pred) {
+            return Pred.getKind() == SDep::Data &&
+                   Pred.getSUnit()->getInstr()->getOpcode() == Opc;
+          });
+    }
+
+    NoOpcDataPred(unsigned Opc, const SIInstrInfo *TII, unsigned SGID,
+                  bool NeedsCache = false)
+        : InstructionRule(TII, SGID, NeedsCache), Opc(Opc) {}
+  };
+
+  /// Whether or not the instruction has no write after read predecessors
+  /// with opcode \p Opc.
+  class NoOpcWARPred final : public InstructionRule {
+  protected:
+    unsigned Opc;
+
+  public:
+    bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
+               SmallVectorImpl<SchedGroup> &SyncPipe) override {
+      return !std::any_of(
+          SU->Preds.begin(), SU->Preds.end(), [this](const SDep &Pred) {
+            return Pred.getKind() == SDep::Anti &&
+                   Pred.getSUnit()->getInstr()->getOpcode() == Opc;
+          });
+    }
+    NoOpcWARPred(unsigned Opc, const SIInstrInfo *TII, unsigned SGID,
+                 bool NeedsCache = false)
+        : InstructionRule(TII, SGID, NeedsCache), Opc(Opc){};
+  };
+
+  SchedGroupBarrierRuleCallBacks = {
+      [&](unsigned SGID) {
+        return std::make_shared<NoOpcWARPred>(AMDGPU::V_CNDMASK_B32_e64, TII,
+                                              SGID, false);
+      },
+      [&](unsigned SGID) {
+        return std::make_shared<NoOpcWARPred>(AMDGPU::V_PERM_B32_e64, TII, SGID,
+                                              false);
+      },
+      [&](unsigned SGID) {
+        return std::make_shared<NoOpcDataPred>(AMDGPU::V_CNDMASK_B32_e64, TII,
+                                               SGID, false);
+      },
+      [&](unsigned SGID) {
+        return std::make_shared<NoOpcDataPred>(AMDGPU::V_PERM_B32_e64, TII,
+                                               SGID, false);
+      }};
+}
+
 void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   // Remove all existing edges from the SCHED_GROUP_BARRIER that were added due
   // to the instruction having side effects.
   resetEdges(*RIter, DAG);
   MachineInstr &SGB = *RIter->getInstr();
-  assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
+  assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+         SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE);
   int32_t SGMask = SGB.getOperand(0).getImm();
   int32_t Size = SGB.getOperand(1).getImm();
   int32_t SyncID = SGB.getOperand(2).getImm();
+  std::optional<int32_t> RuleID =
+      (SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE)
+          ? SGB.getOperand(3).getImm()
+          : std::optional<int32_t>(std::nullopt);
 
-  auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
+  // Sanitize the input
+  if (RuleID && (!SchedGroupBarrierRuleCallBacks.size() ||
+                 *RuleID > (int)(SchedGroupBarrierRuleCallBacks.size() - 1))) {
+    RuleID = std::nullopt;
+    llvm_unreachable("Bad rule ID!");
+  }
+
+  auto SG = &SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
                                                     Size, SyncID, DAG, TII);
+  if (RuleID)
+    SG->addRule(SchedGroupBarrierRuleCallBacks[*RuleID](SG->getSGID()));
 
-  SG.initSchedGroup(RIter, SyncedInstrs[SG.getSyncID()]);
+  SG->initSchedGroup(RIter, SyncedInstrs[SG->getSyncID()]);
 }
 
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {

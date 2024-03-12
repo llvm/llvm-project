@@ -26,6 +26,30 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @test_sched_group_barrier_rule() #0 {
+; GCN-LABEL: test_sched_group_barrier_rule:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    ; sched_group_barrier mask(0x00000000) size(1) SyncID(2) Rule(0)
+; GCN-NEXT:    ; sched_group_barrier mask(0x00000001) size(2) SyncID(4) Rule(1)
+; GCN-NEXT:    ; sched_group_barrier mask(0x00000004) size(8) SyncID(16) Rule(2)
+; GCN-NEXT:    ; sched_group_barrier mask(0x0000000F) size(10000) SyncID(-1) Rule(3)
+; GCN-NEXT:    s_endpgm
+;
+; EXACTCUTOFF-LABEL: test_sched_group_barrier_rule:
+; EXACTCUTOFF:       ; %bb.0: ; %entry
+; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000000) size(1) SyncID(2) Rule(0)
+; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000001) size(2) SyncID(4) Rule(1)
+; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000004) size(8) SyncID(16) Rule(2)
+; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x0000000F) size(10000) SyncID(-1) Rule(3)
+; EXACTCUTOFF-NEXT:    s_endpgm
+entry:
+  call void @llvm.amdgcn.sched.group.barrier.rule(i32 0, i32 1, i32 2, i32 0) #1
+  call void @llvm.amdgcn.sched.group.barrier.rule(i32 1, i32 2, i32 4, i32 1) #1
+  call void @llvm.amdgcn.sched.group.barrier.rule(i32 4, i32 8, i32 16, i32 2) #1
+  call void @llvm.amdgcn.sched.group.barrier.rule(i32 15, i32 10000, i32 -1, i32 3) #1
+  ret void
+}
+
 define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
@@ -1615,6 +1639,7 @@ entry:
 
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 declare void @llvm.amdgcn.sched.group.barrier(i32, i32, i32) #1
+declare void @llvm.amdgcn.sched.group.barrier.rule(i32, i32, i32, i32) #1
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32) #1
 declare float @llvm.exp.f32(float) #2
 
