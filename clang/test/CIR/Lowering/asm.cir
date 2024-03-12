@@ -26,7 +26,9 @@ module {
     %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
     cir.asm(x86_att, {"" "=&r,=&r,1,~{dirflag},~{fpsr},~{flags}"}) side_effects %1 : (!s32i) -> ()
     // CHECK: llvm.inline_asm has_side_effects asm_dialect = att operand_attrs = [] "", "=&r,=&r,1,~{dirflag},~{fpsr},~{flags}" %2 : (i32) -> ()
-    
+
+    cir.asm(x86_att, {"" "~{dirflag},~{fpsr},~{flags}"}) operand_attrs = [!s32i] side_effects  : () -> ()
+    // CHECK: llvm.inline_asm has_side_effects asm_dialect = att operand_attrs = [{elementtype = i32}] "", "~{dirflag},~{fpsr},~{flags}"  : () -> ()
     cir.return
   }
 
