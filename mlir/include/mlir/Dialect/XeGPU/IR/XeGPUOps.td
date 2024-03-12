@@ -9,26 +9,13 @@
 #ifndef MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
 #define MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUAttrs.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUTypes.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/AttrTypeBase.td"
-
-
-include "mlir/IR/OpBase.td"
-include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/BuiltinTypes.td"
-include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/Interfaces/CastInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
-include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/ShapedOpInterfaces.td"
-
 
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
@@ -39,12 +26,13 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
           Op<XeGPU_Dialect, mnemonic, traits>;
 
 
-def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSegments]> {
+def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface, 
+                        AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
 
   let summary = "create nd tensor descriptor operation";
   let description = [{
     The "create_nd_tdesc" operation creates a TensorDescType which represents
-    a sub-view of a 2D memory region (It can be extended to support N-D memory
+    a sub-view of a 2D memory region (It can be extended to support n-D memory
     region if needed in future). Elements in the subview continuous in each 
     dimention. It encodes the following important information for supporting 
     Intel hardware features:
@@ -90,31 +78,27 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
 
   let arguments = (ins 
     XeGPU_BaseAddrType: $source, 
-    Variadic<Index>: $dynamic_offsets, 
-    Variadic<Index>: $dynamic_shape, 
-    Variadic<Index>: $dynamic_strides,
+    Variadic<Index>: $offsets, 
+    Variadic<Index>: $shape, 
+    Variadic<Index>: $strides,
     DenseI64ArrayAttr: $static_offsets
   );
   let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($dynamic_offsets, $static_offsets)
-    (`,` `[` $dynamic_shape^ `]` `,` `[` $dynamic_strides `]`)?
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    (`,` `[` $shape^ `]` `,` `[` $strides `]`)?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
-  let skipDefaultBuilders = 1;
+
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "Type": $TensorDesc, "Value": $source, "ValueRange": $offsets, 
-                   "ValueRange": $shape, "ValueRange": $strides, 
-                   "llvm::ArrayRef<int64_t>": $static_offsets)>,
-
-    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source, 
                    "llvm::ArrayRef<OpFoldResult>": $offsets)>,
 
-    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source, 
                    "llvm::ArrayRef<OpFoldResult>": $offsets,
                    "ValueRange": $shape, "ValueRange": $stride)>
   ];
@@ -130,27 +114,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
       return getTensorDesc().getType();
     }
 
-    /// Returns the offsets info to the source. It consolidates
-    /// information from both dynamic_offsets and static_offsets
-    /// parameters. static_offsets parameter always has the expected
-    /// ranks with some dim could have ShapeType::kDynamic value
-    /// indicating the corresponding value should be from dynamic_offsets.
-    llvm::SmallVector<OpFoldResult> getOffsets();
-
-    /// returns the shape info of the source. It is either from the
-    /// memref type, if source is a memref with static shape
-    /// information or from the dynamic_shape parameter. If both
-    /// exists, the dynamic_shape parameter will be used and the
-    /// shape information from  memref type will be ignored.
-    llvm::SmallVector<OpFoldResult> getShape();
-
-    /// returns the strides info of the source. It is either from the
-    /// memref type, if source is a memref with static shape
-    /// information or from the dynamic_stride parameter. If both
-    /// exists, the dynamic_strides parameter will be used and the
-    /// strides information from  memref type will be ignored.
-    llvm::SmallVector<OpFoldResult> getStrides();
-
     /// Return the element type of the TensorDesc
     Type getElementType() {
       return getType().getElementType();
@@ -160,6 +123,58 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, AttrSizedOperandSeg
     llvm::ArrayRef<int64_t> getTensorDescShape() {
       return getType().getShape();
     }
+
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
+    OperandRange getSizes() {
+      return getShape();
+    }
+
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
+    /// If source is IntegerType and `shape` is filled, it will 
+    /// return an array of ShapedType::kDynamic representing dynamic 
+    /// shape encoded in the `shape` argument will be used. Presence
+    /// of `shape` overides static shape from source memref type.
+    SmallVector<int64_t> getStaticSizes() {
+      if (getSourceType().isa<IntegerType>() || getShape().size()) {
+        auto dims = getMixedOffsets().size();
+        return SmallVector<int64_t>(dims, ShapedType::kDynamic);
+      }
+      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      return SmallVector<int64_t>(memrefType.getShape());
+    }
+
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
+    /// If source is IntegerType or `strides` is filled, it will 
+    /// return an array of ShapedType::kDynamic representing dynamic 
+    /// strides encoded in the `strides` argument will be used. Presence
+    /// of `strides` overides static strides from source memref type.
+    SmallVector<int64_t> getStaticStrides() {
+      if (getSourceType().isa<IntegerType>() || getStrides().size()) {
+        auto dims = getMixedOffsets().size();
+        return SmallVector<int64_t>(dims, ShapedType::kDynamic);
+      }
+      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      auto [strides, offset] = getStridesAndOffset(memrefType);
+      return strides;
+    }
+
+    /// Return the expected rank of each of the`static_offsets`, 
+    /// `static_shape` and `static_strides` attributes.
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
+      unsigned rank;
+      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
+        rank = ty.getRank();
+      } else {
+        rank = (unsigned)getMixedOffsets().size();
+      }
+      return {rank, rank, rank};
+    }
+    
+    /// Return the number of leading operands before the `offsets`, 
+    /// `shape` and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+
+    mlir::Value getViewSource() { return getSource(); }
   }];
 }
 
@@ -178,11 +193,11 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 }
 
 
-def XeGPU_LoadNDOp : XeGPU_Op<"load_nd"> {
+def XeGPU_LoadNdOp : XeGPU_Op<"load_nd"> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)" 
                 "to registers (represented by vector)";
   let description = [{
-    LoadNDOp essentially mimics the hardware block read instruction to read 
+    LoadNdOp essentially mimics the hardware block read instruction to read 
     a block of data from memory to register. It takes a set of cache hints 
     for each level of cache, L1, L2 and L3. If hardware does not have a 
     correspoding cache, Corresponding cache hint attribute will be masked.
@@ -218,7 +233,7 @@ def XeGPU_LoadNDOp : XeGPU_Op<"load_nd"> {
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreNDOp : XeGPU_Op<"store_nd", []> {
+def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", []> {
   let summary = "stores a n-D block register region back to memory, currently only supports 2D";
   let arguments = (ins XeGPU_ValueType: $value,
                        XeGPU_TensorDesc: $TensorDesc,

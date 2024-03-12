@@ -9,22 +9,11 @@
 #include <mlir/Dialect/Utils/StaticValueUtils.h>
 #include <mlir/Dialect/XeGPU/IR/XeGPU.h>
 #include <mlir/IR/Builders.h>
-#include <mlir/Interfaces/ViewLikeInterface.h>
 
 #define DEBUG_TYPE "xegpu"
 
 namespace mlir {
 namespace xegpu {
-
-static size_t getRankOf(Value value) {
-  if (value.getType().isIntOrIndexOrFloat())
-    return 0;
-  if (auto ty = llvm::dyn_cast_if_present<MemRefType>(value.getType()))
-    return ty.getRank();
-  if (auto ty = llvm::dyn_cast_if_present<VectorType>(value.getType()))
-    return ty.getRank();
-  llvm_unreachable("Unsupported value for getRankOf");
-}
 
 static void transpose(llvm::ArrayRef<int64_t> trans,
                       std::vector<int64_t> &shape) {
@@ -53,41 +42,10 @@ static std::string makeString(T array, bool breakline = false) {
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type TensorDesc, Value source, ValueRange offsets,
-                           ValueRange shape, ValueRange strides,
-                           llvm::ArrayRef<int64_t> static_offsets) {
-  auto offsetRank = static_offsets.size();
-  auto shapeRank = shape.size() ? shape.size() : getRankOf(source);
-
-  size_t dynOffsetRank =
-      std::count_if(static_offsets.begin(), static_offsets.end(),
-                    [](int64_t d) { return ShapedType::isDynamic(d); });
-
-  // shape and strides should exists at the same time
-  // and the final rank for shape and offset (dynamic + static)
-  // should be the same
-  assert(shape.size() == strides.size() && shapeRank == offsetRank &&
-         offsets.size() == dynOffsetRank);
-
-  state.addOperands(source);
-  state.addOperands(offsets);
-  state.addOperands(shape);
-  state.addOperands(strides);
-  state.addAttribute(
-      getOperandSegmentSizesAttrName(state.name),
-      builder.getDenseI32ArrayAttr({1, static_cast<int32_t>(offsets.size()),
-                                    static_cast<int32_t>(shape.size()),
-                                    static_cast<int32_t>(strides.size())}));
-  state.addAttribute(getStaticOffsetsAttrName(state.name),
-                     builder.getDenseI64ArrayAttr(static_offsets));
-  state.addTypes(TensorDesc);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
+                           Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> offsets) {
-  auto ty = llvm::dyn_cast_if_present<MemRefType>(source.getType());
-  assert(ty && ty.hasStaticShape() && offsets.size() == getRankOf(source));
+  auto ty = source.getType();
+  assert(ty && ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
 
   llvm::SmallVector<int64_t> staticOffsets;
   llvm::SmallVector<Value> dynamicOffsets;
@@ -100,7 +58,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
+                           Type tdesc, TypedValue<IntegerType> source,
                            llvm::ArrayRef<OpFoldResult> offsets,
                            ValueRange shape, ValueRange stride) {
   assert(shape.size() && offsets.size() && stride.size() &&
@@ -117,108 +75,47 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  auto offsetRank = getOffsets().size();
-  auto shapeRank = getShape().size();
-  auto stridesRank = getStrides().size();
-  auto baseRank = getRankOf(getSource()) ? getRankOf(getSource()) : 2;
+  auto rank = (int64_t)getMixedOffsets().size();
+  bool invalidRank = (rank != 2);
+  bool invalidElemTy = false;
 
-  if (offsetRank != shapeRank || shapeRank != stridesRank ||
-      shapeRank != baseRank)
+  // check source type matches the rank if it is a memref.
+  // It also should have the same ElementType as TensorDesc.
+  auto memrefTy = getSourceType().dyn_cast<MemRefType>();
+  if (memrefTy) {
+    invalidRank |= (memrefTy.getRank() != rank);
+    invalidElemTy |= memrefTy.getElementType() != getElementType();
+  }
 
+  // check result type matches the rank
+  invalidRank = (getType().getRank() != rank);
+
+  // mismatches among shape, strides, and offsets are
+  // already handeled by OffsetSizeAndStrideOpInterface.
+  // So they are not check here.
+  if (invalidRank)
     return emitOpError(
-        "Expecting the rank of shape, strides, offsets and memref type "
-        "should match with each other (they currently should be 2D).");
+        "Expecting the rank of shape, strides, offsets, "
+        "source memref type (if source is a memref) and TensorDesc "
+        "should match with each other. They currenlty are 2D.");
+
+  if (invalidElemTy)
+    return emitOpError("TensorDesc should have the same element "
+                       "type with the source if it is a memref.\n");
+
   return success();
 }
 
-// compute consolidated offsets from dynamic_offsets and static_offsets
-// parameters
-llvm::SmallVector<OpFoldResult> CreateNdDescOp::getOffsets() {
-  llvm::SmallVector<OpFoldResult> offsets;
-  auto dynamicOffsets = getDynamicOffsets(); // dynamic_offsets variable
-  auto staticOffsets = getStaticOffsets();   // static_offsets attribute
-
-  // in case static_offsets is missing, dynamic_offsets will be used
-  if (staticOffsets.size() == 0) {
-    offsets.assign(dynamicOffsets.begin(), dynamicOffsets.end());
-    return offsets;
-  }
-
-  // use static offsets for each dim if it has valid value,
-  // othwise use the value from dynamic_offsets
-  for (size_t i = 0, j = 0; i < staticOffsets.size(); i++) {
-    if (ShapedType::isDynamic(staticOffsets[i])) {
-      assert(j < dynamicOffsets.size());
-      offsets.push_back(dynamicOffsets[j++]);
-    } else {
-      auto ty = IndexType::get(getContext());
-      auto attr = IntegerAttr::get(ty, staticOffsets[i]);
-      offsets.push_back(attr);
-    }
-  }
-  return offsets;
-}
-
-// get the consolidated shape of the 2D memory region.
-// It prefer dynamic_shape than the static shape of
-// memref type.
-llvm::SmallVector<OpFoldResult> CreateNdDescOp::getShape() {
-  llvm::SmallVector<OpFoldResult> shape;
-  auto dynShape = getDynamicShape();
-  if (dynShape.size()) {
-    shape.append(dynShape.begin(), dynShape.end());
-    return shape;
-  }
-
-  auto ty = llvm::dyn_cast_if_present<MemRefType>(getSourceType());
-  if (ty && ty.hasStaticShape()) {
-    for (auto dim : ty.getShape()) {
-      auto attr = IntegerAttr::get(IndexType::get(getContext()), dim);
-      shape.push_back(attr);
-    }
-    return shape;
-  }
-
-  this->emitError("The shape information of the memory is missing.\n");
-  return {};
-}
-
-// get the consolidated strides of the 2D memory region.
-// It prefer dynamic_stride than the static strides of
-// memref type.
-llvm::SmallVector<OpFoldResult> CreateNdDescOp::getStrides() {
-  llvm::SmallVector<OpFoldResult> strides;
-
-  auto dynStrides = getDynamicStrides();
-  if (dynStrides.size()) {
-    strides.append(dynStrides.begin(), dynStrides.end());
-    return strides;
-  }
-
-  auto ty = llvm::dyn_cast_if_present<MemRefType>(getSourceType());
-  if (ty && ty.hasStaticShape()) {
-    auto [staticStrides, offset] = getStridesAndOffset(ty);
-    for (auto dim : staticStrides) {
-      auto attr = IntegerAttr::get(IndexType::get(getContext()), dim);
-      strides.push_back(attr);
-    }
-    return strides;
-  }
-
-  this->emitError("The strides information of the memory is missing.\n");
-  return {};
-}
-
 //===----------------------------------------------------------------------===//
-// XeGPU_LoadNDOp
+// XeGPU_LoadNdOp
 //===----------------------------------------------------------------------===//
-LogicalResult LoadNDOp::verify() {
+LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
 
   if (tdescTy.getRank() != 2)
     return emitOpError(
-        "The TensorDesc for LoadNDOp should be a 2D TensorDesc.");
+        "The TensorDesc for LoadNdOp should be a 2D TensorDesc.");
 
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
@@ -257,16 +154,15 @@ LogicalResult LoadNDOp::verify() {
   if (tdescShape != valueShape)
     return emitOpError() << "Result shape doesn't match TensorDesc shape."
                          << "The expected shape is " << makeString(tdescShape)
-                         << ". "
-                         << "But the given shape is " << makeString(valueShape)
-                         << ".\n";
+                         << ". But the given shape is "
+                         << makeString(valueShape) << ".\n";
   return success();
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_StoreNDOp
+// XeGPU_StoreNdOp
 //===----------------------------------------------------------------------===//
-LogicalResult StoreNDOp::verify() {
+LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDesc().getType();               // Tile
   auto valTy = getValue().getType().cast<VectorType>(); // Vector
 
