@@ -282,7 +282,7 @@ def Inliner : Pass<"inline"> {
            /*default=*/"-1U",
            "If the ratio between the number of the operations "
            "in the callee and the number of the operations "
-           "in the caller exceeds this value (in percentages), "
+           "in the caller exceeds this value (in percentage), "
            "then the callee is not inlined even if it is legal "
            "to inline it">,
   ];

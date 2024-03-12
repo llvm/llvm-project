@@ -115,7 +115,7 @@ static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
 
   unsigned ratio = countOps(calleeRegion) * 100 / callerOps;
   LLVM_DEBUG(llvm::dbgs() << "Callee / caller operation ratio (max: "
-                          << inliningThreshold << "): " << ratio << "\n");
+                          << inliningThreshold << "%): " << ratio << "%\n");
   return ratio <= inliningThreshold;
 }
 
