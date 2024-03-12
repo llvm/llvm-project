@@ -11,7 +11,9 @@
 
 #include "fcntl-macros.h"
 
-// TODO: Do we need to define these?
+// These are also defined in <linux/eventpoll.h> but that also contains a
+// different definition of the epoll_event struct that is different from the
+// userspace version.
 
 #define EPOLL_CLOEXEC O_CLOEXEC
 
