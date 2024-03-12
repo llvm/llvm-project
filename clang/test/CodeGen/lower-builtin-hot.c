@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 %s -o - -emit-llvm -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -mllvm -ubsan-exp-hot | FileCheck %s 
+// RUN: %clang_cc1 -O1 %s -o - -emit-llvm -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -mllvm -ubsan-exp-hot | FileCheck %s
 // RUN: %clang_cc1 -O1 %s -o - -emit-llvm -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -mllvm -ubsan-exp-hot -mllvm -clang-lower-builtin-hot -mllvm -lower-builtin-hot-random-rate=1 %s -o - | FileCheck %s --check-prefixes=REMOVE
 
 #include <stdbool.h>
