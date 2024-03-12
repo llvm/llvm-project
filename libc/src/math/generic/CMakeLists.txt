@@ -1817,6 +1817,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextafterf128
+  SRCS
+    nextafterf128.cpp
+  HDRS
+    ../nextafterf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   nexttoward
   SRCS
     nexttoward.cpp
