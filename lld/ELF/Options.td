@@ -67,6 +67,10 @@ defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
   MetaVarName<"[none,zlib,zstd]">;
 
+defm compress_nonalloc_sections: EEq<"compress-nonalloc-sections",
+  "Compress non-SHF_ALLOC output sections matching <section-glob>">,
+  MetaVarName<"<section-glob>=[none|zlib|zstd]">;
+
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
 defm optimize_bb_jumps: BB<"optimize-bb-jumps",
