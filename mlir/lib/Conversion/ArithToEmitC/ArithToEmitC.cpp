@@ -63,12 +63,17 @@ public:
   matchAndRewrite(arith::SelectOp selectOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    if (!selectOp.getCondition().getType().isInteger())
-      return rewriter.notifyMatchFailure(
-          selectOp, "can only converted if condition is a scalar of type i1");
+    auto dstType = getTypeConverter()->convertType(selectOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(selectOp, "type conversion failed");
 
-    rewriter.replaceOpWithNewOp<emitc::ConditionalOp>(
-        selectOp, selectOp.getType(), adaptor.getOperands());
+    if (!adaptor.getCondition().getType().isInteger(1))
+      return rewriter.notifyMatchFailure(
+          selectOp,
+          "can only be converted if condition is a scalar of type i1");
+
+    rewriter.replaceOpWithNewOp<emitc::ConditionalOp>(selectOp, dstType,
+                                                      adaptor.getOperands());
 
     return success();
   }
