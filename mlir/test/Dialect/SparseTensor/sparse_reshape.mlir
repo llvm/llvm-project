@@ -31,7 +31,7 @@
 // CHECK:           %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[I]]] : memref<?xf64>
 // CHECK:           %[[DI0:.*]] = arith.divui %[[SI]], %[[C10]] : index
 // CHECK:           %[[DI1:.*]] = arith.remui %[[SI]], %[[C10]] : index
-// CHECK:           %[[NT:.*]] = sparse_tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
+// CHECK:           %[[NT:.*]] = tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
 // CHECK:           scf.yield %[[NT:.*]]
 // CHECK:         }
 // CHECK:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
@@ -75,7 +75,7 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK:             %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[J]]] : memref<?xf64>
 // CHECK:             %[[T:.*]] = arith.muli %[[SI0]], %[[C10]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
-// CHECK:             %[[R1:.*]] = sparse_tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[DI]]]
+// CHECK:             %[[R1:.*]] = tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[DI]]]
 // CHECK              scf.yield %[[R1]]
 // CHECK            }
 // CHECK            scf.yield %[[RET_1]]
@@ -120,7 +120,7 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK:           %[[T3:.*]] = arith.remui %[[SI]], %[[T2]] : index
 // CHECK:           %[[T4:.*]] = arith.divui %[[T2]], %[[C10]] : index
 // CHECK:           %[[DI1:.*]] = arith.divui %[[T3]], %[[T4]] : index
-// CHECK:           %[[NT:.*]] = sparse_tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
+// CHECK:           %[[NT:.*]] = tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
 // CHECK:           scf.yield %[[NT]]
 // CHECK:         }
 // CHECK:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
@@ -169,7 +169,7 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK:             %[[T3:.*]] = arith.divui %[[T1]], %[[SD1]] : index
 // CHECK:             %[[T4:.*]] = arith.muli %[[SI1]], %[[T3]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T2]], %[[T4]] : index
-// CHECK:             %[[NT:.*]] = sparse_tensor.insert %[[SV]] into %[[R1]]{{\[}}%[[DI]]]
+// CHECK:             %[[NT:.*]] = tensor.insert %[[SV]] into %[[R1]]{{\[}}%[[DI]]]
 // CHECK              scf.yield %[[NT]]
 // CHECK            }
 // CHECK            scf.yield %[[RET_1]]

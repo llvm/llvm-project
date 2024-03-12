@@ -72,10 +72,10 @@ module {
     // CHECK-NEXT: ----
     //
     %densea = tensor.empty() : tensor<4x3xf64, #Dense>
-    %dense1 = sparse_tensor.insert %f1 into %densea[%c0, %c0] : tensor<4x3xf64, #Dense>
-    %dense2 = sparse_tensor.insert %f2 into %dense1[%c2, %c2] : tensor<4x3xf64, #Dense>
-    %dense3 = sparse_tensor.insert %f3 into %dense2[%c3, %c0] : tensor<4x3xf64, #Dense>
-    %dense4 = sparse_tensor.insert %f4 into %dense3[%c3, %c2] : tensor<4x3xf64, #Dense>
+    %dense1 = tensor.insert %f1 into %densea[%c0, %c0] : tensor<4x3xf64, #Dense>
+    %dense2 = tensor.insert %f2 into %dense1[%c2, %c2] : tensor<4x3xf64, #Dense>
+    %dense3 = tensor.insert %f3 into %dense2[%c3, %c0] : tensor<4x3xf64, #Dense>
+    %dense4 = tensor.insert %f4 into %dense3[%c3, %c2] : tensor<4x3xf64, #Dense>
     %densem = sparse_tensor.load %dense4 hasInserts : tensor<4x3xf64, #Dense>
     sparse_tensor.print %densem : tensor<4x3xf64, #Dense>
 
@@ -93,10 +93,10 @@ module {
     // CHECK-NEXT: ----
     //
     %cooa = tensor.empty() : tensor<4x3xf64, #SortedCOO>
-    %coo1 = sparse_tensor.insert %f1 into %cooa[%c0, %c0] : tensor<4x3xf64, #SortedCOO>
-    %coo2 = sparse_tensor.insert %f2 into %coo1[%c2, %c2] : tensor<4x3xf64, #SortedCOO>
-    %coo3 = sparse_tensor.insert %f3 into %coo2[%c3, %c0] : tensor<4x3xf64, #SortedCOO>
-    %coo4 = sparse_tensor.insert %f4 into %coo3[%c3, %c2] : tensor<4x3xf64, #SortedCOO>
+    %coo1 = tensor.insert %f1 into %cooa[%c0, %c0] : tensor<4x3xf64, #SortedCOO>
+    %coo2 = tensor.insert %f2 into %coo1[%c2, %c2] : tensor<4x3xf64, #SortedCOO>
+    %coo3 = tensor.insert %f3 into %coo2[%c3, %c0] : tensor<4x3xf64, #SortedCOO>
+    %coo4 = tensor.insert %f4 into %coo3[%c3, %c2] : tensor<4x3xf64, #SortedCOO>
     %coom = sparse_tensor.load %coo4 hasInserts : tensor<4x3xf64, #SortedCOO>
     sparse_tensor.print %coom : tensor<4x3xf64, #SortedCOO>
 
@@ -113,10 +113,10 @@ module {
     // CHECK-NEXT: ----
     //
     %csra = tensor.empty() : tensor<4x3xf64, #CSR>
-    %csr1 = sparse_tensor.insert %f1 into %csra[%c0, %c0] : tensor<4x3xf64, #CSR>
-    %csr2 = sparse_tensor.insert %f2 into %csr1[%c2, %c2] : tensor<4x3xf64, #CSR>
-    %csr3 = sparse_tensor.insert %f3 into %csr2[%c3, %c0] : tensor<4x3xf64, #CSR>
-    %csr4 = sparse_tensor.insert %f4 into %csr3[%c3, %c2] : tensor<4x3xf64, #CSR>
+    %csr1 = tensor.insert %f1 into %csra[%c0, %c0] : tensor<4x3xf64, #CSR>
+    %csr2 = tensor.insert %f2 into %csr1[%c2, %c2] : tensor<4x3xf64, #CSR>
+    %csr3 = tensor.insert %f3 into %csr2[%c3, %c0] : tensor<4x3xf64, #CSR>
+    %csr4 = tensor.insert %f4 into %csr3[%c3, %c2] : tensor<4x3xf64, #CSR>
     %csrm = sparse_tensor.load %csr4 hasInserts : tensor<4x3xf64, #CSR>
     sparse_tensor.print %csrm : tensor<4x3xf64, #CSR>
 
@@ -135,10 +135,10 @@ module {
     // CHECK-NEXT: ----
     //
     %dcsra = tensor.empty() : tensor<4x3xf64, #DCSR>
-    %dcsr1 = sparse_tensor.insert %f1 into %dcsra[%c0, %c0] : tensor<4x3xf64, #DCSR>
-    %dcsr2 = sparse_tensor.insert %f2 into %dcsr1[%c2, %c2] : tensor<4x3xf64, #DCSR>
-    %dcsr3 = sparse_tensor.insert %f3 into %dcsr2[%c3, %c0] : tensor<4x3xf64, #DCSR>
-    %dcsr4 = sparse_tensor.insert %f4 into %dcsr3[%c3, %c2] : tensor<4x3xf64, #DCSR>
+    %dcsr1 = tensor.insert %f1 into %dcsra[%c0, %c0] : tensor<4x3xf64, #DCSR>
+    %dcsr2 = tensor.insert %f2 into %dcsr1[%c2, %c2] : tensor<4x3xf64, #DCSR>
+    %dcsr3 = tensor.insert %f3 into %dcsr2[%c3, %c0] : tensor<4x3xf64, #DCSR>
+    %dcsr4 = tensor.insert %f4 into %dcsr3[%c3, %c2] : tensor<4x3xf64, #DCSR>
     %dcsrm = sparse_tensor.load %dcsr4 hasInserts : tensor<4x3xf64, #DCSR>
     sparse_tensor.print %dcsrm : tensor<4x3xf64, #DCSR>
 
@@ -155,10 +155,10 @@ module {
     // CHECK-NEXT: ----
     //
     %rowa = tensor.empty() : tensor<4x3xf64, #Row>
-    %row1 = sparse_tensor.insert %f1 into %rowa[%c0, %c0] : tensor<4x3xf64, #Row>
-    %row2 = sparse_tensor.insert %f2 into %row1[%c2, %c2] : tensor<4x3xf64, #Row>
-    %row3 = sparse_tensor.insert %f3 into %row2[%c3, %c0] : tensor<4x3xf64, #Row>
-    %row4 = sparse_tensor.insert %f4 into %row3[%c3, %c2] : tensor<4x3xf64, #Row>
+    %row1 = tensor.insert %f1 into %rowa[%c0, %c0] : tensor<4x3xf64, #Row>
+    %row2 = tensor.insert %f2 into %row1[%c2, %c2] : tensor<4x3xf64, #Row>
+    %row3 = tensor.insert %f3 into %row2[%c3, %c0] : tensor<4x3xf64, #Row>
+    %row4 = tensor.insert %f4 into %row3[%c3, %c2] : tensor<4x3xf64, #Row>
     %rowm = sparse_tensor.load %row4 hasInserts : tensor<4x3xf64, #Row>
     sparse_tensor.print %rowm : tensor<4x3xf64, #Row>
 
