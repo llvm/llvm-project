@@ -3182,6 +3182,17 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
   case UO_AddrOf:
     return this->delegate(SubExpr);
 
+  case UO_LNot:
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitComplexBoolCast(SubExpr))
+      return false;
+    if (!this->emitInvBool(E))
+      return false;
+    if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
+      return this->emitCast(PT_Bool, ET, E);
+    return true;
+
   case UO_Real:
     return this->emitComplexReal(SubExpr);
 
