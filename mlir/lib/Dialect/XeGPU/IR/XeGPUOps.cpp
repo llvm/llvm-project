@@ -53,69 +53,69 @@ static std::string makeString(T array, bool breakline = false) {
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type TensorDesc, Value source, ValueRange offsets,
-                           ValueRange shape, ValueRange strides,
-                           llvm::ArrayRef<int64_t> static_offsets) {
-  auto offsetRank = static_offsets.size();
-  auto shapeRank = shape.size() ? shape.size() : getRankOf(source);
+// void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+//                            Type TensorDesc, Value source, ValueRange offsets,
+//                            ValueRange shape, ValueRange strides,
+//                            llvm::ArrayRef<int64_t> static_offsets) {
+//   auto offsetRank = static_offsets.size();
+//   auto shapeRank = shape.size() ? shape.size() : getRankOf(source);
 
-  size_t dynOffsetRank =
-      std::count_if(static_offsets.begin(), static_offsets.end(),
-                    [](int64_t d) { return ShapedType::isDynamic(d); });
+//   size_t dynOffsetRank =
+//       std::count_if(static_offsets.begin(), static_offsets.end(),
+//                     [](int64_t d) { return ShapedType::isDynamic(d); });
 
-  // shape and strides should exists at the same time
-  // and the final rank for shape and offset (dynamic + static)
-  // should be the same
-  assert(shape.size() == strides.size() && shapeRank == offsetRank &&
-         offsets.size() == dynOffsetRank);
+//   // shape and strides should exists at the same time
+//   // and the final rank for shape and offset (dynamic + static)
+//   // should be the same
+//   assert(shape.size() == strides.size() && shapeRank == offsetRank &&
+//          offsets.size() == dynOffsetRank);
 
-  state.addOperands(source);
-  state.addOperands(offsets);
-  state.addOperands(shape);
-  state.addOperands(strides);
-  state.addAttribute(
-      getOperandSegmentSizesAttrName(state.name),
-      builder.getDenseI32ArrayAttr({1, static_cast<int32_t>(offsets.size()),
-                                    static_cast<int32_t>(shape.size()),
-                                    static_cast<int32_t>(strides.size())}));
-  state.addAttribute(getStaticOffsetsAttrName(state.name),
-                     builder.getDenseI64ArrayAttr(static_offsets));
-  state.addTypes(TensorDesc);
-}
+//   state.addOperands(source);
+//   state.addOperands(offsets);
+//   state.addOperands(shape);
+//   state.addOperands(strides);
+//   state.addAttribute(
+//       getOperandSegmentSizesAttrName(state.name),
+//       builder.getDenseI32ArrayAttr({1, static_cast<int32_t>(offsets.size()),
+//                                     static_cast<int32_t>(shape.size()),
+//                                     static_cast<int32_t>(strides.size())}));
+//   state.addAttribute(getStaticOffsetsAttrName(state.name),
+//                      builder.getDenseI64ArrayAttr(static_offsets));
+//   state.addTypes(TensorDesc);
+// }
 
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  auto ty = llvm::dyn_cast_if_present<MemRefType>(source.getType());
-  assert(ty && ty.hasStaticShape() && offsets.size() == getRankOf(source));
+// void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+//                            Type tdesc, Value source,
+//                            llvm::ArrayRef<OpFoldResult> offsets) {
+//   auto ty = llvm::dyn_cast_if_present<MemRefType>(source.getType());
+//   assert(ty && ty.hasStaticShape() && offsets.size() == getRankOf(source));
 
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+//   llvm::SmallVector<int64_t> staticOffsets;
+//   llvm::SmallVector<Value> dynamicOffsets;
+//   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
 
-  build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
-        ValueRange({}) /* empty dynamic strides */,
-        staticOffsets /* static offsets */);
-}
+//   build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
+//         ValueRange({}) /* empty dynamic shape */,
+//         ValueRange({}) /* empty dynamic strides */,
+//         staticOffsets /* static offsets */);
+// }
 
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
-                           llvm::ArrayRef<OpFoldResult> offsets,
-                           ValueRange shape, ValueRange stride) {
-  assert(shape.size() && offsets.size() && stride.size() &&
-         shape.size() == stride.size() && shape.size() == offsets.size());
+// void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+//                            Type tdesc, Value source,
+//                            llvm::ArrayRef<OpFoldResult> offsets,
+//                            ValueRange shape, ValueRange stride) {
+//   assert(shape.size() && offsets.size() && stride.size() &&
+//          shape.size() == stride.size() && shape.size() == offsets.size());
 
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
+//   llvm::SmallVector<int64_t> staticOffsets;
+//   llvm::SmallVector<Value> dynamicOffsets;
 
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+//   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
 
-  build(builder, state, tdesc, source, /* dynamic_offsets = */ dynamicOffsets,
-        /* dynamic shape = */ shape , /* dynamic strides = */ stride,
-        /* static offsets = */ staticOffsets);
-}
+//   build(builder, state, tdesc, source, /* dynamic_offsets = */ dynamicOffsets,
+//         /* dynamic shape = */ shape , /* dynamic strides = */ stride,
+//         /* static offsets = */ staticOffsets);
+// }
 
 
 LogicalResult CreateNdDescOp::verify() {

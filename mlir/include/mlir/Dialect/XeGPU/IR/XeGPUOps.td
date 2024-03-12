@@ -81,34 +81,31 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     Variadic<Index>: $offsets, 
     Variadic<Index>: $shape, 
     Variadic<Index>: $strides,
-    DenseI64ArrayAttr: $static_offsets,
-    DefaultValuedAttr<DenseI64ArrayAttr, "{0, 0}">: $static_shape,
-    DefaultValuedAttr<DenseI64ArrayAttr, "{0, 0}">: $static_strides
+    DenseI64ArrayAttr: $static_offsets
   );
   let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let assemblyFormat = [{
     $source ``
     custom<DynamicIndexList>($offsets, $static_offsets)
-    (`,` custom<DynamicIndexList>($shape, $static_shape)^
-     `,` custom<DynamicIndexList>($strides, $static_strides))?
+    (`,` `[` $shape^ `]` `,` `[` $strides `]`)?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
-  let skipDefaultBuilders = 1;
+
   let hasVerifier = 1;
 
-  let builders = [
-    OpBuilder<(ins "Type": $TensorDesc, "Value": $source, "ValueRange": $offsets, 
-                   "ValueRange": $shape, "ValueRange": $strides, 
-                   "llvm::ArrayRef<int64_t>": $static_offsets)>,
-
-    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-
-    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
-                   "llvm::ArrayRef<OpFoldResult>": $offsets,
-                   "ValueRange": $shape, "ValueRange": $stride)>
-  ];
+//  let builders = [
+//    OpBuilder<(ins "Type": $TensorDesc, "Value": $source, "ValueRange": $offsets, 
+//                   "ValueRange": $shape, "ValueRange": $strides, 
+//                   "llvm::ArrayRef<int64_t>": $static_offsets)>,
+//
+//    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
+//                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
+//
+//    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
+//                   "llvm::ArrayRef<OpFoldResult>": $offsets,
+//                   "ValueRange": $shape, "ValueRange": $stride)>
+//  ];
 
   let extraClassDeclaration = [{
     /// Returns the type of the source memref operand.
@@ -119,6 +116,35 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     /// Returns the type of the result TensorDesc.
     xegpu::TensorDescType getType() {
       return getTensorDesc().getType();
+    }
+
+    /// Return the element type of the TensorDesc
+    Type getElementType() {
+      return getType().getElementType();
+    }
+
+
+
+    /// Return the shape of the TensorDesc
+    llvm::ArrayRef<int64_t> getTensorDescShape() {
+      return getType().getShape();
+    }
+
+    OperandRange getSizes() {
+      return getShape();
+    }
+
+    SmallVector<int64_t> getStaticSizes() {
+      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
+        return SmallVector<int64_t>(ty.getShape());
+      }
+    }
+
+    SmallVector<int64_t> getStaticStrides() {
+      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
+        auto [strides, offset] = getStridesAndOffset(ty);
+        return strides;
+      }
     }
 
     /// Returns the offsets info to the source. It consolidates
@@ -142,30 +168,13 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     /// strides information from  memref type will be ignored.
     llvm::SmallVector<OpFoldResult> getEffectiveStrides();
 
-    /// Return the element type of the TensorDesc
-    Type getElementType() {
-      return getType().getElementType();
-    }
 
-    /// Return the shape of the TensorDesc
-    llvm::ArrayRef<int64_t> getTensorDescShape() {
-      return getType().getShape();
-    }
-
-    /// Return the expected rank of each of the`static_offsets`, `static_sizes`
-    /// and `static_strides` attributes.
+    /// Return the expected rank of each of the`static_offsets`, 
+    /// `static_sizes` and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
       return {2, 2, 2};
     }
-
-    mlir::OperandRange getSizes() {
-      return getShape();
-    }
     
-    llvm::ArrayRef<int64_t> getStaticSizes() {
-      return getStaticShape();
-    }
-
     /// Return the number of leading operands before the `offsets`, `sizes` and
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
