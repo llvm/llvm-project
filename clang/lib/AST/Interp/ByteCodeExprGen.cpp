@@ -3138,16 +3138,17 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
     return this->discard(SubExpr);
 
   std::optional<PrimType> ResT = classify(E);
+  auto prepareResult = [=]() -> bool {
+    if (!ResT && !Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(SubExpr, /*IsExtended=*/false);
+      if (!LocalIndex)
+        return false;
+      return this->emitGetPtrLocal(*LocalIndex, E);
+    }
 
-  // Prepare storage for result.
-  if (!ResT && !Initializing) {
-    std::optional<unsigned> LocalIndex =
-        allocateLocal(SubExpr, /*IsExtended=*/false);
-    if (!LocalIndex)
-      return false;
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
-      return false;
-  }
+    return true;
+  };
 
   // The offset of the temporary, if we created one.
   unsigned SubExprOffset = ~0u;
@@ -3167,6 +3168,8 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
 
   switch (E->getOpcode()) {
   case UO_Minus:
+    if (!prepareResult())
+      return false;
     if (!createTemp())
       return false;
     for (unsigned I = 0; I != 2; ++I) {
@@ -3179,7 +3182,9 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
     }
     break;
 
-  case UO_AddrOf:
+  case UO_Plus:   // +x
+  case UO_AddrOf: // &x
+  case UO_Deref:  // *x
     return this->delegate(SubExpr);
 
   case UO_LNot:
