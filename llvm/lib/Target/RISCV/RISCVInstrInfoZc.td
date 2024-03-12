@@ -61,10 +61,11 @@ def rlist : Operand<OtherVT> {
   }];
  }
 
-def spimm : Operand<OtherVT> {
+def spimm : RISCVOp<OtherVT> {
   let ParserMatchClass = SpimmAsmOperand;
   let PrintMethod = "printSpimm";
   let DecoderMethod = "decodeZcmpSpimm";
+  let OperandType = "OPERAND_SPIMM";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
