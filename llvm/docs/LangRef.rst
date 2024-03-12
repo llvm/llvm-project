@@ -27656,7 +27656,7 @@ This intrinsic returns true iff it's known that containing basic block is hot in
 profile.
 
 When used with profile based optimization allows to change program behaviour
-deppending on the code hotness.
+depending on the code hotness.
 
 Arguments:
 """"""""""
