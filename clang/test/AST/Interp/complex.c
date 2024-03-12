@@ -14,3 +14,8 @@ void blah() {
 _Static_assert((0.0 + 0.0j) == (0.0 + 0.0j), "");
 _Static_assert((0.0 + 0.0j) != (0.0 + 0.0j), ""); // both-error {{static assertion}} \
                                                   // both-note {{evaluates to}}
+
+const _Complex float FC = {0.0f, 0.0f};
+_Static_assert(!FC, "");
+const _Complex float FI = {0, 0};
+_Static_assert(!FI, "");
