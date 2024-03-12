@@ -29,7 +29,7 @@ int foo() {
 // IR-NEXT:    [[I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[SUM:%.*]] = alloca [10 x [10 x i32]], align 16
-// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4:[0-9]+]], i32 2, ptr @_Z3foov.omp_outlined, ptr [[J]], ptr [[SUM]])
+// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @_Z3foov.omp_outlined, ptr [[J]], ptr [[SUM]])
 // IR-NEXT:    ret i32 0
 //
 //
@@ -132,7 +132,7 @@ int foo() {
 // IR:       omp.loop.exit:
 // IR-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP18]], align 4
-// IR-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP19]])
+// IR-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP19]])
 // IR-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // IR-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // IR-NEXT:    br i1 [[TMP21]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
@@ -146,10 +146,10 @@ int foo() {
 // IR-NEXT:    store ptr [[SUM1]], ptr [[TMP23]], align 8
 // IR-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// IR-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// IR-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    switch i32 [[TMP26]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-NEXT:    ]
 // IR:       .omp.reduction.case1:
 // IR-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -167,7 +167,7 @@ int foo() {
 // IR-NEXT:    [[OMP_ARRAYCPY_DONE17:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT16]], [[TMP27]]
 // IR-NEXT:    br i1 [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_BODY]]
 // IR:       omp.arraycpy.done18:
-// IR-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
+// IR-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // IR:       .omp.reduction.case2:
 // IR-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -225,7 +225,7 @@ int foo() {
 // IR-PCH-NEXT:    [[I:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[J:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[SUM:%.*]] = alloca [10 x [10 x i32]], align 16
-// IR-PCH-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4:[0-9]+]], i32 2, ptr @_Z3foov.omp_outlined, ptr [[J]], ptr [[SUM]])
+// IR-PCH-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @_Z3foov.omp_outlined, ptr [[J]], ptr [[SUM]])
 // IR-PCH-NEXT:    ret i32 0
 //
 //
@@ -328,7 +328,7 @@ int foo() {
 // IR-PCH:       omp.loop.exit:
 // IR-PCH-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP18]], align 4
-// IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP19]])
+// IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP19]])
 // IR-PCH-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // IR-PCH-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // IR-PCH-NEXT:    br i1 [[TMP21]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
@@ -342,10 +342,10 @@ int foo() {
 // IR-PCH-NEXT:    store ptr [[SUM1]], ptr [[TMP23]], align 8
 // IR-PCH-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// IR-PCH-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// IR-PCH-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    switch i32 [[TMP26]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-PCH-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-PCH-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-PCH-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-PCH-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-PCH-NEXT:    ]
 // IR-PCH:       .omp.reduction.case1:
 // IR-PCH-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -363,7 +363,7 @@ int foo() {
 // IR-PCH-NEXT:    [[OMP_ARRAYCPY_DONE17:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT16]], [[TMP27]]
 // IR-PCH-NEXT:    br i1 [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_BODY]]
 // IR-PCH:       omp.arraycpy.done18:
-// IR-PCH-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
+// IR-PCH-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // IR-PCH:       .omp.reduction.case2:
 // IR-PCH-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100

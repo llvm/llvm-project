@@ -470,6 +470,6 @@ void foo() {
 // CHECK:       omp.inner.for.end:
 // CHECK-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK:       omp.loop.exit:
-// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP3]])
 // CHECK-NEXT:    ret void
 //

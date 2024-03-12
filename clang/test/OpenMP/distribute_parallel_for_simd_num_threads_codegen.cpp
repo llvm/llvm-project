@@ -393,7 +393,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK1-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -568,7 +568,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK1-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -914,7 +914,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK1-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1075,7 +1075,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK1-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1236,7 +1236,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK1-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1412,7 +1412,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK1-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2068,7 +2068,7 @@ int main() {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK5-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2243,7 +2243,7 @@ int main() {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK5-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2580,7 +2580,7 @@ int main() {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK5-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2741,7 +2741,7 @@ int main() {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK5-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2902,7 +2902,7 @@ int main() {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK5-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -3078,7 +3078,7 @@ int main() {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK5-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -3404,7 +3404,7 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK9-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -3579,7 +3579,7 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK9-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -3925,7 +3925,7 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK9-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -4086,7 +4086,7 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK9-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -4247,7 +4247,7 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK9-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -4423,7 +4423,7 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK9-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK9-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK9-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -5079,7 +5079,7 @@ int main() {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK13-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -5254,7 +5254,7 @@ int main() {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK13-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -5591,7 +5591,7 @@ int main() {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK13-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -5752,7 +5752,7 @@ int main() {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK13-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -5913,7 +5913,7 @@ int main() {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK13-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -6089,7 +6089,7 @@ int main() {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
 // CHECK13-NEXT:    br i1 [[TMP12]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]

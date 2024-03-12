@@ -157,7 +157,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK1-NEXT:    store i32 0, ptr [[TMP17]], align 4
-// CHECK1-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.region_id, ptr [[KERNEL_ARGS]])
+// CHECK1-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.region_id, ptr [[KERNEL_ARGS]])
 // CHECK1-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK1-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
@@ -177,7 +177,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.omp_outlined, ptr [[TMP0]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.omp_outlined, ptr [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -259,7 +259,7 @@ int main (int argc, char **argv) {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -318,7 +318,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
 // CHECK3-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK3-NEXT:    store i32 0, ptr [[TMP17]], align 4
-// CHECK3-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.region_id, ptr [[KERNEL_ARGS]])
+// CHECK3-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.region_id, ptr [[KERNEL_ARGS]])
 // CHECK3-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK3-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
@@ -338,7 +338,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.omp_outlined, ptr [[TMP0]])
+// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l28.omp_outlined, ptr [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -418,7 +418,7 @@ int main (int argc, char **argv) {
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -547,7 +547,7 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP47]], align 4
 // CHECK9-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK9-NEXT:    store i32 0, ptr [[TMP48]], align 4
-// CHECK9-NEXT:    [[TMP49:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.region_id, ptr [[KERNEL_ARGS]])
+// CHECK9-NEXT:    [[TMP49:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.region_id, ptr [[KERNEL_ARGS]])
 // CHECK9-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CHECK9-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
@@ -579,7 +579,7 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
 // CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 5, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.omp_outlined, ptr [[N_ADDR]], ptr [[M_ADDR]], i64 [[TMP0]], i64 [[TMP1]], ptr [[TMP2]])
+// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 5, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.omp_outlined, ptr [[N_ADDR]], ptr [[M_ADDR]], i64 [[TMP0]], i64 [[TMP1]], ptr [[TMP2]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -725,7 +725,7 @@ int main (int argc, char **argv) {
 // CHECK9:       omp.loop.exit:
 // CHECK9-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP31]], align 4
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP32]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP32]])
 // CHECK9-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK9:       omp.precond.end:
 // CHECK9-NEXT:    ret void
@@ -777,7 +777,7 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
 // CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK9-NEXT:    store i32 0, ptr [[TMP17]], align 4
-// CHECK9-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.region_id, ptr [[KERNEL_ARGS]])
+// CHECK9-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.region_id, ptr [[KERNEL_ARGS]])
 // CHECK9-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK9-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
@@ -793,7 +793,7 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.omp_outlined, ptr [[TMP0]])
+// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.omp_outlined, ptr [[TMP0]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -874,7 +874,7 @@ int main (int argc, char **argv) {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -1002,7 +1002,7 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP46]], align 4
 // CHECK11-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK11-NEXT:    store i32 0, ptr [[TMP47]], align 4
-// CHECK11-NEXT:    [[TMP48:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.region_id, ptr [[KERNEL_ARGS]])
+// CHECK11-NEXT:    [[TMP48:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.region_id, ptr [[KERNEL_ARGS]])
 // CHECK11-NEXT:    [[TMP49:%.*]] = icmp ne i32 [[TMP48]], 0
 // CHECK11-NEXT:    br i1 [[TMP49]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK11:       omp_offload.failed:
@@ -1034,7 +1034,7 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VLA_ADDR]], align 4
 // CHECK11-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VLA_ADDR2]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 5, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.omp_outlined, ptr [[N_ADDR]], ptr [[M_ADDR]], i32 [[TMP0]], i32 [[TMP1]], ptr [[TMP2]])
+// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 5, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l83.omp_outlined, ptr [[N_ADDR]], ptr [[M_ADDR]], i32 [[TMP0]], i32 [[TMP1]], ptr [[TMP2]])
 // CHECK11-NEXT:    ret void
 //
 //
@@ -1178,7 +1178,7 @@ int main (int argc, char **argv) {
 // CHECK11:       omp.loop.exit:
 // CHECK11-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK11-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP31]], align 4
-// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP32]])
+// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP32]])
 // CHECK11-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK11:       omp.precond.end:
 // CHECK11-NEXT:    ret void
@@ -1230,7 +1230,7 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
 // CHECK11-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK11-NEXT:    store i32 0, ptr [[TMP17]], align 4
-// CHECK11-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.region_id, ptr [[KERNEL_ARGS]])
+// CHECK11-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.region_id, ptr [[KERNEL_ARGS]])
 // CHECK11-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK11-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK11:       omp_offload.failed:
@@ -1246,7 +1246,7 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.omp_outlined, ptr [[TMP0]])
+// CHECK11-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10ELi2EEiT__l69.omp_outlined, ptr [[TMP0]])
 // CHECK11-NEXT:    ret void
 //
 //
@@ -1325,6 +1325,6 @@ int main (int argc, char **argv) {
 // CHECK11:       omp.inner.for.end:
 // CHECK11-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK11:       omp.loop.exit:
-// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK11-NEXT:    ret void
 //

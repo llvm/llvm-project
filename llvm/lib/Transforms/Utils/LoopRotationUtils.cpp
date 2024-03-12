@@ -554,7 +554,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         DbgIntrinsics.insert(makeHash(DII));
         // Until RemoveDIs supports dbg.declares in DPValue format, we'll need
         // to collect DPValues attached to any other debug intrinsics.
-        for (const DPValue &DPV : DPValue::filter(DII->getDbgValueRange()))
+        for (const DPValue &DPV : DPValue::filter(DII->getDbgRecordRange()))
           DbgIntrinsics.insert(makeHash(&DPV));
       } else {
         break;
@@ -564,7 +564,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Build DPValue hashes for DPValues attached to the terminator, which isn't
     // considered in the loop above.
     for (const DPValue &DPV :
-         DPValue::filter(OrigPreheader->getTerminator()->getDbgValueRange()))
+         DPValue::filter(OrigPreheader->getTerminator()->getDbgRecordRange()))
       DbgIntrinsics.insert(makeHash(&DPV));
 
     // Remember the local noalias scope declarations in the header. After the
@@ -599,7 +599,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // (Stored as a range because it gives us a natural way of testing whether
     //  there were DPValues on the next instruction before we hoisted things).
     iterator_range<DPValue::self_iterator> NextDbgInsts =
-      (I != E) ? I->getDbgValueRange() : DPMarker::getEmptyDPValueRange();
+        (I != E) ? I->getDbgRecordRange() : DPMarker::getEmptyDbgRecordRange();
 
     while (I != E) {
       Instruction *Inst = &*I++;
@@ -636,7 +636,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
               DPV.eraseFromParent();
         }
 
-        NextDbgInsts = I->getDbgValueRange();
+        NextDbgInsts = I->getDbgRecordRange();
 
         Inst->moveBefore(LoopEntryBranch);
 
@@ -655,7 +655,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
         RemapDPValueRange(M, Range, ValueMap,
                           RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-        NextDbgInsts = DPMarker::getEmptyDPValueRange();
+        NextDbgInsts = DPMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
         for (DPValue &DPV : make_early_inc_range(DPValue::filter(Range)))
           if (DbgIntrinsics.count(makeHash(&DPV)))

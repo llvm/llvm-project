@@ -1312,7 +1312,7 @@ int foo() {
 // IR-GPU:       omp.loop.exit:
 // IR-GPU-NEXT:    [[TMP32:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP32]], align 4
-// IR-GPU-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP33]])
+// IR-GPU-NEXT:    call void @__kmpc_distribute_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP33]])
 // IR-GPU-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // IR-GPU-NEXT:    br i1 [[TMP35]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
@@ -1466,7 +1466,7 @@ int foo() {
 // IR-GPU:       omp.loop.exit:
 // IR-GPU-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP18]], align 4
-// IR-GPU-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP19]])
+// IR-GPU-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr), i32 [[TMP19]])
 // IR-GPU-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    store ptr [[SUM4_ASCAST]], ptr [[TMP20]], align 8
 // IR-GPU-NEXT:    [[TMP21:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i64 400, ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
@@ -2165,7 +2165,7 @@ int foo() {
 // IR:       omp.loop.exit:
 // IR-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
-// IR-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP20]])
+// IR-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP20]])
 // IR-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // IR-NEXT:    store ptr [[SUM4]], ptr [[TMP21]], align 8
 // IR-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
@@ -2560,7 +2560,7 @@ int foo() {
 // IR-PCH:       omp.loop.exit:
 // IR-PCH-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
-// IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP20]])
+// IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP20]])
 // IR-PCH-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // IR-PCH-NEXT:    store ptr [[SUM4]], ptr [[TMP21]], align 8
 // IR-PCH-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8

@@ -919,7 +919,7 @@ int main()
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP23]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr), i32 [[TMP23]])
 // CHECK-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK:       omp.precond.end:
 // CHECK-NEXT:    ret void
@@ -1077,7 +1077,7 @@ int main()
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP23]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr), i32 [[TMP23]])
 // CHECK-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK:       omp.precond.end:
 // CHECK-NEXT:    ret void

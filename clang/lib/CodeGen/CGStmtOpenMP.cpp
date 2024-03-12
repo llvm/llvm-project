@@ -3110,10 +3110,10 @@ void CodeGenFunction::EmitOMPOuterLoop(
   EmitBlock(LoopExit.getBlock());
 
   // Tell the runtime we are done.
-  auto &&CodeGen = [DynamicOrOrdered, &S](CodeGenFunction &CGF) {
+  auto &&CodeGen = [DynamicOrOrdered, &S, &LoopArgs](CodeGenFunction &CGF) {
     if (!DynamicOrOrdered)
       CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getEndLoc(),
-                                                     S.getDirectiveKind());
+                                                     LoopArgs.DKind);
   };
   OMPCancelStack.emitExit(*this, S.getDirectiveKind(), CodeGen);
 }
@@ -3219,6 +3219,7 @@ void CodeGenFunction::EmitOMPForOuterLoop(
   OuterLoopArgs.Cond = S.getCond();
   OuterLoopArgs.NextLB = S.getNextLowerBound();
   OuterLoopArgs.NextUB = S.getNextUpperBound();
+  OuterLoopArgs.DKind = LoopArgs.DKind;
   EmitOMPOuterLoop(DynamicOrOrdered, IsMonotonic, S, LoopScope, OuterLoopArgs,
                    emitOMPLoopBodyWithStopPoint, CodeGenOrdered);
 }
@@ -3280,6 +3281,7 @@ void CodeGenFunction::EmitOMPDistributeOuterLoop(
   OuterLoopArgs.NextUB = isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
                              ? S.getCombinedNextUpperBound()
                              : S.getNextUpperBound();
+  OuterLoopArgs.DKind = OMPD_distribute;
 
   EmitOMPOuterLoop(/* DynamicOrOrdered = */ false, /* IsMonotonic = */ false, S,
                    LoopScope, OuterLoopArgs, CodeGenLoopContent,
@@ -3652,15 +3654,16 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         // Tell the runtime we are done.
         auto &&CodeGen = [&S](CodeGenFunction &CGF) {
           CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getEndLoc(),
-                                                         S.getDirectiveKind());
+                                                         OMPD_for);
         };
         OMPCancelStack.emitExit(*this, S.getDirectiveKind(), CodeGen);
       } else {
         // Emit the outer loop, which requests its work chunk [LB..UB] from
         // runtime and runs the inner loop to process it.
-        const OMPLoopArguments LoopArguments(
+        OMPLoopArguments LoopArguments(
             LB.getAddress(*this), UB.getAddress(*this), ST.getAddress(*this),
             IL.getAddress(*this), Chunk, EUB);
+        LoopArguments.DKind = OMPD_for;
         EmitOMPForOuterLoop(ScheduleKind, IsMonotonic, S, LoopScope, Ordered,
                             LoopArguments, CGDispatchBounds);
       }
@@ -4282,7 +4285,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     // Tell the runtime we are done.
     auto &&CodeGen = [&S](CodeGenFunction &CGF) {
       CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getEndLoc(),
-                                                     S.getDirectiveKind());
+                                                     OMPD_sections);
     };
     CGF.OMPCancelStack.emitExit(CGF, S.getDirectiveKind(), CodeGen);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);
@@ -5994,7 +5997,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
             });
         EmitBlock(LoopExit.getBlock());
         // Tell the runtime we are done.
-        RT.emitForStaticFinish(*this, S.getEndLoc(), S.getDirectiveKind());
+        RT.emitForStaticFinish(*this, S.getEndLoc(), OMPD_distribute);
       } else {
         // Emit the outer loop, which requests its work chunk [LB..UB] from
         // runtime and runs the inner loop to process it.

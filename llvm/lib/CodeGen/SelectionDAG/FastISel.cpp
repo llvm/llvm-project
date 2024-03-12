@@ -1181,14 +1181,14 @@ bool FastISel::selectCall(const User *I) {
 }
 
 void FastISel::handleDbgInfo(const Instruction *II) {
-  if (!II->hasDbgValues())
+  if (!II->hasDbgRecords())
     return;
 
   // Clear any metadata.
   MIMD = MIMetadata();
 
   // Reverse order of debug records, because fast-isel walks through backwards.
-  for (DbgRecord &DR : llvm::reverse(II->getDbgValueRange())) {
+  for (DbgRecord &DR : llvm::reverse(II->getDbgRecordRange())) {
     flushLocalValueMap();
     recomputeInsertPt();
 

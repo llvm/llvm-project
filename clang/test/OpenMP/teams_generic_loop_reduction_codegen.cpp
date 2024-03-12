@@ -141,7 +141,7 @@ int main() {
 // CHECK1-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP18]], align 4
 // CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK1-NEXT:    store i32 0, ptr [[TMP19]], align 4
-// CHECK1-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB4:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.region_id, ptr [[KERNEL_ARGS]])
+// CHECK1-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.region_id, ptr [[KERNEL_ARGS]])
 // CHECK1-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK1-NEXT:    br i1 [[TMP21]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
@@ -157,7 +157,7 @@ int main() {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[SIVAR_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined, ptr [[SIVAR_ADDR]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined, ptr [[SIVAR_ADDR]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -227,10 +227,10 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 8
-// CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -240,7 +240,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[SIVAR1]], align 4
 // CHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP14]], [[TMP15]]
 // CHECK1-NEXT:    store i32 [[ADD5]], ptr [[TMP0]], align 4
-// CHECK1-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK1-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SIVAR1]], align 4
@@ -320,7 +320,7 @@ int main() {
 // CHECK1-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP18]], align 4
 // CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK1-NEXT:    store i32 0, ptr [[TMP19]], align 4
-// CHECK1-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB4]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.region_id, ptr [[KERNEL_ARGS]])
+// CHECK1-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.region_id, ptr [[KERNEL_ARGS]])
 // CHECK1-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK1-NEXT:    br i1 [[TMP21]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
@@ -335,7 +335,7 @@ int main() {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[T_VAR_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[T_VAR]], ptr [[T_VAR_ADDR]], align 8
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined, ptr [[T_VAR_ADDR]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined, ptr [[T_VAR_ADDR]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -405,10 +405,10 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[T_VAR1]], ptr [[TMP12]], align 8
-// CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK1-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // CHECK1-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // CHECK1-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -418,7 +418,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[T_VAR1]], align 4
 // CHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP14]], [[TMP15]]
 // CHECK1-NEXT:    store i32 [[ADD5]], ptr [[TMP0]], align 4
-// CHECK1-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK1-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[T_VAR1]], align 4
@@ -496,7 +496,7 @@ int main() {
 // CHECK3-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP18]], align 4
 // CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK3-NEXT:    store i32 0, ptr [[TMP19]], align 4
-// CHECK3-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB4:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.region_id, ptr [[KERNEL_ARGS]])
+// CHECK3-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3:[0-9]+]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.region_id, ptr [[KERNEL_ARGS]])
 // CHECK3-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK3-NEXT:    br i1 [[TMP21]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
@@ -512,7 +512,7 @@ int main() {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[SIVAR_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store i32 [[SIVAR]], ptr [[SIVAR_ADDR]], align 4
-// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined, ptr [[SIVAR_ADDR]])
+// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined, ptr [[SIVAR_ADDR]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -582,10 +582,10 @@ int main() {
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[SIVAR1]], ptr [[TMP12]], align 4
-// CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -595,7 +595,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i32, ptr [[SIVAR1]], align 4
 // CHECK3-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP14]], [[TMP15]]
 // CHECK3-NEXT:    store i32 [[ADD5]], ptr [[TMP0]], align 4
-// CHECK3-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK3-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK3:       .omp.reduction.case2:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SIVAR1]], align 4
@@ -675,7 +675,7 @@ int main() {
 // CHECK3-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP18]], align 4
 // CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // CHECK3-NEXT:    store i32 0, ptr [[TMP19]], align 4
-// CHECK3-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB4]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.region_id, ptr [[KERNEL_ARGS]])
+// CHECK3-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB3]], i64 -1, i32 0, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.region_id, ptr [[KERNEL_ARGS]])
 // CHECK3-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK3-NEXT:    br i1 [[TMP21]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
@@ -690,7 +690,7 @@ int main() {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[T_VAR_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store i32 [[T_VAR]], ptr [[T_VAR_ADDR]], align 4
-// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined, ptr [[T_VAR_ADDR]])
+// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined, ptr [[T_VAR_ADDR]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -760,10 +760,10 @@ int main() {
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[T_VAR1]], ptr [[TMP12]], align 4
-// CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK3-NEXT:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l32.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    switch i32 [[TMP13]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // CHECK3-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // CHECK3-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -773,7 +773,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i32, ptr [[T_VAR1]], align 4
 // CHECK3-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP14]], [[TMP15]]
 // CHECK3-NEXT:    store i32 [[ADD5]], ptr [[TMP0]], align 4
-// CHECK3-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK3-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK3:       .omp.reduction.case2:
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[T_VAR1]], align 4
@@ -818,7 +818,7 @@ int main() {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[SIVAR_ADDR:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    store i64 [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
-// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB4:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l45.omp_outlined, ptr [[SIVAR_ADDR]])
+// CHECK9-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l45.omp_outlined, ptr [[SIVAR_ADDR]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -892,10 +892,10 @@ int main() {
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // CHECK9-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // CHECK9-NEXT:    store ptr [[SIVAR1]], ptr [[TMP13]], align 8
-// CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l45.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l45.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    switch i32 [[TMP14]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // CHECK9-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // CHECK9-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -905,7 +905,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SIVAR1]], align 4
 // CHECK9-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP15]], [[TMP16]]
 // CHECK9-NEXT:    store i32 [[ADD5]], ptr [[TMP0]], align 4
-// CHECK9-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK9-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP2]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK9-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK9:       .omp.reduction.case2:
 // CHECK9-NEXT:    [[TMP17:%.*]] = load i32, ptr [[SIVAR1]], align 4

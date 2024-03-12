@@ -938,7 +938,7 @@ int main()
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP49:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[TMP49]], align 4
-// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP50]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP50]])
 // CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[SUM117]], ptr [[TMP51]], align 8
 // CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 1
@@ -1347,7 +1347,7 @@ int main()
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
-// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP26]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP26]])
 // CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[SUM55]], ptr [[TMP27]], align 8
 // CHECK-NEXT:    [[TMP28:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8

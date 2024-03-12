@@ -315,7 +315,7 @@ int main()
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP17]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr), i32 [[TMP17]])
 // CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[SUM14_ASCAST]], ptr [[TMP18]], align 8
 // CHECK-NEXT:    [[TMP19:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i64 4, ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)

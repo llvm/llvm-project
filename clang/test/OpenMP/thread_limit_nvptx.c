@@ -261,7 +261,7 @@ void foo(int N) {
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP15]])
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
 // CHECK-NEXT:    br i1 [[TMP17]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -515,7 +515,7 @@ void foo(int N) {
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP15]])
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
 // CHECK-NEXT:    br i1 [[TMP17]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -769,7 +769,7 @@ void foo(int N) {
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP15]])
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
 // CHECK-NEXT:    br i1 [[TMP17]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1023,7 +1023,7 @@ void foo(int N) {
 // CHECK:       omp.loop.exit:
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-// CHECK-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP15]])
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
 // CHECK-NEXT:    br i1 [[TMP17]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]

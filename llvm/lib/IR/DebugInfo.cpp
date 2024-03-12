@@ -245,7 +245,7 @@ void DebugInfoFinder::processInstruction(const Module &M,
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
 
-  for (const DbgRecord &DPR : I.getDbgValueRange())
+  for (const DbgRecord &DPR : I.getDbgRecordRange())
     processDbgRecord(M, DPR);
 }
 
@@ -598,7 +598,7 @@ bool llvm::stripDebugInfo(Function &F) {
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
       }
-      I.dropDbgValues();
+      I.dropDbgRecords();
     }
   }
   return Changed;
@@ -915,7 +915,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           I.setMetadata("heapallocsite", nullptr);
 
         // Strip any DPValues attached.
-        I.dropDbgValues();
+        I.dropDbgRecords();
       }
     }
   }
@@ -1871,7 +1871,7 @@ void at::deleteAll(Function *F) {
   SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange()))
         if (DPV.isDbgAssign())
           DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
@@ -2300,7 +2300,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }
