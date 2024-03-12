@@ -2410,20 +2410,35 @@ usual build cycle when using sample profilers for optimization:
 
 1. Build the code with source line table information. You can use all the
    usual build flags that you always build your application with. The only
-   requirement is that you add ``-gline-tables-only`` or ``-g`` to the
-   command line. This is important for the profiler to be able to map
-   instructions back to source line locations.
+   requirement is that DWARF debug info including source line information is
+   generated. This DWARF information is important for the profiler to be able
+   to map instructions back to source line locations.
+
+   On Linux, ``-g`` or just ``-gline-tables-only`` is sufficient:
 
    .. code-block:: console
 
      $ clang++ -O2 -gline-tables-only code.cc -o code
 
+   It is also possible to include DWARF in Windows binaries:
+
+   .. code-block:: console
+
+     $ clang-cl -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -link -debug:dwarf
+
 2. Run the executable under a sampling profiler. The specific profiler
    you use does not really matter, as long as its output can be converted
-   into the format that the LLVM optimizer understands. Currently, there
-   exists a conversion tool for the Linux Perf profiler
-   (https://perf.wiki.kernel.org/), so these examples assume that you
-   are using Linux Perf to profile your code.
+   into the format that the LLVM optimizer understands.
+
+   Two such profilers are the the Linux Perf profiler
+   (https://perf.wiki.kernel.org/) and Intel's Sampling Enabling Product (SEP),
+   available as part of `Intel VTune
+   <https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html>`_.
+
+   The LLVM tool ``llvm-profgen`` can convert output of either Perf or SEP. An
+   external tool, AutoFDO, also supports Linux Perf output.
+
+   When using Perf:
 
    .. code-block:: console
 
@@ -2433,6 +2448,15 @@ usual build cycle when using sample profilers for optimization:
    Record (LBR) to record call chains. While this is not strictly required,
    it provides better call information, which improves the accuracy of
    the profile data.
+
+   When using SEP:
+
+   .. code-block:: console
+
+     $ sep -start -ec BR_INST_RETIRED.NEAR_TAKEN:precise=yes:pdir -lbr no_filter:usr -perf-script ip,brstack -app ./code
+
+   This produces a ``perf.data.script`` output which can be used with
+   ``llvm-profgen``'s ``--perfscript`` input option.
 
 3. Convert the collected profile data to LLVM's sample profile format.
    This is currently supported via the AutoFDO converter ``create_llvm_prof``.
@@ -2454,7 +2478,14 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ llvm-profgen --binary=./code --output=code.prof--perfdata=perf.data
+     $ llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
+
+   When using SEP the output is in the textual format corresponding to
+   `llvm-profgen --perfscript`. For example:
+
+   .. code-block:: console
+
+     $ llvm-profgen --binary=./code --output=code.prof --perfscript=perf.data.script
 
 
 4. Build the code again using the collected profile. This step feeds
