@@ -1649,9 +1649,9 @@ static void insertDbgValueOrDPValue(DIBuilder &Builder, Value *DV,
                                     const DebugLoc &NewLoc,
                                     BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertBefore(Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
@@ -1667,9 +1667,9 @@ static void insertDbgValueOrDPValueAfter(DIBuilder &Builder, Value *DV,
                                          const DebugLoc &NewLoc,
                                          BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertAfter(&*Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
@@ -2762,6 +2762,23 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   return false;
 }
 
+bool llvm::handleUnreachableTerminator(
+    Instruction *I, SmallVectorImpl<Value *> &PoisonedValues) {
+  bool Changed = false;
+  // RemoveDIs: erase debug-info on this instruction manually.
+  I->dropDbgValues();
+  for (Use &U : I->operands()) {
+    Value *Op = U.get();
+    if (isa<Instruction>(Op) && !Op->getType()->isTokenTy()) {
+      U.set(PoisonValue::get(Op->getType()));
+      PoisonedValues.push_back(Op);
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
 std::pair<unsigned, unsigned>
 llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   unsigned NumDeadInst = 0;
@@ -2769,8 +2786,9 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   // Delete the instructions backwards, as it has a reduced likelihood of
   // having to update as many def-use and use-def chains.
   Instruction *EndInst = BB->getTerminator(); // Last not to be deleted.
-  // RemoveDIs: erasing debug-info must be done manually.
-  EndInst->dropDbgValues();
+  SmallVector<Value *> Uses;
+  handleUnreachableTerminator(EndInst, Uses);
+
   while (EndInst != &BB->front()) {
     // Delete the next to last instruction.
     Instruction *Inst = &*--EndInst->getIterator();

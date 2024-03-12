@@ -565,3 +565,13 @@ namespace VariadicOperator {
     float &fr = c(10);
   }
 }
+
+namespace WeakCompare {
+  [[gnu::weak]]void weak_method();
+  static_assert(weak_method != nullptr, ""); // both-error {{not an integral constant expression}} \
+                                         // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+
+  constexpr auto A = &weak_method;
+  static_assert(A != nullptr, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+}

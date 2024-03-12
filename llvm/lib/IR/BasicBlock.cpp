@@ -348,6 +348,8 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
 
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   const Instruction *I = getFirstNonPHI();
+  if (!I)
+    return end();
   BasicBlock::const_iterator It = I->getIterator();
   // Set the head-inclusive bit to indicate that this iterator includes
   // any debug-info at the start of the block. This is a no-op unless the
@@ -752,8 +754,6 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
   // occur when a block is optimised away and the terminator has been moved
   // somewhere else.
   if (Src->empty()) {
-    assert(Dest != end() &&
-           "Transferring trailing DPValues to another trailing position");
     DPMarker *SrcTrailingDPValues = Src->getTrailingDPValues();
     if (!SrcTrailingDPValues)
       return;
@@ -1038,15 +1038,10 @@ void BasicBlock::insertDPValueAfter(DbgRecord *DPV, Instruction *I) {
 
 void BasicBlock::insertDPValueBefore(DbgRecord *DPV,
                                      InstListType::iterator Where) {
-  // We should never directly insert at the end of the block, new DPValues
-  // shouldn't be generated at times when there's no terminator.
-  assert(Where != end());
-  assert(Where->getParent() == this);
-  if (!Where->DbgMarker)
-    createMarker(Where);
+  assert(Where == end() || Where->getParent() == this);
   bool InsertAtHead = Where.getHeadBit();
-  createMarker(&*Where);
-  Where->DbgMarker->insertDPValue(DPV, InsertAtHead);
+  DPMarker *M = createMarker(Where);
+  M->insertDPValue(DPV, InsertAtHead);
 }
 
 DPMarker *BasicBlock::getNextMarker(Instruction *I) {

@@ -3,14 +3,32 @@
 // expected-error@+1{{OpenACC construct 'parallel' cannot be used here; it can only be used in a statement context}}
 #pragma acc parallel
 
+// expected-error@+1{{OpenACC construct 'serial' cannot be used here; it can only be used in a statement context}}
+#pragma acc serial
+
+// expected-error@+1{{OpenACC construct 'kernels' cannot be used here; it can only be used in a statement context}}
+#pragma acc kernels
+
 // expected-error@+1{{OpenACC construct 'parallel' cannot be used here; it can only be used in a statement context}}
 #pragma acc parallel
 int foo;
+// expected-error@+1{{OpenACC construct 'serial' cannot be used here; it can only be used in a statement context}}
+#pragma acc serial
+int foo2;
+// expected-error@+1{{OpenACC construct 'kernels' cannot be used here; it can only be used in a statement context}}
+#pragma acc kernels
+int foo3;
 
 struct S {
 // expected-error@+1{{OpenACC construct 'parallel' cannot be used here; it can only be used in a statement context}}
 #pragma acc parallel
 int foo;
+// expected-error@+1{{OpenACC construct 'serial' cannot be used here; it can only be used in a statement context}}
+#pragma acc serial
+int foo2;
+// expected-error@+1{{OpenACC construct 'kernels' cannot be used here; it can only be used in a statement context}}
+#pragma acc kernels
+int foo3;
 };
 
 void func() {
@@ -29,6 +47,15 @@ void func() {
   {
 // expected-error@+2{{expected statement}}
 #pragma acc parallel
+  }
+
+  {
+// expected-error@+2{{expected statement}}
+#pragma acc serial
+  }
+  {
+// expected-error@+2{{expected statement}}
+#pragma acc kernels
   }
 
 #pragma acc parallel

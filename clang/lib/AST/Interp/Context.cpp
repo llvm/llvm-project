@@ -9,7 +9,6 @@
 #include "Context.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
-#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -205,17 +204,6 @@ bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
   }
 
   Stk.clear();
-  return false;
-}
-
-bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
-  if (Flag)
-    return *Flag;
-  handleAllErrors(Flag.takeError(), [&Parent](ByteCodeGenError &Err) {
-    Parent.FFDiag(Err.getRange().getBegin(),
-                  diag::err_experimental_clang_interp_failed)
-        << Err.getRange();
-  });
   return false;
 }
 

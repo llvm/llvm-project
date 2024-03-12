@@ -3485,7 +3485,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SRL:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::lshr(Known, Known2);
+    Known = KnownBits::lshr(Known, Known2, /*ShAmtNonZero=*/false,
+                            Op->getFlags().hasExact());
 
     // Minimum shift high bits are known zero.
     if (const APInt *ShMinAmt =
@@ -3495,7 +3496,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::ashr(Known, Known2);
+    Known = KnownBits::ashr(Known, Known2, /*ShAmtNonZero=*/false,
+                            Op->getFlags().hasExact());
     break;
   case ISD::FSHL:
   case ISD::FSHR:
@@ -3763,8 +3765,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     SDNodeFlags Flags = Op.getNode()->getFlags();
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForAddSub(Op.getOpcode() == ISD::ADD,
-                                        Flags.hasNoSignedWrap(), Known, Known2);
+    Known = KnownBits::computeForAddSub(
+        Op.getOpcode() == ISD::ADD, Flags.hasNoSignedWrap(),
+        Flags.hasNoUnsignedWrap(), Known, Known2);
     break;
   }
   case ISD::USUBO:
@@ -4997,6 +5000,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return true;
 
   switch (Opcode) {
+  case ISD::CONDCODE:
   case ISD::VALUETYPE:
   case ISD::FrameIndex:
   case ISD::TargetFrameIndex:
@@ -5088,6 +5092,25 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
     return false;
+
+  case ISD::SETCC: {
+    // Integer setcc cannot create undef or poison.
+    if (Op.getOperand(0).getValueType().isInteger())
+      return false;
+
+    // FP compares are more complicated. They can create poison for nan/infinity
+    // based on options and flags. The options and flags also cause special
+    // nonan condition codes to be used. Those condition codes may be preserved
+    // even if the nonan flag is dropped somewhere.
+    ISD::CondCode CCCode = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    if (((unsigned)CCCode & 0x10U))
+      return true;
+
+    const TargetOptions &Options = getTarget().Options;
+    return Options.NoNaNsFPMath || Options.NoInfsFPMath ||
+           (ConsiderFlags &&
+            (Op->getFlags().hasNoNaNs() || Op->getFlags().hasNoInfs()));
+  }
 
   // Matches hasPoisonGeneratingFlags().
   case ISD::ZERO_EXTEND:
@@ -6045,9 +6068,9 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
   }
   case ISD::ABDS:
-    return APIntOps::smax(C1, C2) - APIntOps::smin(C1, C2);
+    return APIntOps::abds(C1, C2);
   case ISD::ABDU:
-    return APIntOps::umax(C1, C2) - APIntOps::umin(C1, C2);
+    return APIntOps::abdu(C1, C2);
   }
   return std::nullopt;
 }
