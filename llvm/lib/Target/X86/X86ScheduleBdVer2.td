@@ -1275,12 +1275,12 @@ def : InstRW<[WritePHAdd.Folded], (instrs PHADDDrm, PHSUBDrm,
 
 defm : PdWriteResXMMPair<WriteCLMul, [PdFPU0, PdFPMMA], 12, [1, 7], 5, 1>;
 
-def PdWriteVPCLMULQDQrr : SchedWriteRes<[PdFPU0, PdFPMMA]> {
+def PdWriteVPCLMULQDQrri : SchedWriteRes<[PdFPU0, PdFPMMA]> {
   let Latency = 12;
   let ReleaseAtCycles = [1, 7];
   let NumMicroOps = 6;
 }
-def : InstRW<[PdWriteVPCLMULQDQrr], (instrs VPCLMULQDQrr)>;
+def : InstRW<[PdWriteVPCLMULQDQrri], (instrs VPCLMULQDQrri)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE4A instructions.

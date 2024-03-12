@@ -13,7 +13,6 @@
 ; CHECK-SPIRV:     %[[#test_arr2:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 ; CHECK-SPIRV:     %[[#test_arr:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 
-; CHECK-SPIRV-DAG: %[[#i8_ptr:]] = OpTypePointer Function %[[#i8]]
 ; CHECK-SPIRV-DAG: %[[#const_i8_ptr:]] = OpTypePointer UniformConstant %[[#i8]]
 ; CHECK-SPIRV-DAG: %[[#i32x3_ptr:]] = OpTypePointer Function %[[#i32x3]]
 

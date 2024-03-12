@@ -143,7 +143,7 @@ It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
 
-.. _strings:
+.. _string_constants:
 
 String constants
 ----------------
@@ -908,7 +908,8 @@ Syntax::
 
 A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
-(giving the basic block a symbol table entry), contains a list of instructions,
+(giving the basic block a symbol table entry), contains a list of instructions
+and :ref:`debug records <debugrecords>`,
 and ends with a :ref:`terminator <terminators>` instruction (such as a branch or
 function return). If an explicit label name is not provided, a block is assigned
 an implicit numbered label, using the next value from the same counter as used
@@ -1633,6 +1634,22 @@ Currently, only the following parameter attributes are defined:
     memory, but all loads that are not preceded by a store will return poison.
 
     This attribute cannot be applied to return values.
+
+``range(<ty> <a>, <b>)``
+    This attribute expresses the possible range of the parameter or return value.
+    If the value is not in the specified range, it is converted to poison.
+    The arguments passed to ``range`` have the following properties:
+
+    -  The type must match the scalar type of the parameter or return value.
+    -  The pair ``a,b`` represents the range ``[a,b)``.
+    -  Both ``a`` and ``b`` are constants.
+    -  The range is allowed to wrap.
+    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    
+    This attribute may only be applied to parameters or return values with integer 
+    or vector of integer types.
+    
+    For vector-typed parameters, the range is applied element-wise.
 
 .. _gc:
 
@@ -4364,7 +4381,7 @@ constants and smaller complex constants.
 
     When creating a vector whose elements have the same constant value, the
     preferred syntax is ``splat (<Ty> Val)``. For example: "``splat (i32 11)``".
-    These vector constants must have ::ref:`vector type <t_vector>` with an
+    These vector constants must have :ref:`vector type <t_vector>` with an
     element type that matches the ``splat`` operand.
 **Zero initialization**
     The string '``zeroinitializer``' can be used to zero initialize a
@@ -8541,7 +8558,10 @@ The LLVM instruction set consists of several different classifications
 of instructions: :ref:`terminator instructions <terminators>`, :ref:`binary
 instructions <binaryops>`, :ref:`bitwise binary
 instructions <bitwiseops>`, :ref:`memory instructions <memoryops>`, and
-:ref:`other instructions <otherops>`.
+:ref:`other instructions <otherops>`. There are also :ref:`debug records
+<debugrecords>`, which are not instructions themselves but are printed
+interleaved with instructions to describe changes in the state of the program's
+debug information at each position in the program's execution.
 
 .. _terminators:
 
@@ -12695,6 +12715,29 @@ Example:
 
       %tok = cleanuppad within %cs []
 
+.. _debugrecords:
+
+Debug Records
+-----------------------
+
+Debug records appear interleaved with instructions, but are not instructions;
+they are used only to define debug information, and have no effect on generated
+code. They are distinguished from instructions by the use of a leading `#` and
+an extra level of indentation. As an example:
+
+.. code-block:: llvm
+
+  %inst1 = op1 %a, %b
+    #dbg_value(%inst1, !10, !DIExpression(), !11)
+  %inst2 = op2 %inst1, %c
+
+These debug records are an optional replacement for
+:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
+``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
+records and intrinsics to appear in the same module. More information about
+debug records can be found in the `LLVM Source Level Debugging
+<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
+
 .. _intrinsics:
 
 Intrinsic Functions
@@ -15581,7 +15624,7 @@ Semantics:
 If either operand is a NaN, returns NaN. Otherwise returns the lesser
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2018.
+IEEE 754-2019.
 
 .. _i_maximum:
 
@@ -15621,7 +15664,7 @@ Semantics:
 If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2018.
+IEEE 754-2019.
 
 .. _int_copysign:
 
@@ -24276,6 +24319,9 @@ Arguments:
 
 The first operand is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second operand, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' operand have the same vector type.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand. The pointer alignment defaults to 1.
+
 Semantics:
 """"""""""
 
@@ -24333,6 +24379,8 @@ Arguments:
 
 The first operand is the input vector, from which elements are collected and written to memory. The second operand is the base pointer for the store, it has the same underlying type as the element of the input vector operand. The third operand is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the second
+operand. The pointer alignment defaults to 1.
 
 Semantics:
 """"""""""
@@ -26000,7 +26048,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows semantics specified in the draft of IEEE 754-2018.
+This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.minimum``' Intrinsic
@@ -26032,7 +26080,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows semantics specified in the draft of IEEE 754-2018.
+This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.ceil``' Intrinsic
@@ -26427,6 +26475,7 @@ similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
 
+.. _int_get_fpenv:
 
 '``llvm.get.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26450,6 +26499,7 @@ Semantics:
 The '``llvm.get.fpenv``' intrinsic reads the current floating-point environment
 and returns it as an integer value.
 
+.. _int_set_fpenv:
 
 '``llvm.set.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

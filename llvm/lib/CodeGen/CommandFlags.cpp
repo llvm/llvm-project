@@ -85,7 +85,6 @@ CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
 CGOPT(bool, DisableIntegratedAS)
-CGOPT(bool, RelaxELFRelocations)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
@@ -362,13 +361,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                                 cl::init(false));
   CGBINDOPT(UseCtors);
 
-  static cl::opt<bool> RelaxELFRelocations(
-      "relax-elf-relocations",
-      cl::desc(
-          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
-      cl::init(true));
-  CGBINDOPT(RelaxELFRelocations);
-
   static cl::opt<bool> DataSections(
       "data-sections", cl::desc("Emit data into separate sections"),
       cl::init(false));
@@ -568,7 +560,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
   Options.DisableIntegratedAS = getDisableIntegratedAS();
-  Options.RelaxELFRelocations = getRelaxELFRelocations();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();

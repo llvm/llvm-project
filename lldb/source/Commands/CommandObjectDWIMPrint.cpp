@@ -37,8 +37,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                        "dwim-print [<variable-name> | <expression>]",
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
 
-  CommandArgumentData var_name_arg(eArgTypeVarName, eArgRepeatPlain);
-  m_arguments.push_back({var_name_arg});
+  AddSimpleArgumentList(eArgTypeVarName);
 
   m_option_group.Append(&m_format_options,
                         OptionGroupFormat::OPTION_GROUP_FORMAT |

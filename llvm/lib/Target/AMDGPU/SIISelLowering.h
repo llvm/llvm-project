@@ -305,6 +305,10 @@ public:
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
+  void CollectTargetIntrinsicOperands(const CallInst &I,
+                                      SmallVectorImpl<SDValue> &Ops,
+                                      SelectionDAG &DAG) const override;
+
   bool getAddrModeArguments(IntrinsicInst * /*I*/,
                             SmallVectorImpl<Value*> &/*Ops*/,
                             Type *&/*AccessTy*/) const override;
@@ -421,6 +425,8 @@ public:
 
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;

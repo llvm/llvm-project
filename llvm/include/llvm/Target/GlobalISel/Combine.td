@@ -952,6 +952,37 @@ def redundant_binop_in_equality : GICombineRule<
          [{ return Helper.matchRedundantBinOpInEquality(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Transform: (X == 0 & Y == 0) -> (X | Y) == 0
+def double_icmp_zero_and_combine: GICombineRule<
+  (defs root:$root),
+  (match (G_ICMP $d1, $p, $s1, 0),
+         (G_ICMP $d2, $p, $s2, 0),
+         (G_AND $root, $d1, $d2),
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_EQ &&
+                       !MRI.getType(${s1}.getReg()).getScalarType().isPointer() &&
+                       (MRI.getType(${s1}.getReg()) ==
+                           MRI.getType(${s2}.getReg())); }]),
+  (apply (G_OR $ordst, $s1, $s2),
+         (G_ICMP $root, $p, $ordst, 0))
+>;
+
+// Transform: (X != 0 | Y != 0) -> (X | Y) != 0
+def double_icmp_zero_or_combine: GICombineRule<
+  (defs root:$root),
+  (match (G_ICMP $d1, $p, $s1, 0),
+         (G_ICMP $d2, $p, $s2, 0),
+         (G_OR $root, $d1, $d2),
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_NE &&
+                       !MRI.getType(${s1}.getReg()).getScalarType().isPointer() &&
+                       (MRI.getType(${s1}.getReg()) ==
+                           MRI.getType(${s2}.getReg())); }]),
+  (apply (G_OR $ordst, $s1, $s2),
+         (G_ICMP $root, $p, $ordst, 0))
+>;
+
+def double_icmp_zero_and_or_combine : GICombineGroup<[double_icmp_zero_and_combine,
+                                                      double_icmp_zero_or_combine]>;
+
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -1343,7 +1374,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors, 
-    combine_concat_vector]>;
+    combine_concat_vector, double_icmp_zero_and_or_combine]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

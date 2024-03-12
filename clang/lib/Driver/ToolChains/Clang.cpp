@@ -1109,7 +1109,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if ((getToolChain().getTriple().isNVPTX() ||
          getToolChain().getTriple().isAMDGCN()) &&
         C.getActiveOffloadKinds() == Action::OFK_None) {
-      SmallString<128> P(llvm::sys::path::parent_path(D.InstalledDir));
+      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, getToolChain().getTripleString());
       CmdArgs.push_back("-internal-isystem");
@@ -4554,14 +4554,20 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
                       options::OPT_gpubnames, options::OPT_gno_pubnames);
   if (DwarfFission != DwarfFissionKind::None ||
-      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC)))
-    if (!PubnamesArg ||
-        (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
-         !PubnamesArg->getOption().matches(options::OPT_gno_pubnames)))
+      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC))) {
+    const bool OptionSet =
+        (PubnamesArg &&
+         (PubnamesArg->getOption().matches(options::OPT_gpubnames) ||
+          PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames)));
+    if ((DebuggerTuning != llvm::DebuggerKind::LLDB || OptionSet) &&
+        (!PubnamesArg ||
+         (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
+          !PubnamesArg->getOption().matches(options::OPT_gno_pubnames))))
       CmdArgs.push_back(PubnamesArg && PubnamesArg->getOption().matches(
                                            options::OPT_gpubnames)
                             ? "-gpubnames"
                             : "-ggnu-pubnames");
+  }
   const auto *SimpleTemplateNamesArg =
       Args.getLastArg(options::OPT_gsimple_template_names,
                       options::OPT_gno_simple_template_names);
@@ -6034,7 +6040,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
-    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+    if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
       if (A->getOption().matches(options::OPT_fbasic_block_address_map))
         A->render(Args, CmdArgs);
     } else {
@@ -7051,6 +7057,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     !types::isOpenCL(InputType) &&
                         (!IsWindowsMSVC || IsMSVC2015Compatible)))
     CmdArgs.push_back("-fno-threadsafe-statics");
+
+  // Add -fno-assumptions, if it was specified.
+  if (!Args.hasFlag(options::OPT_fassumptions, options::OPT_fno_assumptions,
+                    true))
+    CmdArgs.push_back("-fno-assumptions");
 
   // -fgnu-keywords default varies depending on language; only pass if
   // specified.
@@ -8594,7 +8605,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 // Begin OffloadBundler
-
 void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -8692,11 +8702,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back(TCArgs.MakeArgString(UB));
   }
-  if (TCArgs.hasFlag(options::OPT_offload_compress,
-                     options::OPT_no_offload_compress, false))
-    CmdArgs.push_back("-compress");
-  if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("-verbose");
+  addOffloadCompressArgs(TCArgs, CmdArgs);
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
@@ -8962,9 +8968,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
                                        LinkCommand->getExecutable()));
-  CmdArgs.push_back("--");
   for (const char *LinkArg : LinkCommand->getArguments())
     CmdArgs.push_back(LinkArg);
+
+  addOffloadCompressArgs(Args, CmdArgs);
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));

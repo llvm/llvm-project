@@ -37,9 +37,16 @@ def OptimizeSharedMemory : Pass<"amdgpu-optimize-shared-memory"> {
     attempts to optimize reads/writes from a memref representing GPU shared
     memory in order to avoid bank conflicts.
   }];
-
   let dependentDialects = [
     "memref::MemRefDialect", "vector::VectorDialect"
+  ];
+  let options = [
+    Option<"sharedMemoryLineSizeBytes", "shared-memory-line-size-bytes", "int64_t",
+           /*default=*/"128",
+           "Shared memory line size in bytes">,
+    Option<"defaultVectorSizeBits", "default-vector-size-bits", "int64_t",
+           /*default=*/"128",
+           "Default vector size in bits">,
   ];
 }
 

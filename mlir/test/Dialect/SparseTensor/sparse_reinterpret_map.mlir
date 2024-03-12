@@ -99,13 +99,13 @@ func.func @sparse_foreach_reinterpret_map(%6 : tensor<2x4xf64, #BSR>) -> tensor<
 // CHECK-SAME:        %[[VAL_0:.*]]: tensor<?xf64>,
 // CHECK-SAME:        %[[VAL_1:.*]]: tensor<?xindex>,
 // CHECK-SAME:        %[[VAL_2:.*]]: tensor<?xindex>) -> tensor<2x4xf64, #[[$remap]]> {
-// CHECK:           %[[VAL_3:.*]] = sparse_tensor.assemble %[[VAL_0]], %[[VAL_1]], %[[VAL_2]] : tensor<?xf64>, tensor<?xindex>, tensor<?xindex> to tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.assemble {{.*}} to tensor<1x2x2x2xf64, #[[$demap]]>
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.reinterpret_map %[[VAL_3]] : tensor<1x2x2x2xf64, #[[$demap]]> to tensor<2x4xf64, #[[$remap]]>
 // CHECK:           return %[[VAL_4]] : tensor<2x4xf64, #[[$remap]]>
 // CHECK:         }
 func.func @sparse_assemble_reinterpret_map(%val : tensor<?xf64>, %pos:tensor<?xindex>, %crd:tensor<?xindex>) -> tensor<2x4xf64, #BSR> {
-  %0 = sparse_tensor.assemble %val, %pos, %crd
-     : tensor<?xf64>, tensor<?xindex>, tensor<?xindex> to tensor<2x4xf64, #BSR>
+  %0 = sparse_tensor.assemble (%pos, %crd), %val
+     : (tensor<?xindex>, tensor<?xindex>), tensor<?xf64> to tensor<2x4xf64, #BSR>
   return %0 : tensor<2x4xf64, #BSR>
 }
 
@@ -115,7 +115,7 @@ func.func @sparse_assemble_reinterpret_map(%val : tensor<?xf64>, %pos:tensor<?xi
 // CHECK-SAME:         %[[VAL_2:.*]]: tensor<?xindex>,
 // CHECK-SAME:         %[[VAL_3:.*]]: tensor<?xindex>) -> (tensor<?xf64>, tensor<?xindex>, tensor<?xindex>) {
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<2x4xf64, #[[$remap]]> to tensor<1x2x2x2xf64, #[[$demap]]>
-// CHECK:           %[[VAL_5:.*]], %[[VAL_6:.*]]:2, %[[VAL_7:.*]], %[[VAL_8:.*]]:2 = sparse_tensor.disassemble %[[VAL_4]] : tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:           %{{.*}} = sparse_tensor.disassemble %[[VAL_4]] : tensor<1x2x2x2xf64, #[[$demap]]>
 // CHECK:           return
 // CHECK:         }
 func.func @sparse_disassemble_reinterpret_map(%sp : tensor<2x4xf64, #BSR>,
@@ -123,8 +123,9 @@ func.func @sparse_disassemble_reinterpret_map(%sp : tensor<2x4xf64, #BSR>,
                                               %op : tensor<?xindex>,
                                               %oi : tensor<?xindex>)
                                             -> (tensor<?xf64>, tensor<?xindex>, tensor<?xindex>) {
-  %rd, %rp, %ri, %dl, %pl, %il = sparse_tensor.disassemble %sp : tensor<2x4xf64, #BSR>
-                                 outs(%od, %op, %oi : tensor<?xf64>, tensor<?xindex>, tensor<?xindex>)
-                                 -> tensor<?xf64>, (tensor<?xindex>, tensor<?xindex>), index, (index, index)
+  %rp, %ri, %rd, %dl, %pl, %il = sparse_tensor.disassemble %sp : tensor<2x4xf64, #BSR>
+                                 out_lvls(%op, %oi : tensor<?xindex>, tensor<?xindex>)
+                                 out_vals(%od : tensor<?xf64>)
+                                 -> (tensor<?xindex>, tensor<?xindex>), tensor<?xf64>, (index, index), index
   return %rd, %rp, %ri : tensor<?xf64>, tensor<?xindex>, tensor<?xindex>
 }

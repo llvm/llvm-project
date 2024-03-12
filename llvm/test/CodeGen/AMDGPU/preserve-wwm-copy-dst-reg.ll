@@ -830,4 +830,4 @@ declare void @foo()
 attributes #0 = { "amdgpu-num-vgpr"="42" "amdgpu-num-sgpr"="40"}
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

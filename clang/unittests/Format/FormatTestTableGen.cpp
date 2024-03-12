@@ -346,5 +346,19 @@ TEST_F(FormatTestTableGen, CondOperatorAlignment) {
                Style);
 }
 
+TEST_F(FormatTestTableGen, DefAlignment) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
+  Style.ColumnLimit = 60;
+  verifyFormat("def Def : Parent {}\n"
+               "def DefDef : Parent {}\n"
+               "def DefDefDef : Parent {}\n",
+               Style);
+  Style.AlignConsecutiveTableGenDefinitionColons.Enabled = true;
+  verifyFormat("def Def       : Parent {}\n"
+               "def DefDef    : Parent {}\n"
+               "def DefDefDef : Parent {}\n",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang
