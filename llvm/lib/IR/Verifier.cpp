@@ -5240,7 +5240,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Type *SrcTy = Call.getOperand(0)->getType();
     Type *DestTy = Call.getType();
 
-    Check(DestTy->getScalarSizeInBits() >= 2, "Result type must be at least 2 bits wide", Call);
+    Check(DestTy->getScalarSizeInBits() >= 2, "result type must be at least 2 bits wide", Call);
 
     bool isDestTypeVector = DestTy->isVectorTy();
     Check(SrcTy->isVectorTy() == isDestTypeVector,
@@ -5249,7 +5249,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto srcVecLen = cast<VectorType>(SrcTy)->getElementCount();
       auto destVecLen = cast<VectorType>(DestTy)->getElementCount();
       Check(srcVecLen == destVecLen,
-        "the return type the first arg type must have the same number of elements", Call);
+        "return type and first arg type must have the same number of elements", Call);
     }
     break;
   }
