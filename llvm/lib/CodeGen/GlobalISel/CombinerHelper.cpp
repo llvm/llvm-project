@@ -6982,21 +6982,9 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
   // Fold addo(c1, c2) -> c3, carry.
   if (MaybeLHS && MaybeRHS && isConstantLegalOrBeforeLegalizer(DstTy) &&
       isConstantLegalOrBeforeLegalizer(CarryTy)) {
-    // They must both have the same bitwidth. Otherwise APInt might
-    // assert. Pre legalization, they may have widely different bitwidths.
-    unsigned BitWidth =
-        std::max(MaybeLHS->getBitWidth(), MaybeRHS->getBitWidth());
     bool Overflow;
-    APInt Result;
-    if (IsSigned) {
-      APInt LHS = MaybeLHS->sext(BitWidth);
-      APInt RHS = MaybeRHS->sext(BitWidth);
-      Result = LHS.sadd_ov(RHS, Overflow);
-    } else {
-      APInt LHS = MaybeLHS->zext(BitWidth);
-      APInt RHS = MaybeRHS->zext(BitWidth);
-      Result = LHS.uadd_ov(RHS, Overflow);
-    }
+    APInt Result = IsSigned ? MaybeLHS->sadd_ov(*MaybeRHS, Overflow)
+                            : MaybeLHS->uadd_ov(*MaybeRHS, Overflow);
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildConstant(Dst, Result);
       B.buildConstant(Carry, Overflow);
@@ -7023,19 +7011,9 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
     std::optional<APInt> MaybeAddRHS =
         getConstantOrConstantSplatVector(AddLHS->getRHSReg());
     if (MaybeAddRHS) {
-      unsigned BitWidth =
-          std::max(MaybeRHS->getBitWidth(), MaybeAddRHS->getBitWidth());
       bool Overflow;
-      APInt NewC;
-      if (IsSigned) {
-        APInt LHS = MaybeRHS->sext(BitWidth);
-        APInt RHS = MaybeAddRHS->sext(BitWidth);
-        NewC = LHS.sadd_ov(RHS, Overflow);
-      } else {
-        APInt LHS = MaybeRHS->zext(BitWidth);
-        APInt RHS = MaybeAddRHS->zext(BitWidth);
-        NewC = LHS.uadd_ov(RHS, Overflow);
-      }
+      APInt NewC = IsSigned ? MaybeAddRHS->sadd_ov(*MaybeRHS, Overflow)
+                            : MaybeAddRHS->uadd_ov(*MaybeRHS, Overflow);
       if (!Overflow && isConstantLegalOrBeforeLegalizer(DstTy)) {
         if (IsSigned) {
           MatchInfo = [=](MachineIRBuilder &B) {
@@ -7043,13 +7021,13 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
             B.buildSAddo(Dst, Carry, AddLHS->getLHSReg(), ConstRHS);
           };
           return true;
-        } else {
-          MatchInfo = [=](MachineIRBuilder &B) {
-            auto ConstRHS = B.buildConstant(DstTy, NewC);
-            B.buildUAddo(Dst, Carry, AddLHS->getLHSReg(), ConstRHS);
-          };
-          return true;
         }
+        // !IsSigned
+        MatchInfo = [=](MachineIRBuilder &B) {
+          auto ConstRHS = B.buildConstant(DstTy, NewC);
+          B.buildUAddo(Dst, Carry, AddLHS->getLHSReg(), ConstRHS);
+        };
+        return true;
       }
     }
   };
