@@ -7276,6 +7276,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, getValue(I.getArgOperand(0)));
     return;
 
+  case Intrinsic::experimental_hot:
+    // Default lowering to false. It's intended to be lowered as soon as profile
+    // is avalible to unblock other optimizations.
+    setValue(&I, DAG.getConstant(0, sdl, MVT::i1));
+    return;
+
   case Intrinsic::ubsantrap:
   case Intrinsic::debugtrap:
   case Intrinsic::trap: {
