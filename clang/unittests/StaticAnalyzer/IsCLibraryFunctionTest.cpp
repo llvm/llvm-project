@@ -47,11 +47,11 @@ TEST(IsCLibraryFunctionTest, AcceptsExternCGlobal) {
   EXPECT_TRUE(CheckerContext::isCLibraryFunction(Result));
 }
 
-TEST(IsCLibraryFunctionTest, AcceptsStaticGlobal) {
+TEST(IsCLibraryFunctionTest, RejectsNoInlineNoExternalLinkage) {
+  // Functions that are neither inlined nor externally visible cannot be C library functions.
   const FunctionDecl *Result;
   ASSERT_TRUE(extractFunctionDecl(R"cpp(static void fun();)cpp", Result));
   EXPECT_FALSE(CheckerContext::isCLibraryFunction(Result));
-  // FIXME: Shouldn't this be TRUE?
 }
 
 TEST(IsCLibraryFunctionTest, RejectsAnonymousNamespace) {
