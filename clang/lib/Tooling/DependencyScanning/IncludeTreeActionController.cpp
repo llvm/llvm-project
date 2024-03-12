@@ -824,7 +824,18 @@ IncludeTreeBuilder::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
 
 Expected<cas::ObjectRef> IncludeTreeBuilder::addToFileList(FileManager &FM,
                                                            FileEntryRef FE) {
+  SmallString<128> PathStorage;
   StringRef Filename = FE.getName();
+  // Apply -working-directory to relative paths. This option causes filesystem
+  // lookups to use absolute paths, so make paths in the include-tree filesystem
+  // absolute to match.
+  if (!llvm::sys::path::is_absolute(Filename) &&
+      !FM.getFileSystemOpts().WorkingDir.empty()) {
+    PathStorage = Filename;
+    FM.FixupRelativePath(PathStorage);
+    Filename = PathStorage;
+  }
+
   llvm::ErrorOr<std::optional<cas::ObjectRef>> CASContents =
       FM.getObjectRefForFileContent(Filename);
   if (!CASContents)
