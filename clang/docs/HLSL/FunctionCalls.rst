@@ -167,9 +167,9 @@ Array Temporaries
 -----------------
 
 The new ``ArrayParameterType`` is a non-array type which represents an array
-value. It is only applied to constant-sized array ``ParmVarDecl`` nodes. Much
-like a ``DecayedType`` it stores both the original ``ConstantArrayType`` and a
-decayed ``PointerType``, which is used during code generation.
+value. It is a sub-class of ``ConstantArrayType`` inheriting all the behaviors
+and methods of the parent except that it does not decay to a pointer during
+overload resolution or template type deduction.
 
 An argument of ``ConstantArrayType`` can be implicitly converted to an
 equivalent non-decayed ``ArrayParameterType`` if the underlying canonical
