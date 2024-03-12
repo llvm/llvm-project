@@ -1065,23 +1065,42 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
-  llvm::SmallString<128> FakeRocmDir = TmpDir;
-  path::append(FakeRocmDir, "rocm");
-  llvm::SmallString<128> DeviceLibsDir = FakeRocmDir;
-  path::append(DeviceLibsDir, "amdgcn", "bitcode");
-  if (fs::create_directory(InputDir)) {
-    return AMD_COMGR_STATUS_ERROR;
-  }
-  Args.push_back(Saver.save(Twine("--rocm-path=") + FakeRocmDir).data());
+
   Args.push_back("-mllvm");
   Args.push_back("-relink-builtin-bitcode-postop");
   NoGpuLib = false;
 
-  for (auto DeviceLib : getDeviceLibraries()) {
-    llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
-    path::append(DeviceLibPath, std::get<0>(DeviceLib));
-    if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
-      return Status;
+  SmallString<256> ClangBinaryPath(env::getLLVMPath());
+  sys::path::append(ClangBinaryPath, "bin", "clang");
+
+  std::string ClangResourceDir =
+    Driver::GetResourcesPath(ClangBinaryPath);
+
+  SmallString<256> DeviceLibPath(ClangResourceDir);
+  sys::path::append(DeviceLibPath, "lib");
+
+  SmallString<256> DeviceCodeDir(DeviceLibPath);
+  sys::path::append(DeviceCodeDir, "amdgcn", "bitcode");
+
+  if (llvm::sys::fs::exists(DeviceCodeDir)) {
+    Args.push_back(Saver.save(Twine("--rocm-path=") + DeviceLibPath).data());
+  }
+  else {
+    llvm::SmallString<128> FakeRocmDir = TmpDir;
+    path::append(FakeRocmDir, "rocm");
+    llvm::SmallString<128> DeviceLibsDir = FakeRocmDir;
+    path::append(DeviceLibsDir, "amdgcn", "bitcode");
+    if (fs::create_directory(InputDir)) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    Args.push_back(Saver.save(Twine("--rocm-path=") + FakeRocmDir).data());
+
+    for (auto DeviceLib : getDeviceLibraries()) {
+      llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
+      path::append(DeviceLibPath, std::get<0>(DeviceLib));
+      if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
+        return Status;
+      }
     }
   }
 

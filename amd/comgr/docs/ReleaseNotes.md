@@ -38,6 +38,8 @@ an std::scoped\_lock()
 - Added support for bitcode and archive unbundling during linking via the new
 llvm OffloadBundler API.
 - Added support for code object v6 and generic targets.
+- Added mechanism to bypass device library file system writes if Comgr is able
+to locate a local device library directory via the clang-resource-dir
 
 Bug Fixes
 ---------
