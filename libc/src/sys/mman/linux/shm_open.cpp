@@ -10,7 +10,6 @@
 #include "src/fcntl/open.h"
 #include "src/sys/mman/linux/shm_common.h"
 #include <asm/fcntl.h>
-#include <linux/limits.h>
 
 namespace LIBC_NAMESPACE {
 
