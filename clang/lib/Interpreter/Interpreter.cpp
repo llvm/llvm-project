@@ -375,6 +375,10 @@ Interpreter::Parse(llvm::StringRef Code) {
 llvm::Error Interpreter::CreateExecutor() {
   const clang::TargetInfo &TI =
       getCompilerInstance()->getASTContext().getTargetInfo();
+  if (IncrExecutor)
+    return llvm::make_error<llvm::StringError>("Operation failed. "
+                                               "Execution engine exists",
+                                               std::error_code());
   llvm::Error Err = llvm::Error::success();
   auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
   if (!Err)
@@ -382,6 +386,8 @@ llvm::Error Interpreter::CreateExecutor() {
 
   return Err;
 }
+
+void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
