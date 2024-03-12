@@ -64,8 +64,6 @@
 
 .globl _start
 _start:
-  leaq __start_foo0(%rip), %rax
-  leaq __stop_foo0(%rip), %rax
   ret
 
 .section foo0,"a"
