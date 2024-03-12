@@ -63,7 +63,7 @@ public:
   matchAndRewrite(arith::SelectOp selectOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto dstType = getTypeConverter()->convertType(selectOp.getType());
+    Type dstType = getTypeConverter()->convertType(selectOp.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(selectOp, "type conversion failed");
 
