@@ -500,6 +500,11 @@ Python Binding Changes
 
 - Exposed `CXRewriter` API as `class Rewriter`.
 
+OpenMP Support
+--------------
+
+- Added support for the `[[omp::assume]]` attribute.
+
 Additional Information
 ======================
 
