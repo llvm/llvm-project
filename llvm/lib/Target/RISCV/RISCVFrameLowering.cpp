@@ -557,7 +557,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     // stack space.
     uint64_t Spimm = alignTo(std::min(StackSize, (uint64_t)48), 16);
     FirstFrameSetup->getOperand(1).setImm(Spimm);
-    StackSize -= Spimm;
+    StackSize -= std::min(StackSize, Spimm);
   }
 
   if (StackSize != 0) {
