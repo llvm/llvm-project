@@ -550,6 +550,29 @@ R a 0 1 - Ja Su>=31 1w 2s abc
   assert(result.rules[0].second[2].__letters == "abc");
 }
 
+static void test_mixed_order() {
+  // This is a part of the real database. The interesting part is that the
+  // rules NZ and Chatham are interleaved. Make sure the parse algorithm
+  // handles this correctly.
+  parse_result result{
+      R"(
+# Since 1957 Chatham has been 45 minutes ahead of NZ, but until 2018a
+# there was no documented single notation for the date and time of this
+# transition.  Duplicate the Rule lines for now, to give the 2018a change
+# time to percolate out.
+Rule NZ  1974    only    -   Nov Sun>=1  2:00s   1:00    D
+Rule Chatham 1974    only    -   Nov Sun>=1  2:45s   1:00    -
+Rule NZ  1975    only    -   Feb lastSun 2:00s   0   S
+Rule Chatham 1975    only    -   Feb lastSun 2:45s   0   -
+Rule NZ  1975    1988    -   Oct lastSun 2:00s   1:00    D
+Rule Chatham 1975    1988    -   Oct lastSun 2:45s   1:00    -
+)"};
+
+  assert(result.rules.size() == 2);
+  assert(result.rules[0].second.size() == 3);
+  assert(result.rules[1].second.size() == 3);
+}
+
 int main(int, const char**) {
   test_invalid();
   test_name();
@@ -560,6 +583,7 @@ int main(int, const char**) {
   test_at();
   test_save();
   test_letter();
+  test_mixed_order();
 
   return 0;
 }
