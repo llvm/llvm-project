@@ -3383,6 +3383,66 @@ TEST_P(UncheckedOptionalAccessTest, LambdaCaptureStateNotPropagated) {
     }
   )");
 }
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedFromOptional) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : public $ns::$optional<int> {};
+
+    void target(Derived opt) {
+      *opt;  // [[unsafe]]
+      if (opt.has_value())
+        *opt;
+
+      // The same thing, but with a pointer receiver.
+      Derived *popt = &opt;
+      **popt;  // [[unsafe]]
+      if (popt->has_value())
+        **popt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassTemplateDerivedFromOptional) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <class T>
+    struct Derived : public $ns::$optional<T> {};
+
+    void target(Derived<int> opt) {
+      *opt;  // [[unsafe]]
+      if (opt.has_value())
+        *opt;
+
+      // The same thing, but with a pointer receiver.
+      Derived<int> *popt = &opt;
+      **popt;  // [[unsafe]]
+      if (popt->has_value())
+        **popt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedPrivatelyFromOptional) {
+  // Classes that derive privately from optional can themselves still call
+  // member functions of optional. Check that we model the optional correctly
+  // in this situation.
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : private $ns::$optional<int> {
+      void Method() {
+        **this;  // [[unsafe]]
+        if (this->has_value())
+          **this;
+      }
+    };
+  )",
+                       ast_matchers::hasName("Method"));
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
