@@ -450,6 +450,8 @@ AST Matchers
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 - Add ``isExplicitObjectMemberFunction``.
+- Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
+  not skip the explicit object parameter for operator calls.
 
 clang-format
 ------------
