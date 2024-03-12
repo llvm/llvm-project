@@ -41,8 +41,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     It encodes the following information:
 
     * shape:  the sizes/shape of the intereted data block, e.g., 8x16 means 8 rows
-              and each row contains 16 continious data element. The rows could be
-              either continuous or not, depends on whether the encoding attribute
+              and each row contains 16 contiguous data element. The rows could be
+              either contiguous or not, depends on whether the encoding attribute
               is set or not.
     * element_type: the data type of the data element, e.g., f16, f32.
 
@@ -50,7 +50,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     the following information via the TensorDescAttr object:
     * memory_scope (xegpu::MemoryScope): [optional] where the data is located, 
                 global memory or shared memory. It is default to Global.
-    * array_length (int): [optional] The number of continuous blocks with size as `shape`,
+    * array_length (int): [optional] The number of contiguous blocks with size as `shape`,
                that will be loaded by block load at a time. It is default to 1.
     * boundary_check (bool): [optional] indicates whether the operation detects the boundary 
                 and pads with zero for out-of-boundary access. It is default to do boundary check.

@@ -32,7 +32,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
   let summary = "create nd tensor descriptor operation";
   let description = [{
     The "create_nd_tdesc" operation creates a TensorDescType which represents
-    a sub-view of a 2D memory region (It can be extended to support N-D memory
+    a sub-view of a 2D memory region (It can be extended to support n-D memory
     region if needed in future). Elements in the subview continuous in each 
     dimention. It encodes the following important information for supporting 
     Intel hardware features:
@@ -94,18 +94,14 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
 
   let hasVerifier = 1;
 
-//  let builders = [
-//    OpBuilder<(ins "Type": $TensorDesc, "Value": $source, "ValueRange": $offsets, 
-//                   "ValueRange": $shape, "ValueRange": $strides, 
-//                   "llvm::ArrayRef<int64_t>": $static_offsets)>,
-//
-//    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
-//                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-//
-//    OpBuilder<(ins "Type": $tdesc, "Value": $source, 
-//                   "llvm::ArrayRef<OpFoldResult>": $offsets,
-//                   "ValueRange": $shape, "ValueRange": $stride)>
-//  ];
+  let builders = [
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source, 
+                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
+
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source, 
+                   "llvm::ArrayRef<OpFoldResult>": $offsets,
+                   "ValueRange": $shape, "ValueRange": $stride)>
+  ];
 
   let extraClassDeclaration = [{
     /// Returns the type of the source memref operand.
@@ -134,6 +130,9 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     }
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
+    /// If source is integer it will simply return an array of 
+    /// ShapedType::kDynamic representing dynamic shape encoded 
+    /// in the `shape` argument will be used.
     SmallVector<int64_t> getStaticSizes() {
       if (getSourceType().dyn_cast<IntegerType>()) {
         auto dims = getMixedOffsets().size();
@@ -144,6 +143,9 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     }
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
+    /// If source is integer it will simply return an array of 
+    /// ShapedType::kDynamic representing dynamic strides encoded 
+    /// in the `strides` argument will be used.
     SmallVector<int64_t> getStaticStrides() {
       if (getSourceType().dyn_cast<IntegerType>()) {
         auto dims = getMixedOffsets().size();
@@ -155,14 +157,19 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
     }
 
     /// Return the expected rank of each of the`static_offsets`, 
-    /// `static_sizes` and `static_strides` attributes.
+    /// `static_shape` and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
-      auto rank = getMixedOffsets().size();
+      unsigned rank;
+      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
+        rank = ty.getRank();
+      } else {
+        rank = (unsigned)getMixedOffsets().size();
+      }
       return {rank, rank, rank};
     }
     
-    /// Return the number of leading operands before the `offsets`, `sizes` and
-    /// and `strides` operands.
+    /// Return the number of leading operands before the `offsets`, 
+    /// `shape` and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
   }];
 }
@@ -182,11 +189,11 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 }
 
 
-def XeGPU_LoadNDOp : XeGPU_Op<"load_nd"> {
+def XeGPU_LoadNdOp : XeGPU_Op<"load_nd"> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)" 
                 "to registers (represented by vector)";
   let description = [{
-    LoadNDOp essentially mimics the hardware block read instruction to read 
+    LoadNdOp essentially mimics the hardware block read instruction to read 
     a block of data from memory to register. It takes a set of cache hints 
     for each level of cache, L1, L2 and L3. If hardware does not have a 
     correspoding cache, Corresponding cache hint attribute will be masked.
@@ -222,7 +229,7 @@ def XeGPU_LoadNDOp : XeGPU_Op<"load_nd"> {
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreNDOp : XeGPU_Op<"store_nd", []> {
+def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", []> {
   let summary = "stores a n-D block register region back to memory, currently only supports 2D";
   let arguments = (ins XeGPU_ValueType: $value,
                        XeGPU_TensorDesc: $TensorDesc,
