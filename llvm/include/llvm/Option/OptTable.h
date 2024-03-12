@@ -61,9 +61,10 @@ public:
     // Help text for specific visibilities. A list of pairs, where each pair
     // is a list of visibilities and a specific help string for those
     // visibilities. If no help text is found in this list for the visibility of
-    // the program, HelpText is used instead. This type cannot use std::vector
+    // the program, HelpText is used instead. This cannot use std::vector
     // because OptTable is used in constexpr contexts. Increase the array sizes
-    // here if you need more entries.
+    // here if you need more entries and adjust the constants in the TableGen
+    // backends that use it.
     std::array<std::pair<std::array<unsigned int, 2>, const char *>, 1>
         HelpTextForVisibilities;
     const char *MetaVar;

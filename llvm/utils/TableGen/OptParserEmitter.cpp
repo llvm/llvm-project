@@ -275,6 +275,9 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "#endif\n";
 
+  const unsigned MaxVisibilityHelp = 1;
+  const unsigned MaxVisibilityPerHelp = 2;
+
   OS << "/////////\n";
   OS << "// Groups\n\n";
   OS << "#ifdef OPTION\n";
@@ -313,8 +316,9 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << ", nullptr";
 
     // Not using Visibility specific text for group help.
-    OS << ", (std::array<std::pair<std::array<unsigned, 2>, const char*>, 1>{{"
-       << "std::make_pair(std::array<unsigned, 2>{{0, 0}}, nullptr)}})";
+    OS << ", (std::array<std::pair<std::array<unsigned, "
+       << MaxVisibilityPerHelp << ">, const char*>, " << MaxVisibilityHelp
+       << ">{{std::make_pair(std::array<unsigned, 2>{{0, 0}}, nullptr)}})";
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
@@ -414,8 +418,6 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     } else
       OS << ", nullptr";
 
-    const unsigned MaxVisibilityHelp = 1;
-    const unsigned MaxVisibilityPerHelp = 2;
     OS << ", (std::array<std::pair<std::array<unsigned, "
        << MaxVisibilityPerHelp << ">, const char*>, " << MaxVisibilityHelp
        << ">{{ ";
