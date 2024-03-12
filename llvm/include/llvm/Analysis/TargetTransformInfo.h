@@ -1247,9 +1247,8 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
-  /// \p TLibInfo use to search for platform specific vector library functions
-  /// for instructions that might be converted to calls. The only known case
-  /// currently is frem.
+  /// \p TLibInfo is used to search for platform specific vector library
+  /// functions for instructions that might be converted to calls (e.g. frem).
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
