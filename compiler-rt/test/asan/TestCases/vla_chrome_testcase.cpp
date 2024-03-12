@@ -1,10 +1,12 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-dynamic-allocas %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
+// UNSUPPORTED: MSVC
 
 // This is reduced testcase based on Chromium code.
 // See http://reviews.llvm.org/D6055?vs=on&id=15616&whitespace=ignore-all#toc.
 
+#include "defines.h"
 #include <stdint.h>
 #include <assert.h>
 
@@ -13,7 +15,7 @@ int b;
 int c;
 int *p;
 
-__attribute__((noinline)) void fn3(int *first, int second) {
+ATTRIBUTE_NOINLINE void fn3(int *first, int second) {
 }
 
 int main() {

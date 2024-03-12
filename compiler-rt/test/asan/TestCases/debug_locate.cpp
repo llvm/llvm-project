@@ -1,3 +1,4 @@
+// UNSUPPORTED: MSVC
 // Checks the ASan memory address type debugging API, makes sure it returns
 // the correct memory type for heap, stack, global and shadow addresses and
 // that it correctly finds out which region (and name and size) the address

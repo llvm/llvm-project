@@ -15,6 +15,7 @@
 
 // UNSUPPORTED: ios
 
+#include "defines.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -22,13 +23,13 @@
 #  include <windows.h>
 #endif
 
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 char *pretend_to_do_something(char *x) {
   __asm__ __volatile__("" : : "r" (x) : "memory");
   return x;
 }
 
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 char *LeakStack() {
   char x[1024];
   memset(x, 0, sizeof(x));
@@ -36,7 +37,7 @@ char *LeakStack() {
 }
 
 template<size_t kFrameSize>
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 void RecursiveFunctionWithStackFrame(int depth) {
   if (depth <= 0) return;
   char x[kFrameSize];

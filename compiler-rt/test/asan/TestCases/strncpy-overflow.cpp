@@ -6,6 +6,7 @@
 // REQUIRES: compiler-rt-optimized
 // REQUIRES: stable-runtime
 
+#include "defines.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -13,7 +14,7 @@
 // strncpy below (which otherwises writes to dead storage).  We
 // need the read to be out-of-line to prevent memory forwarding
 // from making the memory dead again.
-int sink_memory(int N, char *p) __attribute__((noinline));
+int ATTRIBUTE_NOINLINE sink_memory(int N, char *p);
 int sink_memory(int N, char *p) {
   int sum = 0;
   for (int i = 0; i < N; i++)

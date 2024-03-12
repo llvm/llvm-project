@@ -2,7 +2,7 @@
 // RUN: %clangxx_asan %s -o %t -static-libstdc++ && %run %t
 
 // Investigate why it fails with NDK 21.
-// UNSUPPORTED: android
+// UNSUPPORTED: android, MSVC
 
 #include <stdio.h>
 static volatile int zero = 0;
@@ -34,7 +34,7 @@ void Throw() {
   ReallyThrow();
 }
 
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 void CheckStack() {
   int ar[100];
   pretend_to_do_something(ar);

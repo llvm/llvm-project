@@ -4,7 +4,9 @@
 // REQUIRES: stable-runtime
 
 // This testcase checks that allocas and VLAs inside loop are correctly unpoisoned.
+// UNSUPPORTED: MSVC
 
+#include "defines.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -21,7 +23,7 @@
 
 void *top, *bot;
 
-__attribute__((noinline)) void foo(int len) {
+ATTRIBUTE_NOINLINE void foo(int len) {
   char x;
   top = &x;
   volatile char array[len];
