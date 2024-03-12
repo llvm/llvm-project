@@ -371,6 +371,19 @@ void ReductionProcessor::addReductionDecl(
       std::get<Fortran::parser::OmpReductionOperator>(reduction.t)};
   const auto &objectList{std::get<Fortran::parser::OmpObjectList>(reduction.t)};
 
+  if (!std::holds_alternative<Fortran::parser::DefinedOperator>(
+          redOperator.u)) {
+    if (const auto *reductionIntrinsic =
+            std::get_if<Fortran::parser::ProcedureDesignator>(&redOperator.u)) {
+      if (!ReductionProcessor::supportedIntrinsicProcReduction(
+              *reductionIntrinsic)) {
+        return;
+      }
+    } else {
+      return;
+    }
+  }
+
   // initial pass to collect all recuction vars so we can figure out if this
   // should happen byref
   for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
