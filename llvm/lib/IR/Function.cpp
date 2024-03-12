@@ -700,6 +700,10 @@ Attribute Function::getFnAttribute(StringRef Kind) const {
   return AttributeSets.getFnAttr(Kind);
 }
 
+Attribute Function::getRetAttribute(Attribute::AttrKind Kind) const {
+  return AttributeSets.getRetAttr(Kind);
+}
+
 uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
                                                  uint64_t Default) const {
   Attribute A = getFnAttribute(Name);

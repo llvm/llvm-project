@@ -848,6 +848,11 @@ public:
     return getAttributeAtIndex(FunctionIndex, Kind);
   }
 
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttr(Attribute::AttrKind Kind) const {
+    return getAttributeAtIndex(ReturnIndex, Kind);
+  }
+
   /// Return the alignment of the return value.
   MaybeAlign getRetAlignment() const;
 

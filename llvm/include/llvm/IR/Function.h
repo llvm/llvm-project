@@ -430,6 +430,9 @@ public:
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const;
 
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttribute(Attribute::AttrKind Kind) const;
+
   /// For a string attribute \p Kind, parse attribute as an integer.
   ///
   /// \returns \p Default if attribute is not present.
