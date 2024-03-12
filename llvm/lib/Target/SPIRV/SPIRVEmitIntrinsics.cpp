@@ -440,9 +440,9 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   // spv_assign_ptr_type instead.
   if (FirstPtrCastOrAssignPtrType &&
       (isa<Instruction>(Pointer) || isa<Argument>(Pointer))) {
-    CallInst *CI = buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {Pointer->getType()},
-                    ExpectedElementTypeConst, Pointer,
-                    {B.getInt32(AddressSpace)}, B);
+    CallInst *CI = buildIntrWithMD(
+        Intrinsic::spv_assign_ptr_type, {Pointer->getType()},
+        ExpectedElementTypeConst, Pointer, {B.getInt32(AddressSpace)}, B);
     DeducedElTys[CI] = ExpectedElementType;
     DeducedElTys[Pointer] = ExpectedElementType;
     return;
@@ -521,7 +521,8 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     if (!isa<Instruction>(ArgOperand) && !isa<Argument>(ArgOperand))
       continue;
 
-    Type *ExpectedType = OpIdx < CalledArgTys.size() ? CalledArgTys[OpIdx] : nullptr;
+    Type *ExpectedType =
+        OpIdx < CalledArgTys.size() ? CalledArgTys[OpIdx] : nullptr;
     if (!ExpectedType && !DemangledName.empty())
       ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
           DemangledName, OpIdx, I->getContext());
@@ -716,8 +717,8 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
   Type *ElemTy = deduceElementType(I);
   Constant *EltTyConst = UndefValue::get(ElemTy);
   unsigned AddressSpace = getPointerAddressSpace(I->getType());
-  CallInst *CI = buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()}, EltTyConst, I,
-                  {B.getInt32(AddressSpace)}, B);
+  CallInst *CI = buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()},
+                                 EltTyConst, I, {B.getInt32(AddressSpace)}, B);
   DeducedElTys[CI] = ElemTy;
 }
 
