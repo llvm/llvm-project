@@ -824,11 +824,37 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
     return success();
   }
 };
+
+/// Fold dim of a tensor reshape operation to a extract into the reshape's shape
+/// operand.
+struct DimOfReshapeOp : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dim,
+                                PatternRewriter &rewriter) const override {
+    auto reshape = dim.getSource().getDefiningOp<ReshapeOp>();
+
+    if (!reshape)
+      return failure();
+
+    // Since tensors are immutable we don't need to worry about where to place
+    // the extract call
+    rewriter.setInsertionPointAfter(dim);
+    Location loc = dim.getLoc();
+    Value extract =
+        rewriter.create<ExtractOp>(loc, reshape.getShape(), dim.getIndex());
+    if (extract.getType() != dim.getType())
+      extract =
+          rewriter.create<arith::IndexCastOp>(loc, dim.getType(), extract);
+    rewriter.replaceOp(dim, extract);
+    return success();
+  }
+};
 } // namespace
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<DimOfCastOp, DimOfDestStyleOp>(context);
+  results.add<DimOfCastOp, DimOfDestStyleOp, DimOfReshapeOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
