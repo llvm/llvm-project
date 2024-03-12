@@ -302,58 +302,38 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
                                        RISCVII::VLMUL LMul, unsigned NF) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  int I = 0, End = NF, Incr = 1;
   unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned DstEncoding = TRI->getEncodingValue(DstReg);
   unsigned LMulVal;
   bool Fractional;
   std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
   assert(!Fractional && "It is impossible be fractional lmul here.");
-  if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMulVal)) {
-    I = NF - 1;
-    End = -1;
-    Incr = -1;
-  }
+  unsigned NumRegs = NF * LMulVal;
+  bool ReversedCopy =
+      forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NumRegs);
 
-  for (; I != End; I += Incr) {
+  unsigned I = 0;
+  while (I != NumRegs) {
     auto GetCopyInfo =
-        [](RISCVII::VLMUL LMul,unsigned NF) -> std::tuple<unsigned, unsigned, unsigned, unsigned> {
-      unsigned Opc;
-      unsigned SubRegIdx;
-      unsigned VVOpc, VIOpc;
-      switch (LMul) {
-      default:
-        llvm_unreachable("Impossible LMUL for vector register copy.");
-      case RISCVII::LMUL_1:
-        Opc = RISCV::VMV1R_V;
-        SubRegIdx = RISCV::sub_vrm1_0;
-        VVOpc = RISCV::PseudoVMV_V_V_M1;
-        VIOpc = RISCV::PseudoVMV_V_I_M1;
-        break;
-      case RISCVII::LMUL_2:
-        Opc = RISCV::VMV2R_V;
-        SubRegIdx = RISCV::sub_vrm2_0;
-        VVOpc = RISCV::PseudoVMV_V_V_M2;
-        VIOpc = RISCV::PseudoVMV_V_I_M2;
-        break;
-      case RISCVII::LMUL_4:
-        Opc = RISCV::VMV4R_V;
-        SubRegIdx = RISCV::sub_vrm4_0;
-        VVOpc = RISCV::PseudoVMV_V_V_M4;
-        VIOpc = RISCV::PseudoVMV_V_I_M4;
-        break;
-      case RISCVII::LMUL_8:
-        assert(NF == 1);
-        Opc = RISCV::VMV8R_V;
-        SubRegIdx = RISCV::sub_vrm1_0; // There is no sub_vrm8_0.
-        VVOpc = RISCV::PseudoVMV_V_V_M8;
-        VIOpc = RISCV::PseudoVMV_V_I_M8;
-        break;
-      }
-      return {SubRegIdx, Opc, VVOpc, VIOpc};
+        [&](unsigned SrcReg,
+            unsigned DstReg) -> std::tuple<int, const TargetRegisterClass &,
+                                           unsigned, unsigned, unsigned> {
+      unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
+      unsigned DstEncoding = TRI->getEncodingValue(DstReg);
+      if (!(SrcEncoding & 0b111) && !(DstEncoding & 0b111) && I + 8 <= NumRegs)
+        return {8, RISCV::VRM8RegClass, RISCV::VMV8R_V, RISCV::PseudoVMV_V_V_M8,
+                RISCV::PseudoVMV_V_I_M8};
+      if (!(SrcEncoding & 0b11) && !(DstEncoding & 0b11) && I + 4 <= NumRegs)
+        return {4, RISCV::VRM4RegClass, RISCV::VMV4R_V, RISCV::PseudoVMV_V_V_M4,
+                RISCV::PseudoVMV_V_I_M4};
+      if (!(SrcEncoding & 0b1) && !(DstEncoding & 0b1) && I + 2 <= NumRegs)
+        return {2, RISCV::VRM2RegClass, RISCV::VMV2R_V, RISCV::PseudoVMV_V_V_M2,
+                RISCV::PseudoVMV_V_I_M2};
+      return {1, RISCV::VRRegClass, RISCV::VMV1R_V, RISCV::PseudoVMV_V_V_M1,
+              RISCV::PseudoVMV_V_I_M1};
     };
 
-    auto [SubRegIdx, Opc, VVOpc, VIOpc] = GetCopyInfo(LMul, NF);
+    auto [NumCopied, RegClass, Opc, VVOpc, VIOpc] = GetCopyInfo(SrcReg, DstReg);
 
     MachineBasicBlock::const_iterator DefMBBI;
     if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
@@ -361,6 +341,20 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
 
       if (DefMBBI->getOpcode() == VIOpc) {
         Opc = VIOpc;
+      }
+    }
+
+    for (MCPhysReg Reg : RegClass.getRegisters()) {
+      if (TRI->getEncodingValue(Reg) == TRI->getEncodingValue(SrcReg)) {
+        SrcReg = Reg;
+        break;
+      }
+    }
+
+    for (MCPhysReg Reg : RegClass.getRegisters()) {
+      if (TRI->getEncodingValue(Reg) == TRI->getEncodingValue(DstReg)) {
+        DstReg = Reg;
+        break;
       }
     }
 
@@ -385,13 +379,10 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
       }
     };
 
-    if (NF == 1) {
-      EmitCopy(SrcReg, DstReg, Opc);
-      return;
-    }
-
-    EmitCopy(TRI->getSubReg(SrcReg, SubRegIdx + I),
-             TRI->getSubReg(DstReg, SubRegIdx + I), Opc);
+    EmitCopy(SrcReg, DstReg, Opc);
+    SrcReg = SrcReg.id() + (ReversedCopy ? -NumCopied : NumCopied);
+    DstReg = DstReg.id() + (ReversedCopy ? -NumCopied : NumCopied);
+    I += NumCopied;
   }
 }
 
