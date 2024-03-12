@@ -294,18 +294,18 @@ TEST(KnownBitsTest, SignBitUnknown) {
   EXPECT_TRUE(Known.isSignUnknown());
 }
 
-TEST(KnownBitsTest, AbsDiffSpecialCase) {
-  // There are 2 implementation of absdiff - both are currently needed to cover
+TEST(KnownBitsTest, ABDUSpecialCase) {
+  // There are 2 implementations of abdu - both are currently needed to cover
   // extra cases.
   KnownBits LHS, RHS, Res;
 
-  // absdiff(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
+  // abdu(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
   // Actual: false (Inputs = 1011, 101?, Computed = 000?, Exact = 000?)
   LHS.One = APInt(4, 0b1011);
   RHS.One = APInt(4, 0b1010);
   LHS.Zero = APInt(4, 0b0100);
   RHS.Zero = APInt(4, 0b0100);
-  Res = KnownBits::absdiff(LHS, RHS);
+  Res = KnownBits::abdu(LHS, RHS);
   EXPECT_EQ(0b0000ul, Res.One.getZExtValue());
   EXPECT_EQ(0b1110ul, Res.Zero.getZExtValue());
 
@@ -315,9 +315,35 @@ TEST(KnownBitsTest, AbsDiffSpecialCase) {
   RHS.One = APInt(4, 0b1000);
   LHS.Zero = APInt(4, 0b0000);
   RHS.Zero = APInt(4, 0b0111);
-  Res = KnownBits::absdiff(LHS, RHS);
+  Res = KnownBits::abdu(LHS, RHS);
   EXPECT_EQ(0b0001ul, Res.One.getZExtValue());
   EXPECT_EQ(0b0000ul, Res.Zero.getZExtValue());
+}
+
+TEST(KnownBitsTest, ABDSSpecialCase) {
+  // There are 2 implementations of abds - both are currently needed to cover
+  // extra cases.
+  KnownBits LHS, RHS, Res;
+
+  // abds(LHS,RHS) = sub(smax(LHS,RHS), smin(LHS,RHS)).
+  // Actual: false (Inputs = 1011, 10??, Computed = ????, Exact = 00??)
+  LHS.One = APInt(4, 0b1011);
+  RHS.One = APInt(4, 0b1000);
+  LHS.Zero = APInt(4, 0b0100);
+  RHS.Zero = APInt(4, 0b0100);
+  Res = KnownBits::abds(LHS, RHS);
+  EXPECT_EQ(0, Res.One.getSExtValue());
+  EXPECT_EQ(-4, Res.Zero.getSExtValue());
+
+  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
+  // Actual: false (Inputs = ???1, 1000, Computed = ???1, Exact = 0??1)
+  LHS.One = APInt(4, 0b0001);
+  RHS.One = APInt(4, 0b1000);
+  LHS.Zero = APInt(4, 0b0000);
+  RHS.Zero = APInt(4, 0b0111);
+  Res = KnownBits::abds(LHS, RHS);
+  EXPECT_EQ(1, Res.One.getSExtValue());
+  EXPECT_EQ(0, Res.Zero.getSExtValue());
 }
 
 TEST(KnownBitsTest, BinaryExhaustive) {
@@ -359,9 +385,15 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       [](const APInt &N1, const APInt &N2) { return APIntOps::smin(N1, N2); });
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::absdiff(Known1, Known2);
+        return KnownBits::abdu(Known1, Known2);
       },
       [](const APInt &N1, const APInt &N2) { return APIntOps::abdu(N1, N2); },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::abds(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) { return APIntOps::abds(N1, N2); },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
