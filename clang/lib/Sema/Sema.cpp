@@ -681,7 +681,8 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
   diagnoseZeroToNullptrConversion(Kind, E);
-  if (!isCast(CCK) && !E->isNullPointerConstant(Context, Expr::NPC_NeverValueDependent /* ???*/)) {
+  if (!isCast(CCK) && !E->isNullPointerConstant(
+                          Context, Expr::NPC_NeverValueDependent /* ???*/)) {
     llvm::outs() << "Sema::ImpCastExprToType\n";
     diagnoseFunctionEffectConversion(Ty, E->getType(), E->getBeginLoc());
   }

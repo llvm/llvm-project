@@ -4360,8 +4360,8 @@ class FunctionProtoType final
   //   hasFunctionEffects() is true.
   //
   // * Optionally a Qualifiers object to represent extra qualifiers that can't
-  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and only
-  //   if hasExtQualifiers() is true.
+  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
+  //   only if hasExtQualifiers() is true.
   //
   // The optional FunctionTypeExtraBitfields has to be before the data
   // related to the exception specification since it contains the number
@@ -4435,8 +4435,7 @@ public:
 
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
-             requiresFunctionProtoTypeArmAttributes() ||
-             FunctionEffects;
+             requiresFunctionProtoTypeArmAttributes() || FunctionEffects;
     }
 
     bool requiresFunctionProtoTypeArmAttributes() const {
@@ -7984,7 +7983,7 @@ public:
                                      const FunctionDecl &NewFunction,
                                      FunctionEffectSet NewFX) const;
 
-  /// Return true if adding or removing the effect in a C++ virtual method 
+  /// Return true if adding or removing the effect in a C++ virtual method
   /// override should generate a diagnostic.
   virtual bool diagnoseMethodOverride(bool Adding,
                                       const CXXMethodDecl &OldMethod,
@@ -7994,7 +7993,7 @@ public:
 
   /// Return true if the effect is allowed to be inferred on the specified Decl
   /// (may be a FunctionDecl or BlockDecl). Only used if the effect has
-  /// kInferrableOnCallees flag set. Example: This allows nolock(false) to 
+  /// kInferrableOnCallees flag set. Example: This allows nolock(false) to
   /// prevent inference for the function.
   virtual bool canInferOnDecl(const Decl *Caller,
                               FunctionEffectSet CallerFX) const;

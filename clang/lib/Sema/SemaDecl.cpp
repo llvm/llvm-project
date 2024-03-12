@@ -3923,28 +3923,30 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   }
 
   const auto OldFX = Old->getFunctionEffects();
-  const auto NewFX = New->getFunctionEffects();  
+  const auto NewFX = New->getFunctionEffects();
   if (OldFX != NewFX) {
     const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
-    for (const auto& Item : Diffs) {
-      const FunctionEffect* Effect = Item.first;
+    for (const auto &Item : Diffs) {
+      const FunctionEffect *Effect = Item.first;
       const bool Adding = Item.second;
       if (Effect->diagnoseRedeclaration(Adding, *Old, OldFX, *New, NewFX)) {
-        Diag(New->getLocation(), diag::warn_mismatched_func_effect_redeclaration) << Effect->name();
+        Diag(New->getLocation(),
+             diag::warn_mismatched_func_effect_redeclaration)
+            << Effect->name();
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
     }
 
     const auto MergedFX = OldFX | NewFX;
 
-    // Having diagnosed any problems, prevent further errors by applying the merged set of effects
-    // to both declarations.
-    auto applyMergedFX = [&](FunctionDecl* FD) {
+    // Having diagnosed any problems, prevent further errors by applying the
+    // merged set of effects to both declarations.
+    auto applyMergedFX = [&](FunctionDecl *FD) {
       const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.FunctionEffects = MergedFX;
       QualType ModQT = Context.getFunctionType(FD->getReturnType(),
-                                                  FPT->getParamTypes(), EPI);
+                                               FPT->getParamTypes(), EPI);
 
       FD->setType(ModQT);
     };
@@ -11136,8 +11138,7 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
 
 // Should only be called when getFunctionEffects() returns a non-empty set.
 // Decl should be a FunctionDecl or BlockDecl.
-void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX)
-{
+void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
   if (!D->hasBody()) {
     if (const auto *FD = D->getAsFunction()) {
       if (!FD->willHaveBody()) {
@@ -11148,7 +11149,7 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX)
 
   if (Diags.getIgnoreAllWarnings() ||
       (Diags.getSuppressSystemWarnings() &&
-        SourceMgr.isInSystemHeader(D->getLocation())))
+       SourceMgr.isInSystemHeader(D->getLocation())))
     return;
 
   if (hasUncompilableErrorOccurred())

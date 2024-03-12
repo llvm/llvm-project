@@ -4951,7 +4951,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
     // TODO: This generates a redundant diagnostic for:
     // void (^nl_block0)() NOLOCK = ^(){};
-    // if (!From->isNullPointerConstant(Context, Expr::NPC_NeverValueDependent /* ???*/))
+    // if (!From->isNullPointerConstant(Context, Expr::NPC_NeverValueDependent
+    // /* ???*/))
     //   diagnoseFunctionEffectConversion(ToType, InitialFromType,
     //                                         From->getBeginLoc());
   }

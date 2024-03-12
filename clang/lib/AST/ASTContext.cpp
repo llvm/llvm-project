@@ -4502,13 +4502,12 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, 
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo,
       FunctionEffectSet, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
-      EPI.ExtParameterInfos ? NumArgs : 0,
-      EPI.FunctionEffects ? 1 : 0,
+      EPI.ExtParameterInfos ? NumArgs : 0, EPI.FunctionEffects ? 1 : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
@@ -10440,8 +10439,10 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
   FunctionEffectSet FromFX, ToFX;
   std::optional<FunctionEffectSet> MergedFX;
 
-  if (lproto) ToFX = lproto->getFunctionEffects();
-  if (rproto) FromFX = rproto->getFunctionEffects();
+  if (lproto)
+    ToFX = lproto->getFunctionEffects();
+  if (rproto)
+    FromFX = rproto->getFunctionEffects();
   if (ToFX != FromFX) {
     // We want the intersection of the effects...
     MergedFX = FunctionEffectSet::create(FromFX & ToFX);
@@ -10499,8 +10500,10 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     }
 
     if (!MergedFX) { // effects changed so we can't return either side unaltered
-      if (allLTypes) return lhs;
-      if (allRTypes) return rhs;
+      if (allLTypes)
+        return lhs;
+      if (allRTypes)
+        return rhs;
     }
 
     FunctionProtoType::ExtProtoInfo EPI = lproto->getExtProtoInfo();
@@ -10543,8 +10546,10 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     }
 
     if (!MergedFX) { // effects changed so we can't return either side unaltered
-      if (allLTypes) return lhs;
-      if (allRTypes) return rhs;
+      if (allLTypes)
+        return lhs;
+      if (allRTypes)
+        return rhs;
     }
 
     FunctionProtoType::ExtProtoInfo EPI = proto->getExtProtoInfo();

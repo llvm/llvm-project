@@ -18329,11 +18329,12 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
     const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
     bool AnyDiags = false;
 
-    for (const auto& Item : Diffs) {
-      const FunctionEffect* Effect = Item.first;
+    for (const auto &Item : Diffs) {
+      const FunctionEffect *Effect = Item.first;
       const bool Adding = Item.second;
       if (Effect->diagnoseMethodOverride(Adding, *Old, OldFX, *New, NewFX)) {
-        Diag(New->getLocation(), diag::warn_mismatched_func_effect_override) << Effect->name();
+        Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+            << Effect->name();
         Diag(Old->getLocation(), diag::note_overridden_virtual_function);
         AnyDiags = true;
       }

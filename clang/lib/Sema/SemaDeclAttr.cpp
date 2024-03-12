@@ -398,8 +398,7 @@ bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
 /// Check if the argument \p ArgNum of \p Attr is a compile-time constant
 /// integer (boolean) expression. If not, emit an error and return false.
 bool Sema::checkBoolExprArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
-                                    bool &Value)
-{
+                                     bool &Value) {
   if (AL.isInvalid()) {
     return false;
   }
@@ -411,7 +410,7 @@ bool Sema::checkBoolExprArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
     ErrorLoc = IL->Loc;
   } else if (ArgExpr != nullptr) {
     if (const std::optional<llvm::APSInt> MaybeVal =
-        ArgExpr->getIntegerConstantExpr(Context, &ErrorLoc)) {
+            ArgExpr->getIntegerConstantExpr(Context, &ErrorLoc)) {
       Value = MaybeVal->getBoolValue();
       return true;
     }
@@ -419,7 +418,7 @@ bool Sema::checkBoolExprArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
 
   AL.setInvalid();
   Diag(ErrorLoc, diag::err_attribute_argument_n_type)
-    << AL << ArgNum << AANT_ArgumentConstantExpr;
+      << AL << ArgNum << AANT_ArgumentConstantExpr;
   return false;
 }
 

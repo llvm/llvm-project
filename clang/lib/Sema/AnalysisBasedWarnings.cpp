@@ -3196,8 +3196,7 @@ private:
           CurrentCaller(CurrentCaller) {}
 
     // -- Entry point --
-    void run()
-    {
+    void run() {
       // The target function itself may have some implicit code paths beyond the
       // body: member and base constructors and destructors. Visit these first.
       if (const auto *FD = dyn_cast<const FunctionDecl>(CurrentCaller.CDecl)) {
@@ -3225,8 +3224,8 @@ private:
     // flags include the specified flag receive a diagnostic. \p Flag describes
     // the construct.
     void diagnoseLanguageConstruct(FunctionEffect::FlagBit Flag, DiagnosticID D,
-                       SourceLocation Loc, const Decl *Callee = nullptr)
-    {
+                                   SourceLocation Loc,
+                                   const Decl *Callee = nullptr) {
       // If there are ANY declared verifiable effects holding the flag, store
       // just one diagnostic.
       for (auto *Effect : CurrentFunction.DeclaredVerifiableEffects) {
@@ -3247,8 +3246,8 @@ private:
     void addDiagnosticInner(bool Inferring, const FunctionEffect *Effect,
                             DiagnosticID D, SourceLocation Loc,
                             const Decl *Callee = nullptr) {
-      CurrentFunction.checkAddDiagnostic(Inferring, 
-        Diagnostic(Effect, D, Loc, Callee));
+      CurrentFunction.checkAddDiagnostic(Inferring,
+                                         Diagnostic(Effect, D, Loc, Callee));
     }
 
     // Here we have a call to a Decl, either explicitly via a CallExpr or some
@@ -3334,14 +3333,14 @@ private:
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
     bool VisitCXXThrowExpr(CXXThrowExpr *Throw) {
-      diagnoseLanguageConstruct(FunctionEffect::kExcludeThrow, DiagnosticID::Throws,
-                                Throw->getThrowLoc());
+      diagnoseLanguageConstruct(FunctionEffect::kExcludeThrow,
+                                DiagnosticID::Throws, Throw->getThrowLoc());
       return Proceed;
     }
 
     bool VisitCXXCatchStmt(CXXCatchStmt *Catch) {
-      diagnoseLanguageConstruct(FunctionEffect::kExcludeCatch, DiagnosticID::Catches,
-                                Catch->getCatchLoc());
+      diagnoseLanguageConstruct(FunctionEffect::kExcludeCatch,
+                                DiagnosticID::Catches, Catch->getCatchLoc());
       return Proceed;
     }
 
@@ -3394,7 +3393,8 @@ private:
 
       if (Var->isStaticLocal()) {
         diagnoseLanguageConstruct(FunctionEffect::kExcludeStaticLocalVars,
-                                  DiagnosticID::HasStaticLocal, Var->getLocation());
+                                  DiagnosticID::HasStaticLocal,
+                                  Var->getLocation());
       }
 
       const QualType::DestructionKind DK =
@@ -3493,7 +3493,8 @@ private:
           // At least on macOS, thread-local variables are initialized on
           // first access.
           diagnoseLanguageConstruct(FunctionEffect::kExcludeThreadLocalVars,
-                                    DiagnosticID::AccessesThreadLocal, E->getLocation());
+                                    DiagnosticID::AccessesThreadLocal,
+                                    E->getLocation());
         }
       }
       return Proceed;
@@ -3770,7 +3771,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // TODO: skip this if the warning isn't enabled.
-  FXAnalysis::Analyzer{ S }.run(*TU);
+  FXAnalysis::Analyzer{S}.run(*TU);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
