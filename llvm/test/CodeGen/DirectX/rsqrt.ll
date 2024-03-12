@@ -29,3 +29,6 @@ entry:
   %dx.rsqrt = call half @llvm.dx.rsqrt.f16(half %0)
   ret half %dx.rsqrt
 }
+
+; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+declare half @llvm.dx.rsqrt.f16(half) #1

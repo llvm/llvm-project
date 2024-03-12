@@ -1158,8 +1158,9 @@ double4 rcp(double4);
 //===----------------------------------------------------------------------===//
 
 /// \fn T rsqrt(T x)
-/// \brief RReturns the reciprocal of the square root of the specified value \a
-/// x. \param x The specified input value.
+/// \brief Returns the reciprocal of the square root of the specified value.
+/// ie 1 / sqrt( \a x).
+/// \param x The specified input value.
 ///
 /// This function uses the following formula: 1 / sqrt(x).
 
