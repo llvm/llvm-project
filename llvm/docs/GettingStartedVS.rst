@@ -63,6 +63,7 @@ allows you to adjust installation options.
 You will need `Git for Windows <https://git-scm.com/>`_ with bash tools, too.
 Git for Windows is also bundled with Visual Studio 2019.
 
+.. _getting_started:
 
 Getting Started
 ===============
@@ -132,13 +133,15 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
 Visual Studio native CMake support
 ==================================
 
+Before you can build LLVM with Visual Studio you need to follow the step
+outlined in :ref:`Getting Started<getting_started>`.
+
 Support for native CMake integration was added in Visual Studio 2019, but it has
 been made more robust in 2022. If you are using Visual Studio before 2022, it's
 recommended to generate a Visual Studio solution from CMake instead of using the
 native CMake integration.
 
-If you want to generate a Visual Studio Solution for older versions of Visual
-Studio or because that is a workflow that suits you better, please refer to the
+If you want to generate a Visual Studio Solution, please refer to the
 chapter below on :ref:generating Visual Studio Solution<gen_vs_cmake>.
 
 To use the native CMake support, launch Visual Studio 2022 and select the option
@@ -167,8 +170,10 @@ documentation
 Generate Visual Studio Solution with CMake
 ==========================================
 
-1.  After following the steps above you can generate a Visual Studio Solution by
-    running the following CMake command:
+Before you can generate the Visual Studio solution you need to follow the step
+outlined in :ref:`Getting Started<getting_started>`.
+
+1.  You can generate a Visual Studio Solution by running the following CMake command:
 
     .. code-block:: bat
 

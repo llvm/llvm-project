@@ -1,4 +1,4 @@
 {
-  "enableCMake": true,
-  "sourceDirectory": "llvm"
+  "sourceDirectory": "llvm",
+  "enableCMake": false
 }
