@@ -93,8 +93,10 @@ inline ObjectList makeList(const parser::OmpObjectList &objects,
   return makeList(objects.v, makeObjectF(semaCtx));
 }
 
-template <typename F, typename T, typename U = std::invoke_result_t<F, T>>
-std::optional<U> maybeApply(F &&func, const std::optional<T> &inp) {
+template <typename FuncTy, typename ElemTy,
+          typename ResultTy = std::invoke_result_t<FuncTy, ElemTy>>
+std::optional<ResultTy> maybeApply(FuncTy &&func,
+                                   const std::optional<ElemTy> &inp) {
   if (!inp)
     return std::nullopt;
   return std::move(func(*inp));
@@ -120,6 +122,11 @@ namespace clause {
 #include "llvm/Frontend/OpenMP/OMP.inc"
 #undef EMPTY_CLASS
 #undef WRAPPER_CLASS
+
+// "Requires" clauses are handled early on, and the aggregated information
+// is stored in the Symbol details of modules, programs, and subprograms.
+// These clauses are still handled here to cover all alternatives in the
+// main clause variant.
 
 using Aligned = tomp::clause::AlignedT<SymIdent, SymReference>;
 using Allocate = tomp::clause::AllocateT<SymIdent, SymReference>;

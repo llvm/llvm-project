@@ -45,7 +45,7 @@ static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
 namespace omp {
 using SymbolWithDesignator = std::tuple<semantics::Symbol *, MaybeExpr>;
 
-struct SymDsgExtractor {
+struct SymbolAndDesignatorExtractor {
   template <typename T>
   static T &&AsRvalueRef(T &&t) {
     return std::move(t);
@@ -110,8 +110,8 @@ struct SymDsgExtractor {
 SymbolWithDesignator getSymbolAndDesignator(const MaybeExpr &expr) {
   if (!expr)
     return SymbolWithDesignator{};
-  return std::visit([](auto &&s) { return SymDsgExtractor::visit(s); },
-                    expr->u);
+  return std::visit(
+      [](auto &&s) { return SymbolAndDesignatorExtractor::visit(s); }, expr->u);
 }
 
 Object makeObject(const parser::Name &name,
@@ -124,7 +124,7 @@ Object makeObject(const parser::Designator &dsg,
                   semantics::SemanticsContext &semaCtx) {
   evaluate::ExpressionAnalyzer ea{semaCtx};
   SymbolWithDesignator sd = getSymbolAndDesignator(ea.Analyze(dsg));
-  SymDsgExtractor::verify(sd);
+  SymbolAndDesignatorExtractor::verify(sd);
   return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
 }
 
@@ -132,7 +132,7 @@ Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx) {
   evaluate::ExpressionAnalyzer ea{semaCtx};
   SymbolWithDesignator sd = getSymbolAndDesignator(ea.Analyze(comp));
-  SymDsgExtractor::verify(sd);
+  SymbolAndDesignatorExtractor::verify(sd);
   return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
 }
 
@@ -165,20 +165,23 @@ getBaseObject(const Object &object,
     return std::nullopt;
   } else if (auto *comp = std::get_if<evaluate::Component>(&ref.u)) {
     const evaluate::DataRef &base = comp->base();
-    return Object{SymDsgExtractor::symbol_addr(base.GetLastSymbol()),
-                  evaluate::AsGenericExpr(SymDsgExtractor::AsRvalueRef(base))};
+    return Object{
+        SymbolAndDesignatorExtractor::symbol_addr(base.GetLastSymbol()),
+        evaluate::AsGenericExpr(
+            SymbolAndDesignatorExtractor::AsRvalueRef(base))};
   } else if (auto *arr = std::get_if<evaluate::ArrayRef>(&ref.u)) {
     const evaluate::NamedEntity &base = arr->base();
     evaluate::ExpressionAnalyzer ea{semaCtx};
     if (auto *comp = base.UnwrapComponent()) {
-      return Object{
-          SymDsgExtractor::symbol_addr(comp->symbol()),
-          ea.Designate(evaluate::DataRef{SymDsgExtractor::AsRvalueRef(*comp)})};
+      return Object{SymbolAndDesignatorExtractor::symbol_addr(comp->symbol()),
+                    ea.Designate(evaluate::DataRef{
+                        SymbolAndDesignatorExtractor::AsRvalueRef(*comp)})};
     } else if (base.UnwrapSymbolRef()) {
       return std::nullopt;
     }
   } else {
-    assert(std::holds_alternative<evaluate::CoarrayRef>(ref.u));
+    assert(std::holds_alternative<evaluate::CoarrayRef>(ref.u) &&
+           "Unexpected variant alternative");
     llvm_unreachable("Coarray reference not supported at the moment");
   }
   return std::nullopt;
@@ -211,24 +214,24 @@ using ProcedureDesignator =
 using ReductionOperator =
     tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
 
-DefinedOperator makeDefOp(const parser::DefinedOperator &inp,
-                          semantics::SemanticsContext &semaCtx) {
-  return DefinedOperator{
-      std::visit(common::visitors{
-                     [&](const parser::DefinedOpName &s) {
-                       return DefinedOperator{DefinedOperator::DefinedOpName{
-                           makeObject(s.v, semaCtx)}};
-                     },
-                     [&](const parser::DefinedOperator::IntrinsicOperator &s) {
-                       return DefinedOperator{s};
-                     },
-                 },
-                 inp.u),
-  };
+DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
+                                    semantics::SemanticsContext &semaCtx) {
+  return std::visit(
+      common::visitors{
+          [&](const parser::DefinedOpName &s) {
+            return DefinedOperator{
+                DefinedOperator::DefinedOpName{makeObject(s.v, semaCtx)}};
+          },
+          [&](const parser::DefinedOperator::IntrinsicOperator &s) {
+            return DefinedOperator{s};
+          },
+      },
+      inp.u);
 }
 
-ProcedureDesignator makeProcDsg(const parser::ProcedureDesignator &inp,
-                                semantics::SemanticsContext &semaCtx) {
+ProcedureDesignator
+makeProcedureDesignator(const parser::ProcedureDesignator &inp,
+                        semantics::SemanticsContext &semaCtx) {
   return ProcedureDesignator{std::visit(
       common::visitors{
           [&](const parser::Name &t) { return makeObject(t, semaCtx); },
@@ -239,17 +242,18 @@ ProcedureDesignator makeProcDsg(const parser::ProcedureDesignator &inp,
       inp.u)};
 }
 
-ReductionOperator makeRedOp(const parser::OmpReductionOperator &inp,
-                            semantics::SemanticsContext &semaCtx) {
-  return std::visit(common::visitors{
-                        [&](const parser::DefinedOperator &s) {
-                          return ReductionOperator{makeDefOp(s, semaCtx)};
-                        },
-                        [&](const parser::ProcedureDesignator &s) {
-                          return ReductionOperator{makeProcDsg(s, semaCtx)};
-                        },
-                    },
-                    inp.u);
+ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
+                                        semantics::SemanticsContext &semaCtx) {
+  return std::visit(
+      common::visitors{
+          [&](const parser::DefinedOperator &s) {
+            return ReductionOperator{makeDefinedOperator(s, semaCtx)};
+          },
+          [&](const parser::ProcedureDesignator &s) {
+            return ReductionOperator{makeProcedureDesignator(s, semaCtx)};
+          },
+      },
+      inp.u);
 }
 
 // Actual clauses. Each T (where OmpClause::T exists) has its "make".
@@ -278,27 +282,24 @@ Allocate make(const parser::OmpClause::Allocate &inp,
     using Align = Modifier::Align;
     using ComplexModifier = Modifier::ComplexModifier;
 
-    return Modifier{
-        std::visit(
-            common::visitors{
-                [&](const wrapped::AllocateModifier::Allocator &v) {
-                  return Modifier{Allocator{makeExpr(v.v, semaCtx)}};
-                },
-                [&](const wrapped::AllocateModifier::ComplexModifier &v) {
-                  auto &s0 =
-                      std::get<wrapped::AllocateModifier::Allocator>(v.t);
-                  auto &s1 = std::get<wrapped::AllocateModifier::Align>(v.t);
-                  return Modifier{ComplexModifier{{
-                      Allocator{makeExpr(s0.v, semaCtx)},
-                      Align{makeExpr(s1.v, semaCtx)},
-                  }}};
-                },
-                [&](const wrapped::AllocateModifier::Align &v) {
-                  return Modifier{Align{makeExpr(v.v, semaCtx)}};
-                },
+    return std::visit(
+        common::visitors{
+            [&](const wrapped::AllocateModifier::Allocator &v) {
+              return Modifier{Allocator{makeExpr(v.v, semaCtx)}};
             },
-            s.u),
-    };
+            [&](const wrapped::AllocateModifier::ComplexModifier &v) {
+              auto &s0 = std::get<wrapped::AllocateModifier::Allocator>(v.t);
+              auto &s1 = std::get<wrapped::AllocateModifier::Align>(v.t);
+              return Modifier{ComplexModifier{{
+                  Allocator{makeExpr(s0.v, semaCtx)},
+                  Align{makeExpr(s1.v, semaCtx)},
+              }}};
+            },
+            [&](const wrapped::AllocateModifier::Align &v) {
+              return Modifier{Align{makeExpr(v.v, semaCtx)}};
+            },
+        },
+        s.u);
   };
 
   return Allocate{{maybeApply(convert, t0), makeList(t1, semaCtx)}};
@@ -366,7 +367,7 @@ Depend make(const parser::OmpClause::Depend &inp,
               auto convert1 = [&](const parser::OmpDependSinkVecLength &u) {
                 auto &s0 = std::get<parser::DefinedOperator>(u.t);
                 auto &s1 = std::get<parser::ScalarIntConstantExpr>(u.t);
-                return Depend::Sink::Length{makeDefOp(s0, semaCtx),
+                return Depend::Sink::Length{makeDefinedOperator(s0, semaCtx),
                                             makeExpr(s1, semaCtx)};
               };
               return Depend::Sink::Vec{makeObject(t0, semaCtx),
@@ -471,7 +472,8 @@ InReduction make(const parser::OmpClause::InReduction &inp,
   // inp.v -> parser::OmpInReductionClause
   auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  return InReduction{{makeRedOp(t0, semaCtx), makeList(t1, semaCtx)}};
+  return InReduction{
+      {makeReductionOperator(t0, semaCtx), makeList(t1, semaCtx)}};
 }
 
 IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
@@ -618,7 +620,7 @@ Reduction make(const parser::OmpClause::Reduction &inp,
   // inp.v -> parser::OmpReductionClause
   auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  return Reduction{{makeRedOp(t0, semaCtx), makeList(t1, semaCtx)}};
+  return Reduction{{makeReductionOperator(t0, semaCtx), makeList(t1, semaCtx)}};
 }
 
 Safelen make(const parser::OmpClause::Safelen &inp,
@@ -674,7 +676,8 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
   // inp.v -> parser::OmpReductionClause
   auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
-  return TaskReduction{{makeRedOp(t0, semaCtx), makeList(t1, semaCtx)}};
+  return TaskReduction{
+      {makeReductionOperator(t0, semaCtx), makeList(t1, semaCtx)}};
 }
 
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
