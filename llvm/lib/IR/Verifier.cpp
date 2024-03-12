@@ -5267,7 +5267,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::ucmp:
   case Intrinsic::scmp: {
-
     Type *SrcTy = Call.getOperand(0)->getType();
     Type *DestTy = Call.getType();
 
