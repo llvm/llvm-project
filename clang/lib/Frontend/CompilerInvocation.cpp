@@ -1480,13 +1480,14 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
   }
+  Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
 }
 
 static void parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const LangOptions &LangOpts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
-  if (!LangOpts.PointerAuthCalls)
+  if (!LangOpts.PointerAuthCalls && !LangOpts.PointerAuthIndirectGotos)
     return;
 
   CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple);
@@ -3390,6 +3391,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_calls);
   if (Opts.PointerAuthReturns)
     GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuthIndirectGotos)
+    GenerateArg(Consumer, OPT_fptrauth_indirect_gotos);
   if (Opts.PointerAuthAuthTraps)
     GenerateArg(Consumer, OPT_fptrauth_auth_traps);
   if (Opts.PointerAuthVTPtrAddressDiscrimination)
@@ -3405,6 +3408,7 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
   Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
   Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
   Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
   Opts.PointerAuthVTPtrAddressDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
