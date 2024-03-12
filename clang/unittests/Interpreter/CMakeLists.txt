@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   OrcJIT
   Support
   TargetParser
-  TestingSupport
   )
 
 add_clang_unittest(ClangReplInterpreterTests
@@ -20,6 +19,7 @@ target_link_libraries(ClangReplInterpreterTests PUBLIC
   clangInterpreter
   clangFrontend
   clangSema
+  LLVMTestingSupport
   )
 
 # Exceptions on Windows are not yet supported.
