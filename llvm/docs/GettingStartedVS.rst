@@ -153,17 +153,14 @@ LLVM ships with a default CMakePresets.json that is supposed to make it easy to
 get started, but usually you need to modify the settings used. The best way to
 do this is to create a CMakeUserPresets.json in the llvm subfolder and add your
 configuration there. For more information about the Preset system, see
-Microsoft's documentation
-<https://learn.microsoft.com/en-us/cpp/build/cmake-presets-json-reference>_.
+`Microsoft's documentation <https://learn.microsoft.com/en-us/cpp/build/cmake-presets-json-reference>`_.
 
 The default CMakePreset comes with MSVC and Clang targets. To use the Clang
 target, you need to have the C++ Clang compiler for Windows component of Visual
 Studio installed.
 
-To debug Clang and other binaries within Visual Studio, see Microsoft's
-documentation
-<https://learn.microsoft.com/en-us/cpp/build/configure-cmake-debugging-sessions>_.
-
+To debug Clang and other binaries within Visual Studio, see 
+`Visual Studio documentation <https://learn.microsoft.com/en-us/cpp/build/configure-cmake-debugging-sessions>`_.
 
 .. _gen_vs_cmake:
 
