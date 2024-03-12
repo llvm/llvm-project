@@ -104,9 +104,6 @@ let Definition = "target" in {
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
     Desc<"Consult the platform module avoid list when setting non-module specific breakpoints.">;
-  def EnableLanguageFilterForLineBreakpoints: Property<"enable-language-filter-for-line-breakpoints", "Boolean">,
-    DefaultTrue,
-    Desc<"If true, allow Language plugins to filter locations when setting breakpoints by line number or regex.">;
   def Arg0: Property<"arg0", "String">,
     DefaultStringValue<"">,
     Desc<"The first argument passed to the program in the argument array which can be different from the executable itself.">;
@@ -313,4 +310,10 @@ let Definition = "thread" in {
   def MaxBacktraceDepth: Property<"max-backtrace-depth", "UInt64">,
     DefaultUnsignedValue<600000>,
     Desc<"Maximum number of frames to backtrace.">;
+}
+
+let Definition = "language" in {
+  def EnableFilterForLineBreakpoints: Property<"enable-filter-for-line-breakpoints", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, allow Language plugins to filter locations when setting breakpoints by line number or regex.">;
 }

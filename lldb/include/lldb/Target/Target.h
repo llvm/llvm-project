@@ -258,8 +258,6 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
-  bool GetEnableLanguageFilterForLineBreakpoints() const;
-
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();

@@ -26,7 +26,16 @@
 
 namespace lldb_private {
 
-class Language : public PluginInterface {
+class LanguageProperties : public Properties {
+public:
+  LanguageProperties();
+
+  static llvm::StringRef GetSettingName();
+
+  bool GetEnableFilterForLineBreakpoints() const;
+};
+
+class Language : public PluginInterface, public LanguageProperties {
 public:
   class TypeScavenger {
   public:
@@ -323,6 +332,8 @@ public:
   static LanguageSet GetLanguagesSupportingTypeSystems();
   static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
   static LanguageSet GetLanguagesSupportingREPLs();
+
+  static LanguageProperties &GetGlobalLanguageProperties();
 
   // Given a mangled function name, calculates some alternative manglings since
   // the compiler mangling may not line up with the symbol we are expecting.

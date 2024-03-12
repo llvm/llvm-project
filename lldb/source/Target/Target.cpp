@@ -4896,12 +4896,6 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   SetPropertyAtIndex(idx, debug);
 }
 
-bool TargetProperties::GetEnableLanguageFilterForLineBreakpoints() const {
-  const uint32_t idx = ePropertyEnableLanguageFilterForLineBreakpoints;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_target_properties[idx].default_uint_value != 0);
-}
-
 // Target::TargetEventData
 
 Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp)
