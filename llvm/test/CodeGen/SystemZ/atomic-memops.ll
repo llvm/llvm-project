@@ -408,19 +408,6 @@ define void @f25(ptr %src, ptr %dst) {
   ret void
 }
 
-define void @f25_b(ptr %src, ptr %dst) {
-; CHECK-LABEL: f25_b:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlrepf %v0, 0(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r3), 3
-; CHECK-NEXT:    br %r14
-  %l = load atomic i32, ptr %src seq_cst, align 4
-  %b = bitcast i32 %l to float
-  %v = insertelement <4 x float> undef, float %b, i32 1
-  store volatile <4 x float> %v, ptr %dst
-  ret void
-}
-
 ; Do *not* use vlrep for an extending load.
 define <4 x i32> @f25_c(ptr %ptr) {
 ; CHECK-LABEL: f25_c:
@@ -465,21 +452,6 @@ define void @f26(ptr %src, ptr %dst) {
   store volatile <2 x double> %v, ptr %dst
   ret void
 }
-
-define void @f26_b(ptr %src, ptr %dst) {
-; CHECK-LABEL: f26_b:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlrepg %v0, 0(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r3), 3
-; CHECK-NEXT:    br %r14
-  %l = load atomic i64, ptr %src seq_cst, align 8
-  %b = bitcast i64 %l to double
-  %v = insertelement <2 x double> undef, double %b, i32 0
-  store volatile <2 x double> %v, ptr %dst
-  ret void
-}
-
-
 
 ; Vector Load logical element and zero.
 define <16 x i8> @f27(ptr %ptr) {
@@ -583,40 +555,6 @@ define <2 x i64> @f36(<2 x i64> %val, ptr %ptr) {
   ret <2 x i64> %ret
 }
 
-; Test that fp values are loaded/stored directly. Clang FE currently always
-; emits atomic load/stores casted this way.
-define void @f37(ptr %src, ptr %dst) {
-; CHECK-LABEL: f37:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld %f0, 0(%r2)
-; CHECK-NEXT:    adbr %f0, %f0
-; CHECK-NEXT:    std %f0, 0(%r3)
-; CHECK-NEXT:    bcr 14, %r0
-; CHECK-NEXT:    br %r14
-  %atomic-load = load atomic i64, ptr %src seq_cst, align 8
-  %bc0 = bitcast i64 %atomic-load to double
-  %fa = fadd double %bc0, %bc0
-  %bc1 = bitcast double %fa to i64
-  store atomic i64 %bc1, ptr %dst seq_cst, align 8
-  ret void
-}
-
-define void @f38(ptr %src, ptr %dst) {
-; CHECK-LABEL: f38:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lde %f0, 0(%r2)
-; CHECK-NEXT:    aebr %f0, %f0
-; CHECK-NEXT:    ste %f0, 0(%r3)
-; CHECK-NEXT:    bcr 14, %r0
-; CHECK-NEXT:    br %r14
-  %atomic-load = load atomic i32, ptr %src seq_cst, align 8
-  %bc0 = bitcast i32 %atomic-load to float
-  %fa = fadd float %bc0, %bc0
-  %bc1 = bitcast float %fa to i32
-  store atomic i32 %bc1, ptr %dst seq_cst, align 8
-  ret void
-}
-
 ; Test operation on memory involving atomic load and store.
 define void @f39(ptr %ptr) {
 ; CHECK-LABEL: f39:
@@ -676,7 +614,7 @@ define void @f43(ptr %ptr) {
 define void @f44(ptr %ptr) {
 ; CHECK-LABEL: f44:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI53_0
+; CHECK-NEXT:    larl %r1, .LCPI49_0
 ; CHECK-NEXT:    ld %f0, 0(%r1)
 ; CHECK-NEXT:    std %f0, 0(%r2)
 ; CHECK-NEXT:    bcr 14, %r0
@@ -767,8 +705,7 @@ define void @f51(ptr %src, ptr %dst) {
   %b0 = bitcast i128 %atomic-load to <4 x float>
   %vecext = extractelement <4 x float> %b0, i64 0
   %add = fadd float %vecext, 1.000000e+00
-  %b1 = bitcast float %add to i32
-  store atomic i32 %b1, ptr %dst seq_cst, align 4
+  store atomic float %add, ptr %dst seq_cst, align 4
   ret void
 }
 
@@ -786,8 +723,7 @@ define void @f52(ptr %src, ptr %dst) {
   %b0 = bitcast i128 %atomic-load to <2 x double>
   %vecext = extractelement <2 x double> %b0, i64 0
   %add = fadd double %vecext, 1.000000e+00
-  %b1 = bitcast double %add to i64
-  store atomic i64 %b1, ptr %dst seq_cst, align 8
+  store atomic double %add, ptr %dst seq_cst, align 8
   ret void
 }
 

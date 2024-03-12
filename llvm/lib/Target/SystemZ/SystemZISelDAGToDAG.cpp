@@ -1761,21 +1761,12 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::ATOMIC_STORE: {
     auto *AtomOp = cast<AtomicSDNode>(Node);
-    // Store FP values directly without first moving to a GPR. This is needed
-    // as long as clang always emits the cast to integer.
-    EVT SVT = AtomOp->getMemoryVT();
-    SDValue StoredVal = AtomOp->getVal();
-    if (SVT.isInteger() && StoredVal->getOpcode() == ISD::BITCAST &&
-        StoredVal->getOperand(0).getValueType().isFloatingPoint()) {
-      StoredVal = StoredVal->getOperand(0);
-      SVT = StoredVal.getValueType();
-    }
     // Replace the atomic_store with a regular store and select it. This is
     // ok since we know all store instructions <= 8 bytes are atomic, and the
     // 16 byte case is already handled during lowering.
     StoreSDNode *St = cast<StoreSDNode>(CurDAG->getTruncStore(
-        AtomOp->getChain(), SDLoc(AtomOp), StoredVal, AtomOp->getBasePtr(), SVT,
-        AtomOp->getMemOperand()));
+         AtomOp->getChain(), SDLoc(AtomOp), AtomOp->getVal(),
+         AtomOp->getBasePtr(), AtomOp->getMemoryVT(), AtomOp->getMemOperand()));
     assert(St->getMemOperand()->isAtomic() && "Broken MMO.");
     SDNode *Chain = St;
     // We have to enforce sequential consistency by performing a

@@ -538,7 +538,7 @@ def zext32 : PatFrag<(ops node:$src), (zext (i32 node:$src))>;
 def z_load : PatFrags<(ops node:$ptr),
                       [(load node:$ptr),
                        (atomic_load node:$ptr)], [{
-  if (auto *AL = dyn_cast<AtomicSDNode>(N))  // XXXX getLoadExtType?
+  if (auto *AL = dyn_cast<AtomicSDNode>(N))
     if (AL->getExtensionType() != ISD::NON_EXTLOAD)
       return false;
   return true;
@@ -680,7 +680,7 @@ def z_any_extloadf64 : PatFrags<(ops node:$ptr),
 class AlignedLoad<SDPatternOperator load>
   : PatFrag<(ops node:$addr), (load node:$addr),
   [{ return storeLoadIsAligned(N); }]>;
-def aligned_z_load       : AlignedLoad<z_load>;
+def aligned_z_load         : AlignedLoad<z_load>;
 def aligned_z_asextloadi16 : AlignedLoad<z_asextloadi16>;
 def aligned_z_asextloadi32 : AlignedLoad<z_asextloadi32>;
 def aligned_z_azextloadi16 : AlignedLoad<z_azextloadi16>;

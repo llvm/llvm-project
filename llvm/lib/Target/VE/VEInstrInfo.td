@@ -1785,7 +1785,7 @@ defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
-// Atomic loads
+// Atomic loads (FIXME: replace iAny with the correct integer VT:)
 multiclass ATMLDm<SDPatternOperator from,
                   RM torri, RM torii,
                   RM tozri, RM tozii> {

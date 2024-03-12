@@ -695,8 +695,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
 
   // Codes for which we want to perform some z-specific combinations.
-  setTargetDAGCombine({ISD::BITCAST,
-                       ISD::ZERO_EXTEND,
+  setTargetDAGCombine({ISD::ZERO_EXTEND,
                        ISD::SIGN_EXTEND,
                        ISD::SIGN_EXTEND_INREG,
                        ISD::LOAD,
@@ -916,7 +915,6 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
   return false;
 }
 
-// FIXME: Clang emits these casts always regardless of these hooks.
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
   // Lower fp128 the same way as i128.
@@ -6597,32 +6595,6 @@ static SDValue extendAtomicLoad(AtomicSDNode *ALoad, EVT VT, SelectionDAG &DAG,
   return SDValue(NewALoad, 0);
 }
 
-SDValue SystemZTargetLowering::combineBITCAST(SDNode *N,
-                                              DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue N0 = N->getOperand(0);
-  EVT InVT = N0.getValueType();
-  EVT ResVT = N->getValueType(0);
-  // Handle atomic loads to load float/double values directly and not via a
-  // GPR. Do it before legalization to help in treating the ATOMIC_LOAD the
-  // same way as a LOAD, and e.g. emit a REPLICATE. FIXME: This is only
-  // needed because clang currently emits these casts always.
-  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
-    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD && InVT.getSizeInBits() <= 64 &&
-        ALoad->getExtensionType() == ISD::NON_EXTLOAD &&
-        SDValue(ALoad, 0).hasOneUse() && InVT.isInteger() &&
-        ResVT.isFloatingPoint()) {
-      SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD, SDLoc(N), ResVT, ResVT,
-                                  ALoad->getChain(), ALoad->getBasePtr(),
-                                  ALoad->getMemOperand());
-      // Update the chain uses.
-      DAG.ReplaceAllUsesOfValueWith(SDValue(ALoad, 1), Res.getValue(1));
-      return Res;
-    }
-
-  return SDValue();
-}
-
 SDValue SystemZTargetLowering::combineZERO_EXTEND(
     SDNode *N, DAGCombinerInfo &DCI) const {
   // Convert (zext (select_ccmask C1, C2)) into (select_ccmask C1', C2')
@@ -7683,7 +7655,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   switch(N->getOpcode()) {
   default: break;
-  case ISD::BITCAST:            return combineBITCAST(N, DCI);
   case ISD::ZERO_EXTEND:        return combineZERO_EXTEND(N, DCI);
   case ISD::SIGN_EXTEND:        return combineSIGN_EXTEND(N, DCI);
   case ISD::SIGN_EXTEND_INREG:  return combineSIGN_EXTEND_INREG(N, DCI);
