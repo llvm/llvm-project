@@ -69,9 +69,9 @@ PRIMARY_REQUIRED(const uptr, CompactPtrScale)
 // Log2 of the size of a size class region, as used by the Primary.
 PRIMARY_REQUIRED(const uptr, RegionSizeLog)
 
-// Conceptually, a region will be divided into groups based on the address range
-// Each allocation consumes blocks in the same group until the exhaustion then
-// it pops out blocks in a new group. Therefore, `GroupSizeLog` is always
+// Conceptually, a region will be divided into groups based on the address
+// range. Each allocation consumes blocks in the same group until exhaustion
+// then it pops out blocks in a new group. Therefore, `GroupSizeLog` is always
 // smaller or equal to `RegionSizeLog`. Note that `GroupSizeLog` needs to be
 // equal to `RegionSizeLog` for SizeClassAllocator32 because of certain
 // constraints.
@@ -94,7 +94,7 @@ PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
 //
 // Use condition variable to shorten the waiting time of refillment of
 // freelist. Note that this depends on the implementation of condition
-// variable on each platform and the performance may vary so that it doesn not
+// variable on each platform and the performance may vary so that it does not
 // guarantee a performance benefit.
 PRIMARY_OPTIONAL_TYPE(ConditionVariableT, ConditionVariableDummy)
 
