@@ -634,7 +634,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
         // RemoveDIs: do the same as below for DPValues.
         if (Block->IsNewDbgInfoFormat) {
           for (DPValue &DPV : llvm::make_early_inc_range(
-                   DPValue::filter(I.getDbgValueRange()))) {
+                   DPValue::filter(I.getDbgRecordRange()))) {
             DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                               DPV.getDebugLoc().get());
             if (!DeadDebugSet.insert(Key).second)
@@ -677,7 +677,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // repeatedly inserted before the first instruction. To replicate this
     // behaviour, do it backwards.
     for (DPValue *DPV : llvm::reverse(DeadDPValues))
-      ExitBlock->insertDPValueBefore(DPV, InsertDbgValueBefore);
+      ExitBlock->insertDbgRecordBefore(DPV, InsertDbgValueBefore);
   }
 
   // Remove the block from the reference counting scheme, so that we can
