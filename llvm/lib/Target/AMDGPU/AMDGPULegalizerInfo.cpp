@@ -4287,19 +4287,19 @@ bool AMDGPULegalizerInfo::loadInputValue(
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
   const ArgDescriptor ClusterWorkGroupIDX =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xFu);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000000Fu);
   const ArgDescriptor ClusterWorkGroupIDY =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF0u);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000000F0u);
   const ArgDescriptor ClusterWorkGroupIDZ =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF00u);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00000F00u);
   const ArgDescriptor ClusterNumWorkGroupsX =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF000u);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000F000u);
   const ArgDescriptor ClusterNumWorkGroupsY =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF0000u);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000F0000u);
   const ArgDescriptor ClusterNumWorkGroupsZ =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF00000u);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterFlatNumWorkGroups =
-      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF000000u);
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
   if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
