@@ -110,7 +110,7 @@ private:
   bool swingModuloScheduler(MachineLoop &L);
   void setPragmaPipelineOptions(MachineLoop &L);
   bool runWindowScheduler(MachineLoop &L);
-  bool useSwingModuloScheduler(bool Changed);
+  bool useSwingModuloScheduler();
   bool useWindowScheduler(bool Changed);
 };
 

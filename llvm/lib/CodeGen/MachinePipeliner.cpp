@@ -304,7 +304,7 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   }
 
   ++NumTrytoPipeline;
-  if (useSwingModuloScheduler(Changed))
+  if (useSwingModuloScheduler())
     Changed = swingModuloScheduler(L);
 
   if (useWindowScheduler(Changed))
@@ -516,7 +516,7 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   return WS.run();
 }
 
-bool MachinePipeliner::useSwingModuloScheduler(bool Changed) {
+bool MachinePipeliner::useSwingModuloScheduler() {
   // SwingModuloScheduler does not work when WindowScheduler is forced.
   return WindowSchedulingOption != WindowSchedulingFlag::WS_Force;
 }
