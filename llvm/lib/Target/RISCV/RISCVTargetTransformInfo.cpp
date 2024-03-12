@@ -1630,5 +1630,9 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
           TLI->getValueType(DL, VTy->getElementType())))
     return false;
 
+  if (!isLegalMaskedLoadStore(DataTy, Alignment))
+    return false;
+
+  // Splitting of vcompress for LMUL > 8 is yet not implemented.
   return getRegUsageForType(VTy) <= 8;
 }
