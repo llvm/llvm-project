@@ -207,7 +207,7 @@ This is a small sample program that uses the module ``std``. It consists of a
 
   add_executable(main)
   add_dependencies(main std)
-  target_link_libraries(std)
+  target_link_libraries(main std)
   target_sources(main
     PRIVATE
       main.cpp
