@@ -1884,7 +1884,7 @@ def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
 
-def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
+def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
@@ -1903,7 +1903,7 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16

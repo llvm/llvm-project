@@ -106,7 +106,7 @@ def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
   let hasVerifier = 1;
 }
 
-def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", []> {
+def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", [CExpression]> {
   let summary = "Bitwise and operation";
   let description = [{
     With the `bitwise_and` operation the bitwise operator & (and) can
@@ -124,7 +124,8 @@ def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", []> {
   }];
 }
 
-def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift", []> {
+def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift",
+    [CExpression]> {
   let summary = "Bitwise left shift operation";
   let description = [{
     With the `bitwise_left_shift` operation the bitwise operator <<
@@ -142,7 +143,7 @@ def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift", []> {
   }];
 }
 
-def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", []> {
+def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", [CExpression]> {
   let summary = "Bitwise not operation";
   let description = [{
     With the `bitwise_not` operation the bitwise operator ~ (not) can
@@ -160,7 +161,7 @@ def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", []> {
   }];
 }
 
-def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", []> {
+def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", [CExpression]> {
   let summary = "Bitwise or operation";
   let description = [{
     With the `bitwise_or` operation the bitwise operator | (or)
@@ -178,7 +179,8 @@ def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", []> {
   }];
 }
 
-def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift", []> {
+def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift",
+    [CExpression]> {
   let summary = "Bitwise right shift operation";
   let description = [{
     With the `bitwise_right_shift` operation the bitwise operator >>
@@ -196,7 +198,7 @@ def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift", []> {
   }];
 }
 
-def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", []> {
+def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", [CExpression]> {
   let summary = "Bitwise xor operation";
   let description = [{
     With the `bitwise_xor` operation the bitwise operator ^ (xor)
@@ -515,7 +517,7 @@ def EmitC_ForOp : EmitC_Op<"for",
 }
 
 def EmitC_CallOp : EmitC_Op<"call",
-    [CallOpInterface,
+    [CallOpInterface, CExpression,
      DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "call operation";
   let description = [{
@@ -771,7 +773,7 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   let assemblyFormat = "$value attr-dict `:` type($result)";
 }
 
-def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {
+def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", [CExpression]> {
   let summary = "Logical and operation";
   let description = [{
     With the `logical_and` operation the logical operator && (and) can
@@ -792,7 +794,7 @@ def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", []> {
+def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", [CExpression]> {
   let summary = "Logical not operation";
   let description = [{
     With the `logical_not` operation the logical operator ! (negation) can
@@ -813,7 +815,7 @@ def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", []> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", []> {
+def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
   let summary = "Logical or operation";
   let description = [{
     With the `logical_or` operation the logical operator || (inclusive or)
@@ -904,6 +906,42 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   }];
 
   let hasVerifier = 1;
+}
+
+def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", [CExpression]> {
+  let summary = "Unary minus operation";
+  let description = [{
+    With the `unary_minus` operation the unary operator - (minus) can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.unary_plus %arg0 : (i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = -v1;
+    ```
+  }];
+}
+
+def EmitC_UnaryPlusOp : EmitC_UnaryOp<"unary_plus", [CExpression]> {
+  let summary = "Unary plus operation";
+  let description = [{
+    With the `unary_plus` operation the unary operator + (plus) can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.unary_plus %arg0 : (i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = +v1;
+    ```
+  }];
 }
 
 def EmitC_VariableOp : EmitC_Op<"variable", []> {

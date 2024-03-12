@@ -2491,12 +2491,12 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->removeOperand(3);
     break;
   }
-  case X86::PCLMULQDQrr:
-  case X86::VPCLMULQDQrr:
-  case X86::VPCLMULQDQYrr:
-  case X86::VPCLMULQDQZrr:
-  case X86::VPCLMULQDQZ128rr:
-  case X86::VPCLMULQDQZ256rr: {
+  case X86::PCLMULQDQrri:
+  case X86::VPCLMULQDQrri:
+  case X86::VPCLMULQDQYrri:
+  case X86::VPCLMULQDQZrri:
+  case X86::VPCLMULQDQZ128rri:
+  case X86::VPCLMULQDQZ256rri: {
     // SRC1 64bits = Imm[0] ? SRC1[127:64] : SRC1[63:0]
     // SRC2 64bits = Imm[4] ? SRC2[127:64] : SRC2[63:0]
     unsigned Imm = MI.getOperand(3).getImm();
@@ -2573,11 +2573,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(
         X86::getSwappedVPCOMImm(MI.getOperand(3).getImm() & 0x7));
     break;
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -2820,21 +2820,21 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
-  case X86::CMPSDrr:
-  case X86::CMPSSrr:
+  case X86::CMPSDrri:
+  case X86::CMPSSrri:
   case X86::CMPPDrri:
   case X86::CMPPSrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr:
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri:
   case X86::VCMPPDrri:
   case X86::VCMPPSrri:
   case X86::VCMPPDYrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -7510,9 +7510,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSSrr_Int:
     case X86::VADDSSrr_Int:
     case X86::VADDSSZrr_Int:
-    case X86::CMPSSrr_Int:
-    case X86::VCMPSSrr_Int:
-    case X86::VCMPSSZrr_Int:
+    case X86::CMPSSrri_Int:
+    case X86::VCMPSSrri_Int:
+    case X86::VCMPSSZrri_Int:
     case X86::DIVSSrr_Int:
     case X86::VDIVSSrr_Int:
     case X86::VDIVSSZrr_Int:
@@ -7533,7 +7533,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSSZrr_Int:
     case X86::VADDSSZrr_Intk:
     case X86::VADDSSZrr_Intkz:
-    case X86::VCMPSSZrr_Intk:
+    case X86::VCMPSSZrri_Intk:
     case X86::VDIVSSZrr_Intk:
     case X86::VDIVSSZrr_Intkz:
     case X86::VMAXSSZrr_Intk:
@@ -7679,9 +7679,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSDrr_Int:
     case X86::VADDSDrr_Int:
     case X86::VADDSDZrr_Int:
-    case X86::CMPSDrr_Int:
-    case X86::VCMPSDrr_Int:
-    case X86::VCMPSDZrr_Int:
+    case X86::CMPSDrri_Int:
+    case X86::VCMPSDrri_Int:
+    case X86::VCMPSDZrri_Int:
     case X86::DIVSDrr_Int:
     case X86::VDIVSDrr_Int:
     case X86::VDIVSDZrr_Int:
@@ -7702,7 +7702,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSDZrr_Int:
     case X86::VADDSDZrr_Intk:
     case X86::VADDSDZrr_Intkz:
-    case X86::VCMPSDZrr_Intk:
+    case X86::VCMPSDZrri_Intk:
     case X86::VDIVSDZrr_Intk:
     case X86::VDIVSDZrr_Intkz:
     case X86::VMAXSDZrr_Intk:
@@ -7814,7 +7814,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // instruction isn't scalar (SH).
     switch (UserOpc) {
     case X86::VADDSHZrr_Int:
-    case X86::VCMPSHZrr_Int:
+    case X86::VCMPSHZrri_Int:
     case X86::VDIVSHZrr_Int:
     case X86::VMAXSHZrr_Int:
     case X86::VMINSHZrr_Int:
@@ -7822,7 +7822,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VSUBSHZrr_Int:
     case X86::VADDSHZrr_Intk:
     case X86::VADDSHZrr_Intkz:
-    case X86::VCMPSHZrr_Intk:
+    case X86::VCMPSHZrri_Intk:
     case X86::VDIVSHZrr_Intk:
     case X86::VDIVSHZrr_Intkz:
     case X86::VMAXSHZrr_Intk:

@@ -187,15 +187,15 @@ static cl::opt<bool>
                               cl::desc("Use selective instrumentation"),
                               cl::Hidden, cl::init(false));
 
-static cl::opt<int> HotPercentileCutoff(
+static cl::opt<int> ClHotPercentileCutoff(
     "hwasan-percentile-cutoff-hot", cl::init(0),
     cl::desc("Alternative hot percentile cuttoff."
              "By default `-profile-summary-cutoff-hot` is used."));
 
 static cl::opt<float>
-    RandomSkipRate("hwasan-random-skip-rate", cl::init(0),
-                   cl::desc("Probability value in the range [0.0, 1.0] "
-                            "to skip instrumentation of a function."));
+    ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+                     cl::desc("Probability value in the range [0.0, 1.0] "
+                              "to skip instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -301,7 +301,7 @@ public:
                               ? ClEnableKhwasan
                               : CompileKernel;
     this->Rng =
-        RandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
+        ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
 
     initializeModule();
   }
@@ -316,8 +316,9 @@ private:
     Value *PtrTag = nullptr;
     Value *MemTag = nullptr;
   };
-  void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
+  bool selectiveInstrumentationShouldSkip(Function &F,
+                                          FunctionAnalysisManager &FAM);
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -412,8 +413,8 @@ private:
   Type *VoidTy = Type::getVoidTy(M.getContext());
   Type *IntptrTy;
   PointerType *PtrTy;
-  Type *Int8Ty;
-  Type *Int32Ty;
+  Type *Int8Ty = Type::getInt8Ty(M.getContext());
+  Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
 
   bool CompileKernel;
@@ -615,8 +616,6 @@ void HWAddressSanitizer::initializeModule() {
   IRBuilder<> IRB(*C);
   IntptrTy = IRB.getIntPtrTy(DL);
   PtrTy = IRB.getPtrTy();
-  Int8Ty = IRB.getInt8Ty();
-  Int32Ty = IRB.getInt32Ty();
 
   HwasanCtorFunction = nullptr;
 
@@ -1526,6 +1525,31 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
   return true;
 }
 
+bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
+    Function &F, FunctionAnalysisManager &FAM) {
+  if (ClRandomSkipRate.getNumOccurrences()) {
+    std::bernoulli_distribution D(ClRandomSkipRate);
+    if (D(*Rng))
+      return true;
+  } else {
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (PSI && PSI->hasProfileSummary()) {
+      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+      if ((ClHotPercentileCutoff.getNumOccurrences() &&
+           ClHotPercentileCutoff >= 0)
+              ? PSI->isFunctionHotInCallGraphNthPercentile(
+                    ClHotPercentileCutoff, &F, BFI)
+              : PSI->isFunctionHotInCallGraph(&F, BFI))
+        return true;
+    } else {
+      ++NumNoProfileSummaryFuncs;
+    }
+  }
+  return false;
+}
+
 void HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
@@ -1538,28 +1562,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   NumTotalFuncs++;
-  if (CSelectiveInstrumentation) {
-    if (RandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(RandomSkipRate);
-      if (D(*Rng))
-        return;
-    } else {
-      auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-      ProfileSummaryInfo *PSI =
-          MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-      if (PSI && PSI->hasProfileSummary()) {
-        auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-        if ((HotPercentileCutoff.getNumOccurrences() &&
-             HotPercentileCutoff >= 0)
-                ? PSI->isFunctionHotInCallGraphNthPercentile(
-                      HotPercentileCutoff, &F, BFI)
-                : PSI->isFunctionHotInCallGraph(&F, BFI))
-          return;
-      } else {
-        ++NumNoProfileSummaryFuncs;
-      }
-    }
-  }
+
+  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+    return;
+
   NumInstrumentedFuncs++;
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");

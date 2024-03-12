@@ -28926,6 +28926,9 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
 // supported by the Subtarget
 static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
                                         unsigned Opcode) {
+  assert((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
+         "Unexpected shift opcode");
+
   if (!VT.isSimple())
     return false;
 
@@ -28959,6 +28962,9 @@ bool supportedVectorShiftWithBaseAmnt(EVT VT, const X86Subtarget &Subtarget,
 // natively supported by the Subtarget
 static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
                                     unsigned Opcode) {
+  assert((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
+         "Unexpected shift opcode");
+
   if (!VT.isSimple())
     return false;
 
@@ -48179,6 +48185,7 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
   SDValue X, Y;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (SDValue Not = GetNot(N0)) {
     X = Not;
@@ -48192,9 +48199,11 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
   X = DAG.getBitcast(VT, X);
   Y = DAG.getBitcast(VT, Y);
   SDLoc DL(N);
+
   // We do not split for SSE at all, but we need to split vectors for AVX1 and
   // AVX2.
-  if (!Subtarget.useAVX512Regs() && VT.is512BitVector()) {
+  if (!Subtarget.useAVX512Regs() && VT.is512BitVector() && 
+      TLI.isTypeLegal(VT.getHalfNumVectorElementsVT(*DAG.getContext()))) {
     SDValue LoX, HiX;
     std::tie(LoX, HiX) = splitVector(X, DAG, DL);
     SDValue LoY, HiY;
@@ -48204,7 +48213,11 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
     SDValue HiV = DAG.getNode(X86ISD::ANDNP, DL, SplitVT, {HiX, HiY});
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, {LoV, HiV});
   }
-  return DAG.getNode(X86ISD::ANDNP, DL, VT, {X, Y});
+
+  if (TLI.isTypeLegal(VT))
+    return DAG.getNode(X86ISD::ANDNP, DL, VT, {X, Y});
+
+  return SDValue();
 }
 
 // Try to widen AND, OR and XOR nodes to VT in order to remove casts around
@@ -53440,6 +53453,69 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   if (SDValue R =
           truncateAVX512SetCCNoBWI(VT, OpVT, LHS, RHS, CC, DL, DAG, Subtarget))
     return R;
+
+  // In the middle end transforms:
+  //    `(or (icmp eq X, C), (icmp eq X, C+1))`
+  //        -> `(icmp ult (add x, -C), 2)`
+  // Likewise inverted cases with `ugt`.
+  //
+  // Since x86, pre avx512, doesn't have unsigned vector compares, this results
+  // in worse codegen. So, undo the middle-end transform and go back to `(or
+  // (icmp eq), (icmp eq))` form.
+  // Also skip AVX1 with ymm vectors, as the umin approach combines better than
+  // the xmm approach.
+  //
+  // NB: We don't handle the similiar simplication of `(and (icmp ne), (icmp
+  // ne))` as it doesn't end up instruction positive.
+  // TODO: We might want to do this for avx512 as well if we `sext` the result.
+  if (VT.isVector() && OpVT.isVector() && OpVT.isInteger() &&
+      ISD::isUnsignedIntSetCC(CC) && LHS.getOpcode() == ISD::ADD &&
+      !Subtarget.hasAVX512() &&
+      (OpVT.getSizeInBits() <= 128 || !Subtarget.hasAVX() ||
+       Subtarget.hasAVX2()) &&
+      LHS.hasOneUse()) {
+
+    APInt CmpC;
+    SDValue AddC = LHS.getOperand(1);
+    if (ISD::isConstantSplatVector(RHS.getNode(), CmpC) &&
+        DAG.isConstantIntBuildVectorOrConstantInt(AddC)) {
+      // See which form we have depending on the constant/condition.
+      SDValue C0 = SDValue();
+      SDValue C1 = SDValue();
+
+      // If we had `(add x, -1)` and can lower with `umin`, don't transform as
+      // we will end up generating an additional constant. Keeping in the
+      // current form has a slight latency cost, but it probably worth saving a
+      // constant.
+      if (ISD::isConstantSplatVectorAllOnes(AddC.getNode()) &&
+          DAG.getTargetLoweringInfo().isOperationLegal(ISD::UMIN, OpVT)) {
+        // Pass
+      }
+      // Normal Cases
+      else if ((CC == ISD::SETULT && CmpC == 2) ||
+               (CC == ISD::SETULE && CmpC == 1)) {
+        // These will constant fold.
+        C0 = DAG.getNegative(AddC, DL, OpVT);
+        C1 = DAG.getNode(ISD::SUB, DL, OpVT, C0,
+                         DAG.getAllOnesConstant(DL, OpVT));
+      }
+      // Inverted Cases
+      else if ((CC == ISD::SETUGT && (-CmpC) == 3) ||
+               (CC == ISD::SETUGE && (-CmpC) == 2)) {
+        // These will constant fold.
+        C0 = DAG.getNOT(DL, AddC, OpVT);
+        C1 = DAG.getNode(ISD::ADD, DL, OpVT, C0,
+                         DAG.getAllOnesConstant(DL, OpVT));
+      }
+      if (C0 && C1) {
+        SDValue NewLHS =
+            DAG.getSetCC(DL, VT, LHS.getOperand(0), C0, ISD::SETEQ);
+        SDValue NewRHS =
+            DAG.getSetCC(DL, VT, LHS.getOperand(0), C1, ISD::SETEQ);
+        return DAG.getNode(ISD::OR, DL, VT, NewLHS, NewRHS);
+      }
+    }
+  }
 
   // For an SSE1-only target, lower a comparison of v4f32 to X86ISD::CMPP early
   // to avoid scalarization via legalization because v4i32 is not a legal type.

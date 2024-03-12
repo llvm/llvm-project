@@ -855,10 +855,10 @@ def note_strncat_wrong_size : Note<
 def warn_assume_side_effects : Warning<
   "the argument to %0 has side effects that will be discarded">,
   InGroup<DiagGroup<"assume">>;
-def warn_assume_attribute_string_unknown : Warning<
+def warn_omp_assume_attribute_string_unknown : Warning<
   "unknown assumption string '%0'; attribute is potentially ignored">,
   InGroup<UnknownAssumption>;
-def warn_assume_attribute_string_unknown_suggested : Warning<
+def warn_omp_assume_attribute_string_unknown_suggested : Warning<
   "unknown assumption string '%0' may be misspelled; attribute is potentially "
   "ignored, did you mean '%1'?">,
   InGroup<MisspelledAssumption>;
@@ -2515,10 +2515,11 @@ def err_deduced_class_template_compound_type : Error<
   "cannot %select{form pointer to|form reference to|form array of|"
   "form function returning|use parentheses when declaring variable with}0 "
   "deduced class template specialization type">;
-def err_deduced_non_class_template_specialization_type : Error<
+def err_deduced_non_class_or_alias_template_specialization_type : Error<
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
-  "arguments; argument deduction only allowed for class templates">;
+  "arguments; argument deduction only allowed for class templates or alias "
+  "templates">;
 def err_deduced_class_template_ctor_ambiguous : Error<
   "ambiguous deduction for template arguments of %0">;
 def err_deduced_class_template_ctor_no_viable : Error<
@@ -8170,6 +8171,8 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx11_compat_generic_lambda : Warning<
     "generic lambdas are incompatible with C++11">,
     InGroup<CXXPre14Compat>, DefaultIgnore;
+  def err_lambda_explicit_spec : Error<
+    "lambda call operator should not be explicitly specialized or instantiated">;
 
   // C++17 '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
@@ -8199,6 +8202,11 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+
+  // C++20 class template argument deduction for alias templates.
+  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
+  "class template argument deduction for alias templates is incompatible with "
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -9107,6 +9115,8 @@ def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17Attrs>;
 def ext_cxx20_attr : Extension<
   "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
+def ext_cxx23_attr : Extension<
+  "use of the %0 attribute is a C++23 extension">, InGroup<CXX23Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -10161,6 +10171,9 @@ def err_fallthrough_attr_outside_switch : Error<
 def err_fallthrough_attr_invalid_placement : Error<
   "fallthrough annotation does not directly precede switch label">;
 
+def err_assume_attr_args : Error<
+  "attribute '%0' requires a single expression argument">;
+
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,
   InGroup<CoveredSwitchDefault>, DefaultIgnore;
@@ -10235,14 +10248,14 @@ def warn_second_parameter_to_va_arg_never_compatible : Warning<
 
 def warn_return_missing_expr : Warning<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_missing_expr : ExtWarn<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
-  InGroup<ReturnType>;
+  InGroup<ReturnMismatch>;
 def ext_return_has_expr : ExtWarn<
   "%select{void function|void method|constructor|destructor}1 %0 "
   "should not return a value">,
-  DefaultError, InGroup<ReturnType>;
+  DefaultError, InGroup<ReturnMismatch>;
 def ext_return_has_void_expr : Extension<
   "void %select{function|method|block}1 %0 should not return void expression">;
 def err_return_init_list : Error<

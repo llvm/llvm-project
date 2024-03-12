@@ -367,13 +367,13 @@ bool TypePromotionImpl::isSafeWrap(Instruction *I) {
 
   SafeWrap.insert(I);
 
-  if (OverflowConst.ugt(ICmpConst)) {
-    LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
+  if (OverflowConst == 0 || OverflowConst.ugt(ICmpConst)) {
+    LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for "
                       << "const of " << *I << "\n");
     return true;
   }
 
-  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for "
                     << "const of " << *I << " and " << *CI << "\n");
   SafeWrap.insert(CI);
   return true;
