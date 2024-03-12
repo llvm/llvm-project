@@ -15,6 +15,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 #include <queue>
 
@@ -63,7 +64,8 @@ using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 ///
 /// Note: Any modification of existing IR invalides the data stored in this
 /// class. Adding new operations is allowed.
-class ValueBoundsConstraintSet {
+class ValueBoundsConstraintSet
+    : public llvm::RTTIExtends<ValueBoundsConstraintSet, llvm::RTTIRoot> {
 protected:
   /// Helper class that builds a bound for a shaped value dimension or
   /// index-typed value.
@@ -107,6 +109,8 @@ protected:
   };
 
 public:
+  static char ID;
+
   /// The stop condition when traversing the backward slice of a shaped value/
   /// index-type value. The traversal continues until the stop condition
   /// evaluates to "true" for a value.

@@ -70,6 +70,8 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
 ValueBoundsConstraintSet::ValueBoundsConstraintSet(MLIRContext *ctx)
     : builder(ctx) {}
 
+char ValueBoundsConstraintSet::ID = 0;
+
 #ifndef NDEBUG
 static void assertValidValueDim(Value value, std::optional<int64_t> dim) {
   if (value.getType().isIndex()) {
