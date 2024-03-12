@@ -4,14 +4,12 @@
 define void @test(i16 %0) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  for.body92.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> <i16 0, i16 poison>, i16 [[TMP0:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>, <4 x i32> [[TMP5]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    br label [[FOR_BODY92:%.*]]
 ; CHECK:       for.body92:
+; CHECK-NEXT:    [[CONV177_I:%.*]] = sext i16 0 to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>, i32 [[CONV177_I]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[TMP1]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr undef, align 8
 ; CHECK-NEXT:    br label [[FOR_BODY92]]

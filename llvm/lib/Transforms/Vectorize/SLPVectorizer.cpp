@@ -2235,7 +2235,7 @@ public:
   /// of the cost, considered to be good enough score.
   std::optional<int>
   findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
-                   int Limit = LookAheadHeuristics::ScoreFail) {
+                   int Limit = LookAheadHeuristics::ScoreFail) const {
     LookAheadHeuristics LookAhead(*TLI, *DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
     int BestScore = Limit;
@@ -6019,6 +6019,100 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
       return TreeEntry::NeedToGather;
     }
+    // Check that the operand node does not generate buildvector sequence. If it
+    // is, then probably not worth it to build alternate shuffle, if number of
+    // buildvector operands + alternate instruction > than the number of
+    // buildvector instructions.
+    SmallVector<ValueList> Operands;
+    for (unsigned I : seq<unsigned>(0, VL0->getNumOperands())) {
+      Operands.emplace_back();
+      // Prepare the operand vector.
+      for (Value *V : VL)
+        Operands.back().push_back(cast<Instruction>(V)->getOperand(I));
+    }
+    if (Operands.size() == 2) {
+      // Try find best operands candidates.
+      for (unsigned I : seq<unsigned>(0, VL.size() - 1)) {
+        SmallVector<std::pair<Value *, Value *>> Candidates(3);
+        Candidates[0] = std::make_pair(Operands[0][I], Operands[0][I + 1]);
+        Candidates[1] = std::make_pair(Operands[0][I], Operands[1][I + 1]);
+        Candidates[2] = std::make_pair(Operands[1][I], Operands[0][I + 1]);
+        std::optional<int> Res = findBestRootPair(Candidates);
+        switch (Res.value_or(0)) {
+        case 0:
+          break;
+        case 1:
+          std::swap(Operands[0][I + 1], Operands[1][I + 1]);
+          break;
+        case 2:
+          std::swap(Operands[0][I], Operands[1][I]);
+          break;
+        default:
+          llvm_unreachable("Unexpected index.");
+        }
+      }
+    }
+    DenseSet<unsigned> UniqueOpcodes;
+    constexpr unsigned NumAltInsts = 3; // main + alt + shuffle.
+    unsigned NonInstCnt = 0;
+    unsigned UndefCnt = 0;
+    unsigned ExtraShuffleInsts = 0;
+    if (Operands.size() == 2) {
+      // Do not count same operands twice.
+      if (Operands.front() == Operands.back()) {
+        Operands.erase(Operands.begin());
+      } else if (!allConstant(Operands.front()) &&
+                 all_of(Operands.front(), [&](Value *V) {
+                   return is_contained(Operands.back(), V);
+                 })) {
+        Operands.erase(Operands.begin());
+        ++ExtraShuffleInsts;
+      }
+    }
+    const Loop *L = LI->getLoopFor(VL0->getParent());
+    if (any_of(Operands,
+               [&](ArrayRef<Value *> Op) {
+                 if (allConstant(Op) ||
+                     (!isSplat(Op) && allSameBlock(Op) && allSameType(Op) &&
+                      getSameOpcode(Op, *TLI).MainOp))
+                   return false;
+                 DenseMap<Value *, unsigned> Uniques;
+                 for (Value *V : Op) {
+                   if (isa<Constant, ExtractElementInst>(V) ||
+                       getTreeEntry(V) || (L && L->isLoopInvariant(V))) {
+                     if (isa<UndefValue>(V))
+                       ++UndefCnt;
+                     continue;
+                   }
+                   auto Res = Uniques.try_emplace(V, 0);
+                   // Found first duplicate - need to add shuffle.
+                   if (!Res.second && Res.first->second == 1)
+                     ++ExtraShuffleInsts;
+                   ++Res.first->getSecond();
+                   if (auto *I = dyn_cast<Instruction>(V))
+                     UniqueOpcodes.insert(I->getOpcode());
+                   else if (Res.second)
+                     ++NonInstCnt;
+                 }
+                 if (any_of(Uniques, [&](const auto &P) {
+                       return P.first->hasNUsesOrMore(P.second + 1) &&
+                              none_of(P.first->users(), [&](User *U) {
+                                return getTreeEntry(U) || Uniques.contains(U);
+                              });
+                     }))
+                   return false;
+                 return true;
+               }) &&
+        (UndefCnt >= (VL.size() - 1) * VL0->getNumOperands() ||
+         (UniqueOpcodes.size() + NonInstCnt + ExtraShuffleInsts +
+          NumAltInsts) >= VL0->getNumOperands() * VL.size())) {
+      LLVM_DEBUG(
+          dbgs()
+          << "SLP: ShuffleVector not vectorized, operands are buildvector and "
+             "the whole alt sequence is not profitable.\n");
+      return TreeEntry::NeedToGather;
+    }
+
     return TreeEntry::Vectorize;
   }
   default:
