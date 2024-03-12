@@ -85,11 +85,6 @@ STATISTIC(NumUnrolledNotLatch, "Number of loops unrolled without a conditional "
                                "latch (completely or otherwise)");
 
 static cl::opt<bool>
-UnrollSimplifyReductions("unroll-simplify-reductions", cl::init(true),
-                         cl::Hidden, cl::desc("Try to simplify reductions "
-                                              "after unrolling a loop."));
-
-static cl::opt<bool>
 UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(false), cl::Hidden,
                     cl::desc("Allow runtime unrolled loops to be unrolled "
                              "with epilog instead of prolog."));
@@ -113,6 +108,11 @@ UnrollVerifyLoopInfo("unroll-verify-loopinfo", cl::Hidden,
     cl::init(false)
 #endif
                     );
+
+static cl::opt<bool>
+UnrollSimplifyReductions("unroll-simplify-reductions", cl::init(true),
+                         cl::Hidden, cl::desc("Try to simplify reductions "
+                                              "after unrolling a loop."));
 
 
 /// Check if unrolling created a situation where we need to insert phi nodes to
@@ -265,8 +265,8 @@ static bool trySimplifyReductions(Instruction &I) {
   // Attempt to construct a list of instructions that are chained together
   // (i.e. that perform a reduction).
   SmallVector<BinaryOperator *, 16> Ops;
-  for (Instruction *Cur = PN, *Next = nullptr; /* true */; Cur = Next,
-                                                           Next = nullptr) {
+  for (Instruction *Cur = PN, *Next = nullptr; /* true */;
+       Cur = Next, Next = nullptr) {
     // Try to find the next element in the reduction chain.
     for (auto *U : Cur->users()) {
       auto *Candidate = dyn_cast<Instruction>(U);
@@ -298,11 +298,8 @@ static bool trySimplifyReductions(Instruction &I) {
   if (Ops.size() < 2)
     return false;
 
-  LLVM_DEBUG(
-  dbgs() << "Found candidate reduction: " << I << "\n";
-  for (auto const *Op : Ops)
-    dbgs() << "                         | " << *Op << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "Candidate reduction of length " << Ops.size()
+                    << " found at " << I << ".\n");
 
   // Ensure all instructions perform the same operation and that the operation
   // is associative and commutative so that we can break the chain apart and
@@ -407,9 +404,9 @@ static bool trySimplifyReductions(Instruction &I) {
   // Helper function to create a new binary op.
   // Note: We copy the flags from Ops[0]. Could this be too permissive?
   auto CreateBinOp = [&](Value *V1, Value *V2) {
-    auto Name = PN->getName()+".red";
-    return BinaryOperator::CreateWithCopiedFlags(Opcode, V1, V2, Ops[0],
-                                                 Name, &BB->back());
+    auto Name = PN->getName() + ".red";
+    return BinaryOperator::CreateWithCopiedFlags(Opcode, V1, V2, Ops[0], Name,
+                                                 &BB->back());
   };
 
   // Compute the partial sums of the Ops:
@@ -420,7 +417,7 @@ static bool trySimplifyReductions(Instruction &I) {
   // so if we compute SOps in order (i.e. from 0 to N) we can reuse partial
   // results.
   SmallVector<Value *, 16> SOps(N+1);
-  SOps[0] = nullptr;  // alternatively we could use NeutralElem
+  SOps[0] = nullptr; // alternatively we could use NeutralElem
   SOps[1] = Ops.front();
   for (unsigned k = 2; k <= N; k++)
     SOps[k] = CreateBinOp(SOps[k-1], Ops[k-1]);
@@ -433,7 +430,7 @@ static bool trySimplifyReductions(Instruction &I) {
   // so if we compute SPhis in reverse (i.e. from N down to 0) we can reuse the
   // partial sums computed thus far.
   SmallVector<Value *, 16> SPhis(N+1);
-  SPhis[N] = nullptr;  // alternatively we could use NeutralElem
+  SPhis[N] = nullptr; // alternatively we could use NeutralElem
   SPhis[N-1] = Phis.back();
   for (signed k = N-2; k >= 0; k--)
     SPhis[k] = CreateBinOp(SPhis[k+1], Phis[k]);
