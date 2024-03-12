@@ -483,7 +483,11 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
                   64, // The maximum supported ELEN is 64.
                   regList> {
   int VLMul = Vlmul;
-  int Size = !mul(Vlmul, 64);
+  int NF = 1;
+  int Size = !mul(Vlmul, NF, 64);
+
+  let TSFlags{2-0} = !logtwo(Vlmul);
+  let TSFlags{5-3} = !sub(NF, 1);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
@@ -532,9 +536,7 @@ def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
-def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
-  let Size = 64;
-}
+def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 let RegInfos = XLenRI in {
 def GPRF16  : RegisterClass<"RISCV", [f16], 16, (add GPR)>;
@@ -589,13 +591,15 @@ def VM : VReg<VMaskVTs, (add VR), 1>;
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-                                    !mul(nf, m)>;
-    def "VRN" # nf # "M" # m: VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-                                    !mul(nf, m)>;
+    let NF = nf in {
+      def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
+                                 (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+                                 m>;
+      def "VRN" # nf # "M" # m: VReg<[untyped],
+                                 (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                                      !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+                                 m>;
+    }
   }
 }
 

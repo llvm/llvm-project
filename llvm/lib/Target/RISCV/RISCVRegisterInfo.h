@@ -14,11 +14,32 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVREGISTERINFO_H
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 
 #define GET_REGINFO_HEADER
 #include "RISCVGenRegisterInfo.inc"
 
 namespace llvm {
+
+enum {
+  // The VLMul value of this RegisterClass.
+  VLMulShift = 0,
+  VLMulShiftMask = 0b111 << VLMulShift,
+
+  // The NF value of this RegisterClass.
+  NFShift = VLMulShift + 3,
+  NFShiftMask = 0b111 << NFShift,
+};
+
+/// \returns the LMUL for the register class.
+static inline RISCVII::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVII::VLMUL>((TSFlags & VLMulShiftMask) >> VLMulShift);
+}
+
+/// \returns the NF for the register class.
+static inline unsigned getNF(uint64_t TSFlags) {
+  return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
+}
 
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
@@ -140,6 +161,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
     return isVRRegClass(RC) || isVRNRegClass(RC);
   }
 };
-}
+} // namespace llvm
 
 #endif
