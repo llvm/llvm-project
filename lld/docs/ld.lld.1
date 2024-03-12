@@ -164,6 +164,10 @@ to set the compression level to 6.
 The compression level is 5.
 .El
 .Pp
+.It Fl -compress-sections Ns = Ns Ar section-glob=[none|zlib|zstd]
+Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+This is like a generalized
+.Cm --compress-debug-sections.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
