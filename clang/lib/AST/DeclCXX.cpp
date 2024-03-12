@@ -921,17 +921,14 @@ void CXXRecordDecl::addedMember(Decl *D) {
           Method->getNonObjectParameter(0)->getType()->getAs<ReferenceType>();
       if (!ParamTy || ParamTy->getPointeeType().isConstQualified())
         data().HasDeclaredCopyAssignmentWithConstParam = true;
-
-      if (Method->isUserProvided())
-        data().IsNaturallyTriviallyRelocatable = false;
     }
 
     if (Method->isMoveAssignmentOperator()) {
       SMKind |= SMF_MoveAssignment;
-
-      if (Method->isUserProvided())
-        data().IsNaturallyTriviallyRelocatable = false;
     }
+
+    if (Method->isUserProvided() && (Method->isCopyAssignment() || Method->isMoveAssignment()))
+      data().IsNaturallyTriviallyRelocatable = false;
 
     // Keep the list of conversion functions up-to-date.
     if (auto *Conversion = dyn_cast<CXXConversionDecl>(D)) {
