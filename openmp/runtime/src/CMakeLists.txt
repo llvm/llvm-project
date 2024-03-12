@@ -315,6 +315,7 @@ endif()
 configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
 configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
 
+set(BUILD_FORTRAN_MODULES False)
 if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
   # If libomp is built as an LLVM runtime and the flang compiler is available,
   # compile the Fortran module files.
@@ -327,6 +328,7 @@ if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
       ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
   )
+  set(BUILD_FORTRAN_MODULES True)
 elseif(${LIBOMP_FORTRAN_MODULES})
   # The following requests explicit building of the Fortran module files
   # Workaround for gfortran to build modules with the
@@ -349,6 +351,7 @@ elseif(${LIBOMP_FORTRAN_MODULES})
       ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
   )
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES omp_lib${CMAKE_C_OUTPUT_EXTENSION})
+  set(BUILD_FORTRAN_MODULES True)
 endif()
 
 # Move files to exports/ directory if requested
@@ -422,7 +425,7 @@ if(${LIBOMP_OMPT_SUPPORT})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 endif()
-if(${LIBOMP_FORTRAN_MODULES})
+if(${BUILD_FORTRAN_MODULES})
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod
