@@ -2098,6 +2098,187 @@ public:
   }
 };
 
+static mlir::Value createLLVMBitOp(mlir::Location loc,
+                                   const llvm::Twine &llvmIntrinBaseName,
+                                   mlir::Type resultTy, mlir::Value operand,
+                                   std::optional<bool> poisonZeroInputFlag,
+                                   mlir::ConversionPatternRewriter &rewriter) {
+  auto operandIntTy = operand.getType().cast<mlir::IntegerType>();
+  auto resultIntTy = resultTy.cast<mlir::IntegerType>();
+
+  std::string llvmIntrinName =
+      llvmIntrinBaseName.concat(".i")
+          .concat(std::to_string(operandIntTy.getWidth()))
+          .str();
+  auto llvmIntrinNameAttr =
+      mlir::StringAttr::get(rewriter.getContext(), llvmIntrinName);
+
+  // Note that LLVM intrinsic calls to bit intrinsics have the same type as the
+  // operand.
+  mlir::LLVM::CallIntrinsicOp op;
+  if (poisonZeroInputFlag.has_value()) {
+    auto poisonZeroInputValue = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, rewriter.getI1Type(), static_cast<int64_t>(*poisonZeroInputFlag));
+    op = rewriter.create<mlir::LLVM::CallIntrinsicOp>(
+        loc, operand.getType(), llvmIntrinNameAttr,
+        mlir::ValueRange{operand, poisonZeroInputValue});
+  } else {
+    op = rewriter.create<mlir::LLVM::CallIntrinsicOp>(
+        loc, operand.getType(), llvmIntrinNameAttr, operand);
+  }
+
+  mlir::Value result = op->getResult(0);
+  if (operandIntTy.getWidth() > resultIntTy.getWidth()) {
+    result = rewriter.create<mlir::LLVM::TruncOp>(loc, resultTy, result);
+  } else if (operandIntTy.getWidth() < resultIntTy.getWidth()) {
+    result = rewriter.create<mlir::LLVM::ZExtOp>(loc, resultTy, result);
+  }
+
+  return result;
+}
+
+class CIRBitClrsbOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BitClrsbOp> {
+public:
+  using OpConversionPattern<mlir::cir::BitClrsbOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BitClrsbOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto zero = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), adaptor.getInput().getType(), 0);
+    auto isNeg = rewriter.create<mlir::LLVM::ICmpOp>(
+        op.getLoc(),
+        mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(),
+                                           mlir::LLVM::ICmpPredicate::slt),
+        adaptor.getInput(), zero);
+
+    auto negOne = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), adaptor.getInput().getType(), -1);
+    auto flipped = rewriter.create<mlir::LLVM::XOrOp>(
+        op.getLoc(), adaptor.getInput(), negOne);
+
+    auto select = rewriter.create<mlir::LLVM::SelectOp>(
+        op.getLoc(), isNeg, flipped, adaptor.getInput());
+
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto clz = createLLVMBitOp(op.getLoc(), "llvm.ctlz", resTy, select,
+                               /*poisonZeroInputFlag=*/false, rewriter);
+
+    auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+    auto res = rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), clz, one);
+    rewriter.replaceOp(op, res);
+
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRBitClzOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BitClzOp> {
+public:
+  using OpConversionPattern<mlir::cir::BitClzOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BitClzOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto llvmOp =
+        createLLVMBitOp(op.getLoc(), "llvm.ctlz", resTy, adaptor.getInput(),
+                        /*poisonZeroInputFlag=*/true, rewriter);
+    rewriter.replaceOp(op, llvmOp);
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRBitCtzOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BitCtzOp> {
+public:
+  using OpConversionPattern<mlir::cir::BitCtzOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BitCtzOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto llvmOp =
+        createLLVMBitOp(op.getLoc(), "llvm.cttz", resTy, adaptor.getInput(),
+                        /*poisonZeroInputFlag=*/true, rewriter);
+    rewriter.replaceOp(op, llvmOp);
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRBitFfsOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BitFfsOp> {
+public:
+  using OpConversionPattern<mlir::cir::BitFfsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BitFfsOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto ctz =
+        createLLVMBitOp(op.getLoc(), "llvm.cttz", resTy, adaptor.getInput(),
+                        /*poisonZeroInputFlag=*/false, rewriter);
+
+    auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+    auto ctzAddOne = rewriter.create<mlir::LLVM::AddOp>(op.getLoc(), ctz, one);
+
+    auto zeroInputTy = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), adaptor.getInput().getType(), 0);
+    auto isZero = rewriter.create<mlir::LLVM::ICmpOp>(
+        op.getLoc(),
+        mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(),
+                                           mlir::LLVM::ICmpPredicate::eq),
+        adaptor.getInput(), zeroInputTy);
+
+    auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 0);
+    auto res = rewriter.create<mlir::LLVM::SelectOp>(op.getLoc(), isZero, zero,
+                                                     ctzAddOne);
+    rewriter.replaceOp(op, res);
+
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRBitParityOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BitParityOp> {
+public:
+  using OpConversionPattern<mlir::cir::BitParityOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BitParityOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto popcnt =
+        createLLVMBitOp(op.getLoc(), "llvm.ctpop", resTy, adaptor.getInput(),
+                        /*poisonZeroInputFlag=*/std::nullopt, rewriter);
+
+    auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+    auto popcntMod2 =
+        rewriter.create<mlir::LLVM::AndOp>(op.getLoc(), popcnt, one);
+    rewriter.replaceOp(op, popcntMod2);
+
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRBitPopcountOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BitPopcountOp> {
+public:
+  using OpConversionPattern<mlir::cir::BitPopcountOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BitPopcountOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = getTypeConverter()->convertType(op.getType());
+    auto llvmOp =
+        createLLVMBitOp(op.getLoc(), "llvm.ctpop", resTy, adaptor.getInput(),
+                        /*poisonZeroInputFlag=*/std::nullopt, rewriter);
+    rewriter.replaceOp(op, llvmOp);
+    return mlir::LogicalResult::success();
+  }
+};
+
 class CIRBrOpLowering : public mlir::OpConversionPattern<mlir::cir::BrOp> {
 public:
   using OpConversionPattern<mlir::cir::BrOp>::OpConversionPattern;
@@ -2352,7 +2533,9 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
   patterns.add<
-      CIRCmpOpLowering, CIRLoopOpInterfaceLowering, CIRBrCondOpLowering,
+      CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
+      CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
+      CIRBitPopcountOpLowering, CIRLoopOpInterfaceLowering, CIRBrCondOpLowering,
       CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
       CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
       CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
