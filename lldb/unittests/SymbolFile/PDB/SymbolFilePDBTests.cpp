@@ -527,7 +527,6 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  TypeMap results;
 
   const char *TypedefsToCheck[] = {"ClassTypedef", "NSClassTypedef",
                                    "FuncPointerTypedef",
