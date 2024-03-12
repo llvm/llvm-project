@@ -421,6 +421,15 @@ def IntegerVector : Type<
     ]>, "!cir.vector of !cir.int"> {
 }
 
+// Pointer to Arrays
+def ArrayPtr : Type<
+    And<[
+      CPred<"$_self.isa<::mlir::cir::PointerType>()">,
+      CPred<"$_self.cast<::mlir::cir::PointerType>()"
+            ".getPointee().isa<::mlir::cir::ArrayType>()">,
+    ]>, "!cir.ptr<!cir.eh_info>"> {
+}
+
 //===----------------------------------------------------------------------===//
 // StructType (defined in cpp files)
 //===----------------------------------------------------------------------===//

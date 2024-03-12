@@ -648,7 +648,8 @@ def ConditionOp : CIR_Op<"condition", [
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "ForOp", "AwaitOp",
-                 "TernaryOp", "GlobalOp", "DoWhileOp", "CatchOp", "TryOp"]>]> {
+                 "TernaryOp", "GlobalOp", "DoWhileOp", "CatchOp", "TryOp",
+                 "ArrayCtor", "ArrayDtor"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -3202,6 +3203,49 @@ def TrapOp : CIR_Op<"trap", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayCtor & ArrayDtor
+//===----------------------------------------------------------------------===//
+
+class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic, []> {
+  let arguments = (ins Arg<ArrayPtr, "array address",
+                           [MemWrite, MemRead]>:$addr);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    `(` $addr `:` qualified(type($addr)) `)` $body attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr,
+      "function_ref<void(OpBuilder &, Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        OpBuilder::InsertionGuard guard($_builder);
+        Region *r = $_state.addRegion();
+        $_state.addOperands(ValueRange{addr});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>
+  ];
+}
+
+def ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
+  let summary = "Initialize array elements with C++ constructors";
+  let description = [{
+    Initialize each array element using the same C++ constructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array index to initialize.
+  }];
+}
+
+def ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
+  let summary = "Destroy array elements with C++ dtors";
+  let description = [{
+    Destroy each array element using the same C++ destructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array index to initialize.
+  }];
 }
 
 //===----------------------------------------------------------------------===//

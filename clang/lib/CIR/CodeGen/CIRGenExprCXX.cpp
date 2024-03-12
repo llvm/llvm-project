@@ -344,7 +344,8 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
   }
 
   if (const ArrayType *arrayType = getContext().getAsArrayType(E->getType())) {
-    llvm_unreachable("NYI");
+    buildCXXAggrConstructorCall(CD, arrayType, Dest.getAddress(), E,
+                                Dest.isSanitizerChecked());
   } else {
     clang::CXXCtorType Type = Ctor_Complete;
     bool ForVirtualBase = false;
