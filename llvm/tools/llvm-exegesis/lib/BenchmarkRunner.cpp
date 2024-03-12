@@ -301,7 +301,7 @@ private:
     if (AddMemDefError)
       return AddMemDefError;
 
-    long ParentTID = SubprocessMemory::getCurrentTID();
+    long ParentTID = get_threadid();
     pid_t ParentOrChildPID = fork();
 
     if (ParentOrChildPID == -1) {
