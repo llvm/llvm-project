@@ -684,6 +684,53 @@ private:
   std::vector<ConcatInputSection *> sections;
 };
 
+// This SyntheticSection is for the __objc_methlist section, which contains
+// relative method lists if the -objc_relative_method_lists option is enabled.
+class ObjCMethListSection final : public SyntheticSection {
+public:
+  ObjCMethListSection();
+
+  static bool isMethodList(const ConcatInputSection *isec);
+  void addInput(ConcatInputSection *isec) { inputs.push_back(isec); }
+  std::vector<ConcatInputSection *> getInputs() { return inputs; }
+
+  void setUp();
+  void finalize() override;
+  bool isNeeded() const override { return !inputs.empty(); }
+  uint64_t getSize() const override { return m_size; }
+  void writeTo(uint8_t *bufStart) const override;
+
+private:
+  static void readMethodListHeader(const uint8_t *buf,
+                                   uint32_t &structSizeAndFlags,
+                                   uint32_t &structCount);
+  static void writeMethodListHeader(uint8_t *buf, uint32_t structSizeAndFlags,
+                                    uint32_t structCount);
+  static uint32_t methodListSizeToRelativeMethodListSize(uint32_t iSecSize);
+  void writeRelativeOffsetForIsec(const ConcatInputSection *isec, uint8_t *buf,
+                                  uint32_t &inSecOff, uint32_t &outSecOff,
+                                  bool useSelRef) const;
+  uint32_t writeRelativeMethodList(const ConcatInputSection *isec,
+                                   uint8_t *buf) const;
+
+  static constexpr uint32_t m_methodListHeaderSize =
+      /*structSizeAndFlags*/ sizeof(uint32_t) +
+      /*structCount*/ sizeof(uint32_t);
+  // Relative method lists are supported only for 3-pointer method lists
+  static constexpr uint32_t m_pointersPerStruct = 3;
+  // The runtime identifies relative method lists via this magic value
+  static constexpr uint32_t m_relMethodHeaderFlag = 0x80000000;
+  // In the method list header, the first 2 bytes are the size of struct
+  static constexpr uint32_t m_structSizeMask = 0xFFFF;
+  // Relative method lists have 4 byte alignment as all data in the InputSection
+  // is 4 byte
+  static constexpr uint32_t m_align = 4;
+
+  // The output size of the __objc_methlist section, computed during finalize()
+  uint32_t m_size = 0;
+  std::vector<ConcatInputSection *> inputs;
+};
+
 // Chained fixups are a replacement for classic dyld opcodes. In this format,
 // most of the metadata necessary for binding symbols and rebasing addresses is
 // stored directly in the memory location that will have the fixup applied.
@@ -810,6 +857,7 @@ struct InStruct {
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;
   InitOffsetsSection *initOffsets = nullptr;
+  ObjCMethListSection *objcMethList = nullptr;
   ChainedFixupsSection *chainedFixups = nullptr;
 };
 
