@@ -447,6 +447,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
   const AMDGPUGlobalRegisterPseudoSourceValue GlobalRegisterPSV;
 
+  // Default/requested number of work groups for the function.
+  SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -1098,6 +1101,13 @@ public:
 
   // \returns true if a function needs or may need AGPRs.
   bool usesAGPRs(const MachineFunction &MF) const;
+
+  /// \returns Default/requested number of work groups for this function.
+  SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }
+
+  unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
+  unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
+  unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 };
 
 } // end namespace llvm
