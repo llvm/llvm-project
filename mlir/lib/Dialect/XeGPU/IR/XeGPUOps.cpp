@@ -85,9 +85,10 @@ LogicalResult CreateNdDescOp::verify() {
   invalid = (getTensorDescType().getRank() != rank);
 
   if (invalid) {
-    return emitOpError("Expecting the rank of shape, strides, offsets, "
-            "source memref type (if source is a memref) and TensorDesc "
-            "should match with each other. They currenlty are 2D.");
+    return emitOpError(
+        "Expecting the rank of shape, strides, offsets, "
+        "source memref type (if source is a memref) and TensorDesc "
+        "should match with each other. They currenlty are 2D.");
   }
   return success();
 }
@@ -140,8 +141,8 @@ LogicalResult LoadNdOp::verify() {
   if (tdescShape != valueShape)
     return emitOpError() << "Result shape doesn't match TensorDesc shape."
                          << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is " << makeString(valueShape)
-                         << ".\n";
+                         << ". But the given shape is "
+                         << makeString(valueShape) << ".\n";
   return success();
 }
 
