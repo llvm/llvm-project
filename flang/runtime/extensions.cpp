@@ -23,6 +23,8 @@
 #include <thread>
 
 #ifdef _WIN32
+#include <synchapi.h>
+
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   int error{ctime_s(buffer, bufsize, &cur_time)};
