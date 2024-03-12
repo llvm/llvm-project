@@ -193,7 +193,6 @@ public:
   DataTag::Factory &getDataTags() { return DataTags; }
 };
 
-// TODO: Turn into a class.
 class NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;
