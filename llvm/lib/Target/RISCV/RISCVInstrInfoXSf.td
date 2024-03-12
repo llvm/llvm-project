@@ -818,6 +818,7 @@ let Predicates = [HasVendorXSiFivecdiscarddlone] in {
     let rd = 0;
     let rs2 = 0b00010;
   }
+  def : InstAlias<"sf.cdiscard.d.l1", (SF_CDISCARD_D_L1 X0)>;
 } // Predicates = [HasVendorXSifivecdiscarddlone]
 
 let Predicates = [HasVendorXSiFivecflushdlone] in {
@@ -829,4 +830,5 @@ let Predicates = [HasVendorXSiFivecflushdlone] in {
     let rd = 0;
     let rs2 = 0b00000;
   }
+  def : InstAlias<"sf.cflush.d.l1", (SF_CFLUSH_D_L1 X0)>;
 } // Predicates = [HasVendorXSifivecflushdlone]
