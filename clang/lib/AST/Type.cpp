@@ -4985,12 +4985,12 @@ std::string NoLockNoAllocEffect::attribute() const {
   return std::string{"__attribute__((clang_"} + name().str() + "))";
 }
 
-bool NoLockNoAllocEffect::diagnoseConversion(bool adding, QualType OldType,
+bool NoLockNoAllocEffect::diagnoseConversion(bool Adding, QualType OldType,
                                              FunctionEffectSet OldFX,
                                              QualType NewType,
                                              FunctionEffectSet NewFX) const {
   // noalloc can't be added (spoofed) during a conversion, unless we have nolock
-  if (adding) {
+  if (Adding) {
     if (!isNoLock()) {
       for (const auto *Effect : OldFX) {
         if (Effect->type() == kNoLockTrue)

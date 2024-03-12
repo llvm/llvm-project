@@ -8,12 +8,19 @@
 void unannotated(void);
 void nolock(void) [[clang::nolock]];
 void noalloc(void) [[clang::noalloc]];
+
+
+void callthis(void (*fp)(void));
+
+
 void type_conversions(void)
 {
+// 	callthis(nolock);
+
 	// It's fine to remove a performance constraint.
 	void (*fp_plain)(void);
 
-	fp_plain = unannotated;
+// 	fp_plain = unannotated;
 	fp_plain = nolock;
-	fp_plain = noalloc;
+// 	fp_plain = noalloc;
 }

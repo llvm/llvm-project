@@ -1787,7 +1787,7 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                                 QualType &ResultTy) {
 
-  llvm::outs() << "IsFunctionConversion " << FromType << " " << ToType << "\n";
+  llvm::outs() << "IsFunctionConversion: " << FromType << " -> " << ToType << "\n";
 
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
@@ -1827,6 +1827,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     if (TyClass != Type::FunctionProto && TyClass != Type::FunctionNoProto)
       return false;
   }
+  llvm::outs() << "  didn't exit early\n";
 
   const auto *FromFn = cast<FunctionType>(CanFrom);
   FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
@@ -1879,7 +1880,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     auto FromFX = FromFPT->getFunctionEffects();
     auto ToFX = ToFPT->getFunctionEffects();
     if (FromFX != ToFX) {
-      llvm::outs() << "IsFunctionConversion effects change " << FromType << " -> " << ToType << "\n";
+      llvm::outs() << "  effects change: " << FromType << " -> " << ToType << "\n";
 
       //const auto MergedFX = FunctionEffectSet::getIntersection(FromFX, ToFX);
       // TODO: diagnose conflicts
