@@ -70,21 +70,24 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
 
   build(builder, state, tdesc, source, /* dynamic_offsets = */ dynamicOffsets,
-        /* dynamic shape = */ shape , /* dynamic strides = */ stride,
+        /* dynamic shape = */ shape, /* dynamic strides = */ stride,
         /* static offsets = */ staticOffsets);
 }
 
 LogicalResult CreateNdDescOp::verify() {
   auto rank = getMixedOffsets().size();
   bool invalid = (rank != 2);
+
   auto memrefTy = getSourceType().dyn_cast<MemRefType>();
-  if (memrefTy) {
+  if (memrefTy)
     invalid |= (memrefTy.getRank() != rank);
-  }
+
+  invalid = (getTensorDescType().getRank() != rank);
+
   if (invalid) {
-    return emitOpError("Expecting the rank of shape, strides, offsets and "
-                       "memref type (if source is a memref) should match "
-                       "with each other. They currenlty are 2D.");
+    return emitOpError("Expecting the rank of shape, strides, offsets, "
+            "source memref type (if source is a memref) and TensorDesc "
+            "should match with each other. They currenlty are 2D.");
   }
   return success();
 }
@@ -135,9 +138,10 @@ LogicalResult LoadNdOp::verify() {
   }
 
   if (tdescShape != valueShape)
-    return emitOpError() <<"Result shape doesn't match TensorDesc shape."
-           << "The expected shape is " << makeString(tdescShape) << ". "
-           << "But the given shape is " << makeString(valueShape) << ".\n";
+    return emitOpError() << "Result shape doesn't match TensorDesc shape."
+                         << "The expected shape is " << makeString(tdescShape)
+                         << ". But the given shape is " << makeString(valueShape)
+                         << ".\n";
   return success();
 }
 
@@ -159,11 +163,12 @@ LogicalResult StoreNdOp::verify() {
 
   if (dstElemTy != valElemTy) {
     return emitOpError() << "The element type of the value should "
-                       "match the elementtype of the TensorDesc.\n";
+                            "match the elementtype of the TensorDesc.\n";
   }
 
   if (dstTy.getShape() != valTy.getShape())
-    return emitOpError() << "The result shape should match the TensorDesc shape.\n";
+    return emitOpError()
+           << "The result shape should match the TensorDesc shape.\n";
   return success();
 }
 

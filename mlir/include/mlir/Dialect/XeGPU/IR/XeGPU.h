@@ -16,7 +16,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
-
 namespace mlir {
 namespace xegpu {
 // placeholder
