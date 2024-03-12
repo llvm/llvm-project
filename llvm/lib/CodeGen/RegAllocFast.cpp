@@ -1970,7 +1970,7 @@ bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
   MFI = &MF.getFrameInfo();
-  MRI->freezeReservedRegs(MF);
+  MRI->freezeReservedRegs();
   RegClassInfo.runOnMachineFunction(MF);
   unsigned NumRegUnits = TRI->getNumRegUnits();
   UsedInInstr.clear();

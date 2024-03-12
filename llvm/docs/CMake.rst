@@ -363,7 +363,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   documentation targets being as part of a normal build.  If the ``install``
   target is run then this also enables all built documentation targets to be
   installed. Defaults to OFF.  To enable a particular documentation target, see
-  see LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
+  LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
 
 **LLVM_BUILD_EXAMPLES**:BOOL
   Build LLVM examples. Defaults to OFF. Targets for building each example are
@@ -761,12 +761,6 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
-
-**LLVM_PARALLEL_LIT**:BOOL
-  Defaults to ``OFF``. If set to ``OFF``, lit testsuites will be configured
-  with CMake's ``USES_TERMINAL`` flag to give direct access to the terminal. If
-  set to ``ON``, that flag will be removed allowing Ninja to schedule multiple
-  lit testsuites in parallel.
 
 **LLVM_RAM_PER_COMPILE_JOB**:STRING
   Calculates the amount of Ninja compile jobs according to available resources.

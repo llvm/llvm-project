@@ -16,6 +16,10 @@ if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 endif()
 
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
+
+# TODO: Remove the following block of llvm versions once build_lightning script
+# has been updated to lookup above LLVMVersion.cmake file instead of this file.
 if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 19)
 endif()
@@ -174,15 +178,18 @@ endforeach()
 set(NEED_LIBC_HDRGEN FALSE)
 if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
   set(NEED_LIBC_HDRGEN TRUE)
-else()
-  foreach(_name ${LLVM_RUNTIME_TARGETS})
-    if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-      set(NEED_LIBC_HDRGEN TRUE)
-      if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
-        set(LLVM_LIBC_GPU_BUILD ON)
-      endif()
+endif()
+foreach(_name ${LLVM_RUNTIME_TARGETS})
+  if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
+    set(NEED_LIBC_HDRGEN TRUE)
+    if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
+      set(LLVM_LIBC_GPU_BUILD ON)
     endif()
-  endforeach()
+  endif()
+endforeach()
+if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
+   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
+  set(LLVM_LIBC_GPU_BUILD ON)
 endif()
 if(NEED_LIBC_HDRGEN)
   # To build the libc runtime, we need to be able to build few libc build
@@ -720,8 +727,6 @@ if(LLVM_INDIVIDUAL_TEST_COVERAGE)
    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --per-test-coverage")
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
-
-option(LLVM_PARALLEL_LIT "Enable multiple lit suites to run in parallel" OFF)
 
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
 if( WIN32 AND NOT CYGWIN )

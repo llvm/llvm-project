@@ -283,7 +283,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
   ; GFX10-FLATSCR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD killed $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
@@ -392,8 +392,8 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   $vgpr2 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
   ; GFX10-FLATSCR-NEXT:   $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2 killed $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s64) from %stack.1, align 4, addrspace 5)
@@ -570,7 +570,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -817,8 +817,8 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -1070,9 +1070,9 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1_lo16
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr2_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -2039,7 +2039,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -2283,7 +2283,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -2468,7 +2468,7 @@ body:             |
   ; GFX10-FLATSCR-NEXT: {{  $}}
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined <badreg>
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   $sgpr4 = S_ADDC_U32 $sgpr32, 8200, implicit-def $scc, implicit $scc
   ; GFX10-FLATSCR-NEXT:   S_BITCMP1_B32 $sgpr4, 0, implicit-def $scc

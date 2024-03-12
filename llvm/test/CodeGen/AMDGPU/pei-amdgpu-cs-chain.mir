@@ -147,9 +147,9 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr105_lo16
     ; GCN-NEXT: $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset <badreg>, 0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr8_lo16, 0
     ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr9, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset <badreg>, 128
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr9_lo16, 128
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
@@ -183,8 +183,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -293,9 +293,9 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr105_lo16
     ; GCN-NEXT: $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset <badreg>, 0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr8_lo16, 0
     ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr9, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset <badreg>, 128
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr9_lo16, 128
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: renamable $vgpr8 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr8
     ; GCN-NEXT: $sgpr35 = S_MOV_B32 5
@@ -345,7 +345,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr35_lo16
     ; GCN-NEXT: renamable $vgpr8 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr8
     ; GCN-NEXT: $sgpr35 = S_MOV_B32 5
@@ -377,8 +377,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
@@ -518,10 +518,10 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8_lo16
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2_lo16
