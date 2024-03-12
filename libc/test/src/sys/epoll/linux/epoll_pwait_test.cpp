@@ -14,7 +14,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/epoll.h>
+#include <sys/epoll.h> // For epoll_event
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 

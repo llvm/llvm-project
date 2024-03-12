@@ -20,3 +20,7 @@ TEST(LlvmLibcEpollCreateTest, Basic) {
 
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
 }
+
+TEST(LlvmLibcEpollCreateTest, Fails) {
+  ASSERT_THAT(LIBC_NAMESPACE::epoll_create(0), Fails(EINVAL));
+}

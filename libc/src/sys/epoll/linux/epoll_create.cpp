@@ -15,11 +15,10 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, epoll_create, (int size)) {
+LLVM_LIBC_FUNCTION(int, epoll_create, ([[maybe_unused]] int size)) {
 #ifdef SYS_epoll_create
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_epoll_create, size);
 #elif defined(SYS_epoll_create1)
-  // TODO: Silence warning for size being unused.
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_epoll_create1, 0);
 #else
 #error                                                                         \

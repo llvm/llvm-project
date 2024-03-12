@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SYS_EPOLL_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SYS_EPOLL_MACROS_H
 
-#include "llvm-libc-macros/linux/fcntl-macros.h"
+#include "fcntl-macros.h"
 
 // TODO: Do we need to define these?
 
