@@ -125,7 +125,8 @@ static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
 }
 #endif
 
-#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&  \
+#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||   \
+      KMP_OS_AIX) &&                                                           \
      KMP_AFFINITY_SUPPORTED)
 
 /* Affinity support */
@@ -141,6 +142,8 @@ void __kmp_affinity_bind_thread(int which) {
   __kmp_set_system_affinity(mask, TRUE);
   KMP_CPU_FREE_FROM_STACK(mask);
 }
+
+#ifndef KMP_OS_AIX
 
 /* Determine if we can access affinity functionality on this version of
  * Linux* OS by checking __NR_sched_{get,set}affinity system calls, and set
@@ -272,7 +275,25 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   }
 }
 
-#endif // KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#elif KMP_OS_AIX
+void __kmp_affinity_determine_capable(const char *env_var) {
+  // All versions of AIX support bindprocessor().
+
+  size_t mask_size = __kmp_xproc / CHAR_BIT;
+  if (__kmp_xproc % CHAR_BIT)
+    ++mask_size;
+
+  KMP_AFFINITY_ENABLE(mask_size);
+  KA_TRACE(10,
+           ("__kmp_affinity_determine_capable: "
+            "AIX OS affinity interface bindprocessor functional (mask size = "
+            "%" KMP_SIZE_T_SPEC ").\n",
+            __kmp_affin_mask_size));
+}
+
+#endif // KMP_OS_AIX
+#endif // (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD ||                  \
+           KMP_OS_DRAGONFLY || KMP_OS_AIX) && KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_FUTEX
 
@@ -501,7 +522,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -550,7 +571,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -1268,7 +1289,8 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
@@ -2325,6 +2347,7 @@ int __kmp_is_address_mapped(void *addr) {
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
 #elif KMP_OS_AIX
 
+  (void)rc;
   // FIXME(AIX): Implement this
   found = 1;
 
