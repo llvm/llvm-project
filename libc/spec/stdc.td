@@ -1265,6 +1265,7 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"WEOF">,
       ],
       [ //Types
+        MBStateTType,
         SizeTType,
         WIntType,
         WCharType,
