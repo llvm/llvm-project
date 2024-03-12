@@ -58,8 +58,8 @@ Error SubprocessMemory::addMemoryDefinition(
     pid_t ProcessPID) {
   SharedMemoryNames.reserve(MemoryDefinitions.size());
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string SharedMemoryName = formatv(
-        "/{0}t{1}memdef{2}", ProcessPID, getCurrentTID(), MemVal.Index);
+    std::string SharedMemoryName =
+        formatv("/{0}t{1}memdef{2}", ProcessPID, getCurrentTID(), MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -109,7 +109,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string MemoryValueName = formatv("/{0}t{1}memdef{2}", ParentPID, ParentTID, MemVal.Index);
+    std::string MemoryValueName =
+        formatv("/{0}t{1}memdef{2}", ParentPID, ParentTID, MemVal.Index);
     AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] =
         shm_open(MemoryValueName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
     if (AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] == -1)
