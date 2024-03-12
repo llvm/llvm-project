@@ -30,3 +30,16 @@ add_entrypoint_object(
     libc.include.stdlib
     libc.src.__support.GPU.allocator
 )
+
+add_entrypoint_object(
+  atexit
+  SRCS
+    atexit.cpp
+  HDRS
+    ../atexit.h
+  CXX_STANDARD
+    20 # For constinit of the atexit callback list.
+  DEPENDS
+    libc.include.stdlib
+    libc.src.__support.fixedstack
+)

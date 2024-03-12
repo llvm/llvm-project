@@ -102,6 +102,7 @@ atol           |check|
 atoll          |check|
 exit           |check|    |check|
 abort          |check|    |check|
+atexit         |check|
 labs           |check|
 llabs          |check|
 div            |check|

@@ -5,6 +5,7 @@ add_startup_object(
   DEPENDS
     libc.src.__support.RPC.rpc_client
     libc.src.__support.GPU.utils
+    libc.src.__support.CPP.new
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
   COMPILE_OPTIONS
