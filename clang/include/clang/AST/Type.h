@@ -4221,7 +4221,7 @@ private:
 
     UniquedAndSortedFX(Base Array) : Base(Array) {}
     UniquedAndSortedFX(const FunctionEffect **Ptr, size_t Len)
-        : Base(ptr, len) {}
+        : Base(Ptr, Len) {}
 
     bool operator<(const UniquedAndSortedFX &rhs) const;
   };
@@ -7955,14 +7955,14 @@ public:
       llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
 
   FunctionEffect(EffectType T, Flags F, const char *Name)
-      : Type_{T}, Flags_{F}, Name{Name} {}
+      : Type_(T), Flags_(F), Name(Name) {}
   virtual ~FunctionEffect();
 
   /// The type of the effect.
   EffectType type() const { return Type_; }
 
   /// Flags describing behaviors of the effect.
-  Flags getFlags() const { return Flags_; }
+  Flags flags() const { return Flags_; }
 
   /// The description printed in diagnostics, e.g. 'nolock'.
   StringRef name() const { return Name; }
@@ -7972,13 +7972,13 @@ public:
 
   /// Return true if adding or removing the effect as part of a type conversion
   /// should generate a diagnostic.
-  virtual bool diagnoseConversion(bool adding, QualType OldType,
+  virtual bool diagnoseConversion(bool Adding, QualType OldType,
                                   FunctionEffectSet OldFX, QualType NewType,
                                   FunctionEffectSet NewFX) const;
 
   /// Return true if adding or removing the effect in a redeclaration should
   /// generate a diagnostic.
-  virtual bool diagnoseRedeclaration(bool adding,
+  virtual bool diagnoseRedeclaration(bool Adding,
                                      const FunctionDecl &OldFunction,
                                      FunctionEffectSet OldFX,
                                      const FunctionDecl &NewFunction,
@@ -7986,7 +7986,7 @@ public:
 
   /// Return true if adding or removing the effect in a C++ virtual method 
   /// override should generate a diagnostic.
-  virtual bool diagnoseMethodOverride(bool adding,
+  virtual bool diagnoseMethodOverride(bool Adding,
                                       const CXXMethodDecl &OldMethod,
                                       FunctionEffectSet OldFX,
                                       const CXXMethodDecl &NewMethod,
@@ -8003,7 +8003,7 @@ public:
   // returned for a direct call, then the kInferrableOnCallees flag may trigger
   // inference rather than an immediate diagnostic. Caller should be assumed to
   // have the effect (it may not have it explicitly when inferring).
-  virtual bool diagnoseFunctionCall(bool direct, const Decl *Caller,
+  virtual bool diagnoseFunctionCall(bool Direct, const Decl *Caller,
                                     FunctionEffectSet CallerFX,
                                     CalleeDeclOrType Callee,
                                     FunctionEffectSet CalleeFX) const;
@@ -8018,21 +8018,21 @@ public:
   static const NoLockNoAllocEffect &nolock_instance();
   static const NoLockNoAllocEffect &noalloc_instance();
 
-  NoLockNoAllocEffect(EffectType ty, const char *name);
+  NoLockNoAllocEffect(EffectType Type, const char *Name);
   ~NoLockNoAllocEffect() override;
 
   std::string attribute() const override;
 
-  bool diagnoseConversion(bool adding, QualType OldType,
+  bool diagnoseConversion(bool Adding, QualType OldType,
                           FunctionEffectSet OldFX, QualType NewType,
                           FunctionEffectSet NewFX) const override;
 
-  bool diagnoseRedeclaration(bool adding, const FunctionDecl &OldFunction,
+  bool diagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
                              FunctionEffectSet OldFX,
                              const FunctionDecl &NewFunction,
                              FunctionEffectSet NewFX) const override;
 
-  bool diagnoseMethodOverride(bool adding, const CXXMethodDecl &OldMethod,
+  bool diagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
                               FunctionEffectSet OldFX,
                               const CXXMethodDecl &NewMethod,
                               FunctionEffectSet NewFX) const override;
@@ -8040,7 +8040,7 @@ public:
   bool canInferOnDecl(const Decl *Caller,
                       FunctionEffectSet CallerFX) const override;
 
-  bool diagnoseFunctionCall(bool direct, const Decl *Caller,
+  bool diagnoseFunctionCall(bool Direct, const Decl *Caller,
                             FunctionEffectSet CallerFX, CalleeDeclOrType Callee,
                             FunctionEffectSet CalleeFX) const override;
 };

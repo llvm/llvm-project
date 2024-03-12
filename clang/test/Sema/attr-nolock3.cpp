@@ -5,7 +5,6 @@
 #endif
 
 // --- CONSTRAINTS ---
-#if 0 // TEMP_DISABLE
 
 void nl1() [[clang::nolock]]
 {
@@ -129,10 +128,7 @@ void nl10(
 	fp2();
 }
 
-#endif // TEMP_DISABLE
-
-// --- PLAYGROUND ---
-
+// Interactions with nolock(false)
 void nl11_no_inference() [[clang::nolock(false)]] // expected-note {{'nl11_no_inference' does not permit inference of 'nolock'}}
 {
 }
@@ -141,4 +137,3 @@ void nl11() [[clang::nolock]]
 {
 	nl11_no_inference(); // expected-warning {{'nolock' function 'nl11' must not call non-'nolock' function 'nl11_no_inference'}}
 }
-

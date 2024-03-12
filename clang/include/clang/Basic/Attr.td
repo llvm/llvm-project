@@ -1404,7 +1404,7 @@ def CXX11NoReturn : InheritableAttr {
 
 def NoLock : DeclOrTypeAttr {
   let Spellings = [CXX11<"clang", "nolock">,
-                   C2x<"clang", "nolock">,
+                   C23<"clang", "nolock">,
                    GNU<"clang_nolock">];
 
   // Subjects - not needed?
@@ -1416,7 +1416,7 @@ def NoLock : DeclOrTypeAttr {
 
 def NoAlloc : DeclOrTypeAttr {
   let Spellings = [CXX11<"clang", "noalloc">,
-                   C2x<"clang", "noalloc">,
+                   C23<"clang", "noalloc">,
                    GNU<"clang_noalloc">];
   // Subjects - not needed?
   //let Subjects = SubjectList<[FunctionLike, Block, TypedefName], ErrorDiag>;

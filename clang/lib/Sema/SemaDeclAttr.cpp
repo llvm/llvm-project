@@ -403,22 +403,22 @@ bool Sema::checkBoolExprArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
   if (AL.isInvalid()) {
     return false;
   }
-  Expr* ArgExpr = AL.getArgAsExpr(ArgNum);
-  SourceLocation errorLoc{ AL.getLoc() };
+  Expr *ArgExpr = AL.getArgAsExpr(ArgNum);
+  SourceLocation ErrorLoc(AL.getLoc());
 
   if (AL.isArgIdent(ArgNum)) {
-    IdentifierLoc * IL = AL.getArgAsIdent(ArgNum);
-    errorLoc = IL->Loc;
+    IdentifierLoc *IL = AL.getArgAsIdent(ArgNum);
+    ErrorLoc = IL->Loc;
   } else if (ArgExpr != nullptr) {
-    auto maybeVal = ArgExpr->getIntegerConstantExpr(Context, &errorLoc);
-    if (maybeVal) {
-      Value = maybeVal->getBoolValue();
+    if (const std::optional<llvm::APSInt> MaybeVal =
+        ArgExpr->getIntegerConstantExpr(Context, &ErrorLoc)) {
+      Value = MaybeVal->getBoolValue();
       return true;
     }
   }
 
   AL.setInvalid();
-  Diag(errorLoc, diag::err_attribute_argument_n_type)
+  Diag(ErrorLoc, diag::err_attribute_argument_n_type)
     << AL << ArgNum << AANT_ArgumentConstantExpr;
   return false;
 }

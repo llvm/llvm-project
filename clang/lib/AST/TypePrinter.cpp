@@ -984,12 +984,11 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     OS << " &&";
     break;
   }
-
   T->printExceptionSpecification(OS, Policy);
 
-  if (auto effects = T->getFunctionEffects()) {
-    for (const auto* effect : effects) {
-      OS << " " << effect->attribute();
+  if (const FunctionEffectSet FX = T->getFunctionEffects()) {
+    for (const auto *Effect : FX) {
+      OS << " " << Effect->attribute();
     }
   }
 
@@ -1911,7 +1910,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
   case attr::AMDGPUKernelCall: OS << "amdgpu_kernel"; break;
   case attr::IntelOclBicc: OS << "inteloclbicc"; break;
-
   case attr::PreserveMost:
     OS << "preserve_most";
     break;

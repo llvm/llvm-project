@@ -9,8 +9,6 @@
 #error "the 'nolock' attribute is not available"
 #endif
 
-#if 1 // TEMP_DISABLE
-
 // --- ATTRIBUTE SYNTAX: COMBINATIONS ---
 // Check invalid combinations of nolock/noalloc attributes
 void nl_true_false_1(void) [[clang::nolock(true)]] [[clang::nolock(false)]]; // expected-error {{nolock(true) and nolock(false) attributes are not compatible}}
@@ -84,5 +82,3 @@ int f3(void);
 // redeclaration with a stronger constraint is OK.
 int f3(void) [[clang::noalloc]]; // expected-note {{previous declaration is here}}
 int f3(void) { return 42; } // expected-warning {{attribute 'noalloc' on function does not match previous declaration}}
-
-#endif // TEMP_DISABLE

@@ -586,21 +586,20 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
 }
 
 // Generate diagnostics when adding or removing effects in a type conversion.
-void Sema::diagnoseFunctionEffectConversion(QualType DstType,
-                                          QualType SrcType,
-                                          SourceLocation Loc)
-{
-  llvm::outs() << "diagnoseFunctionEffectConversion " << SrcType << " -> " << DstType << "\n";
+void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                            SourceLocation Loc) {
+  llvm::outs() << "diagnoseFunctionEffectConversion " << SrcType << " -> "
+               << DstType << "\n";
   const auto SrcFX = FunctionEffectSet::get(*SrcType);
   const auto DstFX = FunctionEffectSet::get(*DstType);
   if (SrcFX != DstFX) {
-    const auto diffs = FunctionEffectSet::differences(SrcFX, DstFX);
-    for (const auto& item : diffs) {
-      const FunctionEffect* effect = item.first;
-      const bool adding = item.second;
-      if (effect->diagnoseConversion(adding,
-        SrcType, SrcFX, DstType, DstFX)) {
-        Diag(Loc, adding ? diag::warn_invalid_add_func_effects : diag::warn_invalid_remove_func_effects) << effect->name();
+    for (const auto &Item : FunctionEffectSet::differences(SrcFX, DstFX)) {
+      const FunctionEffect *Effect = Item.first;
+      const bool Adding = Item.second;
+      if (Effect->diagnoseConversion(Adding, SrcType, SrcFX, DstType, DstFX)) {
+        Diag(Loc, Adding ? diag::warn_invalid_add_func_effects
+                         : diag::warn_invalid_remove_func_effects)
+            << Effect->name();
       }
     }
   }

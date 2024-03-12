@@ -3925,12 +3925,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   const auto OldFX = Old->getFunctionEffects();
   const auto NewFX = New->getFunctionEffects();  
   if (OldFX != NewFX) {
-    const auto diffs = FunctionEffectSet::differences(OldFX, NewFX);
-    for (const auto& item : diffs) {
-      const FunctionEffect* effect = item.first;
-      const bool adding = item.second;
-      if (effect->diagnoseRedeclaration(adding, *Old, OldFX, *New, NewFX)) {
-        Diag(New->getLocation(), diag::warn_mismatched_func_effect_redeclaration) << effect->name();
+    const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
+    for (const auto& Item : Diffs) {
+      const FunctionEffect* Effect = Item.first;
+      const bool Adding = Item.second;
+      if (Effect->diagnoseRedeclaration(Adding, *Old, OldFX, *New, NewFX)) {
+        Diag(New->getLocation(), diag::warn_mismatched_func_effect_redeclaration) << Effect->name();
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
     }
@@ -11162,14 +11162,14 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX)
 
   // Filter out declarations that the FunctionEffect analysis should skip
   // and not verify. (??? Is this the optimal order in which to test ???)
-  bool effectsNeedVerification = false;
+  bool FXNeedVerification = false;
   for (const auto *Effect : FX) {
-    if (Effect->getFlags() & FunctionEffect::kRequiresVerification) {
+    if (Effect->flags() & FunctionEffect::kRequiresVerification) {
       AllEffectsToVerify.insert(Effect);
-      effectsNeedVerification = true;
+      FXNeedVerification = true;
     }
   }
-  if (!effectsNeedVerification) {
+  if (!FXNeedVerification) {
     return;
   }
 
@@ -15789,12 +15789,6 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   else
     FD = cast<FunctionDecl>(D);
 
-  auto *Canon = FD->getCanonicalDecl();
-
-  // llvm::outs() << "** ActOnStartOfFunctionDef " << FD->getName() << 
-  //   " " << FD << " " << Canon << " " << FD->getType() << "\n";
-  // getNameForDiagnostic
-
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
   if (!isLambdaCallOperator(FD))
@@ -15995,9 +15989,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
-  const auto FX = FD->getCanonicalDecl()->getFunctionEffects();
-  llvm::outs() << "^^ " << FX.size() << " effects\n";
-  if (FX) {
+  // TODO: does this really need to be getCanonicalDecl()?
+  if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects()) {
     CheckAddCallableWithEffects(FD, FX);
   }
 

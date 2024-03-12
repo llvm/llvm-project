@@ -3517,61 +3517,6 @@ bool FunctionDecl::isMemberLikeConstrainedFriend() const {
   return FriendConstraintRefersToEnclosingTemplate();
 }
 
-static void examine(const Decl& D)
-{
-  PrintingPolicy PP = D.getASTContext().getPrintingPolicy();
-  PP.TerseOutput = 1;
-  D.print(llvm::outs(), PP);
-}
-
-#if TEMP_DISABLE
-// This constant controls the default policy.
-constexpr static bool kDefaultCanInferPerfAnnotation = true;
-
-static bool declCanInferPerfAnnotation(const Decl &D, QualType QT) {
-  // llvm::outs() << "declCanInferPerfAnnotation " << &D << "\n";
-  // examine(D);
-
-  // nolock(false) or noalloc(false) disables inference.
-  if (QT->disallowPerfAnnotationInference()) {
-    // llvm::outs() << "  disallowed by QT\n";
-    return false;
-  }
-  if (auto *IA = D.getAttr<PerformanceInferredAttr>()) {
-    // llvm::outs() << "  decl has attr " << IA->getCanInfer() << "\n";
-    return IA->getCanInfer();
-  }
-  if (auto *Method = dyn_cast<CXXMethodDecl>(&D)) {
-    auto *Class = Method->getParent();
-    if (auto *IA = Class->getAttr<PerformanceInferredAttr>()) {
-      // llvm::outs() << "  class has attr " << IA->getCanInfer() << "\n";
-      return IA->getCanInfer();
-    }
-  }
-
-  // for (const DeclContext *DC = D.getDeclContext(); DC != nullptr; DC = DC->getParent()) {
-  //   if (auto *Decl2 = dyn_cast<Decl>(DC)) {
-  //     examine(*Decl2);
-  //     if (auto *IA = Decl2->getAttr<PerformanceInferredAttr>()) {
-  //       llvm::outs() << "  decl2 has attr " << IA->getCanInfer() << "\n";
-  //       return IA->getCanInfer();
-  //     }
-  //   }
-  // }
-
-  // llvm::outs() << "  result: false\n";
-  return kDefaultCanInferPerfAnnotation;
-}
-
-PerfAnnotation FunctionDecl::getPerfAnnotation() const {
-  return getType()->getPerfAnnotation();
-}
-
-bool FunctionDecl::canInferPerfAnnotation() const {
-  return declCanInferPerfAnnotation(*this, getType());
-}
-#endif // TEMP_DISABLE
-
 MultiVersionKind FunctionDecl::getMultiVersionKind() const {
   if (hasAttr<TargetAttr>())
     return MultiVersionKind::Target;
@@ -5282,34 +5227,13 @@ SourceRange BlockDecl::getSourceRange() const {
 }
 
 FunctionEffectSet BlockDecl::getFunctionEffects() const {
-  if (auto* TSI = getSignatureAsWritten()) {
-    if (auto* FPT = TSI->getType()->getAs<FunctionProtoType>()) {
+  if (auto *TSI = getSignatureAsWritten()) {
+    if (auto *FPT = TSI->getType()->getAs<FunctionProtoType>()) {
       return FPT->getFunctionEffects();
     }
   }
   return {};
 }
-
-#if TEMP_DISABLE
-PerfAnnotation BlockDecl::getPerfAnnotation() const
-{
-  if (auto* TSI = getSignatureAsWritten()) {
-    return TSI->getType()->getPerfAnnotation();
-  }
-  return PerfAnnotation::None;
-}
-#endif // TEMP_DISABLE
-
-#if 0
-// unused
-bool BlockDecl::canInferPerfAnnotation() const
-{
-  if (auto* TSI = getSignatureAsWritten()) {
-    return declCanInferPerfAnnotation(*this, TSI->getType());
-  }
-  return kDefaultCanInferPerfAnnotation;
-}
-#endif
 
 //===----------------------------------------------------------------------===//
 // Other Decl Allocation/Deallocation Method Implementations

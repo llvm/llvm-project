@@ -10838,9 +10838,9 @@ def note_func_effect_call_func_ptr : Note<
   "'%1' cannot be inferred '%0' because it is a function pointer">;
 
 // TODO: Not currently being generated
-def warn_perf_annotation_implies_noexcept : Warning<
-  "'%0' function should be declared noexcept">,
-  InGroup<PerfAnnotationImpliesNoexcept>;
+// def warn_perf_annotation_implies_noexcept : Warning<
+//  "'%0' function should be declared noexcept">,
+//  InGroup<PerfAnnotationImpliesNoexcept>;
 
 // TODO: Not currently being generated
 def warn_func_effect_false_on_type : Warning<
