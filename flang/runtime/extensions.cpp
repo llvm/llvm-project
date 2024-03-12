@@ -136,7 +136,11 @@ void RTNAME(Sleep)(std::int64_t seconds) {
   if (seconds < 1) {
     return;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(seconds));
+#if _WIN32
+  Sleep(seconds * 1000);
+#else
+  sleep(seconds);
+#endif
 }
 
 // TODO: not supported on Windows
