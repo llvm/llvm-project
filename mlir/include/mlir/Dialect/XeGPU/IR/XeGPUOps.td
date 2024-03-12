@@ -123,56 +123,42 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure,
       return getType().getElementType();
     }
 
-
-
     /// Return the shape of the TensorDesc
     llvm::ArrayRef<int64_t> getTensorDescShape() {
       return getType().getShape();
     }
 
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
     OperandRange getSizes() {
       return getShape();
     }
 
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
     SmallVector<int64_t> getStaticSizes() {
-      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
-        return SmallVector<int64_t>(ty.getShape());
+      if (getSourceType().dyn_cast<IntegerType>()) {
+        auto dims = getMixedOffsets().size();
+        return SmallVector<int64_t>(dims, ShapedType::kDynamic);
       }
+      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      return SmallVector<int64_t>(memrefType.getShape());
     }
 
+    /// wrapper for matching with OffsetSizeAndStrideOpInterface
     SmallVector<int64_t> getStaticStrides() {
-      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
-        auto [strides, offset] = getStridesAndOffset(ty);
-        return strides;
+      if (getSourceType().dyn_cast<IntegerType>()) {
+        auto dims = getMixedOffsets().size();
+        return SmallVector<int64_t>(dims, ShapedType::kDynamic);
       }
+      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      auto [strides, offset] = getStridesAndOffset(memrefType);
+      return strides;
     }
-
-    /// Returns the offsets info to the source. It consolidates
-    /// information from both dynamic_offsets and static_offsets
-    /// parameters. static_offsets parameter always has the expected
-    /// ranks with some dim could have ShapeType::kDynamic value
-    /// indicating the corresponding value should be from dynamic_offsets.
-    llvm::SmallVector<OpFoldResult> getEffectiveOffsets();
-
-    /// returns the shape info of the source. It is either from the
-    /// memref type, if source is a memref with static shape
-    /// information or from the dynamic_shape parameter. If both
-    /// exists, the dynamic_shape parameter will be used and the
-    /// shape information from  memref type will be ignored.
-    llvm::SmallVector<OpFoldResult> getEffectiveShape();
-
-    /// returns the strides info of the source. It is either from the
-    /// memref type, if source is a memref with static shape
-    /// information or from the dynamic_stride parameter. If both
-    /// exists, the dynamic_strides parameter will be used and the
-    /// strides information from  memref type will be ignored.
-    llvm::SmallVector<OpFoldResult> getEffectiveStrides();
-
 
     /// Return the expected rank of each of the`static_offsets`, 
     /// `static_sizes` and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
-      return {2, 2, 2};
+      auto rank = getMixedOffsets().size();
+      return {rank, rank, rank};
     }
     
     /// Return the number of leading operands before the `offsets`, `sizes` and
