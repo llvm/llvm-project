@@ -146,3 +146,63 @@ v_wmma_f32i32_16x16_iu4 v[8:15], v[0:3], v[4:7], v[8:15] signed_a signed_b clamp
 
 v_wmma_i32_16x16_iu4 v[8:15], v[0:3], v[4:7], v[8:15] signed_a signed_b clamp
 // GFX13: v_wmma_i32_16x16_iu4 v[8:15], v[0:3], v[4:7], v[8:15] signed_a signed_b clamp ; encoding: [0x08,0x10,0x4f,0xde,0x00,0x81,0x20,0x70,0x08,0x01,0x00,0x00]
+
+v_swmmac_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp ; encoding: [0x06,0x10,0x66,0xde,0x00,0x41,0x20,0x04,0x0e,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_fp8_fp8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_fp8_fp8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp ; encoding: [0x06,0x10,0x6a,0xde,0x00,0x41,0x20,0x04,0x0a,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_fp8_bf8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_fp8_bf8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp ; encoding: [0x06,0x10,0x67,0xde,0x00,0x41,0x20,0x04,0x0e,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_fp8_bf8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_fp8_bf8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp ; encoding: [0x06,0x10,0x6b,0xde,0x00,0x41,0x20,0x04,0x0a,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_bf8_fp8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_bf8_fp8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp ; encoding: [0x06,0x10,0x68,0xde,0x00,0x41,0x20,0x04,0x0e,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_bf8_fp8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_bf8_fp8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp ; encoding: [0x06,0x10,0x6c,0xde,0x00,0x41,0x20,0x04,0x0a,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_bf8_bf8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_bf8_bf8 v[6:13], v[0:1], v[2:5], v14 index_key:1 clamp ; encoding: [0x06,0x10,0x69,0xde,0x00,0x41,0x20,0x04,0x0e,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_bf8_bf8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_bf8_bf8 v[6:9], v[0:1], v[2:5], v10 index_key:1 clamp ; encoding: [0x06,0x10,0x6d,0xde,0x00,0x41,0x20,0x04,0x0a,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp ; encoding: [0x0c,0x10,0x63,0xde,0x00,0x81,0x20,0x04,0x14,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp ; encoding: [0x0c,0x10,0x62,0xde,0x00,0x81,0x20,0x04,0x10,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16x32_bf16 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16x32_bf16 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp ; encoding: [0x0c,0x10,0x64,0xde,0x00,0x81,0x20,0x04,0x14,0x21,0x00,0x00]
+
+v_swmmac_bf16_16x16x32_bf16 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp
+// GFX13: v_swmmac_bf16_16x16x32_bf16 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp ; encoding: [0x0c,0x10,0x65,0xde,0x00,0x81,0x20,0x04,0x10,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_fp8_fp8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_fp8_fp8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp ; encoding: [0x0c,0x10,0x66,0xde,0x00,0x81,0x20,0x08,0x14,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_fp8_fp8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_fp8_fp8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp ; encoding: [0x0c,0x10,0x6a,0xde,0x00,0x81,0x20,0x08,0x10,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_fp8_bf8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_fp8_bf8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp ; encoding: [0x0c,0x10,0x67,0xde,0x00,0x81,0x20,0x08,0x14,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_fp8_bf8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_fp8_bf8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp ; encoding: [0x0c,0x10,0x6b,0xde,0x00,0x81,0x20,0x08,0x10,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_bf8_fp8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_bf8_fp8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp ; encoding: [0x0c,0x10,0x68,0xde,0x00,0x81,0x20,0x08,0x14,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_bf8_fp8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_bf8_fp8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp ; encoding: [0x0c,0x10,0x6c,0xde,0x00,0x81,0x20,0x08,0x10,0x21,0x00,0x00]
+
+v_swmmac_f32_16x16_bf8_bf8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp
+// GFX13: v_swmmac_f32_16x16_bf8_bf8 v[12:19], v[0:3], v[4:11], v20 index_key:1 clamp ; encoding: [0x0c,0x10,0x69,0xde,0x00,0x81,0x20,0x08,0x14,0x21,0x00,0x00]
+
+v_swmmac_f16_16x16_bf8_bf8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp
+// GFX13: v_swmmac_f16_16x16_bf8_bf8 v[12:15], v[0:3], v[4:11], v16 index_key:1 clamp ; encoding: [0x0c,0x10,0x6d,0xde,0x00,0x81,0x20,0x08,0x10,0x21,0x00,0x00]
