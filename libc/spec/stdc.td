@@ -820,9 +820,9 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_count_zeros">,
         Macro<"stdc_count_ones">,
         Macro<"stdc_has_single_bit">,
-        Macro<"std_bit_width">,
-        Macro<"std_bit_floor">,
-        Macro<"std_bit_ceil">
+        Macro<"stdc_bit_width">,
+        Macro<"stdc_bit_floor">,
+        Macro<"stdc_bit_ceil">
       ], // Macros
       [], // Types
       [], // Enumerations
