@@ -2906,18 +2906,27 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Context.getCanonicalTemplateArgument(
               Context.getInjectedTemplateArg(NewParam));
     }
-    // FIXME: implement the associated constraint per C++
+    // Substitute new template parameters into requires-clause if present.
+    Expr *RequiresClause = nullptr;
+    if (Expr *InnerRC = F->getTemplateParameters()->getRequiresClause()) {
+      MultiLevelTemplateArgumentList Args;
+      Args.setKind(TemplateSubstitutionKind::Rewrite);
+      Args.addOuterTemplateArguments(TemplateArgsForBuildingFPrime);
+      ExprResult E = SemaRef.SubstExpr(InnerRC, Args);
+      if (E.isInvalid())
+        return;
+      RequiresClause = E.getAs<Expr>();
+    }
+    // FIXME: implement the is_deducible constraint per C++
     // [over.match.class.deduct]p3.3:
-    //    The associated constraints ([temp.constr.decl]) are the
-    //    conjunction of the associated constraints of g and a
-    //    constraint that is satisfied if and only if the arguments
+    //    ... and a constraint that is satisfied if and only if the arguments
     //    of A are deducible (see below) from the return type.
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
         Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
         AliasTemplate->getTemplateParameters()->getLAngleLoc(),
         FPrimeTemplateParams,
         AliasTemplate->getTemplateParameters()->getRAngleLoc(),
-        /*RequiresClause=*/nullptr);
+        /*RequiresClause=*/RequiresClause);
 
     // To form a deduction guide f' from f, we leverage clang's instantiation
     // mechanism, we construct a template argument list where the template
