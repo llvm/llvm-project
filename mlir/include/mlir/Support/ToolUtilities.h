@@ -36,14 +36,13 @@ extern inline const char *const kDefaultSplitMarker = "// -----";
 /// and writes all results to `os`.
 ///
 /// This is used to allow a large number of small independent tests to be put
-/// into a single file. `enableSplitting` can be used to toggle if splitting
-/// should be enabled, e.g. to allow for merging split and non-split code paths.
-/// Output split markers (`//-----` by default) are placed between each of the
-/// processed output chunks.
+/// into a single file. The input split marker is configurable. If it is empty
+/// merging is disabled, which allows for merging split and non-split code
+/// paths. Output split markers (`//-----` by default) are placed between each
+/// of the processed output chunks.
 LogicalResult
 splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                       ChunkBufferHandler processChunkBuffer, raw_ostream &os,
-                      bool enableSplitting = true,
                       llvm::StringRef inputSplitMarker = kDefaultSplitMarker,
                       llvm::StringRef outputSplitMarker = kDefaultSplitMarker);
 } // namespace mlir

@@ -136,11 +136,12 @@ int main(int argc, char **argv) {
       llvm::cl::desc(
           "Print out the parsed ODS information from the input file"),
       llvm::cl::init(false));
-  llvm::cl::opt<bool> splitInputFile(
+  llvm::cl::opt<std::string> splitInputFile(
       "split-input-file",
-      llvm::cl::desc("Split the input file into pieces and process each "
-                     "chunk independently"),
-      llvm::cl::init(false));
+      llvm::cl::desc(
+          "Split the input file into chunks using the given marker and "
+          "process each chunk independently"),
+      llvm::cl::init(kDefaultSplitMarker));
   llvm::cl::opt<enum OutputType> outputType(
       "x", llvm::cl::init(OutputType::AST),
       llvm::cl::desc("The type of output desired"),

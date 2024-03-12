@@ -21,11 +21,10 @@ using namespace mlir;
 LogicalResult
 mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                             ChunkBufferHandler processChunkBuffer,
-                            raw_ostream &os, bool enableSplitting,
-                            llvm::StringRef inputSplitMarker,
+                            raw_ostream &os, llvm::StringRef inputSplitMarker,
                             llvm::StringRef outputSplitMarker) {
   // If splitting is disabled, we process the full input buffer.
-  if (!enableSplitting)
+  if (inputSplitMarker.empty())
     return processChunkBuffer(std::move(originalBuffer), os);
 
   const int inputSplitMarkerLen = inputSplitMarker.size();
