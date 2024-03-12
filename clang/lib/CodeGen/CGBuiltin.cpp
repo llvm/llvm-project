@@ -5460,7 +5460,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   // OpenCL v2.0, s6.13.17 - Enqueue kernel function.
-  // It contains four different overload formats specified in Table 6.13.17.1.
+  // Table 6.13.17.1 specifies four overload forms of enqueue_kernel.
+  // The code below expands the builtin call to a call to one of the following
+  // functions that an OpenCL runtime library will have to provide:
+  //   __enqueue_kernel_basic
+  //   __enqueue_kernel_varargs
+  //   __enqueue_kernel_basic_events
+  //   __enqueue_kernel_events_varargs
   case Builtin::BIenqueue_kernel: {
     StringRef Name; // Generated function call name
     unsigned NumArgs = E->getNumArgs();
