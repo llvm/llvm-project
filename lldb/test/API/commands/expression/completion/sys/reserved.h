@@ -1,7 +1,8 @@
 class MyVec {
-    int __mem;
-    int _Mem;
+  int __mem;
+  int _Mem;
+
 public:
-    void __func() {}
-    void _Func() {}
+  void __func() {}
+  void _Func() {}
 };
