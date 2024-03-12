@@ -242,8 +242,11 @@ static void makeNextConditionalOn(fir::FirOpBuilder &builder,
   // is in a fir.iterate_while loop, the result must be propagated up to the
   // loop scope as an extra ifOp result. (The propagation is done in genIoLoop.)
   mlir::TypeRange resTy;
+  // TypeRange does not own its contents, so make sure the the type object
+  // is live until the end of the function.
+  mlir::IntegerType boolTy = builder.getI1Type();
   if (inLoop)
-    resTy = builder.getI1Type();
+    resTy = boolTy;
   auto ifOp = builder.create<fir::IfOp>(loc, resTy, ok,
                                         /*withElseRegion=*/inLoop);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
