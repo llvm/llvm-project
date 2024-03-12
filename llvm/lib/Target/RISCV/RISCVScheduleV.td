@@ -196,7 +196,7 @@ multiclass LMULSEWReadAdvanceImpl<string name, int val, list<SchedWrite> writes 
 // by the ReadAdvance. For example:
 // ```
 //   defm "" : LMULReadAdvance<"ReadVIALUX", 1,
-//                             LMULSchedWriteList<["WriteVIMovVX"]>.value>;
+//                             LMULSchedWriteList<["WriteVMovSX"]>.value>;
 // ```
 class LMULSchedWriteListImpl<list<string> names, list<string> MxList> {
   list<SchedWrite> value = !foldl([]<SchedWrite>,
@@ -484,11 +484,11 @@ defm "" : LMULSchedWrites<"WriteVIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-def WriteVIMovVX : SchedWrite;
-def WriteVIMovXV : SchedWrite;
+def WriteVMovSX : SchedWrite;
+def WriteVMovXS : SchedWrite;
 // 16.2. Floating-Point Scalar Move Instructions
-def WriteVFMovVF : SchedWrite;
-def WriteVFMovFV : SchedWrite;
+def WriteVMovSF : SchedWrite;
+def WriteVMovFS : SchedWrite;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedWrites<"WriteVISlideX">;
 defm "" : LMULSchedWrites<"WriteVISlideI">;
@@ -709,13 +709,13 @@ defm "" : LMULSchedReads<"ReadVIotaV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-def ReadVIMovVX : SchedRead;
-def ReadVIMovXV : SchedRead;
-def ReadVIMovXX : SchedRead;
+def ReadVMovXS : SchedRead;
+def ReadVMovSX_V : SchedRead;
+def ReadVMovSX_X : SchedRead;
 // 16.2. Floating-Point Scalar Move Instructions
-def ReadVFMovVF : SchedRead;
-def ReadVFMovFV : SchedRead;
-def ReadVFMovFX : SchedRead;
+def ReadVMovFS : SchedRead;
+def ReadVMovSF_V : SchedRead;
+def ReadVMovSF_F : SchedRead;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedReads<"ReadVISlideV">;
 defm "" : LMULSchedReads<"ReadVISlideX">;
@@ -921,10 +921,10 @@ defm "" : LMULWriteRes<"WriteVIotaV", []>;
 defm "" : LMULWriteRes<"WriteVIdxV", []>;
 
 // 16. Vector Permutation Instructions
-def : WriteRes<WriteVIMovVX, []>;
-def : WriteRes<WriteVIMovXV, []>;
-def : WriteRes<WriteVFMovVF, []>;
-def : WriteRes<WriteVFMovFV, []>;
+def : WriteRes<WriteVMovSX, []>;
+def : WriteRes<WriteVMovXS, []>;
+def : WriteRes<WriteVMovSF, []>;
+def : WriteRes<WriteVMovFS, []>;
 defm "" : LMULWriteRes<"WriteVISlideX", []>;
 defm "" : LMULWriteRes<"WriteVISlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
@@ -1082,12 +1082,12 @@ defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 16. Vector Permutation Instructions
-def : ReadAdvance<ReadVIMovVX, 0>;
-def : ReadAdvance<ReadVIMovXV, 0>;
-def : ReadAdvance<ReadVIMovXX, 0>;
-def : ReadAdvance<ReadVFMovVF, 0>;
-def : ReadAdvance<ReadVFMovFV, 0>;
-def : ReadAdvance<ReadVFMovFX, 0>;
+def : ReadAdvance<ReadVMovXS, 0>;
+def : ReadAdvance<ReadVMovSX_V, 0>;
+def : ReadAdvance<ReadVMovSX_X, 0>;
+def : ReadAdvance<ReadVMovFS, 0>;
+def : ReadAdvance<ReadVMovSF_V, 0>;
+def : ReadAdvance<ReadVMovSF_F, 0>;
 defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;

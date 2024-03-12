@@ -13,23 +13,17 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/InstallAPI/Context.h"
+#include "clang/InstallAPI/MachO.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/TextAPI/Architecture.h"
-#include "llvm/TextAPI/InterfaceFile.h"
-#include "llvm/TextAPI/PackedVersion.h"
-#include "llvm/TextAPI/Platform.h"
-#include "llvm/TextAPI/Target.h"
-#include "llvm/TextAPI/Utils.h"
 #include <set>
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace installapi {
-using Macro = std::pair<std::string, bool /*isUndef*/>;
 
 struct DriverOptions {
   /// \brief Path to input file lists (JSON).
@@ -42,7 +36,7 @@ struct DriverOptions {
   std::string OutputPath;
 
   /// \brief File encoding to print.
-  llvm::MachO::FileType OutFT = llvm::MachO::FileType::TBD_V5;
+  FileType OutFT = FileType::TBD_V5;
 
   /// \brief Print verbose output.
   bool Verbose = false;
@@ -53,7 +47,7 @@ struct LinkerOptions {
   std::string InstallName;
 
   /// \brief The current version to use for the dynamic library.
-  llvm::MachO::PackedVersion CurrentVersion;
+  PackedVersion CurrentVersion;
 
   /// \brief Is application extension safe.
   bool AppExtensionSafe = false;
@@ -62,15 +56,22 @@ struct LinkerOptions {
   bool IsDylib = false;
 };
 
+struct FrontendOptions {
+  /// \brief The language mode to parse headers in.
+  Language LangMode = Language::ObjC;
+};
+
 class Options {
 private:
   bool processDriverOptions(llvm::opt::InputArgList &Args);
   bool processLinkerOptions(llvm::opt::InputArgList &Args);
+  bool processFrontendOptions(llvm::opt::InputArgList &Args);
 
 public:
   /// The various options grouped together.
   DriverOptions DriverOpts;
   LinkerOptions LinkerOpts;
+  FrontendOptions FEOpts;
 
   Options() = delete;
 

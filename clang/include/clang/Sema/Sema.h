@@ -3911,6 +3911,16 @@ public:
   void addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
                                Expr *Min, Expr *Max);
 
+  /// Create an AMDGPUMaxNumWorkGroupsAttr attribute.
+  AMDGPUMaxNumWorkGroupsAttr *
+  CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI, Expr *XExpr,
+                                   Expr *YExpr, Expr *ZExpr);
+
+  /// addAMDGPUMaxNumWorkGroupsAttr - Adds an amdgpu_max_num_work_groups
+  /// attribute to a particular declaration.
+  void addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
+                                     Expr *XExpr, Expr *YExpr, Expr *ZExpr);
+
   DLLImportAttr *mergeDLLImportAttr(Decl *D, const AttributeCommonInfo &CI);
   DLLExportAttr *mergeDLLExportAttr(Decl *D, const AttributeCommonInfo &CI);
   MSInheritanceAttr *mergeMSInheritanceAttr(Decl *D,
@@ -6752,18 +6762,10 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ///
-  /// \param ThisRefersToClosureObject Whether to skip the 'this' check for a
-  /// lambda because 'this' refers to the closure object.
-  ExprResult ActOnCXXThis(SourceLocation loc,
-                          bool ThisRefersToClosureObject = false);
+  ExprResult ActOnCXXThis(SourceLocation loc);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
-  ///
-  /// \param ThisRefersToClosureObject Whether to skip the 'this' check for a
-  /// lambda because 'this' refers to the closure object.
-  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit,
-                         bool ThisRefersToClosureObject = false);
+  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
   void MarkThisReferenced(CXXThisExpr *This);
 
   /// Try to retrieve the type of the 'this' pointer.
@@ -9010,6 +9012,12 @@ public:
   /// the semantic attributes that have been processed.
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
                              SmallVectorImpl<const Attr *> &OutAttrs);
+
+  ExprResult ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                SourceRange Range);
+  ExprResult BuildCXXAssumeExpr(Expr *Assumption,
+                                const IdentifierInfo *AttrName,
+                                SourceRange Range);
 
   ///@}
 
@@ -14716,10 +14724,10 @@ private:
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
   /// The current `omp begin/end assumes` scopes.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeScoped;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeScoped;
 
   /// All `omp assumes` we encountered so far.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeGlobal;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
 
   /// OMPD_loop is mapped to OMPD_for, OMPD_distribute or OMPD_simd depending
   /// on the parameter of the bind clause. In the methods for the
