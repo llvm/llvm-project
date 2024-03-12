@@ -27,6 +27,9 @@ namespace llvm {
   }
 }
 
+// Prefix for __builtin_verbose_trap.
+#define CLANG_VERBOSE_TRAP_PREFIX "__llvm_verbose_trap"
+
 namespace clang {
   class CodeGenOptions;
   class CoverageSourceInfo;
