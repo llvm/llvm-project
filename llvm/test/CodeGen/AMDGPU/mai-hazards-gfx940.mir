@@ -2205,12 +2205,12 @@ body:             |
 
 ...
 # 8 pass source
-# GCN-LABEL: name: xdl_mfma_8pass__write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
-name: xdl_mfma_8pass__write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
 body:             |
   bb.0:
     renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
@@ -2220,12 +2220,12 @@ body:             |
 
 ...
 # 8 pass source
-# GCN-LABEL: name: xdl_mfma_8pass__write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
-name: xdl_mfma_8pass__write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
 body:             |
   bb.0:
     renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
@@ -2235,12 +2235,12 @@ body:             |
 
 ...
 # 8 pass source
-# GCN-LABEL: name: xdl_mfma_8pass__write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
-name: xdl_mfma_8pass__write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
 body:             |
   bb.0:
     renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
@@ -2339,12 +2339,12 @@ body:             |
 ...
 ...
 # 8 pass source
-# GCN-LABEL: name: xdl_mfma_8pass__write_vgpr_xdl_mfma_read_overlap_srcc
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcc
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
-name:            xdl_mfma_8pass__write_vgpr_xdl_mfma_read_overlap_srcc
+name:            xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcc
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
@@ -2353,12 +2353,12 @@ body:             |
 
 ...
 # 8 pass source
-# GCN-LABEL: name: xdl_mfma_8pass__write_vgpr_xdl_mfma_read_overlap_srca
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srca
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
-name:            xdl_mfma_8pass__write_vgpr_xdl_mfma_read_overlap_srca
+name:            xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srca
 body:             |
   bb.0:
     renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
@@ -2367,12 +2367,12 @@ body:             |
 
 ...
 # 8 pass source
-# GCN-LABEL: name: xdl_mfma_8pass__write_vgpr_xdl_mfma_read_overlap_srcb
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcb
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
-name:            xdl_mfma_8pass__write_vgpr_xdl_mfma_read_overlap_srcb
+name:            xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcb
 body:             |
   bb.0:
     renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
