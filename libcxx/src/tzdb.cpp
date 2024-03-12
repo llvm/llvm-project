@@ -522,7 +522,7 @@ static __tz::__rule& __create_entry(__tz::__rules_storage_type& __rules, const s
     return __result();
 
   // Typically rules are in contiguous order in the database.
-  // But there are exceptions. For example, NZ and Chatham are interleaved.
+  // But there are exceptions, some rules are interleaved.
   if (__rules.back().first == __name)
     return __rules.back().second.emplace_back();
 
