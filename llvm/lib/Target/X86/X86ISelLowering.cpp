@@ -36753,7 +36753,7 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
   Known = DAG.computeKnownBits(RHS, DemandedSrcElts, Depth + 1);
   Known2 = DAG.computeKnownBits(LHS, DemandedSrcElts, Depth + 1);
-  Known = KnownBits::absdiff(Known, Known2).zext(16);
+  Known = KnownBits::abdu(Known, Known2).zext(16);
   // Known = (((D0 + D1) + (D2 + D3)) + ((D4 + D5) + (D6 + D7)))
   Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
                                       Known, Known);
