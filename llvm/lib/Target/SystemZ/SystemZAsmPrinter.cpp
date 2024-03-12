@@ -1030,6 +1030,9 @@ void SystemZAsmPrinter::emitADASection() {
       MCSymbolGOFF *IndirectSym =
           static_cast<MCSymbolGOFF *>(OutContext.getOrCreateSymbol(
               Twine(Sym->getName()).concat("@indirect")));
+      IndirectSym->setExternal(Sym->isExternal());
+      IndirectSym->setAliasName(Sym->getName());
+      IndirectSym->setIndirect(true);
 
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(

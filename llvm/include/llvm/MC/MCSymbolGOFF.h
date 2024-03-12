@@ -18,10 +18,26 @@
 namespace llvm {
 
 class MCSymbolGOFF : public MCSymbol {
+  mutable StringRef AliasName; // ADA indirect
+
+  enum SymbolFlags : uint16_t {
+    SF_Alias = 0x02,     // Symbol is alias.
+    SF_Indirect = 0x200, // Symbol referenced indirectly.
+  };
+
 public:
   MCSymbolGOFF(const StringMapEntry<bool> *Name, bool IsTemporary)
-      : MCSymbol(SymbolKindGOFF, Name, IsTemporary) {}
+      : MCSymbol(SymbolKindGOFF, Name, IsTemporary), AliasName() {}
   static bool classof(const MCSymbol *S) { return S->isGOFF(); }
+
+  bool hasAliasName() const { return !AliasName.empty(); }
+  void setAliasName(StringRef Name) { AliasName = Name; }
+  StringRef getAliasName() const { return AliasName; }
+
+  void setIndirect(bool Value = true) {
+    modifyFlags(Value ? SF_Indirect : 0, SF_Indirect);
+  }
+  bool isIndirect() const { return getFlags() & SF_Indirect; }
 };
 } // end namespace llvm
 
