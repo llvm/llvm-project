@@ -176,7 +176,7 @@ DEFAULT_FEATURES = [
             cfg,
             """
             #include <atomic>
-            struct Large { int storage[1024/8]; };
+            struct Large { char storage[1024/8]; };
             std::atomic<Large> x;
             int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
