@@ -57,8 +57,14 @@ class SPIRVEmitIntrinsics
   bool TrackConstants = true;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseSet<Instruction *> AggrStores;
+
+  // deduce values type
+  DenseMap<Value *, Type *> DeducedElTys;
+  Type *deduceElementType(Value *I);
+
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
+
   CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
                             Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
                             IRBuilder<> &B) {
@@ -72,6 +78,7 @@ class SPIRVEmitIntrinsics
       Args.push_back(Imm);
     return B.CreateIntrinsic(IntrID, {Types}, Args);
   }
+
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
   void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
   void insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B);
@@ -154,6 +161,47 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
     report_fatal_error("A token is encountered but SPIR-V without extensions "
                        "does not support token type",
                        false);
+}
+
+// Return a successfully deduced Type of the Instruction or nullptr otherwise.
+static Type *deduceElementTypeHelper(Value *I,
+                                     std::unordered_set<Value *> &Visited,
+                                     DenseMap<Value *, Type *> &DeducedElTys) {
+  // maybe already known
+  auto It = DeducedElTys.find(I);
+  if (It != DeducedElTys.end())
+    return It->second;
+
+  // maybe a cycle
+  if (Visited.find(I) != Visited.end())
+    return nullptr;
+  Visited.insert(I);
+
+  // fallback value in case when we fail to deduce a type
+  Type *Ty = nullptr;
+  // look for known basic patterns of type inference
+  if (auto *Ref = dyn_cast<AllocaInst>(I))
+    Ty = Ref->getAllocatedType();
+  else if (auto *Ref = dyn_cast<GetElementPtrInst>(I))
+    Ty = Ref->getResultElementType();
+  else if (auto *Ref = dyn_cast<GlobalValue>(I))
+    Ty = Ref->getValueType();
+  else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I))
+    Ty = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
+                                 DeducedElTys);
+
+  // remember the found relationship
+  if (Ty)
+    DeducedElTys[I] = Ty;
+
+  return Ty;
+}
+
+Type *SPIRVEmitIntrinsics::deduceElementType(Value *I) {
+  std::unordered_set<Value *> Visited;
+  if (Type *Ty = deduceElementTypeHelper(I, Visited, DeducedElTys))
+    return Ty;
+  return IntegerType::getInt8Ty(I->getContext());
 }
 
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
@@ -333,20 +381,10 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   while (BitCastInst *BC = dyn_cast<BitCastInst>(Pointer))
     Pointer = BC->getOperand(0);
 
-  // Do not emit spv_ptrcast if Pointer is a GlobalValue of expected type.
-  GlobalValue *GV = dyn_cast<GlobalValue>(Pointer);
-  if (GV && GV->getValueType() == ExpectedElementType)
-    return;
-
-  // Do not emit spv_ptrcast if Pointer is a result of alloca with expected
-  // type.
-  AllocaInst *A = dyn_cast<AllocaInst>(Pointer);
-  if (A && A->getAllocatedType() == ExpectedElementType)
-    return;
-
-  // Do not emit spv_ptrcast if Pointer is a result of GEP of expected type.
-  GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Pointer);
-  if (GEPI && GEPI->getResultElementType() == ExpectedElementType)
+  // Do not emit spv_ptrcast if Pointer's element type is ExpectedElementType
+  std::unordered_set<Value *> Visited;
+  Type *PointerElemTy = deduceElementTypeHelper(Pointer, Visited, DeducedElTys);
+  if (PointerElemTy == ExpectedElementType)
     return;
 
   setInsertPointSkippingPhis(B, I);
@@ -645,15 +683,9 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
 
   setInsertPointSkippingPhis(B, I->getNextNode());
 
-  Constant *EltTyConst;
+  Type *ElemTy = deduceElementType(I);
+  Constant *EltTyConst = UndefValue::get(ElemTy);
   unsigned AddressSpace = getPointerAddressSpace(I->getType());
-  if (auto *AI = dyn_cast<AllocaInst>(I))
-    EltTyConst = UndefValue::get(AI->getAllocatedType());
-  else if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
-    EltTyConst = UndefValue::get(GEP->getResultElementType());
-  else
-    EltTyConst = UndefValue::get(IntegerType::getInt8Ty(I->getContext()));
-
   buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()}, EltTyConst, I,
                   {B.getInt32(AddressSpace)}, B);
 }
@@ -737,6 +769,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   IRBuilder<> B(Func.getContext());
   AggrConsts.clear();
   AggrStores.clear();
+  DeducedElTys.clear();
 
   // StoreInst's operand type can be changed during the next transformations,
   // so we need to store it in the set. Also store already transformed types.

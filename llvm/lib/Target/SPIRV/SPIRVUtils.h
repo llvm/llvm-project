@@ -102,10 +102,19 @@ bool isEntryPoint(const Function &F);
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
 Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
 
+// True if this is an instance of TypedPointerType.
+inline bool isTypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::TypedPointerTyID;
+}
+
+// True if this is an instance of PointerType.
+inline bool isUntypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::PointerTyID;
+}
+
 // True if this is an instance of PointerType or TypedPointerType.
 inline bool isPointerTy(const Type *T) {
-  return T->getTypeID() == Type::PointerTyID ||
-         T->getTypeID() == Type::TypedPointerTyID;
+  return isUntypedPointerTy(T) || isTypedPointerTy(T);
 }
 
 // Get the address space of this pointer or pointer vector type for instances of

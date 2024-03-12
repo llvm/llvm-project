@@ -764,6 +764,10 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
       !isSpecialOpaqueType(Ty)) {
     if (!isPointerTy(Ty))
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
+    else if (isTypedPointerTy(Ty))
+      DT.add(cast<TypedPointerType>(Ty)->getElementType(),
+             getPointerAddressSpace(Ty), &MIRBuilder.getMF(),
+             getSPIRVTypeID(SpirvType));
     else
       DT.add(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
              getPointerAddressSpace(Ty), &MIRBuilder.getMF(),
@@ -789,6 +793,9 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
   Register Reg;
   if (!isPointerTy(Ty))
     Reg = DT.find(Ty, &MIRBuilder.getMF());
+  else if (isTypedPointerTy(Ty))
+    Reg = DT.find(cast<TypedPointerType>(Ty)->getElementType(),
+                  getPointerAddressSpace(Ty), &MIRBuilder.getMF());
   else
     Reg =
         DT.find(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
