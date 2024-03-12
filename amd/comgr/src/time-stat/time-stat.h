@@ -31,7 +31,6 @@ public:
         LogF(new (std::nothrow)
                  llvm::raw_fd_ostream(LogFile, EC, llvm::sys::fs::OF_Text),
              [](llvm::raw_fd_ostream *fp) {
-               *fp << "Closing log...\n";
                fp->close();
              });
     if (EC) {
@@ -58,12 +57,9 @@ public:
 
   void dumpPerfStats() {
     for (const auto &Item : ProfileDataMap) {
-      *pLog << "Profile Point "
-            << llvm::format("%-50s", Item.getKey().str().c_str())
-            << " was invoked " << llvm::format("%6d", Item.getValue().Counter)
-            << " times and took "
-            << llvm::format("%10.4f", Item.getValue().TimeTaken)
-            << " milliseconds overall\n";
+      *pLog << llvm::format("%-50s", Item.getKey().str().c_str())
+            << llvm::format("%6d", Item.getValue().Counter) << " calls"
+            << llvm::format("%10.4f", Item.getValue().TimeTaken) << " ms\n";
     }
   }
 };
