@@ -1023,6 +1023,26 @@ set(files
   wctype.h
   )
 
+
+# Create a set of wrapper includes for use with C++ modules. Most headers are replaced
+# with one containing "import std.compat" and a few are textually copied because
+# they're non-modular or they have macros.
+#
+# Wrapped headers must be
+#  (A) Public headers
+#  (B) not C headers ending in .h (those provide macros sometimes)
+#  (C) not a textual
+set(TOP_LEVEL_HEADERS ${files})
+list(FILTER TOP_LEVEL_HEADERS EXCLUDE REGEX "^.*/.*$")
+set(TEXTUAL_HEADERS ${TOP_LEVEL_HEADERS})
+list(FILTER TEXTUAL_HEADERS INCLUDE REGEX "^(version|cassert|cerrno|climits|cstdarg|cstdio|.*\.h|__.*)$")
+set(WRAPPED_HEADERS)
+foreach (header ${TOP_LEVEL_HEADERS})
+  if (NOT ${header} IN_LIST TEXTUAL_HEADERS)
+    list(APPEND WRAPPED_HEADERS ${header})
+  endif()
+endforeach()
+
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
@@ -1038,7 +1058,29 @@ foreach(f ${files})
   list(APPEND _all_includes "${dst}")
 endforeach()
 
-add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
+set(_wrapper_headers)
+foreach(f ${TEXTUAL_HEADERS})
+    set(src "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
+    set(dst "${LIBCXX_GENERATED_MODULE_DIR}/../vm/${f}")
+    add_custom_command(OUTPUT ${dst}
+        DEPENDS ${src} ${_all_includes}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+        COMMENT "Copying CXX header ${f}")
+    list(APPEND _wrapper_headers "${dst}")
+endforeach()
+
+foreach(f ${WRAPPED_HEADERS})
+    set(src "${CMAKE_CURRENT_SOURCE_DIR}/../modules/std_compat_wrapper.h")
+    set(dst "${LIBCXX_GENERATED_MODULE_DIR}/../vm/${f}")
+    add_custom_command(OUTPUT ${dst}
+        DEPENDS ${src}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+        COMMENT "Copying CXX header ${f}")
+    list(APPEND _wrapper_headers "${dst}")
+endforeach()
+
+
+add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes} ${_wrapper_headers})
 
 add_library(cxx-headers INTERFACE)
 target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
