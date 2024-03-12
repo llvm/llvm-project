@@ -2282,6 +2282,8 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF0000u);
   const ArgDescriptor ClusterNumWorkGroupsZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF00000u);
+  const ArgDescriptor ClusterFlatNumWorkGroups =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0xF000000u);
   if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
@@ -2326,6 +2328,11 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z:
       Reg = &ClusterNumWorkGroupsZ;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS:
+      Reg = &ClusterFlatNumWorkGroups;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
@@ -8526,6 +8533,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z)
+               : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_flat_num_workgroups:
+    return Subtarget->hasGFX12_10Insts()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
