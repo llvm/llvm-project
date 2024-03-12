@@ -267,12 +267,12 @@ void test() {
 
     // pptr not set but off is == 0
     result = input_buffer.seekoff(-10, ios_base::end, ios_base::out);
-    std::cerr << result << std::endl;
+    // std::cerr << result << std::endl;
     assert(result == 0);
 
     // pptr not set and off != 0 -> fail
     result = input_buffer.seekoff(0, ios_base::end, ios_base::out);
-    std::cerr << result << std::endl;
+    // std::cerr << result << std::endl;
     assert(result == -1);
 
     // negative off -> fail
@@ -419,7 +419,7 @@ void test() {
     // no mode set -> fail
     result = output_buffer.seekoff(0, ios_base::cur, 0);
     std::cerr << result << std::endl;
-    // assert(result == -1);
+    assert(result == -1);
 
     // both in and out modes set -> fail
     result = output_buffer.seekoff(0, ios_base::cur, ios_base::in | ios_base::out);
@@ -457,7 +457,7 @@ void test() {
     // no mode set -> fail
     result = inout_buffer.seekoff(0, ios_base::cur, 0);
     std::cerr << result << std::endl;
-    // assert(result == -1);
+    assert(result == -1);
 
     // both in and out modes set -> fail
     result = inout_buffer.seekoff(0, ios_base::cur, ios_base::in | ios_base::out);
