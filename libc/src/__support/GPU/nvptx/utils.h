@@ -126,6 +126,14 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
   __nvvm_bar_warp_sync(static_cast<uint32_t>(mask));
 }
 
+/// Shuffles the the lanes inside the warp according to the given index.
+[[clang::convergent]] LIBC_INLINE uint32_t shuffle(uint64_t lane_mask,
+                                                   uint32_t idx, uint32_t x) {
+  uint32_t mask = static_cast<uint32_t>(lane_mask);
+  uint32_t bitmask = (mask >> idx) & 1;
+  return -bitmask & __nvvm_shfl_sync_idx_i32(mask, x, idx, get_lane_size() - 1);
+}
+
 /// Returns the current value of the GPU's processor clock.
 LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }
 
