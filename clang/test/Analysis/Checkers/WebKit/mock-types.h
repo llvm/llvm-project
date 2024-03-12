@@ -62,6 +62,8 @@ struct RefCountable {
   static Ref<RefCountable> create();
   void ref() {}
   void deref() {}
+  void method();
+  int trivial() { return 123; }
 };
 
 template <typename T> T *downcast(T *t) { return t; }

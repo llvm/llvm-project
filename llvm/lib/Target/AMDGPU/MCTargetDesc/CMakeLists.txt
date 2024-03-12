@@ -5,7 +5,6 @@ add_llvm_component_library(LLVMAMDGPUDesc
   AMDGPUInstPrinter.cpp
   AMDGPUMCAsmInfo.cpp
   AMDGPUMCCodeEmitter.cpp
-  AMDGPUMCExpr.cpp
   AMDGPUMCTargetDesc.cpp
   AMDGPUTargetStreamer.cpp
   R600InstPrinter.cpp

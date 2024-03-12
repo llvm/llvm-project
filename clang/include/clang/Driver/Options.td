@@ -1264,6 +1264,10 @@ def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
 def offload_compress : Flag<["--"], "offload-compress">,
   HelpText<"Compress offload device binaries (HIP only)">;
 def no_offload_compress : Flag<["--"], "no-offload-compress">;
+
+def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
+  Flags<[HelpHidden]>,
+  HelpText<"Compression level for offload device binaries (HIP only)">;
 }
 
 // CUDA options
@@ -3788,6 +3792,12 @@ def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=
   Group<f_Group>,
   HelpText<"Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)">,
   MetaVarName<"<regex>">;
+
+defm assumptions : BoolFOption<"assumptions",
+  LangOpts<"CXXAssumptions">, DefaultTrue,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Disable codegen and compile-time checks for C++23's [[assume]] attribute">,
+  PosFlag<SetTrue>>;
 
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
@@ -7414,7 +7424,9 @@ def ast_view : Flag<["-"], "ast-view">,
 def emit_module : Flag<["-"], "emit-module">,
   HelpText<"Generate pre-compiled module file from a module map">;
 def emit_module_interface : Flag<["-"], "emit-module-interface">,
-  HelpText<"Generate pre-compiled module file from a C++ module interface">;
+  HelpText<"Generate pre-compiled module file from a standard C++ module interface unit">;
+def emit_reduced_module_interface : Flag<["-"], "emit-reduced-module-interface">,
+  HelpText<"Generate reduced prebuilt module interface from a standard C++ module interface unit">;
 def emit_header_unit : Flag<["-"], "emit-header-unit">,
   HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,

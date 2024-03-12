@@ -5562,6 +5562,10 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
       return FoldedVOp;
 
+  // reassociate minmax
+  if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
+    return RMINMAX;
+
   // Is sign bits are zero, flip between UMIN/UMAX and SMIN/SMAX.
   // Only do this if the current op isn't legal and the flipped is.
   if (!TLI.isOperationLegal(Opcode, VT) &&

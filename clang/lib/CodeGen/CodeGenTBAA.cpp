@@ -286,6 +286,14 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
   /* Things not handled yet include: C++ base classes, bitfields, */
 
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
+    if (TTy->isUnionType()) {
+      uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();
+      llvm::MDNode *TBAAType = getChar();
+      llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+      Fields.push_back(
+          llvm::MDBuilder::TBAAStructField(BaseOffset, Size, TBAATag));
+      return true;
+    }
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     if (RD->hasFlexibleArrayMember())
       return false;
@@ -343,6 +351,9 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
 llvm::MDNode *
 CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
+  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
+    return nullptr;
+
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
 
   if (llvm::MDNode *N = StructMetadataCache[Ty])
