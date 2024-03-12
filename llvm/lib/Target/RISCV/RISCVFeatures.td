@@ -1236,3 +1236,22 @@ def FeatureForcedSWShadowStack : SubtargetFeature<
     "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
     "Implement shadow stack with software.">;
 def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;
+
+//===----------------------------------------------------------------------===//
+// T-Head Vector in RuyiSDK specific features and extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureVendorXTHeadV
+    : SubtargetFeature<"xtheadvector", "HasVendorXTHeadVector", "true",
+                       "'xtheadvector' (T-Head Base Vector Instructions)">;
+def HasVendorXTHeadVector : Predicate<"Subtarget->HasVendorXTHeadVector()">,
+                                  AssemblerPredicate<(all_of FeatureVendorXTHeadV),
+                                  "'xtheadvector' (T-Head Base Vector Instructions)">;
+
+def FeatureVendorXTHeadZvamo
+    : SubtargetFeature<"xtheadzvamo", "HasVendorXTHeadZvamo", "true",
+                       "'xtheadzvamo' (T-Head Vector AMO Operations)",
+                       [FeatureStdExtA]>;
+def HasVendorXTHeadZvamo : Predicate<"Subtarget->hasVendorXTHeadZvamo()">,
+                                     AssemblerPredicate<(all_of FeatureVendorXTHeadZvamo),
+                                     "'xtheadzvamo' (T-Head Vector AMO Operations)">;

@@ -559,6 +559,12 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcf' is only supported for 'rv32'");
   }
+
+  for (StringRef Input : {"rv64iv_xtheadvector", "rv32iv_xtheadvector"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xtheadvector' extension is incompatible with "
+              "'v' or 'zve*' extension");
+  }
 }
 
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
@@ -882,6 +888,8 @@ R"(All available -march extensions for RISC-V
     xtheadmempair       1.0
     xtheadsync          1.0
     xtheadvdot          1.0
+    xtheadvector        1.0
+    xtheadzvamo         1.0
     xventanacondops     1.0
 
 Experimental extensions
