@@ -19,6 +19,8 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/InstallAPI/Frontend.h"
+#include "clang/InstallAPI/FrontendRecords.h"
+#include "clang/InstallAPI/MachO.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/Option.h"
@@ -29,8 +31,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TextAPI/RecordVisitor.h"
-#include "llvm/TextAPI/TextAPIWriter.h"
 #include <memory>
 
 using namespace clang;
@@ -125,7 +125,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Execute and gather AST results.
   // An invocation is ran for each unique target triple and for each header
   // access level.
-  llvm::MachO::Records FrontendResults;
+  Records FrontendResults;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
     for (const HeaderType Type :
          {HeaderType::Public, HeaderType::Private, HeaderType::Project}) {
