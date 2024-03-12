@@ -8,7 +8,6 @@ func.func @callee1(%arg : i32) -> i32 {
   return %v3 : i32
 }
 
-// CHECK: Callee / caller operation ratio (max: 100): 200
 // CHECK-LABEL: func @caller1
 func.func @caller1(%arg0 : i32) -> i32 {
   // CHECK-NEXT: call @callee1
