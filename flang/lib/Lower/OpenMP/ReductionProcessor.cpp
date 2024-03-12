@@ -339,6 +339,10 @@ mlir::omp::ReductionDeclareOp ReductionProcessor::createReductionDecl(
   return decl;
 }
 
+// TODO: By-ref vs by-val reductions are currently toggled for the whole
+//       operation (possibly effecting multiple reduction variables).
+//       This could cause a problem with openmp target reductions because
+//       by-ref trivial types may not be supported.
 bool ReductionProcessor::doReductionByRef(
     const llvm::SmallVectorImpl<mlir::Value> &reductionVars) {
   if (reductionVars.empty())
