@@ -16,6 +16,8 @@ ARMAP-NEXT: #funcexp in test.dll
 ARMAP-NEXT: #mangledfunc in test.dll
 ARMAP-NEXT: ?test_cpp_func@@$$hYAHPEAX@Z in test.dll
 ARMAP-NEXT: ?test_cpp_func@@YAHPEAX@Z in test.dll
+ARMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
 ARMAP-NEXT: __imp_?test_cpp_func@@YAHPEAX@Z in test.dll
 ARMAP-NEXT: __imp_aux_?test_cpp_func@@YAHPEAX@Z in test.dll
 ARMAP-NEXT: __imp_aux_expname in test.dll
@@ -28,6 +30,7 @@ ARMAP-NEXT: __imp_mangledfunc in test.dll
 ARMAP-NEXT: expname in test.dll
 ARMAP-NEXT: funcexp in test.dll
 ARMAP-NEXT: mangledfunc in test.dll
+ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
 
 RUN: llvm-readobj test.lib | FileCheck -check-prefix=READOBJ %s
 
@@ -107,6 +110,8 @@ EXPAS-ARMAP-NEXT: #func1 in test.dll
 EXPAS-ARMAP-NEXT: #func2 in test.dll
 EXPAS-ARMAP-NEXT: #func3 in test.dll
 EXPAS-ARMAP-NEXT: #func4 in test.dll
+EXPAS-ARMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+EXPAS-ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
 EXPAS-ARMAP-NEXT: __imp_aux_func1 in test.dll
 EXPAS-ARMAP-NEXT: __imp_aux_func2 in test.dll
 EXPAS-ARMAP-NEXT: __imp_aux_func3 in test.dll
@@ -121,6 +126,7 @@ EXPAS-ARMAP-NEXT: func1 in test.dll
 EXPAS-ARMAP-NEXT: func2 in test.dll
 EXPAS-ARMAP-NEXT: func3 in test.dll
 EXPAS-ARMAP-NEXT: func4 in test.dll
+EXPAS-ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
 
 EXPAS-READOBJ:      File: test.dll
 EXPAS-READOBJ-NEXT: Format: COFF-import-file-ARM64EC
