@@ -2847,6 +2847,8 @@ static SDValue combineFixedwidthToAVG(SDNode *N, SelectionDAG &DAG) {
   if (!N1C || N1C->getAPIntValue() != 1)
     return SDValue();
   EVT VT = And.getValueType();
+  if (VT.isVector())
+    return SDValue();
   SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isOperationLegalOrCustom(ISD::AVGFLOORU, VT))
