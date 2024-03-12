@@ -1952,7 +1952,7 @@ public:
         I->moveBefore(MatMul);
 
       // Deal with lifetime.end calls that might be between Load0/Load1 and the
-      // store. To avoid introducing loads to dead objects (i.e. after thei
+      // store. To avoid introducing loads to dead objects (i.e. after the
       // lifetime has been termined by @llvm.lifetime.end), either sink them
       // after the store if in the same block, or remove the lifetime.end marker
       // otherwise. This might pessimize further optimizations, by extending the
