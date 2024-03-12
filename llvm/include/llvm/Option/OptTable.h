@@ -66,7 +66,7 @@ public:
     // here if you need more entries and adjust the constants in the
     // OptParserEmitter TableGen backend.
     std::array<std::pair<std::array<unsigned int, 2>, const char *>, 1>
-        HelpTextForVisibilities;
+        HelpTextsForVariants;
     const char *MetaVar;
     unsigned ID;
     unsigned char Kind;
@@ -163,7 +163,7 @@ public:
   const char *getOptionHelpText(OptSpecifier id,
                                 Visibility VisibilityMask) const {
     auto Info = getInfo(id);
-    for (auto [Visibilities, Text] : Info.HelpTextForVisibilities)
+    for (auto [Visibilities, Text] : Info.HelpTextsForVariants)
       for (auto Visibility : Visibilities)
         if (VisibilityMask & Visibility)
           return Text;
@@ -381,32 +381,30 @@ protected:
 
 #define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                       \
     ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTFORVISIBILITIES, METAVAR,      \
-    VALUES)                                                                    \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
   ID_PREFIX##ID
 
 #define LLVM_MAKE_OPT_ID(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS,        \
                          ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT,        \
-                         HELPTEXTFORVISIBILITIES, METAVAR, VALUES)             \
+                         HELPTEXTSFORVARIANTS, METAVAR, VALUES)                \
   LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                             \
       OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
-      VISIBILITY, PARAM, HELPTEXT, HELPTEXTFORVISIBILITIES, METAVAR, VALUE)
+      VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUE)
 
 #define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
     ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTFORVISIBILITIES, METAVAR,      \
-    VALUES)                                                                    \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
   llvm::opt::OptTable::Info {                                                  \
-    PREFIX, PREFIXED_NAME, HELPTEXT, HELPTEXTFORVISIBILITIES, METAVAR,         \
+    PREFIX, PREFIXED_NAME, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,            \
         ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,           \
         VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES      \
   }
 
 #define LLVM_CONSTRUCT_OPT_INFO(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, \
                                 ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, \
-                                HELPTEXTFORVISIBILITIES, METAVAR, VALUES)      \
+                                HELPTEXTSFORVARIANTS, METAVAR, VALUES)         \
   LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                      \
       OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
-      VISIBILITY, PARAM, HELPTEXT, HELPTEXTFORVISIBILITIES, METAVAR, VALUES)
+      VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES)
 
 #endif // LLVM_OPTION_OPTTABLE_H

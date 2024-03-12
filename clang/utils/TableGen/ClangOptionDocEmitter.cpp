@@ -364,7 +364,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   // Prefer a program specific help string.
   // This is a list of (visibilities, string) pairs.
   std::vector<Record *> VisibilitiesHelp =
-      R->getValueAsListOfDefs("HelpTextForVisibilities");
+      R->getValueAsListOfDefs("HelpTextsForVariants");
   for (Record *VisibilityHelp : VisibilitiesHelp) {
     // This is a list of visibilities.
     ArrayRef<Init *> Visibilities =

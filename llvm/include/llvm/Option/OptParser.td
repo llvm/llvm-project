@@ -93,7 +93,7 @@ class OptionGroup<string name> {
 
 // Define the option class.
 
-class HelpTextForVisibility<list<OptionVisibility> visibilities, string text> {
+class HelpTextVariant<list<OptionVisibility> visibilities, string text> {
   list<OptionVisibility> Visibilities = visibilities;
   string Text = text;
 }
@@ -106,7 +106,7 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   // Used by MultiArg option kind.
   int NumArgs = 0;
   string HelpText = ?;
-  list<HelpTextForVisibility> HelpTextForVisibilities = [];
+  list<HelpTextVariant> HelpTextsForVariants = [];
   string MetaVarName = ?;
   string Values = ?;
   code ValuesCode = ?;
@@ -161,8 +161,8 @@ class Visibility<list<OptionVisibility> visibility> {
 }
 class Group<OptionGroup group> { OptionGroup Group = group; }
 class HelpText<string text> { string HelpText = text; }
-class HelpTextForVisibilities<list<HelpTextForVisibility> texts> {
-  list<HelpTextForVisibility> HelpTextForVisibilities = texts;
+class HelpTextsForVariants<list<HelpTextVariant> texts> {
+  list<HelpTextVariant> HelpTextsForVariants = texts;
 }
 
 class MetaVarName<string name> { string MetaVarName = name; }

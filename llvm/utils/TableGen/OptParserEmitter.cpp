@@ -425,10 +425,10 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     unsigned NumVisibilityHelpEmitted = 0;
 
     std::vector<Record *> VisibilitiesHelp =
-        R.getValueAsListOfDefs("HelpTextForVisibilities");
+        R.getValueAsListOfDefs("HelpTextsForVariants");
     assert(VisibilitiesHelp.size() <= MaxVisibilityHelp &&
            "Too many help text variants to store in "
-           "OptTable::HelpTextForVisibilities");
+           "OptTable::HelpTextsForVariants");
 
     for (std::vector<Record *>::const_iterator VisibilityHelp =
              VisibilitiesHelp.begin();
@@ -438,7 +438,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
           (*VisibilityHelp)->getValueAsListInit("Visibilities")->getValues();
       assert(Visibilities.size() <= MaxVisibilityPerHelp &&
              "Too many visibilities to store in an "
-             "OptTable::HelpTextForVisibilities entry");
+             "OptTable::HelpTextsForVariants entry");
 
       OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
          << ">{{";
