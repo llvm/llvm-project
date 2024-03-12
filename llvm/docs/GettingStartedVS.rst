@@ -120,34 +120,46 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
  Select the last link: ``Source code (zip)`` and unpack the downloaded file using
  Windows Explorer built-in zip support or any other unzip tool.
 
-12. Open the LLVM folder in Visual Studio or configure LLVM with CMake.
+12. Open the LLVM folder in Visual Studio or generate a solution via CMake.
 
-    Recently Visual Studio has added native support for CMake which will run and
-    manage the CMake settings for you instead of you manually having to generate
-    a Visual Studio Soluion. This is the recommended way to build and debug LLVM
-    in Visual Studio 2022.
+  At this point you can select if you want to use the
+  :ref:`native support for CMake<vs_native_cmake>` in Visual Studio or
+  :ref:`generate Visual Studio<gen_vs_cmake>` solution file from CMake.
+  Both integrations are supported in the LLVM project.
 
-    If you want to generate a Visual Studio Solution for older versions of Visual
-    Studio or becasue that is a workflow that suites you better please refer to the
-    chapter below on :ref:`generating Visual Studio Solution<gen_vs_cmake>`.
+.. _vs_native_cmake:
 
-    To use the native CMake support, launch `Visual Studio 2022` and select the
-    option `Open a Local Folder` and open the root `llvm-project` folder. This
-    will automatically launch CMake (have some patience, it can be a bit slow)
-    and populate the interface.
+Visual Studio native CMake support
+==================================
 
-    LLVM ships with a default `CMakePresets.json` that is supposed to make it easy
-    to get started, but usually you need to modify the setings used, the best way
-    to do this is to create a `CMakeUserPresets.json` in the `llvm` subfolder and
-    add your own configuration there. For more information about the Preset system
-    see `Microsoft's documentation <https://learn.microsoft.com/en-us/cpp/build/cmake-presets-json-reference>`_.
+Support for native CMake integration was added in Visual Studio 2019, but it has
+been made more robust in 2022. If you are using Visual Studio before 2022, it's
+recommended to generate a Visual Studio solution from CMake instead of using the
+native CMake integration.
 
-    The default CMakePreset comes with MSVC and Clang targets. In order to use the
-    Clang target you need to have the **C++ Clang compiler for Windows** component
-    of Visual Studio installed.
+If you want to generate a Visual Studio Solution for older versions of Visual
+Studio or because that is a workflow that suits you better, please refer to the
+chapter below on :ref:generating Visual Studio Solution<gen_vs_cmake>.
 
-    In order to debug Clang and other binaries within Visual Studio, see `Microsoft's
-    documentation. <https://learn.microsoft.com/en-us/cpp/build/configure-cmake-debugging-sessions>`_.
+To use the native CMake support, launch Visual Studio 2022 and select the option
+Open a Local Folder and open the root llvm-project folder. This will
+automatically launch CMake (have some patience, it can be a bit slow) and
+populate the interface.
+
+LLVM ships with a default CMakePresets.json that is supposed to make it easy to
+get started, but usually you need to modify the settings used. The best way to
+do this is to create a CMakeUserPresets.json in the llvm subfolder and add your
+configuration there. For more information about the Preset system, see
+Microsoft's documentation
+<https://learn.microsoft.com/en-us/cpp/build/cmake-presets-json-reference>_.
+
+The default CMakePreset comes with MSVC and Clang targets. To use the Clang
+target, you need to have the C++ Clang compiler for Windows component of Visual
+Studio installed.
+
+To debug Clang and other binaries within Visual Studio, see Microsoft's
+documentation
+<https://learn.microsoft.com/en-us/cpp/build/configure-cmake-debugging-sessions>_.
 
 
 .. _gen_vs_cmake:

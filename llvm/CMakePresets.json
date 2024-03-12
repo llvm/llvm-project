@@ -18,7 +18,6 @@
       "generator": "Ninja",
       "binaryDir": "${sourceParentDir}/out/${presetName}",
       "cacheVariables": {
-        /* Most of the users would like to have these projects enabled */
         "LLVM_ENABLE_PROJECTS": "clang;lld;clang-tools-extra"
       }
     },
@@ -60,8 +59,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_COMPILER": "clang-cl",
         "CMAKE_C_COMPILER": "clang-cl",
-        "LLVM_ENABLE_PDB": "ON",
-        "LLVM_ENABLE_ASSERTIONS": "ON"
+        "LLVM_ENABLE_PDB": "ON"
       }
     }
   ],
