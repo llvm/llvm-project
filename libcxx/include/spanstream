@@ -70,8 +70,6 @@
 #include <streambuf>
 #include <version>
 
-// #include <print>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -166,14 +164,15 @@ protected:
   seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmode __which = ios_base::in | ios_base::out) override {
     const auto __error = static_cast<pos_type>(off_type{-1});
 
-    // Both `in` and `out` modes are set
+    // Mode: `in` and `out`
     if ((__which & ios_base::in) && (__which & ios_base::out) && (ios_base::cur == __way))
       return __error;
-    // No mode is set
+
+    // Mode: none
     if (!((__which & ios_base::in) || (__which & ios_base::out)) && (ios_base::cur == __way))
       return __error;
 
-    // Calculate __baseoff
+    // Calculate `__baseoff`
 
     std::size_t __baseoff;
 
@@ -200,7 +199,7 @@ protected:
       return __error;
     };
 
-    // Calculate __newoff
+    // Calculate `__newoff`
 
     off_type __newoff;
 
@@ -208,10 +207,7 @@ protected:
         std::cmp_greater(__newoff, __buf_.size()))
       return __error;
 
-    // if (((__which & ios_base::in && (this->gptr() == nullptr)) ||
-    //      (__which & ios_base::out && (this->pptr() == nullptr))) &&
-    //     (__newoff != off_type{0}))
-    //   return __error;
+    // Set pointers
 
     if (__which & ios_base::in) {
       if ((this->gptr() == nullptr) && (__newoff != off_type{0}))
