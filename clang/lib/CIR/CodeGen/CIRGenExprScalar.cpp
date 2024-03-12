@@ -368,10 +368,6 @@ public:
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
     if (isInc && type->isBooleanType()) {
-      llvm_unreachable("inc simplification for booleans not implemented yet");
-
-      // NOTE: We likely want the code below, but loading/store booleans need to
-      // work first. See CIRGenFunction::buildFromMemory().
       value = Builder.create<mlir::cir::ConstantOp>(
           CGF.getLoc(E->getExprLoc()), CGF.getCIRType(type),
           Builder.getCIRBoolAttr(true));
