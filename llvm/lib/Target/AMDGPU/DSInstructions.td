@@ -1271,15 +1271,14 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 // GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true,
-                         list<Predicate> AliasPredicates = [isGFX12Plus]> {
+multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
   defvar ps = !cast<DS_Pseudo>(NAME);
   let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
                                                name, /*hasGDS=*/false>;
   if !and(needAlias, !ne(ps.Mnemonic, name)) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<AliasPredicates>;
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
 }
 
 defm DS_MIN_F32           : DS_Real_gfx12<0x012, "ds_min_num_f32">;
@@ -1305,7 +1304,7 @@ defm DS_LOAD_TR16_B128    : DS_Real_gfx12<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12<0x0fd>;
 
 defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
-  "ds_bvh_stack_push4_pop1_rtn_b32", true, [isGFX12Plus, HasImageInsts]>;
+  "ds_bvh_stack_push4_pop1_rtn_b32">;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
