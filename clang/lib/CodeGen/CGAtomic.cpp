@@ -194,12 +194,14 @@ namespace {
     RValue convertAtomicTempToRValue(Address addr, AggValueSlot resultSlot,
                                      SourceLocation loc, bool AsValue) const;
 
-    /// Converts a rvalue to integer value.
-    llvm::Value *convertRValueToInt(RValue RVal) const;
+    llvm::Value *getScalarRValValueOrNull(RValue RVal) const;
 
-    RValue ConvertIntToValueOrAtomic(llvm::Value *IntVal,
-                                     AggValueSlot ResultSlot,
-                                     SourceLocation Loc, bool AsValue) const;
+    /// Converts an rvalue to integer value if needed.
+    llvm::Value *convertRValueToInt(RValue RVal, bool CastFP = true) const;
+
+    RValue ConvertToValueOrAtomic(llvm::Value *IntVal, AggValueSlot ResultSlot,
+                                  SourceLocation Loc, bool AsValue,
+                                  bool CastFP = true) const;
 
     /// Copy an atomic r-value into atomic-layout memory.
     void emitCopyIntoMemory(RValue rvalue) const;
@@ -261,7 +263,8 @@ namespace {
     void EmitAtomicLoadLibcall(llvm::Value *AddForLoaded,
                                llvm::AtomicOrdering AO, bool IsVolatile);
     /// Emits atomic load as LLVM instruction.
-    llvm::Value *EmitAtomicLoadOp(llvm::AtomicOrdering AO, bool IsVolatile);
+    llvm::Value *EmitAtomicLoadOp(llvm::AtomicOrdering AO, bool IsVolatile,
+                                  bool CastFP = true);
     /// Emits atomic compare-and-exchange op as a libcall.
     llvm::Value *EmitAtomicCompareExchangeLibcall(
         llvm::Value *ExpectedAddr, llvm::Value *DesiredAddr,
@@ -1396,12 +1399,13 @@ RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
       LVal.getBaseInfo(), TBAAAccessInfo()));
 }
 
-RValue AtomicInfo::ConvertIntToValueOrAtomic(llvm::Value *IntVal,
-                                             AggValueSlot ResultSlot,
-                                             SourceLocation Loc,
-                                             bool AsValue) const {
+RValue AtomicInfo::ConvertToValueOrAtomic(llvm::Value *Val,
+                                          AggValueSlot ResultSlot,
+                                          SourceLocation Loc, bool AsValue,
+                                          bool CastFP) const {
   // Try not to in some easy cases.
-  assert(IntVal->getType()->isIntegerTy() && "Expected integer value");
+  assert((Val->getType()->isIntegerTy() || Val->getType()->isIEEELikeFPTy()) &&
+         "Expected integer or floating point value");
   if (getEvaluationKind() == TEK_Scalar &&
       (((!LVal.isBitField() ||
          LVal.getBitFieldInfo().Size == ValueSizeInBits) &&
@@ -1410,13 +1414,14 @@ RValue AtomicInfo::ConvertIntToValueOrAtomic(llvm::Value *IntVal,
     auto *ValTy = AsValue
                       ? CGF.ConvertTypeForMem(ValueTy)
                       : getAtomicAddress().getElementType();
-    if (ValTy->isIntegerTy()) {
-      assert(IntVal->getType() == ValTy && "Different integer types.");
-      return RValue::get(CGF.EmitFromMemory(IntVal, ValueTy));
+    if (ValTy->isIntegerTy() || (!CastFP && ValTy->isIEEELikeFPTy())) {
+      assert((!ValTy->isIntegerTy() || Val->getType() == ValTy) &&
+             "Different integer types.");
+      return RValue::get(CGF.EmitFromMemory(Val, ValueTy));
     } else if (ValTy->isPointerTy())
-      return RValue::get(CGF.Builder.CreateIntToPtr(IntVal, ValTy));
-    else if (llvm::CastInst::isBitCastable(IntVal->getType(), ValTy))
-      return RValue::get(CGF.Builder.CreateBitCast(IntVal, ValTy));
+      return RValue::get(CGF.Builder.CreateIntToPtr(Val, ValTy));
+    else if (llvm::CastInst::isBitCastable(Val->getType(), ValTy))
+      return RValue::get(CGF.Builder.CreateBitCast(Val, ValTy));
   }
 
   // Create a temporary.  This needs to be big enough to hold the
@@ -1433,8 +1438,7 @@ RValue AtomicInfo::ConvertIntToValueOrAtomic(llvm::Value *IntVal,
 
   // Slam the integer into the temporary.
   Address CastTemp = castToAtomicIntPointer(Temp);
-  CGF.Builder.CreateStore(IntVal, CastTemp)
-      ->setVolatile(TempIsVolatile);
+  CGF.Builder.CreateStore(Val, CastTemp)->setVolatile(TempIsVolatile);
 
   return convertAtomicTempToRValue(Temp, ResultSlot, Loc, AsValue);
 }
@@ -1453,9 +1457,11 @@ void AtomicInfo::EmitAtomicLoadLibcall(llvm::Value *AddForLoaded,
 }
 
 llvm::Value *AtomicInfo::EmitAtomicLoadOp(llvm::AtomicOrdering AO,
-                                          bool IsVolatile) {
+                                          bool IsVolatile, bool CastFP) {
   // Okay, we're doing this natively.
-  Address Addr = getAtomicAddressAsAtomicIntPointer();
+  Address Addr = getAtomicAddress();
+  if (!(Addr.getElementType()->isIEEELikeFPTy() && !CastFP))
+    Addr = castToAtomicIntPointer(Addr);
   llvm::LoadInst *Load = CGF.Builder.CreateLoad(Addr, "atomic-load");
   Load->setAtomic(AO);
 
@@ -1515,7 +1521,7 @@ RValue AtomicInfo::EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
   }
 
   // Okay, we're doing this natively.
-  auto *Load = EmitAtomicLoadOp(AO, IsVolatile);
+  auto *Load = EmitAtomicLoadOp(AO, IsVolatile, /*CastFP=*/false);
 
   // If we're ignoring an aggregate return, don't do anything.
   if (getEvaluationKind() == TEK_Aggregate && ResultSlot.isIgnored())
@@ -1523,7 +1529,8 @@ RValue AtomicInfo::EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
 
   // Okay, turn that back into the original value or atomic (for non-simple
   // lvalues) type.
-  return ConvertIntToValueOrAtomic(Load, ResultSlot, Loc, AsValue);
+  return ConvertToValueOrAtomic(Load, ResultSlot, Loc, AsValue,
+                                /*CastFP=*/false);
 }
 
 /// Emit a load from an l-value of atomic type.  Note that the r-value
@@ -1586,12 +1593,18 @@ Address AtomicInfo::materializeRValue(RValue rvalue) const {
   return TempLV.getAddress(CGF);
 }
 
-llvm::Value *AtomicInfo::convertRValueToInt(RValue RVal) const {
+llvm::Value *AtomicInfo::getScalarRValValueOrNull(RValue RVal) const {
+  if (RVal.isScalar() && (!hasPadding() || !LVal.isSimple()))
+    return RVal.getScalarVal();
+  return nullptr;
+}
+
+llvm::Value *AtomicInfo::convertRValueToInt(RValue RVal, bool CastFP) const {
   // If we've got a scalar value of the right size, try to avoid going
-  // through memory.
-  if (RVal.isScalar() && (!hasPadding() || !LVal.isSimple())) {
-    llvm::Value *Value = RVal.getScalarVal();
-    if (isa<llvm::IntegerType>(Value->getType()))
+  // through memory. Floats get casted if needed by AtomicExpandPass.
+  if (llvm::Value *Value = getScalarRValValueOrNull(RVal)) {
+    if (isa<llvm::IntegerType>(Value->getType()) ||
+        (!CastFP && Value->getType()->isIEEELikeFPTy()))
       return CGF.EmitToMemory(Value, ValueTy);
     else {
       llvm::IntegerType *InputIntTy = llvm::IntegerType::get(
@@ -1677,8 +1690,8 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
   auto Res = EmitAtomicCompareExchangeOp(ExpectedVal, DesiredVal, Success,
                                          Failure, IsWeak);
   return std::make_pair(
-      ConvertIntToValueOrAtomic(Res.first, AggValueSlot::ignored(),
-                                SourceLocation(), /*AsValue=*/false),
+      ConvertToValueOrAtomic(Res.first, AggValueSlot::ignored(),
+                             SourceLocation(), /*AsValue=*/false),
       Res.second);
 }
 
@@ -1787,8 +1800,8 @@ void AtomicInfo::EmitAtomicUpdateOp(
       requiresMemSetZero(getAtomicAddress().getElementType())) {
     CGF.Builder.CreateStore(PHI, NewAtomicIntAddr);
   }
-  auto OldRVal = ConvertIntToValueOrAtomic(PHI, AggValueSlot::ignored(),
-                                           SourceLocation(), /*AsValue=*/false);
+  auto OldRVal = ConvertToValueOrAtomic(PHI, AggValueSlot::ignored(),
+                                        SourceLocation(), /*AsValue=*/false);
   EmitAtomicUpdateValue(CGF, *this, OldRVal, UpdateOp, NewAtomicAddr);
   auto *DesiredVal = CGF.Builder.CreateLoad(NewAtomicIntAddr);
   // Try to write new value using cmpxchg operation.
@@ -1953,13 +1966,22 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
     }
 
     // Okay, we're doing this natively.
-    llvm::Value *intValue = atomics.convertRValueToInt(rvalue);
+    llvm::Value *ValToStore =
+        atomics.convertRValueToInt(rvalue, /*CastFP=*/false);
 
     // Do the atomic store.
-    Address addr = atomics.castToAtomicIntPointer(atomics.getAtomicAddress());
-    intValue = Builder.CreateIntCast(
-        intValue, addr.getElementType(), /*isSigned=*/false);
-    llvm::StoreInst *store = Builder.CreateStore(intValue, addr);
+    Address Addr = atomics.getAtomicAddress();
+    bool ShouldCastToInt = true;
+    if (llvm::Value *Value = atomics.getScalarRValValueOrNull(rvalue))
+      if (isa<llvm::IntegerType>(Value->getType()) ||
+          Value->getType()->isIEEELikeFPTy())
+        ShouldCastToInt = false;
+    if (ShouldCastToInt) {
+      Addr = atomics.castToAtomicIntPointer(Addr);
+      ValToStore = Builder.CreateIntCast(ValToStore, Addr.getElementType(),
+                                         /*isSigned=*/false);
+    }
+    llvm::StoreInst *store = Builder.CreateStore(ValToStore, Addr);
 
     if (AO == llvm::AtomicOrdering::Acquire)
       AO = llvm::AtomicOrdering::Monotonic;
