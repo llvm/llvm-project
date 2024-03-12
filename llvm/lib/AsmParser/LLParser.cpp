@@ -6527,7 +6527,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 
     // Attach any preceding debug values to this instruction.
     for (DbgRecordPtr &DR : TrailingDbgRecord)
-      BB->insertDPValueBefore(DR.release(), Inst->getIterator());
+      BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
   } while (!Inst->isTerminator());
 

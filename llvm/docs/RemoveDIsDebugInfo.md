@@ -82,11 +82,11 @@ Utilities such as `findDbgUsers` and the like now have an optional argument that
 
 ## Examining debug info records at positions
 
-Call `Instruction::getDbgValueRange()` to get the range of `DPValue` objects that are attached to an instruction.
+Call `Instruction::getDbgRecordRange()` to get the range of `DPValue` objects that are attached to an instruction.
 
 ## Moving around, deleting
 
-You can use `DPValue::removeFromParent` to unlink a `DPValue` from it's marker, and then `BasicBlock::insertDPValueBefore` or `BasicBlock::insertDPValueAfter` to re-insert the `DPValue` somewhere else. You cannot insert a `DPValue` at an arbitary point in a list of `DPValue`s (if you're doing this with `dbg.value`s then it's unlikely to be correct).
+You can use `DPValue::removeFromParent` to unlink a `DPValue` from it's marker, and then `BasicBlock::insertDbgRecordBefore` or `BasicBlock::insertDbgRecordAfter` to re-insert the `DPValue` somewhere else. You cannot insert a `DPValue` at an arbitary point in a list of `DPValue`s (if you're doing this with `dbg.value`s then it's unlikely to be correct).
 
 Erase `DPValue`s by calling `eraseFromParent` or `deleteInstr` if it's already been removed.
 

@@ -577,9 +577,9 @@ public:
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
 
   /// Produce a range over all the DPValues in this Marker.
-  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange();
+  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange();
   iterator_range<simple_ilist<DbgRecord>::const_iterator>
-  getDbgValueRange() const;
+  getDbgRecordRange() const;
   /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
   /// is true, place them before existing DPValues, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
@@ -590,11 +590,11 @@ public:
                          DPMarker &Src, bool InsertAtHead);
   /// Insert a DPValue into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
-  void insertDPValue(DbgRecord *New, bool InsertAtHead);
+  void insertDbgRecord(DbgRecord *New, bool InsertAtHead);
   /// Insert a DPValue prior to a DPValue contained within this marker.
-  void insertDPValue(DbgRecord *New, DbgRecord *InsertBefore);
+  void insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore);
   /// Insert a DPValue after a DPValue contained within this marker.
-  void insertDPValueAfter(DbgRecord *New, DbgRecord *InsertAfter);
+  void insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter);
   /// Clone all DPMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.
@@ -606,11 +606,11 @@ public:
                      std::optional<simple_ilist<DbgRecord>::iterator> FromHere,
                      bool InsertAtHead = false);
   /// Erase all DPValues in this DPMarker.
-  void dropDbgValues();
+  void dropDbgRecords();
   /// Erase a single DbgRecord from this marker. In an ideal future, we would
   /// never erase an assignment in this way, but it's the equivalent to
   /// erasing a debug intrinsic from a block.
-  void dropOneDbgValue(DbgRecord *DR);
+  void dropOneDbgRecord(DbgRecord *DR);
 
   /// We generally act like all llvm Instructions have a range of DPValues
   /// attached to them, but in reality sometimes we don't allocate the DPMarker
@@ -621,7 +621,7 @@ public:
   /// that.
   static DPMarker EmptyDPMarker;
   static iterator_range<simple_ilist<DbgRecord>::iterator>
-  getEmptyDPValueRange() {
+  getEmptyDbgRecordRange() {
     return make_range(EmptyDPMarker.StoredDPValues.end(),
                       EmptyDPMarker.StoredDPValues.end());
   }
@@ -637,10 +637,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
 /// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
 /// inlineable body defined here.
 inline iterator_range<simple_ilist<DbgRecord>::iterator>
-getDbgValueRange(DPMarker *DbgMarker) {
+getDbgRecordRange(DPMarker *DbgMarker) {
   if (!DbgMarker)
-    return DPMarker::getEmptyDPValueRange();
-  return DbgMarker->getDbgValueRange();
+    return DPMarker::getEmptyDbgRecordRange();
+  return DbgMarker->getDbgRecordRange();
 }
 
 } // namespace llvm

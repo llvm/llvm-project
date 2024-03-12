@@ -3277,7 +3277,7 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DbgRecord &DR : Inst.getDbgValueRange()) {
+  for (DbgRecord &DR : Inst.getDbgRecordRange()) {
     if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
       MIRBuilder.setDebugLoc(DPL->getDebugLoc());
       assert(DPL->getLabel() && "Missing label");

@@ -725,7 +725,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // program, it will cause incorrect reporting from a debugger if we keep
       // the same debug instructions. Drop non-intrinsic DPValues here,
       // collect intrinsics for removal later.
-      Val.dropDbgValues();
+      Val.dropDbgRecords();
 
       // We must handle the scoping of called functions differently than
       // other outlined instructions.

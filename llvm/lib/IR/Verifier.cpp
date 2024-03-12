@@ -682,9 +682,9 @@ void Verifier::visitDbgRecords(Instruction &I) {
     return;
   CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker",
           &I);
-  CheckDI(!isa<PHINode>(&I) || !I.hasDbgValues(),
+  CheckDI(!isa<PHINode>(&I) || !I.hasDbgRecords(),
           "PHI Node must not have any attached DbgRecords", &I);
-  for (DbgRecord &DR : I.getDbgValueRange()) {
+  for (DbgRecord &DR : I.getDbgRecordRange()) {
     CheckDI(DR.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
             &I, &DR);
     if (auto *Loc =
@@ -3046,7 +3046,7 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
 
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat)
-    CheckDI(!BB.getTrailingDPValues(), "Basic Block has trailing DbgRecords!",
+    CheckDI(!BB.getTrailingDbgRecords(), "Basic Block has trailing DbgRecords!",
             &BB);
 }
 

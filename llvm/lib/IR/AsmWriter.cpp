@@ -1131,7 +1131,7 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (const DbgRecord &DR : I.getDbgValueRange())
+      for (const DbgRecord &DR : I.getDbgRecordRange())
         processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
     }
@@ -4097,7 +4097,7 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
 
   // Output all of the instructions in the basic block...
   for (const Instruction &I : *BB) {
-    for (const DbgRecord &DR : I.getDbgValueRange())
+    for (const DbgRecord &DR : I.getDbgRecordRange())
       printDbgRecordLine(DR);
     printInstructionLine(I);
   }

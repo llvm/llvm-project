@@ -648,10 +648,10 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Duplicate implementation for DPValues, the non-instruction debug-info
     // record. Helper lambda for moving DPValues to the end block.
     auto TransferDPValues = [&](Instruction &I) {
-      for (auto &DPValue : llvm::make_early_inc_range(I.getDbgValueRange())) {
+      for (auto &DPValue : llvm::make_early_inc_range(I.getDbgRecordRange())) {
         DPValue.removeFromParent();
-        EndBlock->insertDPValueBefore(&DPValue,
-                                      EndBlock->getFirstInsertionPt());
+        EndBlock->insertDbgRecordBefore(&DPValue,
+                                        EndBlock->getFirstInsertionPt());
       }
     };
 

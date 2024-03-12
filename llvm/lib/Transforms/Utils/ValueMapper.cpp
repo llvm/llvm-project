@@ -1066,7 +1066,7 @@ void Mapper::remapFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       remapInstruction(&I);
-      for (DbgRecord &DR : I.getDbgValueRange())
+      for (DbgRecord &DR : I.getDbgRecordRange())
         remapDPValue(DR);
     }
   }
