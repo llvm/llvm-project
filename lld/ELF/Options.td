@@ -67,7 +67,7 @@ defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
   MetaVarName<"[none,zlib,zstd]">;
 
-defm compress_nonalloc_sections: EEq<"compress-nonalloc-sections",
+defm compress_nonalloc_sections: EEq<"compress-sections",
   "Compress non-SHF_ALLOC output sections matching <section-glob>">,
   MetaVarName<"<section-glob>=[none|zlib|zstd]">;
 

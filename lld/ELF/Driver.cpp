@@ -1224,9 +1224,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
-  config->compressDebugSections = getCompressionType(
-      args.getLastArgValue(OPT_compress_debug_sections, "none"),
-      "--compress-debug-sections");
+  if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
+    config->compressDebugSections =
+        getCompressionType(arg->getValue(), "--compress-debug-sections");
+  }
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1526,7 +1527,7 @@ static void readConfigs(opt::InputArgList &args) {
     }
     auto type = getCompressionType(fields[1], arg->getSpelling());
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
-      config->compressNonAllocSections.emplace_back(std::move(*pat), type);
+      config->compressSections.emplace_back(std::move(*pat), type);
     } else {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
       continue;

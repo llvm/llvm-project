@@ -1,8 +1,9 @@
 # REQUIRES: x86, zlib
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-# RUN: ld.lld -pie %t.o --compress-nonalloc-sections .strtab=zlib --compress-nonalloc-sections .symtab=zlib -o %t
-# RUN: llvm-readelf -Ss -x .strtab %t 2>&1 | FileCheck %s
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o a.o
+# RUN: ld.lld -pie a.o --compress-sections .strtab=zlib --compress-sections .symtab=zlib -o out
+# RUN: llvm-readelf -Ss -x .strtab out 2>&1 | FileCheck %s
 
 # CHECK:      nonalloc0  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00     0 0  1
 # CHECK:      .symtab    SYMTAB   0000000000000000 [[#%x,]] [[#%x,]] 18  C 12 3  1
@@ -15,6 +16,9 @@
 # CHECK:      Hex dump of section '.strtab':
 # CHECK-NEXT: 01000000 00000000 1a000000 00000000
 # CHECK-NEXT: 01000000 00000000 {{.*}}
+
+# RUN: not ld.lld -shared a.o --compress-sections .dynstr=zlib 2>&1 | FileCheck %s --check-prefix=ERR-ALLOC
+# ERR-ALLOC: error: --compress-sections: section '.dynstr' with the SHF_ALLOC flag cannot be compressed
 
 .globl _start, g0, g1
 _start:

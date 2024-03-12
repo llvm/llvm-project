@@ -328,25 +328,26 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 
 // Compress certain non-SHF_ALLOC sections:
 //
-// * (--compress-debug-sections is specified) non-empty .debug_* sections
-// * (--compress-nonalloc-sections is specified) matched sections
+// * (if --compress-debug-sections is specified) non-empty .debug_* sections
+// * (if --compress-sections is specified) matched sections
 template <class ELFT> void OutputSection::maybeCompress() {
   using Elf_Chdr = typename ELFT::Chdr;
   (void)sizeof(Elf_Chdr);
-  if (flags & SHF_ALLOC)
-    return;
 
-  DebugCompressionType type = DebugCompressionType::None;
-  if (config->compressDebugSections != DebugCompressionType::None &&
-      name.starts_with(".debug_") && size) {
-    type = config->compressDebugSections;
-  } else {
-    for (auto &[glob, t] : config->compressNonAllocSections)
-      if (glob.match(name))
-        type = t;
-  }
-  if (type == DebugCompressionType::None)
+  DebugCompressionType ctype = DebugCompressionType::None;
+  for (auto &[glob, t] : config->compressSections)
+    if (glob.match(name))
+      ctype = t;
+  if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
+      name.starts_with(".debug_") && size)
+    ctype = *config->compressDebugSections;
+  if (ctype == DebugCompressionType::None)
     return;
+  if (flags & SHF_ALLOC) {
+    errorOrWarn("--compress-sections: section '" + name +
+                "' with the SHF_ALLOC flag cannot be compressed");
+    return;
+  }
 
   llvm::TimeTraceScope timeScope("Compress sections");
   compressed.uncompressedSize = size;
@@ -367,7 +368,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   // Use ZSTD's streaming compression API which permits parallel workers working
   // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
   // "Streaming compression - HowTo".
-  if (type == DebugCompressionType::Zstd) {
+  if (ctype == DebugCompressionType::Zstd) {
     // Allocate a buffer of half of the input size, and grow it by 1.5x if
     // insufficient.
     compressed.type = ELFCOMPRESS_ZSTD;
