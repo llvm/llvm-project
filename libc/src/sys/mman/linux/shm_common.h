@@ -10,8 +10,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/errno/libc_errno.h"
-#include "src/string/memchr.h"
-#include "src/string/memcpy.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include <asm/errno.h>
 #include <linux/limits.h>
 
@@ -34,16 +33,15 @@ LIBC_INLINE cpp::optional<SHMPath> get_shm_name(cpp::string_view name) {
     libc_errno = ENAMETOOLONG;
     return cpp::nullopt;
   }
-  if (name == "." || name == ".." ||
-      memchr(name.data(), '/', name.size()) != nullptr) {
+  if (name == "." || name == ".." || name.contains('/')) {
     libc_errno = EINVAL;
     return cpp::nullopt;
   }
 
   // prepend the prefix
   SHMPath buffer;
-  memcpy(buffer.data(), SHM_PREFIX.data(), SHM_PREFIX.size());
-  memcpy(buffer.data() + SHM_PREFIX.size(), name.data(), name.size());
+  inline_memcpy(buffer.data(), SHM_PREFIX.data(), SHM_PREFIX.size());
+  inline_memcpy(buffer.data() + SHM_PREFIX.size(), name.data(), name.size());
   buffer[SHM_PREFIX.size() + name.size()] = '\0';
   return buffer;
 }

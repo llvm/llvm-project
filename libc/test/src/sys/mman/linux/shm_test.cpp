@@ -44,15 +44,13 @@ TEST(LlvmLibcShmTest, Basic) {
   // just write random data to the shared memory
   char data[] = "Despite its name, LLVM has little to do with traditional "
                 "virtual machines.";
-  for (size_t i = 0; i < sizeof(data); ++i) {
+  for (size_t i = 0; i < sizeof(data); ++i)
     static_cast<char *>(addr)[i] = data[i];
-  }
 
   // close fd does not affect the mapping
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
-  for (size_t i = 0; i < sizeof(data); ++i) {
+  for (size_t i = 0; i < sizeof(data); ++i)
     EXPECT_EQ(static_cast<char *>(addr)[i], data[i]);
-  }
 
   // unmap the shared memory
   ASSERT_THAT(LIBC_NAMESPACE::munmap(addr, 4096), Succeeds());

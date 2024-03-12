@@ -163,8 +163,7 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.common
     libc.src.errno.errno
-    libc.src.string.memcpy
-    libc.src.string.memchr
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
