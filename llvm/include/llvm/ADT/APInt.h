@@ -2188,8 +2188,13 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
+/// Determine the absolute difference of two APInts considered to be signed.
+inline const APInt abds(const APInt &A, const APInt &B) {
+  return A.sge(B) ? (A - B) : (B - A);
+}
+
 /// Determine the absolute difference of two APInts considered to be unsigned.
-inline const APInt absdiff(const APInt &A, const APInt &B) {
+inline const APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
 
