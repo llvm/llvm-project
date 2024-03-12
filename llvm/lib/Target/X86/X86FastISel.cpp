@@ -2230,7 +2230,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     unsigned CmpOpcode =
       (RetVT == MVT::f32) ? X86::VCMPSSrri : X86::VCMPSDrri;
     unsigned BlendOpcode =
-      (RetVT == MVT::f32) ? X86::VBLENDVPSrr : X86::VBLENDVPDrr;
+      (RetVT == MVT::f32) ? X86::VBLENDVPSrrr : X86::VBLENDVPDrrr;
 
     Register CmpReg = fastEmitInst_rri(CmpOpcode, RC, CmpLHSReg, CmpRHSReg,
                                        CC);
