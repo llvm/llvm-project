@@ -99,7 +99,7 @@ struct Symbol : public RecordBase {
   uint8_t FillByteValue;
   uint32_t PSectID;
   uint32_t Priority;
-  std::optional<llvm::yaml::Hex64> Signature;
+  llvm::yaml::Hex64 Signature;
   GOFF_ESDAMODE Amode;
   GOFF_ESDRMODE Rmode;
   GOFF_ESDTEXTSTYLE TextStyle;
@@ -134,6 +134,7 @@ struct Object {
   std::vector<RecordPtr> Records;
   Object();
 };
+
 } // end namespace GOFFYAML
 } // end namespace llvm
 

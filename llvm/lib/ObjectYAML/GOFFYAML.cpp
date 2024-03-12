@@ -224,7 +224,7 @@ void MappingTraits<GOFFYAML::Symbol>::mapping(IO &IO, GOFFYAML::Symbol &Sym) {
   IO.mapOptional("FillByteValue", Sym.FillByteValue, 0);
   IO.mapOptional("PSectID", Sym.PSectID, 0);
   IO.mapOptional("Priority", Sym.Priority, 0);
-  IO.mapOptional("Signature", Sym.Signature);
+  IO.mapOptional("Signature", Sym.Signature, 0);
   IO.mapOptional("Amode", Sym.Amode, GOFF::ESD_AMODE_None);
   IO.mapOptional("Rmode", Sym.Rmode, GOFF::ESD_RMODE_None);
   IO.mapOptional("TextStyle", Sym.TextStyle, GOFF::ESD_TS_ByteOriented);

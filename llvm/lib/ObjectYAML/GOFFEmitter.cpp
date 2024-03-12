@@ -280,7 +280,7 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
      << binaryBe(Sym.PSectID)       // PSECT ID
      << binaryBe(Sym.Priority);     // Priority
   if (Sym.Signature)
-    GW << *Sym.Signature; // Signature
+    GW << Sym.Signature; // Signature
   else
     GW << zeros(8);
 #define BIT(E, N) (Sym.BAFlags & GOFF::E ? 1 << (7 - N) : 0)
@@ -318,7 +318,7 @@ bool GOFFState::writeObject() {
     if (const auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get()))
       writeSymbol(*Sym);
     else
-      reportError("Unknown record type");
+      reportError("unknown record type");
   writeEnd();
   return true;
 }
