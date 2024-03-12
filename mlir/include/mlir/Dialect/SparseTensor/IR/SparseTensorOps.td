@@ -668,48 +668,6 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
 // refined over time as our sparse abstractions evolve.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_InsertOp : SparseTensor_Op<"insert",
-    [TypesMatchWith<"value type matches element type of tensor",
-                    "tensor", "value",
-                    "::llvm::cast<ShapedType>($_self).getElementType()">,
-     AllTypesMatch<["tensor", "result"]>]>,
-    Arguments<(ins AnyType:$value,
-               AnySparseTensor:$tensor,
-               Variadic<Index>:$lvlCoords)>,
-    Results<(outs AnySparseTensor:$result)> {
-  string summary = "Inserts a value into the sparse tensor";
-  string description = [{
-    Inserts the value into the underlying storage of the tensor at the
-    given level-coordinates. The arity of `lvlCoords` must match the
-    level-rank of the tensor. This operation can only be applied when
-    the tensor materializes unintialized from a `tensor.empty` operation
-    and the final tensor is constructed with a `load` operation which
-    has the `hasInserts` attribute set.
-
-    The level-properties of the sparse tensor type fully describe what
-    kind of insertion order is allowed.  When all levels have "unique"
-    and "ordered" properties, for example, insertions should occur in
-    strict lexicographical level-coordinate order.  Other properties
-    define different insertion regimens.  Inserting in a way contrary
-    to these properties results in undefined behavior.
-
-    Note that this operation is "impure" in the sense that even though
-    the result is modeled through an SSA value, the insertion is eventually
-    done "in place", and referencing the old SSA value is undefined behavior.
-    This operation is scheduled to be unified with the dense counterpart
-    `tensor.insert` that has pure SSA semantics.
-
-    Example:
-
-    ```mlir
-    %result = sparse_tensor.insert %val into %tensor[%i,%j] : tensor<1024x1024xf64, #CSR>
-    ```
-  }];
-  let assemblyFormat = "$value `into` $tensor `[` $lvlCoords `]` attr-dict"
-                       "`:` type($tensor)";
-  let hasVerifier = 1;
-}
-
 def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     [TypesMatchWith<"value type matches element type of inBuffer",
                     "inBuffer", "value",
