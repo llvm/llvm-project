@@ -16,7 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {

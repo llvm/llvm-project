@@ -14,7 +14,7 @@
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 
-#include <math.h>
+#include "include/llvm-libc-macros/math-macros.h"
 
 #include <stdint.h>
 
