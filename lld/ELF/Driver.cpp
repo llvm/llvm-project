@@ -1516,6 +1516,23 @@ static void readConfigs(opt::InputArgList &args) {
     }
   }
 
+  for (opt::Arg *arg : args.filtered(OPT_compress_nonalloc_sections)) {
+    SmallVector<StringRef, 0> fields;
+    StringRef(arg->getValue()).split(fields, '=');
+    if (fields.size() != 2 || fields[1].empty()) {
+      error(arg->getSpelling() +
+            ": parse error, not 'section-glob=[none|zlib|zstd]'");
+      continue;
+    }
+    auto type = getCompressionType(fields[1], arg->getSpelling());
+    if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
+      config->compressNonAllocSections.emplace_back(std::move(*pat), type);
+    } else {
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      continue;
+    }
+  }
+
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
