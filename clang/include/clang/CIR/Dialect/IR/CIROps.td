@@ -2008,7 +2008,8 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
-    $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:` type($vec)
+    $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
+    qualified(type($vec))
   }];
 
   let hasVerifier = 0;
@@ -2032,7 +2033,7 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    $vec `[` $index `:` type($index) `]` attr-dict `:` type($vec)
+    $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
   }];
 
   let hasVerifier = 0;
@@ -2055,10 +2056,39 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
-    `(` ($elements^ `:` type($elements))? `)` `:` type($result) attr-dict
+    `(` ($elements^ `:` type($elements))? `)` `:` qualified(type($result))
+    attr-dict
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecSplat
+//===----------------------------------------------------------------------===//
+
+// cir.vec.splat is a separate operation from cir.vec.create because more
+// efficient LLVM IR can be generated for it, and because some optimization and
+// analysis passes can benefit from knowing that all elements of the vector
+// have the same value.
+
+def VecSplatOp : CIR_Op<"vec.splat", [Pure,
+  TypesMatchWith<"type of 'value' matches element type of 'result'", "result",
+                 "value", "$_self.cast<VectorType>().getEltType()">]> {
+
+  let summary = "Convert a scalar into a vector";
+  let description = [{
+    The `cir.vec.splat` operation creates a vector value from a scalar value.
+    All elements of the vector have the same value, that of the given scalar.
+  }];
+
+  let arguments = (ins CIR_AnyType:$value);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2080,7 +2110,8 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` type($lhs) `,` type($result) attr-dict
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) attr-dict
   }];
 
   let hasVerifier = 0;
@@ -2107,11 +2138,12 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
     The result is a vector of the same type as the second and third arguments.
     Each element of the result is `(bool)a[n] ? b[n] : c[n]`.
   }];
-  let arguments = (ins CIR_VectorType:$cond, CIR_VectorType:$vec1,
+  let arguments = (ins IntegerVector:$cond, CIR_VectorType:$vec1,
 		       CIR_VectorType:$vec2);
   let results = (outs CIR_VectorType:$result);
   let assemblyFormat = [{
-    `(` $cond `,` $vec1 `,` $vec2 `)` `:` type($cond) `,` type($vec1) attr-dict
+    `(` $cond `,` $vec1 `,` $vec2 `)` `:` qualified(type($cond)) `,`
+    qualified(type($vec1)) attr-dict
   }];
   let hasVerifier = 1;
 }

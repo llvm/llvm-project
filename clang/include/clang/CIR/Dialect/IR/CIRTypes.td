@@ -400,6 +400,15 @@ def ExceptionInfoPtrPtr : Type<
       "mlir::cir::ExceptionInfoType::get($_builder.getContext())))"> {
 }
 
+// Vector of integral type
+def IntegerVector : Type<
+    And<[
+      CPred<"$_self.isa<::mlir::cir::VectorType>()">,
+      CPred<"$_self.cast<::mlir::cir::VectorType>()"
+            ".getEltType().isa<::mlir::cir::IntType>()">,
+    ]>, "!cir.vector of !cir.int"> {
+}
+
 //===----------------------------------------------------------------------===//
 // StructType (defined in cpp files)
 //===----------------------------------------------------------------------===//
