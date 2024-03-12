@@ -23,7 +23,7 @@ namespace exegesis {
 
 #if defined(__linux__) && !defined(__ANDROID__)
 
-long getCurrentTID() {
+long SubprocessMemory::getCurrentTID() {
   // We're using the raw syscall here rather than the gettid() function provided
   // by most libcs for compatibility as gettid() was only added to glibc in
   // version 2.30.
@@ -93,8 +93,9 @@ Error SubprocessMemory::addMemoryDefinition(
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, int CounterFileDescriptor) {
-  std::string AuxiliaryMemoryName = "/auxmem" + std::to_string(ParentPID);
+    pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
+  std::string AuxiliaryMemoryName =
+      "/" + std::to_string(ParentTID) + "auxmem" + std::to_string(ParentPID);
   int AuxiliaryMemoryFileDescriptor =
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
@@ -108,7 +109,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {
-    std::string MemoryValueName = "/" + std::to_string(ParentPID) + "memdef" +
+    std::string MemoryValueName = "/" + std::to_string(ParentPID) + "t" +
+                                  std::to_string(ParentTID) + "memdef" +
                                   std::to_string(MemVal.Index);
     AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] =
         shm_open(MemoryValueName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
