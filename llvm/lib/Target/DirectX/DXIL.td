@@ -205,28 +205,71 @@ defset list<DXILOpClass> OpClasses = {
   def writeSamplerFeedbackBias : DXILOpClass;
   def writeSamplerFeedbackGrad : DXILOpClass;
   def writeSamplerFeedbackLevel: DXILOpClass;
+
+  // This is a sentinel definition. Hence placed at the end of the list
+  // and not as part of the above alphabetically sorted valid definitions.
+  // Additionally it is capitalized unlike all the others.
+  def UnknownOpClass: DXILOpClass;
 }
 
+// Several of the overloaded DXIL Operations support for data types
+// that are a subset of the overloaded LLVM intrinsics that they map to.
+// For e.g., llvm.sin.* intrinsic operates on any floating-point type and
+// maps for lowering to DXIL Op Sin. However, valid overloads of DXIL Sin
+// operation overloads are half (f16) and float (f32) only.
+//
+// The following abstracts overload types specific to DXIL operations.
+
+class DXILType : LLVMType<OtherVT> {
+  let isAny = 1;
+  int isI16OrI32 = 0;
+  int isHalfOrFloat = 0;
+}
+
+// Concrete records for various overload types supported specifically by
+// DXIL Operations.
+let isI16OrI32 = 1 in
+  def llvm_i16ori32_ty : DXILType;
+
+let isHalfOrFloat = 1 in
+  def llvm_halforfloat_ty : DXILType;
+
 // Abstraction DXIL Operation to LLVM intrinsic
-class DXILOpMapping<int opCode, DXILOpClass opClass, Intrinsic intrinsic, string doc> {
+class DXILOpMappingBase {
+  int OpCode = 0;                      // Opcode of DXIL Operation
+  DXILOpClass OpClass = UnknownOpClass;// Class of DXIL Operation.
+  Intrinsic LLVMIntrinsic = ?;         // LLVM Intrinsic DXIL Operation maps to
+  string Doc = "";                     // A short description of the operation
+  list<LLVMType> OpTypes = ?;          // Valid types of DXIL Operation in the
+                                       // format [returnTy, param1ty, ...]
+}
+
+class DXILOpMapping<int opCode, DXILOpClass opClass,
+                    Intrinsic intrinsic, string doc,
+                    list<LLVMType> opTys = []> : DXILOpMappingBase {
   int OpCode = opCode;                 // Opcode corresponding to DXIL Operation
-  DXILOpClass OpClass = opClass;             // Class of DXIL Operation.
+  DXILOpClass OpClass = opClass;       // Class of DXIL Operation.
   Intrinsic LLVMIntrinsic = intrinsic; // LLVM Intrinsic the DXIL Operation maps
   string Doc = doc;                    // to a short description of the operation
+  list<LLVMType> OpTypes = !if(!eq(!size(opTys), 0), LLVMIntrinsic.Types, opTys);
 }
 
 // Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
 def Sin  : DXILOpMapping<13, unary, int_sin,
-                         "Returns sine(theta) for theta in radians.">;
+                         "Returns sine(theta) for theta in radians.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Exp2 : DXILOpMapping<21, unary, int_exp2,
                          "Returns the base 2 exponential, or 2**x, of the specified value."
-                         "exp2(x) = 2**x.">;
+                         "exp2(x) = 2**x.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
-                         "decimal part of the input.">;
+                         "decimal part of the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Round : DXILOpMapping<26, unary, int_round,
                          "Returns the input rounded to the nearest integer"
-                         "within a floating-point type.">;
+                         "within a floating-point type.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def UMax : DXILOpMapping<39, binary, int_umax,
                          "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
 def FMad : DXILOpMapping<46, tertiary, int_fmuladd,
