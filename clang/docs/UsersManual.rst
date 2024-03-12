@@ -2420,7 +2420,9 @@ usual build cycle when using sample profilers for optimization:
 
      $ clang++ -O2 -gline-tables-only code.cc -o code
 
-   It is also possible to include DWARF in Windows binaries:
+   While MSVC-style targets default to CodeView debug information, DWARF debug
+   information is required to generate source-level LLVM profiles. Use
+   ``-gdwarf`` to include DWARF debug information:
 
    .. code-block:: console
 
@@ -2434,9 +2436,11 @@ usual build cycle when using sample profilers for optimization:
    (https://perf.wiki.kernel.org/) and Intel's Sampling Enabling Product (SEP),
    available as part of `Intel VTune
    <https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html>`_.
+   While Perf is Linux-specific, SEP can be used on Linux, Windows, and FreeBSD.
 
    The LLVM tool ``llvm-profgen`` can convert output of either Perf or SEP. An
-   external tool, AutoFDO, also supports Linux Perf output.
+   external project, `AutoFDO <https://github.com/google/autofdo>`_, also
+   provides a ``create_llvm_prof`` tool which supports Linux Perf output.
 
    When using Perf:
 
@@ -2458,11 +2462,10 @@ usual build cycle when using sample profilers for optimization:
    This produces a ``code.perf.data.script`` output which can be used with
    ``llvm-profgen``'s ``--perfscript`` input option.
 
-3. Convert the collected profile data to LLVM's sample profile format.
-   This is currently supported via the AutoFDO converter ``create_llvm_prof``.
-   It is available at https://github.com/google/autofdo. Once built and
-   installed, you can convert the ``perf.data`` file to LLVM using
-   the command:
+3. Convert the collected profile data to LLVM's sample profile format. This is
+   currently supported via the `AutoFDO <https://github.com/google/autofdo>`_
+   converter ``create_llvm_prof``. Once built and installed, you can convert
+   the ``perf.data`` file to LLVM using the command:
 
    .. code-block:: console
 
