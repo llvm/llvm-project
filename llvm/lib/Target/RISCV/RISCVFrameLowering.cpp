@@ -555,7 +555,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
     // Use available stack adjustment in push instruction to allocate additional
     // stack space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    uint64_t Spimm = alignTo(std::min(StackSize, (uint64_t)48), 16);
     FirstFrameSetup->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }

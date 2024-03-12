@@ -3,7 +3,8 @@
 define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-LABEL: func:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    cm.push {ra, s0-s1}, -24
+; RV32-NEXT:    cm.push {ra, s0-s1}, -32
+; RV32-NEXT:    addi sp, sp, 8
 ; RV32-NEXT:    .cfi_def_cfa_offset 24
 ; RV32-NEXT:    .cfi_offset ra, -12
 ; RV32-NEXT:    .cfi_offset s0, -8
