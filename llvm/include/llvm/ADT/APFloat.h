@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/float128.h"
 #include <memory>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -299,7 +300,7 @@ public:
   IEEEFloat(const fltSemantics &, integerPart);
   IEEEFloat(const fltSemantics &, uninitializedTag);
   IEEEFloat(const fltSemantics &, const APInt &);
-  explicit IEEEFloat(long double ld);
+  explicit IEEEFloat(float128 ld);
   explicit IEEEFloat(double d);
   explicit IEEEFloat(float f);
   IEEEFloat(const IEEEFloat &);
@@ -355,7 +356,7 @@ public:
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
-  long double convertToQuad() const;
+  float128 convertToQuad() const;
   float convertToFloat() const;
 
   /// @}
@@ -944,7 +945,7 @@ public:
   APFloat(const fltSemantics &Semantics, uninitializedTag)
       : U(Semantics, uninitialized) {}
   APFloat(const fltSemantics &Semantics, const APInt &I) : U(Semantics, I) {}
-  explicit APFloat(long double ld) : U(IEEEFloat(ld), IEEEquad()) {}
+  explicit APFloat(float128 ld) : U(IEEEFloat(ld), IEEEquad()) {}
   explicit APFloat(double d) : U(IEEEFloat(d), IEEEdouble()) {}
   explicit APFloat(float f) : U(IEEEFloat(f), IEEEsingle()) {}
   APFloat(const APFloat &RHS) = default;
@@ -1226,7 +1227,7 @@ public:
   /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host float type without loss of precision. It can be IEEEquad and
   /// shorter semantics, like IEEEdouble and others.
-  long double convertToQuad() const;
+  float128 convertToQuad() const;
 
   /// Converts this APFloat to host float value.
   ///
