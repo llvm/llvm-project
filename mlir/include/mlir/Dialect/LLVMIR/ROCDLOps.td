@@ -37,6 +37,12 @@ def ROCDL_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
     }
+    /// MLIR's gpu-related infrastructure effectively assume uniform workgroup
+    /// sizes, so this attribute defaults to "true" on `rocdl.kernel` functions.
+    /// It is provided here to allow overriding this assumption.
+    static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
+    }
 
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
@@ -45,6 +51,14 @@ def ROCDL_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
+
+  let discardableAttrs = (ins
+     "::mlir::UnitAttr":$kernel,
+     "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
+     "::mlir::StringAttr":$flat_work_group_size,
+     "::mlir::IntegerAttr":$max_flat_work_group_size,
+     "::mlir::IntegerAttr":$waves_per_eu
+  );
 
   let useDefaultAttributePrinterParser = 1;
 }
@@ -190,6 +204,22 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
                         llvmContext.getOrInsertSyncScopeID("workgroup"));
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def ROCDL_SetPrioOp : ROCDL_IntrOp<"s.setprio", [], [], [], 0>,
+  Arguments<(ins I16Attr:$priority)> {
+  let results = (outs);
+  let assemblyFormat = "$priority attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_setprio,builder.getInt16(op.getPriority()));";
+}
+
+def ROCDL_SchedBarrier : ROCDL_IntrOp<"sched.barrier", [], [], [], 0>,
+  Arguments<(ins I32Attr:$mask)> {
+  let results = (outs);
+  let assemblyFormat = "$mask attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_sched_barrier,builder.getInt32(op.getMask()));";
 }
 
 

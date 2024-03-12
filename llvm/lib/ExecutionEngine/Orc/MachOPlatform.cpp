@@ -255,6 +255,36 @@ struct ObjCImageInfoFlags {
 namespace llvm {
 namespace orc {
 
+MachOPlatform::HeaderOptions::BuildVersionOpts
+MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
+                                                           uint32_t MinOS,
+                                                           uint32_t SDK) {
+
+  uint32_t Platform;
+  switch (TT.getOS()) {
+  case Triple::IOS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_IOS
+                                           : MachO::PLATFORM_IOSSIMULATOR;
+    break;
+  case Triple::MacOSX:
+    Platform = MachO::PLATFORM_MACOS;
+    break;
+  case Triple::TvOS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_TVOS
+                                           : MachO::PLATFORM_TVOSSIMULATOR;
+    break;
+  case Triple::WatchOS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOS
+                                           : MachO::PLATFORM_WATCHOSSIMULATOR;
+    break;
+  default:
+    Platform = MachO::PLATFORM_UNKNOWN;
+    break;
+  }
+
+  return {Platform, MinOS, SDK};
+}
+
 Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
     ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
     JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
@@ -1694,6 +1724,11 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
         Opts.IDDylib->CurrentVersion, Opts.IDDylib->CompatibilityVersion);
   else
     B.template addLoadCommand<MachO::LC_ID_DYLIB>(JD.getName(), 0, 0, 0);
+
+  if (Opts.BuildVersion)
+    B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
+        Opts.BuildVersion->Platform, Opts.BuildVersion->MinOS,
+        Opts.BuildVersion->SDK, static_cast<uint32_t>(0));
 
   for (auto &D : Opts.LoadDylibs)
     B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(

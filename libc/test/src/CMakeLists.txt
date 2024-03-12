@@ -40,14 +40,17 @@ add_subdirectory(__support)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
-add_subdirectory(inttypes)
 add_subdirectory(math)
 add_subdirectory(search)
 add_subdirectory(stdbit)
+add_subdirectory(stdfix)
 add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(wchar)
+
+# Depends on utilities in stdlib
+add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)

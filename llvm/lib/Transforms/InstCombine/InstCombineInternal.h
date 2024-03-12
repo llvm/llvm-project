@@ -237,6 +237,9 @@ public:
     return getLosslessTrunc(C, TruncTy, Instruction::SExt);
   }
 
+  std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
+  convertOrOfShiftsToFunnelShift(Instruction &Or);
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
@@ -376,6 +379,11 @@ private:
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
+  Instruction *foldFBinOpOfIntCasts(BinaryOperator &I);
+  // Should only be called by `foldFBinOpOfIntCasts`.
+  Instruction *foldFBinOpOfIntCastsFromSign(
+      BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
+      Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown);
   Instruction *foldBinopOfSextBoolToSelect(BinaryOperator &I);
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);

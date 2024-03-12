@@ -781,10 +781,10 @@ define <vscale x 16 x float> @vfmacc_vf_nxv16f32_unmasked(<vscale x 16 x half> %
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v24, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v0, v24
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v4, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v0
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v8, v24, v16
 ; ZVFHMIN-NEXT:    ret

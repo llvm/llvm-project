@@ -1246,4 +1246,4 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind "amdgpu-waves-per-eu"="8,8" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

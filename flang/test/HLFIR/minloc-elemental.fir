@@ -23,6 +23,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
   return
 }
 // CHECK-LABEL: func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}, %arg1: !fir.ref<i32> {fir.bindc_name = "val"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "m"}) {
+// CHECK-NEXT:    %true = arith.constant true
 // CHECK-NEXT:    %c2147483647_i32 = arith.constant 2147483647 : i32
 // CHECK-NEXT:    %c1_i32 = arith.constant 1 : i32
 // CHECK-NEXT:    %c0 = arith.constant 0 : index
@@ -45,14 +46,18 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
 // CHECK-NEXT:      %[[V16:.*]] = fir.load %[[V15]] : !fir.ref<i32>
 // CHECK-NEXT:      %[[V17:.*]] = arith.cmpi sge, %[[V16]], %[[V4]] : i32
 // CHECK-NEXT:      %[[V18:.*]] = fir.if %[[V17]] -> (i32) {
-// CHECK-NEXT:        fir.store %c1_i32 to %[[V0]] : !fir.ref<i32>
+// CHECK-NEXT:        %[[ISFIRST:.*]] = fir.load %[[V0]] : !fir.ref<i32>
 // CHECK-NEXT:        %[[DIMS:.*]]:3 = fir.box_dims %[[V1]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:        %[[SUB:.*]] = arith.subi %[[DIMS]]#0, %c1 : index
 // CHECK-NEXT:        %[[ADD:.*]] = arith.addi %[[V14]], %[[SUB]] : index
 // CHECK-NEXT:        %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[ADD]]) : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:        %[[V20:.*]] = fir.load %[[V19]] : !fir.ref<i32>
 // CHECK-NEXT:        %[[V21:.*]] = arith.cmpi slt, %[[V20]], %arg4 : i32
-// CHECK-NEXT:        %[[V22:.*]] = fir.if %[[V21]] -> (i32) {
+// CHECK-NEXT:        %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK-NEXT:        %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK-NEXT:        %[[ORCOND:.*]] = arith.ori %[[V21]], %[[ISFIRSTNOT]] : i1
+// CHECK-NEXT:        %[[V22:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK-NEXT:          fir.store %c1_i32 to %[[V0]] : !fir.ref<i32>
 // CHECK-NEXT:          %[[V23:.*]] = hlfir.designate %[[RES]] (%c1) : (!fir.ref<!fir.array<1xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:          %[[V24:.*]] = fir.convert %[[V14]] : (index) -> i32
 // CHECK-NEXT:          fir.store %[[V24]] to %[[V23]] : !fir.ref<i32>
@@ -65,15 +70,6 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
 // CHECK-NEXT:        fir.result %arg4 : i32
 // CHECK-NEXT:      }
 // CHECK-NEXT:      fir.result %[[V18]] : i32
-// CHECK-NEXT:    }
-// CHECK-NEXT:    %[[V12:.*]] = fir.load %[[V0]] : !fir.ref<i32>
-// CHECK-NEXT:    %[[V13:.*]] = arith.cmpi eq, %[[V12]], %c1_i32 : i32
-// CHECK-NEXT:    fir.if %[[V13]] {
-// CHECK-NEXT:      %[[V14:.*]] = arith.cmpi eq, %[[V11]], %c2147483647_i32 : i32
-// CHECK-NEXT:      fir.if %[[V14]] {
-// CHECK-NEXT:        %[[V15:.*]] = hlfir.designate %[[RES]] (%c1) : (!fir.ref<!fir.array<1xi32>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:        fir.store %c1_i32 to %[[V15]] : !fir.ref<i32>
-// CHECK-NEXT:      }
 // CHECK-NEXT:    }
 // CHECK-NEXT:    %[[BD:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered {
@@ -109,6 +105,7 @@ func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
   return
 }
 // CHECK-LABEL:  func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}, %arg1: !fir.ref<i32> {fir.bindc_name = "val"}, %arg2: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "m"}) {
+// CHECK-NEXT:    %true = arith.constant true
 // CHECK-NEXT:    %c2147483647_i32 = arith.constant 2147483647 : i32
 // CHECK-NEXT:    %c1_i16 = arith.constant 1 : i16
 // CHECK-NEXT:    %c0 = arith.constant 0 : index
@@ -131,14 +128,18 @@ func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
 // CHECK-NEXT:      %[[V16:.*]] = fir.load %[[V15]] : !fir.ref<i32>
 // CHECK-NEXT:      %[[V17:.*]] = arith.cmpi sge, %[[V16]], %[[V4]] : i32
 // CHECK-NEXT:      %[[V18:.*]] = fir.if %[[V17]] -> (i32) {
-// CHECK-NEXT:        fir.store %c1_i16 to %[[V0]] : !fir.ref<i16>
+// CHECK-NEXT:        %[[ISFIRST:.*]] = fir.load %[[V0]] : !fir.ref<i16>
 // CHECK-NEXT:        %[[DIMS:.*]]:3 = fir.box_dims %[[V1]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:        %[[SUB:.*]] = arith.subi %[[DIMS]]#0, %c1 : index
 // CHECK-NEXT:        %[[ADD:.*]] = arith.addi %[[V14]], %[[SUB]] : index
 // CHECK-NEXT:        %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[ADD]]) : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:        %[[V20:.*]] = fir.load %[[V19]] : !fir.ref<i32>
 // CHECK-NEXT:        %[[V21:.*]] = arith.cmpi slt, %[[V20]], %arg4 : i32
-// CHECK-NEXT:        %[[V22:.*]] = fir.if %[[V21]] -> (i32) {
+// CHECK-NEXT:        %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i16) -> i1
+// CHECK-NEXT:        %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK-NEXT:        %[[ORCOND:.*]] = arith.ori %[[V21]], %[[ISFIRSTNOT]] : i1
+// CHECK-NEXT:        %[[V22:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK-NEXT:          fir.store %c1_i16 to %[[V0]] : !fir.ref<i16>
 // CHECK-NEXT:          %[[V23:.*]] = hlfir.designate %[[RES]] (%c1) : (!fir.ref<!fir.array<1xi16>>, index) -> !fir.ref<i16>
 // CHECK-NEXT:          %[[V24:.*]] = fir.convert %[[V14]] : (index) -> i16
 // CHECK-NEXT:          fir.store %[[V24]] to %[[V23]] : !fir.ref<i16>
@@ -151,15 +152,6 @@ func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
 // CHECK-NEXT:        fir.result %arg4 : i32
 // CHECK-NEXT:      }
 // CHECK-NEXT:      fir.result %[[V18]] : i32
-// CHECK-NEXT:    }
-// CHECK-NEXT:    %[[V12:.*]] = fir.load %[[V0]] : !fir.ref<i16>
-// CHECK-NEXT:    %[[V13:.*]] = arith.cmpi eq, %[[V12]], %c1_i16 : i16
-// CHECK-NEXT:    fir.if %[[V13]] {
-// CHECK-NEXT:      %[[V14:.*]] = arith.cmpi eq, %[[V11]], %c2147483647_i32 : i32
-// CHECK-NEXT:      fir.if %[[V14]] {
-// CHECK-NEXT:        %[[V15:.*]] = hlfir.designate %[[RES]] (%c1) : (!fir.ref<!fir.array<1xi16>>, index) -> !fir.ref<i16>
-// CHECK-NEXT:        fir.store %c1_i16 to %[[V15]] : !fir.ref<i16>
-// CHECK-NEXT:      }
 // CHECK-NEXT:    }
 // CHECK-NEXT:    %[[BD:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi16>>, index) -> (index, index, index)
 // CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered {
@@ -206,6 +198,7 @@ func.func @_QPtest_kind2_convert(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_n
 // CHECK-LABEL: _QPtest_kind2_convert
 // CHECK-SAME:     (%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}, %arg1: !fir.ref<i32> {fir.bindc_name = "val"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "m"}) {
 // CHECK-NEXT:   %false = arith.constant false
+// CHECK-NEXT:   %true = arith.constant true
 // CHECK-NEXT:   %c2147483647_i32 = arith.constant 2147483647 : i32
 // CHECK-NEXT:   %c1_i16 = arith.constant 1 : i16
 // CHECK-NEXT:   %c0 = arith.constant 0 : index
@@ -228,14 +221,18 @@ func.func @_QPtest_kind2_convert(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_n
 // CHECK-NEXT:     %[[V17:.*]] = fir.load %[[V16]] : !fir.ref<i32>
 // CHECK-NEXT:     %[[V18:.*]] = arith.cmpi sge, %[[V17]], %[[V5]] : i32
 // CHECK-NEXT:     %[[V19:.*]] = fir.if %[[V18]] -> (i32) {
-// CHECK-NEXT:       fir.store %c1_i16 to %[[V0]] : !fir.ref<i16>
+// CHECK-NEXT:       %[[ISFIRST:.*]] = fir.load %[[V0]] : !fir.ref<i16>
 // CHECK-NEXT:       %[[V20:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:       %[[V21:.*]] = arith.subi %[[V20]]#0, %c1 : index
 // CHECK-NEXT:       %[[V22:.*]] = arith.addi %[[V15]], %[[V21]] : index
 // CHECK-NEXT:       %[[V23:.*]] = hlfir.designate %[[V2]]#0 (%[[V22]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:       %[[V24:.*]] = fir.load %[[V23]] : !fir.ref<i32>
 // CHECK-NEXT:       %[[V25:.*]] = arith.cmpi slt, %[[V24]], %arg4 : i32
-// CHECK-NEXT:       %[[V26:.*]] = fir.if %[[V25]] -> (i32) {
+// CHECK-NEXT:       %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i16) -> i1
+// CHECK-NEXT:       %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK-NEXT:       %[[ORCOND:.*]] = arith.ori %[[V25]], %[[ISFIRSTNOT]] : i1
+// CHECK-NEXT:       %[[V26:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK-NEXT:         fir.store %c1_i16 to %[[V0]] : !fir.ref<i16>
 // CHECK-NEXT:         %[[V27:.*]] = hlfir.designate %[[V1]] (%c1)  : (!fir.ref<!fir.array<1xi16>>, index) -> !fir.ref<i16>
 // CHECK-NEXT:         %[[V28:.*]] = fir.convert %[[V15]] : (index) -> i16
 // CHECK-NEXT:         fir.store %[[V28]] to %[[V27]] : !fir.ref<i16>
@@ -248,15 +245,6 @@ func.func @_QPtest_kind2_convert(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_n
 // CHECK-NEXT:       fir.result %arg4 : i32
 // CHECK-NEXT:     }
 // CHECK-NEXT:     fir.result %[[V19]] : i32
-// CHECK-NEXT:   }
-// CHECK-NEXT:   %[[V10:.*]] = fir.load %[[V0]] : !fir.ref<i16>
-// CHECK-NEXT:   %[[V11:.*]] = arith.cmpi eq, %[[V10]], %c1_i16 : i16
-// CHECK-NEXT:   fir.if %[[V11]] {
-// CHECK-NEXT:     %[[V15]] = arith.cmpi eq, %[[V9]], %c2147483647_i32 : i32
-// CHECK-NEXT:     fir.if %[[V15]] {
-// CHECK-NEXT:       %[[V16]] = hlfir.designate %[[V1]] (%c1)  : (!fir.ref<!fir.array<1xi16>>, index) -> !fir.ref<i16>
-// CHECK-NEXT:       fir.store %c1_i16 to %[[V16]] : !fir.ref<i16>
-// CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   %[[V12:.*]] = hlfir.as_expr %[[V1]] move %false : (!fir.ref<!fir.array<1xi16>>, i1) -> !hlfir.expr<1xi16>
 // CHECK-NEXT:   %[[V13:.*]] = fir.shape %c1 : (index) -> !fir.shape<1>
@@ -295,21 +283,29 @@ func.func @_QPtest_float(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
   return
 }
 // CHECK-LABEL: _QPtest_float
-// CHECK:        %cst = arith.constant 3.40282347E+38 : f32
+// CHECK:        %cst = arith.constant 0x7F800000 : f32
 // CHECK:        %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10:.*]] step %c1 iter_args(%arg4 = %cst) -> (f32) {
 // CHECK-NEXT:     %[[V14:.*]] = arith.addi %arg3, %c1 : index
 // CHECK-NEXT:     %[[V15:.*]] = hlfir.designate %[[V1:.*]]#0 (%[[V14]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK-NEXT:     %[[V16:.*]] = fir.load %[[V15]] : !fir.ref<f32>
 // CHECK-NEXT:     %[[V17:.*]] = arith.cmpf oge, %[[V16]], %[[V4:.*]] : f32
 // CHECK-NEXT:     %[[V18:.*]] = fir.if %[[V17]] -> (f32) {
-// CHECK-NEXT:       fir.store %c1_i32 to %[[V0:.*]] : !fir.ref<i32>
+// CHECK-NEXT:       %[[ISFIRST:.*]] = fir.load %[[V0:.*]] : !fir.ref<i32>
 // CHECK-NEXT:       %[[DIMS:.*]]:3 = fir.box_dims %2#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK-NEXT:       %[[SUB:.*]] = arith.subi %[[DIMS]]#0, %c1 : index
 // CHECK-NEXT:       %[[ADD:.*]] = arith.addi %[[V14]], %[[SUB]] : index
 // CHECK-NEXT:       %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[ADD]]) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK-NEXT:       %[[V20:.*]] = fir.load %[[V19]] : !fir.ref<f32>
-// CHECK-NEXT:       %[[V21:.*]] = arith.cmpf olt, %[[V20]], %arg4 fastmath<contract> : f32
-// CHECK-NEXT:       %[[V22:.*]] = fir.if %[[V21]] -> (f32) {
+// CHECK-NEXT:       %[[NEW_MIN:.*]] = arith.cmpf olt, %[[V20]], %arg4 fastmath<contract> : f32
+// CHECK-NEXT:       %[[CONDRED:.*]] = arith.cmpf une, %arg4, %arg4 fastmath<contract> : f32
+// CHECK-NEXT:       %[[CONDELEM:.*]] = arith.cmpf oeq, %[[V20]], %[[V20]] fastmath<contract> : f32
+// CHECK-NEXT:       %[[ANDCOND:.*]] = arith.andi %[[CONDRED]], %[[CONDELEM]] : i1
+// CHECK-NEXT:       %[[NEW_MIN2:.*]] = arith.ori %[[NEW_MIN]], %[[ANDCOND]] : i1
+// CHECK-NEXT:       %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK-NEXT:       %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK-NEXT:       %[[ORCOND:.*]] = arith.ori %[[NEW_MIN2]], %[[ISFIRSTNOT]] : i1
+// CHECK-NEXT:       %[[V22:.*]] = fir.if %[[ORCOND]] -> (f32) {
+// CHECK-NEXT:         fir.store %c1_i32 to %[[V0]] : !fir.ref<i32>
 // CHECK-NEXT:         %[[V23:.*]] = hlfir.designate %{{.}} (%c1) : (!fir.ref<!fir.array<1xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:         %[[V24:.*]] = fir.convert %[[V14]] : (index) -> i32
 // CHECK-NEXT:         fir.store %[[V24]] to %[[V23]] : !fir.ref<i32>

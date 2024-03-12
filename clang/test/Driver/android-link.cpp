@@ -17,9 +17,10 @@
 //
 // RUN: %clang -target aarch64-none-linux-android \
 // RUN:   -### -v %s 2> %t
-// RUN: FileCheck -check-prefix=MAX-PAGE-SIZE < %t %s
+// RUN: FileCheck -check-prefix=MAX-PAGE-SIZE-AARCH64 < %t %s
 //
 // GENERIC-ARM: --fix-cortex-a53-843419
 // CORTEX-A53: --fix-cortex-a53-843419
 // CORTEX-A57-NOT: --fix-cortex-a53-843419
 // MAX-PAGE-SIZE: "-z" "max-page-size=4096"
+// MAX-PAGE-SIZE-AARCH64: "-z" "max-page-size=16384"

@@ -1420,6 +1420,7 @@ OpFoldResult ExtractStridedMetadataOp::getConstifiedMixedOffset() {
 
 void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
                                Value memref, ValueRange ivs) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands(memref);
   result.addOperands(ivs);
 
@@ -1428,7 +1429,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
     result.addTypes(elementType);
 
     Region *bodyRegion = result.addRegion();
-    bodyRegion->push_back(new Block());
+    builder.createBlock(bodyRegion);
     bodyRegion->addArgument(elementType, memref.getLoc());
   }
 }

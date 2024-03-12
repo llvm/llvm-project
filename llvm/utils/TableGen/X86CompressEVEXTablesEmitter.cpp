@@ -46,7 +46,7 @@ class X86CompressEVEXTablesEmitter {
 
   typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
       Entry;
-  typedef std::map<const Record *, std::vector<const CodeGenInstruction *>>
+  typedef std::map<StringRef, std::vector<const CodeGenInstruction *>>
       PredicateInstMap;
 
   std::vector<Entry> Table;
@@ -90,7 +90,7 @@ void X86CompressEVEXTablesEmitter::printCheckPredicate(
   for (const auto &[Key, Val] : PredicateInsts) {
     for (const auto &Inst : Val)
       OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
-    OS << "    return " << Key->getValueAsString("CondString") << ";\n";
+    OS << "    return " << Key << ";\n";
   }
 
   OS << "  }\n";
@@ -120,12 +120,11 @@ public:
     RecognizableInstrBase OldRI(*OldInst);
 
     // Return false if any of the following fields of does not match.
-    if (std::make_tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
-                        OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
-                        OldRI.Form) !=
-        std::make_tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
-                        NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W,
-                        NewRI.Form))
+    if (std::tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
+                   OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
+                   OldRI.Form) !=
+        std::tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
+                   NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W, NewRI.Form))
       return false;
 
     for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
@@ -219,7 +218,7 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
     if (!NewInst)
       continue;
 
-    Table.push_back(std::make_pair(Inst, NewInst));
+    Table.push_back(std::pair(Inst, NewInst));
     auto Predicates = NewInst->TheDef->getValueAsListOfDefs("Predicates");
     auto It = llvm::find_if(Predicates, [](const Record *R) {
       StringRef Name = R->getName();
@@ -227,7 +226,7 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
              Name == "HasAVXIFMA";
     });
     if (It != Predicates.end())
-      PredicateInsts[*It].push_back(NewInst);
+      PredicateInsts[(*It)->getValueAsString("CondString")].push_back(NewInst);
   }
 
   printTable(Table, OS);

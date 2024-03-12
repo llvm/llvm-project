@@ -78,3 +78,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.munlockall
 )
+
+add_entrypoint_object(
+  msync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.msync
+)

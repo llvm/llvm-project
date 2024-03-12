@@ -1778,12 +1778,9 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
         .addImm(8);
 
     // Now reference the 8-bit subreg of the result.
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(TargetOpcode::SUBREG_TO_REG))
-        .addDef(DstReg)
-        .addImm(0)
-        .addReg(ResultSuperReg)
-        .addImm(X86::sub_8bit);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(ResultSuperReg, 0, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)

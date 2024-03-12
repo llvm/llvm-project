@@ -14,22 +14,28 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVISELLOWERING_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVISELLOWERING_H
 
+#include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 class SPIRVSubtarget;
 
 class SPIRVTargetLowering : public TargetLowering {
+  const SPIRVSubtarget &STI;
+
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,
-                               const SPIRVSubtarget &STI)
-      : TargetLowering(TM) {}
+                               const SPIRVSubtarget &ST)
+      : TargetLowering(TM), STI(ST) {}
 
   // Stop IRTranslator breaking up FMA instrs to preserve types information.
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {
     return true;
   }
+
+  // prevent creation of jump tables
+  bool areJTsAllowed(const Function *) const override { return false; }
 
   // This is to prevent sexts of non-i64 vector indices which are generated
   // within general IRTranslator hence type generation for it is omitted.
@@ -44,6 +50,11 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
+
+  // Call the default implementation and finalize target lowering by inserting
+  // extra instructions required to preserve validity of SPIR-V code imposed by
+  // the standard.
+  void finalizeLowering(MachineFunction &MF) const override;
 };
 } // namespace llvm
 

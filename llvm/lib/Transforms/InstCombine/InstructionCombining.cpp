@@ -142,12 +142,6 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
-// TODO: Remove this option
-static cl::opt<bool> EnableSimplifyDemandedUseFPClass(
-    "instcombine-simplify-demanded-fp-class",
-    cl::desc("Enable demanded floating-point class optimizations"),
-    cl::init(false));
-
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -1407,6 +1401,196 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
   return nullptr;
 }
 
+// Try to fold:
+//    1) (fp_binop ({s|u}itofp x), ({s|u}itofp y))
+//        -> ({s|u}itofp (int_binop x, y))
+//    2) (fp_binop ({s|u}itofp x), FpC)
+//        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+//
+// Assuming the sign of the cast for x/y is `OpsFromSigned`.
+Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
+    BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
+    Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown) {
+
+  Type *FPTy = BO.getType();
+  Type *IntTy = IntOps[0]->getType();
+
+  unsigned IntSz = IntTy->getScalarSizeInBits();
+  // This is the maximum number of inuse bits by the integer where the int -> fp
+  // casts are exact.
+  unsigned MaxRepresentableBits =
+      APFloat::semanticsPrecision(FPTy->getScalarType()->getFltSemantics());
+
+  // Preserve known number of leading bits. This can allow us to trivial nsw/nuw
+  // checks later on.
+  unsigned NumUsedLeadingBits[2] = {IntSz, IntSz};
+
+  // NB: This only comes up if OpsFromSigned is true, so there is no need to
+  // cache if between calls to `foldFBinOpOfIntCastsFromSign`.
+  auto IsNonZero = [&](unsigned OpNo) -> bool {
+    if (OpsKnown[OpNo].hasKnownBits() &&
+        OpsKnown[OpNo].getKnownBits(SQ).isNonZero())
+      return true;
+    return isKnownNonZero(IntOps[OpNo], SQ.DL);
+  };
+
+  auto IsNonNeg = [&](unsigned OpNo) -> bool {
+    // NB: This matches the impl in ValueTracking, we just try to use cached
+    // knownbits here. If we ever start supporting WithCache for
+    // `isKnownNonNegative`, change this to an explicit call.
+    return OpsKnown[OpNo].getKnownBits(SQ).isNonNegative();
+  };
+
+  // Check if we know for certain that ({s|u}itofp op) is exact.
+  auto IsValidPromotion = [&](unsigned OpNo) -> bool {
+    // Can we treat this operand as the desired sign?
+    if (OpsFromSigned != isa<SIToFPInst>(BO.getOperand(OpNo)) &&
+        !IsNonNeg(OpNo))
+      return false;
+
+    // If fp precision >= bitwidth(op) then its exact.
+    // NB: This is slightly conservative for `sitofp`. For signed conversion, we
+    // can handle `MaxRepresentableBits == IntSz - 1` as the sign bit will be
+    // handled specially. We can't, however, increase the bound arbitrarily for
+    // `sitofp` as for larger sizes, it won't sign extend.
+    if (MaxRepresentableBits < IntSz) {
+      // Otherwise if its signed cast check that fp precisions >= bitwidth(op) -
+      // numSignBits(op).
+      // TODO: If we add support for `WithCache` in `ComputeNumSignBits`, change
+      // `IntOps[OpNo]` arguments to `KnownOps[OpNo]`.
+      if (OpsFromSigned)
+        NumUsedLeadingBits[OpNo] = IntSz - ComputeNumSignBits(IntOps[OpNo]);
+      // Finally for unsigned check that fp precision >= bitwidth(op) -
+      // numLeadingZeros(op).
+      else {
+        NumUsedLeadingBits[OpNo] =
+            IntSz - OpsKnown[OpNo].getKnownBits(SQ).countMinLeadingZeros();
+      }
+    }
+    // NB: We could also check if op is known to be a power of 2 or zero (which
+    // will always be representable). Its unlikely, however, that is we are
+    // unable to bound op in any way we will be able to pass the overflow checks
+    // later on.
+
+    if (MaxRepresentableBits < NumUsedLeadingBits[OpNo])
+      return false;
+    // Signed + Mul also requires that op is non-zero to avoid -0 cases.
+    return !OpsFromSigned || BO.getOpcode() != Instruction::FMul ||
+           IsNonZero(OpNo);
+  };
+
+  // If we have a constant rhs, see if we can losslessly convert it to an int.
+  if (Op1FpC != nullptr) {
+    Constant *Op1IntC = ConstantFoldCastOperand(
+        OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, Op1FpC,
+        IntTy, DL);
+    if (Op1IntC == nullptr)
+      return nullptr;
+    if (ConstantFoldCastOperand(OpsFromSigned ? Instruction::SIToFP
+                                              : Instruction::UIToFP,
+                                Op1IntC, FPTy, DL) != Op1FpC)
+      return nullptr;
+
+    // First try to keep sign of cast the same.
+    IntOps[1] = Op1IntC;
+  }
+
+  // Ensure lhs/rhs integer types match.
+  if (IntTy != IntOps[1]->getType())
+    return nullptr;
+
+  if (Op1FpC == nullptr) {
+    if (!IsValidPromotion(1))
+      return nullptr;
+  }
+  if (!IsValidPromotion(0))
+    return nullptr;
+
+  // Final we check if the integer version of the binop will not overflow.
+  BinaryOperator::BinaryOps IntOpc;
+  // Because of the precision check, we can often rule out overflows.
+  bool NeedsOverflowCheck = true;
+  // Try to conservatively rule out overflow based on the already done precision
+  // checks.
+  unsigned OverflowMaxOutputBits = OpsFromSigned ? 2 : 1;
+  unsigned OverflowMaxCurBits =
+      std::max(NumUsedLeadingBits[0], NumUsedLeadingBits[1]);
+  bool OutputSigned = OpsFromSigned;
+  switch (BO.getOpcode()) {
+  case Instruction::FAdd:
+    IntOpc = Instruction::Add;
+    OverflowMaxOutputBits += OverflowMaxCurBits;
+    break;
+  case Instruction::FSub:
+    IntOpc = Instruction::Sub;
+    OverflowMaxOutputBits += OverflowMaxCurBits;
+    break;
+  case Instruction::FMul:
+    IntOpc = Instruction::Mul;
+    OverflowMaxOutputBits += OverflowMaxCurBits * 2;
+    break;
+  default:
+    llvm_unreachable("Unsupported binop");
+  }
+  // The precision check may have already ruled out overflow.
+  if (OverflowMaxOutputBits < IntSz) {
+    NeedsOverflowCheck = false;
+    // We can bound unsigned overflow from sub to in range signed value (this is
+    // what allows us to avoid the overflow check for sub).
+    if (IntOpc == Instruction::Sub)
+      OutputSigned = true;
+  }
+
+  // Precision check did not rule out overflow, so need to check.
+  // TODO: If we add support for `WithCache` in `willNotOverflow`, change
+  // `IntOps[...]` arguments to `KnownOps[...]`.
+  if (NeedsOverflowCheck &&
+      !willNotOverflow(IntOpc, IntOps[0], IntOps[1], BO, OutputSigned))
+    return nullptr;
+
+  Value *IntBinOp = Builder.CreateBinOp(IntOpc, IntOps[0], IntOps[1]);
+  if (auto *IntBO = dyn_cast<BinaryOperator>(IntBinOp)) {
+    IntBO->setHasNoSignedWrap(OutputSigned);
+    IntBO->setHasNoUnsignedWrap(!OutputSigned);
+  }
+  if (OutputSigned)
+    return new SIToFPInst(IntBinOp, FPTy);
+  return new UIToFPInst(IntBinOp, FPTy);
+}
+
+// Try to fold:
+//    1) (fp_binop ({s|u}itofp x), ({s|u}itofp y))
+//        -> ({s|u}itofp (int_binop x, y))
+//    2) (fp_binop ({s|u}itofp x), FpC)
+//        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
+  std::array<Value *, 2> IntOps = {nullptr, nullptr};
+  Constant *Op1FpC = nullptr;
+  // Check for:
+  //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
+  //    2) (binop ({s|u}itofp x), FpC)
+  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
+      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+    return nullptr;
+
+  if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
+      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
+      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+    return nullptr;
+
+  // Cache KnownBits a bit to potentially save some analysis.
+  SmallVector<WithCache<const Value *>, 2> OpsKnown = {IntOps[0], IntOps[1]};
+
+  // Try treating x/y as coming from both `uitofp` and `sitofp`. There are
+  // different constraints depending on the sign of the cast.
+  // NB: `(uitofp nneg X)` == `(sitofp nneg X)`.
+  if (Instruction *R = foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/false,
+                                                    IntOps, Op1FpC, OpsKnown))
+    return R;
+  return foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/true, IntOps,
+                                      Op1FpC, OpsKnown);
+}
+
 /// A binop with a constant operand and a sign-extended boolean operand may be
 /// converted into a select of constants by applying the binary operation to
 /// the constant with the two possible values of the extended boolean (0 or -1).
@@ -2347,11 +2531,13 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
                   !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
   // Selects/min/max with invertible operands are freely invertible
   if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B)))) {
+    bool LocalDoesConsume = DoesConsume;
     if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder*/ nullptr,
-                               DoesConsume, Depth))
+                               LocalDoesConsume, Depth))
       return nullptr;
     if (Value *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
-                                            DoesConsume, Depth)) {
+                                            LocalDoesConsume, Depth)) {
+      DoesConsume = LocalDoesConsume;
       if (Builder != nullptr) {
         Value *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                             DoesConsume, Depth);
@@ -2367,12 +2553,13 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   }
 
   if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    bool LocalDoesConsume = DoesConsume;
     SmallVector<std::pair<Value *, BasicBlock *>, 8> IncomingValues;
     for (Use &U : PN->operands()) {
       BasicBlock *IncomingBlock = PN->getIncomingBlock(U);
       Value *NewIncomingVal = getFreelyInvertedImpl(
           U.get(), /*WillInvertAllUses=*/false,
-          /*Builder=*/nullptr, DoesConsume, MaxAnalysisRecursionDepth - 1);
+          /*Builder=*/nullptr, LocalDoesConsume, MaxAnalysisRecursionDepth - 1);
       if (NewIncomingVal == nullptr)
         return nullptr;
       // Make sure that we can safely erase the original PHI node.
@@ -2381,6 +2568,8 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       if (Builder != nullptr)
         IncomingValues.emplace_back(NewIncomingVal, IncomingBlock);
     }
+
+    DoesConsume = LocalDoesConsume;
     if (Builder != nullptr) {
       IRBuilderBase::InsertPointGuard Guard(*Builder);
       Builder->SetInsertPoint(PN);
@@ -2391,6 +2580,20 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       return NewPN;
     }
     return NonNull;
+  }
+
+  if (match(V, m_SExtLike(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSExt(AV, V->getType()) : NonNull;
+    return nullptr;
+  }
+
+  if (match(V, m_Trunc(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateTrunc(AV, V->getType()) : NonNull;
+    return nullptr;
   }
 
   return nullptr;
@@ -2621,10 +2824,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *V;
         if ((has_single_bit(TyAllocSize) &&
              match(GEP.getOperand(1),
-                   m_Exact(m_AShr(m_Value(V),
-                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+                   m_Exact(m_Shr(m_Value(V),
+                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
-                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               Builder.getInt8Ty(), GEP.getPointerOperand(), V);
           NewGEP->setIsInBounds(GEP.isInBounds());
@@ -3111,9 +3314,6 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  if (!EnableSimplifyDemandedUseFPClass)
-    return nullptr;
-
   Value *RetVal = RI.getReturnValue();
   if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
     return nullptr;
@@ -3231,9 +3431,12 @@ void InstCombinerImpl::handleUnreachableFrom(
     MadeIRChange = true;
   }
 
-  // RemoveDIs: to match behaviour in dbg.value mode, drop debug-info on
-  // terminator too.
-  BB->getTerminator()->dropDbgValues();
+  SmallVector<Value *> Changed;
+  if (handleUnreachableTerminator(BB->getTerminator(), Changed)) {
+    MadeIRChange = true;
+    for (Value *V : Changed)
+      addToWorklist(cast<Instruction>(V));
+  }
 
   // Handle potentially dead successors.
   for (BasicBlock *Succ : successors(BB))
@@ -4493,7 +4696,8 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // For all instruction/variable pairs needing extra filtering, find the
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
-      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+      for (DPValue &DPV :
+           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());

@@ -269,7 +269,9 @@ def Inliner : Pass<"inline"> {
   let constructor = "mlir::createInlinerPass()";
   let options = [
     Option<"defaultPipelineStr", "default-pipeline", "std::string",
-           /*default=*/"\"canonicalize\"", "The default optimizer pipeline used for callables">,
+           /*default=*/"\"canonicalize\"",
+           "The optimizer pipeline used for callables that do not have "
+           "a dedicated optimizer pipeline in opPipelineList">,
     ListOption<"opPipelineList", "op-pipelines", "OpPassManager",
                "Callable operation specific optimizer pipelines (in the form "
                "of `dialect.op(pipeline)`)">,
