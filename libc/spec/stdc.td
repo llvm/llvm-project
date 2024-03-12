@@ -805,6 +805,10 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec StdBit = HeaderSpec<
       "stdbit.h",
       [
+        Macro<"__STDC_VERSION_STDBIT_H__">,
+        Macro<"__STDC_ENDIAN_LITTLE__">,
+        Macro<"__STDC_ENDIAN_BIG__">,
+        Macro<"__STDC_ENDIAN_NATIVE__">,
         Macro<"stdc_leading_zeros">,
         Macro<"stdc_leading_ones">,
         Macro<"stdc_trailing_zeros">,

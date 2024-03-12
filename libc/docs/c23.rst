@@ -75,7 +75,7 @@ Additions:
   * dfmal
   * fsqrt*
   * dsqrtl
-* stdbit.h (New header)
+* stdbit.h (New header)    |check|
 * stdckdint.h (New header) |check|
 * stddef.h
 
