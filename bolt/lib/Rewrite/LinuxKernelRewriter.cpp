@@ -55,6 +55,11 @@ static cl::opt<bool> DumpParavirtualPatchSites(
     "dump-para-sites", cl::desc("dump Linux kernel paravitual patch sites"),
     cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool>
+    DumpPCIFixups("dump-pci-fixups",
+                  cl::desc("dump Linux kernel PCI fixup table"),
+                  cl::init(false), cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool> DumpStaticCalls("dump-static-calls",
                                      cl::desc("dump Linux kernel static calls"),
                                      cl::init(false), cl::Hidden,
@@ -181,6 +186,10 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Size of bug_entry struct.
   static constexpr size_t BUG_TABLE_ENTRY_SIZE = 12;
 
+  /// .pci_fixup section.
+  ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
+  static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
+
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
   void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
@@ -189,9 +198,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
-
-  /// Process special linux kernel section, .pci_fixup.
-  void processLKPCIFixup();
 
   /// Process __ksymtab and __ksymtab_gpl.
   void processLKKSymtab(bool IsGPL = false);
@@ -226,6 +232,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Read alternative instruction info from .altinstructions.
   Error readAltInstructions();
 
+  /// Read .pci_fixup
+  Error readPCIFixupTable();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -254,6 +263,9 @@ public:
       return E;
 
     if (Error E = readAltInstructions())
+      return E;
+
+    if (Error E = readPCIFixupTable())
       return E;
 
     return Error::success();
@@ -318,39 +330,9 @@ void LinuxKernelRewriter::insertLKMarker(uint64_t PC, uint64_t SectionOffset,
 }
 
 void LinuxKernelRewriter::processLKSections() {
-  processLKPCIFixup();
   processLKKSymtab();
   processLKKSymtab(true);
   processLKSMPLocks();
-}
-
-/// Process .pci_fixup section of Linux Kernel.
-/// This section contains a list of entries for different PCI devices and their
-/// corresponding hook handler (code pointer where the fixup
-/// code resides, usually on x86_64 it is an entry PC relative 32 bit offset).
-/// Documentation is in include/linux/pci.h.
-void LinuxKernelRewriter::processLKPCIFixup() {
-  ErrorOr<BinarySection &> SectionOrError =
-      BC.getUniqueSectionByName(".pci_fixup");
-  if (!SectionOrError)
-    return;
-
-  const uint64_t SectionSize = SectionOrError->getSize();
-  const uint64_t SectionAddress = SectionOrError->getAddress();
-  assert((SectionSize % 16) == 0 && ".pci_fixup size is not a multiple of 16");
-
-  for (uint64_t I = 12; I + 4 <= SectionSize; I += 16) {
-    const uint64_t PC = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(PC, 4);
-    assert(Offset && "cannot read value from .pci_fixup");
-    const int32_t SignedOffset = *Offset;
-    const uint64_t HookupAddress = PC + SignedOffset;
-    BinaryFunction *HookupFunction =
-        BC.getBinaryFunctionAtAddress(HookupAddress);
-    assert(HookupFunction && "expected function for entry in .pci_fixup");
-    BC.addRelocation(PC, HookupFunction->getSymbol(), Relocation::getPC32(), 0,
-                     *Offset);
-  }
 }
 
 /// Process __ksymtab[_gpl] sections of Linux Kernel.
@@ -1279,6 +1261,84 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
   BC.outs() << "BOLT-INFO: parsed " << EntryID
             << " alternative instruction entries\n";
+
+  return Error::success();
+}
+
+/// When the Linux kernel needs to handle an error associated with a given PCI
+/// device, it uses a table stored in .pci_fixup section to locate a fixup code
+/// specific to the vendor and the problematic device. The section contains a
+/// list of the following structures defined in include/linux/pci.h:
+///
+///   struct pci_fixup {
+///     u16 vendor;     /* Or PCI_ANY_ID */
+///     u16 device;     /* Or PCI_ANY_ID */
+///     u32 class;      /* Or PCI_ANY_ID */
+///     unsigned int class_shift; /* should be 0, 8, 16 */
+///     int hook_offset;
+///   };
+///
+/// Normally, the hook will point to a function start and we don't have to
+/// update the pointer if we are not relocating functions. Hence, while reading
+/// the table we validate this assumption. If a function has a fixup code in the
+/// middle of its body, we issue a warning and ignore it.
+Error LinuxKernelRewriter::readPCIFixupTable() {
+  PCIFixupSection = BC.getUniqueSectionByName(".pci_fixup");
+  if (!PCIFixupSection)
+    return Error::success();
+
+  if (PCIFixupSection->getSize() % PCI_FIXUP_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "PCI fixup table size error");
+
+  const uint64_t Address = PCIFixupSection->getAddress();
+  DataExtractor DE = DataExtractor(PCIFixupSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  uint64_t EntryID = 0;
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && !DE.eof(Cursor)) {
+    const uint16_t Vendor = DE.getU16(Cursor);
+    const uint16_t Device = DE.getU16(Cursor);
+    const uint32_t Class = DE.getU32(Cursor);
+    const uint32_t ClassShift = DE.getU32(Cursor);
+    const uint64_t HookAddress =
+        Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading .pci_fixup: %s",
+                               toString(Cursor.takeError()).c_str());
+
+    ++EntryID;
+
+    if (opts::DumpPCIFixups) {
+      BC.outs() << "PCI fixup entry: " << EntryID << "\n\tVendor       0x"
+                << Twine::utohexstr(Vendor) << "\n\tDevice:      0x"
+                << Twine::utohexstr(Device) << "\n\tClass:       0x"
+                << Twine::utohexstr(Class) << "\n\tClassShift:  0x"
+                << Twine::utohexstr(ClassShift) << "\n\tHookAddress: 0x"
+                << Twine::utohexstr(HookAddress) << '\n';
+    }
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(HookAddress);
+    if (!BF && opts::Verbosity) {
+      BC.outs() << "BOLT-INFO: no function matches address 0x"
+                << Twine::utohexstr(HookAddress)
+                << " of hook from .pci_fixup\n";
+    }
+
+    if (!BF || !BC.shouldEmit(*BF))
+      continue;
+
+    if (const uint64_t Offset = HookAddress - BF->getAddress()) {
+      BC.errs() << "BOLT-WARNING: PCI fixup detected in the middle of function "
+                << *BF << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
+      BF->setSimple(false);
+    }
+  }
+
+  BC.outs() << "BOLT-INFO: parsed " << EntryID << " PCI fixup entries\n";
 
   return Error::success();
 }
