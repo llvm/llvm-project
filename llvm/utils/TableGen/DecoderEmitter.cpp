@@ -471,8 +471,9 @@ protected:
   // Populates the field of the insn given the start position and the number of
   // consecutive bits to scan for.
   //
-  // Returns false if there exists any uninitialized bit value in the range.
-  // Returns true, otherwise.
+  // Returns a pair of values (indicator, field), where the indicator is false
+  // if there exists any uninitialized bit value in the range and true if all
+  // bits are well-known. The second value is the potentially populated field.
   std::pair<bool, uint64_t> fieldFromInsn(const insn_t &Insn, unsigned StartBit,
                                           unsigned NumBits) const;
 
@@ -1042,8 +1043,9 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
 // Populates the field of the insn given the start position and the number of
 // consecutive bits to scan for.
 //
-// Returns false if and on the first uninitialized bit value encountered.
-// Returns true, otherwise.
+// Returns a pair of values (indicator, field), where the indicator is false
+// if there exists any uninitialized bit value in the range and true if all
+// bits are well-known. The second value is the potentially populated field.
 std::pair<bool, uint64_t> FilterChooser::fieldFromInsn(const insn_t &Insn,
                                                        unsigned StartBit,
                                                        unsigned NumBits) const {
@@ -1759,14 +1761,14 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   bool AllUseless = true;
   unsigned BestScore = 0;
 
-  for (const auto &[I, TFilter] : enumerate(Filters)) {
-    unsigned Usefulness = TFilter.usefulness();
+  for (const auto &[Idx, Filter] : enumerate(Filters)) {
+    unsigned Usefulness = Filter.usefulness();
 
     if (Usefulness)
       AllUseless = false;
 
     if (Usefulness > BestScore) {
-      BestIndex = I;
+      BestIndex = Idx;
       BestScore = Usefulness;
     }
   }
@@ -2023,13 +2025,13 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   // Gather the outputs/inputs of the instruction, so we can find their
   // positions in the encoding.  This assumes for now that they appear in the
   // MCInst in the order that they're listed.
-  std::vector<std::tuple<Init *, StringInit *>> InOutOperands;
+  std::vector<std::pair<Init *, StringRef>> InOutOperands;
   DagInit *Out = Def.getValueAsDag("OutOperandList");
   DagInit *In = Def.getValueAsDag("InOperandList");
-  for (const auto &ArgPair :
-       zip(concat<Init *const>(Out->getArgs(), In->getArgs()),
-           concat<StringInit *const>(Out->getArgNames(), In->getArgNames())))
-    InOutOperands.push_back(ArgPair);
+  for (const auto &[Idx, Arg] : enumerate(Out->getArgs()))
+    InOutOperands.push_back(std::pair(Arg, Out->getArgNameStr(Idx)));
+  for (const auto &[Idx, Arg] : enumerate(In->getArgs()))
+    InOutOperands.push_back(std::pair(Arg, In->getArgNameStr(Idx)));
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
@@ -2056,8 +2058,9 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
     parseVarLenInstOperand(EncodingDef, InsnOperands, CGI);
   } else {
     // For each operand, see if we can figure out where it is encoded.
-    for (auto [OpInit, OpNameInit] : InOutOperands) {
-      StringRef OpName = OpNameInit ? OpNameInit->getValue() : "";
+    for (const auto &Op : InOutOperands) {
+      Init *OpInit = Op.first;
+      StringRef OpName = Op.second;
 
       // We're ready to find the instruction encoding locations for this
       // operand.
