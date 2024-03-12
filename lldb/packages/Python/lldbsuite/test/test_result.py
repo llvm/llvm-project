@@ -160,7 +160,9 @@ class LLDBTestResult(unittest.TextTestResult):
 
     def hardMarkAsSkipped(self, test):
         getattr(test, test._testMethodName).__func__.__unittest_skip__ = True
-        getattr(test, test._testMethodName).__func__.__unittest_skip_why__ = (
+        getattr(
+            test, test._testMethodName
+        ).__func__.__unittest_skip_why__ = (
             "test case does not fall in any category of interest for this run"
         )
 
