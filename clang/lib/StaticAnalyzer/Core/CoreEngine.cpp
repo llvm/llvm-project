@@ -655,7 +655,7 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
   if (!isFeasible(branch))
     return nullptr;
 
-  ProgramPoint Loc = BlockEdge(C.getBlock(), branch ? DstT:DstF,
+  ProgramPoint Loc = BlockEdge(C.getBlock(), branch ? DstT : DstF,
                                NodePred->getLocationContext());
   ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
   return Succ;
