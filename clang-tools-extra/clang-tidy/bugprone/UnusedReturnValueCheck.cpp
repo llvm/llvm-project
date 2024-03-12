@@ -165,20 +165,20 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
   auto MatchedDirectCallExpr = expr(
-      callExpr(
-          callee(functionDecl(
-              // Don't match void overloads of checked functions.
-              unless(returns(voidType())),
-              // Don't match copy or move assignment operator.
-              unless(cxxMethodDecl(isOperatorOverloading(
-                  {OO_Equal, OO_PlusEqual, OO_MinusEqual, OO_StarEqual,
-                   OO_SlashEqual, OO_PercentEqual, OO_CaretEqual, OO_AmpEqual,
-                   OO_PipeEqual, OO_LessLessEqual, OO_GreaterGreaterEqual}))),
-              anyOf(
-                  isInstantiatedFrom(
-                      matchers::matchesAnyListedName(CheckedFunctions)),
-                  returns(hasCanonicalType(hasDeclaration(namedDecl(
-                      matchers::matchesAnyListedName(CheckedReturnTypes)))))))))
+      callExpr(callee(functionDecl(
+                   // Don't match void overloads of checked functions.
+                   unless(returns(voidType())),
+                   // Don't match copy or move assignment operator.
+                   unless(cxxMethodDecl(isOperatorOverloading(
+                       {OO_Equal, OO_PlusEqual, OO_MinusEqual, OO_StarEqual,
+                        OO_SlashEqual, OO_PercentEqual, OO_CaretEqual,
+                        OO_AmpEqual, OO_PipeEqual, OO_LessLessEqual,
+                        OO_GreaterGreaterEqual, OO_PlusPlus, OO_MinusMinus}))),
+                   anyOf(isInstantiatedFrom(
+                             matchers::matchesAnyListedName(CheckedFunctions)),
+                         returns(hasCanonicalType(hasDeclaration(
+                             namedDecl(matchers::matchesAnyListedName(
+                                 CheckedReturnTypes)))))))))
           .bind("match"));
 
   auto CheckCastToVoid =
