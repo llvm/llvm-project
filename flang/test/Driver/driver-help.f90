@@ -28,7 +28,6 @@
 ! HELP-NEXT: -fbackslash             Specify that backslash in string introduces an escape character
 ! HELP-NEXT: -fcolor-diagnostics     Enable colors in diagnostics
 ! HELP-NEXT: -fconvert=<value>       Set endian conversion of data for unformatted files
-! HELP-NEXT: -fcuda                  Enable CUDA 
 ! HELP-NEXT: -fdefault-double-8      Set the default double precision kind to an 8 byte wide type
 ! HELP-NEXT: -fdefault-integer-8     Set the default integer and logical kind to an 8 byte wide type
 ! HELP-NEXT: -fdefault-real-8        Set the default real kind to an 8 byte wide type
@@ -166,7 +165,6 @@
 ! HELP-FC1-NEXT: -fbackslash             Specify that backslash in string introduces an escape character
 ! HELP-FC1-NEXT: -fcolor-diagnostics     Enable colors in diagnostics
 ! HELP-FC1-NEXT: -fconvert=<value>       Set endian conversion of data for unformatted files
-! HELP-FC1-NEXT: -fcuda                  Enable CUDA
 ! HELP-FC1-NEXT: -fdebug-dump-all        Dump symbols and the parse tree after the semantic checks
 ! HELP-FC1-NEXT: -fdebug-dump-parse-tree-no-sema
 ! HELP-FC1-NEXT:                         Dump the parse tree (skips the semantic checks)
