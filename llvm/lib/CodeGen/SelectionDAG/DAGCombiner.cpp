@@ -2826,6 +2826,36 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
+// Attempt to form ext(avgflooru(A, B)) from add(and(A, B), lshr(xor(A, B), 1))
+static SDValue combineFixedwidthToAVG(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::ADD && "ADD node is required here");
+  SDValue And = N->getOperand(0);
+  SDValue Lshr = N->getOperand(1);
+  if (And.getOpcode() != ISD::AND || Lshr.getOpcode() != ISD::SRL)
+    return SDValue();
+  SDValue Xor = Lshr.getOperand(0);
+  if (Xor.getOpcode() != ISD::XOR)
+    return SDValue();
+  SDValue And1 = And.getOperand(0);
+  SDValue And2 = And.getOperand(1);
+  SDValue Xor1 = Xor.getOperand(0);
+  SDValue Xor2 = Xor.getOperand(1);
+  if (Xor1 != And1 && Xor2 != And2)
+    return SDValue();
+  // Is the right shift using an immediate value of 1?
+  ConstantSDNode *N1C = isConstOrConstSplat(Lshr.getOperand(1));
+  if (!N1C || N1C->getAPIntValue() != 1)
+    return SDValue();
+  EVT VT = And.getValueType();
+  SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isOperationLegalOrCustom(ISD::AVGFLOORU, VT))
+    return SDValue();
+  return DAG.getNode(ISD::AVGFLOORU, DL, VT,
+                     DAG.getExtOrTrunc(false, And1, DL, VT),
+                     DAG.getExtOrTrunc(false, And2, DL, VT));
+}
+
 SDValue DAGCombiner::visitADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -2839,6 +2869,10 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return V;
 
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
+    return V;
+
+  // Try to match AVG fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVG(N, DAG))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
