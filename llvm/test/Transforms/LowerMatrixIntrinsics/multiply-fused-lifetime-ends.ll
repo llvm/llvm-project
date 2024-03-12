@@ -6,15 +6,11 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; Tests to make sure no loads are introduced after a lifetime.end by multiply
 ; fusion.
 
-; FIXME: Currently the tests are mis-compiled, with loads being introduced after
-;       llvm.lifetime.end calls.
-
 define void @lifetime_for_first_arg_before_multiply(ptr noalias %B, ptr noalias %C) {
 ; CHECK-LABEL: @lifetime_for_first_arg_before_multiply(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca <4 x double>, align 32
 ; CHECK-NEXT:    call void @init(ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
@@ -77,6 +73,7 @@ define void @lifetime_for_first_arg_before_multiply(ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -95,7 +92,6 @@ define void @lifetime_for_second_arg_before_multiply(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca <4 x double>, align 32
 ; CHECK-NEXT:    call void @init(ptr [[B]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
@@ -158,6 +154,7 @@ define void @lifetime_for_second_arg_before_multiply(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -177,7 +174,6 @@ define void @lifetime_for_first_arg_before_multiply_load_from_offset(ptr noalias
 ; CHECK-NEXT:    [[A:%.*]] = alloca <8 x double>, align 64
 ; CHECK-NEXT:    call void @init(ptr [[A]])
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[GEP_8]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
@@ -240,6 +236,7 @@ define void @lifetime_for_first_arg_before_multiply_load_from_offset(ptr noalias
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -261,7 +258,6 @@ define void @lifetime_for_first_arg_before_multiply_lifetime_does_not_dominate(p
 ; CHECK-NEXT:    call void @init(ptr [[A]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
@@ -352,7 +348,6 @@ define void @lifetime_for_second_arg_before_multiply_lifetime_does_not_dominate(
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 0
@@ -441,10 +436,9 @@ define void @lifetime_for_ptr_first_arg_before_multiply(ptr noalias %A, ptr noal
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A:%.*]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
@@ -528,15 +522,13 @@ define void @lifetime_for_both_ptr_args_before_multiply(ptr noalias %A, ptr noal
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B:%.*]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A:%.*]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
@@ -618,7 +610,6 @@ define void @lifetime_for_ptr_select_before_multiply(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    [[P:%.*]] = select i1 [[C_0:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[P]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[P]], i64 0
