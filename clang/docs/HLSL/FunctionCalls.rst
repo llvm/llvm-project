@@ -166,10 +166,9 @@ magic that needs to occur during IR generation.
 Array Temporaries
 -----------------
 
-The new ``ArrayParameterType`` is a non-array type which represents an array
-value. It is a sub-class of ``ConstantArrayType`` inheriting all the behaviors
-and methods of the parent except that it does not decay to a pointer during
-overload resolution or template type deduction.
+The new ``ArrayParameterType`` is a sub-class of ``ConstantArrayType``
+inheriting all the behaviors and methods of the parent except that it does not
+decay to a pointer during overload resolution or template type deduction.
 
 An argument of ``ConstantArrayType`` can be implicitly converted to an
 equivalent non-decayed ``ArrayParameterType`` if the underlying canonical
