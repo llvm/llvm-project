@@ -546,13 +546,13 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   const MCSymbolRefExpr *Sym = MCSymbolRefExpr::create(
       MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)), SRVK, Ctx);
 
-  // As of binutils 2.32, ld has a bogus TLS relaxation error when the GD/LD
+  // Before binutils 2.41, ld has a bogus TLS relaxation error when the GD/LD
   // code sequence using R_X86_64_GOTPCREL (instead of R_X86_64_GOTPCRELX) is
   // attempted to be relaxed to IE/LE (binutils PR24784). Work around the bug by
   // only using GOT when GOTPCRELX is enabled.
-  // TODO Delete the workaround when GOTPCRELX becomes commonplace.
+  // TODO Delete the workaround when rustc no longer relies on the hack
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
-                Ctx.getAsmInfo()->canRelaxRelocations();
+                Ctx.getTargetOptions()->X86RelaxRelocations;
 
   if (Is64Bits) {
     bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
@@ -1388,18 +1388,6 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   return MBBI;
 }
 
-static unsigned getRegisterWidth(const MCOperandInfo &Info) {
-  if (Info.RegClass == X86::VR128RegClassID ||
-      Info.RegClass == X86::VR128XRegClassID)
-    return 128;
-  if (Info.RegClass == X86::VR256RegClassID ||
-      Info.RegClass == X86::VR256XRegClassID)
-    return 256;
-  if (Info.RegClass == X86::VR512RegClassID)
-    return 512;
-  llvm_unreachable("Unknown register class!");
-}
-
 static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
   if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     // Skip mask operand.
@@ -1648,7 +1636,7 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
   CS << " = ";
 
   SmallVector<int> Mask;
-  unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+  unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
   assert((Width % DstEltBits) == 0 && (DstEltBits % SrcEltBits) == 0 &&
          "Illegal extension ratio");
   DecodeZeroExtendMask(SrcEltBits, DstEltBits, Width / DstEltBits, false, Mask);
@@ -1753,7 +1741,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPSHUFBZrmkz: {
     unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
       if (!Mask.empty())
@@ -1775,7 +1763,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPSZrmkz: {
     unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, 32, Width, Mask);
       if (!Mask.empty())
@@ -1796,7 +1784,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPDZrmkz: {
     unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, 64, Width, Mask);
       if (!Mask.empty())
@@ -1824,7 +1812,7 @@ static void addConstantComments(const MachineInstr *MI,
     }
 
     if (auto *C = X86::getConstantFromPool(*MI, 3)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
       if (!Mask.empty())
@@ -1835,7 +1823,7 @@ static void addConstantComments(const MachineInstr *MI,
 
   case X86::VPPERMrrm: {
     if (auto *C = X86::getConstantFromPool(*MI, 3)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
       if (!Mask.empty())

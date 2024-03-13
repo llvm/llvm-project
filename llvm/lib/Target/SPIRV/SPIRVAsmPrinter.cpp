@@ -450,7 +450,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
-    if (F.isDeclaration())
+    // Only operands of OpEntryPoint instructions are allowed to be
+    // <Entry Point> operands of OpExecutionMode
+    if (F.isDeclaration() || !isEntryPoint(F))
       continue;
     Register FReg = MAI->getFuncReg(&F);
     assert(FReg.isValid());

@@ -887,7 +887,7 @@ public:
 #include "TestTransformDialectExtensionTypes.cpp.inc"
         >();
 
-    auto verboseConstraint = [](PatternRewriter &rewriter,
+    auto verboseConstraint = [](PatternRewriter &rewriter, PDLResultList &,
                                 ArrayRef<PDLValue> pdlValues) {
       for (const PDLValue &pdlValue : pdlValues) {
         if (Operation *op = pdlValue.dyn_cast<Operation *>()) {

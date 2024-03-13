@@ -90,7 +90,7 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
     }
   }
 
-  return object::Archive::getDefaultKindForHost();
+  return object::Archive::getDefaultKind();
 }
 
 Expected<NewArchiveMember>
@@ -677,6 +677,13 @@ static bool isECObject(object::SymbolicFile &Obj) {
   return false;
 }
 
+bool isImportDescriptor(StringRef Name) {
+  return Name.starts_with(ImportDescriptorPrefix) ||
+         Name == StringRef{NullImportDescriptorSymbolName} ||
+         (Name.starts_with(NullThunkDataPrefix) &&
+          Name.ends_with(NullThunkDataSuffix));
+}
+
 static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
                                                   uint16_t Index,
                                                   raw_ostream &SymNames,
@@ -704,6 +711,10 @@ static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
       if (Map == &SymMap->Map) {
         Ret.push_back(SymNames.tell());
         SymNames << Name << '\0';
+        // If EC is enabled, then the import descriptors are NOT put into EC
+        // objects so we need to copy them to the EC map manually.
+        if (SymMap->UseECMap && isImportDescriptor(Name))
+          SymMap->ECMap[Name] = Index;
       }
     } else {
       Ret.push_back(SymNames.tell());
@@ -926,7 +937,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   ErrorOr<SmallString<128>> PathToOrErr = canonicalizePath(To);
   ErrorOr<SmallString<128>> DirFromOrErr = canonicalizePath(From);
   if (!PathToOrErr || !DirFromOrErr)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   const SmallString<128> &PathTo = *PathToOrErr;
   const SmallString<128> &DirFrom = sys::path::parent_path(*DirFromOrErr);

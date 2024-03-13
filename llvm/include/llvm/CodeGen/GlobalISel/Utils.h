@@ -368,7 +368,10 @@ LLT getCoverTy(LLT OrigTy, LLT TargetTy);
 /// If these are vectors with different element types, this will try to produce
 /// a vector with a compatible total size, but the element type of \p OrigTy. If
 /// this can't be satisfied, this will produce a scalar smaller than the
-/// original vector elements.
+/// original vector elements. It is an error to call this function where
+/// one argument is a fixed vector and the other is a scalable vector, since it
+/// is illegal to build a G_{MERGE|UNMERGE}_VALUES between fixed and scalable
+/// vectors.
 ///
 /// In the worst case, this returns LLT::scalar(1)
 LLVM_READNONE

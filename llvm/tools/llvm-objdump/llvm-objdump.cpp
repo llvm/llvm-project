@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -187,8 +188,10 @@ public:
   const BBAddrMap &getAddrMap() const { return AddrMap; }
 
   // Returns the PGO string associated with the entry of index `PGOBBEntryIndex`
-  // in `PGOMap`.
-  std::string constructPGOLabelString(size_t PGOBBEntryIndex) const {
+  // in `PGOMap`. If PrettyPGOAnalysis is true, prints BFI as relative frequency
+  // and BPI as percentage. Otherwise raw values are displayed.
+  std::string constructPGOLabelString(size_t PGOBBEntryIndex,
+                                      bool PrettyPGOAnalysis) const {
     if (!PGOMap.FeatEnable.hasPGOAnalysis())
       return "";
     std::string PGOString;
@@ -210,7 +213,12 @@ public:
           PGOMap.BBEntries[PGOBBEntryIndex];
 
       if (PGOMap.FeatEnable.BBFreq) {
-        PGOSS << "Frequency: " << Twine(PGOBBEntry.BlockFreq.getFrequency());
+        PGOSS << "Frequency: ";
+        if (PrettyPGOAnalysis)
+          printRelativeBlockFreq(PGOSS, PGOMap.BBEntries.front().BlockFreq,
+                                 PGOBBEntry.BlockFreq);
+        else
+          PGOSS << Twine(PGOBBEntry.BlockFreq.getFrequency());
         if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
           PGOSS << ", ";
         }
@@ -219,9 +227,12 @@ public:
         PGOSS << "Successors: ";
         interleaveComma(
             PGOBBEntry.Successors, PGOSS,
-            [&PGOSS](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
+            [&](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
               PGOSS << "BB" << SE.ID << ":";
-              PGOSS.write_hex(SE.Prob.getNumerator());
+              if (PrettyPGOAnalysis)
+                PGOSS << "[" << SE.Prob << "]";
+              else
+                PGOSS.write_hex(SE.Prob.getNumerator());
             });
       }
     }
@@ -330,6 +341,7 @@ static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
 static bool SymbolizeOperands;
+static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
@@ -1149,7 +1161,11 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
     SymbolAddresses.insert(Sym.Addr);
 
   for (const wasm::WasmFunction &Function : Obj.functions()) {
-    uint64_t Address = Function.CodeSectionOffset;
+    // This adjustment mirrors the one in WasmObjectFile::getSymbolAddress.
+    uint32_t Adjustment = Obj.isRelocatableObject() || Obj.isSharedObject()
+                              ? 0
+                              : Section->getAddress();
+    uint64_t Address = Function.CodeSectionOffset + Adjustment;
     // Only add fallback symbols for functions not already present in the symbol
     // table.
     if (SymbolAddresses.count(Address))
@@ -1354,6 +1370,10 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
     const SymbolRef::Type SymType = unwrapOrError(Symbol.getType(), FileName);
     return SymbolInfoTy(Addr, Name, SymType, /*IsMappingSymbol=*/false,
                         /*IsXCOFF=*/true);
+  } else if (Obj.isWasm()) {
+    uint8_t SymType =
+        cast<WasmObjectFile>(&Obj)->getWasmSymbol(Symbol).Info.Kind;
+    return SymbolInfoTy(Addr, Name, SymType, false);
   } else {
     uint8_t Type =
         Obj.isELF() ? getElfSymbolType(Obj, Symbol) : (uint8_t)ELF::STT_NOTYPE;
@@ -1366,8 +1386,9 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
                                           uint8_t Type) {
   if (Obj.isXCOFF() && (SymbolDescription || TracebackTable))
     return SymbolInfoTy(std::nullopt, Addr, Name, std::nullopt, false);
-  else
-    return SymbolInfoTy(Addr, Name, Type);
+  if (Obj.isWasm())
+    return SymbolInfoTy(Addr, Name, wasm::WASM_SYMBOL_TYPE_SECTION);
+  return SymbolInfoTy(Addr, Name, Type);
 }
 
 static void collectBBAddrMapLabels(
@@ -1400,8 +1421,8 @@ static void collectBBAddrMapLabels(
 
     std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
     Labels[BBAddress].push_back(
-        {LabelString,
-         FunctionMap->constructPGOLabelString(NumBBEntriesBeforeRange + I)});
+        {LabelString, FunctionMap->constructPGOLabelString(
+                          NumBBEntriesBeforeRange + I, PrettyPGOAnalysisMap)});
   }
 }
 
@@ -2937,6 +2958,10 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
                               Symbol.getRawDataRefImpl()));
   else if (O.isELF())
     outs() << '\t' << format(Fmt, ELFSymbolRef(Symbol).getSize());
+  else if (O.isWasm())
+    outs() << '\t'
+           << format(Fmt, static_cast<uint64_t>(
+                              cast<WasmObjectFile>(O).getSymbolSize(Symbol)));
 
   if (O.isELF()) {
     if (!SymbolVersions.empty()) {
@@ -3459,6 +3484,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
   SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
+  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+    reportCmdLineWarning("--symbolize-operands must be enabled for "
+                         "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);

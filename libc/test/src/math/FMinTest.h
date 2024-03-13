@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -83,3 +86,5 @@ public:
   TEST_F(LlvmLibcFMinTest, NegInfArg) { testNegInfArg(&func); }                \
   TEST_F(LlvmLibcFMinTest, BothZero) { testBothZero(&func); }                  \
   TEST_F(LlvmLibcFMinTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H

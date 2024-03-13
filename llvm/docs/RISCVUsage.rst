@@ -101,6 +101,7 @@ on support follow.
      ``Smepmp``        Supported
      ``Ssaia``         Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -117,6 +118,7 @@ on support follow.
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
      ``Zawrs``         Assembly Support
      ``Zba``           Supported
      ``Zbb``           Supported
@@ -236,6 +238,11 @@ Supported
 ``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
+  .. _riscv-zacas-note:
+
+``Zacas``
+  amocas.w will be used for i32 cmpxchg. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+
 Experimental Extensions
 =======================
 
@@ -250,10 +257,7 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
 
 ``experimental-zabha``
-  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
-
-``experimental-zacas``
-  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`__.
+  LLVM implements the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
@@ -327,6 +331,15 @@ The current vendor extensions supported are:
 
 ``XSfvcp``
   LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
+
+``XSfvqmaccdod``, ``XSfvqmaccqoq``
+  LLVM implements `version 1.1.0 of the SiFive Int8 Matrix Multiplication Extensions Specification <https://sifive.cdn.prismic.io/sifive/1a2ad85b-d818-49f7-ba83-f51f1731edbe_int8-matmul-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
+
+``Xsfvfnrclipxfqf``
+  LLVM implements `version 1.0.0 of the FP32-to-int8 Ranged Clip Instructions Extension Specification <https://sifive.cdn.prismic.io/sifive/0aacff47-f530-43dc-8446-5caa2260ece0_xsfvfnrclipxfqf-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
+
+``Xsfvfwmaccqqq``
+  LLVM implements `version 1.0.0 of the Matrix Multiply Accumulate Instruction Extension Specification <https://sifive.cdn.prismic.io/sifive/c391d53e-ffcf-4091-82f6-c37bf3e883ed_xsfvfwmaccqqq-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
 
 ``XCVbitmanip``
   LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`__ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.

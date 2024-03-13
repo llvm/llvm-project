@@ -36,7 +36,7 @@ string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 # The following only works with the Ninja generator in CMake >= 3.0.
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
   "Define the maximum number of concurrent compilation jobs (Ninja only).")
-if(LLVM_RAM_PER_COMPILE_JOB OR LLVM_RAM_PER_LINK_JOB)
+if(LLVM_RAM_PER_COMPILE_JOB OR LLVM_RAM_PER_LINK_JOB OR LLVM_RAM_PER_TABLEGEN_JOB)
   cmake_host_system_information(RESULT available_physical_memory QUERY AVAILABLE_PHYSICAL_MEMORY)
   cmake_host_system_information(RESULT number_of_logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
 endif()
@@ -86,6 +86,28 @@ elseif(LLVM_PARALLEL_LINK_JOBS)
   message(WARNING "Job pooling is only available with Ninja generators.")
 endif()
 
+set(LLVM_PARALLEL_TABLEGEN_JOBS "" CACHE STRING
+  "Define the maximum number of concurrent tablegen jobs (Ninja only).")
+if(LLVM_RAM_PER_TABLEGEN_JOB)
+  math(EXPR jobs_with_sufficient_memory "${available_physical_memory} / ${LLVM_RAM_PER_TABLEGEN_JOB}" OUTPUT_FORMAT DECIMAL)
+  if (jobs_with_sufficient_memory LESS 1)
+    set(jobs_with_sufficient_memory 1)
+  endif()
+  if (jobs_with_sufficient_memory LESS number_of_logical_cores)
+    set(LLVM_PARALLEL_TABLEGEN_JOBS "${jobs_with_sufficient_memory}")
+  else()
+    set(LLVM_PARALLEL_TABLEGEN_JOBS "${number_of_logical_cores}")
+  endif()
+endif()
+if(LLVM_PARALLEL_TABLEGEN_JOBS)
+  if(NOT CMAKE_GENERATOR MATCHES "Ninja")
+    message(WARNING "Job pooling is only available with Ninja generators.")
+  else()
+    set_property(GLOBAL APPEND PROPERTY JOB_POOLS tablegen_job_pool=${LLVM_PARALLEL_TABLEGEN_JOBS})
+    # Job pool for tablegen is set on the add_custom_command
+  endif()
+endif()
+
 if( LLVM_ENABLE_ASSERTIONS )
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
   if( NOT MSVC )
@@ -120,7 +142,18 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
+# If we are targeting a GPU architecture in a runtimes build we want to ignore
+# all the standard flag handling.
+if(LLVM_RUNTIMES_GPU_BUILD)
+  return()
+endif()
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
+  # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
+  # using assert(). An explicit check is performed here.
+  if (NOT LLVM_ENABLE_ASSERTIONS)
+    message(FATAL_ERROR "LLVM_ENABLE_EXPENSIVE_CHECKS requires LLVM_ENABLE_ASSERTIONS \"ON\".")
+  endif()
   add_compile_definitions(EXPENSIVE_CHECKS)
 
   # In some libstdc++ versions, std::min_element is not constexpr when
@@ -138,10 +171,6 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   else()
     add_compile_definitions(_GLIBCXX_ASSERTIONS)
   endif()
-endif()
-
-if(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS)
-  add_compile_definitions(EXPERIMENTAL_DEBUGINFO_ITERATORS)
 endif()
 
 if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)

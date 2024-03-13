@@ -350,7 +350,7 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__algorithm/min.h>
 #include <__algorithm/min_element.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__config>
 #include <__functional/operations.h>
 #include <__memory/addressof.h>
@@ -2435,7 +2435,7 @@ template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator*=(const _Expr& __v) {
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
-    *__t *= std::__get(__v,__i);
+    *__t *= std::__get(__v, __i);
   return *this;
 }
 
@@ -2444,7 +2444,7 @@ template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator/=(const _Expr& __v) {
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
-    *__t /= std::__get(__v,__i);
+    *__t /= std::__get(__v, __i);
   return *this;
 }
 
