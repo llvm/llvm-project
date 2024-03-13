@@ -123,6 +123,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FORT_CHECK_POINTER_DEALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      checkPointerDeallocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_CHECK_POINTER_DEALLOCATION=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 }
 
