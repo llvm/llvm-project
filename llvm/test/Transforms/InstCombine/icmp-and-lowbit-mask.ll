@@ -453,6 +453,24 @@ define i1 @src_is_notmask_shl(i8 %x_in, i8 %y, i1 %cond) {
   ret i1 %r
 }
 
+define i1 @src_is_notmask_x_xor_neg_x(i8 %x_in, i8 %y, i1 %cond) {
+; CHECK-LABEL: @src_is_notmask_x_xor_neg_x(
+; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
+; CHECK-NEXT:    [[NEG_Y:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[NOTMASK0:%.*]] = xor i8 [[NEG_Y]], [[Y]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i8 [[NOTMASK0]], i8 7
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[TMP3]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = xor i8 %x_in, 123
+  %neg_y = sub i8 0, %y
+  %nmask0 = xor i8 %y, %neg_y
+  %notmask = select i1 %cond, i8 %nmask0, i8 -8
+  %and = and i8 %x, %notmask
+  %r = icmp eq i8 %and, 0
+  ret i1 %r
+}
+
 define i1 @src_is_notmask_shl_fail_multiuse_invert(i8 %x_in, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @src_is_notmask_shl_fail_multiuse_invert(
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 122
