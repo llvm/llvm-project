@@ -49,6 +49,11 @@ void addDescriptiveNameChecker(AnalysisASTConsumer &AnalysisConsumer,
   });
 }
 
+bool runChecker(StringRef Code, std::string &Output) {
+  return runCheckerOnCode<addDescriptiveNameChecker>(Code.str(), Output,
+                                                     /*OnlyEmitWarnings=*/true);
+}
+
 TEST(MemRegionDescriptiveNameTest, ConcreteIntElementRegionIndex) {
   StringRef Code = R"cpp(
 void reportDescriptiveName(int *p);
@@ -59,8 +64,7 @@ void top() {
 })cpp";
 
   std::string Output;
-  ASSERT_TRUE(runCheckerOnCode<addDescriptiveNameChecker>(
-      Code.str(), Output, /*OnlyEmitWarnings=*/true));
+  ASSERT_TRUE(runChecker(Code, Output));
   EXPECT_EQ(Output, "DescriptiveNameChecker: array[1]\n");
 }
 
@@ -74,8 +78,7 @@ void top() {
 })cpp";
 
   std::string Output;
-  ASSERT_TRUE(runCheckerOnCode<addDescriptiveNameChecker>(
-      Code.str(), Output, /*OnlyEmitWarnings=*/true));
+  ASSERT_TRUE(runChecker(Code, Output));
   EXPECT_EQ(Output, "DescriptiveNameChecker: array[index]\n");
 }
 
