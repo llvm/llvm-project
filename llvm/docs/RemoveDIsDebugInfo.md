@@ -40,7 +40,7 @@ This will all happen transparently without needing to think about it!
 
 ## What exactly have you replaced debug intrinsics with?
 
-We're using a dedicated C++ class called `DbgRecord` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DbgRecord` object in any LLVM IR program; these `DbgRecord`s are represented in the IR as non-instruction debug records, as described in the [Source Level Debugging](https://llvm.org/docs/SourceLevelDebugging.html#debug-records) document. This class has a set of subclasses that store exactly the same information as is stored in debugging intrinsics. Each one also has almost entirely the same set of methods, that behave in the same way:
+We're using a dedicated C++ class called `DbgRecord` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DbgRecord` object in any LLVM IR program; these `DbgRecord`s are represented in the IR as non-instruction debug records, as described in the [Source Level Debugging](./SourceLevelDebugging.rst#_debug_records) document. This class has a set of subclasses that store exactly the same information as is stored in debugging intrinsics. Each one also has almost entirely the same set of methods, that behave in the same way:
 
   https://llvm.org/docs/doxygen/classllvm_1_1DbgRecord.html
   https://llvm.org/docs/doxygen/classllvm_1_1DPValue.html
@@ -48,7 +48,7 @@ We're using a dedicated C++ class called `DbgRecord` to store debug info, with a
 
 This allows you to treat a `DPValue` as if it's a `dbg.value`/`dbg.declare`/`dbg.assign` intrinsic most of the time, for example in generic (auto-param) lambdas, and the same for `DPLabel` and `dbg.label`s.
 
-## How do these DbgRecords fit into the instruction stream?
+## How do these `DbgRecords` fit into the instruction stream?
 
 Like so:
 
