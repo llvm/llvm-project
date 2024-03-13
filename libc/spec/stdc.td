@@ -530,6 +530,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"nextafterf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"nextafter", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"nextafterl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"nextafterf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nexttowardf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<LongDoubleType>]>,
           FunctionSpec<"nexttoward", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<LongDoubleType>]>,
