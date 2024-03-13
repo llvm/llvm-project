@@ -178,6 +178,9 @@ namespace llvm {
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
 
+    bool SeenNewDbgInfoFormat = false;
+    bool SeenOldDbgInfoFormat = false;
+
     std::string SourceFileName;
 
   public:
@@ -366,6 +369,7 @@ namespace llvm {
     bool parseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
+    bool parseRangeAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 
@@ -573,6 +577,7 @@ namespace llvm {
     bool parseMDNodeTail(MDNode *&N);
     bool parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts);
     bool parseMetadataAttachment(unsigned &Kind, MDNode *&MD);
+    bool parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS);
     bool parseInstructionMetadata(Instruction &Inst);
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool parseOptionalFunctionMetadata(Function &F);

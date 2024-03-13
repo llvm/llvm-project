@@ -213,6 +213,9 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if this is a dummy descriptor.
   bool isDummy() const { return IsDummy; }
+
+  void dump() const;
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

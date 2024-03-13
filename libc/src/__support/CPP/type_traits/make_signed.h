@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 namespace LIBC_NAMESPACE::cpp {
 
@@ -26,7 +27,7 @@ template <> struct make_signed<unsigned int> : type_identity<int> {};
 template <> struct make_signed<unsigned long> : type_identity<long> {};
 template <>
 struct make_signed<unsigned long long> : type_identity<long long> {};
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template <> struct make_signed<__int128_t> : type_identity<__int128_t> {};
 template <> struct make_signed<__uint128_t> : type_identity<__int128_t> {};
 #endif

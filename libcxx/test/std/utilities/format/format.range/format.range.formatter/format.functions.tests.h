@@ -39,8 +39,10 @@ void test_char_default(TestFunction check, ExceptionTest check_exception, auto&&
 
   // when one is present there is no escaping,
   check(SV("[H, e, l, l, o]"), SV("{::}"), input);
+  check(SV("[H, e, l, l, o]"), SV("{::<}"), input);
   // unless forced by the type specifier.
   check(SV("['H', 'e', 'l', 'l', 'o']"), SV("{::?}"), input);
+  check(SV("['H', 'e', 'l', 'l', 'o']"), SV("{::<?}"), input);
 
   // ***** underlying has no format-spec
 
@@ -57,7 +59,6 @@ void test_char_default(TestFunction check, ExceptionTest check_exception, auto&&
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -157,7 +158,6 @@ void test_char_string(TestFunction check, ExceptionTest check_exception, auto&& 
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<s}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<s}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<s}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-s}"), input);
@@ -181,6 +181,7 @@ void test_char_string(TestFunction check, ExceptionTest check_exception, auto&& 
 
   // *** type ***
   check_exception("Type m requires a pair or a tuple with two elements", SV("{:m}"), input);
+  check_exception("The type option contains an invalid value for a character formatting argument", SV("{::<s}"), input);
 
   // ***** Only underlying has a format-spec
   check_exception("Type s and an underlying format specification can't be used together", SV("{:s:}"), input);
@@ -210,7 +211,7 @@ void test_char_escaped_string(TestFunction check, ExceptionTest check_exception,
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<?s}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<?s}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<?s}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::<?s}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-?s}"), input);
@@ -315,7 +316,6 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -423,7 +423,6 @@ void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -534,7 +533,6 @@ void test_floating_point(TestFunction check, ExceptionTest check_exception, auto
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -673,7 +671,6 @@ void test_pointer(TestFunction check, ExceptionTest check_exception, auto&& inpu
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
@@ -782,7 +779,6 @@ void test_string(TestFunction check, ExceptionTest check_exception, auto&& input
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
@@ -895,7 +891,6 @@ void test_status(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -978,7 +973,6 @@ void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& i
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -1019,7 +1013,6 @@ void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& i
   check(SV("[_(1, 'a')__, _(42, '*')_]"), SV("{::_^{}}"), input, 11);
   check(SV("[###(1, 'a'), ##(42, '*')]"), SV("{::#>{}}"), input, 11);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -1098,7 +1091,6 @@ void test_tuple_int(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -1138,7 +1130,6 @@ void test_tuple_int(TestFunction check, ExceptionTest check_exception) {
   check(SV("[_(42)__, _(99)__]"), SV("{::_^{}}"), input, 7);
   check(SV("[###(42), ###(99)]"), SV("{::#>{}}"), input, 7);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
@@ -1203,7 +1194,6 @@ void test_tuple_int_int_int(TestFunction check, ExceptionTest check_exception) {
 
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -1243,7 +1233,6 @@ void test_tuple_int_int_int(TestFunction check, ExceptionTest check_exception) {
   check(SV("[_(42, 99, 0)__, _(1, 10, 100)_]"), SV("{::_^{}}"), input, 14);
   check(SV("[###(42, 99, 0), ##(1, 10, 100)]"), SV("{::#>{}}"), input, 14);
 
-  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
   check_exception("The format string contains an invalid escape sequence", SV("{::}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 

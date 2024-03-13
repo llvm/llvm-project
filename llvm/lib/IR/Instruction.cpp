@@ -23,6 +23,16 @@
 using namespace llvm;
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+                         InstListType::iterator InsertBefore)
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+
+  // When called with an iterator, there must be a block to insert into.
+  BasicBlock *BB = InsertBefore->getParent();
+  assert(BB && "Instruction to insert before is not in a basic block!");
+  insertInto(BB, InsertBefore);
+}
+
+Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          Instruction *InsertBefore)
   : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
 
@@ -36,11 +46,11 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          BasicBlock *InsertAtEnd)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
 
-  // append this instruction into the basic block
-  assert(InsertAtEnd && "Basic block to append to may not be NULL!");
-  insertInto(InsertAtEnd, InsertAtEnd->end());
+  // If requested, append this instruction into the basic block.
+  if (InsertAtEnd)
+    insertInto(InsertAtEnd, InsertAtEnd->end());
 }
 
 Instruction::~Instruction() {
@@ -62,7 +72,6 @@ Instruction::~Instruction() {
   // mapping in LLVMContext.
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
-
 
 void Instruction::setParent(BasicBlock *P) {
   Parent = P;
@@ -140,12 +149,25 @@ void Instruction::insertBefore(BasicBlock &BB,
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
     if (SrcMarker && !SrcMarker->empty()) {
-      adoptDbgValues(&BB, InsertPos, false);
+      // If this assertion fires, the calling code is about to insert a PHI
+      // after debug-records, which would form a sequence like:
+      //     %0 = PHI
+      //     #dbg_value
+      //     %1 = PHI
+      // Which is de-normalised and undesired -- hence the assertion. To avoid
+      // this, you must insert at that position using an iterator, and it must
+      // be aquired by calling getFirstNonPHIIt / begin or similar methods on
+      // the block. This will signal to this behind-the-scenes debug-info
+      // maintenence code that you intend the PHI to be ahead of everything,
+      // including any debug-info.
+      assert(!isa<PHINode>(this) && "Inserting PHI after debug-records!");
+      adoptDbgRecords(&BB, InsertPos, false);
     }
   }
 
   // If we're inserting a terminator, check if we need to flush out
-  // TrailingDPValues.
+  // TrailingDPValues. Inserting instructions at the end of an incomplete
+  // block is handled by the code block above.
   if (isTerminator())
     getParent()->flushTerminatorDbgValues();
 }
@@ -210,7 +232,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
     // If we're inserting at point I, and not in front of the DPValues attached
     // there, then we should absorb the DPValues attached to I.
     if (!InsertAtHead && NextMarker && !NextMarker->empty()) {
-      adoptDbgValues(&BB, I, false);
+      adoptDbgRecords(&BB, I, false);
     }
   }
 
@@ -222,7 +244,7 @@ iterator_range<DbgRecord::self_iterator> Instruction::cloneDebugInfoFrom(
     const Instruction *From, std::optional<DbgRecord::self_iterator> FromHere,
     bool InsertAtHead) {
   if (!From->DbgMarker)
-    return DPMarker::getEmptyDPValueRange();
+    return DPMarker::getEmptyDbgRecordRange();
 
   assert(getParent()->IsNewDbgInfoFormat);
   assert(getParent()->IsNewDbgInfoFormat ==
@@ -248,15 +270,15 @@ Instruction::getDbgReinsertionPosition() {
   return NextMarker->StoredDPValues.begin();
 }
 
-bool Instruction::hasDbgValues() const { return !getDbgValueRange().empty(); }
+bool Instruction::hasDbgRecords() const { return !getDbgRecordRange().empty(); }
 
-void Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
-                                 bool InsertAtHead) {
+void Instruction::adoptDbgRecords(BasicBlock *BB, BasicBlock::iterator It,
+                                  bool InsertAtHead) {
   DPMarker *SrcMarker = BB->getMarker(It);
   auto ReleaseTrailingDPValues = [BB, It, SrcMarker]() {
     if (BB->end() == It) {
       SrcMarker->eraseFromParent();
-      BB->deleteTrailingDPValues();
+      BB->deleteTrailingDbgRecords();
     }
   };
 
@@ -292,13 +314,13 @@ void Instruction::adoptDbgValues(BasicBlock *BB, BasicBlock::iterator It,
   }
 }
 
-void Instruction::dropDbgValues() {
+void Instruction::dropDbgRecords() {
   if (DbgMarker)
-    DbgMarker->dropDbgValues();
+    DbgMarker->dropDbgRecords();
 }
 
-void Instruction::dropOneDbgValue(DbgRecord *DPV) {
-  DbgMarker->dropOneDbgValue(DPV);
+void Instruction::dropOneDbgRecord(DbgRecord *DPV) {
+  DbgMarker->dropOneDbgRecord(DPV);
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {

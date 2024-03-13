@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/foo.cppm -I%t -emit-module-interface -o %t/foo.pcm
 // RUN: %clang_cc1 -fprebuilt-module-path=%t -std=c++20 %t/use.cpp -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++20 %t/foo.cppm -I%t -emit-reduced-module-interface -o %t/foo.pcm
+// RUN: %clang_cc1 -fprebuilt-module-path=%t -std=c++20 %t/use.cpp -fsyntax-only -verify
+
 //--- foo.cppm
 export module foo;
 export template <typename T = int>

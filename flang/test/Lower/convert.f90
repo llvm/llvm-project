@@ -34,8 +34,8 @@ end
 ! ALL: fir.has_value %[[VAL_0]] : !fir.char<1,[[OPT_STR_LEN]]>
 
 ! ALL: fir.global linkonce @_QQEnvironmentDefaults.list constant : tuple<i[[int_size:.*]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>> {
-! ALL: %[[VAL_0:.*]] = fir.undefined tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>
 ! ALL: %[[VAL_1:.*]] = arith.constant 1 : i[[int_size]]
+! ALL: %[[VAL_0:.*]] = fir.undefined tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>
 ! ALL: %[[VAL_2:.*]] = fir.insert_value %[[VAL_0]], %[[VAL_1]], [0 : index] : (tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>, i[[int_size]]) -> tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>
 ! ALL: %[[VAL_3:.*]] = fir.address_of(@_QQEnvironmentDefaults.items) : !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>
 ! ALL: %[[VAL_4:.*]] = fir.insert_value %[[VAL_2]], %[[VAL_3]], [1 : index] : (tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>) -> tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>
