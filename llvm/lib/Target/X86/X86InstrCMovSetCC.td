@@ -31,14 +31,15 @@ let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in
 multiclass Cfcmov<X86TypeInfo t> {
 let isCommutable = 1, SchedRW = [WriteCMOV] in {
 let Predicates = [HasCMOV, HasCF, In64BitMode] in {
-  def rr : ITy<0x40, MRMSrcRegCC, t, (outs t.RegClass:$dst),
+  def rr : ITy<0x40, MRMDestRegCC, t, (outs t.RegClass:$dst),
                (ins t.RegClass:$src1, ccode:$cond),
                "cfcmov${cond}", unaryop_ndd_args,
-               [(set t.RegClass:$dst, (X86cmov 0,
-                                 t.RegClass:$src1, timm:$cond, EFLAGS))]>, UseEFLAGS, EVEX, T_MAP4;
-  def rr_REV : ITy<0x40, MRMDestRegCC, t, (outs t.RegClass:$dst),
+               [(set t.RegClass:$dst,
+                 (X86cmov 0, t.RegClass:$src1, timm:$cond, EFLAGS))]>, UseEFLAGS, NF;
+  def rr_REV : ITy<0x40, MRMSrcRegCC, t, (outs t.RegClass:$dst),
                    (ins t.RegClass:$src1, ccode:$cond),
-                   "cfcmov${cond}", unaryop_ndd_args, []>, UseEFLAGS, NF;
+                   "cfcmov${cond}", unaryop_ndd_args,
+                   []>, UseEFLAGS, EVEX, T_MAP4;
 }
 let Predicates = [HasCMOV, HasCF, HasNDD, In64BitMode] in
   def rr_ND : ITy<0x40, MRMSrcRegCC, t, (outs t.RegClass:$dst),

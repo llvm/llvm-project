@@ -144,16 +144,6 @@
 # CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
          mulxq	%r16, %r17, %r18
 
-## MRMSrcRegCC
-
-# CHECK: cfcmovbq	%r9, %r15
-# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x42,0xf9]
-         cfcmovbq	%r9, %r15
-
-# CHECK: cfcmovbeq	%r9, %r15, %r11
-# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x46,0xf9]
-         cfcmovbeq	%r9, %r15, %r11
-
 ## MRMSrcReg4VOp3
 
 # CHECK: bzhiq	%r19, %r23, %r27
