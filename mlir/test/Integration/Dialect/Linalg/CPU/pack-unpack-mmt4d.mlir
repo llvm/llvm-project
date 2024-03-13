@@ -1,6 +1,6 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize -func-bufferize -cse -canonicalize -convert-vector-to-scf -test-lower-to-llvm -o %t
+// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -test-lower-to-llvm -o %t -o %t
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = mlir-cpu-runner %t -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
@@ -9,13 +9,13 @@
 
 // RUN: %{run} | FileCheck %s
 
-/// End-to-end test for computing matrix-multiplicatin using linalg.mmt4d. In
+/// End-to-end test for computing matrix-multiplication using linalg.mmt4d. In
 /// particular, demonstrates how the following MLIR sequence (implemented in @mmt4d):
 ///
 ///   A_pack = tensor.pack A
 ///   B_pack = tensor.pack B
 ///   C_pack = tensor.pack C
-///   out_pack = linalg.mmt4d(A_pack, B_ pack, C_pack)
+///   out_pack = linalg.mmt4d(A_pack, B_pack, C_pack)
 ///
 /// is equivalent to:
 ///
@@ -55,7 +55,7 @@ func.func @main() {
   %xf = tensor.cast %C_mmt4d : tensor<7x13xi32> to tensor<*xi32>
   call @printMemrefI32(%xf) : (tensor<*xi32>) -> ()
 
-  // Matrix multiplicaiton with linalg.matmul
+  // Matrix multiplication with linalg.matmul
   // CHECK: Unranked Memref
   // CHECK:  [193,   200,   207,   214,   221,   228,   235,   242,   249,   256,   263,   270,   277]
   // CHECK:  [194,   201,   208,   215,   222,   229,   236,   243,   250,   257,   264,   271,   278]
@@ -87,7 +87,7 @@ func.func @mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi3
   %C_pack_empty = tensor.empty() : tensor<2x2x8x8xi32>
 
   // Pack matrices
-  %A_pack = tensor.pack %A padding_value(%zero : i32) outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %A_pack_empty : tensor<7x16xi32> -> tensor<2x16x8x1xi32>
+  %A_pack = tensor.pack %A padding_value(%zero : i32) inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %A_pack_empty : tensor<7x16xi32> -> tensor<2x16x8x1xi32>
   %B_pack = tensor.pack %B padding_value(%zero : i32) outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [8, 1] into %B_pack_empty : tensor<16x13xi32> -> tensor<2x16x8x1xi32>
   %C_pack = tensor.pack %C padding_value(%zero : i32) outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %C_pack_empty : tensor<7x13xi32> -> tensor<2x2x8x8xi32>
 
