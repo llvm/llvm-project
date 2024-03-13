@@ -14,8 +14,9 @@ constexpr int i(int n) {
   return m;
 }
 
-constexpr int g() {
-  goto test; // expected-warning {{use of this statement in a constexpr function is incompatible with C++ standards before C++23}}
+constexpr int g() { // expected-error {{constexpr function never produces a constant expression}}
+  goto test;        // expected-note {{subexpression not valid in a constant expression}} \
+           // expected-warning {{use of this statement in a constexpr function is incompatible with C++ standards before C++23}}
 test:
   return 0;
 }
@@ -28,8 +29,9 @@ struct NonLiteral { // expected-note 2 {{'NonLiteral' is not literal}}
   NonLiteral() {}
 };
 
-constexpr void non_literal() {
-  NonLiteral n; // expected-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++23}}
+constexpr void non_literal() { // expected-error {{constexpr function never produces a constant expression}}
+  NonLiteral n;                // expected-note {{non-literal type 'NonLiteral' cannot be used in a constant expression}} \
+                               // expected-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++23}}
 }
 
 constexpr void non_literal2(bool b) {
