@@ -19,7 +19,6 @@
 //     pos_type seekoff(off_type off, ios_base::seekdir way,
 //                      ios_base::openmode which = ios_base::in | ios_base::out) override;
 
-#include <algorithm>
 #include <cassert>
 #include <span>
 #include <spanstream>
