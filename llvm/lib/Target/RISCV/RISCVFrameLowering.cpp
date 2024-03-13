@@ -777,9 +777,9 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
     // space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    uint64_t Spimm = alignTo(std::min(StackSize, (uint64_t)48), 16);
     MBBI->getOperand(1).setImm(Spimm);
-    StackSize -= Spimm;
+    StackSize -= std::min(StackSize, Spimm);
   }
 
   // Deallocate stack

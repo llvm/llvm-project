@@ -31,7 +31,7 @@ define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sb a0, 0(s0)
 ; RV32-NEXT:    mv a0, s1
-; RV32-NEXT:    cm.popret {ra, s0-s1}, 24
+; RV32-NEXT:    cm.popret {ra, s0-s1}, 32
 entry:
   br label %while.body
 
