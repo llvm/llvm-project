@@ -10,9 +10,9 @@
 #define LLVMIR_ATTRDEFS
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
+include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
-include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -386,7 +386,7 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     /// Get a copy of this type attr but with the recursive ID set to `recId`.
     DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
 
-    /// Build a rec-self instance using the provided recId.
+    /// Build a rec-self instance using the provided `recId`.
     static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
 
     /// @}

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines op, type, & attr interfaces for the LLVM dialect in MLIR.
+// This file defines interfaces for the LLVM dialect in MLIR.
 //
 //===----------------------------------------------------------------------===//
 
@@ -341,10 +341,10 @@ def LLVM_DIRecursiveTypeAttrInterface
         replaced with the closest parent attr of the same type with the same
         recId.
 
-    e.g. To represent a linked list struct:
+    For example, to represent a linked list struct:
 
       #rec_self = di_composite_type<recId = 0>
-      #ptr = di_derived_type<baseType: #struct_self, ...>
+      #ptr = di_derived_type<baseType: #rec_self, ...>
       #field = di_derived_type<name = "next", baseType: #ptr, ...>
       #rec = di_composite_type<recId = 0, name = "Node", elements: #field, ...>
       #var = di_local_variable<type = #rec, ...>

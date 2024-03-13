@@ -260,7 +260,6 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
         iter->second = recId;
       }
       unboundRecursiveSelfRefs.back().insert(recId);
-
       return cast<DINodeAttr>(recSelfCtor(recId));
     }
   }
@@ -393,7 +392,7 @@ DistinctAttr DebugImporter::getOrCreateDistinctID(llvm::DINode *node) {
   return id;
 }
 
-llvm::function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
 DebugImporter::getRecSelfConstructor(llvm::DINode *node) {
   using CtorType =
       llvm::function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;

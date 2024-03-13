@@ -99,8 +99,8 @@ private:
 
   /// A stack that stores the metadata nodes that are being traversed. The stack
   /// is used to detect cyclic dependencies during the metadata translation.
-  /// Nodes are pushed with a null value. If it is ever seen twice, it is given
-  /// a DistinctAttr ID, indicating that it is a recursive node.
+  /// A node is pushed with a null value. If it is ever seen twice, it is given
+  /// a recursive id attribute, indicating that it is a recursive node.
   llvm::MapVector<llvm::DINode *, DistinctAttr> translationStack;
   /// All the unbound recursive self references in the translation stack.
   SmallVector<DenseSet<DistinctAttr>> unboundRecursiveSelfRefs;

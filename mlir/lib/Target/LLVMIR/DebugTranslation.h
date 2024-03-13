@@ -101,7 +101,7 @@ private:
 
   /// Get a placeholder DICompositeType without recursing into the elements.
   llvm::DICompositeType *translateImplGetPlaceholder(DICompositeTypeAttr attr);
-  /// Fill out the DICompositeType placeholder by recursively translating the
+  /// Completes the DICompositeType `placeholder` by recursively translating the
   /// elements.
   void translateImplFillPlaceholder(DICompositeTypeAttr attr,
                                     llvm::DICompositeType *placeholder);
