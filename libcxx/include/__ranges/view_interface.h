@@ -51,16 +51,24 @@ class view_interface {
 public:
   template <class _D2 = _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty()
-    requires forward_range<_D2>
+    requires sized_range<_D2> || forward_range<_D2>
   {
-    return ranges::begin(__derived()) == ranges::end(__derived());
+    if constexpr (sized_range<_D2>) {
+      return ranges::size(__derived()) == 0;
+    } else {
+      return ranges::begin(__derived()) == ranges::end(__derived());
+    }
   }
 
   template <class _D2 = _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
-    requires forward_range<const _D2>
+    requires sized_range<const _D2> || forward_range<const _D2>
   {
-    return ranges::begin(__derived()) == ranges::end(__derived());
+    if constexpr (sized_range<const _D2>) {
+      return ranges::size(__derived()) == 0;
+    } else {
+      return ranges::begin(__derived()) == ranges::end(__derived());
+    }
   }
 
   template <class _D2 = _Derived>
