@@ -2821,7 +2821,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   return SDValue();
 }
 
-// Attempt to form ext(avgflooru(A, B)) from add(and(A, B), lshr(xor(A, B), 1))
+// Attempt to form avgflooru(A, B) from add(and(A, B), lshr(xor(A, B), 1))
 static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::ADD and "ADD node is required here");
   SDValue And = N->getOperand(0);
