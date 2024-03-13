@@ -368,6 +368,9 @@ The current vendor extensions supported are:
 ``XSiFivecflushdlone``
   LLVM implements `the SiFive sf.cflush.d.l1 instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
 
+``XSfcease``
+  LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+
 Experimental C Intrinsics
 =========================
 
