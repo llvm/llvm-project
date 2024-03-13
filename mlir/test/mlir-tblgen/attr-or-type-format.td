@@ -648,7 +648,7 @@ def TypeN : TestType<"TestP"> {
 // TYPE-LABEL: TestQType::parse
 // TYPE: if (auto result = [&]() -> ::mlir::OptionalParseResult {
 // TYPE:     auto odsCustomResult = parseAB(odsParser
-// TYPE:     if (!odsCustomResult) return {};
+// TYPE:     if (!odsCustomResult.has_value()) return {};
 // TYPE:     if (::mlir::failed(*odsCustomResult)) return ::mlir::failure();
 // TYPE:   return ::mlir::success();
 // TYPE: }(); result.has_value() && ::mlir::failed(*result)) {
