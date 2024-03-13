@@ -1036,9 +1036,9 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
     return hlfir::loadTrivialScalar(l, b, newAddr);
   };
   mlir::Type elementType = scalarAddress.getFortranElementType();
-  return hlfir::genElementalOp(loc, builder, elementType,
-                               elementalAddrOp.getShape(), typeParams,
-                               genKernel, !elementalAddrOp.isOrdered());
+  return hlfir::genElementalOp(
+      loc, builder, elementType, elementalAddrOp.getShape(), typeParams,
+      genKernel, !elementalAddrOp.isOrdered(), elementalAddrOp.getMold());
 }
 
 bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {

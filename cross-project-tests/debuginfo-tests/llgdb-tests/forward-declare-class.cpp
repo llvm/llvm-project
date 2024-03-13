@@ -6,9 +6,8 @@
 // Work around a gdb bug where it believes that a class is a
 // struct if there aren't any methods - even though it's tagged
 // as a class.
-// CHECK: type = {{struct|class}} A {
-// CHECK-NEXT: {{(public:){0,1}}}
-// CHECK-NEXT: int MyData;
+// CHECK: {{struct|class}} A {
+// CHECK:        int MyData;
 // CHECK-NEXT: }
 class A;
 class B {

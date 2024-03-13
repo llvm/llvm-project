@@ -1724,8 +1724,8 @@ def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
 
 // Return true if profile counter for containing block is hot.
 def int_experimental_hot : Intrinsic<[llvm_i1_ty], [],
-                                      [IntrInaccessibleMemOnly, IntrWriteMem,
-                                       IntrWillReturn, NoUndef<RetIndex>]>;
+                                     [IntrInaccessibleMemOnly, IntrWriteMem,
+                                      IntrWillReturn, NoUndef<RetIndex>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
