@@ -1311,7 +1311,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     // This alloca'ed pointer is used by the runtime to identify function
     // inovactions. It's just for pointer comparisons. It will never
     // be dereferenced.
-    FunctionInvocationId = IRB.CreateAlloca(IRB.getInt32Ty(), nullptr, "functionInvocationId");
+    FunctionInvocationId =
+        IRB.CreateAlloca(IRB.getInt32Ty(), nullptr, "functionInvocationId");
     FunctionInvocationId->setDebugLoc(FirstDL);
   } else {
     // This instruction effectively means %setjmpTableSize = 4.
