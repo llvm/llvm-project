@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 
+#ifdef LIBC_TARGET_ARCH_IS_GPU
 #include "src/__support/GPU/utils.h"
+#endif
 #include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE {
