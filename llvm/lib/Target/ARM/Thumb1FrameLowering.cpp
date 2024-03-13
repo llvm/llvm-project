@@ -1049,16 +1049,28 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
         continue;
 
       if (Reg == ARM::LR) {
-        if (!MBB.succ_empty() ||
-            MI->getOpcode() == ARM::TCRETURNdi ||
-            MI->getOpcode() == ARM::TCRETURNri)
-          // LR may only be popped into PC, as part of return sequence.
-          // If this isn't the return sequence, we'll need emitPopSpecialFixUp
-          // to restore LR the hard way.
-          // FIXME: if we don't pass any stack arguments it would be actually
+        if (!MBB.succ_empty() || MI->getOpcode() == ARM::TCRETURNdi ||
+            MI->getOpcode() == ARM::TCRETURNri) {
+
+          // If we don't pass any stack arguments it would be actually
           // advantageous *and* correct to do the conversion to an ordinary call
           // instruction here.
-          continue;
+
+          // Get the MachineFrameInfo.
+          const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+          // Check if there are any stack arguments.
+          bool hasStackArgs = MFI.hasStackObjects();
+
+          // If we have stack args, then LR may only be popped into PC,
+          // as part of the return sequence.
+          //
+          // If this isn't the return sequence, and we have the stack to deal
+          // with, we'll need emitPopSpecialFixUp to restore LR the hard way.
+          if (hasStackArgs)
+            continue;
+        }
+
         // Special epilogue for vararg functions. See emitEpilogue
         if (IsVarArg)
           continue;
