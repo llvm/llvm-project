@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
@@ -81,6 +82,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 /// makeVTList - Return an instance of the SDVTList struct initialized with the
 /// specified members.
@@ -4290,21 +4292,15 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
     return isKnownToBeAPowerOfTwo(Val.getOperand(2), Depth + 1) &&
            isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1);
 
-  if (Val.getOpcode() == ISD::AND) {
-    // Looking for `x & -x` pattern:
-    // If x == 0:
-    //    x & -x -> 0
-    // If x != 0:
-    //    x & -x -> non-zero pow2
-    // so if we find the pattern return whether we know `x` is non-zero.
-    for (unsigned OpIdx = 0; OpIdx < 2; ++OpIdx) {
-      SDValue NegOp = Val.getOperand(OpIdx);
-      if (NegOp.getOpcode() == ISD::SUB &&
-          NegOp.getOperand(1) == Val.getOperand(1 - OpIdx) &&
-          isNullOrNullSplat(NegOp.getOperand(0)))
-        return isKnownNeverZero(Val.getOperand(1 - OpIdx), Depth);
-    }
-  }
+  // Looking for `x & -x` pattern:
+  // If x == 0:
+  //    x & -x -> 0
+  // If x != 0:
+  //    x & -x -> non-zero pow2
+  // so if we find the pattern return whether we know `x` is non-zero.
+  SDValue X;
+  if (sd_match(Val, m_And(m_Value(X), m_Sub(m_Zero(), m_Deferred(X)))))
+    return isKnownNeverZero(X, Depth);
 
   if (Val.getOpcode() == ISD::ZERO_EXTEND)
     return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
