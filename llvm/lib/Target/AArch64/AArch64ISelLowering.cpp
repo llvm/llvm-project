@@ -7751,13 +7751,23 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   // register allocator to pass call args in callee saved regs, without extra
   // copies to avoid these fake clobbers of actually-preserved GPRs.
   if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 ||
-      MI.getOpcode() == AArch64::MSRpstatePseudo)
+      MI.getOpcode() == AArch64::MSRpstatePseudo) {
     for (unsigned I = MI.getNumOperands() - 1; I > 0; --I)
       if (MachineOperand &MO = MI.getOperand(I);
           MO.isReg() && MO.isImplicit() && MO.isDef() &&
           (AArch64::GPR32RegClass.contains(MO.getReg()) ||
            AArch64::GPR64RegClass.contains(MO.getReg())))
         MI.removeOperand(I);
+
+    // The SVE vector length can change when entering/leaving streaming mode.
+    if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
+        MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
+                                              /*IsImplicit=*/true));
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
+                                              /*IsImplicit=*/true));
+    }
+  }
 
   // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that
   // have nothing to do with VG, were it not that they are used to materialise a
