@@ -817,6 +817,7 @@ bool ClauseProcessor::processTargetDepend(
   firOpBuilder.setInsertionPointToStart(&taskOp.getRegion().front());
   return true;
 }
+
 bool ClauseProcessor::processIf(
     omp::clause::If::DirectiveNameModifier directiveName,
     mlir::omp::IfClauseOps &result) const {
