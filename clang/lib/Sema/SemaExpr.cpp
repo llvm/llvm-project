@@ -17161,7 +17161,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.TypeQuals = Qualifiers();
       EPI.ExtInfo = Ext;
-      BlockTy = Context.getFunctionType(RetTy, FPT->getParamTypes(), EPI);
+      BlockTy = Context.getFunctionTypeWithResultType(BSI->FunctionType, RetTy, EPI);
     }
 
   // If we don't have a function type, just build one from nothing.

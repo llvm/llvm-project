@@ -3140,13 +3140,71 @@ const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
   return cast<FunctionType>(Result.getTypePtr());
 }
 
+// EPI is provided by the caller because in the case of adjustDeducedFunctionResultType, it
+// is copied entirely from the previous FunctionType, but with a block (ActOnBlockStmtExpr),
+// it is more complicated...
+QualType ASTContext::getFunctionTypeWithResultType(QualType OrigFuncType, QualType ResultType,
+  const FunctionProtoType::ExtProtoInfo &EPI) const
+{
+  // Might be wrapped in a macro qualified type.
+  if (const auto *MQT = dyn_cast<MacroQualifiedType>(OrigFuncType)) {
+    return getMacroQualifiedType(
+        getFunctionTypeWithResultType(MQT->getUnderlyingType(), ResultType, EPI),
+        MQT->getMacroIdentifier());
+  }
+
+  // Might have a calling-convention attribute.
+  if (const auto *AT = dyn_cast<AttributedType>(OrigFuncType)) {
+    return getAttributedType(
+        AT->getAttrKind(),
+        getFunctionTypeWithResultType(AT->getModifiedType(), ResultType, EPI),
+        getFunctionTypeWithResultType(AT->getEquivalentType(), ResultType, EPI));
+  }
+  
+  // Anything else must be a function type. Rebuild it with the new return value.
+  const auto *FPT = OrigFuncType->castAs<FunctionProtoType>();
+  return getFunctionType(ResultType, FPT->getParamTypes(), EPI);
+}
+
+#if 0
+static void examineType(const char* prefix, QualType QT, const char* term)
+{
+  llvm::outs() << prefix;
+  if (const auto *MQT = dyn_cast<MacroQualifiedType>(QT)) {
+    examineType( "MacroQualifiedType <", MQT->getUnderlyingType(), ">");
+  } else if (const auto *AT = dyn_cast<AttributedType>(QT)) {
+    examineType("AttributedType <", AT->getEquivalentType(), ">");
+  } else {
+    const auto *FPT = QT->castAs<FunctionProtoType>();
+    assert(FPT);
+    llvm::outs() << QT;
+  }
+  llvm::outs() << term;
+}
+#endif
+
 void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
                                                  QualType ResultType) {
   FD = FD->getMostRecentDecl();
   while (true) {
-    const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
+    QualType OrigFuncType = FD->getType();
+    const auto *FPT = OrigFuncType->castAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-    FD->setType(getFunctionType(ResultType, FPT->getParamTypes(), EPI));
+#if 1 // my new way
+    QualType NewFuncType = getFunctionTypeWithResultType(OrigFuncType, ResultType, EPI);
+#else // original way
+    QualType NewFuncType = getFunctionType(ResultType, FPT->getParamTypes(), EPI);
+#endif
+    /*llvm::outs() << "transform " << OrigFuncType << " -> " << NewFuncType << "\n";
+    llvm::outs() << " isConstQualified " << OrigFuncType.isConstQualified() << NewFuncType.isConstQualified() << "\n";
+    llvm::outs() << " isLocalConstQualified " << OrigFuncType.isLocalConstQualified() << NewFuncType.isLocalConstQualified() << "\n";
+    llvm::outs() << " const method " << FPT->isConst() << NewFuncType->castAs<FunctionProtoType>()->isConst() << "\n";
+    llvm::outs() << " canonical " << NewFuncType.getCanonicalType() << "\n";*/
+
+    /*examineType("original ", OrigFuncType, "\n");
+    examineType("deduced ", NewFuncType, "\n");*/
+
+    FD->setType(NewFuncType);
     if (FunctionDecl *Next = FD->getPreviousDecl())
       FD = Next;
     else

@@ -13830,6 +13830,33 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
 
+#if 0
+// Conflicting old bug fix attempt
+
+@@ -13719,10 +13719,23 @@
+   // it introduces a mapping of the original to the newly created
+   // transformed parameters.
+   TypeSourceInfo *NewCallOpTSI = nullptr;
++  // <rdar://117704214> Crash involving AttributedTypeLoc on lambda.
++  // Hack of a fix adapted from https://github.com/llvm/llvm-project/issues/58366
++  FunctionProtoTypeLoc NewCallOpFPTL;
+   {
+     TypeSourceInfo *OldCallOpTSI = E->getCallOperator()->getTypeSourceInfo();
+     auto OldCallOpFPTL =
+         OldCallOpTSI->getTypeLoc().getAs<FunctionProtoTypeLoc>();
++    AttributedTypeLoc OldCallOpATTL;
++    bool IsAttributed = false;
++    if (!OldCallOpFPTL) {
++      OldCallOpATTL = OldCallOpTSI->getTypeLoc().getAs<AttributedTypeLoc>();
++      assert(OldCallOpATTL);
++      OldCallOpFPTL =
++          OldCallOpATTL.getModifiedLoc().getAs<FunctionProtoTypeLoc>();
++      assert(OldCallOpFPTL);
++      IsAttributed = true;
++    }
+#endif
+
+
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since
   // it introduces a mapping of the original to the newly created
@@ -13867,8 +13894,38 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     if (NewCallOpType.isNull())
       return ExprError();
-    NewCallOpTSI =
-        NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
+
+    // NewCallOpTSI =
+    //     NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
+    if (IsAttributed) {
+      const AttributedType *oldType = OldCallOpATTL.getTypePtr();
+
+      const Attr *newAttr = getDerived().TransformAttr(OldCallOpATTL.getAttr());
+      if (!newAttr)
+        return ExprError();
+
+      QualType equivalentType =
+          getDerived().TransformType(oldType->getEquivalentType());
+      if (equivalentType.isNull())
+        return ExprError();
+      QualType result = SemaRef.Context.getAttributedType(
+          OldCallOpATTL.getAttrKind(), NewCallOpType, equivalentType);
+
+      AttributedTypeLoc newTL =
+          NewCallOpTLBuilder.push<AttributedTypeLoc>(result);
+      newTL.setAttr(newAttr);
+
+      NewCallOpTSI =
+          NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, result);
+      NewCallOpFPTL = NewCallOpTSI->getTypeLoc()
+                          .castAs<AttributedTypeLoc>()
+                          .getModifiedLoc()
+                          .castAs<FunctionProtoTypeLoc>();
+    } else {
+      NewCallOpTSI = NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context,
+                                                          NewCallOpType);
+      NewCallOpFPTL = NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
+    }
   }
 
   ArrayRef<ParmVarDecl *> Params;

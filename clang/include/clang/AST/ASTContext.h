@@ -1301,6 +1301,11 @@ public:
   /// Change the result type of a function type once it is deduced.
   void adjustDeducedFunctionResultType(FunctionDecl *FD, QualType ResultType);
 
+  /// Transform a function type to have the provided result type, preserving
+  /// AttributedType and MacroQualifiedType sugar.
+  QualType getFunctionTypeWithResultType(QualType OrigFuncType, QualType ResultType,
+    const FunctionProtoType::ExtProtoInfo &EPI) const;
+
   /// Get a function type and produce the equivalent function type with the
   /// specified exception specification. Type sugar that can be present on a
   /// declaration of a function with an exception specification is permitted
