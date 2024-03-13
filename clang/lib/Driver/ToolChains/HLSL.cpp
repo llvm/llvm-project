@@ -235,7 +235,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
         DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
                             l.getName());
       } else {
-        getDriver().Diag(diag::err_drv_hlsl_dxc_bad_argument_value)
+        getDriver().Diag(diag::err_drv_invalid_value)
             << "HV" << A->getValue();
       }
 

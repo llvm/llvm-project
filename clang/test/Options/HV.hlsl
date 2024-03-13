@@ -12,7 +12,7 @@
 // 2021: "-std=hlsl2021"
 // 202x: "-std=hlsl202x"
 // NO_HV-NOT: "-std="
-// CHECK-ERR: error: 'HV' dxc argument has invalid value 'gibberish'
+// CHECK-ERR: error: Driver argument 'HV' has invalid value 'gibberish'
 float4 main(float4 a : A) : SV_TARGET
 {
   return -a.yxxx;

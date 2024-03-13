@@ -753,8 +753,6 @@ def err_drv_hlsl_bad_shader_required_in_target : Error<
 
 def err_drv_hlsl_bad_shader_unsupported : Error<
   "%select{shader model|Vulkan environment|shader stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
-def err_drv_hlsl_dxc_bad_argument_value : Error<
-  "'%0' dxc argument has invalid value '%1'">;
 
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "
     "Resulting DXIL will not be validated or signed for use in release environments.">,
