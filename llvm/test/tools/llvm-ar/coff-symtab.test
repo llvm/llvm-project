@@ -16,7 +16,7 @@ RUN: llvm-nm --print-armap out3.a | FileCheck %s
 
 Create an empty archive with no symbol map, add a COFF file to it and check that the output archive is a COFF archive.
 
-RUN: llvm-ar rcS out4.a
+RUN: llvm-ar --format coff rcS out4.a
 RUN: llvm-ar rs out4.a coff-symtab.obj
 RUN: llvm-nm --print-armap out4.a | FileCheck %s
 
