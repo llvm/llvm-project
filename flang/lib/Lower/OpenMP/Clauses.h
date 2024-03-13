@@ -63,18 +63,18 @@ Object makeObject(const parser::Designator &dsg,
 Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx);
 
-inline auto makeObjectF(semantics::SemanticsContext &semaCtx) {
+inline auto makeObjectFn(semantics::SemanticsContext &semaCtx) {
   return [&](auto &&s) { return makeObject(s, semaCtx); };
 }
 
 template <typename T>
-SomeExpr makeExpr(T &&inp, semantics::SemanticsContext &semaCtx) {
-  auto maybeExpr = evaluate::ExpressionAnalyzer(semaCtx).Analyze(inp);
+SomeExpr makeExpr(T &&pftExpr, semantics::SemanticsContext &semaCtx) {
+  auto maybeExpr = evaluate::ExpressionAnalyzer(semaCtx).Analyze(pftExpr);
   assert(maybeExpr);
   return std::move(*maybeExpr);
 }
 
-inline auto makeExprF(semantics::SemanticsContext &semaCtx) {
+inline auto makeExprFn(semantics::SemanticsContext &semaCtx) {
   return [&](auto &&s) { return makeExpr(s, semaCtx); };
 }
 
@@ -90,7 +90,7 @@ List<ResultTy> makeList(ContainerTy &&container, FunctionTy &&func) {
 
 inline ObjectList makeList(const parser::OmpObjectList &objects,
                            semantics::SemanticsContext &semaCtx) {
-  return makeList(objects.v, makeObjectF(semaCtx));
+  return makeList(objects.v, makeObjectFn(semaCtx));
 }
 
 template <typename FuncTy, typename ElemTy,

@@ -265,7 +265,7 @@ Aligned make(const parser::OmpClause::Aligned &inp,
 
   return Aligned{{
       makeList(t0, semaCtx),
-      maybeApply(makeExprF(semaCtx), t1),
+      maybeApply(makeExprFn(semaCtx), t1),
   }};
 }
 
@@ -408,7 +408,7 @@ DeviceType make(const parser::OmpClause::DeviceType &inp,
 DistSchedule make(const parser::OmpClause::DistSchedule &inp,
                   semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::optional<parser::ScalarIntExpr>
-  return DistSchedule{maybeApply(makeExprF(semaCtx), inp.v)};
+  return DistSchedule{maybeApply(makeExprFn(semaCtx), inp.v)};
 }
 
 Enter make(const parser::OmpClause::Enter &inp,
@@ -499,13 +499,13 @@ Linear make(const parser::OmpClause::Linear &inp,
       common::visitors{
           [&](const wrapped::WithModifier &s) {
             return Linear{{Linear::Modifier{s.modifier.v},
-                           makeList(s.names, makeObjectF(semaCtx)),
-                           maybeApply(makeExprF(semaCtx), s.step)}};
+                           makeList(s.names, makeObjectFn(semaCtx)),
+                           maybeApply(makeExprFn(semaCtx), s.step)}};
           },
           [&](const wrapped::WithoutModifier &s) {
             return Linear{{std::nullopt,
-                           makeList(s.names, makeObjectF(semaCtx)),
-                           maybeApply(makeExprF(semaCtx), s.step)}};
+                           makeList(s.names, makeObjectFn(semaCtx)),
+                           maybeApply(makeExprFn(semaCtx), s.step)}};
           },
       },
       inp.v.u);
@@ -542,7 +542,7 @@ Nocontext make(const parser::OmpClause::Nocontext &inp,
 Nontemporal make(const parser::OmpClause::Nontemporal &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::list<parser::Name>
-  return Nontemporal{makeList(inp.v, makeObjectF(semaCtx))};
+  return Nontemporal{makeList(inp.v, makeObjectFn(semaCtx))};
 }
 
 Novariants make(const parser::OmpClause::Novariants &inp,
@@ -578,7 +578,7 @@ OmpxDynCgroupMem make(const parser::OmpClause::OmpxDynCgroupMem &inp,
 Ordered make(const parser::OmpClause::Ordered &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::optional<parser::ScalarIntConstantExpr>
-  return Ordered{maybeApply(makeExprF(semaCtx), inp.v)};
+  return Ordered{maybeApply(makeExprFn(semaCtx), inp.v)};
 }
 
 Order make(const parser::OmpClause::Order &inp,
@@ -596,7 +596,7 @@ Order make(const parser::OmpClause::Order &inp,
 Partial make(const parser::OmpClause::Partial &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::optional<parser::ScalarIntConstantExpr>
-  return Partial{maybeApply(makeExprF(semaCtx), inp.v)};
+  return Partial{maybeApply(makeExprFn(semaCtx), inp.v)};
 }
 
 Priority make(const parser::OmpClause::Priority &inp,
@@ -652,7 +652,7 @@ Schedule make(const parser::OmpClause::Schedule &inp,
   };
 
   return Schedule{
-      {maybeApply(convert, t0), t1, maybeApply(makeExprF(semaCtx), t2)}};
+      {maybeApply(convert, t0), t1, maybeApply(makeExprFn(semaCtx), t2)}};
 }
 
 Shared make(const parser::OmpClause::Shared &inp,
@@ -670,7 +670,7 @@ Simdlen make(const parser::OmpClause::Simdlen &inp,
 Sizes make(const parser::OmpClause::Sizes &inp,
            semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::list<parser::ScalarIntExpr>
-  return Sizes{makeList(inp.v, makeExprF(semaCtx))};
+  return Sizes{makeList(inp.v, makeExprFn(semaCtx))};
 }
 
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,
@@ -697,7 +697,7 @@ To make(const parser::OmpClause::To &inp,
 Uniform make(const parser::OmpClause::Uniform &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::list<parser::Name>
-  return Uniform{makeList(inp.v, makeObjectF(semaCtx))};
+  return Uniform{makeList(inp.v, makeObjectFn(semaCtx))};
 }
 
 UseDeviceAddr make(const parser::OmpClause::UseDeviceAddr &inp,
