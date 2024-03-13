@@ -62,4 +62,4 @@ cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
-ninja -C -k 0 "${BUILD_DIR}" ${targets}
+ninja -C "${BUILD_DIR}" -k 0 ${targets}
