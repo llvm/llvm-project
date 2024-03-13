@@ -16,11 +16,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
-// Necessary for llvm::DebugCompressionType::None
-#include "llvm/Target/TargetOptions.h"
 #include <optional>
 
 namespace llvm {
