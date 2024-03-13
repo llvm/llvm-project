@@ -1715,8 +1715,6 @@ static bool CheckLiteralType(Sema &SemaRef, Sema::CheckConstexprKind Kind,
 static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
                                                const CXXDestructorDecl *DD,
                                                Sema::CheckConstexprKind Kind) {
-  assert(!SemaRef.getLangOpts().CPlusPlus23 &&
-         "this check is obsolete for C++23");
   auto Check = [&](SourceLocation Loc, QualType T, const FieldDecl *FD) {
     const CXXRecordDecl *RD =
         T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
@@ -1748,8 +1746,6 @@ static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
 static bool CheckConstexprParameterTypes(Sema &SemaRef,
                                          const FunctionDecl *FD,
                                          Sema::CheckConstexprKind Kind) {
-  assert(!SemaRef.getLangOpts().CPlusPlus23 &&
-         "this check is obsolete for C++23");
   unsigned ArgIndex = 0;
   const auto *FT = FD->getType()->castAs<FunctionProtoType>();
   for (FunctionProtoType::param_type_iterator i = FT->param_type_begin(),
@@ -1771,8 +1767,6 @@ static bool CheckConstexprParameterTypes(Sema &SemaRef,
 /// true. If not, produce a suitable diagnostic and return false.
 static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
                                      Sema::CheckConstexprKind Kind) {
-  assert(!SemaRef.getLangOpts().CPlusPlus23 &&
-         "this check is obsolete for C++23");
   if (CheckLiteralType(SemaRef, Kind, FD->getLocation(), FD->getReturnType(),
                        diag::err_constexpr_non_literal_return,
                        FD->isConsteval()))
@@ -1862,18 +1856,16 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
       }
     }
 
-    // - its return type shall be a literal type; (removed in C++23)
-    if (!getLangOpts().CPlusPlus23 &&
-        !CheckConstexprReturnType(*this, NewFD, Kind))
+    // - its return type shall be a literal type;
+    if (!CheckConstexprReturnType(*this, NewFD, Kind))
       return false;
   }
 
   if (auto *Dtor = dyn_cast<CXXDestructorDecl>(NewFD)) {
     // A destructor can be constexpr only if the defaulted destructor could be;
     // we don't need to check the members and bases if we already know they all
-    // have constexpr destructors. (removed in C++23)
-    if (!getLangOpts().CPlusPlus23 &&
-        !Dtor->getParent()->defaultedDestructorIsConstexpr()) {
+    // have constexpr destructors.
+    if (!Dtor->getParent()->defaultedDestructorIsConstexpr()) {
       if (Kind == CheckConstexprKind::CheckValid)
         return false;
       if (!CheckConstexprDestructorSubobjects(*this, Dtor, Kind))
@@ -1881,9 +1873,8 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     }
   }
 
-  // - each of its parameter types shall be a literal type; (removed in C++23)
-  if (!getLangOpts().CPlusPlus23 &&
-      !CheckConstexprParameterTypes(*this, NewFD, Kind))
+  // - each of its parameter types shall be a literal type;
+  if (!CheckConstexprParameterTypes(*this, NewFD, Kind))
     return false;
 
   Stmt *Body = NewFD->getBody();
@@ -2466,8 +2457,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   // function", so is not checked in CheckValid mode.
   SmallVector<PartialDiagnosticAt, 8> Diags;
   if (Kind == Sema::CheckConstexprKind::Diagnose &&
-      !Expr::isPotentialConstantExpr(Dcl, Diags) &&
-      !SemaRef.getLangOpts().CPlusPlus23) {
+      !Expr::isPotentialConstantExpr(Dcl, Diags)) {
     SemaRef.Diag(Dcl->getLocation(),
                  diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
@@ -7545,23 +7535,21 @@ static bool defaultedSpecialMemberIsConstexpr(
 
   // C++1y [class.copy]p26:
   //   -- [the class] is a literal type, and
-  if (!Ctor && !ClassDecl->isLiteral() && !S.getLangOpts().CPlusPlus23)
+  if (!Ctor && !ClassDecl->isLiteral())
     return false;
 
   //   -- every constructor involved in initializing [...] base class
   //      sub-objects shall be a constexpr constructor;
   //   -- the assignment operator selected to copy/move each direct base
   //      class is a constexpr function, and
-  if (!S.getLangOpts().CPlusPlus23) {
-    for (const auto &B : ClassDecl->bases()) {
-      const RecordType *BaseType = B.getType()->getAs<RecordType>();
-      if (!BaseType)
-        continue;
-      CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
-      if (!specialMemberIsConstexpr(S, BaseClassDecl, CSM, 0, ConstArg,
-                                    InheritedCtor, Inherited))
-        return false;
-    }
+  for (const auto &B : ClassDecl->bases()) {
+    const RecordType *BaseType = B.getType()->getAs<RecordType>();
+    if (!BaseType)
+      continue;
+    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
+    if (!specialMemberIsConstexpr(S, BaseClassDecl, CSM, 0, ConstArg,
+                                  InheritedCtor, Inherited))
+      return false;
   }
 
   //   -- every constructor involved in initializing non-static data members
@@ -7571,22 +7559,20 @@ static bool defaultedSpecialMemberIsConstexpr(
   //   -- for each non-static data member of X that is of class type (or array
   //      thereof), the assignment operator selected to copy/move that member is
   //      a constexpr function
-  if (!S.getLangOpts().CPlusPlus23) {
-    for (const auto *F : ClassDecl->fields()) {
-      if (F->isInvalidDecl())
-        continue;
-      if (CSM == Sema::CXXDefaultConstructor && F->hasInClassInitializer())
-        continue;
-      QualType BaseType = S.Context.getBaseElementType(F->getType());
-      if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
-        CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(RecordTy->getDecl());
-        if (!specialMemberIsConstexpr(S, FieldRecDecl, CSM,
-                                      BaseType.getCVRQualifiers(),
-                                      ConstArg && !F->isMutable()))
-          return false;
-      } else if (CSM == Sema::CXXDefaultConstructor) {
+  for (const auto *F : ClassDecl->fields()) {
+    if (F->isInvalidDecl())
+      continue;
+    if (CSM == Sema::CXXDefaultConstructor && F->hasInClassInitializer())
+      continue;
+    QualType BaseType = S.Context.getBaseElementType(F->getType());
+    if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
+      CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(RecordTy->getDecl());
+      if (!specialMemberIsConstexpr(S, FieldRecDecl, CSM,
+                                    BaseType.getCVRQualifiers(),
+                                    ConstArg && !F->isMutable()))
         return false;
-      }
+    } else if (CSM == Sema::CXXDefaultConstructor) {
+      return false;
     }
   }
 
@@ -7872,17 +7858,18 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       MD->isConstexpr() && !Constexpr &&
       MD->getTemplatedKind() == FunctionDecl::TK_NonTemplate) {
         if (!MD->isConsteval() && RD->getNumVBases()) {
-          Diag(MD->getBeginLoc(),
-               diag::err_incorrect_defaulted_constexpr_with_vb)
+          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr_with_vb)
               << CSM;
           for (const auto &I : RD->vbases())
             Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
         } else {
-          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr)
-              << CSM << MD->isConsteval();
+          Diag(MD->getBeginLoc(), MD->isConsteval()
+                                      ? diag::err_incorrect_defaulted_consteval
+                                      : diag::err_incorrect_defaulted_constexpr)
+              << CSM;
         }
-        HadError = true;
-        // FIXME: Explain why the special member can't be constexpr.
+    // FIXME: Explain why the special member can't be constexpr.
+    HadError = true;
   }
 
   if (First) {
@@ -9114,11 +9101,13 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   //    - if the function is a constructor or destructor, its class does not
   //      have any virtual base classes.
   if (FD->isConstexpr()) {
-    if (!getLangOpts().CPlusPlus23 &&
-        CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
+    if (CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
         CheckConstexprParameterTypes(*this, FD, CheckConstexprKind::Diagnose) &&
         !Info.Constexpr) {
-      Diag(FD->getBeginLoc(), diag::err_defaulted_comparison_constexpr_mismatch)
+      Diag(FD->getBeginLoc(),
+           getLangOpts().CPlusPlus23
+               ? diag::warn_cxx23_compat_defaulted_comparison_constexpr_mismatch
+               : diag::ext_defaulted_comparison_constexpr_mismatch)
           << FD->isImplicit() << (int)DCK << FD->isConsteval();
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
                                   DefaultedComparisonAnalyzer::ExplainConstexpr)
