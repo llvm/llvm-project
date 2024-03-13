@@ -1959,7 +1959,7 @@ void SparseTensorDialect::initialize() {
       >();
   declarePromisedInterfaces<
       bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
-      NewOp, InsertOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
+      NewOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
       ToCoordinatesBufferOp, ToCoordinatesOp, ToPositionsOp, ToValuesOp>();
 }
 
