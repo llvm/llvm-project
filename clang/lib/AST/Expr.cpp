@@ -264,11 +264,14 @@ namespace {
 }
 
 QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
-  if (isa<EnumType>(this->getType()))
-    return this->getType();
-  else if (const auto *ECD = this->getEnumConstantDecl())
-    return Ctx.getTypeDeclType(cast<EnumDecl>(ECD->getDeclContext()));
-  return this->getType();
+  if (isa<EnumType>(getType()))
+    return getType();
+  if (const auto *ECD = getEnumConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    if (ED->isCompleteDefinition())
+      return Ctx.getTypeDeclType(ED);
+  }
+  return getType();
 }
 
 SourceLocation Expr::getExprLoc() const {
