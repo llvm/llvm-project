@@ -1,5 +1,8 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -O0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK32,NOOPT
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -O0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK64,NOOPT
+
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s --check-prefixes=CHECK,CHECK32,NOOPT
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefixes=CHECK,CHECK64,OPT
 
 ; RUN: llc -filetype=obj -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s -o %t32.o
 ; RUN: llvm-readobj %t32.o --syms --relocs | FileCheck %s -D#NFA=2 --check-prefix=OBJ32
@@ -23,15 +26,19 @@ define ptr @retptr() {
 
 attributes #0 = { "toc-data" }
 
-; CHECK:       .read:
-; CHECK:        la 3, i1[TD](2)
+; CHECK-LABEL: .read:
+; NOOPT:         la 3, i1[TD](2)
+; NOOPT:         lwz 3, 0(3)
+; OPT:           lwz 3, i1[TD](2)
 
-; CHECK:       .retptr:
-; CHECK:        la 3, i2[TD](2)
+; CHECK-LABEL: .retptr:
+; CHECK:         la 3, i2[TD](2)
+; CHECK-NEXT:    blr
 
 ; CHECK-DAG:   .toc
 ; CHECK:         .extern i1[TD]
-; CHECK:         .csect i2[TD]
+; CHECK32:       .csect i2[TD],2
+; CHECK64:       .csect i2[TD],3
 
 ; OBJ32:      Relocations [
 ; OBJ32-NEXT:   Section (index: 1) .text {
@@ -111,14 +118,14 @@ attributes #0 = { "toc-data" }
 ; OBJ64:      Relocations [
 ; OBJ64-NEXT:   Section (index: 1) .text {
 ; OBJ64-NEXT:     0x2 R_TOC i1([[#NFA+1]]) 0xF
-; OBJ64-NEXT:     0x26 R_TOC i2([[#NFA+15]]) 0xF
+; OBJ64-NEXT:     0x22 R_TOC i2([[#NFA+15]]) 0xF
 ; OBJ64-NEXT:   }
 ; OBJ64-NEXT:   Section (index: 2) .data {
-; OBJ64-NEXT:     0x48 R_POS .read([[#NFA+5]]) 0x3F
-; OBJ64-NEXT:     0x50 R_POS TOC([[#NFA+13]]) 0x3F
-; OBJ64-NEXT:     0x60 R_POS .retptr([[#NFA+7]]) 0x3F
-; OBJ64-NEXT:     0x68 R_POS TOC([[#NFA+13]]) 0x3F
-; OBJ64-NEXT:     0x78 R_POS i1([[#NFA+1]]) 0x3F
+; OBJ64-NEXT:     0x40 R_POS .read([[#NFA+5]]) 0x3F
+; OBJ64-NEXT:     0x48 R_POS TOC([[#NFA+13]]) 0x3F
+; OBJ64-NEXT:     0x58 R_POS .retptr([[#NFA+7]]) 0x3F
+; OBJ64-NEXT:     0x60 R_POS TOC([[#NFA+13]]) 0x3F
+; OBJ64-NEXT:     0x70 R_POS i1([[#NFA+1]]) 0x3F
 ; OBJ64-NEXT:   }
 ; OBJ64-NEXT: ]
 
@@ -144,7 +151,7 @@ attributes #0 = { "toc-data" }
 ; OBJ64:      Symbol {
 ; OBJ64:        Index: [[#NFA+13]]
 ; OBJ64-NEXT:   Name: TOC
-; OBJ64-NEXT:   Value (RelocatableAddress): 0x78
+; OBJ64-NEXT:   Value (RelocatableAddress): 0x70
 ; OBJ64-NEXT:   Section: .data
 ; OBJ64-NEXT:   Type: 0x0
 ; OBJ64-NEXT:   StorageClass: C_HIDEXT (0x6B)
@@ -163,7 +170,7 @@ attributes #0 = { "toc-data" }
 ; OBJ64:      Symbol {
 ; OBJ64:        Index: [[#NFA+15]]
 ; OBJ64-NEXT:   Name: i2
-; OBJ64-NEXT:   Value (RelocatableAddress): 0x78
+; OBJ64-NEXT:   Value (RelocatableAddress): 0x70
 ; OBJ64-NEXT:   Section: .data
 ; OBJ64-NEXT:   Type: 0x0
 ; OBJ64-NEXT:   StorageClass: C_EXT (0x2)
@@ -188,8 +195,8 @@ attributes #0 = { "toc-data" }
 ; DIS32-NEXT:                         00000026:  R_TOC	i2
 
 ; DIS64:      0000000000000000 <.read>:
-; DIS64-NEXT:        0: 38 62 00 00  	addi 3, 2, 0
+; DIS64-NEXT:        0: 80 62 00 00  	lwz 3, 0(2)
 ; DIS64-NEXT:                         0000000000000002:  R_TOC	i1
-; DIS64:      0000000000000024 <.retptr>:
-; DIS64-NEXT:       24: 38 62 00 00  	addi 3, 2, 0
-; DIS64-NEXT:                         0000000000000026:  R_TOC	i2
+; DIS64:      0000000000000020 <.retptr>:
+; DIS64-NEXT:       20: 38 62 00 00  	addi 3, 2, 0
+; DIS64-NEXT:                         0000000000000022:  R_TOC	i2
