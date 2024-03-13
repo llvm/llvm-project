@@ -2529,6 +2529,43 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
 }
 
+// Attempt to form avgceilu(A, B) from sub(or(A, B), lshr(xor(A, B), 1))
+static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::SUB and "SUB node is required here");
+  SDValue Or = N->getOperand(0);
+  SDValue Lshr = N->getOperand(1);
+  if (Or.getOpcode() != ISD::OR or Lshr.getOpcode() != ISD::SRL)
+    return SDValue();
+  SDValue Xor = Lshr.getOperand(0);
+  if (Xor.getOpcode() != ISD::XOR)
+    return SDValue();
+  SDValue Or1 = Or.getOperand(0);
+  SDValue Or2 = Or.getOperand(1);
+  SDValue Xor1 = Xor.getOperand(0);
+  SDValue Xor2 = Xor.getOperand(1);
+  if (Or1 == Xor2 and Or2 == Xor1) {
+    SDValue temp = Or1;
+    Or1 = Or2;
+    Or2 = temp;
+  } else if (Or1 != Xor1 or Or2 != Xor2)
+    return SDValue();
+  // Is the right shift using an immediate value of 1?
+  ConstantSDNode *N1C = isConstOrConstSplat(Lshr.getOperand(1));
+  if (!N1C or N1C->getAPIntValue() != 1)
+    return SDValue();
+  EVT VT = Or1.getValueType();
+  EVT NVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  if (VT.isVector())
+    VT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
+  else
+    VT = NVT;
+  SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isOperationLegalOrCustom(ISD::AVGCEILU, VT))
+    return SDValue();
+  return DAG.getNode(ISD::AVGCEILU, DL, VT, Or1, Or2);
+}
+
 /// Try to fold a 'not' shifted sign-bit with add/sub with constant operand into
 /// a shift and add with a different constant.
 static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
@@ -3857,6 +3894,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return V;
 
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
+    return V;
+
+  // Try to match AVGCEILU fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVGCEILU(N, DAG))
     return V;
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
