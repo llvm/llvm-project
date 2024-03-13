@@ -3400,10 +3400,17 @@ def int_amdgcn_permlane32_swap : ClangBuiltin<"__builtin_amdgcn_permlane32_swap"
 // gfx1210 intrinsics
 // ===----------------------------------------------------------------------===//
 
+// Async waits decrement ASYNCcnt and tensor waits decrement TENSORcnt which is
+// modeled as InaccessibleMem.
+class AMDGPUWaitAsyncIntrinsic :
+  Intrinsic<[], [llvm_i16_ty],
+  [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>, IntrHasSideEffects,
+   IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
 def int_amdgcn_s_wait_asynccnt :
-    ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitIntrinsic;
+    ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitAsyncIntrinsic;
 def int_amdgcn_s_wait_tensorcnt :
-    ClangBuiltin<"__builtin_amdgcn_s_wait_tensorcnt">, AMDGPUWaitIntrinsic;
+    ClangBuiltin<"__builtin_amdgcn_s_wait_tensorcnt">, AMDGPUWaitAsyncIntrinsic;
 
 def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
   ClangBuiltin<"__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64">,
@@ -3510,6 +3517,7 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable]
 >;
 
+// Async instructions increment ASYNCcnt which is modeled as InaccessibleMem.
 class AMDGPUAsyncClusterLoadLDS : Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
@@ -3518,7 +3526,7 @@ class AMDGPUAsyncClusterLoadLDS : Intrinsic <
                            //   bits [0-2] = th
                            //   bits [3-4] = scope
    llvm_i32_ty],           // workgroup broadcast mask (to M0)
-  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>,  NoCapture<ArgIndex<0>>,
+  [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>,  NoCapture<ArgIndex<0>>,
    NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
   "", [SDNPMemOperand]
 >;
@@ -3530,7 +3538,7 @@ class AMDGPUAsyncGlobalLoadStoreLDS : Intrinsic <
    llvm_i32_ty],           // gfx12+ cachepolicy:
                            //   bits [0-2] = th
                            //   bits [3-4] = scope
-  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+  [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
    NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree],
   "", [SDNPMemOperand]
 >;
