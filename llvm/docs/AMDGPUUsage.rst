@@ -1312,24 +1312,30 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu_metadata:
+
 LLVM IR Metadata
-------------------
+================
 
-The AMDGPU backend implements the following LLVM IR metadata.
+The AMDGPU backend implements the following target custom LLVM IR
+metadata.
 
-.. list-table:: AMDGPU LLVM IR Metatdata
-  :name: amdgpu-llvm-ir-metadata-table
+.. _amdgpu_last_use:
 
-  * - Metadata Name
-    - Description
-    - Values
-  * - !amdgpu.last.use
-    - Sets TH_LOAD_LU temporal hint on load instructions that support it.
-      Takes priority over nontemporal hint (TH_LOAD_NT).
-    - {}
+'``amdgpu.last.use``' Metadata
+------------------------------
+
+Sets TH_LOAD_LU temporal hint on load instructions that support it.
+Takes priority over nontemporal hint (TH_LOAD_NT). This takes no
+arguments.
+
+.. code-block:: llvm
+
+  %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
+
 
 LLVM IR Attributes
-------------------
+==================
 
 The AMDGPU backend supports the following LLVM IR attributes.
 
@@ -1451,7 +1457,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
      ======================================= ==========================================================
 
 Calling Conventions
--------------------
+===================
 
 The AMDGPU backend supports the following calling conventions:
 
