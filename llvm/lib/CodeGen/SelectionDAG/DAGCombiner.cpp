@@ -2531,10 +2531,10 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
 
 // Attempt to form avgceilu(A, B) from sub(or(A, B), lshr(xor(A, B), 1))
 static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::SUB and "SUB node is required here");
+  assert(N->getOpcode() == ISD::SUB && "SUB node is required here");
   SDValue Or = N->getOperand(0);
   SDValue Lshr = N->getOperand(1);
-  if (Or.getOpcode() != ISD::OR or Lshr.getOpcode() != ISD::SRL)
+  if (Or.getOpcode() != ISD::OR || Lshr.getOpcode() != ISD::SRL)
     return SDValue();
   SDValue Xor = Lshr.getOperand(0);
   if (Xor.getOpcode() != ISD::XOR)
@@ -2543,11 +2543,11 @@ static SDValue combineFixedwidthToAVGCEILU(SDNode *N, SelectionDAG &DAG) {
   SDValue Or2 = Or.getOperand(1);
   SDValue Xor1 = Xor.getOperand(0);
   SDValue Xor2 = Xor.getOperand(1);
-  if (Or1 == Xor2 and Or2 == Xor1) {
+  if (Or1 == Xor2 && Or2 == Xor1) {
     SDValue temp = Or1;
     Or1 = Or2;
     Or2 = temp;
-  } else if (Or1 != Xor1 or Or2 != Xor2)
+  } else if (Or1 != Xor1 || Or2 != Xor2)
     return SDValue();
   // Is the right shift using an immediate value of 1?
   ConstantSDNode *N1C = isConstOrConstSplat(Lshr.getOperand(1));
