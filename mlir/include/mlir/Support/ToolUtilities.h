@@ -44,7 +44,7 @@ LogicalResult
 splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                       ChunkBufferHandler processChunkBuffer, raw_ostream &os,
                       llvm::StringRef inputSplitMarker = kDefaultSplitMarker,
-                      llvm::StringRef outputSplitMarker = kDefaultSplitMarker);
+                      llvm::StringRef outputSplitMarker = "");
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_TOOLUTILITIES_H
