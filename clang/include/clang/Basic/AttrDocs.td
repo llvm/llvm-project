@@ -4162,7 +4162,9 @@ The following C++ standard library types are considered nullable:
 Types should be marked nullable only where the type itself leaves nullability
 ambiguous. For example, ``std::optional`` is not marked ``_Nullable``, because
 ``optional<int> _Nullable`` is redundant and ``optional<int> _Nonnull`` is
-not a useful type.
+not a useful type. ``std::weak_ptr`` is not nullable, because its nullability
+can change with no visible modification, so static annotation is unlikely to be
+unhelpful.
   }];
 }
 
