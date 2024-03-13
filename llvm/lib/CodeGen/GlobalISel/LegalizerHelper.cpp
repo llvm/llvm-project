@@ -5411,6 +5411,9 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FPEXT:
@@ -5492,26 +5495,6 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
 
     Observer.changingInstr(MI);
     MO.setReg(NewVec.getReg(0));
-    Observer.changedInstr(MI);
-    return Legalized;
-  }
-
-  case TargetOpcode::G_SEXT:
-  case TargetOpcode::G_ZEXT:
-  case TargetOpcode::G_ANYEXT: {
-    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
-    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    if (TypeIdx == 0) {
-      DstTy = MoreTy;
-      SrcTy = MoreTy.changeElementType(SrcTy.getElementType());
-    } else if (TypeIdx == 1) {
-      SrcTy = MoreTy;
-      DstTy = MoreTy.changeElementType(DstTy.getElementType());
-    }
-
-    Observer.changingInstr(MI);
-    moreElementsVectorSrc(MI, SrcTy, 1);
-    moreElementsVectorDst(MI, DstTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
