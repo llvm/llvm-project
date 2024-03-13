@@ -257,6 +257,16 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       message(STATUS "Linker detection: unknown")
     endif()
   endif()
+
+  # Apple's linker complains about duplicate libraries, which CMake likes to do
+  # to support ELF platforms. To silence that warning, we can use
+  # -no_warn_duplicate_libraries, but only in versions of the linker that
+  # support that flag.
+  if(NOT LLVM_USE_LINKER AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+  else()
+    set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
+  endif()
 endif()
 
 function(add_link_opts target_name)
@@ -308,6 +318,11 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
     endif()
+  endif()
+
+  if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                 LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
