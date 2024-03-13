@@ -305,7 +305,8 @@ def : WriteRes<WriteCPOP32, [SiFive7PipeB]>;
 // orc.b is in the late-B ALU.
 def : WriteRes<WriteORCB, [SiFive7PipeB]>;
 
-def : WriteRes<WriteIMinMax, [SiFive7PipeAB]>;
+// min/max are in the late-B ALU
+def : WriteRes<WriteIMinMax, [SiFive7PipeB]>;
 
 // rev8 is in the late-A and late-B ALUs.
 def : WriteRes<WriteREV8, [SiFive7PipeAB]>;
