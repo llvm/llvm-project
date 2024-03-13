@@ -1392,7 +1392,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     IRB.SetInsertPoint(CI);
     if (EnableWasmSjLj) {
       Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
-                       SetjmpTable};
+                       FunctionInvocationId};
       IRB.CreateCall(SaveSetjmpF, Args);
     } else {
       Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
