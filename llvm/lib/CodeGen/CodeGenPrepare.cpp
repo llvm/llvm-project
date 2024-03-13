@@ -2946,7 +2946,7 @@ class TypePromotionTransaction {
       Instruction *PrevInst;
       BasicBlock *BB;
     } Point;
-    std::optional<DPValue::self_iterator> BeforeDPValue = std::nullopt;
+    std::optional<DbgRecord::self_iterator> BeforeDbgRecord = std::nullopt;
 
     /// Remember whether or not the instruction had a previous instruction.
     bool HasPrevInstruction;
@@ -2958,9 +2958,9 @@ class TypePromotionTransaction {
       BasicBlock *BB = Inst->getParent();
 
       // Record where we would have to re-insert the instruction in the sequence
-      // of DPValues, if we ended up reinserting.
+      // of DbgRecords, if we ended up reinserting.
       if (BB->IsNewDbgInfoFormat)
-        BeforeDPValue = Inst->getDbgReinsertionPosition();
+        BeforeDbgRecord = Inst->getDbgReinsertionPosition();
 
       if (HasPrevInstruction) {
         Point.PrevInst = &*std::prev(Inst->getIterator());
@@ -2983,7 +2983,7 @@ class TypePromotionTransaction {
           Inst->insertBefore(*Point.BB, Position);
       }
 
-      Inst->getParent()->reinsertInstInDbgRecords(Inst, BeforeDPValue);
+      Inst->getParent()->reinsertInstInDbgRecords(Inst, BeforeDbgRecord);
     }
   };
 

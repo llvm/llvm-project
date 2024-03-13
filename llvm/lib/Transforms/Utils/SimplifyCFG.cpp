@@ -1572,7 +1572,8 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
   while (none_of(Itrs, atEnd)) {
     bool HoistDPVs = allIdentical(Itrs);
     for (CurrentAndEndIt &Pair : Itrs) {
-      // Increment Current iterator now as we may be about to move the DPValue.
+      // Increment Current iterator now as we may be about to move the
+      // DbgRecord.
       DbgRecord &DR = *Pair.first++;
       if (HoistDPVs) {
         DR.removeFromParent();
@@ -5304,7 +5305,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   // Ensure that any debug-info records that used to occur after the Unreachable
   // are moved to in front of it -- otherwise they'll "dangle" at the end of
   // the block.
-  BB->flushTerminatorDbgValues();
+  BB->flushTerminatorDbgRecords();
 
   // Debug-info records on the unreachable inst itself should be deleted, as
   // below we delete everything past the final executable instruction.
@@ -5326,8 +5327,8 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
     // block will be the unwind edges of Invoke/CatchSwitch/CleanupReturn,
     // and we can therefore guarantee this block will be erased.
 
-    // If we're deleting this, we're deleting any subsequent dbg.values, so
-    // delete DPValue records of variable information.
+    // If we're deleting this, we're deleting any subsequent debug info, so
+    // delete DbgRecords.
     BBI->dropDbgRecords();
 
     // Delete this instruction (any uses are guaranteed to be dead)

@@ -895,7 +895,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
         if (I.hasMetadataOtherThanDebugLoc())
           I.setMetadata("heapallocsite", nullptr);
 
-        // Strip any DPValues attached.
+        // Strip any DbgRecords attached.
         I.dropDbgRecords();
       }
     }
