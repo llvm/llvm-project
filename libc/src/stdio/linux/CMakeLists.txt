@@ -19,8 +19,6 @@ add_entrypoint_object(
   HDRS
     ../rename.h
   DEPENDS
-    libc.include.fcntl
-    libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

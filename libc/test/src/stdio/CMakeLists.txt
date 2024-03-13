@@ -363,12 +363,12 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
-      libc.include.unistd
       libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.rename
       libc.src.unistd.access
       libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
   )
 endif()
 

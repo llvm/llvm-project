@@ -14,7 +14,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "src/errno/libc_errno.h"
-#include <unistd.h>
 
 TEST(LlvmLibcRenameTest, CreateAndRenameFile) {
   // The test strategy is to create a file and rename it, and also verify that

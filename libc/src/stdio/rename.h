@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDIO_RENAME_H
 #define LLVM_LIBC_SRC_STDIO_RENAME_H
 
-#include <stdio.h>
-
 namespace LIBC_NAMESPACE {
 
 int rename(const char *oldpath, const char *newpath);
