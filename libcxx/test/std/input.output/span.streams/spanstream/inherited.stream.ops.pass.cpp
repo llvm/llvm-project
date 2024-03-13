@@ -43,7 +43,7 @@ void test() {
   initialize_array(arr, sv);
   std::span<CharT> sp{arr};
 
-  // Mode: default
+  // Mode: default (`in` | `out`)
   {
     SpStream spSt(sp);
     std::basic_string<CharT, TraitsT> str1;
@@ -76,30 +76,18 @@ void test() {
     assert(str4 == CS("year"));
     assert(i4 == 2024);
   }
-  //   // Mode: `ios_base::in`
-  //   {
-  //     SpStream rhsSpSt{sp, std::ios_base::in};
-  //     SpStream spSt(std::move(rhsSpSt));
-  //     assert(spSt.span().data() == arr);
-  //     assert(!spSt.span().empty());
-  //     assert(spSt.span().size() == 4);
-  //   }
-  //   // Mode `ios_base::out`
-  //   {
-  //     SpStream rhsSpSt{sp, std::ios_base::out};
-  //     SpStream spSt(std::move(rhsSpSt));
-  //     assert(spSt.span().data() == arr);
-  //     assert(spSt.span().empty());
-  //     assert(spSt.span().size() == 0);
-  //   }
-  //   // Mode: multiple
-  //   {
-  //     SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-  //     SpStream spSt(std::move(rhsSpSt));
-  //     assert(spSt.span().data() == arr);
-  //     assert(spSt.span().empty());
-  //     assert(spSt.span().size() == 0);
-  //   }
+  // Mode: `ios_base::in`
+  {
+    SpStream spSt{sp, std::ios_base::in};
+    //TODO
+    (void)spSt;
+  }
+  // Mode `ios_base::out`
+  {
+    SpStream spSt{sp, std::ios_base::out};
+    //TODO
+    (void)spSt;
+  }
 }
 
 int main(int, char**) {
