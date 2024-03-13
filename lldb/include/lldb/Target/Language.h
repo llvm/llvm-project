@@ -35,7 +35,7 @@ public:
   bool GetEnableFilterForLineBreakpoints() const;
 };
 
-class Language : public PluginInterface, public LanguageProperties {
+class Language : public PluginInterface {
 public:
   class TypeScavenger {
   public:
