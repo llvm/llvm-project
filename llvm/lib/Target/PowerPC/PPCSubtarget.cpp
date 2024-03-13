@@ -185,6 +185,28 @@ bool PPCSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
 }
 
+void PPCSubtarget::tocDataChecks(unsigned PointerSize,
+                                 const GlobalVariable *GV) const {
+  // TODO: These asserts should be updated as more support for the toc data
+  // transformation is added (struct support, etc.).
+  assert(
+      PointerSize >= GV->getAlign().valueOrOne().value() &&
+      "GlobalVariables with an alignment requirement stricter than TOC entry "
+      "size not supported by the toc data transformation.");
+
+  Type *GVType = GV->getValueType();
+  assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
+                              "supported by the toc data transformation.");
+  if (GV->getParent()->getDataLayout().getTypeSizeInBits(GVType) >
+      PointerSize * 8)
+    report_fatal_error(
+        "A GlobalVariable with size larger than a TOC entry is not currently "
+        "supported by the toc data transformation.");
+  if (GV->hasPrivateLinkage())
+    report_fatal_error("A GlobalVariable with private linkage is not "
+                       "currently supported by the toc data transformation.");
+}
+
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)

@@ -17,7 +17,9 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
@@ -26,6 +28,54 @@
 
 using namespace clang;
 namespace {
+
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
+struct LLVMInitRAII {
+  LLVMInitRAII() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+  }
+  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
+} LLVMInit;
+
+class TestCreateResetExecutor : public Interpreter {
+public:
+  TestCreateResetExecutor(std::unique_ptr<CompilerInstance> CI,
+                          llvm::Error &Err)
+      : Interpreter(std::move(CI), Err) {}
+
+  llvm::Error testCreateExecutor() { return Interpreter::CreateExecutor(); }
+
+  void resetExecutor() { Interpreter::ResetExecutor(); }
+};
+
+#ifdef _AIX
+TEST(InterpreterExtensionsTest, DISABLED_ExecutorCreateReset) {
+#else
+TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
+#endif
+  // Make sure we can create the executer on the platform.
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
+  clang::IncrementalCompilerBuilder CB;
+  llvm::Error ErrOut = llvm::Error::success();
+  TestCreateResetExecutor Interp(cantFail(CB.CreateCpp()), ErrOut);
+  cantFail(std::move(ErrOut));
+  cantFail(Interp.testCreateExecutor());
+  Interp.resetExecutor();
+  cantFail(Interp.testCreateExecutor());
+  EXPECT_THAT_ERROR(Interp.testCreateExecutor(),
+                    llvm::FailedWithMessage("Operation failed. "
+                                            "Execution engine exists"));
+}
 
 class RecordRuntimeIBMetrics : public Interpreter {
   struct NoopRuntimeInterfaceBuilder : public RuntimeInterfaceBuilder {

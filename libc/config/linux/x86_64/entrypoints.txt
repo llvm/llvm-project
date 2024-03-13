@@ -481,6 +481,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.lrintf128
     libc.src.math.lroundf128
     libc.src.math.modff128
+    libc.src.math.nextafterf128
     libc.src.math.rintf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128

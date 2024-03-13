@@ -846,8 +846,7 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
       CmpInfo->getValueInfo(CmpInfo->makeWeakResult(CmpResult));
   assert(CmpValueInfo);
   assert(CmpValueInfo->hasValidIntValue());
-  const APSInt &IntValue = CmpValueInfo->getIntValue();
-  return SetThreeWayComparisonField(S, OpPC, P, IntValue);
+  return SetThreeWayComparisonField(S, OpPC, P, CmpValueInfo->getIntValue());
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
