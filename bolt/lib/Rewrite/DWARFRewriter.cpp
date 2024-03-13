@@ -347,6 +347,12 @@ static cl::opt<bool>
                       "multiple non-relocatable dwarf object files (dwo)."),
              cl::init(false), cl::cat(BoltCategory));
 
+static cl::opt<bool> CreateDebugNames(
+    "create-debug-names-section",
+    cl::desc("Creates .debug_names section, if the input binary doesn't have "
+             "it already, for DWARF5 CU/TUs."),
+    cl::init(false), cl::cat(BoltCategory));
+
 static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
                     cl::desc("prints out offsetrs for abbrev and debu_info of "
@@ -692,6 +698,8 @@ void DWARFRewriter::updateDebugInfo() {
     return ObjectName;
   };
 
+  DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
+                                         *StrWriter);
   DWPState State;
   if (opts::WriteDWP)
     initDWPState(State);
@@ -709,7 +717,8 @@ void DWARFRewriter::updateDebugInfo() {
                                 : LegacyRangesSectionWriter.get();
     // Skipping CUs that failed to load.
     if (SplitCU) {
-      DIEBuilder DWODIEBuilder(BC, &(*SplitCU)->getContext(), true);
+      DIEBuilder DWODIEBuilder(BC, &(*SplitCU)->getContext(), DebugNamesTable,
+                               Unit);
       DWODIEBuilder.buildDWOUnit(**SplitCU);
       std::string DWOName = updateDWONameCompDir(
           *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
@@ -720,12 +729,7 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
         RangesBase = RangesSectionWriter->getSectionOffset();
-        // For DWARF5 there is now .debug_rnglists.dwo, so don't need to
-        // update rnglists base.
-        if (RangesBase) {
-          DwoRangesBase[*DWOId] = *RangesBase;
-          setDwoRangesBase(*DWOId, *RangesBase);
-        }
+        setDwoRangesBase(*DWOId, *RangesBase);
       }
 
       updateUnitDebugInfo(*(*SplitCU), DWODIEBuilder, DebugLocDWoWriter,
@@ -754,7 +758,7 @@ void DWARFRewriter::updateDebugInfo() {
     AddrWriter->update(*DIEBlder, *Unit);
   };
 
-  DIEBuilder DIEBlder(BC, BC.DwCtx.get());
+  DIEBuilder DIEBlder(BC, BC.DwCtx.get(), DebugNamesTable);
   DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
@@ -780,16 +784,19 @@ void DWARFRewriter::updateDebugInfo() {
     }
   } else {
     // Update unit debug info in parallel
-    ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
+    ThreadPoolInterface &ThreadPool = ParallelUtilities::getThreadPool();
     for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
       ThreadPool.async(processUnitDIE, CU.get(), &DIEBlder);
     ThreadPool.wait();
   }
 
+  DebugNamesTable.emitAccelTable();
+
   if (opts::WriteDWP)
     finalizeDWP(State);
 
-  finalizeDebugSections(DIEBlder, *Streamer, *ObjOS, OffsetMap);
+  finalizeDebugSections(DIEBlder, DebugNamesTable, *Streamer, *ObjOS,
+                        OffsetMap);
   updateGdbIndexSection(OffsetMap, CUIndex);
 }
 
@@ -873,7 +880,9 @@ void DWARFRewriter::updateUnitDebugInfo(
         OutputRanges.push_back({0, 0});
       const uint64_t RangesSectionOffset =
           RangesSectionWriter.addRanges(OutputRanges);
-      if (!Unit.isDWOUnit())
+      // Don't emit the zero low_pc arange.
+      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
+          OutputRanges.back().LowPC)
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
@@ -1518,10 +1527,9 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   return CUMap;
 }
 
-void DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder,
-                                          DIEStreamer &Streamer,
-                                          raw_svector_ostream &ObjOS,
-                                          CUOffsetMap &CUMap) {
+void DWARFRewriter::finalizeDebugSections(
+    DIEBuilder &DIEBlder, DWARF5AcceleratorTable &DebugNamesTable,
+    DIEStreamer &Streamer, raw_svector_ostream &ObjOS, CUOffsetMap &CUMap) {
   if (StrWriter->isInitialized()) {
     RewriteInstance::addToDebugSectionsToOverwrite(".debug_str");
     std::unique_ptr<DebugStrBufferVector> DebugStrSectionContents =
@@ -1618,6 +1626,15 @@ void DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder,
     BC.registerOrUpdateNoteSection(".debug_aranges",
                                    copyByteArray(ARangesContents),
                                    ARangesContents.size());
+  }
+
+  if (DebugNamesTable.isCreated()) {
+    RewriteInstance::addToDebugSectionsToOverwrite(".debug_names");
+    std::unique_ptr<DebugBufferVector> DebugNamesSectionContents =
+        DebugNamesTable.releaseBuffer();
+    BC.registerOrUpdateNoteSection(".debug_names",
+                                   copyByteArray(*DebugNamesSectionContents),
+                                   DebugNamesSectionContents->size());
   }
 }
 

@@ -36,13 +36,12 @@ public:
 
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false);
-  EvaluationResult interpretDecl(const VarDecl *VD);
+  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
 
   InterpState &getState() { return S; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
-              APValue &Result);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
   virtual ~EvalEmitter();
 
@@ -74,7 +73,7 @@ protected:
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.
-  unsigned LambdaThisCapture = 0;
+  ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 
@@ -89,6 +88,9 @@ private:
   EvaluationResult EvalResult;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
+  /// Whether we should check if the result has been fully
+  /// initialized.
+  bool CheckFullyInitialized = false;
 
   /// Temporaries which require storage.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;

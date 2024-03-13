@@ -51,7 +51,8 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
 
 // Helper macro for wrong "partial method specialization" errors.
 #define FATAL_PIV(NAME)                                                        \
-  MLIR_SPARSETENSOR_FATAL("<P,I,V> type mismatch for: " #NAME);
+  fprintf(stderr, "<P,I,V> type mismatch for: " #NAME);                        \
+  exit(1);
 
 #define IMPL_GETPOSITIONS(PNAME, P)                                            \
   void SparseTensorStorageBase::getPositions(std::vector<P> **, uint64_t) {    \
@@ -73,13 +74,6 @@ MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATES)
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETVALUES)
 #undef IMPL_GETVALUES
-
-#define IMPL_FORWARDINGINSERT(VNAME, V)                                        \
-  void SparseTensorStorageBase::forwardingInsert(const uint64_t *, V) {        \
-    FATAL_PIV("forwardingInsert" #VNAME);                                      \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_FORWARDINGINSERT)
-#undef IMPL_FORWARDINGINSERT
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
   void SparseTensorStorageBase::lexInsert(const uint64_t *, V) {               \

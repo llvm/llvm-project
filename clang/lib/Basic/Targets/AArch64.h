@@ -96,7 +96,6 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  void setSupportedArgTypes() override;
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
@@ -166,7 +165,7 @@ public:
                             DiagnosticsEngine &Diags) override;
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool supportsTargetAttributeTune() const override { return true; }
-
+  bool supportsCpuSupports() const override { return true; }
   bool checkArithmeticFenceSupported() const override { return true; }
 
   bool hasBFloat16Type() const override;
@@ -200,8 +199,6 @@ public:
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
-
-  bool validateTarget(DiagnosticsEngine &Diags) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

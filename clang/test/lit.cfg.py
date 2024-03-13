@@ -90,6 +90,7 @@ tools = [
     "clang-offload-packager",
     "clang-tblgen",
     "clang-scan-deps",
+    "clang-installapi",
     "opt",
     "llvm-ifs",
     "yaml2obj",

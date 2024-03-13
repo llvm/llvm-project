@@ -102,7 +102,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__type_traits/apply_cv.h>
 #include <__type_traits/is_constant_evaluated.h>

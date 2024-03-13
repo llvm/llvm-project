@@ -162,7 +162,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     and how to initialize the copy from the original item in the copy region.
 
     Examples:
-    ---------
+
     * `private(x)` would be emitted as:
     ```mlir
     omp.private {type = private} @x.privatizer : !fir.ref<i32> alloc {
@@ -268,6 +268,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
+
+    The optional byref attribute controls whether reduction arguments are passed by
+    reference or by value.
   }];
 
   let arguments = (ins Optional<I1>:$if_expr_var,
@@ -276,7 +279,10 @@ def ParallelOp : OpenMP_Op<"parallel", [
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
-             OptionalAttr<ProcBindKindAttr>:$proc_bind_val);
+             OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
+             Variadic<AnyType>:$private_vars,
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers,
+             UnitAttr:$byref);
 
   let regions = (region AnyRegion:$region);
 
@@ -297,7 +303,10 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
-    ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars), $reductions) attr-dict
+          | `byref` $byref
+    ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
+                             $reductions, $private_vars, type($private_vars),
+                             $privatizers) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -566,6 +575,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `order` attribute specifies which order the iterations of the
     associate loops are executed in. Currently the only option for this
     attribute is "concurrent".
+    
+    The optional `byref` attribute indicates that reduction arguments should be
+    passed by reference.
   }];
 
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
@@ -580,6 +592,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
+             UnitAttr:$byref,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
@@ -609,6 +622,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
           |`nowait` $nowait
+          |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
     ) custom<WsLoop>($region, $lowerBound, $upperBound, $step,

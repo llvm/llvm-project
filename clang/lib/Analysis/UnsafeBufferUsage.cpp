@@ -130,42 +130,42 @@ public:
 
   bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) {
     // These are unevaluated, except the result expression.
-    if(ignoreUnevaluatedContext)
+    if (ignoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
     return VisitorBase::TraverseGenericSelectionExpr(Node);
   }
 
   bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) {
     // Unevaluated context.
-    if(ignoreUnevaluatedContext)
+    if (ignoreUnevaluatedContext)
       return true;
     return VisitorBase::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) {
     // Unevaluated context.
-    if(ignoreUnevaluatedContext)
+    if (ignoreUnevaluatedContext)
       return true;
     return VisitorBase::TraverseTypeOfExprTypeLoc(Node);
   }
 
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) {
     // Unevaluated context.
-    if(ignoreUnevaluatedContext)
+    if (ignoreUnevaluatedContext)
       return true;
     return VisitorBase::TraverseDecltypeTypeLoc(Node);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) {
     // Unevaluated context.
-    if(ignoreUnevaluatedContext)
+    if (ignoreUnevaluatedContext)
       return true;
     return VisitorBase::TraverseCXXNoexceptExpr(Node);
   }
 
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) {
     // Unevaluated context.
-    if(ignoreUnevaluatedContext)
+    if (ignoreUnevaluatedContext)
       return true;
     return VisitorBase::TraverseCXXTypeidExpr(Node);
   }
@@ -213,24 +213,26 @@ private:
 
 // Because we're dealing with raw pointers, let's define what we mean by that.
 static auto hasPointerType() {
-    return hasType(hasCanonicalType(pointerType()));
+  return hasType(hasCanonicalType(pointerType()));
 }
 
-static auto hasArrayType() {
-    return hasType(hasCanonicalType(arrayType()));
-}
+static auto hasArrayType() { return hasType(hasCanonicalType(arrayType())); }
 
-AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>, innerMatcher) {
+AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>,
+              innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
 
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All, true);
+  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All,
+                                 true);
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
 
-AST_MATCHER_P(Stmt, forEachDescendantStmt, internal::Matcher<Stmt>, innerMatcher) {
+AST_MATCHER_P(Stmt, forEachDescendantStmt, internal::Matcher<Stmt>,
+              innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
 
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All, false);
+  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All,
+                                 false);
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
 
@@ -268,9 +270,8 @@ static auto isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
         hasLHS(innerMatcher)
       )
     ));
-// clang-format on
+  // clang-format on
 }
-
 
 // Returns a matcher that matches any expression `e` such that `InnerMatcher`
 // matches `e` and `e` is in an Unspecified Pointer Context (UPC).
@@ -287,7 +288,7 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   // clang-format off
   auto CallArgMatcher = callExpr(
     forEachArgumentWithParamType(
-      InnerMatcher, 
+      InnerMatcher,
       isAnyPointer() /* array also decays to pointer type*/),
     unless(callee(
       functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
@@ -315,7 +316,7 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   // clang-format on
 
   return stmt(anyOf(CallArgMatcher, CastOperandMatcher, CompOperandMatcher,
-		    PtrSubtractionMatcher));
+                    PtrSubtractionMatcher));
   // FIXME: any more cases? (UPC excludes the RHS of an assignment.  For now we
   // don't have to check that.)
 }
@@ -481,7 +482,9 @@ public:
 #ifndef NDEBUG
   StringRef getDebugName() const {
     switch (K) {
-#define GADGET(x) case Kind::x: return #x;
+#define GADGET(x)                                                              \
+  case Kind::x:                                                                \
+    return #x;
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
     }
     llvm_unreachable("Unhandled Gadget::Kind enum");
@@ -502,7 +505,6 @@ private:
   Kind K;
 };
 
-
 /// Warning gadgets correspond to unsafe code patterns that warrants
 /// an immediate warning.
 class WarningGadget : public Gadget {
@@ -513,10 +515,10 @@ public:
   bool isWarningGadget() const final { return true; }
 };
 
-/// Fixable gadgets correspond to code patterns that aren't always unsafe but need to be
-/// properly recognized in order to emit fixes. For example, if a raw pointer-type
-/// variable is replaced by a safe C++ container, every use of such variable must be
-/// carefully considered and possibly updated.
+/// Fixable gadgets correspond to code patterns that aren't always unsafe but
+/// need to be properly recognized in order to emit fixes. For example, if a raw
+/// pointer-type variable is replaced by a safe C++ container, every use of such
+/// variable must be carefully considered and possibly updated.
 class FixableGadget : public Gadget {
 public:
   FixableGadget(Kind K) : Gadget(K) {}
@@ -531,20 +533,19 @@ public:
     return std::nullopt;
   }
 
-  /// Returns a list of two elements where the first element is the LHS of a pointer assignment
-  /// statement and the second element is the RHS. This two-element list represents the fact that
-  /// the LHS buffer gets its bounds information from the RHS buffer. This information will be used
-  /// later to group all those variables whose types must be modified together to prevent type
-  /// mismatches.
+  /// Returns a list of two elements where the first element is the LHS of a
+  /// pointer assignment statement and the second element is the RHS. This
+  /// two-element list represents the fact that the LHS buffer gets its bounds
+  /// information from the RHS buffer. This information will be used later to
+  /// group all those variables whose types must be modified together to prevent
+  /// type mismatches.
   virtual std::optional<std::pair<const VarDecl *, const VarDecl *>>
   getStrategyImplications() const {
     return std::nullopt;
   }
 };
 
-static auto toSupportedVariable() {
-  return to(varDecl());
-}
+static auto toSupportedVariable() { return to(varDecl()); }
 
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
@@ -565,10 +566,10 @@ public:
   }
 
   static Matcher matcher() {
-    return stmt(unaryOperator(
-      hasOperatorName("++"),
-      hasUnaryOperand(ignoringParenImpCasts(hasPointerType()))
-    ).bind(OpTag));
+    return stmt(
+        unaryOperator(hasOperatorName("++"),
+                      hasUnaryOperand(ignoringParenImpCasts(hasPointerType())))
+            .bind(OpTag));
   }
 
   const UnaryOperator *getBaseStmt() const override { return Op; }
@@ -600,10 +601,10 @@ public:
   }
 
   static Matcher matcher() {
-    return stmt(unaryOperator(
-      hasOperatorName("--"),
-      hasUnaryOperand(ignoringParenImpCasts(hasPointerType()))
-    ).bind(OpTag));
+    return stmt(
+        unaryOperator(hasOperatorName("--"),
+                      hasUnaryOperand(ignoringParenImpCasts(hasPointerType())))
+            .bind(OpTag));
   }
 
   const UnaryOperator *getBaseStmt() const override { return Op; }
@@ -754,26 +755,25 @@ class PointerInitGadget : public FixableGadget {
 private:
   static constexpr const char *const PointerInitLHSTag = "ptrInitLHS";
   static constexpr const char *const PointerInitRHSTag = "ptrInitRHS";
-  const VarDecl * PtrInitLHS;         // the LHS pointer expression in `PI`
-  const DeclRefExpr * PtrInitRHS;         // the RHS pointer expression in `PI`
+  const VarDecl *PtrInitLHS;     // the LHS pointer expression in `PI`
+  const DeclRefExpr *PtrInitRHS; // the RHS pointer expression in `PI`
 
 public:
   PointerInitGadget(const MatchFinder::MatchResult &Result)
       : FixableGadget(Kind::PointerInit),
-    PtrInitLHS(Result.Nodes.getNodeAs<VarDecl>(PointerInitLHSTag)),
-    PtrInitRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerInitRHSTag)) {}
+        PtrInitLHS(Result.Nodes.getNodeAs<VarDecl>(PointerInitLHSTag)),
+        PtrInitRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerInitRHSTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::PointerInit;
   }
 
   static Matcher matcher() {
-    auto PtrInitStmt = declStmt(hasSingleDecl(varDecl(
-                                 hasInitializer(ignoringImpCasts(declRefExpr(
-                                                  hasPointerType(),
-                                                    toSupportedVariable()).
-                                                  bind(PointerInitRHSTag)))).
-                                              bind(PointerInitLHSTag)));
+    auto PtrInitStmt = declStmt(hasSingleDecl(
+        varDecl(hasInitializer(ignoringImpCasts(
+                    declRefExpr(hasPointerType(), toSupportedVariable())
+                        .bind(PointerInitRHSTag))))
+            .bind(PointerInitLHSTag)));
 
     return stmt(PtrInitStmt);
   }
@@ -793,8 +793,7 @@ public:
 
   virtual std::optional<std::pair<const VarDecl *, const VarDecl *>>
   getStrategyImplications() const override {
-      return std::make_pair(PtrInitLHS,
-                            cast<VarDecl>(PtrInitRHS->getDecl()));
+    return std::make_pair(PtrInitLHS, cast<VarDecl>(PtrInitRHS->getDecl()));
   }
 };
 
@@ -807,8 +806,8 @@ class PtrToPtrAssignmentGadget : public FixableGadget {
 private:
   static constexpr const char *const PointerAssignLHSTag = "ptrLHS";
   static constexpr const char *const PointerAssignRHSTag = "ptrRHS";
-  const DeclRefExpr * PtrLHS;         // the LHS pointer expression in `PA`
-  const DeclRefExpr * PtrRHS;         // the RHS pointer expression in `PA`
+  const DeclRefExpr *PtrLHS; // the LHS pointer expression in `PA`
+  const DeclRefExpr *PtrRHS; // the RHS pointer expression in `PA`
 
 public:
   PtrToPtrAssignmentGadget(const MatchFinder::MatchResult &Result)
@@ -821,13 +820,13 @@ public:
   }
 
   static Matcher matcher() {
-    auto PtrAssignExpr = binaryOperator(allOf(hasOperatorName("="),
-      hasRHS(ignoringParenImpCasts(declRefExpr(hasPointerType(),
-                                               toSupportedVariable()).
-                                   bind(PointerAssignRHSTag))),
-                                   hasLHS(declRefExpr(hasPointerType(),
-                                                      toSupportedVariable()).
-                                          bind(PointerAssignLHSTag))));
+    auto PtrAssignExpr = binaryOperator(
+        allOf(hasOperatorName("="),
+              hasRHS(ignoringParenImpCasts(
+                  declRefExpr(hasPointerType(), toSupportedVariable())
+                      .bind(PointerAssignRHSTag))),
+              hasLHS(declRefExpr(hasPointerType(), toSupportedVariable())
+                         .bind(PointerAssignLHSTag))));
 
     return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
   }
@@ -981,9 +980,8 @@ public:
 
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
-    auto BaseIsArrayOrPtrDRE =
-        hasBase(ignoringParenImpCasts(declRefExpr(ArrayOrPtr,
-                                                  toSupportedVariable())));
+    auto BaseIsArrayOrPtrDRE = hasBase(
+        ignoringParenImpCasts(declRefExpr(ArrayOrPtr, toSupportedVariable())));
     auto Target =
         arraySubscriptExpr(BaseIsArrayOrPtrDRE).bind(ULCArraySubscriptTag);
 
@@ -1025,9 +1023,9 @@ public:
 
   static Matcher matcher() {
     auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
-    auto target = expr(
-        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr,
-                              toSupportedVariable())).bind(DeclRefExprTag)));
+    auto target = expr(ignoringParenImpCasts(
+        declRefExpr(allOf(ArrayOrPtr, toSupportedVariable()))
+            .bind(DeclRefExprTag)));
     return stmt(isInUnspecifiedPointerContext(target));
   }
 
@@ -1036,9 +1034,7 @@ public:
 
   virtual const Stmt *getBaseStmt() const override { return Node; }
 
-  virtual DeclUseList getClaimedVarUseSites() const override {
-    return {Node};
-  }
+  virtual DeclUseList getClaimedVarUseSites() const override { return {Node}; }
 };
 
 class PointerDereferenceGadget : public FixableGadget {
@@ -1103,10 +1099,10 @@ public:
 
   static Matcher matcher() {
     return expr(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
-        unaryOperator(hasOperatorName("&"),
-                      hasUnaryOperand(arraySubscriptExpr(
-                          hasBase(ignoringParenImpCasts(declRefExpr(
-                                                  toSupportedVariable()))))))
+        unaryOperator(
+            hasOperatorName("&"),
+            hasUnaryOperand(arraySubscriptExpr(hasBase(
+                ignoringParenImpCasts(declRefExpr(toSupportedVariable()))))))
             .bind(UPCAddressofArraySubscriptTag)))));
   }
 
@@ -1195,13 +1191,13 @@ public:
 class UPCPreIncrementGadget : public FixableGadget {
 private:
   static constexpr const char *const UPCPreIncrementTag =
-    "PointerPreIncrementUnderUPC";
+      "PointerPreIncrementUnderUPC";
   const UnaryOperator *Node; // the `++Ptr` node
 
 public:
   UPCPreIncrementGadget(const MatchFinder::MatchResult &Result)
-    : FixableGadget(Kind::UPCPreIncrement),
-      Node(Result.Nodes.getNodeAs<UnaryOperator>(UPCPreIncrementTag)) {
+      : FixableGadget(Kind::UPCPreIncrement),
+        Node(Result.Nodes.getNodeAs<UnaryOperator>(UPCPreIncrementTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1215,10 +1211,9 @@ public:
     // can have the matcher be general, so long as `getClaimedVarUseSites` does
     // things right.
     return stmt(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
-								    unaryOperator(isPreInc(),
-										  hasUnaryOperand(declRefExpr(
-                                                    toSupportedVariable()))
-										  ).bind(UPCPreIncrementTag)))));
+        unaryOperator(isPreInc(),
+                      hasUnaryOperand(declRefExpr(toSupportedVariable())))
+            .bind(UPCPreIncrementTag)))));
   }
 
   virtual std::optional<FixItList>
@@ -1677,15 +1672,6 @@ std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   return s;
 }
 
-// Return the text representation of the given `APInt Val`:
-static std::string getAPIntText(APInt Val) {
-  SmallVector<char> Txt;
-  Val.toString(Txt, 10, true);
-  // APInt::toString does not add '\0' to the end of the string for us:
-  Txt.push_back('\0');
-  return Txt.data();
-}
-
 // Return the source location of the last character of the AST `Node`.
 template <typename NodeTy>
 static std::optional<SourceLocation>
@@ -1791,9 +1777,9 @@ static SourceRange getSourceRangeToTokenEnd(const Decl *D,
                                             const LangOptions &LangOpts) {
   SourceLocation Begin = D->getBeginLoc();
   SourceLocation
-    End = // `D->getEndLoc` should always return the starting location of the
-    // last token, so we should get the end of the token
-    Lexer::getLocForEndOfToken(D->getEndLoc(), 0, SM, LangOpts);
+      End = // `D->getEndLoc` should always return the starting location of the
+      // last token, so we should get the end of the token
+      Lexer::getLocForEndOfToken(D->getEndLoc(), 0, SM, LangOpts);
 
   return SourceRange(Begin, End);
 }
@@ -1985,7 +1971,7 @@ PointerDereferenceGadget::getFixits(const FixitStrategy &S) const {
     if (auto LocPastOperand =
             getPastLoc(BaseDeclRefExpr, SM, Ctx.getLangOpts())) {
       return FixItList{{FixItHint::CreateRemoval(derefRange),
-			FixItHint::CreateInsertion(*LocPastOperand, "[0]")}};
+                        FixItHint::CreateInsertion(*LocPastOperand, "[0]")}};
     }
     break;
   }
@@ -2152,15 +2138,18 @@ UPCPreIncrementGadget::getFixits(const FixitStrategy &S) const {
 // In many cases, this function cannot figure out the actual extent `S`.  It
 // then will use a place holder to replace `S` to ask users to fill `S` in.  The
 // initializer shall be used to initialize a variable of type `std::span<T>`.
+// In some cases (e. g. constant size array) the initializer should remain
+// unchanged and the function returns empty list. In case the function can't
+// provide the right fixit it will return nullopt.
 //
 // FIXME: Support multi-level pointers
 //
 // Parameters:
 //   `Init` a pointer to the initializer expression
 //   `Ctx` a reference to the ASTContext
-static FixItList
+static std::optional<FixItList>
 FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
-                                 const StringRef UserFillPlaceHolder) {
+                          const StringRef UserFillPlaceHolder) {
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
 
@@ -2168,7 +2157,8 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
   // NULL pointer, we use the default constructor to initialize the span
   // object, i.e., a `std:span` variable declaration with no initializer.
   // So the fix-it is just to remove the initializer.
-  if (Init->isNullPointerConstant(Ctx,
+  if (Init->isNullPointerConstant(
+          Ctx,
           // FIXME: Why does this function not ask for `const ASTContext
           // &`? It should. Maybe worth an NFC patch later.
           Expr::NullPointerConstantValueDependence::
@@ -2176,11 +2166,11 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
     std::optional<SourceLocation> InitLocation =
         getEndCharLoc(Init, SM, LangOpts);
     if (!InitLocation)
-      return {};
+      return std::nullopt;
 
     SourceRange SR(Init->getBeginLoc(), *InitLocation);
 
-    return {FixItHint::CreateRemoval(SR)};
+    return FixItList{FixItHint::CreateRemoval(SR)};
   }
 
   FixItList FixIts{};
@@ -2199,19 +2189,18 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
       if (!Ext->HasSideEffects(Ctx)) {
         std::optional<StringRef> ExtentString = getExprText(Ext, SM, LangOpts);
         if (!ExtentString)
-          return {};
+          return std::nullopt;
         ExtentText = *ExtentString;
       }
     } else if (!CxxNew->isArray())
       // Although the initializer is not allocating a buffer, the pointer
       // variable could still be used in buffer access operations.
       ExtentText = One;
-  } else if (const auto *CArrTy = Ctx.getAsConstantArrayType(
-                 Init->IgnoreImpCasts()->getType())) {
-    // In cases `Init` is of an array type after stripping off implicit casts,
-    // the extent is the array size.  Note that if the array size is not a
-    // constant, we cannot use it as the extent.
-    ExtentText = getAPIntText(CArrTy->getSize());
+  } else if (Ctx.getAsConstantArrayType(Init->IgnoreImpCasts()->getType())) {
+    // std::span has a single parameter constructor for initialization with
+    // constant size array. The size is auto-deduced as the constructor is a
+    // function template. The correct fixit is empty - no changes should happen.
+    return FixItList{};
   } else {
     // In cases `Init` is of the form `&Var` after stripping of implicit
     // casts, where `&` is the built-in operator, the extent is 1.
@@ -2227,7 +2216,7 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
   std::optional<SourceLocation> LocPassInit = getPastLoc(Init, SM, LangOpts);
 
   if (!LocPassInit)
-    return {};
+    return std::nullopt;
 
   StrBuffer.append(", ");
   StrBuffer.append(ExtentText);
@@ -2237,8 +2226,10 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
 }
 
 #ifndef NDEBUG
-#define DEBUG_NOTE_DECL_FAIL(D, Msg)  \
-Handler.addDebugNoteForVar((D), (D)->getBeginLoc(), "failed to produce fixit for declaration '" + (D)->getNameAsString() + "'" + (Msg))
+#define DEBUG_NOTE_DECL_FAIL(D, Msg)                                           \
+  Handler.addDebugNoteForVar((D), (D)->getBeginLoc(),                          \
+                             "failed to produce fixit for declaration '" +     \
+                                 (D)->getNameAsString() + "'" + (Msg))
 #else
 #define DEBUG_NOTE_DECL_FAIL(D, Msg)
 #endif
@@ -2246,8 +2237,8 @@ Handler.addDebugNoteForVar((D), (D)->getBeginLoc(), "failed to produce fixit for
 // For the given variable declaration with a pointer-to-T type, returns the text
 // `std::span<T>`.  If it is unable to generate the text, returns
 // `std::nullopt`.
-static std::optional<std::string> createSpanTypeForVarDecl(const VarDecl *VD,
-                                                           const ASTContext &Ctx) {
+static std::optional<std::string>
+createSpanTypeForVarDecl(const VarDecl *VD, const ASTContext &Ctx) {
   assert(VD->getType()->isPointerType());
 
   std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
@@ -2284,8 +2275,8 @@ static std::optional<std::string> createSpanTypeForVarDecl(const VarDecl *VD,
 //    the non-empty fix-it list, if fix-its are successfuly generated; empty
 //    list otherwise.
 static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
-					 const StringRef UserFillPlaceHolder,
-					 UnsafeBufferUsageHandler &Handler) {
+                                         const StringRef UserFillPlaceHolder,
+                                         UnsafeBufferUsageHandler &Handler) {
   if (hasUnsupportedSpecifiers(D, Ctx.getSourceManager()))
     return {};
 
@@ -2301,37 +2292,30 @@ static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
   std::stringstream SS;
 
   SS << *SpanTyText;
-  // Append qualifiers to the type of `D`, if any:
-  if (D->getType().hasQualifiers())
-    SS << " " << D->getType().getQualifiers().getAsString();
-
-  // The end of the range of the original source that will be replaced
-  // by `std::span<T> ident`:
-  SourceLocation EndLocForReplacement = D->getEndLoc();
-  std::optional<StringRef> IdentText =
-      getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());
-
-  if (!IdentText) {
-    DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the identifier");
-    return {};
-  }
   // Fix the initializer if it exists:
   if (const Expr *Init = D->getInit()) {
-    FixItList InitFixIts =
+    std::optional<FixItList> InitFixIts =
         FixVarInitializerWithSpan(Init, Ctx, UserFillPlaceHolder);
-    if (InitFixIts.empty())
+    if (!InitFixIts)
       return {};
-    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
-                  std::make_move_iterator(InitFixIts.end()));
-    // If the declaration has the form `T *ident = init`, we want to replace
-    // `T *ident = ` with `std::span<T> ident`:
-    EndLocForReplacement = Init->getBeginLoc().getLocWithOffset(-1);
+    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts->begin()),
+                  std::make_move_iterator(InitFixIts->end()));
   }
-  SS << " " << IdentText->str();
+  // For declaration of the form `T * ident = init;`, we want to replace
+  // `T * ` with `std::span<T>`.
+  // We ignore CV-qualifiers so for `T * const ident;` we also want to replace
+  // just `T *` with `std::span<T>`.
+  const SourceLocation EndLocForReplacement = D->getTypeSpecEndLoc();
   if (!EndLocForReplacement.isValid()) {
     DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the end of the declaration");
     return {};
   }
+  // The only exception is that for `T *ident` we'll add a single space between
+  // "std::span<T>" and "ident".
+  // FIXME: The condition is false for identifiers expended from macros.
+  if (EndLocForReplacement.getLocWithOffset(1) == getVarDeclIdentifierLoc(D))
+    SS << " ";
+
   FixIts.push_back(FixItHint::CreateReplacement(
       SourceRange(D->getBeginLoc(), EndLocForReplacement), SS.str()));
   return FixIts;
@@ -2445,9 +2429,9 @@ createOverloadsForFixedParams(const FixitStrategy &S, const FunctionDecl *FD,
         // print parameter name if provided:
         if (IdentifierInfo *II = Parm->getIdentifier())
           SS << ' ' << II->getName().str();
-      } else if (auto ParmTypeText = getRangeText(
-                     getSourceRangeToTokenEnd(Parm, SM, LangOpts),
-                     SM, LangOpts)) {
+      } else if (auto ParmTypeText =
+                     getRangeText(getSourceRangeToTokenEnd(Parm, SM, LangOpts),
+                                  SM, LangOpts)) {
         // print the whole `Parm` without modification:
         SS << ParmTypeText->str();
       } else
@@ -2591,7 +2575,8 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
                                      UnsafeBufferUsageHandler &Handler) {
   const DeclStmt *DS = Tracker.lookupDecl(VD);
   if (!DS) {
-    DEBUG_NOTE_DECL_FAIL(VD, " : variables declared this way not implemented yet");
+    DEBUG_NOTE_DECL_FAIL(VD,
+                         " : variables declared this way not implemented yet");
     return {};
   }
   if (!DS->isSingleDecl()) {
@@ -2993,8 +2978,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 #endif
 
   assert(D && D->getBody());
-  // We do not want to visit a Lambda expression defined inside a method independently.
-  // Instead, it should be visited along with the outer method.
+  // We do not want to visit a Lambda expression defined inside a method
+  // independently. Instead, it should be visited along with the outer method.
   // FIXME: do we want to do the same thing for `BlockDecl`s?
   if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
     if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
@@ -3004,7 +2989,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   // Do not emit fixit suggestions for functions declared in an
   // extern "C" block.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-      for (FunctionDecl *FReDecl : FD->redecls()) {
+    for (FunctionDecl *FReDecl : FD->redecls()) {
       if (FReDecl->isExternC()) {
         EmitSuggestions = false;
         break;
@@ -3016,7 +3001,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   FixableGadgetSets FixablesForAllVars;
 
   auto [FixableGadgets, WarningGadgets, Tracker] =
-    findGadgets(D, Handler, EmitSuggestions);
+      findGadgets(D, Handler, EmitSuggestions);
 
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
@@ -3069,36 +3054,36 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
   for (auto it = FixablesForAllVars.byVar.cbegin();
        it != FixablesForAllVars.byVar.cend();) {
-      // FIXME: need to deal with global variables later
-      if ((!it->first->isLocalVarDecl() && !isa<ParmVarDecl>(it->first))) {
+    // FIXME: need to deal with global variables later
+    if ((!it->first->isLocalVarDecl() && !isa<ParmVarDecl>(it->first))) {
 #ifndef NDEBUG
-          Handler.addDebugNoteForVar(
-              it->first, it->first->getBeginLoc(),
-              ("failed to produce fixit for '" + it->first->getNameAsString() +
-               "' : neither local nor a parameter"));
+      Handler.addDebugNoteForVar(it->first, it->first->getBeginLoc(),
+                                 ("failed to produce fixit for '" +
+                                  it->first->getNameAsString() +
+                                  "' : neither local nor a parameter"));
 #endif
-        it = FixablesForAllVars.byVar.erase(it);
-      } else if (it->first->getType().getCanonicalType()->isReferenceType()) {
+      it = FixablesForAllVars.byVar.erase(it);
+    } else if (it->first->getType().getCanonicalType()->isReferenceType()) {
 #ifndef NDEBUG
-        Handler.addDebugNoteForVar(it->first, it->first->getBeginLoc(),
-                                   ("failed to produce fixit for '" +
-                                    it->first->getNameAsString() +
-                                    "' : has a reference type"));
+      Handler.addDebugNoteForVar(it->first, it->first->getBeginLoc(),
+                                 ("failed to produce fixit for '" +
+                                  it->first->getNameAsString() +
+                                  "' : has a reference type"));
 #endif
-        it = FixablesForAllVars.byVar.erase(it);
-      } else if (Tracker.hasUnclaimedUses(it->first)) {
-        it = FixablesForAllVars.byVar.erase(it);
-      } else if (it->first->isInitCapture()) {
+      it = FixablesForAllVars.byVar.erase(it);
+    } else if (Tracker.hasUnclaimedUses(it->first)) {
+      it = FixablesForAllVars.byVar.erase(it);
+    } else if (it->first->isInitCapture()) {
 #ifndef NDEBUG
-        Handler.addDebugNoteForVar(
-            it->first, it->first->getBeginLoc(),
-                                   ("failed to produce fixit for '" + it->first->getNameAsString() +
-                                    "' : init capture"));
+      Handler.addDebugNoteForVar(it->first, it->first->getBeginLoc(),
+                                 ("failed to produce fixit for '" +
+                                  it->first->getNameAsString() +
+                                  "' : init capture"));
 #endif
-        it = FixablesForAllVars.byVar.erase(it);
-      } else {
-        ++it;
-      }
+      it = FixablesForAllVars.byVar.erase(it);
+    } else {
+      ++it;
+    }
   }
 
 #ifndef NDEBUG
@@ -3129,7 +3114,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (auto it : FixablesForAllVars.byVar) {
     for (const FixableGadget *fixable : it.second) {
       std::optional<std::pair<const VarDecl *, const VarDecl *>> ImplPair =
-                                  fixable->getStrategyImplications();
+          fixable->getStrategyImplications();
       if (ImplPair) {
         std::pair<const VarDecl *, const VarDecl *> Impl = std::move(*ImplPair);
         PtrAssignmentGraph[Impl.first].insert(Impl.second);
@@ -3158,10 +3143,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (const auto &[Var, ignore] : UnsafeOps.byVar) {
     if (VisitedVarsDirected.find(Var) == VisitedVarsDirected.end()) {
 
-      std::queue<const VarDecl*> QueueDirected{};
+      std::queue<const VarDecl *> QueueDirected{};
       QueueDirected.push(Var);
-      while(!QueueDirected.empty()) {
-        const VarDecl* CurrentVar = QueueDirected.front();
+      while (!QueueDirected.empty()) {
+        const VarDecl *CurrentVar = QueueDirected.front();
         QueueDirected.pop();
         VisitedVarsDirected.insert(CurrentVar);
         auto AdjacentNodes = PtrAssignmentGraph[CurrentVar];
@@ -3192,11 +3177,11 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (const auto &[Var, ignore] : UnsafeOps.byVar) {
     if (VisitedVars.find(Var) == VisitedVars.end()) {
       VarGrpTy &VarGroup = Groups.emplace_back();
-      std::queue<const VarDecl*> Queue{};
+      std::queue<const VarDecl *> Queue{};
 
       Queue.push(Var);
-      while(!Queue.empty()) {
-        const VarDecl* CurrentVar = Queue.front();
+      while (!Queue.empty()) {
+        const VarDecl *CurrentVar = Queue.front();
         Queue.pop();
         VisitedVars.insert(CurrentVar);
         VarGroup.push_back(CurrentVar);

@@ -114,10 +114,6 @@
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
-// Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @.omp_offloading.requires_reg, ptr null }]
-
-
 template<typename tx, typename ty>
 struct TT{
   tx X;
@@ -889,10 +885,6 @@ void thread_limit_target(int TargetTL, int TeamsTL) {
 // OMP51: call void @__kmpc_set_thread_limit(ptr @{{.+}}, i32 %{{.+}}, i32 %{{.+}})
 // OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0,
 
-
-// CHECK:     define internal void @.omp_offloading.requires_reg()
-// CHECK:     call void @__tgt_register_requires(i64 1)
-// CHECK:     ret void
 
 int main () {
   S2 bar;
