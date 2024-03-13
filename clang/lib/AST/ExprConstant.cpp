@@ -9066,7 +9066,7 @@ public:
     if (Info.checkingPotentialConstantExpression())
       return false;
 
-    const bool IsExplicitLambda =
+    bool IsExplicitLambda =
         isLambdaCallWithExplicitObjectParameter(Info.CurrentCall->Callee);
     if (!IsExplicitLambda) {
       if (!Info.CurrentCall->This) {
