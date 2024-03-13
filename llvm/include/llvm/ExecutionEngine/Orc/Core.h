@@ -1454,7 +1454,7 @@ public:
   /// Construct an ExecutionSession with the given ExecutorProcessControl
   /// object.
   ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC,
-                   std::shared_ptr<SymbolStringPool> SSP = nullptr);
+                   std::shared_ptr<SymbolStringPool> SSP);
 
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.

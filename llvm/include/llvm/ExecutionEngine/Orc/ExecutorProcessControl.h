@@ -413,8 +413,6 @@ public:
   virtual Error disconnect() = 0;
 
 protected:
-
-  std::shared_ptr<SymbolStringPool> SSP;
   std::unique_ptr<TaskDispatcher> D;
   ExecutionSession *ES = nullptr;
   Triple TargetTriple;
