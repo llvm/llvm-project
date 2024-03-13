@@ -10747,9 +10747,8 @@ void test5()
       pnan_sign = "+";
     }
 
-    std::string nan_padding25 = std::string(25 - nan.length(), '*');
-    std::string pnan_padding25 = std::string(25 - nan.length()
-                                             - pnan_sign.length(), '*');
+    std::string nan_padding25  = std::string(25 - nan.length(), '*');
+    std::string pnan_padding25 = std::string(25 - nan.length() - pnan_sign.length(), '*');
 
     {
         long double v = std::nan("");
