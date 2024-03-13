@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
+// These are in a separate file because errors (e.g. incompatible attributes) currently prevent
+// the AnalysisBasedWarnings pass from running at all.
 
 #if !__has_attribute(clang_nolock)
 #error "the 'nolock' attribute is not available"

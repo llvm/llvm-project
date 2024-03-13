@@ -2519,9 +2519,10 @@ struct CallableInfo {
 // Map effects to single diagnostics.
 class EffectToDiagnosticMap {
   // Since we currently only have a tiny number of effects (typically no more
-  // than 1), use a sorted SmallVector.
+  // than 1), use a sorted SmallVector with an inline capacity of 1. Since it
+  // is often empty, use a unique_ptr to the SmallVector.
   using Element = std::pair<const FunctionEffect *, Diagnostic>;
-  using ImplVec = llvm::SmallVector<Element>;
+  using ImplVec = llvm::SmallVector<Element, 1>;
   std::unique_ptr<ImplVec> Impl;
 
 public:
@@ -2533,7 +2534,7 @@ public:
       return Item.second;
     }
     Element Elem(Key, {});
-    auto Iter = _find(Elem);
+    auto *Iter = _find(Elem);
     if (Iter != Impl->end() && Iter->first == Key) {
       return Iter->second;
     }
@@ -2546,7 +2547,7 @@ public:
       return nullptr;
     }
     Element elem(key, {});
-    auto iter = _find(elem);
+    auto *iter = _find(elem);
     if (iter != Impl->end() && iter->first == key) {
       return &iter->second;
     }
@@ -2599,7 +2600,7 @@ public:
                           FunctionEffectSet AllInferrableEffectsToVerify) {
     MutableFunctionEffectSet fx;
     for (const auto *effect : cinfo.Effects) {
-      if (effect->flags() & FunctionEffect::kRequiresVerification) {
+      if (effect->flags() & FunctionEffect::FE_RequiresVerification) {
         fx.insert(effect);
       }
     }
@@ -2807,7 +2808,7 @@ public:
       MutableFunctionEffectSet inferrableEffects;
       for (const FunctionEffect *effect : Sem.AllEffectsToVerify) {
         const auto Flags = effect->flags();
-        if (Flags & FunctionEffect::kInferrableOnCallees) {
+        if (Flags & FunctionEffect::FE_InferrableOnCallees) {
           inferrableEffects.insert(effect);
         }
       }
@@ -2820,7 +2821,7 @@ public:
 
     SmallVector<const Decl *> &verifyQueue = Sem.DeclsWithUnverifiedEffects;
 
-    // It's useful to use DeclsWithUnverifiedEffects as a stack for a
+    // It's helpful to use DeclsWithUnverifiedEffects as a stack for a
     // depth-first traversal rather than have a secondary container. But first,
     // reverse it, so Decls are verified in the order they are declared.
     std::reverse(verifyQueue.begin(), verifyQueue.end());
@@ -2840,7 +2841,7 @@ public:
           verifyQueue.pop_back();
           continue;
         }
-        llvm_unreachable("shouldn't happen");
+        llvm_unreachable("unexpected DeclAnalysis item");
       }
 
       auto *Pending = verifyDecl(D);
@@ -2861,9 +2862,10 @@ public:
         }
         if (isa<PendingFunctionAnalysis *>(AP)) {
           // $$$$$$$$$$$$$$$$$$$$$$$ recursion $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+          // TODO
           __builtin_trap();
         }
-        llvm_unreachable("shouldn't happen");
+        llvm_unreachable("unexpected DeclAnalysis item");
       }
     }
   }
@@ -2964,7 +2966,7 @@ private:
 
     auto check1Effect = [&](const FunctionEffect *Effect, bool Inferring) {
       const auto Flags = Effect->flags();
-      if (Flags & FunctionEffect::kVerifyCalls) {
+      if (Flags & FunctionEffect::FE_VerifyCalls) {
         const bool diagnose = Effect->diagnoseFunctionCall(
             DirectCall, Caller.CDecl, Caller.Effects, Callee.CDecl,
             CalleeEffects);
@@ -2972,7 +2974,7 @@ private:
           // If inference is not allowed, or the target is indirect (virtual
           // method/function ptr?), generate a diagnostic now.
           if (!IsInferencePossible ||
-              !(Flags & FunctionEffect::kInferrableOnCallees)) {
+              !(Flags & FunctionEffect::FE_InferrableOnCallees)) {
             if (Callee.FuncType == SpecialFuncType::None) {
               PFA.checkAddDiagnostic(Inferring,
                                      {Effect, DiagnosticID::CallsUnsafeDecl,
@@ -3263,7 +3265,7 @@ private:
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
 
       auto check1Effect = [&](const FunctionEffect *effect, bool inferring) {
-        if (effect->flags() & FunctionEffect::kVerifyCalls) {
+        if (effect->flags() & FunctionEffect::FE_VerifyCalls) {
           if (FPT == nullptr ||
               effect->diagnoseFunctionCall(
                   /*direct=*/false, CurrentCaller.CDecl, CurrentCaller.Effects,
@@ -3333,19 +3335,19 @@ private:
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
     bool VisitCXXThrowExpr(CXXThrowExpr *Throw) {
-      diagnoseLanguageConstruct(FunctionEffect::kExcludeThrow,
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThrow,
                                 DiagnosticID::Throws, Throw->getThrowLoc());
       return Proceed;
     }
 
     bool VisitCXXCatchStmt(CXXCatchStmt *Catch) {
-      diagnoseLanguageConstruct(FunctionEffect::kExcludeCatch,
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
                                 DiagnosticID::Catches, Catch->getCatchLoc());
       return Proceed;
     }
 
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
-      diagnoseLanguageConstruct(FunctionEffect::kExcludeObjCMessageSend,
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 DiagnosticID::CallsObjC, Msg->getBeginLoc());
       return Proceed;
     }
@@ -3392,7 +3394,7 @@ private:
       }
 
       if (Var->isStaticLocal()) {
-        diagnoseLanguageConstruct(FunctionEffect::kExcludeStaticLocalVars,
+        diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeStaticLocalVars,
                                   DiagnosticID::HasStaticLocal,
                                   Var->getLocation());
       }
@@ -3491,8 +3493,8 @@ private:
         const auto TLSK = Var->getTLSKind();
         if (TLSK != VarDecl::TLS_None) {
           // At least on macOS, thread-local variables are initialized on
-          // first access.
-          diagnoseLanguageConstruct(FunctionEffect::kExcludeThreadLocalVars,
+          // first access, including a heap allocation.
+          diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeThreadLocalVars,
                                     DiagnosticID::AccessesThreadLocal,
                                     E->getLocation());
         }
@@ -3502,14 +3504,6 @@ private:
 
     // Unevaluated contexts: need to skip
     // see https://reviews.llvm.org/rG777eb4bcfc3265359edb7c979d3e5ac699ad4641
-
-    // bool TraverseTypeLoc(TypeLoc /*unused*/)
-    // {
-    //   // This is a big blunt hammer so that we don't reach __invoke()'s call
-    //   to declval().
-    //   // Is it correct?
-    //   return Proceed;
-    // }
 
     bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) {
       return TraverseStmt(Node->getResultExpr());

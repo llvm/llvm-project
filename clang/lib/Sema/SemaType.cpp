@@ -172,6 +172,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_TypeNullableResult:                                      \
   case ParsedAttr::AT_TypeNullUnspecified
 
+enum class BoolAttrState : uint8_t { Unseen, False, True };
+
 namespace {
   /// An object which stores processing state for the entire
   /// GetTypeForDeclarator process.
@@ -215,14 +217,15 @@ namespace {
     // Manual logic for finding previous attributes would be more complex,
     // unless we transformed nolock/noalloc(false) into distinct separate
     // attributes from the ones which are parsed.
-    unsigned char parsedNolock : 2;
-    unsigned char parsedNoalloc : 2;
+    BoolAttrState parsedNolock : 2;
+    BoolAttrState parsedNoalloc : 2;
 
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
           chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
-          parsedNolock(0), parsedNoalloc(0) {}
+          parsedNolock(BoolAttrState::Unseen),
+          parsedNoalloc(BoolAttrState::Unseen) {}
 
     Sema &getSema() const {
       return sema;
@@ -349,10 +352,10 @@ namespace {
 
     bool didParseNoDeref() const { return parsedNoDeref; }
 
-    void setParsedNolock(unsigned char v) { parsedNolock = v; }
-    unsigned char getParsedNolock() const { return parsedNolock; }
-    void setParsedNoalloc(unsigned char v) { parsedNoalloc = v; }
-    unsigned char getParsedNoalloc() const { return parsedNoalloc; }
+    void setParsedNolock(BoolAttrState v) { parsedNolock = v; }
+    BoolAttrState getParsedNolock() const { return parsedNolock; }
+    void setParsedNoalloc(BoolAttrState v) { parsedNoalloc = v; }
+    BoolAttrState getParsedNoalloc() const { return parsedNoalloc; }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -7944,15 +7947,12 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
 static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
                                         ParsedAttr &PAttr, QualType &type,
                                         FunctionTypeUnwrapper &unwrapped) {
-  // Values of nolockState / noallocState
-  enum { kNotSeen = 0, kSeenFalse = 1, kSeenTrue = 2 };
-
-  const bool isNoLock = PAttr.getKind() == ParsedAttr::AT_NoLock;
-  Sema &S = state.getSema();
-
   // Delay if this is not a function type.
   if (!unwrapped.isFunctionType())
     return false;
+
+  const bool isNoLock = PAttr.getKind() == ParsedAttr::AT_NoLock;
+  Sema &S = state.getSema();
 
   // Require FunctionProtoType
   auto *FPT = unwrapped.get()->getAs<FunctionProtoType>();
@@ -7962,6 +7962,8 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
   }
 
   // Parse the conditional expression, if any
+  // TODO: There's a better way to do this. See PR feedback.
+  // TODO: Handle a type-dependent expression.
   bool Cond = true; // default
   if (PAttr.getNumArgs() > 0) {
     if (!S.checkBoolExprArgumentAttr(PAttr, 0, Cond)) {
@@ -7983,14 +7985,16 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
   };
 
   // check nolock(true) against nolock(false), and same for noalloc
-  const unsigned newState = Cond ? kSeenTrue : kSeenFalse;
-  const unsigned oppositeNewState = Cond ? kSeenFalse : kSeenTrue;
+  const BoolAttrState newState =
+      Cond ? BoolAttrState::True : BoolAttrState::False;
+  const BoolAttrState oppositeNewState =
+      Cond ? BoolAttrState::False : BoolAttrState::True;
   if (isNoLock) {
     if (state.getParsedNolock() == oppositeNewState) {
       return incompatible("nolock(true)", "nolock(false)");
     }
     // also check nolock(true) against noalloc(false)
-    if (Cond && state.getParsedNoalloc() == kSeenFalse) {
+    if (Cond && state.getParsedNoalloc() == BoolAttrState::False) {
       return incompatible("nolock(true)", "noalloc(false)");
     }
     state.setParsedNolock(newState);
@@ -7999,7 +8003,7 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
       return incompatible("noalloc(true)", "noalloc(false)");
     }
     // also check nolock(true) against noalloc(false)
-    if (state.getParsedNolock() == kSeenTrue) {
+    if (state.getParsedNolock() == BoolAttrState::True) {
       if (!Cond) {
         return incompatible("nolock(true)", "noalloc(false)");
       }
@@ -8022,6 +8026,8 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
     return true;
   }
 
+  // nolock(true) and noalloc(true) are represented as FunctionEffects, in a
+  // FunctionEffectSet attached to a FunctionProtoType.
   const FunctionEffect *Effect = nullptr;
   if (isNoLock) {
     Effect = &NoLockNoAllocEffect::nolock_instance();
@@ -8031,9 +8037,9 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
 
   MutableFunctionEffectSet newEffectSet{Effect};
   if (EPI.FunctionEffects) {
-    // Preserve all previous effects - except noalloc, when we are adding nolock
+    // Preserve any previous effects - except noalloc, when we are adding nolock
     for (const auto *effect : EPI.FunctionEffects) {
-      if (!(isNoLock && effect->type() == FunctionEffect::kNoAllocTrue))
+      if (!(isNoLock && effect->type() == FunctionEffect::Type::NoAllocTrue))
         newEffectSet.insert(effect);
     }
   }

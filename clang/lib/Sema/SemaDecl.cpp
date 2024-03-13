@@ -11155,17 +11155,21 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
   if (hasUncompilableErrorOccurred())
     return;
 
+#if 0
+// TODO: Does anything break if we don't do this?
+
   // For code in dependent contexts, we'll do this at instantiation time
   // (??? This was copied from something else in AnalysisBasedWarnings ???)
   if (cast<DeclContext>(D)->isDependentContext()) {
     return;
   }
+#endif
 
   // Filter out declarations that the FunctionEffect analysis should skip
-  // and not verify. (??? Is this the optimal order in which to test ???)
+  // and not verify.
   bool FXNeedVerification = false;
   for (const auto *Effect : FX) {
-    if (Effect->flags() & FunctionEffect::kRequiresVerification) {
+    if (Effect->flags() & FunctionEffect::FE_RequiresVerification) {
       AllEffectsToVerify.insert(Effect);
       FXNeedVerification = true;
     }
@@ -15990,7 +15994,6 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
-  // TODO: does this really need to be getCanonicalDecl()?
   if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects()) {
     CheckAddCallableWithEffects(FD, FX);
   }

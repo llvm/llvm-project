@@ -3662,7 +3662,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // Note that valid type pointers are never ambiguous with anything else.
   //
   // The encoding grammar begins:
-  //      type type* bool int bool
+  //      effects type type* bool int bool
   // If that final bool is true, then there is a section for the EH spec:
   //      bool type*
   // This is followed by an optional "consumed argument" section of the
@@ -3673,13 +3673,12 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // Finally we have a trailing return type flag (bool)
   // combined with AArch64 SME Attributes, to save space:
   //      int
-  // Then add the FunctionEffects
   //
   // There is no ambiguity between the consumed arguments and an empty EH
   // spec because of the leading 'bool' which unambiguously indicates
   // whether the following bool is the EH spec or part of the arguments.
 
-  ID.AddPointer(epi.FunctionEffects.getOpaqueValue()); // TODO: Where???
+  ID.AddPointer(epi.FunctionEffects.getOpaqueValue());
 
   ID.AddPointer(Result.getAsOpaquePtr());
   for (unsigned i = 0; i != NumParams; ++i)
@@ -4961,22 +4960,22 @@ bool FunctionEffect::diagnoseFunctionCall(bool Direct, const Decl *Caller,
 }
 
 const NoLockNoAllocEffect &NoLockNoAllocEffect::nolock_instance() {
-  static NoLockNoAllocEffect global(kNoLockTrue, "nolock");
+  static NoLockNoAllocEffect global(Type::NoLockTrue, "nolock");
   return global;
 }
 
 const NoLockNoAllocEffect &NoLockNoAllocEffect::noalloc_instance() {
-  static NoLockNoAllocEffect global(kNoAllocTrue, "noalloc");
+  static NoLockNoAllocEffect global(Type::NoAllocTrue, "noalloc");
   return global;
 }
 
 // TODO: Separate flags for noalloc
-NoLockNoAllocEffect::NoLockNoAllocEffect(EffectType Ty, const char *Name)
+NoLockNoAllocEffect::NoLockNoAllocEffect(Type Ty, const char *Name)
     : FunctionEffect(Ty,
-                     kRequiresVerification | kVerifyCalls |
-                         kInferrableOnCallees | kExcludeThrow | kExcludeCatch |
-                         kExcludeObjCMessageSend | kExcludeStaticLocalVars |
-                         kExcludeThreadLocalVars,
+                     FE_RequiresVerification | FE_VerifyCalls |
+                         FE_InferrableOnCallees | FE_ExcludeThrow |
+                         FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
+                         FE_ExcludeStaticLocalVars | FE_ExcludeThreadLocalVars,
                      Name) {}
 
 NoLockNoAllocEffect::~NoLockNoAllocEffect() = default;
@@ -4993,7 +4992,7 @@ bool NoLockNoAllocEffect::diagnoseConversion(bool Adding, QualType OldType,
   if (Adding) {
     if (!isNoLock()) {
       for (const auto *Effect : OldFX) {
-        if (Effect->type() == kNoLockTrue)
+        if (Effect->type() == Type::NoLockTrue)
           return false;
       }
     }
@@ -5044,10 +5043,11 @@ bool NoLockNoAllocEffect::canInferOnDecl(const Decl *Caller,
 bool NoLockNoAllocEffect::diagnoseFunctionCall(
     bool Direct, const Decl *Caller, FunctionEffectSet CallerFX,
     CalleeDeclOrType Callee, FunctionEffectSet CalleeFX) const {
-  const EffectType CallerType = type();
+  const Type CallerType = type();
   for (const auto *Effect : CalleeFX) {
-    const EffectType ET = Effect->type();
-    if (ET == CallerType || (CallerType == kNoAllocTrue && ET == kNoLockTrue)) {
+    const Type ET = Effect->type();
+    if (ET == CallerType ||
+        (CallerType == Type::NoAllocTrue && ET == Type::NoLockTrue)) {
       return false;
     }
   }
@@ -5088,11 +5088,16 @@ FunctionEffectSet::create(llvm::ArrayRef<const FunctionEffect *> Items) {
 
   // SmallSet only has contains(), so it provides no way to obtain the uniqued
   // value.
-  static std::set<UniquedAndSortedFX> uniquedFXSets;
+  // TODO: Put this in the ASTContext
+  // TODO: Try making this a DenseSet? Requires more methods on the members.
+  // static llvm::DenseSet<UniquedAndSortedFX> UniquedFXSets;
+  // Punt on this until we revisit FunctionFX.
+
+  static std::set<UniquedAndSortedFX> UniquedFXSets;
 
   // See if we already have this set.
-  const auto Iter = uniquedFXSets.find(NewSet);
-  if (Iter != uniquedFXSets.end()) {
+  const auto Iter = UniquedFXSets.find(NewSet);
+  if (Iter != UniquedFXSets.end()) {
     return FunctionEffectSet{&*Iter};
   }
 
@@ -5102,7 +5107,7 @@ FunctionEffectSet::create(llvm::ArrayRef<const FunctionEffect *> Items) {
 
   // Make a new wrapper and insert it into the set.
   NewSet = UniquedAndSortedFX(Storage, Items.size());
-  auto [InsIter, _] = uniquedFXSets.insert(NewSet);
+  auto [InsIter, _] = UniquedFXSets.insert(NewSet);
   return FunctionEffectSet(&*InsIter);
 }
 

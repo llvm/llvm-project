@@ -5,20 +5,20 @@
 #error "the 'nolock' attribute is not available"
 #endif
 
-void unannotated(void);
-void nolock(void) [[clang::nolock]];
-void noalloc(void) [[clang::noalloc]];
+void unannotated();
+void nolock() [[clang::nolock]];
+void noalloc() [[clang::noalloc]];
 
 
-void callthis(void (*fp)(void));
+void callthis(void (*fp)());
 
 
-void type_conversions(void)
+void type_conversions()
 {
 // 	callthis(nolock);
 
 	// It's fine to remove a performance constraint.
-	void (*fp_plain)(void);
+	void (*fp_plain)();
 
 // 	fp_plain = unannotated;
 	fp_plain = nolock;

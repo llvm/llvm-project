@@ -4274,10 +4274,6 @@ public:
 
   ArrayRef<const FunctionEffect *> items() const { return {begin(), end()}; }
 
-  // Since iterators are non-trivial and sets are very often empty,
-  // encourage short-circuiting loops for the empty set.
-  // void for_each(llvm::function_ref<void(const FunctionEffect*)> func) const;
-
   bool operator==(const FunctionEffectSet &other) const {
     return Impl == other.Impl;
   }
@@ -7915,37 +7911,39 @@ class CXXMethodDecl;
 /// Represents an abstract function effect.
 class FunctionEffect {
 public:
-  enum EffectType {
-    kGeneric,
-    kNoLockTrue,
-    kNoAllocTrue,
+  enum class Type : unsigned char {
+    NoLockTrue,
+    NoAllocTrue,
   };
 
   /// Flags describing behaviors of the effect.
+  // (Why not a struct with bitfields? There's one function that would like to
+  // test a caller-specified bit. There are some potential optimizations that
+  // would OR together the bits of multiple effects.)
   using Flags = unsigned;
   enum FlagBit : unsigned {
     // Some effects require verification, e.g. nolock(true); others might not?
-    // (no example yet)
-    kRequiresVerification = 0x1,
+    // (no example yet; TODO: maybe always true, vestigial from nolock(false)).
+    FE_RequiresVerification = 0x1,
 
     // Does this effect want to verify all function calls originating in
-    // functions having this effect?
-    kVerifyCalls = 0x2,
+    // functions having this effect? TODO: maybe always true, vestigial.
+    FE_VerifyCalls = 0x2,
 
     // Can verification inspect callees' implementations? (e.g. nolock: yes,
     // tcb+types: no)
-    kInferrableOnCallees = 0x4,
+    FE_InferrableOnCallees = 0x4,
 
     // Language constructs which effects can diagnose as disallowed.
-    kExcludeThrow = 0x8,
-    kExcludeCatch = 0x10,
-    kExcludeObjCMessageSend = 0x20,
-    kExcludeStaticLocalVars = 0x40,
-    kExcludeThreadLocalVars = 0x80
+    FE_ExcludeThrow = 0x8,
+    FE_ExcludeCatch = 0x10,
+    FE_ExcludeObjCMessageSend = 0x20,
+    FE_ExcludeStaticLocalVars = 0x40,
+    FE_ExcludeThreadLocalVars = 0x80
   };
 
 private:
-  const EffectType Type_;
+  const Type Type_;
   const Flags Flags_;
   const char *Name;
 
@@ -7953,12 +7951,12 @@ public:
   using CalleeDeclOrType =
       llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
 
-  FunctionEffect(EffectType T, Flags F, const char *Name)
+  FunctionEffect(Type T, Flags F, const char *Name)
       : Type_(T), Flags_(F), Name(Name) {}
   virtual ~FunctionEffect();
 
   /// The type of the effect.
-  EffectType type() const { return Type_; }
+  Type type() const { return Type_; }
 
   /// Flags describing behaviors of the effect.
   Flags flags() const { return Flags_; }
@@ -8011,13 +8009,13 @@ public:
 /// FunctionEffect subclass for nolock and noalloc (whose behaviors are close
 /// to identical).
 class NoLockNoAllocEffect : public FunctionEffect {
-  bool isNoLock() const { return type() == kNoLockTrue; }
+  bool isNoLock() const { return type() == Type::NoLockTrue; }
 
 public:
   static const NoLockNoAllocEffect &nolock_instance();
   static const NoLockNoAllocEffect &noalloc_instance();
 
-  NoLockNoAllocEffect(EffectType Type, const char *Name);
+  NoLockNoAllocEffect(Type Type, const char *Name);
   ~NoLockNoAllocEffect() override;
 
   std::string attribute() const override;

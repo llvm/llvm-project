@@ -1402,26 +1402,20 @@ def CXX11NoReturn : InheritableAttr {
   let Documentation = [CXX11NoReturnDocs];
 }
 
-def NoLock : DeclOrTypeAttr {
+def NoLock : TypeAttr {
   let Spellings = [CXX11<"clang", "nolock">,
                    C23<"clang", "nolock">,
                    GNU<"clang_nolock">];
 
-  // Subjects - not needed?
-  //let Subjects = SubjectList<[FunctionLike, Block, TypedefName], ErrorDiag>;
   let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
-  let HasCustomParsing = 0;
   let Documentation = [NoLockNoAllocDocs];
 }
 
-def NoAlloc : DeclOrTypeAttr {
+def NoAlloc : TypeAttr {
   let Spellings = [CXX11<"clang", "noalloc">,
                    C23<"clang", "noalloc">,
                    GNU<"clang_noalloc">];
-  // Subjects - not needed?
-  //let Subjects = SubjectList<[FunctionLike, Block, TypedefName], ErrorDiag>;
   let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
-  let HasCustomParsing = 0;
   let Documentation = [NoLockNoAllocDocs];
 }
 
