@@ -355,7 +355,6 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
       SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
   void
   handleLongjmpableCallsForWasmSjLj(Function &F, InstVector &SetjmpTableInsts,
-                                    InstVector &SetjmpTableSizeInsts,
                                     SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
@@ -1417,8 +1416,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     handleLongjmpableCallsForEmscriptenSjLj(
         F, SetjmpTableInsts, SetjmpTableSizeInsts, SetjmpRetPHIs);
   else // EnableWasmSjLj
-    handleLongjmpableCallsForWasmSjLj(F, SetjmpTableInsts, SetjmpTableSizeInsts,
-                                      SetjmpRetPHIs);
+    handleLongjmpableCallsForWasmSjLj(F, SetjmpTableInsts, SetjmpRetPHIs);
 
   // Erase everything we no longer need in this function
   for (Instruction *I : ToErase)
@@ -1712,7 +1710,7 @@ static BasicBlock *getCleanupRetUnwindDest(const CleanupPadInst *CPI) {
 // BBs. Refer to 4) of "Wasm setjmp/longjmp handling" section in the comments at
 // top of the file for details.
 void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
-    Function &F, InstVector &SetjmpTableInsts, InstVector &SetjmpTableSizeInsts,
+    Function &F, InstVector &SetjmpTableInsts,
     SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
@@ -1739,7 +1737,6 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   // Arbitrarily use the ones defined in the beginning of the function.
   // SSAUpdater will later update them to the correct values.
   Instruction *SetjmpTable = *SetjmpTableInsts.begin();
-  Instruction *SetjmpTableSize = *SetjmpTableSizeInsts.begin();
 
   // Add setjmp.dispatch BB right after the entry block. Because we have
   // initialized setjmpTable/setjmpTableSize in the entry block and split the
