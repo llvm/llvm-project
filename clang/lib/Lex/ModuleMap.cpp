@@ -2498,9 +2498,12 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   }
 
   bool NeedsFramework = false;
-  // Don't add the top level headers to the builtin modules if the builtin headers
-  // belong to the system modules.
-  if (!Map.LangOpts.BuiltinHeadersInSystemModules || ActiveModule->isSubModule() || !isBuiltInModuleName(ActiveModule->Name))
+  // Don't add headers to the builtin modules if the builtin headers belong to
+  // the system modules, with the exception of __stddef_max_align_t.h which
+  // always had its own module.
+  if (!Map.LangOpts.BuiltinHeadersInSystemModules ||
+      !isBuiltInModuleName(ActiveModule->getTopLevelModuleName()) ||
+      ActiveModule->fullModuleNameIs({"_Builtin_stddef", "max_align_t"}))
     Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
 
   if (NeedsFramework)
