@@ -2106,7 +2106,9 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     } else {
       // Otherwise generate the ADDItocL8.
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDItocL8),
-              DestReg).addReg(HighPartReg).addGlobalAddress(GV);
+              DestReg)
+          .addReg(HighPartReg)
+          .addGlobalAddress(GV);
     }
   }
 
