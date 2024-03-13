@@ -457,11 +457,11 @@ private:
 class UnsupportedExecutorProcessControl : public ExecutorProcessControl,
                                           private InProcessMemoryAccess {
 public:
-  UnsupportedExecutorProcessControl(
-      std::unique_ptr<TaskDispatcher> D = nullptr, const std::string &TT = "",
-      unsigned PageSize = 0)
-      : ExecutorProcessControl(
-            D ? std::move(D) : std::make_unique<InPlaceTaskDispatcher>()),
+  UnsupportedExecutorProcessControl(std::unique_ptr<TaskDispatcher> D = nullptr,
+                                    const std::string &TT = "",
+                                    unsigned PageSize = 0)
+      : ExecutorProcessControl(D ? std::move(D)
+                                 : std::make_unique<InPlaceTaskDispatcher>()),
         InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
     this->TargetTriple = Triple(TT);
     this->PageSize = PageSize;
