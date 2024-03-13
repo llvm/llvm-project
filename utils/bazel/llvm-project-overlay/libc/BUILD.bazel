@@ -595,6 +595,7 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
