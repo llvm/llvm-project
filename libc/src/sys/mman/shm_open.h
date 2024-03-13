@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_SHM_OPEN_H
 #define LLVM_LIBC_SRC_SYS_MMAN_SHM_OPEN_H
 
-#include <fcntl.h> // For mode_t.
+#include <sys/mman.h>
 
 namespace LIBC_NAMESPACE {
 

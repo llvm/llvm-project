@@ -14,9 +14,8 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
   auto buffer = get_shm_name(name);
-  if (!buffer.has_value()) {
+  if (!buffer.has_value())
     return -1;
-  }
   return unlink(buffer->data());
 }
 

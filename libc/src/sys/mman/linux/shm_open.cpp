@@ -9,17 +9,16 @@
 #include "src/sys/mman/shm_open.h"
 #include "src/fcntl/open.h"
 #include "src/sys/mman/linux/shm_common.h"
-#include <asm/fcntl.h>
+#include <fcntl.h>
 
 namespace LIBC_NAMESPACE {
 
 static constexpr int DEFAULT_OFLAGS = O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK;
 
 LLVM_LIBC_FUNCTION(int, shm_open, (const char *name, int oflags, mode_t mode)) {
-  auto buffer = get_shm_name(name);
-  if (!buffer.has_value()) {
+  cpp::optional<SHMPath> buffer = get_shm_name(name);
+  if (!buffer.has_value())
     return -1;
-  }
   return open(buffer->data(), oflags | DEFAULT_OFLAGS, mode);
 }
 

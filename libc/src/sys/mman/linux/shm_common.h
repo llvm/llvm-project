@@ -11,7 +11,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/errno/libc_errno.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include <asm/errno.h>
 #include <linux/limits.h>
 
 namespace LIBC_NAMESPACE {
