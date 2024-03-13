@@ -929,7 +929,10 @@ def checkPexpectSupport():
             import pexpect
         except:
             raise Exception(
-                "pexpect is not installed, but pexpect tests are not being skipped."
+                "Tests in the 'pexpect' category will run, but pexpect is not installed. "
+                "Either install it (via pip or via a distro package), "
+                "or skip them by configuring cmake with "
+                "-DLLDB_TEST_USER_ARGS=--skip-category=pexpect"
             )
 
 
