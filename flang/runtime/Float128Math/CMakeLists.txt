@@ -48,6 +48,7 @@ set(sources
   nearest.cpp
   norm2.cpp
   pow.cpp
+  random.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp
