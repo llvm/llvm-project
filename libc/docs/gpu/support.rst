@@ -162,7 +162,6 @@ stdc_bit_ceil_ul              |check|
 stdc_bit_ceil_ull             |check|
 ============================  =========  ============
 
-
 stdlib.h
 --------
 
