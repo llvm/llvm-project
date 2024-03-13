@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CheckerRegistration.h"
-#include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
-
-#include "Reusables.h"
 
 namespace clang {
 namespace ento {
