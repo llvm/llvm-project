@@ -1,4 +1,4 @@
-//======-- DebugProgramInstruction.cpp - Implement DPValues/DPMarkers --======//
+//=====-- DebugProgramInstruction.cpp - Implement DbgRecords/DPMarkers --=====//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -541,21 +541,21 @@ void DbgRecord::moveAfter(DbgRecord *MoveAfter) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // An empty, global, DPMarker for the purpose of describing empty ranges of
-// DPValues.
+// DbgRecords.
 DPMarker DPMarker::EmptyDPMarker;
 
 void DPMarker::dropDbgRecords() {
-  while (!StoredDPValues.empty()) {
-    auto It = StoredDPValues.begin();
+  while (!StoredDbgRecords.empty()) {
+    auto It = StoredDbgRecords.begin();
     DbgRecord *DR = &*It;
-    StoredDPValues.erase(It);
+    StoredDbgRecords.erase(It);
     DR->deleteRecord();
   }
 }
 
 void DPMarker::dropOneDbgRecord(DbgRecord *DR) {
   assert(DR->getMarker() == this);
-  StoredDPValues.erase(DR->getIterator());
+  StoredDbgRecords.erase(DR->getIterator());
   DR->deleteRecord();
 }
 
@@ -566,15 +566,15 @@ const BasicBlock *DPMarker::getParent() const {
 BasicBlock *DPMarker::getParent() { return MarkedInstr->getParent(); }
 
 void DPMarker::removeMarker() {
-  // Are there any DPValues in this DPMarker? If not, nothing to preserve.
+  // Are there any DbgRecords in this DPMarker? If not, nothing to preserve.
   Instruction *Owner = MarkedInstr;
-  if (StoredDPValues.empty()) {
+  if (StoredDbgRecords.empty()) {
     eraseFromParent();
     Owner->DbgMarker = nullptr;
     return;
   }
 
-  // The attached DPValues need to be preserved; attach them to the next
+  // The attached DbgRecords need to be preserved; attach them to the next
   // instruction. If there isn't a next instruction, put them on the
   // "trailing" list.
   DPMarker *NextMarker = Owner->getParent()->getNextMarker(Owner);
@@ -610,15 +610,15 @@ void DPMarker::eraseFromParent() {
 }
 
 iterator_range<DbgRecord::self_iterator> DPMarker::getDbgRecordRange() {
-  return make_range(StoredDPValues.begin(), StoredDPValues.end());
+  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
 }
 iterator_range<DbgRecord::const_self_iterator>
 DPMarker::getDbgRecordRange() const {
-  return make_range(StoredDPValues.begin(), StoredDPValues.end());
+  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
 }
 
 void DbgRecord::removeFromParent() {
-  getMarker()->StoredDPValues.erase(getIterator());
+  getMarker()->StoredDbgRecords.erase(getIterator());
   Marker = nullptr;
 }
 
@@ -628,29 +628,29 @@ void DbgRecord::eraseFromParent() {
 }
 
 void DPMarker::insertDbgRecord(DbgRecord *New, bool InsertAtHead) {
-  auto It = InsertAtHead ? StoredDPValues.begin() : StoredDPValues.end();
-  StoredDPValues.insert(It, *New);
+  auto It = InsertAtHead ? StoredDbgRecords.begin() : StoredDbgRecords.end();
+  StoredDbgRecords.insert(It, *New);
   New->setMarker(this);
 }
 void DPMarker::insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore) {
   assert(InsertBefore->getMarker() == this &&
-         "DPValue 'InsertBefore' must be contained in this DPMarker!");
-  StoredDPValues.insert(InsertBefore->getIterator(), *New);
+         "DbgRecord 'InsertBefore' must be contained in this DPMarker!");
+  StoredDbgRecords.insert(InsertBefore->getIterator(), *New);
   New->setMarker(this);
 }
 void DPMarker::insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter) {
   assert(InsertAfter->getMarker() == this &&
-         "DPValue 'InsertAfter' must be contained in this DPMarker!");
-  StoredDPValues.insert(++(InsertAfter->getIterator()), *New);
+         "DbgRecord 'InsertAfter' must be contained in this DPMarker!");
+  StoredDbgRecords.insert(++(InsertAfter->getIterator()), *New);
   New->setMarker(this);
 }
 
 void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
-  auto It = InsertAtHead ? StoredDPValues.begin() : StoredDPValues.end();
-  for (DbgRecord &DPV : Src.StoredDPValues)
+  auto It = InsertAtHead ? StoredDbgRecords.begin() : StoredDbgRecords.end();
+  for (DbgRecord &DPV : Src.StoredDbgRecords)
     DPV.setMarker(this);
 
-  StoredDPValues.splice(It, Src.StoredDPValues);
+  StoredDbgRecords.splice(It, Src.StoredDbgRecords);
 }
 
 void DPMarker::absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
@@ -659,45 +659,45 @@ void DPMarker::absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
     DR.setMarker(this);
 
   auto InsertPos =
-      (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
+      (InsertAtHead) ? StoredDbgRecords.begin() : StoredDbgRecords.end();
 
-  StoredDPValues.splice(InsertPos, Src.StoredDPValues, Range.begin(),
-                        Range.end());
+  StoredDbgRecords.splice(InsertPos, Src.StoredDbgRecords, Range.begin(),
+                          Range.end());
 }
 
 iterator_range<simple_ilist<DbgRecord>::iterator> DPMarker::cloneDebugInfoFrom(
     DPMarker *From, std::optional<simple_ilist<DbgRecord>::iterator> from_here,
     bool InsertAtHead) {
   DbgRecord *First = nullptr;
-  // Work out what range of DPValues to clone: normally all the contents of the
-  // "From" marker, optionally we can start from the from_here position down to
-  // end().
+  // Work out what range of DbgRecords to clone: normally all the contents of
+  // the "From" marker, optionally we can start from the from_here position down
+  // to end().
   auto Range =
-      make_range(From->StoredDPValues.begin(), From->StoredDPValues.end());
+      make_range(From->StoredDbgRecords.begin(), From->StoredDbgRecords.end());
   if (from_here.has_value())
-    Range = make_range(*from_here, From->StoredDPValues.end());
+    Range = make_range(*from_here, From->StoredDbgRecords.end());
 
   // Clone each DPValue and insert into StoreDPValues; optionally place them at
   // the start or the end of the list.
-  auto Pos = (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
+  auto Pos = (InsertAtHead) ? StoredDbgRecords.begin() : StoredDbgRecords.end();
   for (DbgRecord &DR : Range) {
     DbgRecord *New = DR.clone();
     New->setMarker(this);
-    StoredDPValues.insert(Pos, *New);
+    StoredDbgRecords.insert(Pos, *New);
     if (!First)
       First = New;
   }
 
   if (!First)
-    return {StoredDPValues.end(), StoredDPValues.end()};
+    return {StoredDbgRecords.end(), StoredDbgRecords.end()};
 
   if (InsertAtHead)
     // If InsertAtHead is set, we cloned a range onto the front of of the
-    // StoredDPValues collection, return that range.
-    return {StoredDPValues.begin(), Pos};
+    // StoredDbgRecords collection, return that range.
+    return {StoredDbgRecords.begin(), Pos};
   else
     // We inserted a block at the end, return that range.
-    return {First->getIterator(), StoredDPValues.end()};
+    return {First->getIterator(), StoredDbgRecords.end()};
 }
 
 } // end namespace llvm
