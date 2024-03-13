@@ -564,9 +564,9 @@ struct MatchableInfo {
   // where it was copied while being in an owning state.
   MatchableInfo(const MatchableInfo &RHS)
       : AsmVariantID(RHS.AsmVariantID), AsmString(RHS.AsmString),
-        TheDef(RHS.TheDef), DefRec(RHS.DefRec), ResOperands(RHS.ResOperands),
-        Mnemonic(RHS.Mnemonic), AsmOperands(RHS.AsmOperands),
-        RequiredFeatures(RHS.RequiredFeatures),
+        TheDef(RHS.TheDef), ResInstSize(RHS.ResInstSize), DefRec(RHS.DefRec),
+        ResOperands(RHS.ResOperands), Mnemonic(RHS.Mnemonic),
+        AsmOperands(RHS.AsmOperands), RequiredFeatures(RHS.RequiredFeatures),
         ConversionFnKind(RHS.ConversionFnKind),
         HasDeprecation(RHS.HasDeprecation),
         UseInstAsmMatchConverter(RHS.UseInstAsmMatchConverter) {
@@ -678,7 +678,7 @@ struct MatchableInfo {
       return false;
 
     // The size of instruction is unambiguous.
-    if (Target.getPreferSmallerInstructions() && ResInstSize != RHS.ResInstSize)
+    if (getPreferSmallerInstructions(Target) && ResInstSize != RHS.ResInstSize)
       return false;
 
     // The number of operands is unambiguous.
