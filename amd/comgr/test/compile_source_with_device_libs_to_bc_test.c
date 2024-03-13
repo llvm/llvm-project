@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   size_t SizeSource;
   amd_comgr_data_t DataSource;
   amd_comgr_data_set_t DataSetIn, DataSetPch, DataSetBc, DataSetLinked,
-      DataSetAsm, DataSetReloc, DataSetExec;
+      DataSetReloc, DataSetExec;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   const char *CodeGenOptions[] = {
@@ -135,29 +135,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  Status = amd_comgr_create_data_set(&DataSetAsm);
-  checkError(Status, "amd_comgr_create_data_set");
-
-  Status = amd_comgr_do_action(AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY,
-                               DataAction, DataSetLinked, DataSetAsm);
-  checkError(Status, "amd_comgr_do_action");
-
-  Status = amd_comgr_action_data_count(DataSetAsm, AMD_COMGR_DATA_KIND_SOURCE,
-                                       &Count);
-  checkError(Status, "amd_comgr_action_data_count");
-
-  if (Count != 1) {
-    printf("AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY Failed: "
-           "produced %zu source objects (expected 1)\n",
-           Count);
-    exit(1);
-  }
-
   Status = amd_comgr_create_data_set(&DataSetReloc);
   checkError(Status, "amd_comgr_create_data_set");
 
-  Status = amd_comgr_do_action(AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE,
-                               DataAction, DataSetAsm, DataSetReloc);
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE,
+                               DataAction, DataSetLinked, DataSetReloc);
   checkError(Status, "amd_comgr_do_action");
 
   Status = amd_comgr_action_data_count(DataSetReloc,
@@ -201,8 +183,6 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_destroy_data_set(DataSetBc);
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetLinked);
-  checkError(Status, "amd_comgr_destroy_data_set");
-  Status = amd_comgr_destroy_data_set(DataSetAsm);
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetReloc);
   checkError(Status, "amd_comgr_destroy_data_set");
