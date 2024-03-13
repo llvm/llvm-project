@@ -469,6 +469,22 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return LT.first *
            getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI, LT.second, CostKind);
   case TTI::SK_InsertSubvector:
+    // If we're inserting a subvector of *exactly* m1 size at a sub-register
+    // boundary this is a subregister insert at worst and won't require the
+    // slideup.  We require the subvec to to be exactly VLEN as otherwise
+    // we'd have to account for tail elements in the m1 container if any.
+    // TODO: Extend for aligned m2, m4 inserts
+    // TODO: Extend for scalable subvector types
+    if (std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
+        SubLT.second.isValid() && SubLT.second.isFixedLengthVector()) {
+      const unsigned MinVLen = ST->getRealMinVLen();
+      const unsigned MaxVLen = ST->getRealMaxVLen();
+      if (MinVLen == MaxVLen &&
+          SubLT.second.getScalarSizeInBits() * Index % MinVLen == 0 &&
+          SubLT.second.getSizeInBits() == MinVLen)
+        return TTI::TCC_Free;
+    }
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
