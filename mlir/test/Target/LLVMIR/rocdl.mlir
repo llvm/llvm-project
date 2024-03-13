@@ -95,6 +95,13 @@ llvm.func @rocdl.ballot(%pred : i1) -> i32 {
   llvm.return %0 : i32
 }
 
+llvm.func @rocdl.ballot(%pred : i1) -> i64 {
+  // CHECK-LABEL: rocdl.ballot
+  // CHECK: call i64 @llvm.amdgcn.ballot
+  %0 = rocdl.ballot %pred : i64
+  llvm.return %0 : i64
+}
+
 llvm.func @rocdl.waitcnt() {
   // CHECK-LABEL: rocdl.waitcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)
