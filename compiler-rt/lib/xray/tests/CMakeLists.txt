@@ -109,7 +109,7 @@ macro(add_xray_unittest testname)
         ${XRAY_HEADERS} ${XRAY_ALL_SOURCE_FILES_ABS_PATHS}
         "test_helpers.h"
         RUNTIME "${XRAY_RUNTIME_LIBS}"
-        DEPS llvm_gtest xray llvm-xray LLVMXRay LLVMTestingSupport
+        DEPS xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
         )
