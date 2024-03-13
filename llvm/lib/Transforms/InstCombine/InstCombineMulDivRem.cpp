@@ -198,20 +198,6 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
-  // mul (sext X)), Y -> select X, -Y, 0
-  // mul Y, (sext X)) -> select X, -Y, 0
-  Value *SExtOp;
-  if (match(Op0, m_SExt(m_Value(SExtOp))) &&
-      SExtOp->getType()->isIntOrIntVectorTy(1)) {
-    return SelectInst::Create(SExtOp, Builder.CreateNeg(Op1),
-                              ConstantInt::getNullValue(Op1->getType()));
-  }
-  if (match(Op1, m_SExt(m_Value(SExtOp))) &&
-      SExtOp->getType()->isIntOrIntVectorTy(1)) {
-    return SelectInst::Create(SExtOp, Builder.CreateNeg(Op0),
-                              ConstantInt::getNullValue(Op0->getType()));
-  }
-
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
@@ -461,6 +447,14 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return SelectInst::Create(X, Op1, ConstantInt::getNullValue(Ty));
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op0, ConstantInt::getNullValue(Ty));
+
+  // mul (sext X), Y -> select X, -Y, 0
+  // mul Y, (sext X) -> select X, -Y, 0
+  if (match(&I, m_c_Mul(m_OneUse(m_SExt(m_Value(X))), m_Value(Y))) &&
+      X->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(
+        X, Builder.CreateNeg(Y, "", /*HasNUW=*/false, I.hasNoSignedWrap()),
+        ConstantInt::getNullValue(Op0->getType()));
 
   Constant *ImmC;
   if (match(Op1, m_ImmConstant(ImmC))) {

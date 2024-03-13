@@ -190,8 +190,8 @@ define i32 @mul_bools_use3(i1 %x, i1 %y) {
 
 define <3 x i32> @mul_bools_sext(<3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @mul_bools_sext(
-; CHECK-NEXT:    [[NARROW:%.*]] = select <3 x i1> [[X:%.*]], <3 x i1> [[Y:%.*]], <3 x i1> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = zext <3 x i1> [[NARROW]] to <3 x i32>
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext <3 x i1> [[MULBOOL]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[R]]
 ;
   %sx = sext <3 x i1> %x to <3 x i32>
@@ -204,8 +204,8 @@ define i32 @mul_bools_sext_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_sext_use1(
 ; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[X:%.*]], i1 [[Y]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
@@ -219,8 +219,8 @@ define i32 @mul_bools_sext_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_sext_use2(
 ; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[Y]], i1 [[X:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
@@ -236,8 +236,7 @@ define i32 @mul_bools_sext_use3(i1 %x, i1 %y) {
 ; CHECK-NEXT:    call void @use32(i32 [[SX]])
 ; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[Y]], i1 [[X]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[R:%.*]] = mul nsw i32 [[SY]], [[SX]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
@@ -250,8 +249,8 @@ define i32 @mul_bools_sext_use3(i1 %x, i1 %y) {
 
 define <3 x i32> @mul_bools_mixed_ext(<3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext(
-; CHECK-NEXT:    [[NARROW:%.*]] = select <3 x i1> [[Y:%.*]], <3 x i1> [[X:%.*]], <3 x i1> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = sext <3 x i1> [[NARROW]] to <3 x i32>
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <3 x i1> [[MULBOOL]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[R]]
 ;
   %zx = zext <3 x i1> %x to <3 x i32>
@@ -264,8 +263,8 @@ define i32 @mul_bools_mixed_ext_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext_use1(
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[X:%.*]], i1 [[Y]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
@@ -279,8 +278,8 @@ define i32 @mul_bools_mixed_ext_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext_use2(
 ; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[Y]], i1 [[X:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -296,8 +295,7 @@ define i32 @mul_bools_mixed_ext_use3(i1 %x, i1 %y) {
 ; CHECK-NEXT:    call void @use32(i32 [[SX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[X]], i1 [[Y]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 [[SX]], i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
