@@ -577,28 +577,28 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
     Module *M = OrigHeader->getModule();
 
-    // Track the next DPValue to clone. If we have a sequence where an
+    // Track the next DbgRecord to clone. If we have a sequence where an
     // instruction is hoisted instead of being cloned:
-    //    DPValue blah
+    //    DbgRecord blah
     //    %foo = add i32 0, 0
-    //    DPValue xyzzy
+    //    DbgRecord xyzzy
     //    %bar = call i32 @foobar()
-    // where %foo is hoisted, then the DPValue "blah" will be seen twice, once
+    // where %foo is hoisted, then the DbgRecord "blah" will be seen twice, once
     // attached to %foo, then when %foo his hoisted it will "fall down" onto the
     // function call:
-    //    DPValue blah
-    //    DPValue xyzzy
+    //    DbgRecord blah
+    //    DbgRecord xyzzy
     //    %bar = call i32 @foobar()
     // causing it to appear attached to the call too.
     //
     // To avoid this, cloneDebugInfoFrom takes an optional "start cloning from
-    // here" position to account for this behaviour. We point it at any DPValues
-    // on the next instruction, here labelled xyzzy, before we hoist %foo.
-    // Later, we only only clone DPValues from that position (xyzzy) onwards,
-    // which avoids cloning DPValue "blah" multiple times.
-    // (Stored as a range because it gives us a natural way of testing whether
-    //  there were DPValues on the next instruction before we hoisted things).
-    iterator_range<DPValue::self_iterator> NextDbgInsts =
+    // here" position to account for this behaviour. We point it at any
+    // DbgRecords on the next instruction, here labelled xyzzy, before we hoist
+    // %foo. Later, we only only clone DbgRecords from that position (xyzzy)
+    // onwards, which avoids cloning DbgRecord "blah" multiple times. (Stored as
+    // a range because it gives us a natural way of testing whether
+    //  there were DbgRecords on the next instruction before we hoisted things).
+    iterator_range<DbgRecord::self_iterator> NextDbgInsts =
         (I != E) ? I->getDbgRecordRange() : DPMarker::getEmptyDbgRecordRange();
 
     while (I != E) {
@@ -777,7 +777,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // OrigPreHeader's old terminator (the original branch into the loop), and
     // remove the corresponding incoming values from the PHI nodes in OrigHeader.
     LoopEntryBranch->eraseFromParent();
-    OrigPreheader->flushTerminatorDbgValues();
+    OrigPreheader->flushTerminatorDbgRecords();
 
     // Update MemorySSA before the rewrite call below changes the 1:1
     // instruction:cloned_instruction_or_value mapping.

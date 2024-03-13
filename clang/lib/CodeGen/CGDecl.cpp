@@ -284,6 +284,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
     setTLSMode(GV, D);
 
   setGVProperties(GV, &D);
+  getTargetCodeGenInfo().setTargetAttributes(cast<Decl>(&D), GV, *this);
 
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();

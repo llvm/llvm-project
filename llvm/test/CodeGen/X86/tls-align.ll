@@ -12,7 +12,7 @@
 
 define internal fastcc void @foo() unnamed_addr {
 entry:
-  store <8 x ptr> <ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr null>, ptr @array, align 32
+  store <8 x ptr> <ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr null>, ptr @array, align 32
   ret void
 }
 
