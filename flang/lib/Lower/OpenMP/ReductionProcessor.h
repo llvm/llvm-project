@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
@@ -71,11 +72,15 @@ public:
   static const Fortran::semantics::SourceName
   getRealName(const Fortran::parser::ProcedureDesignator &pd);
 
-  static std::string getReductionName(llvm::StringRef name, mlir::Type ty);
+  static bool
+  doReductionByRef(const llvm::SmallVectorImpl<mlir::Value> &reductionVars);
+
+  static std::string getReductionName(llvm::StringRef name, mlir::Type ty,
+                                      bool isByRef);
 
   static std::string getReductionName(
       Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
-      mlir::Type ty);
+      mlir::Type ty, bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
@@ -103,9 +108,11 @@ public:
   /// symbol table. The declaration has a constant initializer with the neutral
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
   /// TODO: Generalize this for non-integer types, add atomic region.
-  static mlir::omp::ReductionDeclareOp createReductionDecl(
-      fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
-      const ReductionIdentifier redId, mlir::Type type, mlir::Location loc);
+  static mlir::omp::ReductionDeclareOp
+  createReductionDecl(fir::FirOpBuilder &builder,
+                      llvm::StringRef reductionOpName,
+                      const ReductionIdentifier redId, mlir::Type type,
+                      mlir::Location loc, bool isByRef);
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
@@ -124,6 +131,7 @@ mlir::Value
 ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
                                           mlir::Type type, mlir::Location loc,
                                           mlir::Value op1, mlir::Value op2) {
+  type = fir::unwrapRefType(type);
   assert(type.isIntOrIndexOrFloat() &&
          "only integer and float types are currently supported");
   if (type.isIntOrIndex())
