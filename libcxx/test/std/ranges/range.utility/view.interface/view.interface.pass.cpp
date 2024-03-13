@@ -164,11 +164,11 @@ concept BoolOpInvocable = requires (T const& obj) { bool(obj); };
 constexpr bool testEmpty() {
   static_assert(!EmptyInvocable<InputRange>);
   // LWG 3715: `view_interface::empty` is overconstrained
-  static_assert( EmptyInvocable<SizedInputRange>);
+  static_assert(EmptyInvocable<SizedInputRange>);
   static_assert( EmptyInvocable<ForwardRange>);
 
   static_assert(!BoolOpInvocable<InputRange>);
-  static_assert( BoolOpInvocable<SizedInputRange>);
+  static_assert(BoolOpInvocable<SizedInputRange>);
   static_assert( BoolOpInvocable<ForwardRange>);
 
   ForwardRange forwardRange;
