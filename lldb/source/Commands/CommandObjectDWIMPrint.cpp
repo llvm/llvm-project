@@ -170,6 +170,14 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     ExpressionResults expr_result = target.EvaluateExpression(
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
 
+    auto persistent_name = valobj_sp->GetName();
+    // EvaluateExpression doesn't generate a new persistent result (`$0`) when
+    // the expression is already just a persistent variable (`$var`). Instead,
+    // the same persistent variable is reused. Take note of when a persistent
+    // result is created, to prevent unintentional deletion of a user's
+    // persistent variable.
+    bool did_persist_result = persistent_name != expr;
+
     // Only mention Fix-Its if the expression evaluator applied them.
     // Compiler errors refer to the final expression after applying Fix-It(s).
     if (!fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
@@ -199,9 +207,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         }
       }
 
-      if (suppress_result)
+      if (did_persist_result && suppress_result)
         if (auto result_var_sp =
-                target.GetPersistentVariable(valobj_sp->GetName())) {
+                target.GetPersistentVariable(persistent_name)) {
           auto language = valobj_sp->GetPreferredDisplayLanguage();
           if (auto *persistent_state =
                   target.GetPersistentExpressionStateForLanguage(language))
