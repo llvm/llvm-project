@@ -10,8 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
+#include "FunctionPointer.h"
+#include "Integral.h"
 #include "IntegralAP.h"
 #include "Opcode.h"
 #include "PrimType.h"
@@ -86,6 +89,40 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void Program::dump() const { dump(llvm::errs()); }
 
+static const char *primTypeToString(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+    return "Sint8";
+  case PT_Uint8:
+    return "Uint8";
+  case PT_Sint16:
+    return "Sint16";
+  case PT_Uint16:
+    return "Uint16";
+  case PT_Sint32:
+    return "Sint32";
+  case PT_Uint32:
+    return "Uint32";
+  case PT_Sint64:
+    return "Sint64";
+  case PT_Uint64:
+    return "Uint64";
+  case PT_IntAP:
+    return "IntAP";
+  case PT_IntAPS:
+    return "IntAPS";
+  case PT_Bool:
+    return "Bool";
+  case PT_Float:
+    return "Float";
+  case PT_Ptr:
+    return "Ptr";
+  case PT_FnPtr:
+    return "FnPtr";
+  }
+  llvm_unreachable("Unhandled PrimType");
+}
+
 LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
@@ -100,9 +137,10 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   unsigned GI = 0;
   for (const Global *G : Globals) {
     const Descriptor *Desc = G->block()->getDescriptor();
+    Pointer GP = getPtrGlobal(GI);
+
     OS << GI << ": " << (void *)G->block() << " ";
     {
-      Pointer GP = getPtrGlobal(GI);
       ColorScope SC(OS, true,
                     GP.isInitialized()
                         ? TerminalColor{llvm::raw_ostream::GREEN, false}
@@ -111,6 +149,15 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
     Desc->dump(OS);
     OS << "\n";
+    if (Desc->isPrimitive() && !Desc->isDummy()) {
+      OS << "   ";
+      {
+        ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
+        OS << primTypeToString(Desc->getPrimType()) << " ";
+      }
+      TYPE_SWITCH(Desc->getPrimType(), { GP.deref<T>().print(OS); });
+      OS << "\n";
+    }
     ++GI;
   }
 
