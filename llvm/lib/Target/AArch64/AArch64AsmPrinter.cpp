@@ -268,13 +268,24 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (Sign->getZExtValue())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
-  if (Flags == 0)
-    return;
+  uint64_t PAuthABIPlatform = -1;
+  if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+    PAuthABIPlatform = PAP->getZExtValue();
+  uint64_t PAuthABIVersion = -1;
+  if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+    PAuthABIVersion = PAV->getZExtValue();
+
+  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+    report_fatal_error(
+        "either both or no 'aarch64-elf-pauthabi-platform' and "
+        "'aarch64-elf-pauthabi-version' module flags must be present");
 
   // Emit a .note.gnu.property section with the flags.
   auto *TS =
       static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags);
+  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
