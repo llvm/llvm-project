@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -115,7 +115,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %df = arith.constant -1.0 : f64
 
@@ -147,60 +147,111 @@ module {
     %expand11 = call @expand_sparse2sparse_dyn(%sdm) : (tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64, #Sparse3dTensor>
 
     //
-    // Verify results of expand
+    // Verify results of expand with dense output.
     //
     // CHECK:      ( ( 1, 0, 3, 0 ), ( 5, 0, 7, 0 ), ( 9, 0, 11, 0 ) )
     // CHECK-NEXT: ( ( 1, 0, 3, 0 ), ( 5, 0, 7, 0 ), ( 9, 0, 11, 0 ) )
-    // CHECK-NEXT: ( 1, 3, 5, 7, 9,
-    // CHECK-NEXT: ( 1, 3, 5, 7, 9,
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
-    // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
-    // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
-    // CHECK-NEXT: 12
-    // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
-    // CHECK-NEXT: 12
-    // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
     //
-
     %m0 = vector.transfer_read %expand0[%c0, %c0], %df: tensor<3x4xf64>, vector<3x4xf64>
     vector.print %m0 : vector<3x4xf64>
     %m1 = vector.transfer_read %expand1[%c0, %c0], %df: tensor<3x4xf64>, vector<3x4xf64>
     vector.print %m1 : vector<3x4xf64>
-    %a2 = sparse_tensor.values %expand2 : tensor<3x4xf64, #SparseMatrix> to memref<?xf64>
-    %m2 = vector.transfer_read %a2[%c0], %df: memref<?xf64>, vector<12xf64>
-    vector.print %m2 : vector<12xf64>
-    %a3 = sparse_tensor.values %expand3 : tensor<3x4xf64, #SparseMatrix> to memref<?xf64>
-    %m3 = vector.transfer_read %a3[%c0], %df: memref<?xf64>, vector<12xf64>
-    vector.print %m3 : vector<12xf64>
-
     %m4 = vector.transfer_read %expand4[%c0, %c0, %c0], %df: tensor<3x2x2xf64>, vector<3x2x2xf64>
     vector.print %m4 : vector<3x2x2xf64>
     %m5 = vector.transfer_read %expand5[%c0, %c0, %c0], %df: tensor<3x2x2xf64>, vector<3x2x2xf64>
     vector.print %m5 : vector<3x2x2xf64>
-    %a6 = sparse_tensor.values %expand6 : tensor<3x2x2xf64, #Sparse3dTensor> to memref<?xf64>
-    %m6 = vector.transfer_read %a6[%c0], %df: memref<?xf64>, vector<12xf64>
-    vector.print %m6 : vector<12xf64>
-    %a7 = sparse_tensor.values %expand7 : tensor<3x2x2xf64, #Sparse3dTensor> to memref<?xf64>
-    %m7 = vector.transfer_read %a7[%c0], %df: memref<?xf64>, vector<12xf64>
-    vector.print %m7 : vector<12xf64>
-
     %m8 = vector.transfer_read %expand8[%c0, %c0, %c0], %df: tensor<?x2x?xf64>, vector<3x2x2xf64>
     vector.print %m8 : vector<3x2x2xf64>
     %m9 = vector.transfer_read %expand9[%c0, %c0, %c0], %df: tensor<?x2x?xf64>, vector<3x2x2xf64>
     vector.print %m9 : vector<3x2x2xf64>
-    %n10 = sparse_tensor.number_of_entries %expand10 : tensor<?x2x?xf64, #Sparse3dTensor>
-    vector.print %n10 : index
-    %a10 = sparse_tensor.values %expand10 : tensor<?x2x?xf64, #Sparse3dTensor> to memref<?xf64>
-    %m10 = vector.transfer_read %a10[%c0], %df: memref<?xf64>, vector<12xf64>
-    vector.print %m10 : vector<12xf64>
-    %n11 = sparse_tensor.number_of_entries %expand11 : tensor<?x2x?xf64, #Sparse3dTensor>
-    vector.print %n11 : index
-    %a11 = sparse_tensor.values %expand11 : tensor<?x2x?xf64, #Sparse3dTensor> to memref<?xf64>
-    %m11 = vector.transfer_read %a11[%c0], %df: memref<?xf64>, vector<12xf64>
-    vector.print %m11 : vector<12xf64>
+
+    //
+    // Verify results of expand with sparse output.
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 3, 4 )
+    // CHECK-NEXT: lvl = ( 3, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2
+    // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 11
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 3, 4 )
+    // CHECK-NEXT: lvl = ( 3, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2
+    // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 11
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 3, 2, 2 )
+    // CHECK-NEXT: lvl = ( 3, 2, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 3, 2, 2 )
+    // CHECK-NEXT: lvl = ( 3, 2, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 3, 2, 2 )
+    // CHECK-NEXT: lvl = ( 3, 2, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 3, 2, 2 )
+    // CHECK-NEXT: lvl = ( 3, 2, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %expand2 : tensor<3x4xf64, #SparseMatrix>
+    sparse_tensor.print %expand3 : tensor<3x4xf64, #SparseMatrix>
+    sparse_tensor.print %expand6 : tensor<3x2x2xf64, #Sparse3dTensor>
+    sparse_tensor.print %expand7 : tensor<3x2x2xf64, #Sparse3dTensor>
+    sparse_tensor.print %expand10 : tensor<?x2x?xf64, #Sparse3dTensor>
+    sparse_tensor.print %expand11 : tensor<?x2x?xf64, #Sparse3dTensor>
 
 
     // Release sparse resources.
