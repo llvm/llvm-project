@@ -3519,12 +3519,6 @@ static const char *get_pointer_64(uint64_t Address, uint32_t &offset,
   return nullptr;
 }
 
-static const char *get_value_32(uint32_t Address, uint32_t &offset,
-                                uint32_t &left, SectionRef &S,
-                                DisassembleInfo *info, bool objc_only = false) {
-  return get_pointer_64(Address, offset, left, S, info, objc_only);
-}
-
 static const char *get_pointer_32(uint32_t Address, uint32_t &offset,
                                   uint32_t &left, SectionRef &S,
                                   DisassembleInfo *info,
@@ -3667,8 +3661,8 @@ struct class_ro32_t {
 #define RO_ROOT (1 << 1)
 #define RO_HAS_CXX_STRUCTORS (1 << 2)
 
-/* Values for method_list{64,32,_delta}_t->entsize */
-#define ML_HAS_DELTAS (1 << 31)
+/* Values for method_list{64,32}_t->entsize */
+#define ML_HAS_RELATIVE_PTRS (1 << 31)
 #define ML_ENTSIZE_MASK 0xFFFF
 
 struct method_list64_t {
@@ -3683,12 +3677,6 @@ struct method_list32_t {
   /* struct method32_t first;  These structures follow inline */
 };
 
-struct method_list_delta_t {
-  uint32_t entsize;
-  uint32_t count;
-  /* struct method_delta_t first;  These structures follow inline */
-};
-
 struct method64_t {
   uint64_t name;  /* SEL (64-bit pointer) */
   uint64_t types; /* const char * (64-bit pointer) */
@@ -3701,10 +3689,10 @@ struct method32_t {
   uint32_t imp;   /* IMP (32-bit pointer) */
 };
 
-struct method_delta_t {
-  int32_t name;  /* SEL (32-bit delta) */
-  int32_t types; /* const char * (32-bit delta) */
-  int32_t imp;   /* IMP (32-bit delta) */
+struct method_relative_t {
+  int32_t name;  /* SEL (32-bit relative) */
+  int32_t types; /* const char * (32-bit relative) */
+  int32_t imp;   /* IMP (32-bit relative) */
 };
 
 struct protocol_list64_t {
@@ -3996,11 +3984,6 @@ inline void swapStruct(struct method_list32_t &ml) {
   sys::swapByteOrder(ml.count);
 }
 
-inline void swapStruct(struct method_list_delta_t &ml) {
-  sys::swapByteOrder(ml.entsize);
-  sys::swapByteOrder(ml.count);
-}
-
 inline void swapStruct(struct method64_t &m) {
   sys::swapByteOrder(m.name);
   sys::swapByteOrder(m.types);
@@ -4013,7 +3996,7 @@ inline void swapStruct(struct method32_t &m) {
   sys::swapByteOrder(m.imp);
 }
 
-inline void swapStruct(struct method_delta_t &m) {
+inline void swapStruct(struct method_relative_t &m) {
   sys::swapByteOrder(m.name);
   sys::swapByteOrder(m.types);
   sys::swapByteOrder(m.imp);
@@ -4473,66 +4456,55 @@ static void print_layout_map32(uint32_t p, struct DisassembleInfo *info) {
   print_layout_map(layout_map, left);
 }
 
-// Return true if this is a delta method list, false otherwise
-static bool print_method_list_delta_t(uint64_t p, struct DisassembleInfo *info,
-                                      const char *indent,
-                                      uint32_t pointerBits) {
-  struct method_list_delta_t ml;
-  struct method_delta_t m;
+static void print_relative_method_list(uint32_t structSizeAndFlags,
+                                       uint32_t structCount, uint64_t p,
+                                       struct DisassembleInfo *info,
+                                       const char *indent,
+                                       uint32_t pointerBits) {
+  struct method_relative_t m;
   const char *r, *name;
   uint32_t offset, xoffset, left, i;
   SectionRef S, xS;
 
-  r = get_pointer_32(p, offset, left, S, info);
-  if (r == nullptr)
-    return false;
-  memset(&ml, '\0', sizeof(struct method_list_delta_t));
-  if (left < sizeof(struct method_list_delta_t)) {
-    memcpy(&ml, r, left);
-    outs() << "   (method_delta_t extends past the end of the section)\n";
-  } else
-    memcpy(&ml, r, sizeof(struct method_list_delta_t));
-  if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
-    swapStruct(ml);
-  if ((ml.entsize & ML_HAS_DELTAS) == 0)
-    return false;
+  assert(((structSizeAndFlags & ML_HAS_RELATIVE_PTRS) != 0) &&
+         "expected structSizeAndFlags to have ML_HAS_RELATIVE_PTRS flag");
 
-  outs() << indent << "\t\t   entsize " << (ml.entsize & ML_ENTSIZE_MASK)
-         << " (relative) \n";
-  outs() << indent << "\t\t     count " << ml.count << "\n";
+  outs() << indent << "\t\t   entsize "
+         << (structSizeAndFlags & ML_ENTSIZE_MASK) << " (relative) \n";
+  outs() << indent << "\t\t     count " << structCount << "\n";
 
-  p += sizeof(struct method_list_delta_t);
-  offset += sizeof(struct method_delta_t);
-  for (i = 0; i < ml.count; i++) {
-    r = get_value_32(p, offset, left, S, info);
-    if (r == nullptr)
-      return true;
-    memset(&m, '\0', sizeof(struct method_delta_t));
-    if (left < sizeof(struct method_delta_t)) {
+  for (i = 0; i < structCount; i++) {
+    r = get_pointer_64(p, offset, left, S, info);
+    memset(&m, '\0', sizeof(struct method_relative_t));
+    if (left < sizeof(struct method_relative_t)) {
       memcpy(&m, r, left);
       outs() << indent << "   (method_t extends past the end of the section)\n";
     } else
-      memcpy(&m, r, sizeof(struct method_delta_t));
+      memcpy(&m, r, sizeof(struct method_relative_t));
     if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
       swapStruct(m);
 
     outs() << indent << "\t\t      name " << format("0x%" PRIx32, m.name);
-    uint64_t relNameRefVA = p + offsetof(struct method_delta_t, name);
+    uint64_t relNameRefVA = p + offsetof(struct method_relative_t, name);
     uint64_t absNameRefVA = relNameRefVA + m.name;
     outs() << " (" << format("0x%" PRIx32, absNameRefVA) << ")";
 
-    // since this is a delta list, absNameRefVA is the address of the
+    // since this is a relative list, absNameRefVA is the address of the
     // __objc_selrefs entry, so a pointer, not the actual name
     const char *nameRefPtr =
-        get_pointer_32(absNameRefVA, xoffset, left, xS, info);
+        get_pointer_64(absNameRefVA, xoffset, left, xS, info);
     if (nameRefPtr) {
       uint32_t pointerSize = pointerBits / CHAR_BIT;
       if (left < pointerSize)
         outs() << indent << " (nameRefPtr extends past the end of the section)";
       else {
-        uint64_t nameVA = 0;
-        memcpy(&nameVA, nameRefPtr, pointerSize);
-        name = get_pointer_32(nameVA, xoffset, left, xS, info);
+        if (pointerSize == 64) {
+          name = get_pointer_64(*reinterpret_cast<const uint64_t *>(nameRefPtr),
+                                xoffset, left, xS, info);
+        } else {
+          name = get_pointer_32(*reinterpret_cast<const uint32_t *>(nameRefPtr),
+                                xoffset, left, xS, info);
+        }
         if (name != nullptr)
           outs() << format(" %.*s", left, name);
       }
@@ -4540,7 +4512,7 @@ static bool print_method_list_delta_t(uint64_t p, struct DisassembleInfo *info,
     outs() << "\n";
 
     outs() << indent << "\t\t     types " << format("0x%" PRIx32, m.types);
-    uint64_t relTypesVA = p + offsetof(struct method_delta_t, types);
+    uint64_t relTypesVA = p + offsetof(struct method_relative_t, types);
     uint64_t absTypesVA = relTypesVA + m.types;
     outs() << " (" << format("0x%" PRIx32, absTypesVA) << ")";
     name = get_pointer_32(absTypesVA, xoffset, left, xS, info);
@@ -4549,7 +4521,7 @@ static bool print_method_list_delta_t(uint64_t p, struct DisassembleInfo *info,
     outs() << "\n";
 
     outs() << indent << "\t\t       imp " << format("0x%" PRIx32, m.imp);
-    uint64_t relImpVA = p + offsetof(struct method_delta_t, imp);
+    uint64_t relImpVA = p + offsetof(struct method_relative_t, imp);
     uint64_t absImpVA = relImpVA + m.imp;
     outs() << " (" << format("0x%" PRIx32, absImpVA) << ")";
     name = GuessSymbolName(absImpVA, info->AddrMap);
@@ -4557,20 +4529,13 @@ static bool print_method_list_delta_t(uint64_t p, struct DisassembleInfo *info,
       outs() << " " << name;
     outs() << "\n";
 
-    p += sizeof(struct method_delta_t);
-    offset += sizeof(struct method_delta_t);
+    p += sizeof(struct method_relative_t);
+    offset += sizeof(struct method_relative_t);
   }
-
-  return true;
 }
 
 static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
                                   const char *indent) {
-  // Attempt to parse the method list as a delta list. If successful, return
-  // early since the parsing is complete.
-  if (print_method_list_delta_t(p, info, indent, /*pointerBits=*/64))
-    return;
-
   struct method_list64_t ml;
   struct method64_t m;
   const char *r;
@@ -4590,10 +4555,17 @@ static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
     memcpy(&ml, r, sizeof(struct method_list64_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(ml);
+  p += sizeof(struct method_list64_t);
+
+  if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
+    print_relative_method_list(ml.entsize, ml.count, p, info, indent,
+                               /*pointerBits=*/32);
+    return;
+  }
+
   outs() << indent << "\t\t   entsize " << ml.entsize << "\n";
   outs() << indent << "\t\t     count " << ml.count << "\n";
 
-  p += sizeof(struct method_list64_t);
   offset += sizeof(struct method_list64_t);
   for (i = 0; i < ml.count; i++) {
     r = get_pointer_64(p, offset, left, S, info);
@@ -4664,11 +4636,6 @@ static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
 
 static void print_method_list32_t(uint64_t p, struct DisassembleInfo *info,
                                   const char *indent) {
-  // Attempt to parse the method list as a delta list. If successful, return
-  // early since the parsing is complete.
-  if (print_method_list_delta_t(p, info, indent, /*pointerBits=*/32))
-    return;
-
   struct method_list32_t ml;
   struct method32_t m;
   const char *r, *name;
@@ -4686,10 +4653,17 @@ static void print_method_list32_t(uint64_t p, struct DisassembleInfo *info,
     memcpy(&ml, r, sizeof(struct method_list32_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(ml);
+  p += sizeof(struct method_list32_t);
+
+  if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
+    print_relative_method_list(ml.entsize, ml.count, p, info, indent,
+                               /*pointerBits=*/32);
+    return;
+  }
+
   outs() << indent << "\t\t   entsize " << ml.entsize << "\n";
   outs() << indent << "\t\t     count " << ml.count << "\n";
 
-  p += sizeof(struct method_list32_t);
   offset += sizeof(struct method_list32_t);
   for (i = 0; i < ml.count; i++) {
     r = get_pointer_32(p, offset, left, S, info);
