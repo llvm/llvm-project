@@ -35,4 +35,3 @@ LLVM_LIBC_FUNCTION(int, rename, (const char *oldpath, const char *newpath)) {
 }
 
 } // namespace LIBC_NAMESPACE
-

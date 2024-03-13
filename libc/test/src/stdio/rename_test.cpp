@@ -34,7 +34,8 @@ TEST(LlvmLibcRenameTest, CreateAndRenameFile) {
 
   constexpr const char *FILENAME1 = "rename.test.file1";
   auto TEST_FILEPATH1 = libc_make_test_file_path(FILENAME1);
-  ASSERT_THAT(LIBC_NAMESPACE::rename(TEST_FILEPATH0, TEST_FILEPATH1), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::rename(TEST_FILEPATH0, TEST_FILEPATH1),
+              Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::access(TEST_FILEPATH1, F_OK), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::access(TEST_FILEPATH0, F_OK), Fails(ENOENT));
 }
@@ -45,6 +46,6 @@ TEST(LlvmLibcRenameTest, RenameNonExistent) {
   constexpr const char *FILENAME1 = "rename.test.file1";
   auto TEST_FILEPATH1 = libc_make_test_file_path(FILENAME1);
 
-  ASSERT_THAT(LIBC_NAMESPACE::rename("non-existent", TEST_FILEPATH1), Fails(ENOENT));
+  ASSERT_THAT(LIBC_NAMESPACE::rename("non-existent", TEST_FILEPATH1),
+              Fails(ENOENT));
 }
-

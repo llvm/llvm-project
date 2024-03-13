@@ -18,4 +18,3 @@ int rename(const char *oldpath, const char *newpath);
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_RENAME_H
-
