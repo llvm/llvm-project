@@ -65,6 +65,7 @@ class CodeGenTarget {
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   CodeGenHwModes CGH;
   std::vector<Record *> MacroFusions;
+  mutable bool HasVariableLengthEncodings = false;
 
   void ReadRegAltNameIndices() const;
   void ReadInstructions() const;
@@ -208,6 +209,9 @@ public:
     return getInstructionsByEnumValue().begin();
   }
   inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
+
+  /// Return whether instructions have variable length encodings on this target.
+  bool hasVariableLengthEncodings() const { return HasVariableLengthEncodings; }
 
   /// isLittleEndianEncoding - are instruction bit patterns defined as  [0..n]?
   ///

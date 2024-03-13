@@ -18,8 +18,8 @@ Testing Infrastructure
 ======================
 
 The testing support in LLVM's libc implementation for GPUs is designed to mimic
-the standard unit tests as much as possible. We use the :ref:`libc_gpu_rpc` 
-support to provide the necessary utilities like printing from the GPU. Execution 
+the standard unit tests as much as possible. We use the :ref:`libc_gpu_rpc`
+support to provide the necessary utilities like printing from the GPU. Execution
 is performed by emitting a ``_start`` kernel from the GPU
 that is then called by an external loader utility. This is an example of how
 this can be done manually:

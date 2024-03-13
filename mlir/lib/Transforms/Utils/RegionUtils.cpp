@@ -161,7 +161,7 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
   rewriter.setInsertionPointToStart(newEntryBlock);
   for (auto *clonedOp : clonedOperations) {
     Operation *newOp = rewriter.clone(*clonedOp, map);
-    rewriter.replaceOpWithIf(clonedOp, newOp->getResults(), replaceIfFn);
+    rewriter.replaceOpUsesWithIf(clonedOp, newOp->getResults(), replaceIfFn);
   }
   rewriter.mergeBlocks(
       entryBlock, newEntryBlock,

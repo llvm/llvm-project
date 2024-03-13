@@ -7,8 +7,8 @@
 
 func.func @entry() {
    // CHECK: Hello, World!
-   vector.print str "Hello, World!"
+   vector.print str "Hello, World!\n"
    // CHECK-NEXT: Bye!
-   vector.print str "Bye!"
+   vector.print str "Bye!\n"
    return
 }

@@ -184,6 +184,58 @@ ABIArgInfo ABIInfo::getNaturalAlignIndirectInReg(QualType Ty,
                                       /*ByVal*/ false, Realign);
 }
 
+void ABIInfo::appendAttributeMangling(TargetAttr *Attr,
+                                      raw_ostream &Out) const {
+  if (Attr->isDefaultVersion())
+    return;
+  appendAttributeMangling(Attr->getFeaturesStr(), Out);
+}
+
+void ABIInfo::appendAttributeMangling(TargetVersionAttr *Attr,
+                                      raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getNamesStr(), Out);
+}
+
+void ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                      raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+  Out << '.' << Attr->getMangledIndex(Index);
+}
+
+void ABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                      raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  llvm::sort(Info.Features, [&TI](StringRef LHS, StringRef RHS) {
+    // Multiversioning doesn't allow "no-${feature}", so we can
+    // only have "+" prefixes here.
+    assert(LHS.starts_with("+") && RHS.starts_with("+") &&
+           "Features should always have a prefix.");
+    return TI.multiVersionSortPriority(LHS.substr(1)) >
+           TI.multiVersionSortPriority(RHS.substr(1));
+  });
+
+  bool IsFirst = true;
+  if (!Info.CPU.empty()) {
+    IsFirst = false;
+    Out << "arch_" << Info.CPU;
+  }
+
+  for (StringRef Feat : Info.Features) {
+    if (!IsFirst)
+      Out << '_';
+    IsFirst = false;
+    Out << Feat.substr(1);
+  }
+}
+
 // Pin the vtable to this file.
 SwiftABIInfo::~SwiftABIInfo() = default;
 

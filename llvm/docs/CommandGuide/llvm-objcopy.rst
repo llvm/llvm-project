@@ -450,10 +450,19 @@ them.
  Set the type of section ``<section>`` to the integer ``<type>``. Can be
  specified multiple times to update multiple sections.
 
-.. option:: --set-start-addr <addr>
+.. option:: --set-start <addr>
 
  Set the start address of the output to ``<addr>``. Overrides any previously
  specified :option:`--change-start` or :option:`--adjust-start` options.
+
+.. option:: --set-symbol-visibility <symbol>=<visibility>
+
+ Change the visibility of a symbol to the specified value.
+
+.. option:: --set-symbols-visibility <filename>=<visibility>
+
+ Read a list of symbols from <filename> and change their visibility to the
+ specified value. Visibility values: default, internal, hidden, protected.
 
 .. option:: --split-dwo <dwo-file>
 
@@ -484,7 +493,7 @@ them.
 
 .. option:: --weaken-symbol <symbol>, -W
 
- Mark any global symbol named ``<symbol>`` as a weak symbol in the output. Can
+ Mark global symbols named ``<symbol>`` as weak symbols in the output. Can
  be specified multiple times to mark multiple symbols as weak.
 
 .. option:: --weaken-symbols <filename>

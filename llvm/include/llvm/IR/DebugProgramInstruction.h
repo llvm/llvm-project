@@ -1,4 +1,4 @@
-//===-- llvm/DebugProgramInstruction.h - Stream of debug info -------*- C++ -*-===//
+//===-- llvm/DebugProgramInstruction.h - Stream of debug info ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,10 +15,10 @@
 //    %bar = void call @ext(%foo);
 //
 // and all information is stored in the Value / Metadata hierachy defined
-// elsewhere in LLVM. In the "DPValue" design, each instruction /may/ have a
-// connection with a DPMarker, which identifies a position immediately before the
-// instruction, and each DPMarker /may/ then have connections to DPValues which
-// record the variable assignment information. To illustrate:
+// elsewhere in LLVM. In the "DbgRecord" design, each instruction /may/ have a
+// connection with a DPMarker, which identifies a position immediately before
+// the instruction, and each DPMarker /may/ then have connections to DbgRecords
+// which record the variable assignment information. To illustrate:
 //
 //    %foo = add i32 1, %0
 //       ; foo->DbgMarker == nullptr
@@ -26,7 +26,7 @@
 //       ;; the instruction for %foo, therefore it has no DbgMarker.
 //    %bar = void call @ext(%foo)
 //       ; bar->DbgMarker = {
-//       ;   StoredDPValues = {
+//       ;   StoredDbgRecords = {
 //       ;     DPValue(metadata i32 %foo, ...)
 //       ;   }
 //       ; }
@@ -62,15 +62,64 @@ class BasicBlock;
 class MDNode;
 class Module;
 class DbgVariableIntrinsic;
+class DbgInfoIntrinsic;
+class DbgLabelInst;
 class DIAssignID;
 class DPMarker;
 class DPValue;
 class raw_ostream;
 
+/// A typed tracking MDNode reference that does not require a definition for its
+/// parameter type. Necessary to avoid including DebugInfoMetadata.h, which has
+/// a significant impact on compile times if included in this file.
+template <typename T> class DbgRecordParamRef {
+  TrackingMDNodeRef Ref;
+
+public:
+public:
+  DbgRecordParamRef() = default;
+
+  /// Construct from the templated type.
+  DbgRecordParamRef(const T *Param);
+
+  /// Construct from an \a MDNode.
+  ///
+  /// Note: if \c Param does not have the template type, a verifier check will
+  /// fail, and accessors will crash.  However, construction from other nodes
+  /// is supported in order to handle forward references when reading textual
+  /// IR.
+  explicit DbgRecordParamRef(const MDNode *Param);
+
+  /// Get the underlying type.
+  ///
+  /// \pre !*this or \c isa<T>(getAsMDNode()).
+  /// @{
+  T *get() const;
+  operator T *() const { return get(); }
+  T *operator->() const { return get(); }
+  T &operator*() const { return *get(); }
+  /// @}
+
+  /// Check for null.
+  ///
+  /// Check for null in a way that is safe with broken debug info.
+  explicit operator bool() const { return Ref; }
+
+  /// Return \c this as a \a MDNode.
+  MDNode *getAsMDNode() const { return Ref; }
+
+  bool operator==(const DbgRecordParamRef &Other) const {
+    return Ref == Other.Ref;
+  }
+  bool operator!=(const DbgRecordParamRef &Other) const {
+    return Ref != Other.Ref;
+  }
+};
+
 /// Base class for non-instruction debug metadata records that have positions
 /// within IR. Features various methods copied across from the Instruction
 /// class to aid ease-of-use. DbgRecords should always be linked into a
-/// DPMarker's StoredDPValues list. The marker connects a DbgRecord back to
+/// DPMarker's StoredDbgRecords list. The marker connects a DbgRecord back to
 /// it's position in the BasicBlock.
 ///
 /// We need a discriminator for dyn/isa casts. In order to avoid paying for a
@@ -80,6 +129,7 @@ class raw_ostream;
 ///   clone
 ///   isIdenticalToWhenDefined
 ///   both print methods
+///   createDebugIntrinsic
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
   /// Marker that this DbgRecord is linked into.
@@ -103,6 +153,11 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
   bool isIdenticalToWhenDefined(const DbgRecord &R) const;
+  /// Convert this DbgRecord back into an appropriate llvm.dbg.* intrinsic.
+  /// \p InsertBefore Optional position to insert this intrinsic.
+  /// \returns A new llvm.dbg.* intrinsic representiung this DbgRecord.
+  DbgInfoIntrinsic *createDebugIntrinsic(Module *M,
+                                         Instruction *InsertBefore) const;
   ///@}
 
   /// Same as isIdenticalToWhenDefined but checks DebugLoc too.
@@ -157,24 +212,39 @@ protected:
   ~DbgRecord() = default;
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
+  R.print(OS);
+  return OS;
+}
+
 /// Records a position in IR for a source label (DILabel). Corresponds to the
 /// llvm.dbg.label intrinsic.
 /// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
 class DPLabel : public DbgRecord {
-  DILabel *Label;
+  DbgRecordParamRef<DILabel> Label;
+
+  /// This constructor intentionally left private, so that it is only called via
+  /// "createUnresolvedDPLabel", which clearly expresses that it is for parsing
+  /// only.
+  DPLabel(MDNode *Label, MDNode *DL);
 
 public:
-  DPLabel(DILabel *Label, DebugLoc DL)
-      : DbgRecord(LabelKind, DL), Label(Label) {
-    assert(Label && "Unexpected nullptr");
-  }
+  DPLabel(DILabel *Label, DebugLoc DL);
+
+  /// For use during parsing; creates a DPLabel from as-of-yet unresolved
+  /// MDNodes. Trying to access the resulting DPLabel's fields before they are
+  /// resolved, or if they resolve to the wrong type, will result in a crash.
+  static DPLabel *createUnresolvedDPLabel(MDNode *Label, MDNode *DL);
 
   DPLabel *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
+  DbgLabelInst *createDebugIntrinsic(Module *M,
+                                     Instruction *InsertBefore) const;
 
   void setLabel(DILabel *NewLabel) { Label = NewLabel; }
-  DILabel *getLabel() const { return Label; }
+  DILabel *getLabel() const { return Label.get(); }
+  MDNode *getRawLabel() const { return Label.getAsMDNode(); };
 
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {
@@ -209,9 +279,9 @@ public:
   // DebugValueUser superclass instead. The referred to Value can either be a
   // ValueAsMetadata or a DIArgList.
 
-  DILocalVariable *Variable;
-  DIExpression *Expression;
-  DIExpression *AddressExpression;
+  DbgRecordParamRef<DILocalVariable> Variable;
+  DbgRecordParamRef<DIExpression> Expression;
+  DbgRecordParamRef<DIExpression> AddressExpression;
 
 public:
   /// Create a new DPValue representing the intrinsic \p DVI, for example the
@@ -225,6 +295,29 @@ public:
   DPValue(Metadata *Value, DILocalVariable *Variable, DIExpression *Expression,
           DIAssignID *AssignID, Metadata *Address,
           DIExpression *AddressExpression, const DILocation *DI);
+
+private:
+  /// Private constructor for creating new instances during parsing only. Only
+  /// called through `createUnresolvedDPValue` below, which makes clear that
+  /// this is used for parsing only, and will later return a subclass depending
+  /// on which Type is passed.
+  DPValue(LocationType Type, Metadata *Val, MDNode *Variable,
+          MDNode *Expression, MDNode *AssignID, Metadata *Address,
+          MDNode *AddressExpression, MDNode *DI);
+
+public:
+  /// Used to create DPValues during parsing, where some metadata references may
+  /// still be unresolved. Although for some fields a generic `Metadata*`
+  /// argument is accepted for forward type-references, the verifier and
+  /// accessors will reject incorrect types later on. The function is used for
+  /// all types of DPValues for simplicity while parsing, but asserts if any
+  /// necessary fields are empty or unused fields are not empty, i.e. if the
+  /// #dbg_assign fields are used for a non-dbg-assign type.
+  static DPValue *createUnresolvedDPValue(LocationType Type, Metadata *Val,
+                                          MDNode *Variable, MDNode *Expression,
+                                          MDNode *AssignID, Metadata *Address,
+                                          MDNode *AddressExpression,
+                                          MDNode *DI);
 
   static DPValue *createDPVAssign(Value *Val, DILocalVariable *Variable,
                                   DIExpression *Expression,
@@ -316,10 +409,6 @@ public:
   void addVariableLocationOps(ArrayRef<Value *> NewValues,
                               DIExpression *NewExpr);
 
-  void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
-
-  void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
-
   unsigned getNumVariableLocationOps() const;
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
@@ -334,9 +423,13 @@ public:
   void setKillLocation();
   bool isKillLocation() const;
 
-  DILocalVariable *getVariable() const { return Variable; }
+  void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
+  DILocalVariable *getVariable() const { return Variable.get(); };
+  MDNode *getRawVariable() const { return Variable.getAsMDNode(); }
 
-  DIExpression *getExpression() const { return Expression; }
+  void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
+  DIExpression *getExpression() const { return Expression.get(); }
+  MDNode *getRawExpression() const { return Expression.getAsMDNode(); }
 
   /// Returns the metadata operand for the first location description. i.e.,
   /// dbg intrinsic dbg.value,declare operand and dbg.assign 1st location
@@ -385,7 +478,10 @@ public:
   }
   Metadata *getRawAssignID() const { return DebugValues[2]; }
   DIAssignID *getAssignID() const;
-  DIExpression *getAddressExpression() const { return AddressExpression; }
+  DIExpression *getAddressExpression() const { return AddressExpression.get(); }
+  MDNode *getRawAddressExpression() const {
+    return AddressExpression.getAsMDNode();
+  }
   void setAddressExpression(DIExpression *NewExpr) {
     AddressExpression = NewExpr;
   }
@@ -461,8 +557,8 @@ public:
   /// intrinsics. There is a one-to-one relationship between each debug
   /// intrinsic in a block and each DbgRecord once the representation has been
   /// converted, and the ordering is meaningful in the same way.
-  simple_ilist<DbgRecord> StoredDPValues;
-  bool empty() const { return StoredDPValues.empty(); }
+  simple_ilist<DbgRecord> StoredDbgRecords;
+  bool empty() const { return StoredDbgRecords.empty(); }
 
   const BasicBlock *getParent() const;
   BasicBlock *getParent();
@@ -480,54 +576,56 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
 
-  /// Produce a range over all the DPValues in this Marker.
-  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange();
+  /// Produce a range over all the DbgRecords in this Marker.
+  iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange();
   iterator_range<simple_ilist<DbgRecord>::const_iterator>
-  getDbgValueRange() const;
-  /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
-  /// is true, place them before existing DPValues, otherwise afterwards.
+  getDbgRecordRange() const;
+  /// Transfer any DbgRecords from \p Src into this DPMarker. If \p InsertAtHead
+  /// is true, place them before existing DbgRecords, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
-  /// Transfer the DPValues in \p Range from \p Src into this DPMarker. If
-  /// \p InsertAtHead is true, place them before existing DPValues, otherwise
+  /// Transfer the DbgRecords in \p Range from \p Src into this DPMarker. If
+  /// \p InsertAtHead is true, place them before existing DbgRecords, otherwise
   // afterwards.
   void absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
                          DPMarker &Src, bool InsertAtHead);
-  /// Insert a DPValue into this DPMarker, at the end of the list. If
+  /// Insert a DbgRecord into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
-  void insertDPValue(DbgRecord *New, bool InsertAtHead);
-  /// Insert a DPValue prior to a DPValue contained within this marker.
-  void insertDPValue(DbgRecord *New, DbgRecord *InsertBefore);
-  /// Insert a DPValue after a DPValue contained within this marker.
-  void insertDPValueAfter(DbgRecord *New, DbgRecord *InsertAfter);
+  void insertDbgRecord(DbgRecord *New, bool InsertAtHead);
+  /// Insert a DbgRecord prior to a DbgRecord contained within this marker.
+  void insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore);
+  /// Insert a DbgRecord after a DbgRecord contained within this marker.
+  void insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter);
   /// Clone all DPMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.
-  /// \p FromHere If non-null, copy from FromHere to the end of From's DPValues
-  /// \p InsertAtHead Place the cloned DPValues at the start of StoredDPValues
-  /// \returns Range over all the newly cloned DPValues
+  /// \p FromHere If non-null, copy from FromHere to the end of From's
+  /// DbgRecords
+  /// \p InsertAtHead Place the cloned DbgRecords at the start of
+  /// StoredDbgRecords
+  /// \returns Range over all the newly cloned DbgRecords
   iterator_range<simple_ilist<DbgRecord>::iterator>
   cloneDebugInfoFrom(DPMarker *From,
                      std::optional<simple_ilist<DbgRecord>::iterator> FromHere,
                      bool InsertAtHead = false);
-  /// Erase all DPValues in this DPMarker.
-  void dropDbgValues();
+  /// Erase all DbgRecords in this DPMarker.
+  void dropDbgRecords();
   /// Erase a single DbgRecord from this marker. In an ideal future, we would
   /// never erase an assignment in this way, but it's the equivalent to
   /// erasing a debug intrinsic from a block.
-  void dropOneDbgValue(DbgRecord *DR);
+  void dropOneDbgRecord(DbgRecord *DR);
 
-  /// We generally act like all llvm Instructions have a range of DPValues
+  /// We generally act like all llvm Instructions have a range of DbgRecords
   /// attached to them, but in reality sometimes we don't allocate the DPMarker
-  /// to save time and memory, but still have to return ranges of DPValues. When
-  /// we need to describe such an unallocated DPValue range, use this static
-  /// markers range instead. This will bite us if someone tries to insert a
-  /// DPValue in that range, but they should be using the Official (TM) API for
-  /// that.
+  /// to save time and memory, but still have to return ranges of DbgRecords.
+  /// When we need to describe such an unallocated DbgRecord range, use this
+  /// static markers range instead. This will bite us if someone tries to insert
+  /// a DbgRecord in that range, but they should be using the Official (TM) API
+  /// for that.
   static DPMarker EmptyDPMarker;
   static iterator_range<simple_ilist<DbgRecord>::iterator>
-  getEmptyDPValueRange() {
-    return make_range(EmptyDPMarker.StoredDPValues.end(),
-                      EmptyDPMarker.StoredDPValues.end());
+  getEmptyDbgRecordRange() {
+    return make_range(EmptyDPMarker.StoredDbgRecords.end(),
+                      EmptyDPMarker.StoredDbgRecords.end());
   }
 };
 
@@ -536,20 +634,15 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
   return OS;
 }
 
-inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
-  Value.print(OS);
-  return OS;
-}
-
-/// Inline helper to return a range of DPValues attached to a marker. It needs
+/// Inline helper to return a range of DbgRecords attached to a marker. It needs
 /// to be inlined as it's frequently called, but also come after the declaration
 /// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
 /// inlineable body defined here.
 inline iterator_range<simple_ilist<DbgRecord>::iterator>
-getDbgValueRange(DPMarker *DbgMarker) {
+getDbgRecordRange(DPMarker *DbgMarker) {
   if (!DbgMarker)
-    return DPMarker::getEmptyDPValueRange();
-  return DbgMarker->getDbgValueRange();
+    return DPMarker::getEmptyDbgRecordRange();
+  return DbgMarker->getDbgRecordRange();
 }
 
 } // namespace llvm

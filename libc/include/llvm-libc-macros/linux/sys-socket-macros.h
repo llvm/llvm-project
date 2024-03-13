@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H
 
 // IEEE Std 1003.1-2017 - basedefs/sys_socket.h.html
 // Macro values come from the Linux syscall interface.
@@ -25,4 +25,4 @@
 #define SOCK_SEQPACKET 5
 #define SOCK_PACKET 10
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H

@@ -165,6 +165,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     if (cast<ConstantSDNode>(this)->isOpaque())
       return "OpaqueTargetConstant";
     return "TargetConstant";
+
+    // clang-format off
+
   case ISD::TargetConstantFP:           return "TargetConstantFP";
   case ISD::TargetGlobalAddress:        return "TargetGlobalAddress";
   case ISD::TargetGlobalTLSAddress:     return "TargetGlobalTLSAddress";
@@ -380,7 +383,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_TO_FP16:                 return "fp_to_fp16";
   case ISD::STRICT_FP_TO_FP16:          return "strict_fp_to_fp16";
   case ISD::BF16_TO_FP:                 return "bf16_to_fp";
+  case ISD::STRICT_BF16_TO_FP:          return "strict_bf16_to_fp";
   case ISD::FP_TO_BF16:                 return "fp_to_bf16";
+  case ISD::STRICT_FP_TO_BF16:          return "strict_fp_to_bf16";
   case ISD::LROUND:                     return "lround";
   case ISD::STRICT_LROUND:              return "strict_lround";
   case ISD::LLROUND:                    return "llround";
@@ -447,6 +452,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SET_FPMODE:                 return "set_fpmode";
   case ISD::RESET_FPMODE:               return "reset_fpmode";
 
+  // Convergence control instructions
+  case ISD::CONVERGENCECTRL_ANCHOR:     return "convergencectrl_anchor";
+  case ISD::CONVERGENCECTRL_ENTRY:      return "convergencectrl_entry";
+  case ISD::CONVERGENCECTRL_LOOP:       return "convergencectrl_loop";
+
   // Bit manipulation
   case ISD::ABS:                        return "abs";
   case ISD::BITREVERSE:                 return "bitreverse";
@@ -461,6 +471,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   // Trampolines
   case ISD::INIT_TRAMPOLINE:            return "init_trampoline";
   case ISD::ADJUST_TRAMPOLINE:          return "adjust_trampoline";
+
+    // clang-format on
 
   case ISD::CONDCODE:
     switch (cast<CondCodeSDNode>(this)->get()) {

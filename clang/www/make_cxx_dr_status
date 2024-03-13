@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 import sys, os, re, urllib.request
 
+latest_release = 18
 
 clang_www_dir = os.path.dirname(__file__)
 default_issue_list_path = os.path.join(clang_www_dir, 'cwg_index.html')
@@ -126,8 +127,6 @@ out_file.write('''\
     <th>Issue title</th>
     <th>Available in Clang?</th>
   </tr>''')
-
-latest_release = 17
 
 class AvailabilityError(RuntimeError):
   pass

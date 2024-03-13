@@ -172,9 +172,12 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
+  fir::CUDADataAttributeAttr cudaAttr =
+      Fortran::lower::translateSymbolCUDADataAttribute(
+          converter.getFirOpBuilder().getContext(), sym);
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
                               mlir::Attribute{}, isConstant(ultimate),
-                              var.isTarget());
+                              var.isTarget(), cudaAttr);
 }
 
 /// Temporary helper to catch todos in initial data target lowering.
@@ -1586,7 +1589,7 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
 fir::CUDADataAttributeAttr Fortran::lower::translateSymbolCUDADataAttribute(
     mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =
-      Fortran::semantics::GetCUDADataAttr(&sym);
+      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
   return fir::getCUDADataAttribute(mlirContext, cudaAttr);
 }
 
