@@ -212,18 +212,17 @@ struct IRExecDiagnosticHandler : public llvm::DiagnosticHandler {
   Status *err;
   IRExecDiagnosticHandler(Status *err) : err(err) {}
   bool handleDiagnostics(const llvm::DiagnosticInfo &DI) override {
-    if (DI.getKind() == llvm::DK_SrcMgr) {
+    if (DI.getSeverity() == llvm::DS_Error) {
       const auto &DISM = llvm::cast<llvm::DiagnosticInfoSrcMgr>(DI);
       if (err && err->Success()) {
         err->SetErrorToGenericError();
         err->SetErrorStringWithFormat(
-            "Inline assembly error: %s",
+            "IRExecution error: %s",
             DISM.getSMDiag().getMessage().str().c_str());
       }
-      return true;
     }
 
-    return false;
+    return true;
   }
 };
 } // namespace
