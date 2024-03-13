@@ -761,8 +761,43 @@ bool ClauseProcessor::processHasDeviceAddr(
         addUseDeviceClause(converter, devAddrClause.v, result.hasDeviceAddrVars,
                            isDeviceTypes, isDeviceLocs, isDeviceSymbols);
       });
+
 }
 
+bool ClauseProcessor::processTargetDepend(
+    mlir::Location currentLocation, mlir::omp::DependClauseOps &clauseOps) const {
+
+  processDepend(clauseOps);
+  if (clauseOps.dependTypeAttrs.empty())
+    return false;
+
+  // If 'dependTypeOperands' is not empty, this means the depend
+  // clause was used and we create an omp.task operation that'll
+  // enclose the omp.target operation corresponding to the target
+  // construct used. This new omp.task will be a mergeable task
+  // on which the depend clause will be tacked on. The depend
+  // clause on the original target construct is dropped.
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // Create the new omp.task op.
+  // As per the OpenMP Spec a target directive creates a mergeable 'target
+  // task'
+  mlir::omp::TaskOp taskOp = firOpBuilder.create<mlir::omp::TaskOp>(
+      currentLocation, /*if_expr*/ mlir::Value(),
+      /*final_expr*/ mlir::Value(), /*untied*/ mlir::UnitAttr(),
+      /*mergeable*/ firOpBuilder.getUnitAttr(),
+      /*in_reduction_vars*/ mlir::ValueRange(), /*in_reductions*/ nullptr,
+      /*priority*/ mlir::Value(),
+      mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                           clauseOps.dependTypeAttrs),
+      clauseOps.dependVars, /*allocate_vars*/ mlir::ValueRange(),
+      /*allocate_vars*/ mlir::ValueRange());
+
+  firOpBuilder.createBlock(&taskOp.getRegion());
+  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+  firOpBuilder.setInsertionPointToStart(&taskOp.getRegion().front());
+  return true;
+}
 bool ClauseProcessor::processIf(
     omp::clause::If::DirectiveNameModifier directiveName,
     mlir::omp::IfClauseOps &result) const {

@@ -94,6 +94,12 @@ public:
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
   bool processDepend(mlir::omp::DependClauseOps &result) const;
+  // This is a special case of processDepend that processes the depend
+  // clause on Target ops - TargetOp, EnterDataOp, ExitDataOp, UpdateDataOp
+  // It sets up the generation of MLIR code for the target construct
+  // in question by first creating an enclosing omp.task operation and transfers
+  // the 'depend' clause and its arguments to this new omp.task operation.
+  bool processTargetDepend(mlir::Location currentLocation, mlir::omp::DependClauseOps &clauseOps) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
