@@ -607,6 +607,17 @@ See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
 Vector Specific Operations
 --------------------------
 
+G_VSCALE
+^^^^^^^^
+
+Puts the value of the runtime ``vscale`` multiplied by the value in the source
+operand into the destination register. This can be useful in determining the
+actual runtime number of elements in a vector.
+
+.. code-block::
+
+  %0:_(s32) = G_VSCALE 4
+
 G_INSERT_SUBVECTOR
 ^^^^^^^^^^^^^^^^^^
 
