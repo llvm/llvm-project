@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE {
 namespace gpu {
 /// Get the first active thread inside the lane.
 LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
-  return __builtin_ffsl(lane_mask) - 1;
+  return __builtin_ffsll(lane_mask) - 1;
 }
 
 /// Conditional that is only true for a single thread in a lane.
