@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_MBSTATE_T_H
 #define LLVM_LIBC_TYPES_MBSTATE_T_H
 
+// TODO: Complete this once we implement functions that operate on this type.
 typedef struct {
 } mbstate_t;
 
