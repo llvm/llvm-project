@@ -124,10 +124,23 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
 
-  if (HasAIXSmallLocalExecTLS && (!TargetTriple.isOSAIX() || !IsPPC64))
-    report_fatal_error(
-      "The aix-small-local-exec-tls attribute is only supported on AIX in "
-      "64-bit mode.\n", false);
+  if (HasAIXSmallLocalExecTLS) {
+    if (!TargetTriple.isOSAIX() || !IsPPC64)
+      report_fatal_error(
+          "The aix-small-local-exec-tls attribute is only supported on AIX in "
+          "64-bit mode.\n",
+          false);
+    // The aix-small-local-exec-tls attribute should only be used with
+    // -data-sections, as having data sections turned off with this option
+    // is not ideal for performance. Moreover, the small-local-exec-tls region
+    // is a limited resource, and should not be used for variables that may
+    // be replaced.
+    if (!TM.getDataSections())
+      report_fatal_error(
+          "The aix-small-local-exec-tls attribute can only be specified with "
+          "-data-sections.\n",
+          false);
+  }
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
@@ -172,11 +185,33 @@ bool PPCSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
 }
 
+void PPCSubtarget::tocDataChecks(unsigned PointerSize,
+                                 const GlobalVariable *GV) const {
+  // TODO: These asserts should be updated as more support for the toc data
+  // transformation is added (struct support, etc.).
+  assert(
+      PointerSize >= GV->getAlign().valueOrOne().value() &&
+      "GlobalVariables with an alignment requirement stricter than TOC entry "
+      "size not supported by the toc data transformation.");
+
+  Type *GVType = GV->getValueType();
+  assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
+                              "supported by the toc data transformation.");
+  if (GV->getParent()->getDataLayout().getTypeSizeInBits(GVType) >
+      PointerSize * 8)
+    report_fatal_error(
+        "A GlobalVariable with size larger than a TOC entry is not currently "
+        "supported by the toc data transformation.");
+  if (GV->hasPrivateLinkage())
+    report_fatal_error("A GlobalVariable with private linkage is not "
+                       "currently supported by the toc data transformation.");
+}
+
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
-  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return false;
   return true;
 }

@@ -16,14 +16,62 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/EmitC/IR/EmitCBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // EmitC type definitions
 //===----------------------------------------------------------------------===//
 
-class EmitC_Type<string name, string typeMnemonic>
-    : TypeDef<EmitC_Dialect, name> {
+class EmitC_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<EmitC_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
+}
+
+def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
+  let summary = "EmitC array type";
+
+  let description = [{
+    An array data type.
+
+    Example:
+
+    ```mlir
+    // Array emitted as `int32_t[10]`
+    !emitc.array<10xi32>
+    // Array emitted as `float[10][20]`
+    !emitc.ptr<10x20xf32>
+    ```
+  }];
+
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$shape,
+    "Type":$elementType
+  );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "ArrayRef<int64_t>":$shape,
+      "Type":$elementType
+    ), [{
+      return $_get(elementType.getContext(), shape, elementType);
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    /// Returns if this type is ranked (always true).
+    bool hasRank() const { return true; }
+
+    /// Clone this array type with the given shape and element type. If the
+    /// provided shape is `std::nullopt`, the current shape of the type is used.
+    ArrayType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                        Type elementType) const;
+
+    static bool isValidElementType(Type type) {
+      return type.isIntOrIndexOrFloat() ||
+         llvm::isa<PointerType, OpaqueType>(type);
+    }
+  }];
+  let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
@@ -42,7 +90,8 @@ def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $value `>`";
+  let genVerifyDecl = 1;
 }
 
 def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {

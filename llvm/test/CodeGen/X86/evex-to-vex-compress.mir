@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass x86-evex-to-vex-compress -verify-machineinstrs -mcpu=skx -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass x86-compress-evex -verify-machineinstrs -mcpu=skx -o - %s | FileCheck %s
 # This test verifies VEX encoding for AVX-512 instructions that use registers of low indexes and
 # do not use zmm or mask registers and have a corresponding AVX/AVX2 opcode
 

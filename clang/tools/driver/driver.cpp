@@ -36,7 +36,6 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -65,7 +64,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return std::string(ExecutablePath.str());
+    return std::string(ExecutablePath);
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -324,28 +323,6 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-static void SetInstallDir(SmallVectorImpl<const char *> &argv,
-                          Driver &TheDriver, bool CanonicalPrefixes) {
-  // Attempt to find the original path used to invoke the driver, to determine
-  // the installed path. We do this manually, because we want to support that
-  // path being a symlink.
-  SmallString<128> InstalledPath(argv[0]);
-
-  // Do a PATH lookup, if there are no directory components.
-  if (llvm::sys::path::filename(InstalledPath) == InstalledPath)
-    if (llvm::ErrorOr<std::string> Tmp = llvm::sys::findProgramByName(
-            llvm::sys::path::filename(InstalledPath.str())))
-      InstalledPath = *Tmp;
-
-  // FIXME: We don't actually canonicalize this, we just make it absolute.
-  if (CanonicalPrefixes)
-    llvm::sys::fs::make_absolute(InstalledPath);
-
-  StringRef InstalledPathParent(llvm::sys::path::parent_path(InstalledPath));
-  if (llvm::sys::fs::exists(InstalledPathParent))
-    TheDriver.setInstalledDir(InstalledPathParent);
-}
-
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
                           const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
@@ -370,14 +347,14 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP, ToolContext);
   // Reject unknown tools.
-  llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
-               << "Valid tools include '-cc1' and '-cc1as'.\n";
+  llvm::errs()
+      << "error: unknown integrated tool '" << Tool << "'. "
+      << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
 
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
-  llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
@@ -485,7 +462,6 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
-  SetInstallDir(Args, TheDriver, CanonicalPrefixes);
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
   // If -canonical-prefixes is set, GetExecutablePath will have resolved Path

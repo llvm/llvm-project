@@ -122,16 +122,23 @@ public:
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
-        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {}
+      : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
+        LastF(Arg.LastF),
+        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
+  }
 
   BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
   BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
 
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
+    Handles = std::move(RHS.Handles);
     Probs = std::move(RHS.Probs);
     EstimatedBlockWeight = std::move(RHS.EstimatedBlockWeight);
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
     return *this;
   }
 
@@ -279,6 +286,8 @@ private:
     }
 
   public:
+    void setBPI(BranchProbabilityInfo *BPI) { this->BPI = BPI; }
+
     BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI = nullptr)
         : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
   };

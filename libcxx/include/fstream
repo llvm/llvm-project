@@ -73,6 +73,7 @@ public:
     typedef typename traits_type::int_type int_type;
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
+    using native_handle_type = typename basic_filebuf<charT, traits>::native_handle_type; // Since C++26
 
     basic_ifstream();
     explicit basic_ifstream(const char* s, ios_base::openmode mode = ios_base::in);
@@ -85,6 +86,7 @@ public:
     void swap(basic_ifstream& rhs);
 
     basic_filebuf<char_type, traits_type>* rdbuf() const;
+    native_handle_type native_handle() const noexcept; // Since C++26
     bool is_open() const;
     void open(const char* s, ios_base::openmode mode = ios_base::in);
     void open(const string& s, ios_base::openmode mode = ios_base::in);
@@ -110,6 +112,7 @@ public:
     typedef typename traits_type::int_type int_type;
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
+    using native_handle_type = typename basic_filebuf<charT, traits>::native_handle_type; // Since C++26
 
     basic_ofstream();
     explicit basic_ofstream(const char* s, ios_base::openmode mode = ios_base::out);
@@ -122,6 +125,8 @@ public:
     void swap(basic_ofstream& rhs);
 
     basic_filebuf<char_type, traits_type>* rdbuf() const;
+    native_handle_type native_handle() const noexcept; // Since C++26
+
     bool is_open() const;
     void open(const char* s, ios_base::openmode mode = ios_base::out);
     void open(const string& s, ios_base::openmode mode = ios_base::out);
@@ -148,6 +153,7 @@ public:
     typedef typename traits_type::int_type int_type;
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
+    using native_handle_type = typename basic_filebuf<charT, traits>::native_handle_type; // Since C++26
 
     basic_fstream();
     explicit basic_fstream(const char* s, ios_base::openmode mode = ios_base::in|ios_base::out);
@@ -160,6 +166,7 @@ public:
     void swap(basic_fstream& rhs);
 
     basic_filebuf<char_type, traits_type>* rdbuf() const;
+    native_handle_type native_handle() const noexcept; // Since C++26
     bool is_open() const;
     void open(const char* s, ios_base::openmode mode = ios_base::in|ios_base::out);
     void open(const string& s, ios_base::openmode mode = ios_base::in|ios_base::out);
@@ -180,7 +187,7 @@ typedef basic_fstream<wchar_t> wfstream;
 */
 
 #include <__algorithm/max.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__fwd/fstream.h>
@@ -210,6 +217,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#  if _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_WIN32API)
+_LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept;
+#  endif
+
 template <class _CharT, class _Traits>
 class _LIBCPP_TEMPLATE_VIS basic_filebuf : public basic_streambuf<_CharT, _Traits> {
 public:
@@ -219,6 +230,15 @@ public:
   typedef typename traits_type::pos_type pos_type;
   typedef typename traits_type::off_type off_type;
   typedef typename traits_type::state_type state_type;
+#  if _LIBCPP_STD_VER >= 26
+#    if defined(_LIBCPP_WIN32API)
+  using native_handle_type = void*; // HANDLE
+#    elif __has_include(<unistd.h>)
+  using native_handle_type = int; // POSIX file descriptor
+#    else
+#      error "Provide a native file handle!"
+#    endif
+#  endif
 
   // 27.9.1.2 Constructors/destructor:
   basic_filebuf();
@@ -245,8 +265,23 @@ public:
 #  endif
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* __open(int __fd, ios_base::openmode __mode);
   basic_filebuf* close();
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
+    _LIBCPP_ASSERT_UNCATEGORIZED(this->is_open(), "File must be opened");
+#    if defined(_LIBCPP_WIN32API)
+    return std::__filebuf_windows_native_handle(__file_);
+#    elif __has_include(<unistd.h>)
+    return fileno(__file_);
+#    else
+#      error "Provide a way to determine the file native handle!"
+#    endif
+  }
+#  endif //  _LIBCPP_STD_VER >= 26
 
   _LIBCPP_HIDE_FROM_ABI inline static const char* __make_mdstring(ios_base::openmode __mode) _NOEXCEPT;
+#  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+  _LIBCPP_HIDE_FROM_ABI inline static const wchar_t* __make_mdwstring(ios_base::openmode __mode) _NOEXCEPT;
+#  endif
 
 protected:
   // 27.9.1.5 Overridden virtual functions:
@@ -282,6 +317,26 @@ private:
   void __write_mode();
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
+
+  // There are multiple (__)open function, they use different C-API open
+  // function. After that call these functions behave the same. This function
+  // does that part and determines the final return value.
+  _LIBCPP_HIDE_FROM_ABI basic_filebuf* __do_open(FILE* __file, ios_base::openmode __mode) {
+    __file_ = __file;
+    if (!__file_)
+      return nullptr;
+
+    __om_ = __mode;
+    if (__mode & ios_base::ate) {
+      if (fseek(__file_, 0, SEEK_END)) {
+        fclose(__file_);
+        __file_ = nullptr;
+        return nullptr;
+      }
+    }
+
+    return this;
+  }
 };
 
 template <class _CharT, class _Traits>
@@ -516,50 +571,79 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
   __libcpp_unreachable();
 }
 
+#  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+template <class _CharT, class _Traits>
+const wchar_t* basic_filebuf<_CharT, _Traits>::__make_mdwstring(ios_base::openmode __mode) _NOEXCEPT {
+  switch (__mode & ~ios_base::ate) {
+  case ios_base::out:
+  case ios_base::out | ios_base::trunc:
+    return L"w";
+  case ios_base::out | ios_base::app:
+  case ios_base::app:
+    return L"a";
+  case ios_base::in:
+    return L"r";
+  case ios_base::in | ios_base::out:
+    return L"r+";
+  case ios_base::in | ios_base::out | ios_base::trunc:
+    return L"w+";
+  case ios_base::in | ios_base::out | ios_base::app:
+  case ios_base::in | ios_base::app:
+    return L"a+";
+  case ios_base::out | ios_base::binary:
+  case ios_base::out | ios_base::trunc | ios_base::binary:
+    return L"wb";
+  case ios_base::out | ios_base::app | ios_base::binary:
+  case ios_base::app | ios_base::binary:
+    return L"ab";
+  case ios_base::in | ios_base::binary:
+    return L"rb";
+  case ios_base::in | ios_base::out | ios_base::binary:
+    return L"r+b";
+  case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary:
+    return L"w+b";
+  case ios_base::in | ios_base::out | ios_base::app | ios_base::binary:
+  case ios_base::in | ios_base::app | ios_base::binary:
+    return L"a+b";
+#    if _LIBCPP_STD_VER >= 23
+  case ios_base::out | ios_base::noreplace:
+  case ios_base::out | ios_base::trunc | ios_base::noreplace:
+    return L"wx";
+  case ios_base::in | ios_base::out | ios_base::trunc | ios_base::noreplace:
+    return L"w+x";
+  case ios_base::out | ios_base::binary | ios_base::noreplace:
+  case ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
+    return L"wbx";
+  case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
+    return L"w+bx";
+#    endif // _LIBCPP_STD_VER >= 23
+  default:
+    return nullptr;
+  }
+  __libcpp_unreachable();
+}
+#  endif
+
 template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode) {
-  basic_filebuf<_CharT, _Traits>* __rt = nullptr;
-  if (__file_ == nullptr) {
-    if (const char* __mdstr = __make_mdstring(__mode)) {
-      __rt    = this;
-      __file_ = fopen(__s, __mdstr);
-      if (__file_) {
-        __om_ = __mode;
-        if (__mode & ios_base::ate) {
-          if (fseek(__file_, 0, SEEK_END)) {
-            fclose(__file_);
-            __file_ = nullptr;
-            __rt    = nullptr;
-          }
-        }
-      } else
-        __rt = nullptr;
-    }
-  }
-  return __rt;
+  if (__file_)
+    return nullptr;
+  const char* __mdstr = __make_mdstring(__mode);
+  if (!__mdstr)
+    return nullptr;
+
+  return __do_open(fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
 inline basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::__open(int __fd, ios_base::openmode __mode) {
-  basic_filebuf<_CharT, _Traits>* __rt = nullptr;
-  if (__file_ == nullptr) {
-    if (const char* __mdstr = __make_mdstring(__mode)) {
-      __rt    = this;
-      __file_ = fdopen(__fd, __mdstr);
-      if (__file_) {
-        __om_ = __mode;
-        if (__mode & ios_base::ate) {
-          if (fseek(__file_, 0, SEEK_END)) {
-            fclose(__file_);
-            __file_ = nullptr;
-            __rt    = nullptr;
-          }
-        }
-      } else
-        __rt = nullptr;
-    }
-  }
-  return __rt;
+  if (__file_)
+    return nullptr;
+  const char* __mdstr = __make_mdstring(__mode);
+  if (!__mdstr)
+    return nullptr;
+
+  return __do_open(fdopen(__fd, __mdstr), __mode);
 }
 
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
@@ -567,89 +651,13 @@ inline basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::__open(in
 // and long mode strings.
 template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar_t* __s, ios_base::openmode __mode) {
-  basic_filebuf<_CharT, _Traits>* __rt = nullptr;
-  if (__file_ == nullptr) {
-    __rt = this;
-    const wchar_t* __mdstr;
-    switch (__mode & ~ios_base::ate) {
-    case ios_base::out:
-    case ios_base::out | ios_base::trunc:
-      __mdstr = L"w";
-      break;
-    case ios_base::out | ios_base::app:
-    case ios_base::app:
-      __mdstr = L"a";
-      break;
-    case ios_base::in:
-      __mdstr = L"r";
-      break;
-    case ios_base::in | ios_base::out:
-      __mdstr = L"r+";
-      break;
-    case ios_base::in | ios_base::out | ios_base::trunc:
-      __mdstr = L"w+";
-      break;
-    case ios_base::in | ios_base::out | ios_base::app:
-    case ios_base::in | ios_base::app:
-      __mdstr = L"a+";
-      break;
-    case ios_base::out | ios_base::binary:
-    case ios_base::out | ios_base::trunc | ios_base::binary:
-      __mdstr = L"wb";
-      break;
-    case ios_base::out | ios_base::app | ios_base::binary:
-    case ios_base::app | ios_base::binary:
-      __mdstr = L"ab";
-      break;
-    case ios_base::in | ios_base::binary:
-      __mdstr = L"rb";
-      break;
-    case ios_base::in | ios_base::out | ios_base::binary:
-      __mdstr = L"r+b";
-      break;
-    case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary:
-      __mdstr = L"w+b";
-      break;
-    case ios_base::in | ios_base::out | ios_base::app | ios_base::binary:
-    case ios_base::in | ios_base::app | ios_base::binary:
-      __mdstr = L"a+b";
-      break;
-#    if _LIBCPP_STD_VER >= 23
-    case ios_base::out | ios_base::noreplace:
-    case ios_base::out | ios_base::trunc | ios_base::noreplace:
-      __mdstr = L"wx";
-      break;
-    case ios_base::in | ios_base::out | ios_base::trunc | ios_base::noreplace:
-      __mdstr = L"w+x";
-      break;
-    case ios_base::out | ios_base::binary | ios_base::noreplace:
-    case ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
-      __mdstr = L"wbx";
-      break;
-    case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
-      __mdstr = L"w+bx";
-      break;
-#    endif // _LIBCPP_STD_VER >= 23
-    default:
-      __rt = nullptr;
-      break;
-    }
-    if (__rt) {
-      __file_ = _wfopen(__s, __mdstr);
-      if (__file_) {
-        __om_ = __mode;
-        if (__mode & ios_base::ate) {
-          if (fseek(__file_, 0, SEEK_END)) {
-            fclose(__file_);
-            __file_ = nullptr;
-            __rt    = nullptr;
-          }
-        }
-      } else
-        __rt = nullptr;
-    }
-  }
-  return __rt;
+  if (__file_)
+    return nullptr;
+  const wchar_t* __mdstr = __make_mdwstring(__mode);
+  if (!__mdstr)
+    return nullptr;
+
+  return __do_open(_wfopen(__s, __mdstr), __mode);
 }
 #  endif
 
@@ -1024,6 +1032,9 @@ public:
   typedef typename traits_type::int_type int_type;
   typedef typename traits_type::pos_type pos_type;
   typedef typename traits_type::off_type off_type;
+#  if _LIBCPP_STD_VER >= 26
+  using native_handle_type = typename basic_filebuf<_CharT, _Traits>::native_handle_type;
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI basic_ifstream();
   _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const char* __s, ios_base::openmode __mode = ios_base::in);
@@ -1041,6 +1052,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(basic_ifstream& __rhs);
 
   _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
+#  endif
   _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::in);
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
@@ -1171,6 +1185,9 @@ public:
   typedef typename traits_type::int_type int_type;
   typedef typename traits_type::pos_type pos_type;
   typedef typename traits_type::off_type off_type;
+#  if _LIBCPP_STD_VER >= 26
+  using native_handle_type = typename basic_filebuf<_CharT, _Traits>::native_handle_type;
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI basic_ofstream();
   _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const char* __s, ios_base::openmode __mode = ios_base::out);
@@ -1190,6 +1207,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(basic_ofstream& __rhs);
 
   _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
+#  endif
   _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::out);
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
@@ -1321,6 +1341,9 @@ public:
   typedef typename traits_type::int_type int_type;
   typedef typename traits_type::pos_type pos_type;
   typedef typename traits_type::off_type off_type;
+#  if _LIBCPP_STD_VER >= 26
+  using native_handle_type = typename basic_filebuf<_CharT, _Traits>::native_handle_type;
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI basic_fstream();
   _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(const char* __s,
@@ -1345,6 +1368,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(basic_fstream& __rhs);
 
   _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
+#  endif
   _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR

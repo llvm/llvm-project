@@ -289,7 +289,7 @@ int test() {
   // used to crash
   S a(0, 1);
   S b(0);
-  S c(0, 0, 1); // beforecxx20-warning {{aggregate initialization of type 'S' from a parenthesized list of values is a C++20 extension}}
+  S c(0, 0, 1);
 
   S d {0, 1};
   S e {0};

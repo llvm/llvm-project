@@ -121,6 +121,10 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
           FPM.addPass(BPFPreserveStaticOffsetPass(false));
           return true;
         }
+        if (PassName == "bpf-aspace-simplify") {
+          FPM.addPass(BPFASpaceCastSimplifyPass());
+          return true;
+        }
         return false;
       });
   PB.registerPipelineStartEPCallback(
@@ -135,6 +139,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
   PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
                                     OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
+    FPM.addPass(BPFASpaceCastSimplifyPass());
   });
   PB.registerScalarOptimizerLateEPCallback(
       [=](FunctionPassManager &FPM, OptimizationLevel Level) {
@@ -149,7 +154,9 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
 }
 
 void BPFPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIR());
+
   TargetPassConfig::addIRPasses();
 }
 

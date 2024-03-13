@@ -818,6 +818,8 @@ enum : uint64_t {
   /// Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
+  /// LEGACY - encoding using REX/REX2 or w/o opcode prefix.
+  LEGACY = 0 << EncodingShift,
   /// VEX - encoding using 0xC4/0xC5
   VEX = 1 << EncodingShift,
   /// XOP - Opcode prefix used by XOP instructions.
@@ -873,7 +875,10 @@ enum : uint64_t {
   ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift,
   /// EVEX_NF - Set if this instruction has EVEX.NF field set.
   EVEX_NFShift = ExplicitOpPrefixShift + 2,
-  EVEX_NF = 1ULL << EVEX_NFShift
+  EVEX_NF = 1ULL << EVEX_NFShift,
+  // TwoConditionalOps - Set if this instruction has two conditional operands
+  TwoConditionalOps_Shift = EVEX_NFShift + 1,
+  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.
@@ -1258,6 +1263,10 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
   if (Encoding == X86II::EVEX)
     return true;
 
+  unsigned Opcode = Desc.Opcode;
+  // MOV32r0 is always expanded to XOR32rr
+  if (Opcode == X86::MOV32r0)
+    return true;
   // To be conservative, egpr is not used for all pseudo instructions
   // because we are not sure what instruction it will become.
   // FIXME: Could we improve it in X86ExpandPseudo?
@@ -1266,7 +1275,6 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
 
   // MAP OB/TB in legacy encoding space can always use egpr except
   // XSAVE*/XRSTOR*.
-  unsigned Opcode = Desc.Opcode;
   switch (Opcode) {
   default:
     break;
@@ -1310,6 +1318,33 @@ inline bool isKMasked(uint64_t TSFlags) {
 inline bool isKMergeMasked(uint64_t TSFlags) {
   return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
 }
+
+/// \returns true if the intruction needs a SIB.
+inline bool needSIB(unsigned BaseReg, unsigned IndexReg, bool In64BitMode) {
+  // The SIB byte must be used if there is an index register.
+  if (IndexReg)
+    return true;
+
+  // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
+  // which encode to an R/M value of 4, which indicates that a SIB byte is
+  // present.
+  switch (BaseReg) {
+  default:
+    // If there is no base register and we're in 64-bit mode, we need a SIB
+    // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
+    return In64BitMode && !BaseReg;
+  case X86::ESP:
+  case X86::RSP:
+  case X86::R12:
+  case X86::R12D:
+  case X86::R20:
+  case X86::R20D:
+  case X86::R28:
+  case X86::R28D:
+    return true;
+  }
+}
+
 } // namespace X86II
 } // namespace llvm
 #endif

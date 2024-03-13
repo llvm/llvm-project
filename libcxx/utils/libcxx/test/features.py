@@ -23,30 +23,6 @@ _isClExe = lambda cfg: not _isAnyClangOrGCC(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
-
-def _getSuitableClangTidy(cfg):
-    try:
-        # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
-        if runScriptExitCode(cfg, ["stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
-            return None
-
-        # TODO MODULES require ToT due module specific fixes.
-        if runScriptExitCode(cfg, ['clang-tidy-17 --version']) == 0:
-          return 'clang-tidy-17'
-
-        # TODO This should be the last stable release.
-        # LLVM RELEASE bump to latest stable version
-        if runScriptExitCode(cfg, ["clang-tidy-16 --version"]) == 0:
-            return "clang-tidy-16"
-
-        # LLVM RELEASE bump version
-        if int(re.search("[0-9]+", commandOutput(cfg, ["clang-tidy --version"])).group()) >= 16:
-            return "clang-tidy"
-
-    except ConfigurationRuntimeError:
-        return None
-
-
 def _getAndroidDeviceApi(cfg):
     return int(
         programOutput(
@@ -183,25 +159,26 @@ DEFAULT_FEATURES = [
         actions=[AddLinkFlag("-latomic")],
     ),
     Feature(
-        name="non-lockfree-atomics",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { int storage[100]; };
-            std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); return 0; }
-          """,
-        ),
-    ),
-    Feature(
         name="has-64-bit-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
             """
             #include <atomic>
-            std::atomic_uint64_t x;
-            int main(int, char**) { (void)x.load(); return 0; }
+            struct Large { char storage[64/8]; };
+            std::atomic<Large> x;
+            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
+          """,
+        ),
+    ),
+    Feature(
+        name="has-1024-bit-atomics",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            #include <atomic>
+            struct Large { char storage[1024/8]; };
+            std::atomic<Large> x;
+            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
         ),
     ),
@@ -214,20 +191,6 @@ DEFAULT_FEATURES = [
             int main(int, char**) {
               static_assert(sizeof(void *) == 4);
             }
-          """,
-        ),
-    ),
-    # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
-    # on all supported platforms.
-    Feature(
-        name="is-lockfree-runtime-function",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { int storage[100]; };
-            std::atomic<Large> x;
-            int main(int, char**) { return x.is_lock_free(); }
           """,
         ),
     ),
@@ -310,12 +273,17 @@ DEFAULT_FEATURES = [
         name="executor-has-no-bash",
         when=lambda cfg: runScriptExitCode(cfg, ["%{exec} bash -c 'bash --version'"]) != 0,
     ),
+    # Whether module support for the platform is available.
     Feature(
-        name="has-clang-tidy",
-        when=lambda cfg: _getSuitableClangTidy(cfg) is not None,
-        actions=[
-            AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
-        ],
+        name="has-no-cxx-module-support",
+        # The libc of these platforms have functions with internal linkage.
+        # This is not allowed per C11 7.1.2 Standard headers/6
+        #  Any declaration of a library function shall have external linkage.
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
+        or "_WIN32" in compilerMacros(cfg)
+        or platform.system().lower().startswith("aix")
+        # Avoid building on platforms that don't support modules properly.
+        or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
     ),
 ]
 
@@ -343,7 +311,6 @@ macros = {
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_NO_STD_MODULES":  "libcpp-has-no-std-modules",
     "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH": "libcpp-pstl-cpu-backend-libdispatch",
 }
 for macro, feature in macros.items():
@@ -528,12 +495,94 @@ DEFAULT_FEATURES += [
 # target that doesn't support it will fail at compile time, not at runtime. This can
 # be achieved by creating a `.verify.cpp` test that checks for the right errors, and
 # mark that test as requiring `stdlib=<vendor>-libc++ && target=<target>`.
+#
+# Since it is not always known which deployment target to pick there are
+# short-hands based on the LLVM version like using-built-library-before-llvm-xx.
+# These short-hands make it easy for libc++ developers to select the proper
+# version the feature will be available in and allows vendors to set the proper
+# target information.
 DEFAULT_FEATURES += [
+    # Backdeployment short-hands
+    Feature(
+        name="using-built-library-before-llvm-11",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="using-built-library-before-llvm-12",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-11 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{(0|1|2)}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-13",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-12 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx{{((12.(3|4|5|6|7))|(13.(0|1|2|3)))}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-14",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-13",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-15",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-14 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx13.{{(4|5|6)}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-16",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-15 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx14.{{(0|1|2|3)}}.0)",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-17",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "using-built-library-before-llvm-16",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-18",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # For now, no released version of macOS contains LLVM 18
+            # TODO(ldionne) Please provide the correct value.
+            "using-built-library-before-llvm-17 || stdlib=apple-libc++ && target={{.+}}-apple-macosx{{.+}}",
+            cfg.available_features,
+        ),
+    ),
+
+    Feature(
+        name="using-built-library-before-llvm-19",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # For now, no released version of macOS contains LLVM 19
+            # TODO(ldionne) Please provide the correct value.
+            "using-built-library-before-llvm-18 || stdlib=apple-libc++ && target={{.+}}-apple-macosx{{.+}}",
+            cfg.available_features,
+        ),
+    ),
+
     # Tests that require std::to_chars(floating-point) in the built library
     Feature(
         name="availability-fp_to_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-13",
             cfg.available_features,
         ),
     ),
@@ -541,7 +590,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-char8_t_support-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0)(.0)?}}",
+            "using-built-library-before-llvm-11",
             cfg.available_features,
         ),
     ),
@@ -549,7 +598,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-verbose_abort-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-13",
             cfg.available_features,
         ),
     ),
@@ -557,7 +606,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-13",
             cfg.available_features,
         ),
     ),
@@ -581,8 +630,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-tzdb-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            # TODO(ldionne) Please provide the correct value.
-            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
+            "using-built-library-before-llvm-19",
             cfg.available_features,
         ),
     ),
@@ -590,8 +638,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-print-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            # TODO(ldionne) Please provide the correct value.
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "using-built-library-before-llvm-18",
             cfg.available_features,
         ),
     ),

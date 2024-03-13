@@ -153,7 +153,7 @@ public:
   // - The parser always needs to consume these code units
   // - The code is optimized for well-formed UTF-8
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __consume_result __consume() noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first_ != __last_, "can't move beyond the end of input");
+    _LIBCPP_ASSERT_INTERNAL(__first_ != __last_, "can't move beyond the end of input");
 
     // Based on the number of leading 1 bits the number of code units in the
     // code point can be determined. See
@@ -259,7 +259,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const noexcept { return __first_ == __last_; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __consume_result __consume() noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first_ != __last_, "can't move beyond the end of input");
+    _LIBCPP_ASSERT_INTERNAL(__first_ != __last_, "can't move beyond the end of input");
 
     char32_t __value = static_cast<char32_t>(*__first_++);
     if constexpr (sizeof(wchar_t) == 2) {
@@ -305,8 +305,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __at_extended_grapheme_cluster_break(
 
   // *** Break at the start and end of text, unless the text is empty. ***
 
-  _LIBCPP_ASSERT_UNCATEGORIZED(__prev != __property::__sot, "should be handled in the constructor"); // GB1
-  _LIBCPP_ASSERT_UNCATEGORIZED(__prev != __property::__eot, "should be handled by our caller");      // GB2
+  _LIBCPP_ASSERT_INTERNAL(__prev != __property::__sot, "should be handled in the constructor"); // GB1
+  _LIBCPP_ASSERT_INTERNAL(__prev != __property::__eot, "should be handled by our caller");      // GB2
 
   // *** Do not break between a CR and LF. Otherwise, break before and after controls. ***
   if (__prev == __property::__CR && __next == __property::__LF) // GB3
@@ -401,8 +401,8 @@ public:
   };
 
   _LIBCPP_HIDE_FROM_ABI constexpr __cluster __consume() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__next_prop_ != __extended_grapheme_custer_property_boundary::__property::__eot,
-                                 "can't move beyond the end of input");
+    _LIBCPP_ASSERT_INTERNAL(__next_prop_ != __extended_grapheme_custer_property_boundary::__property::__eot,
+                            "can't move beyond the end of input");
 
     char32_t __code_point = __next_code_point_;
     if (!__code_point_view_.__at_end())
@@ -459,7 +459,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __position() const noexcept { return __first_; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __consume_result __consume() noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first_ != __last_, "can't move beyond the end of input");
+    _LIBCPP_ASSERT_INTERNAL(__first_ != __last_, "can't move beyond the end of input");
     return {static_cast<char32_t>(*__first_++)};
   }
 

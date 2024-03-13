@@ -168,8 +168,8 @@ llvm.func @no_crash_on_negative_gep_index() {
 // CHECK-LABEL: llvm.func @coalesced_store_ints
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_ints(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
 
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32)>
@@ -193,8 +193,8 @@ llvm.func @coalesced_store_ints(%arg: i64) {
 // CHECK-LABEL: llvm.func @coalesced_store_ints_offset
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_ints_offset(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i64, i32, i32)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, i32, i32)> : (i32) -> !llvm.ptr
@@ -218,8 +218,8 @@ llvm.func @coalesced_store_ints_offset(%arg: i64) {
 // CHECK-LABEL: llvm.func @coalesced_store_floats
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_floats(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
   %0 = llvm.mlir.constant(1 : i32) : i32
 
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (f32, f32)>
@@ -292,9 +292,9 @@ llvm.func @coalesced_store_past_end(%arg: i64) {
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_packed_struct(%arg: i64) {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
-  // CHECK: %[[CST48:.*]] = llvm.mlir.constant(48 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+  // CHECK-DAG: %[[CST48:.*]] = llvm.mlir.constant(48 : i64) : i64
 
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", packed (i16, i32, i16)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", packed (i16, i32, i16)> : (i32) -> !llvm.ptr
@@ -320,10 +320,10 @@ llvm.func @coalesced_store_packed_struct(%arg: i64) {
 // CHECK-LABEL: llvm.func @vector_write_split
 // CHECK-SAME: %[[ARG:.*]]: vector<4xi32>
 llvm.func @vector_write_split(%arg: vector<4xi32>) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32, i32, i32)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, i32, i32)> : (i32) -> !llvm.ptr
@@ -354,10 +354,10 @@ llvm.func @vector_write_split(%arg: vector<4xi32>) {
 // CHECK-LABEL: llvm.func @vector_write_split_offset
 // CHECK-SAME: %[[ARG:.*]]: vector<4xi32>
 llvm.func @vector_write_split_offset(%arg: vector<4xi32>) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i64, i32, i32, i32, i32)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, i32, i32, i32, i32)> : (i32) -> !llvm.ptr
@@ -470,8 +470,8 @@ llvm.func @gep_split(%arg: i64) {
 // CHECK-LABEL: llvm.func @coalesced_store_ints_subaggregate
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_ints_subaggregate(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, struct<(i32, i32)>)> : (i32) -> !llvm.ptr
@@ -513,8 +513,8 @@ llvm.func @gep_result_ptr_type_dynamic(%arg: i64) {
 // CHECK-LABEL: llvm.func @overlapping_int_aggregate_store
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @overlapping_int_aggregate_store(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
 
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
@@ -548,10 +548,10 @@ llvm.func @overlapping_int_aggregate_store(%arg: i64) {
 // CHECK-LABEL: llvm.func @overlapping_vector_aggregate_store
 // CHECK-SAME: %[[ARG:.*]]: vector<4xi16>
 llvm.func @overlapping_vector_aggregate_store(%arg: vector<4 x i16>) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
 
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
@@ -586,8 +586,8 @@ llvm.func @overlapping_vector_aggregate_store(%arg: vector<4 x i16>) {
 // CHECK-LABEL: llvm.func @partially_overlapping_aggregate_store
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @partially_overlapping_aggregate_store(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
 
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
@@ -644,8 +644,8 @@ llvm.func @undesirable_overlapping_aggregate_store(%arg: i64) {
 // CHECK-LABEL: llvm.func @coalesced_store_ints_array
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_ints_array(%arg: i64) {
-  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK-DAG: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK-DAG: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
 
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x i32>

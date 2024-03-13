@@ -22,60 +22,29 @@ int bar() {
 }
 
 
-// CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_ZN7MyClass3gooEi.ifunc = weak_odr ifunc i32 (ptr, i32), ptr @_ZN7MyClass3gooEi.resolver
-// CHECK: @_Z3fooi.ifunc = weak_odr ifunc i32 (i32), ptr @_Z3fooi.resolver
-// CHECK: @_Z3foov.ifunc = weak_odr ifunc i32 (), ptr @_Z3foov.resolver
 
+
+//.
+// CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
+// CHECK: @_ZN7MyClass3gooEi.ifunc = weak_odr alias i32 (ptr, i32), ptr @_ZN7MyClass3gooEi
+// CHECK: @_Z3fooi.ifunc = weak_odr alias i32 (i32), ptr @_Z3fooi
+// CHECK: @_Z3foov.ifunc = weak_odr alias i32 (), ptr @_Z3foov
+// CHECK: @_ZN7MyClass3gooEi = weak_odr ifunc i32 (ptr, i32), ptr @_ZN7MyClass3gooEi.resolver
+// CHECK: @_Z3fooi = weak_odr ifunc i32 (i32), ptr @_Z3fooi.resolver
+// CHECK: @_Z3foov = weak_odr ifunc i32 (), ptr @_Z3foov.resolver
+//.
 // CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @_Z3fooi(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    ret i32 2
-// CHECK-LABEL: @_Z3foov._Msm4Mebf16(
+//
+//
+// CHECK-LABEL: @_Z3foov._Mebf16Msm4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
-// CHECK-LABEL: @_Z3foov(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 4
-// CHECK-LABEL: @_ZN7MyClass3gooEi(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @_ZN7MyClass3gooEi._Mcrc(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 2
-// CHECK-LABEL: @_ZN7MyClass3gooEi._Mdotprod(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 3
-// CHECK-LABEL: @_Z3barv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi.ifunc(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z3fooi.ifunc(i32 noundef 1)
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_Z3foov.ifunc()
-// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-NEXT:    ret i32 [[ADD3]]
+//
+//
 // CHECK-LABEL: @_ZN7MyClass3gooEi.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -95,7 +64,20 @@ int bar() {
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @_ZN7MyClass3gooEi._Mdotprod
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    ret ptr @_ZN7MyClass3gooEi
+// CHECK-NEXT:    ret ptr @_ZN7MyClass3gooEi.default
+//
+//
+// CHECK-LABEL: @_Z3barv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClass3gooEi(ptr noundef nonnull align 1 dereferenceable(1) [[M]], i32 noundef 1)
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z3fooi(i32 noundef 1)
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_Z3foov()
+// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-NEXT:    ret i32 [[ADD3]]
+//
+//
 // CHECK-LABEL: @_Z3fooi.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -107,7 +89,9 @@ int bar() {
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @_Z3fooi._Mbf16Msme-f64f64
 // CHECK:       resolver_else:
-// CHECK-NEXT:    ret ptr @_Z3fooi
+// CHECK-NEXT:    ret ptr @_Z3fooi.default
+//
+//
 // CHECK-LABEL: @_Z3foov.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -117,12 +101,59 @@ int bar() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z3foov._Msm4Mebf16
+// CHECK-NEXT:    ret ptr @_Z3foov._Mebf16Msm4
 // CHECK:       resolver_else:
-// CHECK-NEXT:    ret ptr @_Z3foov
-
-// CHECK: attributes #0 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
-// CHECK: attributes #1 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #2 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+neon,+sm4" }
-// CHECK: attributes #3 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
-// CHECK: attributes #4 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
+// CHECK-NEXT:    ret ptr @_Z3foov.default
+//
+//
+// CHECK-LABEL: @_ZN7MyClass3gooEi._Mdotprod(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK-LABEL: @_ZN7MyClass3gooEi._Mcrc(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK-LABEL: @_ZN7MyClass3gooEi.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: @_Z3fooi.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK-LABEL: @_Z3foov.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 4
+//
+//.
+// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+neon,+sm4" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

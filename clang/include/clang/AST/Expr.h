@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_EXPR_H
 #define LLVM_CLANG_AST_EXPR_H
 
+#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTVector.h"
 #include "clang/AST/ComputeDependence.h"
@@ -81,7 +82,7 @@ struct SubobjectAdjustment {
 
   union {
     struct DTB DerivedToBase;
-    FieldDecl *Field;
+    const FieldDecl *Field;
     struct P Ptr;
   };
 
@@ -92,8 +93,7 @@ struct SubobjectAdjustment {
     DerivedToBase.DerivedClass = DerivedClass;
   }
 
-  SubobjectAdjustment(FieldDecl *Field)
-    : Kind(FieldAdjustment) {
+  SubobjectAdjustment(const FieldDecl *Field) : Kind(FieldAdjustment) {
     this->Field = Field;
   }
 
@@ -152,6 +152,12 @@ public:
 
     TR = t;
   }
+
+  /// If this expression is an enumeration constant, return the
+  /// enumeration type under which said constant was declared.
+  /// Otherwise return the expression's type.
+  /// Note this effectively circumvents the weak typing of C's enum constants
+  QualType getEnumCoercedType(const ASTContext &Ctx) const;
 
   ExprDependence getDependence() const {
     return static_cast<ExprDependence>(ExprBits.Dependent);
@@ -470,6 +476,13 @@ public:
   /// return a non-null pointer even for r-values loaded from
   /// bit-fields, but it will return null for a conditional bit-field.
   FieldDecl *getSourceBitField();
+
+  /// If this expression refers to an enum constant, retrieve its declaration
+  EnumConstantDecl *getEnumConstantDecl();
+
+  const EnumConstantDecl *getEnumConstantDecl() const {
+    return const_cast<Expr *>(this)->getEnumConstantDecl();
+  }
 
   const FieldDecl *getSourceBitField() const {
     return const_cast<Expr*>(this)->getSourceBitField();
@@ -1135,7 +1148,6 @@ public:
     return ConstantExprBits.APValueKind != APValue::None;
   }
   APValue getAPValueResult() const;
-  APValue &getResultAsAPValue() const { return APValueResult(); }
   llvm::APSInt getResultAsAPSInt() const;
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
@@ -1476,57 +1488,6 @@ public:
 
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
-/// Used by IntegerLiteral/FloatingLiteral to store the numeric without
-/// leaking memory.
-///
-/// For large floats/integers, APFloat/APInt will allocate memory from the heap
-/// to represent these numbers.  Unfortunately, when we use a BumpPtrAllocator
-/// to allocate IntegerLiteral/FloatingLiteral nodes the memory associated with
-/// the APFloat/APInt values will never get freed. APNumericStorage uses
-/// ASTContext's allocator for memory allocation.
-class APNumericStorage {
-  union {
-    uint64_t VAL;    ///< Used to store the <= 64 bits integer value.
-    uint64_t *pVal;  ///< Used to store the >64 bits integer value.
-  };
-  unsigned BitWidth;
-
-  bool hasAllocation() const { return llvm::APInt::getNumWords(BitWidth) > 1; }
-
-  APNumericStorage(const APNumericStorage &) = delete;
-  void operator=(const APNumericStorage &) = delete;
-
-protected:
-  APNumericStorage() : VAL(0), BitWidth(0) { }
-
-  llvm::APInt getIntValue() const {
-    unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-    if (NumWords > 1)
-      return llvm::APInt(BitWidth, NumWords, pVal);
-    else
-      return llvm::APInt(BitWidth, VAL);
-  }
-  void setIntValue(const ASTContext &C, const llvm::APInt &Val);
-};
-
-class APIntStorage : private APNumericStorage {
-public:
-  llvm::APInt getValue() const { return getIntValue(); }
-  void setValue(const ASTContext &C, const llvm::APInt &Val) {
-    setIntValue(C, Val);
-  }
-};
-
-class APFloatStorage : private APNumericStorage {
-public:
-  llvm::APFloat getValue(const llvm::fltSemantics &Semantics) const {
-    return llvm::APFloat(Semantics, getIntValue());
-  }
-  void setValue(const ASTContext &C, const llvm::APFloat &Val) {
-    setIntValue(C, Val.bitcastToAPInt());
   }
 };
 
@@ -1912,6 +1873,17 @@ public:
       return getStrDataAsUInt32()[i];
     }
     llvm_unreachable("Unsupported character width!");
+  }
+
+  // Get code unit but preserve sign info.
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
+    int64_t V = getCodeUnit(I);
+    if (isOrdinary() || isWide()) {
+      unsigned Width = getCharByteWidth() * BitWidth;
+      llvm::APInt AInt(Width, (uint64_t)V);
+      V = AInt.getSExtValue();
+    }
+    return V;
   }
 
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
@@ -4806,6 +4778,17 @@ public:
     return T->getStmtClass() == SourceLocExprClass;
   }
 
+  static bool MayBeDependent(SourceLocIdentKind Kind) {
+    switch (Kind) {
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
+      return true;
+    default:
+      return false;
+    }
+  }
+
 private:
   friend class ASTStmtReader;
 };
@@ -5860,7 +5843,7 @@ class GenericSelectionExpr final
         std::conditional_t<Const, const Stmt *const *, Stmt **>;
     using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
                                            TypeSourceInfo **>;
-    StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
+    StmtPtrPtrTy E = nullptr;
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;
     AssociationIteratorTy(StmtPtrPtrTy E, TSIPtrPtrTy TSI, unsigned Offset,
@@ -6450,7 +6433,7 @@ public:
   enum AtomicOp {
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
     BI_First = 0
   };
@@ -6516,7 +6499,7 @@ public:
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case AO##ID:                                                                 \
     return #ID;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     }
     llvm_unreachable("not an atomic operator?");
   }
@@ -6545,8 +6528,8 @@ public:
   }
 
   bool isOpenCL() const {
-    return getOp() >= AO__opencl_atomic_init &&
-           getOp() <= AO__opencl_atomic_fetch_max;
+    return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
+           getOp() <= AO__opencl_atomic_store;
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
@@ -6571,11 +6554,14 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    if (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
+    // FIXME: Allow grouping of builtins to be able to only check >= and <=
+    if (Op >= AO__opencl_atomic_compare_exchange_strong &&
+        Op <= AO__opencl_atomic_store && Op != AO__opencl_atomic_init)
       return AtomicScopeModel::create(AtomicScopeModelKind::OpenCL);
-    else if (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
+    if (Op >= AO__hip_atomic_compare_exchange_strong &&
+        Op <= AO__hip_atomic_store)
       return AtomicScopeModel::create(AtomicScopeModelKind::HIP);
-    else if (Op >= AO__scoped_atomic_load && Op <= AO__scoped_atomic_fetch_max)
+    if (Op >= AO__scoped_atomic_add_fetch && Op <= AO__scoped_atomic_xor_fetch)
       return AtomicScopeModel::create(AtomicScopeModelKind::Generic);
     return AtomicScopeModel::create(AtomicScopeModelKind::None);
   }

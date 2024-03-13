@@ -110,6 +110,7 @@ set(files
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
   __algorithm/ranges_contains.h
+  __algorithm/ranges_contains_subrange.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -290,6 +291,8 @@ set(files
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/time_zone.h
+  __chrono/time_zone_link.h
   __chrono/tzdb.h
   __chrono/tzdb_list.h
   __chrono/weekday.h
@@ -377,7 +380,6 @@ set(files
   __format/format_context.h
   __format/format_error.h
   __format/format_functions.h
-  __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
@@ -426,9 +428,10 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/complex.h
+  __fwd/format.h
   __fwd/fstream.h
-  __fwd/get.h
-  __fwd/hash.h
+  __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -487,9 +490,17 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/locale_base_api.h
+  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/fuchsia.h
+  __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/locale_guard.h
+  __locale_dir/locale_base_api/musl.h
+  __locale_dir/locale_base_api/newlib.h
+  __locale_dir/locale_base_api/openbsd.h
+  __locale_dir/locale_base_api/win32.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -569,6 +580,7 @@ set(files
   __numeric/pstl_reduce.h
   __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
+  __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
@@ -665,16 +677,9 @@ set(files
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
-  __support/android/locale_bionic.h
-  __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/ibm/xlocale.h
-  __support/musl/xlocale.h
-  __support/newlib/xlocale.h
-  __support/openbsd/xlocale.h
-  __support/win32/locale_win32.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
@@ -687,11 +692,16 @@ set(files
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
+  __thread/support.h
+  __thread/support/c11.h
+  __thread/support/external.h
+  __thread/support/pthread.h
+  __thread/support/windows.h
   __thread/this_thread.h
   __thread/thread.h
   __thread/timed_backoff_policy.h
-  __threading_support
   __tree
+  __tuple/find_index.h
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
   __tuple/sfinae_helpers.h
@@ -803,6 +813,7 @@ set(files
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_move_assignable.h
   __type_traits/is_trivially_move_constructible.h
+  __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
@@ -913,7 +924,6 @@ set(files
   execution
   expected
   experimental/__config
-  experimental/__memory
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
@@ -959,6 +969,7 @@ set(files
   mdspan
   memory
   memory_resource
+  module.modulemap
   mutex
   new
   numbers
@@ -1012,17 +1023,11 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
-  if (NOT ${${feature}})
-    set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
-  endif()
-endforeach()
-
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
-configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1056,6 +1061,12 @@ if (LIBCXX_INSTALL_HEADERS)
   # Install the generated __config_site file to the per-target include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated __assertion_handler file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 

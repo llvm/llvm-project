@@ -156,12 +156,13 @@ sure you don't forget anything:
 - Did you add all new named declarations to the ``std`` module?
 - If you added a header:
 
-  - Did you add it to ``include/module.modulemap.in``?
+  - Did you add it to ``include/module.modulemap``?
   - Did you add it to ``include/CMakeLists.txt``?
   - If it's a public header, did you update ``utils/libcxx/header_information.py``?
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
+- If needed, did you add `_LIBCPP_PUSH_MACROS` and `_LIBCPP_POP_MACROS` to the relevant headers?
 
 The review process
 ==================

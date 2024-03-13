@@ -178,6 +178,8 @@ variable and type on the CMake command line:
 
   $ cmake -DVARIABLE:TYPE=value path/to/llvm/source
 
+.. _cmake_frequently_used_variables:
+
 Frequently-used CMake variables
 -------------------------------
 
@@ -275,7 +277,7 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_STANDARD**:STRING
   Sets the C++ standard to conform to when building LLVM.  Possible values are
-  17 and 20.  LLVM Requires C++ 17 or higher.  This defaults to 17.
+  17 and 20.  LLVM Requires C++17 or higher.  This defaults to 17.
 
 **CMAKE_INSTALL_BINDIR**:PATH
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
@@ -361,7 +363,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   documentation targets being as part of a normal build.  If the ``install``
   target is run then this also enables all built documentation targets to be
   installed. Defaults to OFF.  To enable a particular documentation target, see
-  see LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
+  LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
 
 **LLVM_BUILD_EXAMPLES**:BOOL
   Build LLVM examples. Defaults to OFF. Targets for building each example are
@@ -760,6 +762,9 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
 
+**LLVM_PARALLEL_TABLEGEN_JOBS**:STRING
+  Define the maximum number of concurrent tablegen jobs.
+
 **LLVM_RAM_PER_COMPILE_JOB**:STRING
   Calculates the amount of Ninja compile jobs according to available resources.
   Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
@@ -772,6 +777,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   exclusively therefore you should add an offset of one or two compile jobs 
   to be sure its not terminated in your memory restricted environment. On ELF
   platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
+
+**LLVM_RAM_PER_TABLEGEN_JOB**:STRING
+  Calculates the amount of Ninja tablegen jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_TABLEGEN_JOBS. Tablegen jobs
+  will be between one and amount of logical cores.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This
@@ -1118,10 +1128,10 @@ And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 When you are done developing your pass, you may wish to integrate it
 into the LLVM source tree. You can achieve it in two easy steps:
 
-#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transform`` directory.
+#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transforms`` directory.
 
 #. Adding ``add_subdirectory(<pass name>)`` line into
-   ``<LLVM root>/lib/Transform/CMakeLists.txt``.
+   ``<LLVM root>/lib/Transforms/CMakeLists.txt``.
 
 Compiler/Platform-specific topics
 =================================

@@ -232,7 +232,7 @@ define ptr @test8(ptr %A, i1 %b) {
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
 BB0:
@@ -996,10 +996,9 @@ done:
 define i1 @PR24766(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-LABEL: @PR24766(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1040,10 +1039,9 @@ epilog:
 define i1 @PR24766_no_constants(i8 %x1, i8 %x2, i8 %condition, i1 %another_condition) {
 ; CHECK-LABEL: @PR24766_no_constants(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1085,10 +1083,9 @@ epilog:
 define i1 @PR24766_two_constants(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-LABEL: @PR24766_two_constants(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1128,11 +1125,10 @@ epilog:
 define i1 @PR24766_two_constants_two_var(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-LABEL: @PR24766_two_constants_two_var(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
-; CHECK-NEXT:      i32 2, label [[SW3:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
+; CHECK-NEXT:      i8 2, label [[SW3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1739,7 +1735,7 @@ define i1 @pr57488_icmp_of_phi(ptr %ptr.base, i64 %len) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ACCUM:%.*]] = phi i1 [ [[AND:%.*]], [[LOOP]] ], [ true, [[START:%.*]] ]
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LOOP]] ], [ [[PTR_BASE]], [[START]] ]
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR]], align 8
 ; CHECK-NEXT:    [[VAL_ZERO:%.*]] = icmp eq i64 [[VAL]], 0
 ; CHECK-NEXT:    [[AND]] = and i1 [[ACCUM]], [[VAL_ZERO]]

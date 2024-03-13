@@ -629,9 +629,6 @@ void transform::TransformState::recordOpHandleInvalidation(
   // the IR nested in each payload op associated with the given handle and look
   // for handles associated with each operation and value.
   for (const auto &[region, mapping] : llvm::reverse(mappings)) {
-    // Stop lookup when reaching a region that is isolated from above.
-    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
-      break;
     // Go over all op handle mappings and mark as invalidated any handle
     // pointing to any of the payload ops associated with the given handle or
     // any op nested in them.
@@ -652,6 +649,10 @@ void transform::TransformState::recordOpHandleInvalidation(
                                                    payloadValue, valueHandle,
                                                    newlyInvalidated);
     }
+
+    // Stop lookup when reaching a region that is isolated from above.
+    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
   }
 }
 
@@ -917,7 +918,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   }
 
   // Prepare rewriter and listener.
-  TrackingListener::SkipHandleFn skipHandleFn = [&](Value handle) {
+  TrackingListenerConfig config;
+  config.skipHandleFn = [&](Value handle) {
     // Skip handle if it is dead.
     auto scopeIt =
         llvm::find_if(llvm::reverse(regionStack), [&](RegionScope *scope) {
@@ -934,7 +936,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     return true;
   };
   transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
-                                                            skipHandleFn);
+                                                            config);
   transform::TransformRewriter rewriter(transform->getContext(),
                                         &trackingListener);
 
@@ -1183,9 +1185,8 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 
 transform::TrackingListener::TrackingListener(TransformState &state,
                                               TransformOpInterface op,
-                                              SkipHandleFn skipHandleFn)
-    : TransformState::Extension(state), transformOp(op),
-      skipHandleFn(skipHandleFn) {
+                                              TrackingListenerConfig config)
+    : TransformState::Extension(state), transformOp(op), config(config) {
   if (op) {
     for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
       consumedHandles.insert(opOperand->get());
@@ -1227,8 +1228,19 @@ DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
       return diag;
     }
 
-    // If the defining op has the same type, we take it as a replacement.
-    if (op->getName() == defOp->getName()) {
+    // Skip through ops that implement CastOpInterface.
+    if (config.skipCastOps && isa<CastOpInterface>(defOp)) {
+      values.clear();
+      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
+      diag.attachNote(defOp->getLoc())
+          << "using output of 'CastOpInterface' op";
+      continue;
+    }
+
+    // If the defining op has the same name or we do not care about the name of
+    // op replacements at all, we take it as a replacement.
+    if (!config.requireMatchingReplacementOpName ||
+        op->getName() == defOp->getName()) {
       result = defOp;
       return DiagnosedSilenceableFailure::success();
     }
@@ -1250,31 +1262,22 @@ DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
                                           "'FindPayloadReplacementOpInterface'";
       continue;
     }
-
-    // Skip through ops that implement CastOpInterface.
-    if (isa<CastOpInterface>(defOp)) {
-      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
-      diag.attachNote(defOp->getLoc())
-          << "using output of 'CastOpInterface' op";
-      continue;
-    }
   } while (!values.empty());
 
   diag.attachNote() << "ran out of suitable replacement values";
   return diag;
 }
 
-LogicalResult transform::TrackingListener::notifyMatchFailure(
+void transform::TrackingListener::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
     DBGS() << "Match Failure : " << diag.str() << "\n";
   });
-  return failure();
 }
 
-void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
+void transform::TrackingListener::notifyOperationErased(Operation *op) {
   // TODO: Walk can be removed when D144193 has landed.
   op->walk([&](Operation *op) {
     // Remove mappings for result values.
@@ -1318,9 +1321,9 @@ void transform::TrackingListener::notifyOperationReplaced(
 
   // Check if there are any handles that must be updated.
   Value aliveHandle;
-  if (skipHandleFn) {
-    auto it =
-        llvm::find_if(opHandles, [&](Value v) { return !skipHandleFn(v); });
+  if (config.skipHandleFn) {
+    auto it = llvm::find_if(opHandles,
+                            [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {

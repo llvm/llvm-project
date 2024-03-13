@@ -97,22 +97,26 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
-  mlir-capi-pdl-test
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-transform-interpreter-test
   mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
-  mlir-pdll-lsp-server
   mlir-opt
-  mlir-pdll
   mlir-query
   mlir-reduce
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server
   tblgen-to-irdl
+  )
+
+set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
+  mlir-capi-pdl-test
+  mlir-pdll-lsp-server
+  mlir-pdll
   )
 
 # The native target may not be enabled, in this case we won't
@@ -150,6 +154,10 @@ if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
 
+if (MLIR_RUN_ARM_SVE_TESTS OR MLIR_RUN_ARM_SME_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS mlir_arm_runner_utils)
+endif()
+
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
 
 if(LLVM_BUILD_EXAMPLES)
@@ -159,9 +167,13 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch3
     toyc-ch4
     toyc-ch5
+    )
+  list(APPEND MLIR_TEST_DEPENDS
     transform-opt-ch2
     transform-opt-ch3
+    transform-opt-ch4
     mlir-minimal-opt
+    mlir-transform-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

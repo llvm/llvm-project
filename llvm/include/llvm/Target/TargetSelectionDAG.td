@@ -541,6 +541,8 @@ def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
 def fp_to_uint_sat : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntSatOp>;
 def f16_to_fp  : SDNode<"ISD::FP16_TO_FP" , SDTIntToFPOp>;
 def fp_to_f16  : SDNode<"ISD::FP_TO_FP16" , SDTFPToIntOp>;
+def bf16_to_fp  : SDNode<"ISD::BF16_TO_FP" , SDTIntToFPOp>;
+def fp_to_bf16  : SDNode<"ISD::FP_TO_BF16" , SDTFPToIntOp>;
 
 def strict_fadd       : SDNode<"ISD::STRICT_FADD",
                                SDTFPBinOp, [SDNPHasChain, SDNPCommutative]>;
@@ -614,6 +616,17 @@ def strict_sint_to_fp : SDNode<"ISD::STRICT_SINT_TO_FP",
                                SDTIntToFPOp, [SDNPHasChain]>;
 def strict_uint_to_fp : SDNode<"ISD::STRICT_UINT_TO_FP",
                                SDTIntToFPOp, [SDNPHasChain]>;
+
+def strict_f16_to_fp  : SDNode<"ISD::STRICT_FP16_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
+def strict_fp_to_f16  : SDNode<"ISD::STRICT_FP_TO_FP16",
+                               SDTFPToIntOp, [SDNPHasChain]>;
+
+def strict_bf16_to_fp  : SDNode<"ISD::STRICT_BF16_TO_FP",
+                               SDTIntToFPOp, [SDNPHasChain]>;
+def strict_fp_to_bf16  : SDNode<"ISD::STRICT_FP_TO_BF16",
+                               SDTFPToIntOp, [SDNPHasChain]>;
+
 def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
 def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
 
@@ -649,6 +662,9 @@ def prefetch   : SDNode<"ISD::PREFETCH"   , SDTPrefetch,
                          SDNPMemOperand]>;
 
 def readcyclecounter : SDNode<"ISD::READCYCLECOUNTER", SDTIntLeaf,
+                     [SDNPHasChain, SDNPSideEffect]>;
+
+def readsteadycounter : SDNode<"ISD::READSTEADYCOUNTER", SDTIntLeaf,
                      [SDNPHasChain, SDNPSideEffect]>;
 
 def membarrier : SDNode<"ISD::MEMBARRIER", SDTNone,
@@ -772,6 +788,16 @@ def SDT_assert : SDTypeProfile<1, 1,
 def assertsext : SDNode<"ISD::AssertSext", SDT_assert>;
 def assertzext : SDNode<"ISD::AssertZext", SDT_assert>;
 def assertalign : SDNode<"ISD::AssertAlign", SDT_assert>;
+
+def convergencectrl_anchor : SDNode<"ISD::CONVERGENCECTRL_ANCHOR",
+                                    SDTypeProfile<1, 0, [SDTCisVT<0,untyped>]>>;
+def convergencectrl_entry  : SDNode<"ISD::CONVERGENCECTRL_ENTRY",
+                                    SDTypeProfile<1, 0, [SDTCisVT<0,untyped>]>>;
+def convergencectrl_loop   : SDNode<"ISD::CONVERGENCECTRL_LOOP",
+                                    SDTypeProfile<1, 1,
+                                      [SDTCisVT<0,untyped>, SDTCisVT<1,untyped>]>>;
+def convergencectrl_glue   : SDNode<"ISD::CONVERGENCECTRL_GLUE",
+                                    SDTypeProfile<0, 1, [SDTCisVT<0, untyped>]>>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes
@@ -1575,6 +1601,19 @@ def any_fsetcc : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
 def any_fsetccs : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
                           [(strict_fsetccs node:$lhs, node:$rhs, node:$pred),
                            (setcc node:$lhs, node:$rhs, node:$pred)]>;
+
+def any_f16_to_fp : PatFrags<(ops node:$src),
+                              [(f16_to_fp node:$src),
+                               (strict_f16_to_fp node:$src)]>;
+def any_fp_to_f16 : PatFrags<(ops node:$src),
+                              [(fp_to_f16 node:$src),
+                               (strict_fp_to_f16 node:$src)]>;
+def any_bf16_to_fp : PatFrags<(ops node:$src),
+                               [(bf16_to_fp node:$src),
+                                (strict_bf16_to_fp node:$src)]>;
+def any_fp_to_bf16 : PatFrags<(ops node:$src),
+                               [(fp_to_bf16 node:$src),
+                                (strict_fp_to_bf16 node:$src)]>;
 
 multiclass binary_atomic_op_ord {
   def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

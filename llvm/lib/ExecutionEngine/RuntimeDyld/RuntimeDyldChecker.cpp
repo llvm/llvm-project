@@ -400,6 +400,15 @@ private:
     StringRef Symbol;
     std::tie(Symbol, RemainingExpr) = parseSymbol(RemainingExpr);
 
+    // Parse optional parameter to filter by stub kind
+    StringRef KindNameFilter;
+    if (RemainingExpr.starts_with(",")) {
+      RemainingExpr = RemainingExpr.substr(1).ltrim();
+      size_t ClosingBracket = RemainingExpr.find(")");
+      KindNameFilter = RemainingExpr.substr(0, ClosingBracket);
+      RemainingExpr = RemainingExpr.substr(ClosingBracket);
+    }
+
     if (!RemainingExpr.starts_with(")"))
       return std::make_pair(
           unexpectedToken(RemainingExpr, Expr, "expected ')'"), "");
@@ -407,8 +416,9 @@ private:
 
     uint64_t StubAddr;
     std::string ErrorMsg;
-    std::tie(StubAddr, ErrorMsg) = Checker.getStubOrGOTAddrFor(
-        StubContainerName, Symbol, PCtx.IsInsideLoad, IsStubAddr);
+    std::tie(StubAddr, ErrorMsg) =
+        Checker.getStubOrGOTAddrFor(StubContainerName, Symbol, KindNameFilter,
+                                    PCtx.IsInsideLoad, IsStubAddr);
 
     if (ErrorMsg != "")
       return std::make_pair(EvalResult(ErrorMsg), "");
@@ -985,11 +995,14 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
-    StringRef StubContainerName, StringRef SymbolName, bool IsInsideLoad,
-    bool IsStubAddr) const {
+    StringRef StubContainerName, StringRef SymbolName, StringRef StubKindFilter,
+    bool IsInsideLoad, bool IsStubAddr) const {
 
-  auto StubInfo = IsStubAddr ? GetStubInfo(StubContainerName, SymbolName)
-                             : GetGOTInfo(StubContainerName, SymbolName);
+  assert((StubKindFilter.empty() || IsStubAddr) &&
+         "Kind name filter only supported for stubs");
+  auto StubInfo =
+      IsStubAddr ? GetStubInfo(StubContainerName, SymbolName, StubKindFilter)
+                 : GetGOTInfo(StubContainerName, SymbolName);
 
   if (!StubInfo) {
     std::string ErrMsg;

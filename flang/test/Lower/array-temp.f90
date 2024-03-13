@@ -43,15 +43,15 @@ end
 
 ! CHECK-LABEL: func @_QPss2(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
-! CHECK:   %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
-! CHECK:   %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
-! CHECK:   %[[C_27_i32:[-0-9a-z_]+]] = arith.constant 27 : i32
-! CHECK:   %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
-! CHECK:   %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
-! CHECK:   %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
-! CHECK:   %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
-! CHECK:   %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
+! CHECK-DAG: %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
+! CHECK-DAG: %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
+! CHECK-DAG: %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
+! CHECK-DAG: %[[C_27_i32:[-0-9a-z_]+]] = arith.constant 27 : i32
+! CHECK-DAG: %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
+! CHECK-DAG: %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
+! CHECK-DAG: %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
+! CHECK-DAG: %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
+! CHECK-DAG: %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
 ! CHECK:   %[[V_0:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_1:[0-9]+]] = fir.convert %[[V_0:[0-9]+]] : (i32) -> index
 ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %[[C_0]] : index
@@ -137,15 +137,15 @@ end
 
 ! CHECK-LABEL: func @_QPss3(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
-! CHECK:   %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
-! CHECK:   %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
-! CHECK:   %[[C_34_i32:[-0-9a-z_]+]] = arith.constant 34 : i32
-! CHECK:   %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
-! CHECK:   %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
-! CHECK:   %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
-! CHECK:   %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
-! CHECK:   %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
+! CHECK-DAG: %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
+! CHECK-DAG: %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
+! CHECK-DAG: %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
+! CHECK-DAG: %[[C_34_i32:[-0-9a-z_]+]] = arith.constant 34 : i32
+! CHECK-DAG: %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
+! CHECK-DAG: %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
+! CHECK-DAG: %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
+! CHECK-DAG: %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
+! CHECK-DAG: %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
 ! CHECK:   %[[V_0:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_1:[0-9]+]] = fir.convert %[[V_0:[0-9]+]] : (i32) -> index
 ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %[[C_0]] : index
@@ -263,15 +263,15 @@ end
 
 ! CHECK-LABEL: func @_QPss4(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
-! CHECK:   %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
-! CHECK:   %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
-! CHECK:   %[[C_41_i32:[-0-9a-z_]+]] = arith.constant 41 : i32
-! CHECK:   %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
-! CHECK:   %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
-! CHECK:   %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
-! CHECK:   %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
-! CHECK:   %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
+! CHECK-DAG: %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
+! CHECK-DAG: %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
+! CHECK-DAG: %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
+! CHECK-DAG: %[[C_41_i32:[-0-9a-z_]+]] = arith.constant 41 : i32
+! CHECK-DAG: %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
+! CHECK-DAG: %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
+! CHECK-DAG: %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
+! CHECK-DAG: %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
+! CHECK-DAG: %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
 ! CHECK:   %[[V_0:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_1:[0-9]+]] = fir.convert %[[V_0:[0-9]+]] : (i32) -> index
 ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %[[C_0]] : index
@@ -404,7 +404,7 @@ subroutine tt1
   ! CHECK-NEXT: fir.call @_FortranAioEndIoStatement
   print*, [(r([7.0]),i=1,3)]
 contains
-  ! CHECK-LABEL: func @_QFtt1Pr
+  ! CHECK-LABEL: func private @_QFtt1Pr
   function r(x)
     real x(:)
     r = x(1)

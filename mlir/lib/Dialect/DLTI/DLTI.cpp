@@ -108,6 +108,11 @@ void DataLayoutEntryAttr::print(AsmPrinter &os) const {
 constexpr const StringLiteral mlir::DataLayoutSpecAttr::kAttrKeyword;
 constexpr const StringLiteral
     mlir::DLTIDialect::kDataLayoutAllocaMemorySpaceKey;
+constexpr const StringLiteral
+    mlir::DLTIDialect::kDataLayoutProgramMemorySpaceKey;
+constexpr const StringLiteral
+    mlir::DLTIDialect::kDataLayoutGlobalMemorySpaceKey;
+
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutStackAlignmentKey;
 
 namespace mlir {
@@ -282,6 +287,17 @@ DataLayoutSpecAttr::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
       DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
 }
 
+StringAttr DataLayoutSpecAttr::getProgramMemorySpaceIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutProgramMemorySpaceKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
+}
 StringAttr
 DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
@@ -345,6 +361,8 @@ public:
                             << DLTIDialect::kDataLayoutEndiannessLittle << "'";
     }
     if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutStackAlignmentKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;

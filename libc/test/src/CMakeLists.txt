@@ -21,7 +21,7 @@ function(add_fp_unittest name)
   endif()
   if(MATH_UNITTEST_NEED_MPFR)
     if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
-      message(FATAL "Hermetic math test cannot require MPFR.")
+      message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
     endif()
     set(test_type UNIT_TEST_ONLY)
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper libc_math_test_utils -lmpfr -lgmp)
@@ -41,12 +41,16 @@ add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
 add_subdirectory(math)
-add_subdirectory(string)
-add_subdirectory(stdlib)
-add_subdirectory(inttypes)
-add_subdirectory(stdio)
-add_subdirectory(wchar)
 add_subdirectory(search)
+add_subdirectory(stdbit)
+add_subdirectory(stdfix)
+add_subdirectory(stdio)
+add_subdirectory(stdlib)
+add_subdirectory(string)
+add_subdirectory(wchar)
+
+# Depends on utilities in stdlib
+add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
@@ -113,7 +117,7 @@ add_custom_target(libc-api-test)
 add_dependencies(check-libc libc-api-test)
 
 set(
-  allocator_entrypoints 
+  allocator_entrypoints
     libc.src.stdlib.malloc
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc

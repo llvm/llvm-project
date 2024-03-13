@@ -515,7 +515,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__algorithm/equal.h>
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__functional/is_transparent.h>
@@ -551,6 +551,9 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -769,13 +772,13 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI insert_return_type insert(node_type&& __nh) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
-                                 "node_type with incompatible allocator passed to set::insert()");
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
+                                        "node_type with incompatible allocator passed to set::insert()");
     return __tree_.template __node_handle_insert_unique< node_type, insert_return_type>(std::move(__nh));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, node_type&& __nh) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
-                                 "node_type with incompatible allocator passed to set::insert()");
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
+                                        "node_type with incompatible allocator passed to set::insert()");
     return __tree_.template __node_handle_insert_unique<node_type>(__hint, std::move(__nh));
   }
   _LIBCPP_HIDE_FROM_ABI node_type extract(key_type const& __key) {
@@ -786,25 +789,25 @@ public:
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(set<key_type, _Compare2, allocator_type>& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_unique(__source.__tree_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(set<key_type, _Compare2, allocator_type>&& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_unique(__source.__tree_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(multiset<key_type, _Compare2, allocator_type>& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_unique(__source.__tree_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(multiset<key_type, _Compare2, allocator_type>&& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_unique(__source.__tree_);
   }
@@ -1227,13 +1230,13 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI iterator insert(node_type&& __nh) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
-                                 "node_type with incompatible allocator passed to multiset::insert()");
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
+                                        "node_type with incompatible allocator passed to multiset::insert()");
     return __tree_.template __node_handle_insert_multi<node_type>(std::move(__nh));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, node_type&& __nh) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
-                                 "node_type with incompatible allocator passed to multiset::insert()");
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
+                                        "node_type with incompatible allocator passed to multiset::insert()");
     return __tree_.template __node_handle_insert_multi<node_type>(__hint, std::move(__nh));
   }
   _LIBCPP_HIDE_FROM_ABI node_type extract(key_type const& __key) {
@@ -1244,25 +1247,25 @@ public:
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(multiset<key_type, _Compare2, allocator_type>& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_multi(__source.__tree_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(multiset<key_type, _Compare2, allocator_type>&& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_multi(__source.__tree_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(set<key_type, _Compare2, allocator_type>& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_multi(__source.__tree_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(set<key_type, _Compare2, allocator_type>&& __source) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_multi(__source.__tree_);
   }
@@ -1487,6 +1490,8 @@ using multiset _LIBCPP_AVAILABILITY_PMR = std::multiset<_KeyT, _CompareT, polymo
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>

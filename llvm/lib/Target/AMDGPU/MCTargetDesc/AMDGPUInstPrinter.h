@@ -86,10 +86,14 @@ private:
                       raw_ostream &O);
   void printImmediateInt16(uint32_t Imm, const MCSubtargetInfo &STI,
                            raw_ostream &O);
-  void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
-                        raw_ostream &O);
-  void printImmediateV216(uint32_t Imm, const MCSubtargetInfo &STI,
+  void printImmediateBF16(uint32_t Imm, const MCSubtargetInfo &STI,
                           raw_ostream &O);
+  void printImmediateF16(uint32_t Imm, const MCSubtargetInfo &STI,
+                         raw_ostream &O);
+  void printImmediateV216(uint32_t Imm, uint8_t OpType,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  bool printImmediateFloat32(uint32_t Imm, const MCSubtargetInfo &STI,
+                             raw_ostream &O);
   void printImmediate32(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printImmediate64(uint64_t Imm, const MCSubtargetInfo &STI,
@@ -137,6 +141,10 @@ private:
                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printNegHi(const MCInst *MI, unsigned OpNo,
                   const MCSubtargetInfo &STI, raw_ostream &O);
+  void printIndexKey8bit(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printIndexKey16bit(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpSlot(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpAttr(const MCInst *MI, unsigned OpNo,

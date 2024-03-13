@@ -297,6 +297,12 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
   if (Str[0] == '$' || IsPseudo)
     ++I;
 
+  if (I == Str.size())
+    return ErrorDiagnostic::get(SM, Str.slice(I, StringRef::npos),
+                                StringRef("empty ") +
+                                    (IsPseudo ? "pseudo " : "global ") +
+                                    "variable name");
+
   if (!isValidVarNameStart(Str[I++]))
     return ErrorDiagnostic::get(SM, Str, "invalid variable name");
 
@@ -690,9 +696,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
 
   // Parse matching constraint.
   Expr = Expr.ltrim(SpaceChars);
-  bool HasParsedValidConstraint = false;
-  if (Expr.consume_front("=="))
-    HasParsedValidConstraint = true;
+  bool HasParsedValidConstraint = Expr.consume_front("==");
 
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
@@ -766,9 +770,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
 
   if (!(Req.NoCanonicalizeWhiteSpace && Req.MatchFullLines))
     // Ignore trailing whitespace.
-    while (!PatternStr.empty() &&
-           (PatternStr.back() == ' ' || PatternStr.back() == '\t'))
-      PatternStr = PatternStr.substr(0, PatternStr.size() - 1);
+    PatternStr = PatternStr.rtrim(" \t");
 
   // Check that there is something on the line.
   if (PatternStr.empty() && CheckTy != Check::CheckEmpty) {
@@ -1784,7 +1786,7 @@ bool FileCheck::readCheckFile(
 
   PatternContext->createLineVariable();
 
-  std::vector<Pattern> ImplicitNegativeChecks;
+  std::vector<FileCheckString::DagNotPrefixInfo> ImplicitNegativeChecks;
   for (StringRef PatternString : Req.ImplicitCheckNot) {
     // Create a buffer with fake command line content in order to display the
     // command line option responsible for the specific implicit CHECK-NOT.
@@ -1807,14 +1809,15 @@ bool FileCheck::readCheckFile(
       }
     }
 
-    ImplicitNegativeChecks.push_back(
-        Pattern(Check::CheckNot, PatternContext.get()));
-    ImplicitNegativeChecks.back().parsePattern(PatternInBuffer,
-                                               "IMPLICIT-CHECK", SM, Req);
+    ImplicitNegativeChecks.emplace_back(
+        Pattern(Check::CheckNot, PatternContext.get()),
+        StringRef("IMPLICIT-CHECK"));
+    ImplicitNegativeChecks.back().DagNotPat.parsePattern(
+        PatternInBuffer, "IMPLICIT-CHECK", SM, Req);
   }
 
-  std::vector<Pattern> DagNotMatches = ImplicitNegativeChecks;
-
+  std::vector<FileCheckString::DagNotPrefixInfo> DagNotMatches =
+      ImplicitNegativeChecks;
   // LineNumber keeps track of the line on which CheckPrefix instances are
   // found.
   unsigned LineNumber = 1;
@@ -1926,7 +1929,7 @@ bool FileCheck::readCheckFile(
 
     // Handle CHECK-DAG/-NOT.
     if (CheckTy == Check::CheckDAG || CheckTy == Check::CheckNot) {
-      DagNotMatches.push_back(P);
+      DagNotMatches.emplace_back(P, UsedPrefix);
       continue;
     }
 
@@ -2165,7 +2168,7 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
                               FileCheckRequest &Req,
                               std::vector<FileCheckDiag> *Diags) const {
   size_t LastPos = 0;
-  std::vector<const Pattern *> NotStrings;
+  std::vector<const DagNotPrefixInfo *> NotStrings;
 
   // IsLabelScanMode is true when we are scanning forward to find CHECK-LABEL
   // bounds; we have not processed variable definitions within the bounded block
@@ -2302,17 +2305,19 @@ bool FileCheckString::CheckSame(const SourceMgr &SM, StringRef Buffer) const {
   return false;
 }
 
-bool FileCheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
-                               const std::vector<const Pattern *> &NotStrings,
-                               const FileCheckRequest &Req,
-                               std::vector<FileCheckDiag> *Diags) const {
+bool FileCheckString::CheckNot(
+    const SourceMgr &SM, StringRef Buffer,
+    const std::vector<const DagNotPrefixInfo *> &NotStrings,
+    const FileCheckRequest &Req, std::vector<FileCheckDiag> *Diags) const {
   bool DirectiveFail = false;
-  for (const Pattern *Pat : NotStrings) {
-    assert((Pat->getCheckTy() == Check::CheckNot) && "Expect CHECK-NOT!");
-    Pattern::MatchResult MatchResult = Pat->match(Buffer, SM);
-    if (Error Err = reportMatchResult(/*ExpectedMatch=*/false, SM, Prefix,
-                                      Pat->getLoc(), *Pat, 1, Buffer,
-                                      std::move(MatchResult), Req, Diags)) {
+  for (auto NotInfo : NotStrings) {
+    assert((NotInfo->DagNotPat.getCheckTy() == Check::CheckNot) &&
+           "Expect CHECK-NOT!");
+    Pattern::MatchResult MatchResult = NotInfo->DagNotPat.match(Buffer, SM);
+    if (Error Err = reportMatchResult(
+            /*ExpectedMatch=*/false, SM, NotInfo->DagNotPrefix,
+            NotInfo->DagNotPat.getLoc(), NotInfo->DagNotPat, 1, Buffer,
+            std::move(MatchResult), Req, Diags)) {
       cantFail(handleErrors(std::move(Err), [&](const ErrorReported &E) {}));
       DirectiveFail = true;
       continue;
@@ -2321,10 +2326,11 @@ bool FileCheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
   return DirectiveFail;
 }
 
-size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
-                                 std::vector<const Pattern *> &NotStrings,
-                                 const FileCheckRequest &Req,
-                                 std::vector<FileCheckDiag> *Diags) const {
+size_t
+FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
+                          std::vector<const DagNotPrefixInfo *> &NotStrings,
+                          const FileCheckRequest &Req,
+                          std::vector<FileCheckDiag> *Diags) const {
   if (DagNotStrings.empty())
     return 0;
 
@@ -2344,13 +2350,14 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
   // group, so we don't use a range-based for loop here.
   for (auto PatItr = DagNotStrings.begin(), PatEnd = DagNotStrings.end();
        PatItr != PatEnd; ++PatItr) {
-    const Pattern &Pat = *PatItr;
+    const Pattern &Pat = PatItr->DagNotPat;
+    const StringRef DNPrefix = PatItr->DagNotPrefix;
     assert((Pat.getCheckTy() == Check::CheckDAG ||
             Pat.getCheckTy() == Check::CheckNot) &&
            "Invalid CHECK-DAG or CHECK-NOT!");
 
     if (Pat.getCheckTy() == Check::CheckNot) {
-      NotStrings.push_back(&Pat);
+      NotStrings.push_back(&*PatItr);
       continue;
     }
 
@@ -2367,7 +2374,7 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       // With a group of CHECK-DAGs, a single mismatching means the match on
       // that group of CHECK-DAGs fails immediately.
       if (MatchResult.TheError || Req.VerboseVerbose) {
-        if (Error Err = reportMatchResult(/*ExpectedMatch=*/true, SM, Prefix,
+        if (Error Err = reportMatchResult(/*ExpectedMatch=*/true, SM, DNPrefix,
                                           Pat.getLoc(), Pat, 1, MatchBuffer,
                                           std::move(MatchResult), Req, Diags)) {
           cantFail(
@@ -2430,13 +2437,13 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
     }
     if (!Req.VerboseVerbose)
       cantFail(printMatch(
-          /*ExpectedMatch=*/true, SM, Prefix, Pat.getLoc(), Pat, 1, Buffer,
+          /*ExpectedMatch=*/true, SM, DNPrefix, Pat.getLoc(), Pat, 1, Buffer,
           Pattern::MatchResult(MatchPos, MatchLen, Error::success()), Req,
           Diags));
 
     // Handle the end of a CHECK-DAG group.
     if (std::next(PatItr) == PatEnd ||
-        std::next(PatItr)->getCheckTy() == Check::CheckNot) {
+        std::next(PatItr)->DagNotPat.getCheckTy() == Check::CheckNot) {
       if (!NotStrings.empty()) {
         // If there are CHECK-NOTs between two CHECK-DAGs or from CHECK to
         // CHECK-DAG, verify that there are no 'not' strings occurred in that

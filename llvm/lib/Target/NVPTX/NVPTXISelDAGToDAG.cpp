@@ -309,6 +309,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::TexUnifiedCubeArrayS32FloatLevel:
   case NVPTXISD::TexUnifiedCubeArrayU32Float:
   case NVPTXISD::TexUnifiedCubeArrayU32FloatLevel:
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
   case NVPTXISD::Tld4UnifiedR2DFloatFloat:
   case NVPTXISD::Tld4UnifiedG2DFloatFloat:
   case NVPTXISD::Tld4UnifiedB2DFloatFloat:
@@ -2076,7 +2082,7 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
     VTs = CurDAG->getVTList(EVTs);
   }
 
-  unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
+  unsigned OffsetVal = Offset->getAsZExtVal();
 
   SmallVector<SDValue, 2> Ops;
   Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
@@ -2091,7 +2097,7 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Offset = N->getOperand(1);
-  unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
+  unsigned OffsetVal = Offset->getAsZExtVal();
   MemSDNode *Mem = cast<MemSDNode>(N);
 
   // How many elements do we have?
@@ -2129,6 +2135,21 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
                              NVPTX::StoreRetvalI8, NVPTX::StoreRetvalI16,
                              NVPTX::StoreRetvalI32, NVPTX::StoreRetvalI64,
                              NVPTX::StoreRetvalF32, NVPTX::StoreRetvalF64);
+    if (Opcode == NVPTX::StoreRetvalI8) {
+      // Fine tune the opcode depending on the size of the operand.
+      // This helps to avoid creating redundant COPY instructions in
+      // InstrEmitter::AddRegisterOperand().
+      switch (Ops[0].getSimpleValueType().SimpleTy) {
+      default:
+        break;
+      case MVT::i32:
+        Opcode = NVPTX::StoreRetvalI8TruncI32;
+        break;
+      case MVT::i64:
+        Opcode = NVPTX::StoreRetvalI8TruncI64;
+        break;
+      }
+    }
     break;
   case 2:
     Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
@@ -2158,9 +2179,9 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Param = N->getOperand(1);
-  unsigned ParamVal = cast<ConstantSDNode>(Param)->getZExtValue();
+  unsigned ParamVal = Param->getAsZExtVal();
   SDValue Offset = N->getOperand(2);
-  unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
+  unsigned OffsetVal = Offset->getAsZExtVal();
   MemSDNode *Mem = cast<MemSDNode>(N);
   SDValue Glue = N->getOperand(N->getNumOperands() - 1);
 
@@ -2205,6 +2226,21 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
                                NVPTX::StoreParamI8, NVPTX::StoreParamI16,
                                NVPTX::StoreParamI32, NVPTX::StoreParamI64,
                                NVPTX::StoreParamF32, NVPTX::StoreParamF64);
+      if (Opcode == NVPTX::StoreParamI8) {
+        // Fine tune the opcode depending on the size of the operand.
+        // This helps to avoid creating redundant COPY instructions in
+        // InstrEmitter::AddRegisterOperand().
+        switch (Ops[0].getSimpleValueType().SimpleTy) {
+        default:
+          break;
+        case MVT::i32:
+          Opcode = NVPTX::StoreParamI8TruncI32;
+          break;
+        case MVT::i64:
+          Opcode = NVPTX::StoreParamI8TruncI64;
+          break;
+        }
+      }
       break;
     case 2:
       Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
@@ -2762,6 +2798,24 @@ bool NVPTXDAGToDAGISel::tryTextureIntrinsic(SDNode *N) {
     break;
   case NVPTXISD::Tld4UnifiedA2DU64Float:
     Opc = NVPTX::TLD4_UNIFIED_A_2D_U32_F32_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_F32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_S32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_U32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD_R;
     break;
   }
 

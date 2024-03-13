@@ -34,8 +34,8 @@ using namespace lldb;
 namespace {
 
 #ifdef _WIN32
-using SetThreadDescriptionFunctionPtr = HRESULT
-WINAPI (*)(HANDLE hThread, PCWSTR lpThreadDescription);
+using SetThreadDescriptionFunctionPtr =
+    HRESULT(WINAPI *)(HANDLE hThread, PCWSTR lpThreadDescription);
 
 static SetThreadDescriptionFunctionPtr SetThreadName;
 #endif

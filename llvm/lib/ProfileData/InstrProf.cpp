@@ -14,7 +14,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +26,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -297,29 +295,20 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
   return FileName;
 }
 
-// The PGO name has the format [<filepath>;]<linkage-name> where <filepath>; is
-// provided if linkage is local and <linkage-name> is the mangled function
-// name. The filepath is used to discriminate possibly identical function names.
-// ; is used because it is unlikely to be found in either <filepath> or
-// <linkage-name>.
+// The PGO name has the format [<filepath>;]<mangled-name> where <filepath>; is
+// provided if linkage is local and is used to discriminate possibly identical
+// mangled names. ";" is used because it is unlikely to be found in either
+// <filepath> or <mangled-name>.
 //
 // Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<function-name>. <filepath> is used to discriminate between
-// possibly identical function names when linkage is local and <function-name>
-// simply comes from F.getName(). This caused trouble for Objective-C functions
-// which commonly have :'s in their names. Also, since <function-name> is not
-// mangled, they cannot be passed to Mach-O linkers via -order_file. We still
-// need to compute this name to lookup functions from profiles built by older
-// compilers.
+// [<filepath>:]<mangled-name>. This caused trouble for Objective-C functions
+// which commonly have :'s in their names. We still need to compute this name to
+// lookup functions from profiles built by older compilers.
 static std::string
 getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
-  SmallString<64> Name;
-  // FIXME: Mangler's handling is kept outside of `getGlobalIdentifier` for now.
-  // For more details please check issue #74565.
-  Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
-  return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
+  return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
@@ -389,13 +378,12 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
-// See getIRPGOFuncName() for a discription of the format.
-std::pair<StringRef, StringRef>
-getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
-  auto [FileName, FuncName] = IRPGOFuncName.split(';');
-  if (FuncName.empty())
-    return std::make_pair(StringRef(), IRPGOFuncName);
-  return std::make_pair(FileName, FuncName);
+// See getIRPGOObjectName() for a discription of the format.
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName) {
+  auto [FileName, MangledName] = IRPGOName.split(kGlobalIdentifierDelimiter);
+  if (MangledName.empty())
+    return std::make_pair(StringRef(), IRPGOName);
+  return std::make_pair(FileName, MangledName);
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
@@ -529,35 +517,46 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
       std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  if (Error E = addFuncName(PGOFuncName))
-    return E;
-  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // In ThinLTO, local function may have been promoted to global and have
   // suffix ".llvm." added to the function name. We need to add the
   // stripped function name to the symbol table so that we can find a match
   // from profile.
   //
-  // We may have other suffixes similar as ".llvm." which are needed to
-  // be stripped before the matching, but ".__uniq." suffix which is used
-  // to differentiate internal linkage functions in different modules
-  // should be kept. Now this is the only suffix with the pattern ".xxx"
-  // which is kept before matching.
+  // ".__uniq." suffix is used to differentiate internal linkage functions in
+  // different modules and should be kept. This is the only suffix with the
+  // pattern ".xxx" which is kept before matching, other suffixes similar as
+  // ".llvm." will be stripped.
   const std::string UniqSuffix = ".__uniq.";
-  auto pos = PGOFuncName.find(UniqSuffix);
-  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
-  // search '.' from the beginning.
-  if (pos != std::string::npos)
+  size_t pos = PGOName.find(UniqSuffix);
+  if (pos != StringRef::npos)
     pos += UniqSuffix.length();
   else
     pos = 0;
-  pos = PGOFuncName.find('.', pos);
-  if (pos != std::string::npos && pos != 0) {
-    StringRef OtherFuncName = PGOFuncName.substr(0, pos);
-    if (Error E = addFuncName(OtherFuncName))
+
+  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
+  // the beginning.
+  pos = PGOName.find('.', pos);
+  if (pos != StringRef::npos && pos != 0)
+    return PGOName.substr(0, pos);
+
+  return PGOName;
+}
+
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
-  }
+    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    return Error::success();
+  };
+  if (Error E = mapName(PGOFuncName))
+    return E;
+
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName != PGOFuncName)
+    return mapName(CanonicalFuncName);
+
   return Error::success();
 }
 
@@ -932,7 +931,7 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
       if (Timestamp < Trace.FunctionNameRefs.size())
         FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
 
-  int N = std::ceil(std::log2(LargestTraceSize));
+  const int N = Log2_64(LargestTraceSize) + 1;
 
   // TODO: We need to use the Trace.Weight field to give more weight to more
   // important utilities
@@ -940,8 +939,8 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
   for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
     auto &Trace = Traces[TraceIdx].FunctionNameRefs;
     for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = std::floor(std::log2(Timestamp + 1)); I < N; I++) {
-        auto &FunctionId = Trace[Timestamp];
+      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
+        auto FunctionId = Trace[Timestamp];
         UtilityNodeT GroupId = TraceIdx * N + I;
         FuncGroups[FunctionId].push_back(GroupId);
       }
@@ -949,7 +948,7 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
   }
 
   std::vector<BPFunctionNode> Nodes;
-  for (auto &Id : FunctionIds) {
+  for (auto Id : FunctionIds) {
     auto &UNs = FuncGroups[Id];
     llvm::sort(UNs);
     UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
@@ -1534,9 +1533,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 12ull:
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
@@ -1562,10 +1564,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 12ull:
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
   case 11ull:
     [[fallthrough]];
   case 10ull:

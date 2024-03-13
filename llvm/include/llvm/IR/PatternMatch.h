@@ -564,6 +564,19 @@ inline api_pred_ty<is_negated_power2> m_NegatedPower2(const APInt *&V) {
   return V;
 }
 
+struct is_negated_power2_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isNegatedPowerOf2(); }
+};
+/// Match a integer or vector negated power-of-2.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_negated_power2_or_zero> m_NegatedPower2OrZero() {
+  return cst_pred_ty<is_negated_power2_or_zero>();
+}
+inline api_pred_ty<is_negated_power2_or_zero>
+m_NegatedPower2OrZero(const APInt *&V) {
+  return V;
+}
+
 struct is_power2_or_zero {
   bool isValue(const APInt &C) { return !C || C.isPowerOf2(); }
 };
@@ -594,6 +607,18 @@ inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
   return cst_pred_ty<is_lowbit_mask>();
 }
 inline api_pred_ty<is_lowbit_mask> m_LowBitMask(const APInt *&V) { return V; }
+
+struct is_lowbit_mask_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isMask(); }
+};
+/// Match an integer or vector with only the low bit(s) set.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero() {
+  return cst_pred_ty<is_lowbit_mask_or_zero>();
+}
+inline api_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero(const APInt *&V) {
+  return V;
+}
 
 struct icmp_pred_with_threshold {
   ICmpInst::Predicate Pred;
@@ -1270,7 +1295,7 @@ inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
   return DisjointOr_match<LHS, RHS, true>(L, R);
 }
 
-/// Match either "and" or "or disjoint".
+/// Match either "add" or "or disjoint".
 template <typename LHS, typename RHS>
 inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
                         DisjointOr_match<LHS, RHS>>
@@ -1495,6 +1520,36 @@ struct ThreeOps_match {
   }
 };
 
+/// Matches instructions with Opcode and any number of operands
+template <unsigned Opcode, typename... OperandTypes> struct AnyOps_match {
+  std::tuple<OperandTypes...> Operands;
+
+  AnyOps_match(const OperandTypes &...Ops) : Operands(Ops...) {}
+
+  // Operand matching works by recursively calling match_operands, matching the
+  // operands left to right. The first version is called for each operand but
+  // the last, for which the second version is called. The second version of
+  // match_operands is also used to match each individual operand.
+  template <int Idx, int Last>
+  std::enable_if_t<Idx != Last, bool> match_operands(const Instruction *I) {
+    return match_operands<Idx, Idx>(I) && match_operands<Idx + 1, Last>(I);
+  }
+
+  template <int Idx, int Last>
+  std::enable_if_t<Idx == Last, bool> match_operands(const Instruction *I) {
+    return std::get<Idx>(Operands).match(I->getOperand(Idx));
+  }
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (V->getValueID() == Value::InstructionVal + Opcode) {
+      auto *I = cast<Instruction>(V);
+      return I->getNumOperands() == sizeof...(OperandTypes) &&
+             match_operands<0, sizeof...(OperandTypes) - 1>(I);
+    }
+    return false;
+  }
+};
+
 /// Matches SelectInst.
 template <typename Cond, typename LHS, typename RHS>
 inline ThreeOps_match<Cond, LHS, RHS, Instruction::Select>
@@ -1584,6 +1639,21 @@ struct m_SplatOrUndefMask {
   }
 };
 
+template <typename PointerOpTy, typename OffsetOpTy> struct PtrAdd_match {
+  PointerOpTy PointerOp;
+  OffsetOpTy OffsetOp;
+
+  PtrAdd_match(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp)
+      : PointerOp(PointerOp), OffsetOp(OffsetOp) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *GEP = dyn_cast<GEPOperator>(V);
+    return GEP && GEP->getSourceElementType()->isIntegerTy(8) &&
+           PointerOp.match(GEP->getPointerOperand()) &&
+           OffsetOp.match(GEP->idx_begin()->get());
+  }
+};
+
 /// Matches ShuffleVectorInst independently of mask value.
 template <typename V1_t, typename V2_t>
 inline TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>
@@ -1611,6 +1681,19 @@ m_Store(const ValueOpTy &ValueOp, const PointerOpTy &PointerOp) {
                                                                   PointerOp);
 }
 
+/// Matches GetElementPtrInst.
+template <typename... OperandTypes>
+inline auto m_GEP(const OperandTypes &...Ops) {
+  return AnyOps_match<Instruction::GetElementPtr, OperandTypes...>(Ops...);
+}
+
+/// Matches GEP with i8 source element type
+template <typename PointerOpTy, typename OffsetOpTy>
+inline PtrAdd_match<PointerOpTy, OffsetOpTy>
+m_PtrAdd(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp) {
+  return PtrAdd_match<PointerOpTy, OffsetOpTy>(PointerOp, OffsetOp);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for CastInst classes
 //
@@ -1627,14 +1710,14 @@ template <typename Op_t, unsigned Opcode> struct CastOperator_match {
   }
 };
 
-template <typename Op_t, unsigned Opcode> struct CastInst_match {
+template <typename Op_t, typename Class> struct CastInst_match {
   Op_t Op;
 
   CastInst_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Instruction>(V))
-      return I->getOpcode() == Opcode && Op.match(I->getOperand(0));
+    if (auto *I = dyn_cast<Class>(V))
+      return Op.match(I->getOperand(0));
     return false;
   }
 };
@@ -1662,9 +1745,8 @@ template <typename Op_t> struct NNegZExt_match {
   NNegZExt_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Instruction>(V))
-      return I->getOpcode() == Instruction::ZExt && I->hasNonNeg() &&
-             Op.match(I->getOperand(0));
+    if (auto *I = dyn_cast<ZExtInst>(V))
+      return I->hasNonNeg() && Op.match(I->getOperand(0));
     return false;
   }
 };
@@ -1674,6 +1756,34 @@ template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::BitCast>
 m_BitCast(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::BitCast>(Op);
+}
+
+template <typename Op_t> struct ElementWiseBitCast_match {
+  Op_t Op;
+
+  ElementWiseBitCast_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    BitCastInst *I = dyn_cast<BitCastInst>(V);
+    if (!I)
+      return false;
+    Type *SrcType = I->getSrcTy();
+    Type *DstType = I->getType();
+    // Make sure the bitcast doesn't change between scalar and vector and
+    // doesn't change the number of vector elements.
+    if (SrcType->isVectorTy() != DstType->isVectorTy())
+      return false;
+    if (VectorType *SrcVecTy = dyn_cast<VectorType>(SrcType);
+        SrcVecTy && SrcVecTy->getElementCount() !=
+                        cast<VectorType>(DstType)->getElementCount())
+      return false;
+    return Op.match(I->getOperand(0));
+  }
+};
+
+template <typename OpTy>
+inline ElementWiseBitCast_match<OpTy> m_ElementWiseBitCast(const OpTy &Op) {
+  return ElementWiseBitCast_match<OpTy>(Op);
 }
 
 /// Matches PtrToInt.
@@ -1710,14 +1820,14 @@ m_TruncOrSelf(const OpTy &Op) {
 
 /// Matches SExt.
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::SExt> m_SExt(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::SExt>(Op);
+inline CastInst_match<OpTy, SExtInst> m_SExt(const OpTy &Op) {
+  return CastInst_match<OpTy, SExtInst>(Op);
 }
 
 /// Matches ZExt.
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::ZExt>(Op);
+inline CastInst_match<OpTy, ZExtInst> m_ZExt(const OpTy &Op) {
+  return CastInst_match<OpTy, ZExtInst>(Op);
 }
 
 template <typename OpTy>
@@ -1726,70 +1836,67 @@ inline NNegZExt_match<OpTy> m_NNegZExt(const OpTy &Op) {
 }
 
 template <typename OpTy>
-inline match_combine_or<CastInst_match<OpTy, Instruction::ZExt>, OpTy>
+inline match_combine_or<CastInst_match<OpTy, ZExtInst>, OpTy>
 m_ZExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), Op);
 }
 
 template <typename OpTy>
-inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>, OpTy>
+inline match_combine_or<CastInst_match<OpTy, SExtInst>, OpTy>
 m_SExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), Op);
 }
 
 /// Match either "sext" or "zext nneg".
 template <typename OpTy>
-inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>,
-                        NNegZExt_match<OpTy>>
+inline match_combine_or<CastInst_match<OpTy, SExtInst>, NNegZExt_match<OpTy>>
 m_SExtLike(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), m_NNegZExt(Op));
 }
 
 template <typename OpTy>
-inline match_combine_or<CastInst_match<OpTy, Instruction::ZExt>,
-                        CastInst_match<OpTy, Instruction::SExt>>
+inline match_combine_or<CastInst_match<OpTy, ZExtInst>,
+                        CastInst_match<OpTy, SExtInst>>
 m_ZExtOrSExt(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), m_SExt(Op));
 }
 
 template <typename OpTy>
-inline match_combine_or<
-    match_combine_or<CastInst_match<OpTy, Instruction::ZExt>,
-                     CastInst_match<OpTy, Instruction::SExt>>,
-    OpTy>
+inline match_combine_or<match_combine_or<CastInst_match<OpTy, ZExtInst>,
+                                         CastInst_match<OpTy, SExtInst>>,
+                        OpTy>
 m_ZExtOrSExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::UIToFP>(Op);
+inline CastInst_match<OpTy, UIToFPInst> m_UIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, UIToFPInst>(Op);
 }
 
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::SIToFP>(Op);
+inline CastInst_match<OpTy, SIToFPInst> m_SIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, SIToFPInst>(Op);
 }
 
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::FPToUI>(Op);
+inline CastInst_match<OpTy, FPToUIInst> m_FPToUI(const OpTy &Op) {
+  return CastInst_match<OpTy, FPToUIInst>(Op);
 }
 
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::FPToSI>(Op);
+inline CastInst_match<OpTy, FPToSIInst> m_FPToSI(const OpTy &Op) {
+  return CastInst_match<OpTy, FPToSIInst>(Op);
 }
 
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::FPTrunc>
-m_FPTrunc(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::FPTrunc>(Op);
+inline CastInst_match<OpTy, FPTruncInst> m_FPTrunc(const OpTy &Op) {
+  return CastInst_match<OpTy, FPTruncInst>(Op);
 }
 
 template <typename OpTy>
-inline CastInst_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
-  return CastInst_match<OpTy, Instruction::FPExt>(Op);
+inline CastInst_match<OpTy, FPExtInst> m_FPExt(const OpTy &Op) {
+  return CastInst_match<OpTy, FPExtInst>(Op);
 }
 
 //===----------------------------------------------------------------------===//

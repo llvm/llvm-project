@@ -1,8 +1,7 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix=CHECK-DWO
-;; FIXME: RemoveDIs - enable when FastISel support is added.
-; run: llc --try-experimental-debuginfo-iterators -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; run: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix=CHECK-DWO
+; RUN: llc --try-experimental-debuginfo-iterators -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix=CHECK-DWO
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
@@ -12,8 +11,7 @@
 ; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
 ; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
 
-;; FIXME: RemoveDIs - enable when FastISel support is added.
-; run: llc --try-experimental-debuginfo-iterators -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
 ; RUN: llc --try-experimental-debuginfo-iterators -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
 
 ; CHECK: _ZN1B9AInstanceEv

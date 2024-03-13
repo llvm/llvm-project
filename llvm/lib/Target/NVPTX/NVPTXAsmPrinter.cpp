@@ -44,9 +44,9 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -57,6 +57,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -605,14 +606,33 @@ void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
   O << getVirtualRegisterName(vr);
 }
 
+void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
+                                           raw_ostream &O) {
+  const Function *F = dyn_cast_or_null<Function>(GA->getAliaseeObject());
+  if (!F || isKernelFunction(*F) || F->isDeclaration())
+    report_fatal_error(
+        "NVPTX aliasee must be a non-kernel function definition");
+
+  if (GA->hasLinkOnceLinkage() || GA->hasWeakLinkage() ||
+      GA->hasAvailableExternallyLinkage() || GA->hasCommonLinkage())
+    report_fatal_error("NVPTX aliasee must not be '.weak'");
+
+  emitDeclarationWithName(F, getSymbol(GA), O);
+}
+
 void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
+  emitDeclarationWithName(F, getSymbol(F), O);
+}
+
+void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
+                                              raw_ostream &O) {
   emitLinkageDirective(F, O);
   if (isKernelFunction(*F))
     O << ".entry ";
   else
     O << ".func ";
   printReturnValStr(F, O);
-  getSymbol(F)->print(O, MAI);
+  S->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
   O << "\n";
@@ -759,6 +779,8 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
     }
     seenMap[&F] = true;
   }
+  for (const GlobalAlias &GA : M.aliases())
+    emitAliasDeclaration(&GA, O);
 }
 
 static bool isEmptyXXStructor(GlobalVariable *GV) {
@@ -853,25 +875,9 @@ void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   raw_svector_ostream OS(Str);
 
   MCSymbol *Name = getSymbol(&GA);
-  const Function *F = dyn_cast<Function>(GA.getAliasee());
-  if (!F || isKernelFunction(*F))
-    report_fatal_error("NVPTX aliasee must be a non-kernel function");
 
-  if (GA.hasLinkOnceLinkage() || GA.hasWeakLinkage() ||
-      GA.hasAvailableExternallyLinkage() || GA.hasCommonLinkage())
-    report_fatal_error("NVPTX aliasee must not be '.weak'");
-
-  OS << "\n";
-  emitLinkageDirective(F, OS);
-  OS << ".func ";
-  printReturnValStr(F, OS);
-  OS << Name->getName();
-  emitFunctionParamList(F, OS);
-  if (shouldEmitPTXNoReturn(F, TM))
-    OS << "\n.noreturn";
-  OS << ";\n";
-
-  OS << ".alias " << Name->getName() << ", " << F->getName() << ";\n";
+  OS << ".alias " << Name->getName() << ", " << GA.getAliaseeObject()->getName()
+     << ";\n";
 
   OutStreamer->emitRawText(OS.str());
 }
@@ -931,16 +937,6 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     emitGlobals(M);
     GlobalsEmitted = true;
   }
-
-  // If we have any aliases we emit them at the end.
-  SmallVector<GlobalAlias *> AliasesToRemove;
-  for (GlobalAlias &Alias : M.aliases()) {
-    emitGlobalAlias(M, Alias);
-    AliasesToRemove.push_back(&Alias);
-  }
-
-  for (GlobalAlias *A : AliasesToRemove)
-    A->eraseFromParent();
 
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
@@ -1292,10 +1288,21 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  // Do not emit trailing zero initializers. They will be zero-initialized by
+  // ptxas. This saves on both space requirements for the generated PTX and on
+  // memory use by ptxas. (See:
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
+  unsigned int InitializerCount = size;
+  // TODO: symbols make this harder, but it would still be good to trim trailing
+  // 0s for aggs with symbols as well.
+  if (numSymbols() == 0)
+    while (InitializerCount >= 1 && !buffer[InitializerCount - 1])
+      InitializerCount--;
+
+  symbolPosInBuffer.push_back(InitializerCount);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
-  for (unsigned int pos = 0; pos < size;) {
+  for (unsigned int pos = 0; pos < InitializerCount;) {
     if (pos)
       os << ", ";
     if (pos != nextSymbolPos) {
@@ -1519,7 +1526,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     if (isKernelFunction(*F)) {
       if (isSampler(*I) || isImage(*I)) {
         if (isImage(*I)) {
-          std::string sname = std::string(I->getName());
           if (isImageWriteOnly(*I) || isImageReadWrite(*I)) {
             if (hasImageHandles)
               O << "\t.param .u64 .ptr .surfref ";

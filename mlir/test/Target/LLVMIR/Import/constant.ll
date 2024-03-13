@@ -47,6 +47,16 @@ define void @undef_constant(i32 %arg0) {
 
 ; // -----
 
+; CHECK-LABEL: @poison_constant
+define void @poison_constant(double %arg0) {
+  ; CHECK:  %[[POISON:.+]] = llvm.mlir.poison : f64
+  ; CHECK:  llvm.fadd %[[POISON]], %{{.*}} : f64
+  %1 = fadd double poison, %arg0
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @null_constant
 define ptr @null_constant() {
   ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr

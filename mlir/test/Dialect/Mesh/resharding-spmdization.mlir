@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-mesh-resharding-spmdization %s | FileCheck %s
 
-mesh.cluster @mesh_1d(rank = 1, dim_sizes = 2)
-mesh.cluster @mesh_1d_dynamic(rank = 1, dim_sizes = ?)
+mesh.mesh @mesh_1d(shape = 2)
+mesh.mesh @mesh_1d_dynamic(shape = ?)
 
 // CHECK-LABEL: func @same_source_and_target_sharding
 func.func @same_source_and_target_sharding(
@@ -19,17 +19,9 @@ func.func @split_replicated_tensor_axis(
   // CHECK-SAME: %[[ARG:.*]]: tensor<3x14xf32>
   %arg0: tensor<3x14xf32>
 ) -> tensor<3x14xf32> {
-  // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
-  // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = arith.constant 14 : index
-  // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_index on @mesh_1d axes = [0] : index
-  // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.cluster_shape @mesh_1d axes = [0] : index
-  // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE:.*]] = arith.remui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
-  // CHECK: %[[RESULT_TENSOR_AXIS_SIZE_CHECK:.*]] = arith.cmpi eq, %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE]], %[[ZERO]] : index
-  // CHECK: cf.assert %[[RESULT_TENSOR_AXIS_SIZE_CHECK]]
-  // CHECK: %[[RESULT_TENSOR_AXIS_SIZE:.*]] = arith.divui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
-  // CHECK: %[[RESULT_TENSOR_AXIS_OFFSET:.*]] = arith.muli %[[RESULT_TENSOR_AXIS_SIZE]], %[[PROCESS_INDEX]] : index
-  // CHECK: %[[RESULT_TENSOR_SLICE:.*]] = tensor.extract_slice %[[ARG]][0, %[[RESULT_TENSOR_AXIS_OFFSET]]] [3, 7] [1, 1] : tensor<3x14xf32> to tensor<3x7xf32>
-  // CHECK: %[[RESULT:.*]] = builtin.unrealized_conversion_cast %[[RESULT_TENSOR_SLICE]] : tensor<3x7xf32> to tensor<3x14xf32>
+  // CHECK: %[[ALL_SLICE:.*]] = mesh.all_slice %[[ARG]] on @mesh_1d mesh_axes = [0] slice_axis = 1
+  // CHECK-SAME: tensor<3x14xf32> -> tensor<3x7xf32>
+  // CHECK: %[[RESULT:.*]] = builtin.unrealized_conversion_cast %[[ALL_SLICE]] : tensor<3x7xf32> to tensor<3x14xf32>
   %0 = mesh.shard %arg0 to <@mesh_1d, [[]]> : tensor<3x14xf32>
   %1 = mesh.shard %0 to <@mesh_1d, [[], [0]]> annotate_for_users : tensor<3x14xf32>
   // CHECK: return %[[RESULT]] : tensor<3x14xf32>
@@ -41,22 +33,11 @@ func.func @split_replicated_tensor_axis_dynamic(
   // CHECK-SAME: %[[ARG:.*]]: tensor<?x3x?xf32>
   %arg0: tensor<?x3x?xf32>
 ) -> tensor<?x3x?xf32> {
-  // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
-  // CHECK: %[[TWO:.*]] = arith.constant 2 : index
-  // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_index on @mesh_1d_dynamic axes = [0] : index
-  // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.cluster_shape @mesh_1d_dynamic axes = [0] : index
-  // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = tensor.dim %[[ARG]], %[[ZERO]] : tensor<?x3x?xf32>
-  // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE:.*]] = arith.remui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
-  // CHECK: %[[RESULT_TENSOR_AXIS_SIZE_CHECK:.*]] = arith.cmpi eq, %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE]], %[[ZERO]] : index
-  // CHECK: cf.assert %[[RESULT_TENSOR_AXIS_SIZE_CHECK]]
-  // CHECK: %[[RESULT_TENSOR_SPLIT_AXIS_SIZE:.*]] = arith.divui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
-  // CHECK: %[[RESULT_TENSOR_SPLIT_AXIS_OFFSET:.*]] = arith.muli %[[RESULT_TENSOR_SPLIT_AXIS_SIZE]], %[[PROCESS_INDEX]] : index
-  // CHECK: %[[TENSOR_AXIS_2_SIZE:.*]] = tensor.dim %[[ARG]], %[[TWO]] : tensor<?x3x?xf32>
-  // CHECK: %[[RESULT_TENSOR_SLICE:.*]] = tensor.extract_slice %[[ARG]][%[[RESULT_TENSOR_SPLIT_AXIS_OFFSET]], 0, 0]
-  // CHECK-SAME: [%[[RESULT_TENSOR_SPLIT_AXIS_SIZE]], 3, %[[TENSOR_AXIS_2_SIZE]]] [1, 1, 1] : tensor<?x3x?xf32> to tensor<?x3x?xf32>
+  // CHECK: %[[RESULT:.*]] = mesh.all_slice %[[ARG]] on @mesh_1d_dynamic mesh_axes = [0] slice_axis = 0
+  // CHECK-SAME: tensor<?x3x?xf32> -> tensor<?x3x?xf32>
   %0 = mesh.shard %arg0 to <@mesh_1d_dynamic, [[], [], []]> : tensor<?x3x?xf32>
   %1 = mesh.shard %0 to <@mesh_1d_dynamic, [[0]]> annotate_for_users : tensor<?x3x?xf32>
-  // CHECK: return %[[RESULT_TENSOR_SLICE]] : tensor<?x3x?xf32>
+  // CHECK: return %[[RESULT]] : tensor<?x3x?xf32>
   return %1 : tensor<?x3x?xf32>
 }
 
@@ -141,8 +122,8 @@ func.func @unshard_static_axis_on_dynamic_mesh_axis(
   return %1 : tensor<10x14xf32>
 }
 
-// CHECK-LABEL: func @partial_axis
-func.func @partial_axis(
+// CHECK-LABEL: func @partial_axis_to_full_replication
+func.func @partial_axis_to_full_replication(
 // CHECK-SAME: %[[ARG:.*]]: tensor<10x14xf32>  
   %arg0: tensor<10x14xf32>
 ) -> tensor<10x14xf32> {

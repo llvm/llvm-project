@@ -43,7 +43,7 @@ define float @caller_onstack_f32_noop(float %a) nounwind {
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    li a5, 0
 ; RV32IF-NEXT:    li a7, 0
-; RV32IF-NEXT:    call onstack_f32_noop@plt
+; RV32IF-NEXT:    call onstack_f32_noop
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
@@ -70,7 +70,7 @@ define float @caller_onstack_f32_fadd(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    li a3, 0
 ; RV32IF-NEXT:    li a5, 0
 ; RV32IF-NEXT:    li a7, 0
-; RV32IF-NEXT:    call onstack_f32_noop@plt
+; RV32IF-NEXT:    call onstack_f32_noop
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret

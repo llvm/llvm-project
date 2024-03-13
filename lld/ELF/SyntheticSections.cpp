@@ -261,8 +261,8 @@ InputSection *elf::createInterpSection() {
   StringRef s = saver().save(config->dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
-  return make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, contents,
-                            ".interp");
+  return make<InputSection>(ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 1,
+                            contents, ".interp");
 }
 
 Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
@@ -365,8 +365,7 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
   if (firstRelI != (unsigned)-1)
-    personality =
-        &cie.sec->template getFile<ELFT>()->getRelocTargetSym(rels[firstRelI]);
+    personality = &cie.sec->file->getRelocTargetSym(rels[firstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *&rec = cieMap[{cie.data(), personality}];
@@ -396,7 +395,7 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
     return nullptr;
 
   const RelTy &rel = rels[firstRelI];
-  Symbol &b = sec->template getFile<ELFT>()->getRelocTargetSym(rel);
+  Symbol &b = sec->file->getRelocTargetSym(rel);
 
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.
@@ -537,9 +536,11 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
     for (EhSectionPiece *fde : rec->fdes) {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va))
-        fatal(toString(fde->sec) + ": PC offset is too large: 0x" +
-              Twine::utohexstr(pc - va));
+      if (!isInt<32>(pc - va)) {
+        errorOrWarn(toString(fde->sec) + ": PC offset is too large: 0x" +
+                    Twine::utohexstr(pc - va));
+        continue;
+      }
       ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
     }
   }
@@ -1419,6 +1420,9 @@ DynamicSection<ELFT>::computeContents() {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, *in.gotPlt);
       break;
+    case EM_S390:
+      addInSec(DT_PLTGOT, *in.got);
+      break;
     case EM_SPARCV9:
       addInSec(DT_PLTGOT, *in.plt);
       break;
@@ -1450,13 +1454,14 @@ DynamicSection<ELFT>::computeContents() {
     if (config->zPacPlt)
       addInt(DT_AARCH64_PAC_PLT, 0);
 
-    if (config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (hasMemtag()) {
       addInt(DT_AARCH64_MEMTAG_MODE, config->androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, config->androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, config->androidMemtagStack);
-      if (mainPart->memtagDescriptors->isNeeded()) {
-        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagDescriptors);
-        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ, mainPart->memtagDescriptors->getSize());
+      if (mainPart->memtagGlobalDescriptors->isNeeded()) {
+        addInSec(DT_AARCH64_MEMTAG_GLOBALS, *mainPart->memtagGlobalDescriptors);
+        addInt(DT_AARCH64_MEMTAG_GLOBALSSZ,
+               mainPart->memtagGlobalDescriptors->getSize());
       }
     }
   }
@@ -2799,21 +2804,16 @@ createSymbols(
     cuIdx += chunks[i].compilationUnits.size();
   }
 
-  // The number of symbols we will handle in this function is of the order
-  // of millions for very large executables, so we use multi-threading to
-  // speed it up.
+  // Collect the compilation unitss for each unique name. Speed it up using
+  // multi-threading as the number of symbols can be in the order of millions.
+  // Shard GdbSymbols by hash's high bits.
   constexpr size_t numShards = 32;
   const size_t concurrency =
       llvm::bit_floor(std::min<size_t>(config->threadCount, numShards));
-
-  // A sharded map to uniquify symbols by name.
+  const size_t shift = 32 - llvm::countr_zero(numShards);
   auto map =
       std::make_unique<DenseMap<CachedHashStringRef, size_t>[]>(numShards);
-  size_t shift = 32 - llvm::countr_zero(numShards);
-
-  // Instantiate GdbSymbols while uniqufying them by name.
   auto symbols = std::make_unique<SmallVector<GdbSymbol, 0>[]>(numShards);
-
   parallelFor(0, concurrency, [&](size_t threadId) {
     uint32_t i = 0;
     for (ArrayRef<NameAttrEntry> entries : nameAttrs) {
@@ -2823,14 +2823,12 @@ createSymbols(
           continue;
 
         uint32_t v = ent.cuIndexAndAttrs + cuIdxs[i];
-        size_t &idx = map[shardId][ent.name];
-        if (idx) {
-          symbols[shardId][idx - 1].cuVector.push_back(v);
-          continue;
-        }
-
-        idx = symbols[shardId].size() + 1;
-        symbols[shardId].push_back({ent.name, {v}, 0, 0});
+        auto [it, inserted] =
+            map[shardId].try_emplace(ent.name, symbols[shardId].size());
+        if (inserted)
+          symbols[shardId].push_back({ent.name, {v}, 0, 0});
+        else
+          symbols[shardId][it->second].cuVector.push_back(v);
       }
       ++i;
     }
@@ -3919,8 +3917,9 @@ static size_t computeOrWriteULEB128(uint64_t v, uint8_t *buf, size_t offset) {
 // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
 constexpr uint64_t kMemtagStepSizeBits = 3;
 constexpr uint64_t kMemtagGranuleSize = 16;
-static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symbols,
-                                      uint8_t *buf = nullptr) {
+static size_t
+createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
+                              uint8_t *buf = nullptr) {
   size_t sectionSize = 0;
   uint64_t lastGlobalEnd = 0;
 
@@ -3961,7 +3960,7 @@ static size_t createMemtagDescriptors(const SmallVector<const Symbol *, 0> &symb
   return sectionSize;
 }
 
-bool MemtagDescriptors::updateAllocSize() {
+bool MemtagGlobalDescriptors::updateAllocSize() {
   size_t oldSize = getSize();
   std::stable_sort(symbols.begin(), symbols.end(),
                    [](const Symbol *s1, const Symbol *s2) {
@@ -3970,12 +3969,12 @@ bool MemtagDescriptors::updateAllocSize() {
   return oldSize != getSize();
 }
 
-void MemtagDescriptors::writeTo(uint8_t *buf) {
-  createMemtagDescriptors(symbols, buf);
+void MemtagGlobalDescriptors::writeTo(uint8_t *buf) {
+  createMemtagGlobalDescriptors(symbols, buf);
 }
 
-size_t MemtagDescriptors::getSize() const {
-  return createMemtagDescriptors(symbols);
+size_t MemtagGlobalDescriptors::getSize() const {
+  return createMemtagGlobalDescriptors(symbols);
 }
 
 InStruct elf::in;

@@ -187,22 +187,6 @@ private:
   LegalizeResult widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
                                  LLT WideTy);
 
-  /// Helper function to split a wide generic register into bitwise blocks with
-  /// the given Type (which implies the number of blocks needed). The generic
-  /// registers created are appended to Ops, starting at bit 0 of Reg.
-  void extractParts(Register Reg, LLT Ty, int NumParts,
-                    SmallVectorImpl<Register> &VRegs);
-
-  /// Version which handles irregular splits.
-  bool extractParts(Register Reg, LLT RegTy, LLT MainTy,
-                    LLT &LeftoverTy,
-                    SmallVectorImpl<Register> &VRegs,
-                    SmallVectorImpl<Register> &LeftoverVRegs);
-
-  /// Version which handles irregular sub-vector splits.
-  void extractVectorParts(Register Reg, unsigned NumElst,
-                          SmallVectorImpl<Register> &VRegs);
-
   /// Helper function to build a wide generic register \p DstReg of type \p
   /// RegTy from smaller parts. This will produce a G_MERGE_VALUES,
   /// G_BUILD_VECTOR, G_CONCAT_VECTORS, or sequence of G_INSERT as appropriate
@@ -297,6 +281,10 @@ private:
                                          MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
 
+  MachineInstrBuilder
+  getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,
+                                LLT Ty);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -350,6 +338,14 @@ public:
 
   LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
                                                unsigned TypeIdx, LLT NarrowTy);
+  LegalizeResult fewerElementsVectorSeqReductions(MachineInstr &MI,
+                                                  unsigned TypeIdx,
+                                                  LLT NarrowTy);
+
+  // Fewer Elements for bitcast, ensuring that the size of the Src and Dst
+  // registers will be the same
+  LegalizeResult fewerElementsBitcast(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT NarrowTy);
 
   LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
                                             LLT NarrowTy);
@@ -378,6 +374,7 @@ public:
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
 
+  LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(GAnyLoad &MI);

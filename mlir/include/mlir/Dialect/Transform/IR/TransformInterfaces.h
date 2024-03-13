@@ -921,20 +921,36 @@ TransformState::RegionScope TransformState::make_region_scope(Region &region) {
   return RegionScope(*this, region);
 }
 
+/// A configuration object for customizing a `TrackingListener`.
+struct TrackingListenerConfig {
+  using SkipHandleFn = std::function<bool(Value)>;
+
+  /// An optional function that returns "true" for handles that do not have to
+  /// be updated. These are typically dead or consumed handles.
+  SkipHandleFn skipHandleFn = nullptr;
+
+  /// If set to "true", the name of a replacement op must match the name of the
+  /// original op. If set to "false", the names of the payload ops tracked in a
+  /// handle may change as the tracking listener updates the transform state.
+  bool requireMatchingReplacementOpName = true;
+
+  /// If set to "true", cast ops (that implement the CastOpInterface) are
+  /// skipped and the replacement op search continues with the operands of the
+  /// cast op.
+  bool skipCastOps = true;
+};
+
 /// A listener that updates a TransformState based on IR modifications. This
 /// listener can be used during a greedy pattern rewrite to keep the transform
 /// state up-to-date.
 class TrackingListener : public RewriterBase::Listener,
                          public TransformState::Extension {
 public:
-  /// A function that returns "true" for handles that do not have to be updated.
-  using SkipHandleFn = std::function<bool(Value)>;
-
   /// Create a new TrackingListener for usage in the specified transform op.
   /// Optionally, a function can be specified to identify handles that should
   /// do not have to be updated.
   TrackingListener(TransformState &state, TransformOpInterface op,
-                   SkipHandleFn skipHandleFn = nullptr);
+                   TrackingListenerConfig config = TrackingListenerConfig());
 
 protected:
   /// Return a replacement payload op for the given op, which is going to be
@@ -959,7 +975,8 @@ protected:
   /// same computation; e.g., there may be tiled "linalg.generic" inside the
   /// loop body that represents the original computation. Therefore, the
   /// TrackingListener is conservative by default: it drops the mapping and
-  /// triggers the "payload replacement not found" notification.
+  /// triggers the "payload replacement not found" notification. This default
+  /// behavior can be customized in `TrackingListenerConfig`.
   ///
   /// If no replacement op could be found according to the rules mentioned
   /// above, this function tries to skip over cast-like ops that implement
@@ -992,7 +1009,7 @@ protected:
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
   /// failure occurred.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -1012,7 +1029,7 @@ protected:
 private:
   friend class TransformRewriter;
 
-  void notifyOperationRemoved(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
 
   void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
   using Listener::notifyOperationReplaced;
@@ -1023,9 +1040,8 @@ private:
   /// The handles that are consumed by the transform op.
   DenseSet<Value> consumedHandles;
 
-  /// Handles for which this function evaluates to "true" do not have to be
-  /// updated. These are typically dead or consumed handles.
-  SkipHandleFn skipHandleFn;
+  /// Tracking listener configuration.
+  TrackingListenerConfig config;
 };
 
 /// A specialized listener that keeps track of cases in which no replacement
@@ -1282,9 +1298,9 @@ public:
   }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand
-/// single-result operations that use their operand without consuming and
-/// without modifying the Payload IR to produce a new handle.
+/// Trait implementing the MemoryEffectOpInterface for operations that use their
+/// operands without consuming and without modifying the Payload IR to
+/// potentially produce new handles.
 template <typename OpTy>
 class NavigationTransformOpTrait
     : public OpTrait::TraitBase<OpTy, NavigationTransformOpTrait> {
@@ -1294,15 +1310,16 @@ public:
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
     onlyReadsHandle(this->getOperation()->getOperands(), effects);
     producesHandle(this->getOperation()->getResults(), effects);
-    onlyReadsPayload(effects);
+    if (llvm::any_of(this->getOperation()->getOperandTypes(), [](Type t) {
+          return isa<TransformHandleTypeInterface,
+                     TransformValueHandleTypeInterface>(t);
+        })) {
+      onlyReadsPayload(effects);
+    }
   }
 
   /// Checks that the op matches the expectation of this trait.
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
-                  "expected single-operand op");
-    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
-                  "expected single-result op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
       op->emitError() << "NavigationTransformOpTrait should only be attached "
                          "to ops that implement MemoryEffectOpInterface";

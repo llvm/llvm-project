@@ -534,9 +534,9 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
   FileSpec fs(llvm::sys::path::convert_to_slash(
       source_file_name, llvm::sys::path::Style::windows_backslash));
 
-  CompUnitSP cu_sp =
-      std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr, fs,
-                                    toOpaqueUid(cci.m_id), lang, optimized);
+  CompUnitSP cu_sp = std::make_shared<CompileUnit>(
+      m_objfile_sp->GetModule(), nullptr, std::make_shared<SupportFile>(fs),
+      toOpaqueUid(cci.m_id), lang, optimized);
 
   SetCompileUnitAtIndex(cci.m_id.modi, cu_sp);
   return cu_sp;
@@ -1369,7 +1369,7 @@ SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
 }
 
 bool SymbolFileNativePDB::ParseSupportFiles(CompileUnit &comp_unit,
-                                            FileSpecList &support_files) {
+                                            SupportFileList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   PdbSymUid cu_id(comp_unit.GetID());
   lldbassert(cu_id.kind() == PdbSymUidKind::Compiland);
@@ -1416,7 +1416,7 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
     return;
   InlineeSourceLine inlinee_line = iter->second;
 
-  const FileSpecList &files = comp_unit->GetSupportFiles();
+  const SupportFileList &files = comp_unit->GetSupportFiles();
   FileSpec decl_file;
   llvm::Expected<uint32_t> file_index_or_err =
       GetFileIndex(*cii, inlinee_line.Header->FileID);
@@ -2156,7 +2156,7 @@ SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   return type_system_or_err;
 }
 
-uint64_t SymbolFileNativePDB::GetDebugInfoSize() {
+uint64_t SymbolFileNativePDB::GetDebugInfoSize(bool load_all_debug_info) {
   // PDB files are a separate file that contains all debug info.
   return m_index->pdb().getFileSize();
 }
@@ -2265,7 +2265,8 @@ void SymbolFileNativePDB::BuildParentMap() {
   }
   for (TypeIndex fwd : fwd_keys) {
     TypeIndex full = forward_to_full[fwd];
-    m_parent_types[full] = m_parent_types[fwd];
+    TypeIndex parent_idx = m_parent_types[fwd];
+    m_parent_types[full] = parent_idx;
   }
   for (TypeIndex full : full_keys) {
     TypeIndex fwd = full_to_forward[full];

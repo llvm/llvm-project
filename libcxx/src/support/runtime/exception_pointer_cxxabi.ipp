@@ -28,6 +28,14 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
   return *this;
 }
 
+exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
+  exception_ptr ptr;
+  ptr.__ptr_ = __e;
+  __cxa_increment_exception_refcount(ptr.__ptr_);
+
+  return ptr;
+}
+
 nested_exception::nested_exception() noexcept : __ptr_(current_exception()) {}
 
 nested_exception::~nested_exception() noexcept {}

@@ -94,6 +94,8 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def warn_toc_unsupported_type : Warning<"-mtocdata option is ignored "
+  "for %0 because %1">, InGroup<BackendWarningAttributes>;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
@@ -167,7 +169,7 @@ def err_verify_no_such_marker : Error<
 def err_verify_missing_start : Error<
     "cannot find start ('{{') of expected %0">;
 def err_verify_missing_end : Error<
-    "cannot find end ('}}') of expected %0">;
+    "cannot find end ('%1') of expected %0">;
 def err_verify_invalid_content : Error<
     "invalid expected %0: %1">;
 def err_verify_missing_regex : Error<
@@ -176,10 +178,10 @@ def err_verify_inconsistent_diags : Error<
     "'%0' diagnostics %select{expected|seen}1 but not %select{seen|expected}1: "
     "%2">;
 def err_verify_invalid_no_diags : Error<
-    "%select{expected|'expected-no-diagnostics'}0 directive cannot follow "
-    "%select{'expected-no-diagnostics' directive|other expected directives}0">;
+    "%select{expected|'%0-no-diagnostics'}1 directive cannot follow "
+    "%select{'%0-no-diagnostics' directive|other expected directives}1">;
 def err_verify_no_directives : Error<
-    "no expected directives found: consider use of 'expected-no-diagnostics'">;
+    "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 
@@ -279,6 +281,10 @@ def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
+def err_function_always_inline_attribute_mismatch : Error<
+  "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
+def err_function_always_inline_new_za : Error<
+  "always_inline function %0 has new za state">;
 
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "

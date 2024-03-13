@@ -25,8 +25,16 @@ class RecordKeeper;
 namespace clang {
 
 void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
+/**
+  @param PriorizeIfSubclassOf These classes should be prioritized in the output.
+  This is useful to force enum generation/jump tables/lookup tables to be more
+  compact in both size and surrounding code in hot functions. An example use is
+  in Decl for classes that inherit from DeclContext, for functions like
+  castFromDeclContext.
+  */
 void EmitClangASTNodes(llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
-                       const std::string &N, const std::string &S);
+                       const std::string &N, const std::string &S,
+                       std::string_view PriorizeIfSubclassOf = "");
 void EmitClangBasicReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangBasicWriter(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangTypeNodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
@@ -45,8 +53,8 @@ void EmitClangAttrSubjectMatchRuleList(llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS);
 void EmitClangAttrPCHRead(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrPCHWrite(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangAttrTokenKinds(llvm::RecordKeeper &Records,
-                             llvm::raw_ostream &OS);
+void EmitClangRegularKeywordAttributeInfo(llvm::RecordKeeper &Records,
+                                          llvm::raw_ostream &OS);
 void EmitClangAttrHasAttrImpl(llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
 void EmitClangAttrSpellingListIndex(llvm::RecordKeeper &Records,
@@ -66,6 +74,8 @@ void EmitClangAttrTextNodeDump(llvm::RecordKeeper &Records,
 void EmitClangAttrNodeTraverse(llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrDocTable(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
+void EmitClangBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
                         const std::string &Component);

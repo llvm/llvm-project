@@ -284,6 +284,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *a = args.getLastArg(
           clang::driver::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
+    if (s == "6")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_6;
     if (s == "5")
       opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
     if (s == "4")
@@ -579,6 +581,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                 // pre-processed inputs.
                 .Case("f95", Language::Fortran)
                 .Case("f95-cpp-input", Language::Fortran)
+                // CUDA Fortran
+                .Case("cuda", Language::Fortran)
                 .Default(Language::Unknown);
 
     // Flang's intermediate representations.
@@ -875,6 +879,13 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
     res.getDefaultKinds().set_sizeIntegerKind(8);
 
+  // -x cuda
+  auto language = args.getLastArgValue(clang::driver::options::OPT_x);
+  if (language.equals("cuda")) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::CUDA);
+  }
+
   // -fopenmp and -fopenacc
   if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
     res.getFrontendOpts().features.Enable(
@@ -935,6 +946,8 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
           res.getLangOpts().OpenMPTargetDebug = 1;
       }
+      if (args.hasArg(clang::driver::options::OPT_nogpulib))
+        res.getLangOpts().NoGPULib = 1;
     }
 
     switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
@@ -1054,28 +1067,45 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 /// \param [out] diags DiagnosticsEngine to report erros with
 static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  LangOptions &opts = invoc.getLangOpts();
-  if (const auto arg =
-          args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ)) {
-    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    unsigned VScaleMin;
-    if (argValue.getAsInteger(/*Radix=*/10, VScaleMin)) {
-      diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << arg->getSpelling() << argValue;
-      return false;
-    }
-    opts.VScaleMin = VScaleMin;
+  const auto *vscaleMin =
+      args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ);
+  const auto *vscaleMax =
+      args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ);
+
+  if (!vscaleMin && !vscaleMax)
+    return true;
+
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+  if (!triple.isAArch64() && !triple.isRISCV()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "`-mvscale-max` and `-mvscale-min` are not "
+                              "supported for this architecture: %0");
+    diags.Report(diagID) << triple.getArchName();
+    return false;
   }
-  if (const auto arg =
-          args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ)) {
-    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    unsigned VScaleMax;
-    if (argValue.getAsInteger(/*Radix=w*/ 10, VScaleMax)) {
+
+  LangOptions &opts = invoc.getLangOpts();
+  if (vscaleMin) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
+    unsigned vscaleMinVal;
+    if (argValue.getAsInteger(/*Radix=*/10, vscaleMinVal)) {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << arg->getSpelling() << argValue;
+          << vscaleMax->getSpelling() << argValue;
       return false;
     }
-    opts.VScaleMax = VScaleMax;
+    opts.VScaleMin = vscaleMinVal;
+  }
+
+  if (vscaleMax) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMax->getValue());
+    unsigned vscaleMaxVal;
+    if (argValue.getAsInteger(/*Radix=w*/ 10, vscaleMaxVal)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << vscaleMax->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMax = vscaleMaxVal;
   }
   return true;
 }
@@ -1305,10 +1335,23 @@ void CompilerInvocation::setDefaultPredefinitions() {
     Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
                                     fortranOptions.predefinitions);
   }
+
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+  switch (targetTriple.getArch()) {
+  default:
+    break;
+  case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    break;
   }
 }
 

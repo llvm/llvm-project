@@ -64,6 +64,26 @@ struct SymbolizedStack {
   SymbolizedStack();
 };
 
+class SymbolizedStackHolder {
+  SymbolizedStack *Stack;
+
+  void clear() {
+    if (Stack)
+      Stack->ClearAll();
+  }
+
+ public:
+  explicit SymbolizedStackHolder(SymbolizedStack *Stack = nullptr)
+      : Stack(Stack) {}
+  ~SymbolizedStackHolder() { clear(); }
+  void reset(SymbolizedStack *S = nullptr) {
+    if (Stack != S)
+      clear();
+    Stack = S;
+  }
+  const SymbolizedStack *get() const { return Stack; }
+};
+
 // For now, DataInfo is used to describe global variable.
 struct DataInfo {
   // Owns all the string members. Storage for them is

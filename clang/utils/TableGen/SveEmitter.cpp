@@ -1066,17 +1066,6 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
 
   std::string FullName = mangleName(ClassS);
   std::string ProtoName = mangleName(getClassKind());
-  std::string SMEAttrs = "";
-
-  if (Flags & Emitter.getEnumValueForFlag("IsStreaming"))
-    SMEAttrs += ", arm_streaming";
-  if (Flags & Emitter.getEnumValueForFlag("IsStreamingCompatible"))
-    SMEAttrs += ", arm_streaming_compatible";
-  if (Flags & Emitter.getEnumValueForFlag("IsSharedZA"))
-    SMEAttrs += ", arm_shared_za";
-  if (Flags & Emitter.getEnumValueForFlag("IsPreservesZA"))
-    SMEAttrs += ", arm_preserves_za";
-
   OS << (IsOverloaded ? "__aio " : "__ai ")
      << "__attribute__((__clang_arm_builtin_alias(";
 
@@ -1089,8 +1078,6 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
     break;
   }
 
-  if (!SMEAttrs.empty())
-    OS << SMEAttrs;
   OS << "))\n";
 
   OS << getTypes()[0].str() << " " << ProtoName << "(";
@@ -1571,7 +1558,7 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMEHeader(raw_ostream &OS) {
-  OS << "/*===---- arm_sme_draft_spec_subject_to_change.h - ARM SME intrinsics "
+  OS << "/*===---- arm_sme.h - ARM SME intrinsics "
         "------===\n"
         " *\n"
         " *\n"
@@ -1588,10 +1575,11 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#define __ARM_SME_H\n\n";
 
   OS << "#if !defined(__LITTLE_ENDIAN__)\n";
-  OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
+  OS << "#error \"Big endian is currently not supported for arm_sme.h\"\n";
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
+  OS << "#include <stddef.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1618,8 +1606,13 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  return x0 & 1;\n";
   OS << "}\n\n";
 
+  OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memchr(void *s, int c, size_t n) __arm_streaming_compatible;\n\n";
+
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
-        "__arm_streaming_compatible __arm_shared_za "
+        "__arm_streaming_compatible __arm_out(\"za\") "
         "{ }\n\n";
 
   createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
@@ -1733,21 +1726,36 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
-  std::map<bool, std::set<std::string>> DefsZAState;
-
-  uint64_t IsSharedZAFlag = getEnumValueForFlag("IsSharedZA");
+  std::map<std::string, std::set<std::string>> IntrinsicsPerState;
   for (auto &Def : Defs) {
-    bool HasZAState = Def->isFlagSet(IsSharedZAFlag);
-    DefsZAState[HasZAState].insert(Def->getMangledName());
+    std::string Key;
+    auto AddToKey = [&Key](const std::string &S) -> void {
+      Key = Key.empty() ? S : (Key + " | " + S);
+    };
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZA")))
+      AddToKey("ArmInZA");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZA")))
+      AddToKey("ArmOutZA");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZA")))
+      AddToKey("ArmInOutZA");
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZT0")))
+      AddToKey("ArmInZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZT0")))
+      AddToKey("ArmOutZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZT0")))
+      AddToKey("ArmInOutZT0");
+
+    if (!Key.empty())
+      IntrinsicsPerState[Key].insert(Def->getMangledName());
   }
 
-  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
-
-  for (auto HasZA : {true, false}) {
-    auto Names = DefsZAState[HasZA];
-    for (auto Name : Names)
+  OS << "#ifdef GET_SME_BUILTIN_GET_STATE\n";
+  for (auto &KV : IntrinsicsPerState) {
+    for (StringRef Name : KV.second)
       OS << "case SME::BI__builtin_sme_" << Name << ":\n";
-    OS << "  return " << (HasZA ? "true" : "false") << ";\n";
+    OS << "  return " << KV.first << ";\n";
   }
   OS << "#endif\n\n";
 }
@@ -1773,11 +1781,14 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
+  uint64_t IsStreamingOrSVE2p1Flag = getEnumValueForFlag("IsStreamingOrSVE2p1");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(IsStreamingOrSVE2p1Flag))
+      StreamingMap["ArmStreamingOrSVE2p1"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else

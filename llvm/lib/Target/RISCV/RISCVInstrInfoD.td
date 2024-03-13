@@ -33,14 +33,16 @@ def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmINX">;
 
 // Zdinx
 
-def GPRPF64AsFPR : AsmOperandClass {
-  let Name = "GPRPF64AsFPR";
+def GPRPairAsFPR : AsmOperandClass {
+  let Name = "GPRPairAsFPR";
   let ParserMethod = "parseGPRAsFPR";
+  let PredicateMethod = "isGPRAsFPR";
   let RenderMethod = "addRegOperands";
 }
 
 def GPRF64AsFPR : AsmOperandClass {
   let Name = "GPRF64AsFPR";
+  let PredicateMethod = "isGPRAsFPR";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
 }
@@ -50,8 +52,8 @@ def FPR64INX : RegisterOperand<GPR> {
   let DecoderMethod = "DecodeGPRRegisterClass";
 }
 
-def FPR64IN32X : RegisterOperand<GPRPF64> {
-  let ParserMatchClass = GPRPF64AsFPR;
+def FPR64IN32X : RegisterOperand<GPRPair> {
+  let ParserMatchClass = GPRPairAsFPR;
 }
 
 def DExt       : ExtInfo<"", "", [HasStdExtD], f64, FPR64, FPR32, FPR64, ?>;
@@ -408,11 +410,11 @@ foreach Ext = DExts in {
 let Predicates = [HasStdExtD] in {
 // Match signaling FEQ_D
 def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETEQ)),
-          (AND (FLE_D $rs1, $rs2),
-               (FLE_D $rs2, $rs1))>;
+          (AND (XLenVT (FLE_D $rs1, $rs2)),
+               (XLenVT (FLE_D $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETOEQ)),
-          (AND (FLE_D $rs1, $rs2),
-               (FLE_D $rs2, $rs1))>;
+          (AND (XLenVT (FLE_D $rs1, $rs2)),
+               (XLenVT (FLE_D $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETEQ)),
           (FLE_D $rs1, $rs1)>;
@@ -428,11 +430,11 @@ def : PatSetCC<FPR64, any_fsetccs, SETOLE, FLE_D, f64>;
 let Predicates = [HasStdExtZdinx, IsRV64] in {
 // Match signaling FEQ_D
 def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs2, SETEQ)),
-          (AND (FLE_D_INX $rs1, $rs2),
-               (FLE_D_INX $rs2, $rs1))>;
+          (AND (XLenVT (FLE_D_INX $rs1, $rs2)),
+               (XLenVT (FLE_D_INX $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs2, SETOEQ)),
-          (AND (FLE_D_INX $rs1, $rs2),
-               (FLE_D_INX $rs2, $rs1))>;
+          (AND (XLenVT (FLE_D_INX $rs1, $rs2)),
+               (XLenVT (FLE_D_INX $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs1, SETEQ)),
           (FLE_D_INX $rs1, $rs1)>;
@@ -448,11 +450,11 @@ def : PatSetCC<FPR64INX, any_fsetccs, SETOLE, FLE_D_INX, f64>;
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 // Match signaling FEQ_D
 def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETEQ)),
-          (AND (FLE_D_IN32X $rs1, $rs2),
-               (FLE_D_IN32X $rs2, $rs1))>;
+          (AND (XLenVT (FLE_D_IN32X $rs1, $rs2)),
+               (XLenVT (FLE_D_IN32X $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETOEQ)),
-          (AND (FLE_D_IN32X $rs1, $rs2),
-               (FLE_D_IN32X $rs2, $rs1))>;
+          (AND (XLenVT (FLE_D_IN32X $rs1, $rs2)),
+               (XLenVT (FLE_D_IN32X $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETEQ)),
           (FLE_D_IN32X $rs1, $rs1)>;
@@ -513,15 +515,15 @@ def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X, f64>;
 
 /// Loads
 let isCall = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 1 in
-def PseudoRV32ZdinxLD : Pseudo<(outs GPRPF64:$dst), (ins GPR:$rs1, simm12:$imm12), []>;
+def PseudoRV32ZdinxLD : Pseudo<(outs GPRPair:$dst), (ins GPR:$rs1, simm12:$imm12), []>;
 def : Pat<(f64 (load (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12))),
           (PseudoRV32ZdinxLD GPR:$rs1, simm12:$imm12)>;
 
 /// Stores
 let isCall = 0, mayLoad = 0, mayStore = 1, Size = 8, isCodeGenOnly = 1 in
-def PseudoRV32ZdinxSD : Pseudo<(outs), (ins GPRPF64:$rs2, GPRNoX0:$rs1, simm12:$imm12), []>;
-def : Pat<(store (f64 GPRPF64:$rs2), (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12)),
-          (PseudoRV32ZdinxSD GPRPF64:$rs2, GPR:$rs1, simm12:$imm12)>;
+def PseudoRV32ZdinxSD : Pseudo<(outs), (ins GPRPair:$rs2, GPRNoX0:$rs1, simm12:$imm12), []>;
+def : Pat<(store (f64 GPRPair:$rs2), (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12)),
+          (PseudoRV32ZdinxSD GPRPair:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 /// Pseudo-instructions needed for the soft-float ABI with RV32D
 

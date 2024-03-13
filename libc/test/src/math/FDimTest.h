@@ -18,6 +18,13 @@ public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
   void test_na_n_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
@@ -59,7 +66,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       if (isnan(x) || isinf(x))
         continue;
       if (isnan(y) || isinf(y))
@@ -72,13 +79,4 @@ public:
       }
     }
   }
-
-private:
-  // constexpr does not work on FPBits yet, so we cannot have these constants as
-  // static.
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
 };

@@ -216,10 +216,11 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
       spec = (*m_files)[record->FileNum];
   }
 
-  auto cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(),
-                                             /*user_data*/ nullptr, spec, index,
-                                             eLanguageTypeUnknown,
-                                             /*is_optimized*/ eLazyBoolNo);
+  auto cu_sp = std::make_shared<CompileUnit>(
+      m_objfile_sp->GetModule(),
+      /*user_data*/ nullptr, std::make_shared<SupportFile>(spec), index,
+      eLanguageTypeUnknown,
+      /*is_optimized*/ eLazyBoolNo);
 
   SetCompileUnitAtIndex(index, cu_sp);
   return cu_sp;
@@ -278,13 +279,14 @@ bool SymbolFileBreakpad::ParseLineTable(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileBreakpad::ParseSupportFiles(CompileUnit &comp_unit,
-                                           FileSpecList &support_files) {
+                                           SupportFileList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit.GetID()).data;
   if (!data.support_files)
     ParseLineTableAndSupportFiles(comp_unit, data);
 
-  support_files = std::move(*data.support_files);
+  for (auto &fs : *data.support_files)
+    support_files.Append(fs);
   return true;
 }
 
@@ -916,7 +918,7 @@ void SymbolFileBreakpad::ParseUnwindData() {
   m_unwind_data->win.Sort();
 }
 
-uint64_t SymbolFileBreakpad::GetDebugInfoSize() {
+uint64_t SymbolFileBreakpad::GetDebugInfoSize(bool load_all_debug_info) {
   // Breakpad files are all debug info.
   return m_objfile_sp->GetByteSize();
 }

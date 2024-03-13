@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
@@ -122,23 +123,6 @@ enum {
   // 3 -> widening case
   TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
   TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
-};
-
-enum VLMUL : uint8_t {
-  LMUL_1 = 0,
-  LMUL_2,
-  LMUL_4,
-  LMUL_8,
-  LMUL_RESERVED,
-  LMUL_F8,
-  LMUL_F4,
-  LMUL_F2
-};
-
-enum {
-  TAIL_UNDISTURBED_MASK_UNDISTURBED = 0,
-  TAIL_AGNOSTIC = 1,
-  MASK_AGNOSTIC = 2,
 };
 
 // Helper functions to read TSFlags.
@@ -254,7 +238,6 @@ static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
 enum {
   MO_None = 0,
   MO_CALL = 1,
-  MO_PLT = 2,
   MO_LO = 3,
   MO_HI = 4,
   MO_PCREL_LO = 5,
@@ -265,11 +248,15 @@ enum {
   MO_TPREL_ADD = 10,
   MO_TLS_GOT_HI = 11,
   MO_TLS_GD_HI = 12,
+  MO_TLSDESC_HI = 13,
+  MO_TLSDESC_LOAD_LO = 14,
+  MO_TLSDESC_ADD_LO = 15,
+  MO_TLSDESC_CALL = 16,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
   // multiple "bitmask" flags.
-  MO_DIRECT_FLAG_MASK = 15
+  MO_DIRECT_FLAG_MASK = 31
 };
 } // namespace RISCVII
 
@@ -480,61 +467,6 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
-
-namespace RISCVVType {
-// Is this a SEW value that can be encoded into the VTYPE format.
-inline static bool isValidSEW(unsigned SEW) {
-  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 1024;
-}
-
-// Is this a LMUL value that can be encoded into the VTYPE format.
-inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
-  return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
-}
-
-unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic);
-
-inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
-  unsigned VLMUL = VType & 0x7;
-  return static_cast<RISCVII::VLMUL>(VLMUL);
-}
-
-// Decode VLMUL into 1,2,4,8 and fractional indicator.
-std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
-
-inline static RISCVII::VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
-  assert(isValidLMUL(LMUL, Fractional) && "Unsupported LMUL");
-  unsigned LmulLog2 = Log2_32(LMUL);
-  return static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
-}
-
-inline static unsigned decodeVSEW(unsigned VSEW) {
-  assert(VSEW < 8 && "Unexpected VSEW value");
-  return 1 << (VSEW + 3);
-}
-
-inline static unsigned encodeSEW(unsigned SEW) {
-  assert(isValidSEW(SEW) && "Unexpected SEW value");
-  return Log2_32(SEW) - 3;
-}
-
-inline static unsigned getSEW(unsigned VType) {
-  unsigned VSEW = (VType >> 3) & 0x7;
-  return decodeVSEW(VSEW);
-}
-
-inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
-
-inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
-
-void printVType(unsigned VType, raw_ostream &OS);
-
-unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
-
-std::optional<RISCVII::VLMUL>
-getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW);
-} // namespace RISCVVType
 
 namespace RISCVRVC {
 bool compress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);

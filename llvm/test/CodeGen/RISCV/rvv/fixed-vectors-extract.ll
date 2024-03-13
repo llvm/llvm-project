@@ -616,7 +616,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32NOM-NEXT:    mv s2, a0
 ; RV32NOM-NEXT:    andi a0, a1, 31
 ; RV32NOM-NEXT:    li a1, 4
-; RV32NOM-NEXT:    call __mulsi3@plt
+; RV32NOM-NEXT:    call __mulsi3
 ; RV32NOM-NEXT:    li a1, 32
 ; RV32NOM-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32NOM-NEXT:    vle32.v v8, (s2)
@@ -666,7 +666,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64NOM-NEXT:    mv s2, a0
 ; RV64NOM-NEXT:    andi a0, a1, 31
 ; RV64NOM-NEXT:    li a1, 4
-; RV64NOM-NEXT:    call __muldi3@plt
+; RV64NOM-NEXT:    call __muldi3
 ; RV64NOM-NEXT:    li a1, 32
 ; RV64NOM-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV64NOM-NEXT:    vle32.v v8, (s2)

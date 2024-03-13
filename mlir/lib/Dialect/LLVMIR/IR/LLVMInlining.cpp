@@ -663,6 +663,10 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
                  << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
       return false;
     }
+    if (funcOp.isVarArg()) {
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: callable is variadic\n");
+      return false;
+    }
     // TODO: Generate aliasing metadata from noalias argument/result attributes.
     if (auto attrs = funcOp.getArgAttrs()) {
       for (DictionaryAttr attrDict : attrs->getAsRange<DictionaryAttr>()) {
@@ -704,7 +708,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    return true;
+    // The inliner cannot handle variadic function arguments.
+    return !isa<LLVM::VaStartOp>(op);
   }
 
   /// Handle the given inlined return by replacing it with a branch. This

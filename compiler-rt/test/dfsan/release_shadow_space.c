@@ -1,6 +1,3 @@
-// https://github.com/llvm/llvm-project/issues/60678
-// XFAIL: glibc-2.37
-
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -o %t && %run %t
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -o %t && %run %t
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -o %t && %run %t

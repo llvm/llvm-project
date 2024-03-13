@@ -37,7 +37,8 @@ define i64 @test_floor_si64(float %x) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    fsw fs0, 0(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    lui a0, 307200
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
@@ -52,32 +53,33 @@ define i64 @test_floor_si64(float %x) nounwind {
 ; RV32IF-NEXT:    lui a0, 913408
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
 ; RV32IF-NEXT:    fle.s s0, fa5, fs0
+; RV32IF-NEXT:    neg s1, s0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixsfdi@plt
-; RV32IF-NEXT:    lui a4, 524288
-; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    call __fixsfdi
+; RV32IF-NEXT:    lui a2, %hi(.LCPI1_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI1_0)(a2)
+; RV32IF-NEXT:    and a0, s1, a0
+; RV32IF-NEXT:    flt.s a4, fa5, fs0
+; RV32IF-NEXT:    neg a2, a4
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    feq.s a2, fs0, fs0
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    lui a5, 524288
+; RV32IF-NEXT:    lui a3, 524288
 ; RV32IF-NEXT:    beqz s0, .LBB1_4
 ; RV32IF-NEXT:  # %bb.3:
-; RV32IF-NEXT:    mv a2, a1
+; RV32IF-NEXT:    mv a3, a1
 ; RV32IF-NEXT:  .LBB1_4:
-; RV32IF-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV32IF-NEXT:    flw fa5, %lo(.LCPI1_0)(a1)
-; RV32IF-NEXT:    flt.s a3, fa5, fs0
-; RV32IF-NEXT:    beqz a3, .LBB1_6
-; RV32IF-NEXT:  # %bb.5:
-; RV32IF-NEXT:    addi a2, a4, -1
-; RV32IF-NEXT:  .LBB1_6:
-; RV32IF-NEXT:    feq.s a1, fs0, fs0
-; RV32IF-NEXT:    neg a4, a1
-; RV32IF-NEXT:    and a1, a4, a2
-; RV32IF-NEXT:    neg a2, s0
 ; RV32IF-NEXT:    and a0, a2, a0
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    or a0, a2, a0
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    beqz a4, .LBB1_6
+; RV32IF-NEXT:  # %bb.5:
+; RV32IF-NEXT:    addi a3, a5, -1
+; RV32IF-NEXT:  .LBB1_6:
+; RV32IF-NEXT:    and a1, a2, a3
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    flw fs0, 0(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -111,7 +113,7 @@ define i64 @test_floor_si64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s s1, a0, s0
 ; RV32IZFINX-NEXT:    neg s2, s1
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    call __fixsfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI1_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s2, a0
@@ -197,7 +199,7 @@ define i64 @test_floor_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    fle.s a0, fa5, fs0
 ; RV32IF-NEXT:    neg s0, a0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixunssfdi@plt
+; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, %hi(.LCPI3_0)
 ; RV32IF-NEXT:    flw fa5, %lo(.LCPI3_0)(a2)
 ; RV32IF-NEXT:    and a0, s0, a0
@@ -240,7 +242,7 @@ define i64 @test_floor_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s a0, zero, s0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    call __fixunssfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI3_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI3_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0
@@ -297,7 +299,8 @@ define i64 @test_ceil_si64(float %x) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    fsw fs0, 0(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    lui a0, 307200
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
@@ -312,32 +315,33 @@ define i64 @test_ceil_si64(float %x) nounwind {
 ; RV32IF-NEXT:    lui a0, 913408
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
 ; RV32IF-NEXT:    fle.s s0, fa5, fs0
+; RV32IF-NEXT:    neg s1, s0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixsfdi@plt
-; RV32IF-NEXT:    lui a4, 524288
-; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    call __fixsfdi
+; RV32IF-NEXT:    lui a2, %hi(.LCPI5_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI5_0)(a2)
+; RV32IF-NEXT:    and a0, s1, a0
+; RV32IF-NEXT:    flt.s a4, fa5, fs0
+; RV32IF-NEXT:    neg a2, a4
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    feq.s a2, fs0, fs0
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    lui a5, 524288
+; RV32IF-NEXT:    lui a3, 524288
 ; RV32IF-NEXT:    beqz s0, .LBB5_4
 ; RV32IF-NEXT:  # %bb.3:
-; RV32IF-NEXT:    mv a2, a1
+; RV32IF-NEXT:    mv a3, a1
 ; RV32IF-NEXT:  .LBB5_4:
-; RV32IF-NEXT:    lui a1, %hi(.LCPI5_0)
-; RV32IF-NEXT:    flw fa5, %lo(.LCPI5_0)(a1)
-; RV32IF-NEXT:    flt.s a3, fa5, fs0
-; RV32IF-NEXT:    beqz a3, .LBB5_6
-; RV32IF-NEXT:  # %bb.5:
-; RV32IF-NEXT:    addi a2, a4, -1
-; RV32IF-NEXT:  .LBB5_6:
-; RV32IF-NEXT:    feq.s a1, fs0, fs0
-; RV32IF-NEXT:    neg a4, a1
-; RV32IF-NEXT:    and a1, a4, a2
-; RV32IF-NEXT:    neg a2, s0
 ; RV32IF-NEXT:    and a0, a2, a0
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    or a0, a2, a0
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    beqz a4, .LBB5_6
+; RV32IF-NEXT:  # %bb.5:
+; RV32IF-NEXT:    addi a3, a5, -1
+; RV32IF-NEXT:  .LBB5_6:
+; RV32IF-NEXT:    and a1, a2, a3
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    flw fs0, 0(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -371,7 +375,7 @@ define i64 @test_ceil_si64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s s1, a0, s0
 ; RV32IZFINX-NEXT:    neg s2, s1
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    call __fixsfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI5_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI5_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s2, a0
@@ -457,7 +461,7 @@ define i64 @test_ceil_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    fle.s a0, fa5, fs0
 ; RV32IF-NEXT:    neg s0, a0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixunssfdi@plt
+; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, %hi(.LCPI7_0)
 ; RV32IF-NEXT:    flw fa5, %lo(.LCPI7_0)(a2)
 ; RV32IF-NEXT:    and a0, s0, a0
@@ -500,7 +504,7 @@ define i64 @test_ceil_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s a0, zero, s0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    call __fixunssfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI7_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI7_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0
@@ -557,7 +561,8 @@ define i64 @test_trunc_si64(float %x) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    fsw fs0, 0(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    lui a0, 307200
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
@@ -572,32 +577,33 @@ define i64 @test_trunc_si64(float %x) nounwind {
 ; RV32IF-NEXT:    lui a0, 913408
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
 ; RV32IF-NEXT:    fle.s s0, fa5, fs0
+; RV32IF-NEXT:    neg s1, s0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixsfdi@plt
-; RV32IF-NEXT:    lui a4, 524288
-; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    call __fixsfdi
+; RV32IF-NEXT:    lui a2, %hi(.LCPI9_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI9_0)(a2)
+; RV32IF-NEXT:    and a0, s1, a0
+; RV32IF-NEXT:    flt.s a4, fa5, fs0
+; RV32IF-NEXT:    neg a2, a4
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    feq.s a2, fs0, fs0
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    lui a5, 524288
+; RV32IF-NEXT:    lui a3, 524288
 ; RV32IF-NEXT:    beqz s0, .LBB9_4
 ; RV32IF-NEXT:  # %bb.3:
-; RV32IF-NEXT:    mv a2, a1
+; RV32IF-NEXT:    mv a3, a1
 ; RV32IF-NEXT:  .LBB9_4:
-; RV32IF-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV32IF-NEXT:    flw fa5, %lo(.LCPI9_0)(a1)
-; RV32IF-NEXT:    flt.s a3, fa5, fs0
-; RV32IF-NEXT:    beqz a3, .LBB9_6
-; RV32IF-NEXT:  # %bb.5:
-; RV32IF-NEXT:    addi a2, a4, -1
-; RV32IF-NEXT:  .LBB9_6:
-; RV32IF-NEXT:    feq.s a1, fs0, fs0
-; RV32IF-NEXT:    neg a4, a1
-; RV32IF-NEXT:    and a1, a4, a2
-; RV32IF-NEXT:    neg a2, s0
 ; RV32IF-NEXT:    and a0, a2, a0
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    or a0, a2, a0
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    beqz a4, .LBB9_6
+; RV32IF-NEXT:  # %bb.5:
+; RV32IF-NEXT:    addi a3, a5, -1
+; RV32IF-NEXT:  .LBB9_6:
+; RV32IF-NEXT:    and a1, a2, a3
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    flw fs0, 0(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -631,7 +637,7 @@ define i64 @test_trunc_si64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s s1, a0, s0
 ; RV32IZFINX-NEXT:    neg s2, s1
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    call __fixsfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI9_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI9_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s2, a0
@@ -717,7 +723,7 @@ define i64 @test_trunc_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    fle.s a0, fa5, fs0
 ; RV32IF-NEXT:    neg s0, a0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixunssfdi@plt
+; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, %hi(.LCPI11_0)
 ; RV32IF-NEXT:    flw fa5, %lo(.LCPI11_0)(a2)
 ; RV32IF-NEXT:    and a0, s0, a0
@@ -760,7 +766,7 @@ define i64 @test_trunc_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s a0, zero, s0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    call __fixunssfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI11_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI11_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0
@@ -817,7 +823,8 @@ define i64 @test_round_si64(float %x) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    fsw fs0, 0(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    lui a0, 307200
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
@@ -832,32 +839,33 @@ define i64 @test_round_si64(float %x) nounwind {
 ; RV32IF-NEXT:    lui a0, 913408
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
 ; RV32IF-NEXT:    fle.s s0, fa5, fs0
+; RV32IF-NEXT:    neg s1, s0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixsfdi@plt
-; RV32IF-NEXT:    lui a4, 524288
-; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    call __fixsfdi
+; RV32IF-NEXT:    lui a2, %hi(.LCPI13_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI13_0)(a2)
+; RV32IF-NEXT:    and a0, s1, a0
+; RV32IF-NEXT:    flt.s a4, fa5, fs0
+; RV32IF-NEXT:    neg a2, a4
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    feq.s a2, fs0, fs0
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    lui a5, 524288
+; RV32IF-NEXT:    lui a3, 524288
 ; RV32IF-NEXT:    beqz s0, .LBB13_4
 ; RV32IF-NEXT:  # %bb.3:
-; RV32IF-NEXT:    mv a2, a1
+; RV32IF-NEXT:    mv a3, a1
 ; RV32IF-NEXT:  .LBB13_4:
-; RV32IF-NEXT:    lui a1, %hi(.LCPI13_0)
-; RV32IF-NEXT:    flw fa5, %lo(.LCPI13_0)(a1)
-; RV32IF-NEXT:    flt.s a3, fa5, fs0
-; RV32IF-NEXT:    beqz a3, .LBB13_6
-; RV32IF-NEXT:  # %bb.5:
-; RV32IF-NEXT:    addi a2, a4, -1
-; RV32IF-NEXT:  .LBB13_6:
-; RV32IF-NEXT:    feq.s a1, fs0, fs0
-; RV32IF-NEXT:    neg a4, a1
-; RV32IF-NEXT:    and a1, a4, a2
-; RV32IF-NEXT:    neg a2, s0
 ; RV32IF-NEXT:    and a0, a2, a0
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    or a0, a2, a0
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    beqz a4, .LBB13_6
+; RV32IF-NEXT:  # %bb.5:
+; RV32IF-NEXT:    addi a3, a5, -1
+; RV32IF-NEXT:  .LBB13_6:
+; RV32IF-NEXT:    and a1, a2, a3
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    flw fs0, 0(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -891,7 +899,7 @@ define i64 @test_round_si64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s s1, a0, s0
 ; RV32IZFINX-NEXT:    neg s2, s1
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    call __fixsfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI13_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI13_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s2, a0
@@ -977,7 +985,7 @@ define i64 @test_round_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    fle.s a0, fa5, fs0
 ; RV32IF-NEXT:    neg s0, a0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixunssfdi@plt
+; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, %hi(.LCPI15_0)
 ; RV32IF-NEXT:    flw fa5, %lo(.LCPI15_0)(a2)
 ; RV32IF-NEXT:    and a0, s0, a0
@@ -1020,7 +1028,7 @@ define i64 @test_round_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s a0, zero, s0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    call __fixunssfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI15_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI15_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0
@@ -1077,7 +1085,8 @@ define i64 @test_roundeven_si64(float %x) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    fsw fs0, 0(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    lui a0, 307200
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
@@ -1092,32 +1101,33 @@ define i64 @test_roundeven_si64(float %x) nounwind {
 ; RV32IF-NEXT:    lui a0, 913408
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
 ; RV32IF-NEXT:    fle.s s0, fa5, fs0
+; RV32IF-NEXT:    neg s1, s0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixsfdi@plt
-; RV32IF-NEXT:    lui a4, 524288
-; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    call __fixsfdi
+; RV32IF-NEXT:    lui a2, %hi(.LCPI17_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI17_0)(a2)
+; RV32IF-NEXT:    and a0, s1, a0
+; RV32IF-NEXT:    flt.s a4, fa5, fs0
+; RV32IF-NEXT:    neg a2, a4
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    feq.s a2, fs0, fs0
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    lui a5, 524288
+; RV32IF-NEXT:    lui a3, 524288
 ; RV32IF-NEXT:    beqz s0, .LBB17_4
 ; RV32IF-NEXT:  # %bb.3:
-; RV32IF-NEXT:    mv a2, a1
+; RV32IF-NEXT:    mv a3, a1
 ; RV32IF-NEXT:  .LBB17_4:
-; RV32IF-NEXT:    lui a1, %hi(.LCPI17_0)
-; RV32IF-NEXT:    flw fa5, %lo(.LCPI17_0)(a1)
-; RV32IF-NEXT:    flt.s a3, fa5, fs0
-; RV32IF-NEXT:    beqz a3, .LBB17_6
-; RV32IF-NEXT:  # %bb.5:
-; RV32IF-NEXT:    addi a2, a4, -1
-; RV32IF-NEXT:  .LBB17_6:
-; RV32IF-NEXT:    feq.s a1, fs0, fs0
-; RV32IF-NEXT:    neg a4, a1
-; RV32IF-NEXT:    and a1, a4, a2
-; RV32IF-NEXT:    neg a2, s0
 ; RV32IF-NEXT:    and a0, a2, a0
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    or a0, a2, a0
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    beqz a4, .LBB17_6
+; RV32IF-NEXT:  # %bb.5:
+; RV32IF-NEXT:    addi a3, a5, -1
+; RV32IF-NEXT:  .LBB17_6:
+; RV32IF-NEXT:    and a1, a2, a3
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    flw fs0, 0(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -1151,7 +1161,7 @@ define i64 @test_roundeven_si64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s s1, a0, s0
 ; RV32IZFINX-NEXT:    neg s2, s1
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    call __fixsfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI17_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI17_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s2, a0
@@ -1237,7 +1247,7 @@ define i64 @test_roundeven_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    fle.s a0, fa5, fs0
 ; RV32IF-NEXT:    neg s0, a0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixunssfdi@plt
+; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, %hi(.LCPI19_0)
 ; RV32IF-NEXT:    flw fa5, %lo(.LCPI19_0)(a2)
 ; RV32IF-NEXT:    and a0, s0, a0
@@ -1280,7 +1290,7 @@ define i64 @test_roundeven_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s a0, zero, s0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    call __fixunssfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI19_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI19_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0
@@ -1337,7 +1347,8 @@ define i64 @test_rint_si64(float %x) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    fsw fs0, 0(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    lui a0, 307200
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
@@ -1352,32 +1363,33 @@ define i64 @test_rint_si64(float %x) nounwind {
 ; RV32IF-NEXT:    lui a0, 913408
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
 ; RV32IF-NEXT:    fle.s s0, fa5, fs0
+; RV32IF-NEXT:    neg s1, s0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixsfdi@plt
-; RV32IF-NEXT:    lui a4, 524288
-; RV32IF-NEXT:    lui a2, 524288
+; RV32IF-NEXT:    call __fixsfdi
+; RV32IF-NEXT:    lui a2, %hi(.LCPI21_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI21_0)(a2)
+; RV32IF-NEXT:    and a0, s1, a0
+; RV32IF-NEXT:    flt.s a4, fa5, fs0
+; RV32IF-NEXT:    neg a2, a4
+; RV32IF-NEXT:    or a0, a2, a0
+; RV32IF-NEXT:    feq.s a2, fs0, fs0
+; RV32IF-NEXT:    neg a2, a2
+; RV32IF-NEXT:    lui a5, 524288
+; RV32IF-NEXT:    lui a3, 524288
 ; RV32IF-NEXT:    beqz s0, .LBB21_4
 ; RV32IF-NEXT:  # %bb.3:
-; RV32IF-NEXT:    mv a2, a1
+; RV32IF-NEXT:    mv a3, a1
 ; RV32IF-NEXT:  .LBB21_4:
-; RV32IF-NEXT:    lui a1, %hi(.LCPI21_0)
-; RV32IF-NEXT:    flw fa5, %lo(.LCPI21_0)(a1)
-; RV32IF-NEXT:    flt.s a3, fa5, fs0
-; RV32IF-NEXT:    beqz a3, .LBB21_6
-; RV32IF-NEXT:  # %bb.5:
-; RV32IF-NEXT:    addi a2, a4, -1
-; RV32IF-NEXT:  .LBB21_6:
-; RV32IF-NEXT:    feq.s a1, fs0, fs0
-; RV32IF-NEXT:    neg a4, a1
-; RV32IF-NEXT:    and a1, a4, a2
-; RV32IF-NEXT:    neg a2, s0
 ; RV32IF-NEXT:    and a0, a2, a0
-; RV32IF-NEXT:    neg a2, a3
-; RV32IF-NEXT:    or a0, a2, a0
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    beqz a4, .LBB21_6
+; RV32IF-NEXT:  # %bb.5:
+; RV32IF-NEXT:    addi a3, a5, -1
+; RV32IF-NEXT:  .LBB21_6:
+; RV32IF-NEXT:    and a1, a2, a3
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    flw fs0, 0(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -1411,7 +1423,7 @@ define i64 @test_rint_si64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s s1, a0, s0
 ; RV32IZFINX-NEXT:    neg s2, s1
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    call __fixsfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI21_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI21_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s2, a0
@@ -1497,7 +1509,7 @@ define i64 @test_rint_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    fle.s a0, fa5, fs0
 ; RV32IF-NEXT:    neg s0, a0
 ; RV32IF-NEXT:    fmv.s fa0, fs0
-; RV32IF-NEXT:    call __fixunssfdi@plt
+; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, %hi(.LCPI23_0)
 ; RV32IF-NEXT:    flw fa5, %lo(.LCPI23_0)(a2)
 ; RV32IF-NEXT:    and a0, s0, a0
@@ -1540,7 +1552,7 @@ define i64 @test_rint_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    fle.s a0, zero, s0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
-; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    call __fixunssfdi
 ; RV32IZFINX-NEXT:    lui a2, %hi(.LCPI23_0)
 ; RV32IZFINX-NEXT:    lw a2, %lo(.LCPI23_0)(a2)
 ; RV32IZFINX-NEXT:    and a0, s1, a0

@@ -10,7 +10,7 @@
 # This is important notably because the LLDB data formatters use
 # libc++ headers with modules enabled.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
@@ -47,11 +47,8 @@ for header in public_headers:
 #include <{header}>
 """)
 
-# TODO: Remove the UNSUPPORTED{BLOCKLIT}: clang-modules-build once issues with this test have been figured out.
 print(f"""\
 //--- __std_clang_module.compile.pass.mm
-// UNSUPPORTED{BLOCKLIT}: clang-modules-build
-
 // RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
 // REQUIRES{BLOCKLIT}: clang-modules-build

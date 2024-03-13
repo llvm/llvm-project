@@ -54,14 +54,14 @@ using namespace llvm;
 namespace {
 class BytecodeVersionParser : public cl::parser<std::optional<int64_t>> {
 public:
-  BytecodeVersionParser(cl::Option &O)
-      : cl::parser<std::optional<int64_t>>(O) {}
+  BytecodeVersionParser(cl::Option &o)
+      : cl::parser<std::optional<int64_t>>(o) {}
 
-  bool parse(cl::Option &O, StringRef /*argName*/, StringRef arg,
+  bool parse(cl::Option &o, StringRef /*argName*/, StringRef arg,
              std::optional<int64_t> &v) {
     long long w;
     if (getAsSignedInteger(arg, 10, w))
-      return O.error("Invalid argument '" + arg +
+      return o.error("Invalid argument '" + arg +
                      "', only integer is supported.");
     v = w;
     return false;
@@ -276,6 +276,7 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, roundtripContext)))
     return failure();
 
+  std::string testType = (useBytecode) ? "bytecode" : "textual";
   // Print a first time with custom format (or bytecode) and parse it back to
   // the roundtripModule.
   {
@@ -289,7 +290,7 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
       }
     } else {
       op->print(ostream,
-                OpPrintingFlags().printGenericOpForm(false).enableDebugInfo());
+                OpPrintingFlags().printGenericOpForm().enableDebugInfo());
     }
     FallbackAsmResourceMap fallbackResourceMap;
     ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
@@ -297,8 +298,8 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
     roundtripModule =
         parseSourceString<Operation *>(ostream.str(), parseConfig);
     if (!roundtripModule) {
-      op->emitOpError()
-          << "failed to parse bytecode back, cannot verify round-trip.\n";
+      op->emitOpError() << "failed to parse " << testType
+                        << " content back, cannot verify round-trip.\n";
       return failure();
     }
   }
@@ -317,10 +318,12 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
   }
   if (reference != roundtrip) {
     // TODO implement a diff.
-    return op->emitOpError() << "roundTrip testing roundtripped module differs "
-                                "from reference:\n<<<<<<Reference\n"
-                             << reference << "\n=====\n"
-                             << roundtrip << "\n>>>>>roundtripped\n";
+    return op->emitOpError()
+           << testType
+           << " roundTrip testing roundtripped module differs "
+              "from reference:\n<<<<<<Reference\n"
+           << reference << "\n=====\n"
+           << roundtrip << "\n>>>>>roundtripped\n";
   }
 
   return success();
@@ -328,10 +331,9 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
 
 static LogicalResult doVerifyRoundTrip(Operation *op,
                                        const MlirOptMainConfig &config) {
-  // Textual round-trip isn't fully robust at the moment (for example implicit
-  // terminator are losing location informations).
-
-  return doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+  auto txtStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/false);
+  auto bcStatus = doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+  return success(succeeded(txtStatus) && succeeded(bcStatus));
 }
 
 /// Perform the actions on the input file indicated by the command line flags
@@ -429,7 +431,7 @@ static LogicalResult processBuffer(raw_ostream &os,
                                    std::unique_ptr<MemoryBuffer> ownedBuffer,
                                    const MlirOptMainConfig &config,
                                    DialectRegistry &registry,
-                                   llvm::ThreadPool *threadPool) {
+                                   llvm::ThreadPoolInterface *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   auto sourceMgr = std::make_shared<SourceMgr>();
   sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
@@ -515,7 +517,7 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
   // up into small pieces and checks each independently.
   // We use an explicit threadpool to avoid creating and joining/destroying
   // threads for each of the split.
-  ThreadPool *threadPool = nullptr;
+  ThreadPoolInterface *threadPool = nullptr;
 
   // Create a temporary context for the sake of checking if
   // --mlir-disable-threading was passed on the command line.

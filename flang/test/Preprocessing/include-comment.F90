@@ -5,7 +5,7 @@
 #include <empty.h> /* comment */
 ! CHECK-NOT: :7:
 #include <empty.h> !comment
-! CHECK: :9:20: portability: #include: extra stuff ignored after file name
+! CHECK: :9:10: portability: #include: extra stuff ignored after file name
 #include <empty.h> comment
 ! CHECK-NOT: :11:
 #include "empty.h" ! comment
@@ -13,6 +13,6 @@
 #include "empty.h" /* comment */
 ! CHECK-NOT: :15:
 #include "empty.h" !comment
-! CHECK: :17:20: portability: #include: extra stuff ignored after file name
+! CHECK: :17:10: portability: #include: extra stuff ignored after file name
 #include "empty.h" comment
 end

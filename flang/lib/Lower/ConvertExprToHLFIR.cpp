@@ -405,8 +405,8 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-              fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+              fir::ClassType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
@@ -761,9 +761,17 @@ private:
     // of the whole designator (not the ones of the vector subscripted part).
     // These are not yet known and will be added when finalizing the designator
     // lowering.
-    auto elementalAddrOp =
-        builder.create<hlfir::ElementalAddrOp>(loc, shape,
-                                               /*isUnordered=*/true);
+    // The resulting designator may be polymorphic, in which case the resulting
+    // type is the base of the vector subscripted part because
+    // allocatable/pointer components cannot be referenced after a vector
+    // subscripted part. Set the mold to the current base. It will be erased if
+    // the resulting designator is not polymorphic.
+    assert(partInfo.base.has_value() &&
+           "vector subscripted part must have a base");
+    mlir::Value mold = *partInfo.base;
+    auto elementalAddrOp = builder.create<hlfir::ElementalAddrOp>(
+        loc, shape, mold, mlir::ValueRange{},
+        /*isUnordered=*/true);
     setVectorSubscriptElementAddrOp(elementalAddrOp);
     builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
     mlir::Region::BlockArgListType indices = elementalAddrOp.getIndices();
@@ -804,15 +812,8 @@ private:
                              hlfir::EntityWithAttributes elementAddr) {
     fir::FirOpBuilder &builder = getBuilder();
     builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
-    // For polymorphic entities, it will be needed to add a mold on the
-    // hlfir.elemental so that we are able to create temporary storage
-    // for it using the dynamic type. It seems that a reference to the mold
-    // entity can be created by evaluating the hlfir.elemental_addr
-    // for a single index. The evaluation should be legal as long as
-    // the hlfir.elemental_addr has no side effects, otherwise,
-    // it is not clear how to get the mold reference.
-    if (elementAddr.isPolymorphic())
-      TODO(loc, "vector subscripted polymorphic entity in HLFIR");
+    if (!elementAddr.isPolymorphic())
+      elementalAddrOp.getMoldMutable().clear();
     builder.create<hlfir::YieldOp>(loc, elementAddr);
     builder.setInsertionPointAfter(elementalAddrOp);
   }
@@ -929,6 +930,8 @@ HlfirDesignatorBuilder::convertVectorSubscriptedExprToElementalAddr(
   hlfir::genLengthParameters(loc, builder, elementAddrEntity, lengths);
   if (!lengths.empty())
     elementalAddrOp.getTypeparamsMutable().assign(lengths);
+  if (!elementAddrEntity.isPolymorphic())
+    elementalAddrOp.getMoldMutable().clear();
   // Create the hlfir.yield terminator inside the hlfir.elemental_body.
   builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
   builder.create<hlfir::YieldOp>(loc, elementAddrEntity);
@@ -1219,8 +1222,11 @@ struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity string,
                                          hlfir::Entity length) {
+    // The input length may be a user input and needs to be sanitized as per
+    // Fortran 2018 7.4.4.2 point 5.
+    mlir::Value safeLength = fir::factory::genMaxWithZero(builder, loc, length);
     return hlfir::EntityWithAttributes{
-        builder.create<hlfir::SetLengthOp>(loc, string, length)};
+        builder.create<hlfir::SetLengthOp>(loc, string, safeLength)};
   }
   static void
   genResultTypeParams(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
@@ -1383,6 +1389,14 @@ struct UnaryOp<
   }
 };
 
+static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
+  return type &&
+         type->category() ==
+             Fortran::semantics::DeclTypeSpec::Category::Character &&
+         type->characterTypeSpec().length().isDeferred();
+}
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1425,9 +1439,13 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(
-        getLoc(),
-        "lowering function references that return procedure pointers to HLFIR");
+    Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
+    auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
+    auto result = Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(),
+                                                     expr, procTy.getResult(0),
+                                                     getSymMap(), getStmtCtx());
+    assert(result.has_value());
+    return *result;
   }
 
   template <typename T>
@@ -1719,8 +1737,12 @@ private:
           mlir::Type idxType = builder.getIndexType();
           typeParams.push_back(
               builder.createIntegerConstant(loc, idxType, charType.getLen()));
-        } else {
-          TODO(loc, "dynamic character length in structure constructor");
+        } else if (!hasDeferredCharacterLength(sym)) {
+          // If the length is not deferred, this is a parametrized derived type
+          // where the character length depends on the derived type length
+          // parameters. Otherwise, this is a pointer/allocatable component and
+          // the length will be set during the assignment.
+          TODO(loc, "automatic character component in structure constructor");
         }
       }
 
@@ -1825,6 +1847,16 @@ private:
       builder.genIfThen(loc, isAlloc).genThen(genAssign).end();
     }
 
+    if (fir::isRecordWithAllocatableMember(recTy)) {
+      // Deallocate allocatable components without calling final subroutines.
+      // The Fortran 2018 section 9.7.3.2 about deallocation is not ruling
+      // about the fate of allocatable components of structure constructors,
+      // and there is no behavior consensus in other compilers.
+      fir::FirOpBuilder *bldr = &builder;
+      getStmtCtx().attachCleanup([=]() {
+        fir::runtime::genDerivedTypeDestroyWithoutFinalization(*bldr, loc, box);
+      });
+    }
     return varOp;
   }
 

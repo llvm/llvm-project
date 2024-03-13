@@ -229,6 +229,7 @@ public:
     return StringSwitch<bool>(Name.lower())
         .Case("if", true)
         .Case("call", true)
+        .Case("callx", true)
         .Case("goto", true)
         .Case("gotol", true)
         .Case("*", true)
@@ -270,6 +271,7 @@ public:
         .Case("xchg32_32", true)
         .Case("cmpxchg_64", true)
         .Case("cmpxchg32_32", true)
+        .Case("addr_space_cast", true)
         .Default(false);
   }
 };

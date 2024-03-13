@@ -4,7 +4,7 @@ set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 include(LLVMLibCHeaderRules)
 
 # The GPU build wants to install files in the compiler's resource directory.
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   include(GetClangResourceDir)
 endif()
 
@@ -73,6 +73,31 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-macros.inttypes_macros
+)
+
+add_gen_header(
+  float
+  DEF_FILE float.h.def
+  GEN_HDR float.h
+  DEPENDS
+    .llvm-libc-macros.float_macros
+)
+
+add_gen_header(
+  stdint
+  DEF_FILE stdint.h.def
+  GEN_HDR stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
+)
+
+add_gen_header(
+  limits
+  DEF_FILE limits.h.def
+  GEN_HDR limits.h
+  DEPENDS
+    .llvm-libc-macros.limits_macros
 )
 
 add_gen_header(
@@ -84,6 +109,15 @@ add_gen_header(
     .llvm-libc-macros.math_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
+    .llvm-libc-types.float128
+)
+
+add_gen_header(
+  stdfix
+  DEF_FILE stdfix.h.def
+  GEN_HDR stdfix.h
+  DEPENDS
+    .llvm-libc-macros.stdfix_macros
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -184,23 +218,45 @@ add_gen_header(
     .llvm-libc-macros.generic_error_number_macros
 )
 
+if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in")
+  add_gen_header(
+    signal
+    DEF_FILE signal.h.def
+    PARAMS
+      platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
+    GEN_HDR signal.h
+    DATA_FILES
+      ../config/${LIBC_TARGET_OS}/signal.h.in
+    DEPENDS
+      .llvm-libc-macros.signal_macros
+      .llvm-libc-types.sig_atomic_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.struct_sigaction
+      .llvm-libc-types.union_sigval
+      .llvm-libc-types.siginfo_t
+      .llvm-libc-types.stack_t
+      .llvm-libc-types.pid_t
+  )
+else()
+  message(STATUS "Skipping header signal.h as the target config is missing")
+endif()
+
 add_gen_header(
-  signal
-  DEF_FILE signal.h.def
-  PARAMS
-    platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
-  GEN_HDR signal.h
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/signal.h.in
+  stdbit
+  DEF_FILE stdbit.h.def
+  GEN_HDR stdbit.h
   DEPENDS
-    .llvm-libc-macros.signal_macros
-    .llvm-libc-types.sig_atomic_t
-    .llvm-libc-types.sigset_t
-    .llvm-libc-types.struct_sigaction
-    .llvm-libc-types.union_sigval
-    .llvm-libc-types.siginfo_t
-    .llvm-libc-types.stack_t
-    .llvm-libc-types.pid_t
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdbit_macros
+)
+
+add_gen_header(
+  stdckdint
+  DEF_FILE stdckdint.h.def
+  GEN_HDR stdckdint.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdckdint_macros
 )
 
 add_gen_header(
@@ -313,6 +369,17 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_epoll
+  DEF_FILE sys/epoll.h.def
+  GEN_HDR sys/epoll.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_epoll_event
+    .llvm-libc-types.struct_epoll_data
+    .llvm-libc-types.sigset_t
+)
+
+add_gen_header(
   sys_ioctl
   DEF_FILE sys/ioctl.h.def
   GEN_HDR sys/ioctl.h
@@ -339,6 +406,14 @@ add_gen_header(
   GEN_HDR sys/prctl.h
   DEPENDS
     .llvm_libc_common_h
+)
+
+add_header(
+  sys_queue
+  HDR
+    sys/queue.h
+  DEPENDS
+    .llvm-libc-macros.sys_queue_macros
 )
 
 add_gen_header(
@@ -508,18 +583,28 @@ add_gen_header(
 )
 
 add_gen_header(
+  uchar
+  DEF_FILE uchar.h.def
+  GEN_HDR uchar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.mbstate_t
+)
+
+add_gen_header(
   wchar
   DEF_FILE wchar.h.def
   GEN_HDR wchar.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.wchar_macros
+    .llvm-libc-types.mbstate_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
 )
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 
   add_gen_header(
@@ -571,7 +656,7 @@ foreach(target IN LISTS all_install_header_targets)
   # The GPU optionally provides the supported declarations externally so
   # offloading languages like CUDA and OpenMP know what is supported by libc. We
   # install these in the compiler's resource directory at a preset location.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND PACKAGE_VERSION)
+  if(LIBC_TARGET_OS_IS_GPU AND PACKAGE_VERSION)
     get_target_property(decls_file ${target} DECLS_FILE_PATH)
     if(NOT decls_file)
       continue()
@@ -586,3 +671,13 @@ foreach(target IN LISTS all_install_header_targets)
             COMPONENT libc-headers)
   endif()
 endforeach()
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_custom_target(install-libc-headers
+                    DEPENDS libc-headers
+                    COMMAND "${CMAKE_COMMAND}"
+                            -DCMAKE_INSTALL_COMPONENT=libc-headers
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  # Stripping is a no-op for headers
+  add_custom_target(install-libc-headers-stripped DEPENDS install-libc-headers)
+endif()

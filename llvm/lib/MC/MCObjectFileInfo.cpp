@@ -52,6 +52,10 @@ static bool useCompactUnwind(const Triple &T) {
   if (T.isSimulatorEnvironment())
     return true;
 
+  // XROS always has it.
+  if (T.isXROS())
+    return true;
+
   return false;
 }
 
@@ -550,6 +554,11 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   PPA2Section =
       Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(), TextSection,
                           MCConstantExpr::create(GOFF::SK_PPA2, *Ctx));
+
+  PPA2ListSection =
+      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(),
+                          nullptr, nullptr);
+
   ADASection =
       Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr, nullptr);
   IDRLSection =

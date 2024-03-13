@@ -1,5 +1,5 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zicond < %s 2>&1 | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zicond < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zicond < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv64 -mattr=+zicond < %s 2>&1 | FileCheck %s
 
 # Use of operand modifier on register name
 czero.eqz t1, %lo(t2), t3 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction

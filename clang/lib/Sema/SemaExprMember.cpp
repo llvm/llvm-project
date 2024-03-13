@@ -782,7 +782,8 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
                                const Scope *S,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
   if (BaseType->isDependentType() ||
-      (SS.isSet() && isDependentScopeSpecifier(SS)))
+      (SS.isSet() && isDependentScopeSpecifier(SS)) ||
+      NameInfo.getName().isDependentName())
     return ActOnDependentMemberExpr(Base, BaseType,
                                     IsArrow, OpLoc,
                                     SS, TemplateKWLoc, FirstQualifierInScope,

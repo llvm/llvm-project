@@ -62,12 +62,16 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
   Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
       object::ObjectFile::createObjectFile(MemBufferRef);
 
-  if (OptionalObject)
-    return isa<object::MachOObjectFile>(**OptionalObject)
-               ? object::Archive::K_DARWIN
-               : (isa<object::XCOFFObjectFile>(**OptionalObject)
-                      ? object::Archive::K_AIXBIG
-                      : object::Archive::K_GNU);
+  if (OptionalObject) {
+    if (isa<object::MachOObjectFile>(**OptionalObject))
+      return object::Archive::K_DARWIN;
+    if (isa<object::XCOFFObjectFile>(**OptionalObject))
+      return object::Archive::K_AIXBIG;
+    if (isa<object::COFFObjectFile>(**OptionalObject) ||
+        isa<object::COFFImportFile>(**OptionalObject))
+      return object::Archive::K_COFF;
+    return object::Archive::K_GNU;
+  }
 
   // Squelch the error in case we had a non-object file.
   consumeError(OptionalObject.takeError());
@@ -80,17 +84,14 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
             MemBufferRef, file_magic::bitcode, &Context)) {
       auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
       auto TargetTriple = Triple(IRObject.getTargetTriple());
-      return TargetTriple.isOSDarwin()
-                 ? object::Archive::K_DARWIN
-                 : (TargetTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                           : object::Archive::K_GNU);
+      return object::Archive::getDefaultKindForTriple(TargetTriple);
     } else {
       // Squelch the error in case this was not a SymbolicFile.
       consumeError(ObjOrErr.takeError());
     }
   }
 
-  return object::Archive::getDefaultKindForHost();
+  return object::Archive::getDefaultKind();
 }
 
 Expected<NewArchiveMember>
@@ -677,6 +678,13 @@ static bool isECObject(object::SymbolicFile &Obj) {
   return false;
 }
 
+bool isImportDescriptor(StringRef Name) {
+  return Name.starts_with(ImportDescriptorPrefix) ||
+         Name == StringRef{NullImportDescriptorSymbolName} ||
+         (Name.starts_with(NullThunkDataPrefix) &&
+          Name.ends_with(NullThunkDataSuffix));
+}
+
 static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
                                                   uint16_t Index,
                                                   raw_ostream &SymNames,
@@ -704,6 +712,10 @@ static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
       if (Map == &SymMap->Map) {
         Ret.push_back(SymNames.tell());
         SymNames << Name << '\0';
+        // If EC is enabled, then the import descriptors are NOT put into EC
+        // objects so we need to copy them to the EC map manually.
+        if (SymMap->UseECMap && isImportDescriptor(Name))
+          SymMap->ECMap[Name] = Index;
       }
     } else {
       Ret.push_back(SymNames.tell());
@@ -926,7 +938,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   ErrorOr<SmallString<128>> PathToOrErr = canonicalizePath(To);
   ErrorOr<SmallString<128>> DirFromOrErr = canonicalizePath(From);
   if (!PathToOrErr || !DirFromOrErr)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   const SmallString<128> &PathTo = *PathToOrErr;
   const SmallString<128> &DirFrom = sys::path::parent_path(*DirFromOrErr);
@@ -950,7 +962,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   for (auto ToE = sys::path::end(PathTo); ToI != ToE; ++ToI)
     sys::path::append(Relative, sys::path::Style::posix, *ToI);
 
-  return std::string(Relative.str());
+  return std::string(Relative);
 }
 
 static Error writeArchiveToStream(raw_ostream &Out,
@@ -965,10 +977,12 @@ static Error writeArchiveToStream(raw_ostream &Out,
   SmallString<0> StringTableBuf;
   raw_svector_ostream StringTable(StringTableBuf);
   SymMap SymMap;
+  bool ShouldWriteSymtab = WriteSymtab != SymtabWritingMode::NoSymtab;
 
   // COFF symbol map uses 16-bit indexes, so we can't use it if there are too
-  // many members.
-  if (isCOFFArchive(Kind) && NewMembers.size() > 0xfffe)
+  // many members. COFF format also requires symbol table presence, so use
+  // GNU format when NoSymtab is requested.
+  if (isCOFFArchive(Kind) && (NewMembers.size() > 0xfffe || !ShouldWriteSymtab))
     Kind = object::Archive::K_GNU;
 
   // In the scenario when LLVMContext is populated SymbolicFile will contain a
@@ -997,7 +1011,6 @@ static Error writeArchiveToStream(raw_ostream &Out,
   uint64_t LastMemberHeaderOffset = 0;
   uint64_t NumSyms = 0;
   uint64_t NumSyms32 = 0; // Store symbol number of 32-bit member files.
-  bool ShouldWriteSymtab = WriteSymtab != SymtabWritingMode::NoSymtab;
 
   for (const auto &M : Data) {
     // Record the start of the member's offset

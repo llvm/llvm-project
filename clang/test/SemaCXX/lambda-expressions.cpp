@@ -393,7 +393,7 @@ struct S {
 namespace PR18473 {
   template<typename T> void f() {
     T t(0);
-    (void) [=]{ int n = t; }; // expected-error {{deleted}} expected-note {{while substituting into a lambda}}
+    (void) [=]{ int n = t; }; // expected-error {{deleted}}
   }
 
   template void f<int>();
@@ -476,7 +476,7 @@ namespace error_in_transform_prototype {
   void f(T t) {
     // expected-error@+2 {{type 'int' cannot be used prior to '::' because it has no members}}
     // expected-error@+1 {{no member named 'ns' in 'error_in_transform_prototype::S'}}
-    auto x = [](typename T::ns::type &k) {}; // expected-note 2 {{while substituting into a lambda}}
+    auto x = [](typename T::ns::type &k) {};
   }
   class S {};
   void foo() {
@@ -731,4 +731,19 @@ void GH48527() {
 void GH67492() {
   constexpr auto test = 42;
   auto lambda = (test, []() noexcept(true) {});
+}
+
+namespace GH83267 {
+auto l = [](auto a) { return 1; };
+using type = decltype(l);
+
+template<>
+auto type::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+  return c; // expected-error {{use of undeclared identifier 'c'}}
+}
+
+auto ll = [](auto a) { return 1; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+using t = decltype(ll);
+template auto t::operator()<int>(int a) const; // expected-note {{in instantiation}}
+
 }

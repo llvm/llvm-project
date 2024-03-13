@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isMSVC
+from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [
@@ -88,6 +88,59 @@ def getStdFlag(cfg, std):
     return None
 
 
+def getSpeedOptimizationFlag(cfg):
+    if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
+        return "-O3"
+    elif _isMSVC(cfg):
+        return "/O2"
+    else:
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
+
+def getSizeOptimizationFlag(cfg):
+    if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
+        return "-Os"
+    elif _isMSVC(cfg):
+        return "/O1"
+    else:
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
+
+def testClangTidy(cfg, version, executable):
+    try:
+        if version in commandOutput(cfg, [f"{executable} --version"]):
+            return executable
+    except ConfigurationRuntimeError:
+        return None
+
+
+def getSuitableClangTidy(cfg):
+    # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
+    if (
+        runScriptExitCode(
+            cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]
+        )
+        != 0
+    ):
+        return None
+
+    version = "{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(
+        **compilerMacros(cfg)
+    )
+    exe = testClangTidy(
+        cfg, version, "clang-tidy-{__clang_major__}".format(**compilerMacros(cfg))
+    )
+
+    if not exe:
+        exe = testClangTidy(cfg, version, "clang-tidy")
+
+    return exe
+
+
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
@@ -117,6 +170,18 @@ DEFAULT_PARAMETERS = [
             AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
         ],
+    ),
+    Parameter(
+        name="optimization",
+        choices=["none", "speed", "size"],
+        type=str,
+        help="The optimization level to use when compiling the test suite.",
+        default="none",
+        actions=lambda opt: filter(None, [
+            AddCompileFlag(lambda cfg: getSpeedOptimizationFlag(cfg)) if opt == "speed" else None,
+            AddCompileFlag(lambda cfg: getSizeOptimizationFlag(cfg)) if opt == "size" else None,
+            AddFeature(f'optimization={opt}'),
+        ]),
     ),
     Parameter(
         name="enable_modules",
@@ -332,6 +397,16 @@ DEFAULT_PARAMETERS = [
         default=f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
-    )
+    ),
+    Parameter(
+        name='clang-tidy-executable',
+        type=str,
+        default=lambda cfg: getSuitableClangTidy(cfg),
+        help="Selects the clang-tidy executable to use.",
+        actions=lambda exe: [] if exe is None else [
+            AddFeature('has-clang-tidy'),
+            AddSubstitution('%{clang-tidy}', exe),
+        ]
+     ),
 ]
 # fmt: on

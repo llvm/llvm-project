@@ -47,9 +47,16 @@ Status OptionValueUInt64::SetValueFromString(llvm::StringRef value_ref,
     llvm::StringRef value_trimmed = value_ref.trim();
     uint64_t value;
     if (llvm::to_integer(value_trimmed, value)) {
-      m_value_was_set = true;
-      m_current_value = value;
-      NotifyValueChanged();
+      if (value >= m_min_value && value <= m_max_value) {
+        m_value_was_set = true;
+        m_current_value = value;
+        NotifyValueChanged();
+      } else {
+        error.SetErrorStringWithFormat(
+            "%" PRIu64 " is out of range, valid values must be between %" PRIu64
+            " and %" PRIu64 ".",
+            value, m_min_value, m_max_value);
+      }
     } else {
       error.SetErrorStringWithFormat("invalid uint64_t string value: '%s'",
                                      value_ref.str().c_str());

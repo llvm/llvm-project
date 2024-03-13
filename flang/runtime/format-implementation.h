@@ -66,15 +66,6 @@ template <typename CONTEXT>
 int FormatControl<CONTEXT>::GetIntField(
     IoErrorHandler &handler, CharType firstCh, bool *hadError) {
   CharType ch{firstCh ? firstCh : PeekNext()};
-  if (ch != '-' && ch != '+' && (ch < '0' || ch > '9')) {
-    handler.SignalError(IostatErrorInFormat,
-        "Invalid FORMAT: integer expected at '%c'", static_cast<char>(ch));
-    if (hadError) {
-      *hadError = true;
-    }
-    return 0;
-  }
-  int result{0};
   bool negate{ch == '-'};
   if (negate || ch == '+') {
     if (firstCh) {
@@ -84,9 +75,19 @@ int FormatControl<CONTEXT>::GetIntField(
     }
     ch = PeekNext();
   }
+  if (ch < '0' || ch > '9') {
+    handler.SignalError(IostatErrorInFormat,
+        "Invalid FORMAT: integer expected at '%c'", static_cast<char>(ch));
+    if (hadError) {
+      *hadError = true;
+    }
+    return 0;
+  }
+  int result{0};
   while (ch >= '0' && ch <= '9') {
-    if (result >
-        std::numeric_limits<int>::max() / 10 - (static_cast<int>(ch) - '0')) {
+    constexpr int tenth{std::numeric_limits<int>::max() / 10};
+    if (result > tenth ||
+        ch - '0' > std::numeric_limits<int>::max() - 10 * result) {
       handler.SignalError(
           IostatErrorInFormat, "FORMAT integer field out of range");
       if (hadError) {
@@ -245,8 +246,15 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       ch = GetNextChar(context);
     }
     if (ch == '-' || ch == '+' || (ch >= '0' && ch <= '9')) {
+      bool hadSign{ch == '-' || ch == '+'};
       repeat = GetIntField(context, ch);
       ch = GetNextChar(context);
+      if (hadSign && ch != 'p' && ch != 'P') {
+        ReportBadFormat(context,
+            "Invalid FORMAT: signed integer may appear only before 'P",
+            maybeReversionPoint);
+        return 0;
+      }
     } else if (ch == '*') {
       unlimited = true;
       ch = GetNextChar(context);
@@ -296,11 +304,11 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       return 0;
     } else if (ch == ')') {
       if (height_ == 1) {
+        hitEnd_ = true;
         if (stop) {
           return 0; // end of FORMAT and no data items remain
         }
         context.AdvanceRecord(); // implied / before rightmost )
-        hitEnd_ = true;
       }
       auto restart{stack_[height_ - 1].start};
       if (format_[restart] == '(') {

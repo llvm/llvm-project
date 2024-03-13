@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -69,14 +70,12 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
       ++NumCoveredExits;
     }
   }
-  // If there's a mix of covered and non-covered exits, just put the untag
-  // on exits, so we avoid the redundancy of untagging twice.
   if (NumCoveredExits == ReachableRetVec.size()) {
-    for (auto *End : Ends)
-      Callback(End);
+    for_each(Ends, Callback);
   } else {
-    for (auto *RI : ReachableRetVec)
-      Callback(RI);
+    // If there's a mix of covered and non-covered exits, just put the untag
+    // on exits, so we avoid the redundancy of untagging twice.
+    for_each(ReachableRetVec, Callback);
     // We may have inserted untag outside of the lifetime interval.
     // Signal the caller to remove the lifetime end call for this alloca.
     return false;
@@ -110,6 +109,24 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 }
 
 void StackInfoBuilder::visit(Instruction &Inst) {
+  // Visit non-intrinsic debug-info records attached to Inst.
+  for (DPValue &DPV : DPValue::filter(Inst.getDbgRecordRange())) {
+    auto AddIfInteresting = [&](Value *V) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!isInterestingAlloca(*AI))
+          return;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DPVVec = AInfo.DbgVariableRecords;
+        if (DPVVec.empty() || DPVVec.back() != &DPV)
+          DPVVec.push_back(&DPV);
+      }
+    };
+
+    for_each(DPV.location_ops(), AddIfInteresting);
+    if (DPV.isDbgAssign())
+      AddIfInteresting(DPV.getAddress());
+  }
+
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (CI->canReturnTwice()) {
       Info.CallsReturnTwice = true;
@@ -138,17 +155,21 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     return;
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    for (Value *V : DVI->location_ops()) {
+    auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
-          continue;
+          return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
       }
-    }
+    };
+    for_each(DVI->location_ops(), AddIfInteresting);
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      AddIfInteresting(DAI->getAddress());
   }
+
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
   if (ExitUntag)
     Info.RetVec.push_back(ExitUntag);
@@ -197,7 +218,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
   Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
   auto *NewAI = new AllocaInst(TypeWithPadding, Info.AI->getAddressSpace(),
-                               nullptr, "", Info.AI);
+                               nullptr, "", Info.AI->getIterator());
   NewAI->takeName(Info.AI);
   NewAI->setAlignment(Info.AI->getAlign());
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
@@ -208,7 +229,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 
   // TODO: Remove when typed pointers dropped
   if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
 
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();

@@ -17,6 +17,7 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -403,6 +404,18 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         x.split(compressions, ',');
         if (!compressions.empty())
           MaybeEnableCompression(compressions);
+      } else if (x.consume_front("SupportedWatchpointTypes=")) {
+        llvm::SmallVector<llvm::StringRef, 4> watchpoint_types;
+        x.split(watchpoint_types, ',');
+        m_watchpoint_types = eWatchpointHardwareFeatureUnknown;
+        for (auto wp_type : watchpoint_types) {
+          if (wp_type == "x86_64")
+            m_watchpoint_types |= eWatchpointHardwareX86;
+          if (wp_type == "aarch64-mask")
+            m_watchpoint_types |= eWatchpointHardwareArmMASK;
+          if (wp_type == "aarch64-bas")
+            m_watchpoint_types |= eWatchpointHardwareArmBAS;
+        }
       } else if (x.consume_front("PacketSize=")) {
         StringExtractorGDBRemote packet_response(x);
         m_max_packet_size =
@@ -1180,7 +1193,8 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
 static void ParseOSType(llvm::StringRef value, std::string &os_name,
                         std::string &environment) {
   if (value.equals("iossimulator") || value.equals("tvossimulator") ||
-      value.equals("watchossimulator")) {
+      value.equals("watchossimulator") || value.equals("xrossimulator") ||
+      value.equals("visionossimulator")) {
     environment = "simulator";
     os_name = value.drop_back(environment.size()).str();
   } else if (value.equals("maccatalyst")) {
@@ -1827,6 +1841,11 @@ std::optional<uint32_t> GDBRemoteCommunicationClient::GetWatchpointSlotCount() {
   return num;
 }
 
+WatchpointHardwareFeature
+GDBRemoteCommunicationClient::GetSupportedWatchpointTypes() {
+  return m_watchpoint_types;
+}
+
 std::optional<bool> GDBRemoteCommunicationClient::GetWatchpointReportedAfter() {
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
@@ -2129,8 +2148,20 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           if (!value.getAsInteger(16, cpu))
             ++num_keys_decoded;
         } else if (name.equals("cpusubtype")) {
-          if (!value.getAsInteger(16, sub))
+          if (!value.getAsInteger(16, sub)) {
             ++num_keys_decoded;
+            // Workaround for pre-2024 Apple debugserver, which always
+            // returns arm64e on arm64e-capable hardware regardless of
+            // what the process is. This can be deleted at some point
+            // in the future.
+            if (cpu == llvm::MachO::CPU_TYPE_ARM64 &&
+                sub == llvm::MachO::CPU_SUBTYPE_ARM64E) {
+              if (GetGDBServerVersion())
+                if (m_gdb_server_version >= 1000 &&
+                    m_gdb_server_version <= 1504)
+                  sub = 0;
+            }
+          }
         } else if (name.equals("triple")) {
           StringExtractor extractor(value);
           extractor.GetHexByteString(triple);

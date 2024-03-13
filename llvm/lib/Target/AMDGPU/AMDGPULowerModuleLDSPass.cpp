@@ -340,15 +340,25 @@ public:
 
     // Get uses from the current function, excluding uses by called functions
     // Two output variables to avoid walking the globals list twice
+    std::optional<bool> HasAbsoluteGVs;
     for (auto &GV : M.globals()) {
       if (!AMDGPU::isLDSVariableToLower(GV)) {
         continue;
       }
 
-      if (GV.isAbsoluteSymbolRef()) {
-        report_fatal_error(
-            "LDS variables with absolute addresses are unimplemented.");
-      }
+      // Check if the module is consistent: either all GVs are absolute (happens
+      // when we run the pass more than once), or none are.
+      const bool IsAbsolute = GV.isAbsoluteSymbolRef();
+      if (HasAbsoluteGVs.has_value()) {
+        if (*HasAbsoluteGVs != IsAbsolute) {
+          report_fatal_error(
+              "Module cannot mix absolute and non-absolute LDS GVs");
+        }
+      } else
+        HasAbsoluteGVs = IsAbsolute;
+
+      if (IsAbsolute)
+        continue;
 
       for (User *V : GV.users()) {
         if (auto *I = dyn_cast<Instruction>(V)) {
@@ -1026,6 +1036,51 @@ public:
     return N;
   }
 
+  /// Strip "amdgpu-no-lds-kernel-id" from any functions where we may have
+  /// introduced its use. If AMDGPUAttributor ran prior to the pass, we inferred
+  /// the lack of llvm.amdgcn.lds.kernel.id calls.
+  void removeNoLdsKernelIdFromReachable(CallGraph &CG, Function *KernelRoot) {
+    KernelRoot->removeFnAttr("amdgpu-no-lds-kernel-id");
+
+    SmallVector<Function *> Tmp({CG[KernelRoot]->getFunction()});
+    if (!Tmp.back())
+      return;
+
+    SmallPtrSet<Function *, 8> Visited;
+    bool SeenUnknownCall = false;
+
+    do {
+      Function *F = Tmp.pop_back_val();
+
+      for (auto &N : *CG[F]) {
+        if (!N.second)
+          continue;
+
+        Function *Callee = N.second->getFunction();
+        if (!Callee) {
+          if (!SeenUnknownCall) {
+            SeenUnknownCall = true;
+
+            // If we see any indirect calls, assume nothing about potential
+            // targets.
+            // TODO: This could be refined to possible LDS global users.
+            for (auto &N : *CG.getExternalCallingNode()) {
+              Function *PotentialCallee = N.second->getFunction();
+              if (!isKernelLDS(PotentialCallee))
+                PotentialCallee->removeFnAttr("amdgpu-no-lds-kernel-id");
+            }
+
+            continue;
+          }
+        }
+
+        Callee->removeFnAttr("amdgpu-no-lds-kernel-id");
+        if (Visited.insert(Callee).second)
+          Tmp.push_back(Callee);
+      }
+    } while (!Tmp.empty());
+  }
+
   DenseMap<Function *, GlobalVariable *> lowerDynamicLDSVariables(
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       DenseSet<Function *> const &KernelsThatIndirectlyAllocateDynamicLDS,
@@ -1175,6 +1230,13 @@ public:
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
       replaceUsesInInstructionsWithTableLookup(M, TableLookupVariablesOrdered,
                                                LookupTable);
+
+      // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
+      // kernel. We may have inferred this wasn't used prior to the pass.
+      //
+      // TODO: We could filter out subgraphs that do not access LDS globals.
+      for (Function *F : KernelsThatAllocateTableLDS)
+        removeNoLdsKernelIdFromReachable(CG, F);
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =

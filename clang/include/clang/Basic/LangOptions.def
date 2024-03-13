@@ -174,6 +174,7 @@ LANGOPT(MathErrno         , 1, 1, "errno in math functions")
 BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like and may be ripped out at any time")
 LANGOPT(Modules           , 1, 0, "modules semantics")
 COMPATIBLE_LANGOPT(CPlusPlusModules, 1, 0, "C++ modules syntax")
+LANGOPT(SkipODRCheckInGMF, 1, 0, "Skip ODR checks for decls in the global module fragment")
 LANGOPT(BuiltinHeadersInSystemModules, 1, 0, "builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers")
 BENIGN_ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None,
                     "compiling a module interface")
@@ -220,7 +221,7 @@ BENIGN_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization wit
 BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
-ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_Full, "Enable use of range reduction for complex arithmetics.")
+ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_None, "Enable use of range reduction for complex arithmetics.")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 
@@ -260,6 +261,7 @@ LANGOPT(OpenMPTeamSubscription  , 1, 0, "Assume distributed loops do not have mo
 LANGOPT(OpenMPNoThreadState  , 1, 0, "Assume that no thread in a parallel region will modify an ICV.")
 LANGOPT(OpenMPNoNestedParallelism  , 1, 0, "Assume that no thread in a parallel region will encounter a parallel region")
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, "Assert that offloading is mandatory and do not create a host fallback.")
+LANGOPT(OpenMPForceUSM     , 1, 0, "Enable OpenMP unified shared memory mode via compiler.")
 LANGOPT(NoGPULib  , 1, 0, "Indicate a build without the standard GPU libraries.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
@@ -308,7 +310,8 @@ BENIGN_LANGOPT(IgnoreXCOFFVisibility, 1, 0, "All the visibility attributes that 
 BENIGN_LANGOPT(VisibilityInlinesHiddenStaticLocalVar, 1, 0,
                "hidden visibility for static local variables in inline C++ "
                "methods when -fvisibility-inlines hidden is enabled")
-LANGOPT(GlobalAllocationFunctionVisibilityHidden , 1, 0, "hidden visibility for global operator new and delete declaration")
+ENUM_LANGOPT(GlobalAllocationFunctionVisibility, VisibilityForcedKinds, 3, VisibilityForcedKinds::ForceDefault,
+             "How to apply visibility to global operator new and delete declarations")
 LANGOPT(NewInfallible , 1, 0, "Treats throwing global C++ operator new as always returning valid memory (annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.")
 BENIGN_LANGOPT(ParseUnknownAnytype, 1, 0, "__unknown_anytype")
 BENIGN_LANGOPT(DebuggerSupport , 1, 0, "debugger support")
@@ -359,16 +362,16 @@ BENIGN_ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
              "default visibility for types [-ftype-visibility]")
 LANGOPT(SetVisibilityForExternDecls, 1, 0,
         "apply global symbol visibility to external declarations without an explicit visibility")
-LANGOPT(VisibilityFromDLLStorageClass, 1, 0,
-        "set the visiblity of globals from their DLL storage class [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(DLLExportVisibility, Visibility, 3, DefaultVisibility,
-             "visibility for functions and variables with dllexport annotations [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(NoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
-             "visibility for functions and variables without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(ExternDeclDLLImportVisibility, Visibility, 3, DefaultVisibility,
-             "visibility for external declarations with dllimport annotations [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
-             "visibility for external declarations without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
+BENIGN_LANGOPT(VisibilityFromDLLStorageClass, 1, 0,
+               "override the visibility of globals based on their final DLL storage class [-fvisibility-from-dllstorageclass]")
+BENIGN_ENUM_LANGOPT(DLLExportVisibility, VisibilityFromDLLStorageClassKinds, 3, VisibilityFromDLLStorageClassKinds::Default,
+             "how to adjust the visibility for functions and variables with dllexport annotations [-fvisibility-dllexport]")
+BENIGN_ENUM_LANGOPT(NoDLLStorageClassVisibility, VisibilityFromDLLStorageClassKinds, 3, VisibilityFromDLLStorageClassKinds::Hidden,
+             "how to adjust the visibility for functions and variables without an explicit DLL storage class [-fvisibility-nodllstorageclass]")
+BENIGN_ENUM_LANGOPT(ExternDeclDLLImportVisibility, VisibilityFromDLLStorageClassKinds, 3, VisibilityFromDLLStorageClassKinds::Default,
+             "how to adjust the visibility for external declarations with dllimport annotations [-fvisibility-externs-dllimport]")
+BENIGN_ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, VisibilityFromDLLStorageClassKinds, 3,  VisibilityFromDLLStorageClassKinds::Hidden,
+             "how to adjust the visibility for external declarations without an explicit DLL storage class [-fvisibility-externs-nodllstorageclass]")
 BENIGN_LANGOPT(SemanticInterposition        , 1, 0, "semantic interposition")
 BENIGN_LANGOPT(HalfNoSemanticInterposition, 1, 0,
                "Like -fno-semantic-interposition but don't use local aliases")
@@ -378,6 +381,8 @@ ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKi
              "trivial automatic variable initialization")
 VALUE_LANGOPT(TrivialAutoVarInitStopAfter, 32, 0,
              "stop trivial automatic variable initialization after the specified number of instances. Must be greater than 0.")
+VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
+             "stop trivial automatic variable initialization if var size exceeds the specified size (in bytes). Must be greater than 0.")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")
 ENUM_LANGOPT(ThreadModel  , ThreadModelKind, 2, ThreadModelKind::POSIX, "Thread Model")
@@ -445,6 +450,8 @@ LANGOPT(RegCall4, 1, 0, "Set __regcall4 as a default calling convention to respe
 
 LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
 
+LANGOPT(CXXAssumptions, 1, 1, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
+
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default,
              "Rely on strict definition of flexible arrays")
@@ -457,6 +464,7 @@ ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddres
              "Key used for return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, "Branch-target enforcement enabled")
 LANGOPT(BranchProtectionPAuthLR, 1, 0, "Use PC as a diversifier using PAuthLR NOP instructions.")
+LANGOPT(GuardedControlStack, 1, 0, "Guarded control stack enabled")
 
 LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 
@@ -480,7 +488,7 @@ VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
 // on large _BitInts.
 BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
 
-LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
+COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
         "on the global scope, ignore EOF token and continue later on (thus "
         "avoid tearing the Lexer and etc. down). Controlled by "
         "-fincremental-extensions.")

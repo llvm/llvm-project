@@ -10,6 +10,8 @@
 // expected-no-diagnostics
 #endif
 
+// dr2504 is in dr2504.cpp
+
 namespace dr2516 { // dr2516: 3.0
                    // NB: reusing 1482 test
 #if __cplusplus >= 201103L
@@ -83,7 +85,7 @@ using ::dr2521::operator""_div;
 
 
 #if __cplusplus >= 202302L
-namespace dr2553 { // dr2553: 18
+namespace dr2553 { // dr2553: 18 review 2023-07-14
 struct B {
   virtual void f(this B&); 
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
@@ -101,7 +103,7 @@ struct D : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2554 { // dr2554: 18 review
+namespace dr2554 { // dr2554: 18 review 2021-12-10
 struct B {
   virtual void f(); // #dr2554-g
 };
@@ -128,7 +130,7 @@ struct D3 : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2561 { // dr2561: 18 review
+namespace dr2561 { // dr2561: 18 review 2023-11-09
 struct C {
     constexpr C(auto) { }
 };
@@ -143,7 +145,7 @@ void foo() {
 #endif
 
 
-namespace dr2565 { // dr2565: 16
+namespace dr2565 { // dr2565: 16 open 2023-06-07
 #if __cplusplus >= 202002L
   template<typename T>
     concept C = requires (typename T::type x) {
@@ -205,6 +207,96 @@ namespace dr2565 { // dr2565: 16
   static_assert(NestedErrorInRequires<int>);
   // expected-error@-1 {{static assertion failed}}
   //   expected-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+
+#endif
+}
+
+namespace dr2583 { // dr2583: 19
+#if __cplusplus >= 201103L
+struct A {
+  int i;
+  char c;
+};
+
+struct B {
+  int i;
+  alignas(8) char c;
+};
+
+union U {
+  A a;
+  B b;
+};
+
+union V {
+  A a;
+  alignas(64) B b;
+};
+
+static_assert(!__is_layout_compatible(A, B), "");
+static_assert(__is_layout_compatible(U, V), "");
+#endif
+} // namespace dr2583
+
+namespace dr2598 { // dr2598: 18
+#if __cplusplus >= 201103L
+struct NonLiteral {
+    NonLiteral();
+};
+
+struct anonymous1 {
+    union {} a;
+};
+static_assert(__is_literal(anonymous1), "");
+
+struct anonymous2 {
+    union { char c; };
+};
+static_assert(__is_literal(anonymous2), "");
+
+struct anonymous3 {
+    union { char c; NonLiteral NL; };
+};
+static_assert(__is_literal(anonymous3), "");
+
+struct anonymous4 {
+    union { NonLiteral NL; };
+};
+static_assert(!__is_literal(anonymous4), "");
+
+union empty {};
+static_assert(__is_literal(empty), "");
+
+union union1 { char c; };
+static_assert(__is_literal(union1), "");
+
+union union2 { char c; NonLiteral NL;};
+static_assert(__is_literal(union2), "");
+
+union union3 { NonLiteral NL;};
+static_assert(!__is_literal(union3), "");
+
+union union4 { union4(); };
+static_assert(!__is_literal(union4), "");
+
+union union5 { static NonLiteral NL; };
+static_assert(__is_literal(union5), "");
+
+struct Literal { constexpr Literal() {} };
+union union6 { NonLiteral NL; Literal L; };
+static_assert(__is_literal(union6), "");
+
+#if __cplusplus >= 202003L
+struct A { A(); };
+union U {
+  A a;
+  constexpr U() {}
+  constexpr ~U() {}
+};
+static_assert(!__is_literal(U), "");
+#endif
+
+
 
 #endif
 }

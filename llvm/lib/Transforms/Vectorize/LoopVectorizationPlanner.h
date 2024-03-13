@@ -79,6 +79,13 @@ public:
   VPBasicBlock *getInsertBlock() const { return BB; }
   VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
 
+  /// Create a VPBuilder to insert after \p R.
+  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
+    VPBuilder B;
+    B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
+    return B;
+  }
+
   /// InsertPoint - A saved insertion point.
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
@@ -131,8 +138,9 @@ public:
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
-  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Instruction *Inst = nullptr, const Twine &Name = "") {
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              Instruction *Inst = nullptr,
+                              const Twine &Name = "") {
     DebugLoc DL;
     if (Inst)
       DL = Inst->getDebugLoc();
@@ -140,34 +148,35 @@ public:
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
-  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        DebugLoc DL, const Twine &Name = "") {
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
-                                     DebugLoc DL, const Twine &Name = "") {
+                                     DebugLoc DL = {}, const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
-  VPValue *createNot(VPValue *Operand, DebugLoc DL, const Twine &Name = "") {
+  VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
+                     const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
     return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL, const Twine &Name = "",
+                        DebugLoc DL = {}, const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
     auto *Select =
         FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
@@ -346,16 +355,20 @@ public:
   /// Return the best VPlan for \p VF.
   VPlan &getBestPlanFor(ElementCount VF) const;
 
-  /// Generate the IR code for the body of the vectorized loop according to the
-  /// best selected \p VF, \p UF and VPlan \p BestPlan.
+  /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
+  /// according to the best selected \p VF and  \p UF.
+  ///
   /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
   /// vectorization re-using plans for both the main and epilogue vector loops.
   /// It should be removed once the re-use issue has been fixed.
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
-  /// to re-use expansion results generated during main plan execution. Returns
-  /// a mapping of SCEVs to their expanded IR values. Note that this is a
-  /// temporary workaround needed due to the current epilogue handling.
-  DenseMap<const SCEV *, Value *>
+  /// to re-use expansion results generated during main plan execution.
+  ///
+  /// Returns a mapping of SCEVs to their expanded IR values and a mapping for
+  /// the reduction resume values. Note that this is a temporary workaround
+  /// needed due to the current epilogue handling.
+  std::pair<DenseMap<const SCEV *, Value *>,
+            DenseMap<const RecurrenceDescriptor *, Value *>>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               bool IsEpilogueVectorization,

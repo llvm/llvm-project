@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/TypedPointerType.h"
 #include <string>
 
 namespace llvm {
@@ -27,6 +28,7 @@ class MachineRegisterInfo;
 class Register;
 class StringRef;
 class SPIRVInstrInfo;
+class SPIRVSubtarget;
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
@@ -62,7 +64,7 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace);
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI);
 
 SPIRV::MemorySemantics::MemorySemantics
 getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
@@ -79,7 +81,7 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID);
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -88,14 +90,41 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I);
 // name, otherwise return an empty string.
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
 
-// If Type is a pointer type and it is not opaque pointer, return its
-// element type, otherwise return Type.
-const Type *getTypedPtrEltType(const Type *Type);
-
 // Check if a string contains a builtin prefix.
 bool hasBuiltinTypePrefix(StringRef Name);
 
 // Check if given LLVM type is a special opaque builtin type.
 bool isSpecialOpaqueType(const Type *Ty);
+
+// Check if the function is an SPIR-V entry point
+bool isEntryPoint(const Function &F);
+
+// Parse basic scalar type name, substring TypeName, and return LLVM type.
+Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
+
+// True if this is an instance of TypedPointerType.
+inline bool isTypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::TypedPointerTyID;
+}
+
+// True if this is an instance of PointerType.
+inline bool isUntypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::PointerTyID;
+}
+
+// True if this is an instance of PointerType or TypedPointerType.
+inline bool isPointerTy(const Type *T) {
+  return isUntypedPointerTy(T) || isTypedPointerTy(T);
+}
+
+// Get the address space of this pointer or pointer vector type for instances of
+// PointerType or TypedPointerType.
+inline unsigned getPointerAddressSpace(const Type *T) {
+  Type *SubT = T->getScalarType();
+  return SubT->getTypeID() == Type::PointerTyID
+             ? cast<PointerType>(SubT)->getAddressSpace()
+             : cast<TypedPointerType>(SubT)->getAddressSpace();
+}
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

@@ -117,8 +117,12 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   if (!BasePtr0.BaseReg.isValid() || !BasePtr1.BaseReg.isValid())
     return false;
 
-  int64_t Size1 = LdSt1->getMemSize();
-  int64_t Size2 = LdSt2->getMemSize();
+  LocationSize Size1 = LdSt1->getMemSize() != MemoryLocation::UnknownSize
+                           ? LdSt1->getMemSize()
+                           : LocationSize::beforeOrAfterPointer();
+  LocationSize Size2 = LdSt2->getMemSize() != MemoryLocation::UnknownSize
+                           ? LdSt2->getMemSize()
+                           : LocationSize::beforeOrAfterPointer();
 
   int64_t PtrDiff;
   if (BasePtr0.BaseReg == BasePtr1.BaseReg) {
@@ -128,20 +132,18 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
     // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
-    if (PtrDiff >= 0 &&
-        Size1 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+    if (PtrDiff >= 0 && Size1.hasValue()) {
       // [----BasePtr0----]
       //                         [---BasePtr1--]
       // ========PtrDiff========>
-      IsAlias = !(Size1 <= PtrDiff);
+      IsAlias = !((int64_t)Size1.getValue() <= PtrDiff);
       return true;
     }
-    if (PtrDiff < 0 &&
-        Size2 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+    if (PtrDiff < 0 && Size2.hasValue()) {
       //                     [----BasePtr0----]
       // [---BasePtr1--]
       // =====(-PtrDiff)====>
-      IsAlias = !((PtrDiff + Size2) <= 0);
+      IsAlias = !((PtrDiff + (int64_t)Size2.getValue()) <= 0);
       return true;
     }
     return false;
@@ -196,7 +198,7 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
     bool IsAtomic;
     Register BasePtr;
     int64_t Offset;
-    uint64_t NumBytes;
+    LocationSize NumBytes;
     MachineMemOperand *MMO;
   };
 
@@ -212,16 +214,22 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
         Offset = 0;
       }
 
-      uint64_t Size = MemoryLocation::getSizeOrUnknown(
-          LS->getMMO().getMemoryType().getSizeInBytes());
-      return {LS->isVolatile(),       LS->isAtomic(),          BaseReg,
-              Offset /*base offset*/, Size, &LS->getMMO()};
+      TypeSize Size = LS->getMMO().getMemoryType().getSizeInBytes();
+      return {LS->isVolatile(),
+              LS->isAtomic(),
+              BaseReg,
+              Offset /*base offset*/,
+              Size.isScalable() ? LocationSize::beforeOrAfterPointer()
+                                : LocationSize::precise(Size),
+              &LS->getMMO()};
     }
     // FIXME: support recognizing lifetime instructions.
     // Default.
     return {false /*isvolatile*/,
-            /*isAtomic*/ false,          Register(),
-            (int64_t)0 /*offset*/,       0 /*size*/,
+            /*isAtomic*/ false,
+            Register(),
+            (int64_t)0 /*offset*/,
+            LocationSize::beforeOrAfterPointer() /*size*/,
             (MachineMemOperand *)nullptr};
   };
   MemUseCharacteristics MUC0 = getCharacteristics(&MI),
@@ -262,15 +270,14 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
   // FIXME: port the alignment based alias analysis from SDAG's isAlias().
   int64_t SrcValOffset0 = MUC0.MMO->getOffset();
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
-  uint64_t Size0 = MUC0.NumBytes;
-  uint64_t Size1 = MUC1.NumBytes;
-  if (AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
-      Size0 != MemoryLocation::UnknownSize &&
-      Size1 != MemoryLocation::UnknownSize) {
+  LocationSize Size0 = MUC0.NumBytes;
+  LocationSize Size1 = MUC1.NumBytes;
+  if (AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() && Size0.hasValue() &&
+      Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = Size0 + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = Size1 + SrcValOffset1 - MinOffset;
+    int64_t Overlap0 = Size0.getValue() + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 = Size1.getValue() + SrcValOffset1 - MinOffset;
     if (AA->isNoAlias(MemoryLocation(MUC0.MMO->getValue(), Overlap0,
                                      MUC0.MMO->getAAInfo()),
                       MemoryLocation(MUC1.MMO->getValue(), Overlap1,

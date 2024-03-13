@@ -29,7 +29,9 @@
 #include <semaphore.h>
 #endif // KMP_OS_LINUX
 #include <sys/resource.h>
+#if !KMP_OS_AIX
 #include <sys/syscall.h>
+#endif
 #include <sys/time.h>
 #include <sys/times.h>
 #include <unistd.h>
@@ -57,10 +59,19 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <pthread_np.h>
+#if KMP_OS_DRAGONFLY
+#include <kvm.h>
+#endif
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#if KMP_OS_NETBSD
+#include <sched.h>
+#endif
 #elif KMP_OS_SOLARIS
+#include <libproc.h>
+#include <procfs.h>
+#include <thread.h>
 #include <sys/loadavg.h>
 #endif
 
@@ -114,7 +125,8 @@ static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
 }
 #endif
 
-#if ((KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED)
+#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&  \
+     KMP_AFFINITY_SUPPORTED)
 
 /* Affinity support */
 
@@ -139,8 +151,10 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 #if KMP_OS_LINUX
 #define KMP_CPU_SET_SIZE_LIMIT (1024 * 1024)
 #define KMP_CPU_SET_TRY_SIZE CACHE_LINE
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_DRAGONFLY
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
+#elif KMP_OS_NETBSD
+#define KMP_CPU_SET_SIZE_LIMIT (256)
 #endif
 
   int verbose = __kmp_affinity.flags.verbose;
@@ -228,7 +242,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_INTERNAL_FREE(buf);
     return;
   }
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
@@ -413,15 +427,14 @@ void __kmp_terminate_thread(int gtid) {
   KMP_YIELD(TRUE);
 } //
 
-/* Set thread stack info according to values returned by pthread_getattr_np().
+/* Set thread stack info.
    If values are unreasonable, assume call failed and use incremental stack
    refinement method instead. Returns TRUE if the stack parameters could be
    determined exactly, FALSE if incremental refinement is necessary. */
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD || KMP_OS_SOLARIS
-  pthread_attr_t attr;
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   int status;
   size_t size = 0;
   void *addr = 0;
@@ -431,6 +444,19 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
      pthread_attr_getstack may cause thread gtid aliasing */
   if (!KMP_UBER_GTID(gtid)) {
 
+#if KMP_OS_SOLARIS
+    stack_t s;
+    if ((status = thr_stksegment(&s)) < 0) {
+      KMP_CHECK_SYSFAIL("thr_stksegment", status);
+    }
+
+    addr = s.ss_sp;
+    size = s.ss_size;
+    KA_TRACE(60, ("__kmp_set_stack_info: T#%d thr_stksegment returned size:"
+                  " %lu, low addr: %p\n",
+                  gtid, size, addr));
+#else
+    pthread_attr_t attr;
     /* Fetch the real thread attributes */
     status = pthread_attr_init(&attr);
     KMP_CHECK_SYSFAIL("pthread_attr_init", status);
@@ -449,6 +475,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
               gtid, size, addr));
     status = pthread_attr_destroy(&attr);
     KMP_CHECK_SYSFAIL("pthread_attr_destroy", status);
+#endif
   }
 
   if (size != 0 && addr != 0) { // was stack parameter determination successful?
@@ -1040,9 +1067,7 @@ extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
 #else
 // Empty symbol to export (see exports_so.txt) when
 // monitor thread feature is disabled
-extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
-  (void)th;
-}
+extern "C" void __kmp_reap_monitor(kmp_info_t *th) { (void)th; }
 #endif // KMP_USE_MONITOR
 
 void __kmp_reap_worker(kmp_info_t *th) {
@@ -1243,7 +1268,7 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
@@ -1832,7 +1857,7 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -2131,7 +2156,95 @@ int __kmp_is_address_mapped(void *addr) {
     lw += cursz;
   }
   kmpc_free(buf);
+#elif KMP_OS_DRAGONFLY
+  char err[_POSIX2_LINE_MAX];
+  kinfo_proc *proc;
+  vmspace sp;
+  vm_map *cur;
+  vm_map_entry entry, *c;
+  struct proc p;
+  kvm_t *fd;
+  uintptr_t uaddr;
+  int num;
 
+  fd = kvm_openfiles(nullptr, nullptr, nullptr, O_RDONLY, err);
+  if (!fd) {
+    return 0;
+  }
+
+  proc = kvm_getprocs(fd, KERN_PROC_PID, getpid(), &num);
+
+  if (kvm_read(fd, static_cast<uintptr_t>(proc->kp_paddr), &p, sizeof(p)) !=
+          sizeof(p) ||
+      kvm_read(fd, reinterpret_cast<uintptr_t>(p.p_vmspace), &sp, sizeof(sp)) !=
+          sizeof(sp)) {
+    kvm_close(fd);
+    return 0;
+  }
+
+  (void)rc;
+  cur = &sp.vm_map;
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+  for (c = kvm_vm_map_entry_first(fd, cur, &entry); c;
+       c = kvm_vm_map_entry_next(fd, c, &entry)) {
+    if ((uaddr >= entry.ba.start) && (uaddr <= entry.ba.end)) {
+      if ((entry.protection & VM_PROT_READ) != 0 &&
+          (entry.protection & VM_PROT_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  kvm_close(fd);
+#elif KMP_OS_SOLARIS
+  prmap_t *cur, *map;
+  void *buf;
+  uintptr_t uaddr;
+  ssize_t rd;
+  int err;
+  int file;
+
+  pid_t pid = getpid();
+  struct ps_prochandle *fd = Pgrab(pid, PGRAB_RDONLY, &err);
+  ;
+
+  if (!fd) {
+    return 0;
+  }
+
+  char *name = __kmp_str_format("/proc/%d/map", pid);
+  size_t sz = (1 << 20);
+  file = open(name, O_RDONLY);
+  if (file == -1) {
+    KMP_INTERNAL_FREE(name);
+    return 0;
+  }
+
+  buf = kmpc_malloc(sz);
+
+  while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
+    void *newbuf;
+    sz <<= 1;
+    newbuf = kmpc_realloc(buf, sz);
+    buf = newbuf;
+  }
+
+  map = reinterpret_cast<prmap_t *>(buf);
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+
+  for (cur = map; rd > 0; cur++, rd = -sizeof(*map)) {
+    if ((uaddr >= cur->pr_vaddr) && (uaddr < cur->pr_vaddr)) {
+      if ((cur->pr_mflags & MA_READ) != 0 && (cur->pr_mflags & MA_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  kmpc_free(map);
+  close(file);
+  KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN
 
   /* On OS X*, /proc pseudo filesystem is not available. Try to read memory
@@ -2210,9 +2323,9 @@ int __kmp_is_address_mapped(void *addr) {
   }
 #elif KMP_OS_WASI
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
-#elif KMP_OS_DRAGONFLY || KMP_OS_SOLARIS
+#elif KMP_OS_AIX
 
-  // FIXME(DragonFly, Solaris): Implement this
+  // FIXME(AIX): Implement this
   found = 1;
 
 #else
@@ -2317,7 +2430,7 @@ int __kmp_get_load_balance(int max) {
   // Open "/proc/" directory.
   proc_dir = opendir("/proc");
   if (proc_dir == NULL) {
-    // Cannot open "/prroc/". Probably the kernel does not support it. Return an
+    // Cannot open "/proc/". Probably the kernel does not support it. Return an
     // error now and in subsequent calls.
     running_threads = -1;
     permanent_error = 1;
@@ -2330,9 +2443,14 @@ int __kmp_get_load_balance(int max) {
 
   proc_entry = readdir(proc_dir);
   while (proc_entry != NULL) {
+#if KMP_OS_AIX
+    // Proc entry name starts with a digit. Assume it is a  process' directory.
+    if (isdigit(proc_entry->d_name[0])) {
+#else
     // Proc entry is a directory and name starts with a digit. Assume it is a
     // process' directory.
     if (proc_entry->d_type == DT_DIR && isdigit(proc_entry->d_name[0])) {
+#endif
 
 #ifdef KMP_DEBUG
       ++total_processes;
@@ -2376,7 +2494,11 @@ int __kmp_get_load_balance(int max) {
         task_entry = readdir(task_dir);
         while (task_entry != NULL) {
           // It is a directory and name starts with a digit.
+#if KMP_OS_AIX
+          if (isdigit(task_entry->d_name[0])) {
+#else
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
+#endif
 
             // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,
@@ -2486,7 +2608,7 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

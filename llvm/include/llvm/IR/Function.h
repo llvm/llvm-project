@@ -430,6 +430,9 @@ public:
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const;
 
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttribute(Attribute::AttrKind Kind) const;
+
   /// For a string attribute \p Kind, parse attribute as an integer.
   ///
   /// \returns \p Default if attribute is not present.
@@ -722,8 +725,9 @@ public:
   /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
+    Function::iterator FIt = BasicBlocks.insert(Position, BB);
     BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
-    return BasicBlocks.insert(Position, BB);
+    return FIt;
   }
 
   /// Transfer all blocks from \p FromF to this function at \p ToIt.

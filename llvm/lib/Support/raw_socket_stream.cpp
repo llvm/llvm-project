@@ -52,7 +52,7 @@ static std::error_code getLastSocketErrorCode() {
 #ifdef _WIN32
   return std::error_code(::WSAGetLastError(), std::system_category());
 #else
-  return std::error_code(errno, std::system_category());
+  return errnoAsErrorCode();
 #endif
 }
 
@@ -170,10 +170,3 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 
 raw_socket_stream::~raw_socket_stream() {}
 
-//===----------------------------------------------------------------------===//
-//  raw_string_ostream
-//===----------------------------------------------------------------------===//
-
-void raw_string_ostream::write_impl(const char *Ptr, size_t Size) {
-  OS.append(Ptr, Size);
-}

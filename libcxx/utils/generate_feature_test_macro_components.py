@@ -88,9 +88,8 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
-                "c++23": 202106,
                 # Note LWG3887 Version macro for allocate_at_least
-                # "c++26": 202302, # P2652R2 Disallow User Specialization of allocator_traits
+                "c++23": 202302,  # P2652R2 Disallow User Specialization of allocator_traits
             },
             "headers": ["memory"],
         },
@@ -456,8 +455,8 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
-            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
         },
         {
             "name": "__cpp_lib_format",
@@ -467,6 +466,7 @@ feature_test_macros = [
                 # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
+                # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
@@ -570,7 +570,8 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -880,6 +881,8 @@ feature_test_macros = [
             "name": "__cpp_lib_quoted_string_io",
             "values": {"c++14": 201304},
             "headers": ["iomanip"],
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
         },
         {
             "name": "__cpp_lib_ranges",
@@ -912,6 +915,11 @@ feature_test_macros = [
             "headers": ["ranges"],
         },
         {
+            "name": "__cpp_lib_ranges_contains",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
@@ -938,7 +946,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_starts_ends_with",
             "values": {"c++23": 202106},
             "headers": ["algorithm"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_to_container",
@@ -1011,15 +1018,14 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [
-                "numeric"  # TODO verify this entry since the paper was underspecified.
-            ],
-            "unimplemented": True,
+            "headers": ["numeric"],
         },
         {
             "name": "__cpp_lib_scoped_lock",
             "values": {"c++17": 201703},
             "headers": ["mutex"],
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
         },
         {
             "name": "__cpp_lib_semaphore",
@@ -1086,10 +1092,14 @@ feature_test_macros = [
             "headers": ["span"],
         },
         {
+            "name": "__cpp_lib_span_at",
+            "values": {"c++26": 202311},  # P2821R3 span.at()
+            "headers": ["span"],
+        },
+        {
             "name": "__cpp_lib_span_initializer_list",
             "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_spanstream",
@@ -1108,7 +1118,6 @@ feature_test_macros = [
                 "c++26": 202306  # P2495R3 Interfacing stringstreams with string_view
             },
             "headers": ["sstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_stacktrace",
@@ -1222,7 +1231,7 @@ feature_test_macros = [
             "name": "__cpp_lib_tuple_like",
             "values": {
                 "c++23": 202207,  # P2165R4 Compatibility between tuple, pair and tuple-like objects
-                "c++26": 202311,  # P2819R2 Add tuple protocol to complex
+                "c++26": 202311,  # P2819R2 Add tuple protocol to complex (implemented)
             },
             "headers": ["map", "tuple", "unordered_map", "utility"],
             "unimplemented": True,
@@ -1264,7 +1273,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_variant",
-            "values": {"c++17": 202102},
+            "values": {
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit (implemented)
+            },
             "headers": ["variant"],
         },
         {
@@ -1504,7 +1517,6 @@ def produce_version_header():
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 
@@ -1759,7 +1771,7 @@ def pad_cell(s, length, left_align=True):
 def get_status_table():
     table = [["Macro Name", "Value"]]
     for std in get_std_dialects():
-        table += [["**" + std.replace("c++", "C++ ") + "**", ""]]
+        table += [["**" + std.replace("c++", "C++") + "**", ""]]
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue

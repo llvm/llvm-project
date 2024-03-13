@@ -115,7 +115,7 @@ bool SymbolFileOnDemand::ForEachExternalModule(
 }
 
 bool SymbolFileOnDemand::ParseSupportFiles(CompileUnit &comp_unit,
-                                           FileSpecList &support_files) {
+                                           SupportFileList &support_files) {
   LLDB_LOG(GetLog(),
            "[{0}] {1} is not skipped: explicitly allowed to support breakpoint",
            GetSymbolFileName(), __FUNCTION__);
@@ -535,11 +535,11 @@ void SymbolFileOnDemand::PreloadSymbols() {
   return m_sym_file_impl->PreloadSymbols();
 }
 
-uint64_t SymbolFileOnDemand::GetDebugInfoSize() {
+uint64_t SymbolFileOnDemand::GetDebugInfoSize(bool load_all_debug_info) {
   // Always return the real debug info size.
   LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
            __FUNCTION__);
-  return m_sym_file_impl->GetDebugInfoSize();
+  return m_sym_file_impl->GetDebugInfoSize(load_all_debug_info);
 }
 
 StatsDuration::Duration SymbolFileOnDemand::GetDebugInfoParseTime() {

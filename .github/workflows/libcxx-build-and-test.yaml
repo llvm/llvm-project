@@ -23,8 +23,8 @@ on:
       - 'cmake/**'
       - '.github/workflows/libcxx-build-and-test.yaml'
   schedule:
-    # Run nightly at 8 AM UTC (or roughly 3 AM eastern)
-    - cron: '0 3 * * *'
+    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+    - cron: '0 8 * * *'
 
 permissions:
   contents: read # Default everything to read-only
@@ -35,7 +35,6 @@ concurrency:
 
 
 env:
-  CMAKE: "/opt/bin/cmake"
   # LLVM POST-BRANCH bump version
   # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
   # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
@@ -76,7 +75,7 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
           ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -125,10 +124,10 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
           ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
-          name: ${{ matrix.config }}-results
+          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
           path: |
             **/test-results.xml
             **/*.abilist
@@ -161,32 +160,26 @@ jobs:
           'generic-no-unicode',
           'generic-no-wide-characters',
           'generic-no-rtti',
+          'generic-optimized-speed',
           'generic-static',
-          'generic-with_llvm_unwinder',
           # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
           # or don't provide much value since the benchmark run results are too noise on the bots.
           'benchmarks',
           'bootstrapping-build'
         ]
         machine: [ 'libcxx-runners-8-set' ]
-        std_modules: [ 'OFF' ]
         include:
         - config: 'generic-cxx26'
           machine: libcxx-runners-8-set
-          std_modules: 'ON'
         - config: 'generic-asan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
         - config: 'generic-tsan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
         - config: 'generic-ubsan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
     runs-on: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@v4
@@ -196,8 +189,7 @@ jobs:
           CC: clang-18
           CXX: clang++-18
           ENABLE_CLANG_TIDY: "OFF"
-          ENABLE_STD_MODULES: ${{ matrix.std_modules }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
           name: ${{ matrix.config }}-results
@@ -207,3 +199,45 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+  windows:
+    runs-on: windows-2022
+    needs: [ stage1 ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - { config: clang-cl-dll, mingw: false }
+        - { config: clang-cl-static, mingw: false }
+        - { config: clang-cl-no-vcruntime, mingw: false }
+        - { config: clang-cl-debug, mingw: false }
+        - { config: clang-cl-static-crt, mingw: false }
+        - { config: mingw-dll, mingw: true }
+        - { config: mingw-static, mingw: true }
+        - { config: mingw-dll-i686, mingw: true }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          choco install -y ninja wget
+          pip install psutil
+      - name: Install a current LLVM
+        if: ${{ matrix.mingw != true }}
+        run: |
+          choco install -y llvm --version=17.0.6
+      - name: Install llvm-mingw
+        if: ${{ matrix.mingw == true }}
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-x86_64.zip
+          powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
+          del llvm-mingw*.zip
+          mv llvm-mingw* c:\llvm-mingw
+          echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Add Git Bash to the path
+        run: |
+          echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Set up the MSVC dev environment
+        if: ${{ matrix.mingw != true }}
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build and test
+        run: |
+          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
