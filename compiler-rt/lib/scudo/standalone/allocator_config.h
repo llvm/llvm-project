@@ -38,80 +38,10 @@
 
 namespace scudo {
 
-// The combined allocator uses a structure as a template argument that
-// specifies the configuration options for the various subcomponents of the
-// allocator.
-//
-// struct ExampleConfig {
-//   // Indicates possible support for Memory Tagging.
-//   static const bool MaySupportMemoryTagging = false;
-//
-//   // Thread-Specific Data Registry used, shared or exclusive.
-//   template <class A> using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>;
-//
-//   struct Primary {
-//     // SizeClassMap to use with the Primary.
-//     using SizeClassMap = DefaultSizeClassMap;
-//
-//     // Log2 of the size of a size class region, as used by the Primary.
-//     static const uptr RegionSizeLog = 30U;
-//
-//     // Log2 of the size of block group, as used by the Primary. Each group
-//     // contains a range of memory addresses, blocks in the range will belong
-//     // to the same group. In general, single region may have 1 or 2MB group
-//     // size. Multiple regions will have the group size equal to the region
-//     // size because the region size is usually smaller than 1 MB.
-//     // Smaller value gives fine-grained control of memory usage but the
-//     // trade-off is that it may take longer time of deallocation.
-//     static const uptr GroupSizeLog = 20U;
-//
-//     // Defines the type and scale of a compact pointer. A compact pointer can
-//     // be understood as the offset of a pointer within the region it belongs
-//     // to, in increments of a power-of-2 scale.
-//     // eg: Ptr = Base + (CompactPtr << Scale).
-//     typedef u32 CompactPtrT;
-//     static const uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
-//
-//     // Indicates support for offsetting the start of a region by
-//     // a random number of pages. Only used with primary64.
-//     static const bool EnableRandomOffset = true;
-//
-//     // Call map for user memory with at least this size. Only used with
-//     // primary64.
-//     static const uptr MapSizeIncrement = 1UL << 18;
-//
-//     // Defines the minimal & maximal release interval that can be set.
-//     static const s32 MinReleaseToOsIntervalMs = INT32_MIN;
-//     static const s32 MaxReleaseToOsIntervalMs = INT32_MAX;
-//
-//     // Use condition variable to shorten the waiting time of refillment of
-//     // freelist. Note that this depends on the implementation of condition
-//     // variable on each platform and the performance may vary so that it
-//     // doesn't guarantee a performance benefit.
-//     // Note that both variables have to be defined to enable it.
-//     static const bool UseConditionVariable = true;
-//     using ConditionVariableT = ConditionVariableLinux;
-//   };
-//   // Defines the type of Primary allocator to use.
-//   template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
-//
-//   // Defines the type of cache used by the Secondary. Some additional
-//   // configuration entries can be necessary depending on the Cache.
-//   struct Secondary {
-//     struct Cache {
-//       static const u32 EntriesArraySize = 32U;
-//       static const u32 QuarantineSize = 0U;
-//       static const u32 DefaultMaxEntriesCount = 32U;
-//       static const uptr DefaultMaxEntrySize = 1UL << 19;
-//       static const s32 MinReleaseToOsIntervalMs = INT32_MIN;
-//       static const s32 MaxReleaseToOsIntervalMs = INT32_MAX;
-//     };
-//     // Defines the type of Secondary Cache to use.
-//     template <typename Config> using CacheT = MapAllocatorCache<Config>;
-//   };
-//   // Defines the type of Secondary allocator to use.
-//   template <typename Config> using SecondaryT = MapAllocator<Config>;
-// };
+// Scudo uses a structure as a template argument that specifies the
+// configuration options for the various subcomponents of the allocator. See the
+// following configs as examples and check `allocator_config.def` for all the
+// available options.
 
 #ifndef SCUDO_USE_CUSTOM_CONFIG
 
