@@ -924,16 +924,6 @@ def checkPexpectSupport():
         if configuration.verbose:
             print("pexpect tests will be skipped because of unsupported platform")
         configuration.skip_categories.append("pexpect")
-    elif not configuration.shouldSkipBecauseOfCategories(["pexpect"]):
-        try:
-            import pexpect
-        except:
-            raise Exception(
-                "Tests in the 'pexpect' category will run, but pexpect is not installed. "
-                "Either install it (via pip or via a distro package), "
-                "or skip them by configuring cmake with "
-                "-DLLDB_TEST_USER_ARGS=--skip-category=pexpect"
-            )
 
 
 def run_suite():
