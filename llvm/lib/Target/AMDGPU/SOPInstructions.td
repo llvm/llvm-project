@@ -1819,12 +1819,16 @@ let SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
       let mayLoad = 1;
       let mayStore = 1;
+      let Uses = [ASYNCcnt];
+      let Defs = [ASYNCcnt];
     }
   def S_WAIT_TENSORCNT :
     SOPP_Pseudo<"s_wait_tensorcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]> {
       let mayLoad = 1;
       let mayStore = 1;
+      let Uses = [TENSORcnt];
+      let Defs = [TENSORcnt];
     }
   def S_WAIT_XCNT :
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
