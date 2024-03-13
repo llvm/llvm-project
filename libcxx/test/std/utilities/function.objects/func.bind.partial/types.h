@@ -35,8 +35,6 @@ struct CopyMoveInfo {
   constexpr CopyMoveInfo(CopyMoveInfo&&) : copy_kind(move) {}
 };
 
-constexpr int pass(int n) { return n; }
-
 template <class T>
 T do_nothing(T t) {
   return t;

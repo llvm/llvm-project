@@ -17,11 +17,15 @@
 
 #include "types.h"
 
-void test() {
-  { // Various failures
-    auto p = std::bind_back(pass, 1);
-    static_assert(p() == 1); // expected-error {{static assertion expression is not an integral constant expression}}
+constexpr int pass(int n) { return n; }
 
+void test() {
+  { // Test calling constexpr function from non-constexpr `bind_back` unspecified-type
+    auto f1 = std::bind_back(pass, 1);
+    static_assert(f1() == 1); // expected-error {{static assertion expression is not an integral constant expression}}
+  }
+
+  { // Various failures
     auto d = std::bind_back(do_nothing, 2); // expected-error {{no matching function for call to 'bind_back'}}
   }
 
