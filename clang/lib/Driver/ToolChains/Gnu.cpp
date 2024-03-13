@@ -377,9 +377,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsStaticPIE = getStaticPIE(Args, ToolChain);
   const bool IsStatic = getStatic(Args);
   const bool HasCRTBeginEndFiles =
-    !isMusl && (ToolChain.getTriple().hasEnvironment() ||
-                (ToolChain.getTriple().getVendor()
-                 != llvm::Triple::MipsTechnologies));
+      !isMusl &&
+      (ToolChain.getTriple().hasEnvironment() ||
+       (ToolChain.getTriple().getVendor() != llvm::Triple::MipsTechnologies));
 
   ArgStringList CmdArgs;
 
