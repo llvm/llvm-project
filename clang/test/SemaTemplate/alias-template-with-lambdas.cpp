@@ -77,6 +77,16 @@ void bar() {
   int x = T11()();
   using T12 = Meow<int>;
   using T13 = MeowMeow<char, int, long, unsigned>;
+
+  static_assert(__is_same(T, void));
+  static_assert(__is_same(T2, void));
+  static_assert(__is_same(T3, void));
+  static_assert(__is_same(T4, decltype(sizeof(0))));
+  static_assert(__is_same(T6, void));
+  static_assert(__is_same(T9, void));
+  static_assert(__is_same(T10, int));
+  static_assert(__is_same(T12, void));
+  static_assert(__is_same(T13, void));
 }
 
 namespace GH82104 {
@@ -87,6 +97,8 @@ template <typename T, typename...U>
 using T14 = decltype([]<int V = 0>() { return Zero<T, U...>; }());
 
 template <typename T> using T15 = T14<T, T>;
+
+static_assert(__is_same(T15<char>, int));
 
 } // namespace GH82104
 
