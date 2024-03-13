@@ -496,6 +496,21 @@ inline BinaryOpc_match<LHS, RHS, true> m_Mul(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_And(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::AND, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::XOR, L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, false> m_UDiv(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, false>(ISD::UDIV, L, R);
 }
