@@ -180,6 +180,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # time.h entrypoints
+    libc.src.time.difftime
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
