@@ -1787,7 +1787,24 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
     }
   }
 
-  return EmitLoadOfLValue(E);
+  llvm::Value *Result = EmitLoadOfLValue(E);
+
+  // If -fdebug-info-for-pointer-type is specified, emit a pseudo variable and
+  // its debug info for the pointer, even if there is no variable associated
+  // with the pointer's expression.
+  if (CGF.CGM.getCodeGenOpts().DebugInfoForPointerType && CGF.getDebugInfo()) {
+    if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Result)) {
+      if (llvm::GetElementPtrInst *GEP =
+              dyn_cast<llvm::GetElementPtrInst>(Load->getPointerOperand())) {
+        if (llvm::Instruction *Pointer =
+                dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
+          CGF.getDebugInfo()->EmitPseudoVariable(
+              Builder, Pointer, E->getBase()->getType(), E->getExprLoc());
+        }
+      }
+    }
+  }
+  return Result;
 }
 
 Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {

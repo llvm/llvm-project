@@ -1024,6 +1024,8 @@ namespace llvm {
       N->replaceAllUsesWith(Replacement);
       return Replacement;
     }
+
+    Function *GetDeclareFn() { return DeclareFn; }
   };
 
   // Create wrappers for C Binding types (see CBindingWrapping.h).

@@ -3104,11 +3104,6 @@ public:
   /// Get the record field index as represented in debug info.
   unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
 
-  /// When the result of EmitLoadOfScalar is immediately assigned to a declared
-  /// variable, the pseudo variable emitted for it (when the flag
-  /// -fdebug-info-for-pointer-type is specified) should be undone since there
-  /// is already a debug value emitted for the declared variable.
-  llvm::Value *UnemitPseudoVariable(llvm::Value *V);
 
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission

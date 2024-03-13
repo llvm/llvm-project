@@ -793,7 +793,6 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   Qualifiers::ObjCLifetime lifetime = lvalue.getObjCLifetime();
   if (!lifetime) {
     llvm::Value *value = EmitScalarExpr(init);
-    value = UnemitPseudoVariable(value);
     if (capturedByInit)
       drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));
     EmitNullabilityCheck(lvalue, value, init->getExprLoc());

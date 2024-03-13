@@ -170,9 +170,6 @@ class CGDebugInfo {
   /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
   Param2DILocTy ParamDbgMappings;
 
-  /// Cached object for GetPseudoVariableAnnotation().
-  llvm::MDNode *PseudoVariableAnnotation = nullptr;
-
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -532,15 +529,11 @@ public:
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
-  /// Emit debug information for a pseudo variable assigned to the value of an
-  /// intermediate expression, so that a performance counter can track the usage
-  /// of a specific expression of interest.
-  void EmitPseudoVariable(llvm::AllocaInst *Alloca, QualType Ty,
-                          SourceLocation Loc);
-
-  /// Get the special annotation tag that indicates the instruction is
-  /// associated with EmitPseudoVariable.
-  llvm::MDNode *GetPseudoVariableAnnotation();
+  /// Emit a pseudo variable and debug info for an intermediate value if it does
+  /// not correspond to a variable in the source code, so that a profiler can
+  /// track more accurate usage of certain instructions of interest.
+  void EmitPseudoVariable(CGBuilderTy &Builder, llvm::Instruction *Value,
+                          QualType Ty, SourceLocation Loc);
 
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);

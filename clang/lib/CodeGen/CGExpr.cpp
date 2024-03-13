@@ -951,39 +951,6 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-/// When a pseudo variable is created for %1, it generates these instructions
-/// in sequence and return %2:
-/// %pseudo = alloca Ty
-/// call void @llvm.dbg.declare(metadata ptr %pseudo, metadata, metadata)
-/// store Ty %1, ptr %pseudo
-/// %2 = load ptr, ptr %pseudo
-/// To undo, we detect and remove this sequence, and replace %2 back with %1.
-llvm::Value *CodeGenFunction::UnemitPseudoVariable(llvm::Value *V) {
-  if (CGDebugInfo *DI = getDebugInfo()) {
-    if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(V)) {
-      if (llvm::MDNode *Tag =
-              Load->getMetadata(llvm::LLVMContext::MD_annotation)) {
-        if (Tag == DI->GetPseudoVariableAnnotation()) {
-          llvm::Value *PseudoVar = Load->getPointerOperand();
-          llvm::AllocaInst *Alloca = dyn_cast<llvm::AllocaInst>(PseudoVar);
-          llvm::StoreInst *Store =
-              dyn_cast_if_present<llvm::StoreInst>(Load->getPrevNode());
-          assert(Store && Store->getPointerOperand() == PseudoVar);
-          llvm::Value *OriginalValue = Store->getValueOperand();
-          V->replaceAllUsesWith(OriginalValue);
-          assert(Store->getPrevNode()->getPrevNode() == PseudoVar);
-          auto It = Load->getIterator();
-          for (int i = 0; i < 4; i++) {
-            (It--)->eraseFromParent();
-          }
-          return OriginalValue;
-        }
-      }
-    }
-  }
-  return V;
-}
-
 namespace {
 
 /// \p StructAccessBase returns the base \p Expr of a field access. It returns
@@ -2047,40 +2014,6 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       Load->setMetadata(llvm::LLVMContext::MD_noundef,
                         llvm::MDNode::get(getLLVMContext(), std::nullopt));
     }
-
-  // if -g2 or above and -fdebug-info-for-pointer-type are enabled, emit
-  // additional debug info for loads in an intermediate expression, which allows
-  // a performance counter to deduce the type of the value being loaded, even if
-  // it does not correspond to a variable in the source code.
-  // Since there is no variable correspond to an intermediate expression, we
-  // create a pseudo variable for it and emit its debug info, as if the
-  // expression were written in SSA form.
-  if (CGM.getCodeGenOpts().getDebugInfo() >
-          llvm::codegenoptions::DebugLineTablesOnly &&
-      CGM.getCodeGenOpts().DebugInfoForPointerType) {
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      // We only generate this debug info if loading from GEP, not from other
-      // cases such as loading a function argument.
-      if (isa<llvm::GetElementPtrInst>(Load->getOperand(0))) {
-        const llvm::DebugLoc &DebugLoc = Load->getDebugLoc();
-        llvm::AllocaInst *PseudoVar =
-            Builder.CreateAlloca(Load->getType(), nullptr,
-                                 Twine("pseudo_")
-                                     .concat(Twine(DebugLoc.getLine()))
-                                     .concat("_")
-                                     .concat(Twine(DebugLoc.getCol())));
-        DI->EmitPseudoVariable(PseudoVar, Ty, Loc);
-        Address PseudoVarAddr(PseudoVar, Load->getType(), Addr.getAlignment());
-        Builder.CreateStore(Load, PseudoVarAddr);
-        Load = Builder.CreateLoad(PseudoVarAddr);
-        // Set a special metadata tag to this instruction, in the case we need
-        // to revert it because there is already a destination variable for the
-        // load.
-        Load->setMetadata(llvm::LLVMContext::MD_annotation,
-                          DI->GetPseudoVariableAnnotation());
-      }
-    }
-  }
 
   return EmitFromMemory(Load, Ty);
 }
@@ -5636,8 +5569,6 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     }
 
     RValue RV = EmitAnyExpr(E->getRHS());
-    if (isa<DeclRefExpr>(E->getLHS()) && RV.isScalar())
-      RV = RValue::get(UnemitPseudoVariable(RV.getScalarVal()));
     LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
     if (RV.isScalar())
       EmitNullabilityCheck(LV, RV.getScalarVal(), E->getExprLoc());
