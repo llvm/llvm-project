@@ -48,8 +48,8 @@ public:
   public:
     FrontEnd(ObjCRuntimeSyntheticProvider *prv, ValueObject &backend);
 
-    size_t CalculateNumChildren() override;
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    llvm::Expected<uint32_t> CalculateNumChildren() override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
     lldb::ChildCacheState Update() override {
       return lldb::ChildCacheState::eRefetch;
     }

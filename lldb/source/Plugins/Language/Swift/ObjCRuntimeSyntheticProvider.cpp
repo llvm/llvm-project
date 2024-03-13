@@ -34,9 +34,10 @@ size_t ObjCRuntimeSyntheticProvider::FrontEnd::GetNumBases() {
   return m_provider->m_descriptor_sp->GetSuperclass().get() ? 1 : 0;
 }
 
-size_t ObjCRuntimeSyntheticProvider::FrontEnd::CalculateNumChildren() {
-  size_t ivars = m_provider->GetNumIVars();
-  size_t bases = GetNumBases();
+llvm::Expected<uint32_t>
+ObjCRuntimeSyntheticProvider::FrontEnd::CalculateNumChildren() {
+  uint32_t ivars = m_provider->GetNumIVars();
+  uint32_t bases = GetNumBases();
   return bases + ivars;
 }
 
@@ -59,9 +60,9 @@ ObjCRuntimeSyntheticProvider::FrontEnd::FrontEnd(
       m_root_sp(::GetSuitableRootObject(backend.GetSP())) {}
 
 lldb::ValueObjectSP
-ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
+ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(uint32_t idx) {
   lldb::ValueObjectSP child_sp(nullptr);
-  if (idx < CalculateNumChildren()) {
+  if (idx < CalculateNumChildrenIgnoringErrors()) {
     if (GetNumBases() == 1) {
       if (idx == 0) {
         do {
@@ -117,7 +118,7 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
 
 size_t ObjCRuntimeSyntheticProvider::FrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  for (size_t idx = 0; idx < CalculateNumChildren(); idx++) {
+  for (size_t idx = 0; idx < CalculateNumChildrenIgnoringErrors(); idx++) {
     const auto &ivar_info(m_provider->GetIVarAtIndex(idx));
     if (name == ivar_info.m_name)
       return idx + GetNumBases();

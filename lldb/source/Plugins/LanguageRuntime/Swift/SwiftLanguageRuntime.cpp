@@ -299,10 +299,10 @@ public:
     return {};
   }
 
-  std::optional<unsigned> GetNumChildren(CompilerType type,
+  llvm::Expected<uint32_t> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scopej) {
     STUB_LOG();
-    return {};
+    return 0;
   }
 
   std::optional<std::string> GetEnumCaseName(CompilerType type,
@@ -1720,11 +1720,11 @@ protected:
       m_num_bases = type.GetNumDirectBaseClasses();
     }
 
-    size_t CalculateNumChildren() override {
+    llvm::Expected<uint32_t> CalculateNumChildren() override {
       return m_projection->field_projections.size() + m_num_bases;
     }
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
       if (idx < m_num_bases) {
         if (ValueObjectSP base_object_sp =
                 m_backend.GetChildAtIndex(idx, true)) {
@@ -1805,7 +1805,9 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
     if (swift_type.IsValid()) {
       ExecutionContext exe_ctx(m_process);
       bool any_projected = false;
-      for (size_t idx = 0, e = swift_type.GetNumChildren(true, &exe_ctx);
+      for (size_t idx = 0, e = llvm::expectedToStdOptional(
+                                   swift_type.GetNumChildren(true, &exe_ctx))
+                                   .value_or(0);
            idx < e; idx++) {
         // if a projection fails, keep going - we have offsets here, so it
         // should be OK to skip some members
@@ -1843,7 +1845,7 @@ SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
   // - Value type wrappers, which has one ivar, a single char array with the
   // swift value embedded directly in it.
   // In all cases the value object should have exactly one child.
-  if (valobj.GetNumChildren() != 1)
+  if (valobj.GetNumChildrenIgnoringErrors() != 1)
     return {};
 
   auto child_valobj = valobj.GetChildAtIndex(0, true);
@@ -1855,7 +1857,7 @@ SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
   if (child_name == "swift::_impl::RefCountedClass") {
     // The super class should have exactly one ivar, the opaque pointer that
     // points to the Swift instance.
-    if (child_valobj->GetNumChildren() != 1)
+    if (child_valobj->GetNumChildrenIgnoringErrors() != 1)
       return {};
 
     auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
@@ -1866,7 +1868,7 @@ SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
   }
 
   if (child_name == "swift::_impl::OpaqueStorage") {
-    if (child_valobj->GetNumChildren() != 1)
+    if (child_valobj->GetNumChildrenIgnoringErrors() != 1)
       return {};
 
     auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
@@ -2425,7 +2427,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
   FORWARD(GetMemberVariableOffset, instance_type, instance, member_name, error);
 }
 
-std::optional<unsigned>
+llvm::Expected<uint32_t>
 SwiftLanguageRuntime::GetNumChildren(CompilerType type,
                                      ExecutionContextScope *exe_scope) {
   FORWARD(GetNumChildren, type, exe_scope);

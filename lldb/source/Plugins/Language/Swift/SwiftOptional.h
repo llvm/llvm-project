@@ -82,8 +82,8 @@ class SwiftOptionalSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   SwiftOptionalSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;

@@ -6492,13 +6492,14 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   return lldb::eEncodingInvalid;
 }
 
-uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
-                                         bool omit_empty_base_classes,
-                                         const ExecutionContext *exe_ctx) {
-  VALID_OR_RETURN_CHECK_TYPE(type, 0);
+llvm::Expected<uint32_t>
+SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
+                                bool omit_empty_base_classes,
+                                const ExecutionContext *exe_ctx) {
+  VALID_OR_RETURN_CHECK_TYPE(
+      type, llvm::make_error<llvm::StringError>(
+                "invalid type", llvm::inconvertibleErrorCode()));
   LLDB_SCOPED_TIMER();
-
-  uint32_t num_children = 0;
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
@@ -6594,15 +6595,16 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
         swift_can_type->castTo<swift::LValueType>();
     swift::TypeBase *deref_type = lvalue_type->getObjectType().getPointer();
 
-    uint32_t num_pointee_children =
+    llvm::Expected<uint32_t> num_pointee_children =
         ToCompilerType(deref_type)
             .GetNumChildren(omit_empty_base_classes, exe_ctx);
+    if (!num_pointee_children)
+      return num_pointee_children;
     // If this type points to a simple type (or to a class), then it
     // has 1 child.
-    if (num_pointee_children == 0 || deref_type->getClassOrBoundGenericClass())
-      num_children = 1;
-    else
-      num_children = num_pointee_children;
+    if (*num_pointee_children == 0 || deref_type->getClassOrBoundGenericClass())
+      return 1;
+    return num_pointee_children;
   } break;
 
   case swift::TypeKind::UnboundGeneric:
@@ -6617,7 +6619,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
     break;
   }
 
-  return num_children;
+  return 0;
 }
 
 #pragma mark Aggregate Types
@@ -6724,7 +6726,9 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::Existential:
-    return GetNumChildren(type, /*omit_empty_base_classes=*/false, nullptr);
+    return llvm::expectedToStdOptional(
+               GetNumChildren(type, /*omit_empty_base_classes=*/false, nullptr))
+        .value_or(0);
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
@@ -7459,7 +7463,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     break;
 
   case swift::TypeKind::LValue:
-    if (idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx)) {
+    if (idx < llvm::expectedToStdOptional(
+                  GetNumChildren(type, omit_empty_base_classes, exe_ctx))
+                  .value_or(0)) {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
       Flags pointee_clang_type_flags(pointee_clang_type.GetTypeInfo());
       const char *parent_name = valobj ? valobj->GetName().GetCString() : NULL;

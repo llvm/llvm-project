@@ -120,7 +120,7 @@ bool SwiftArrayNativeBufferHandler::IsValid() {
 }
 
 size_t SwiftArrayBridgedBufferHandler::GetCount() {
-  return m_frontend->CalculateNumChildren();
+  return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
 
 size_t SwiftArrayBridgedBufferHandler::GetCapacity() { return GetCount(); }
@@ -248,11 +248,11 @@ bool SwiftArraySliceBufferHandler::IsValid() {
 }
 
 size_t SwiftSyntheticFrontEndBufferHandler::GetCount() {
-  return m_frontend->CalculateNumChildren();
+  return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
 
 size_t SwiftSyntheticFrontEndBufferHandler::GetCapacity() {
-  return m_frontend->CalculateNumChildren();
+  return m_frontend->CalculateNumChildrenIgnoringErrors();
 }
 
 lldb_private::CompilerType
@@ -471,14 +471,17 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::ArraySyntheticFrontEnd(
     Update();
 }
 
-size_t lldb_private::formatters::swift::ArraySyntheticFrontEnd::
-    CalculateNumChildren() {
-  return m_array_buffer ? m_array_buffer->GetCount() : 0;
+llvm::Expected<uint32_t> lldb_private::formatters::swift::
+    ArraySyntheticFrontEnd::CalculateNumChildren() {
+  if (m_array_buffer)
+    return m_array_buffer->GetCount();
+  return llvm::make_error<llvm::StringError>("failed to update array data",
+                                             llvm::inconvertibleErrorCode());
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_array_buffer)
     return ValueObjectSP();
 
@@ -511,7 +514,7 @@ size_t lldb_private::formatters::swift::ArraySyntheticFrontEnd::
     return UINT32_MAX;
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
     return UINT32_MAX;
   return idx;
 }

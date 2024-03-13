@@ -711,8 +711,8 @@ class EnumSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   EnumSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;
@@ -734,14 +734,14 @@ lldb_private::formatters::swift::EnumSyntheticFrontEnd::EnumSyntheticFrontEnd(
     Update();
 }
 
-size_t
+llvm::Expected<uint32_t>
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::CalculateNumChildren() {
   return m_child_index != UINT32_MAX ? 1 : 0;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (idx)
     return ValueObjectSP();
   if (m_child_index == UINT32_MAX)

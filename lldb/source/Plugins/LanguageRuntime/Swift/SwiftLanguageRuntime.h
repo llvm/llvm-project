@@ -315,7 +315,7 @@ public:
                                                    Status *error = nullptr);
 
   /// Ask Remote Mirrors about the children of a composite type.
-  std::optional<unsigned> GetNumChildren(CompilerType type,
+  llvm::Expected<uint32_t> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scope);
 
   /// Determine the enum case name for the \p data value of the enum \p type.

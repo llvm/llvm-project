@@ -153,7 +153,7 @@ public:
     : m_cocoaObject_sp(cocoaObject_sp), m_frontend(frontend) {}
 
   virtual size_t GetCount() override {
-    return m_frontend->CalculateNumChildren();
+    return m_frontend->CalculateNumChildrenIgnoringErrors();
   }
 
   virtual CompilerType GetElementType() override {
@@ -702,13 +702,15 @@ HashedSyntheticChildrenFrontEnd::HashedSyntheticChildrenFrontEnd(
     m_buffer()
 {}
 
-size_t
+llvm::Expected<uint32_t>
 HashedSyntheticChildrenFrontEnd::CalculateNumChildren() {
-  return m_buffer ? m_buffer->GetCount() : 0;
+  if (m_buffer)
+    return m_buffer->GetCount();
+  return llvm::make_error<llvm::StringError>(
+      "failed to update hashed container", llvm::inconvertibleErrorCode());
 }
 
-ValueObjectSP
-HashedSyntheticChildrenFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP HashedSyntheticChildrenFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!m_buffer)
     return ValueObjectSP();
 
@@ -737,7 +739,7 @@ HashedSyntheticChildrenFrontEnd::GetIndexOfChildWithName(ConstString name) {
     return UINT32_MAX;
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
     return UINT32_MAX;
   return idx;
 }

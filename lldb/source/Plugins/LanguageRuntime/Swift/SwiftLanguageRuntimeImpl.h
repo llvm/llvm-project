@@ -128,7 +128,7 @@ public:
                                                    llvm::StringRef member_name,
                                                    Status *error);
 
-  std::optional<unsigned> GetNumChildren(CompilerType type,
+  llvm::Expected<uint32_t> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scope);
 
   std::optional<unsigned> GetNumFields(CompilerType type,
