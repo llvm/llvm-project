@@ -2799,8 +2799,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
         // Limit this to after legalization if the add has wrap flags
         (Level >= AfterLegalizeDAG || (!N->getFlags().hasNoUnsignedWrap() &&
                                        !N->getFlags().hasNoSignedWrap()))) {
-      SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
-                                DAG.getAllOnesConstant(DL, VT));
+      SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
       return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(1), Not);
     }
   }
@@ -3025,8 +3024,7 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
       // Limit this to after legalization if the add has wrap flags
       (Level >= AfterLegalizeDAG || (!N0->getFlags().hasNoUnsignedWrap() &&
                                      !N0->getFlags().hasNoSignedWrap()))) {
-    SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
-                              DAG.getAllOnesConstant(DL, VT));
+    SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
     return DAG.getNode(ISD::SUB, DL, VT, N1, Not);
   }
 
