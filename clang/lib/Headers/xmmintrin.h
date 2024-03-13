@@ -1404,8 +1404,8 @@ _mm_cvt_ps2pi(__m128 __a)
   return _mm_cvtps_pi32(__a);
 }
 
-/// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 32-bit integer, truncating an inexact result.
+/// Converts the lower (first) element of a vector of [4 x float] into a signed
+///    truncated (rounded toward zero) 32-bit integer.
 ///
 ///    If the converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -1426,8 +1426,8 @@ _mm_cvttss_si32(__m128 __a)
   return __builtin_ia32_cvttss2si((__v4sf)__a);
 }
 
-/// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 32-bit integer, truncating an inexact result.
+/// Converts the lower (first) element of a vector of [4 x float] into a signed
+///    truncated (rounded toward zero) 32-bit integer.
 ///
 ///    If the converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -1449,8 +1449,8 @@ _mm_cvtt_ss2si(__m128 __a)
 }
 
 #ifdef __x86_64__
-/// Converts a float value contained in the lower 32 bits of a vector of
-///    [4 x float] into a 64-bit integer, truncating an inexact result.
+/// Converts the lower (first) element of a vector of [4 x float] into a signed
+///    truncated (rounded toward zero) 64-bit integer.
 ///
 ///    If the converted value does not fit in a 64-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -1472,9 +1472,9 @@ _mm_cvttss_si64(__m128 __a)
 }
 #endif
 
-/// Converts two low-order float values in a 128-bit vector of
-///    [4 x float] into a 64-bit vector of [2 x i32], truncating inexact
-///    results.
+/// Converts the lower (first) two elements of a 128-bit vector of [4 x float]
+///    into two signed truncated (rounded toward zero) 32-bit integers,
+///    returned in a 64-bit vector of [2 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -1494,8 +1494,9 @@ _mm_cvttps_pi32(__m128 __a)
   return (__m64)__builtin_ia32_cvttps2pi((__v4sf)__a);
 }
 
-/// Converts two low-order float values in a 128-bit vector of [4 x
-///    float] into a 64-bit vector of [2 x i32], truncating inexact results.
+/// Converts the lower (first) two elements of a 128-bit vector of [4 x float]
+///    into two signed truncated (rounded toward zero) 64-bit integers,
+///    returned in a 64-bit vector of [2 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns

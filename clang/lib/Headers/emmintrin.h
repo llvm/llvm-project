@@ -1412,9 +1412,9 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cvtss_sd(__m128d __a,
 }
 
 /// Converts the two double-precision floating-point elements of a
-///    128-bit vector of [2 x double] into two signed 32-bit integer values,
-///    returned in the lower 64 bits of a 128-bit vector of [4 x i32],
-///    truncating inexact results.
+///    128-bit vector of [2 x double] into two signed truncated (rounded
+///    toward zero) 32-bit integer values, returned in the lower 64 bits
+///    of a 128-bit vector of [4 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -1434,7 +1434,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvttpd_epi32(__m128d __a) {
 }
 
 /// Converts the low-order element of a [2 x double] vector into a 32-bit
-///    signed integer value, truncating inexact results.
+///    signed truncated (rounded toward zero) integer value.
 ///
 ///    If the converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -1473,8 +1473,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX _mm_cvtpd_pi32(__m128d __a) {
 }
 
 /// Converts the two double-precision floating-point elements of a
-///    128-bit vector of [2 x double] into two signed 32-bit integer values,
-///    returned in a 64-bit vector of [2 x i32], truncating inexact results.
+///    128-bit vector of [2 x double] into two signed truncated (rounded toward
+///    zero) 32-bit integer values, returned in a 64-bit vector of [2 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -3244,7 +3244,7 @@ static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvtsd_si64(__m128d __a) {
 }
 
 /// Converts the first (lower) element of a vector of [2 x double] into a
-///    64-bit signed integer value, truncating inexact results.
+///    64-bit signed truncated (rounded toward zero) integer value.
 ///
 ///    If a converted value does not fit in a 64-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -3295,8 +3295,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtps_epi32(__m128 __a) {
   return (__m128i)__builtin_ia32_cvtps2dq((__v4sf)__a);
 }
 
-/// Converts a vector of [4 x float] into a vector of [4 x i32],
-///    truncating inexact results.
+/// Converts a vector of [4 x float] into four signed truncated (rounded toward
+///    zero) 32-bit integers, returned in a vector of [4 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns

@@ -2246,8 +2246,8 @@ _mm256_cvtps_pd(__m128 __a)
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32], truncating inexact results.
+/// Converts a 256-bit vector of [4 x double] into signed truncated (rounded
+///    toward zero) 32-bit integers returned in a 128-bit vector of [4 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
@@ -2286,8 +2286,8 @@ _mm256_cvtpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df) __a);
 }
 
-/// Converts a vector of [8 x float] into a vector of [8 x i32],
-///    truncating inexact results.
+/// Converts a vector of [8 x float] into signed truncated (rounded toward
+///    zero) 32-bit integers returned in a vector of [8 x i32].
 ///
 ///    If a converted value does not fit in a 32-bit integer, raises a
 ///    floating-point invalid exception. If the exception is masked, returns
