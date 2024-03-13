@@ -1,4 +1,4 @@
-//===- RemoveTrapsPass.cpp --------------------------------------*- C++ -*-===//
+//===- LowerBuiltinHotPass.cpp ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/RemoveTrapsPass.h"
+#include "llvm/Transforms/Instrumentation/LowerBuiltinHotPass.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,15 +21,15 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "remove-traps"
+#define DEBUG_TYPE "lower-builtin-hot"
 
 static cl::opt<int> HotPercentileCutoff(
-    "remove-traps-percentile-cutoff-hot", cl::init(0),
+    "lower-builtin-hot-percentile-cutoff", cl::init(0),
     cl::desc("Alternative hot percentile cuttoff. By default "
              "`-profile-summary-cutoff-hot` is used."));
 
 static cl::opt<float>
-    RandomRate("remove-traps-random-rate", cl::init(0.0),
+    RandomRate("lower-builtin-hot-random-rate", cl::init(0.0),
                cl::desc("Probability value in the range [0.0, 1.0] of "
                         "unconditional pseudo-random checks removal."));
 
@@ -94,8 +94,8 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   return !ReplaceWithValue.empty();
 }
 
-PreservedAnalyses RemoveTrapsPass::run(Function &F,
-                                       FunctionAnalysisManager &AM) {
+PreservedAnalyses LowerBuiltinHotPass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
   if (F.isDeclaration())
     return PreservedAnalyses::all();
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);

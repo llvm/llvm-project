@@ -73,10 +73,10 @@
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
+#include "llvm/Transforms/Instrumentation/LowerBuiltinHotPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
-#include "llvm/Transforms/Instrumentation/RemoveTrapsPass.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
@@ -99,9 +99,10 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<bool> PrintPipelinePasses;
 
-static cl::opt<bool> ClRemoveTraps("clang-remove-traps", cl::Optional,
-                                   cl::desc("Insert remove-traps pass."),
-                                   cl::init(false));
+static cl::opt<bool>
+    ClLowerBuiltinHot("clang-lower-builtin-hot", cl::Optional,
+                      cl::desc("Insert lower-builtin-hot pass."),
+                      cl::init(false));
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
@@ -750,13 +751,13 @@ static void addSanitizers(const Triple &TargetTriple,
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
 
-  if (ClRemoveTraps) {
+  if (ClLowerBuiltinHot) {
     // We can optimize after inliner, and PGO profile matching. The hook below
     // is called at the end `buildFunctionSimplificationPipeline`, which called
     // from `buildInlinerPipeline`, which called after profile matching.
     PB.registerScalarOptimizerLateEPCallback(
         [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          FPM.addPass(RemoveTrapsPass());
+          FPM.addPass(LowerBuiltinHotPass());
         });
   }
 }

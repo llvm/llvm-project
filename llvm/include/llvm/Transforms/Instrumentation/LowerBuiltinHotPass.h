@@ -1,4 +1,4 @@
-//===- RemoveTrapsPass.h ----------------------------------------*- C++ -*-===//
+//===- LowerBuiltinHotPass.h ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_UBSANOPTIMIZATIONPASS_H
-#define LLVM_TRANSFORMS_INSTRUMENTATION_UBSANOPTIMIZATIONPASS_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_LOWERBUILTINHOTPASS_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_LOWERBUILTINHOTPASS_H
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -22,7 +22,7 @@ namespace llvm {
 
 // This pass is responsible for removing optional traps, like llvm.ubsantrap
 // from the hot code.
-class RemoveTrapsPass : public PassInfoMixin<RemoveTrapsPass> {
+class LowerBuiltinHotPass : public PassInfoMixin<LowerBuiltinHotPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
