@@ -40,7 +40,7 @@ static cas::CacheKey cacheKeyFromString(StringRef Data) {
 namespace {
 
 class LLVMCASCacheProvider final : public RemoteCacheProvider {
-  StdThreadPool Pool{hardware_concurrency()};
+  DefaultThreadPool Pool{hardware_concurrency()};
   std::string TempDir;
   std::unique_ptr<cas::ObjectStore> CAS;
   std::unique_ptr<cas::ActionCache> ActCache;
