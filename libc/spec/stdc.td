@@ -1284,12 +1284,23 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec UChar = HeaderSpec<
+      "uchar.h",
+      [], // Macros
+      [ //Types
+        MBStateTType,
+      ],
+      [], // Enumerations
+      []
+  >;
+
   HeaderSpec WChar = HeaderSpec<
       "wchar.h",
       [ // Macros
         Macro<"WEOF">,
       ],
       [ //Types
+        MBStateTType,
         SizeTType,
         WIntType,
         WCharType,
@@ -1324,6 +1335,7 @@ def StdC : StandardSpec<"stdc"> {
     Signal,
     Threads,
     Time,
+    UChar,
     WChar,
   ];
 }
