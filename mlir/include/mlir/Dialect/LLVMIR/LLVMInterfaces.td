@@ -367,7 +367,7 @@ def LLVM_DIRecursiveTypeAttrInterface
     }], "DIRecursiveTypeAttrInterface", "withRecId",
     (ins "DistinctAttr":$recId)>,
     StaticInterfaceMethod<[{
-      Build a rec-self instance using the provided recId.
+      Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
   ];

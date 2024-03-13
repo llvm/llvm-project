@@ -120,7 +120,7 @@ private:
   /// metadata.
   DenseMap<Attribute, llvm::DINode *> attrToNode;
 
-  /// A mapping from DistinctAttr ID of DIRecursiveTypeAttr to the translated
+  /// A mapping between recursive ID and the translated DIType.
   /// DIType.
   llvm::MapVector<DistinctAttr, llvm::DIType *> recursiveTypeMap;
 

@@ -320,7 +320,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(attr)) {
       if (DistinctAttr recId = translationStack.lookup(node)) {
         attr = cast<DINodeAttr>(recType.withRecId(recId));
-        // Remove the unbound recursive DistinctAttr ID.
+        // Remove the unbound recursive ID from the set of unbound self references in the translation stack.
         unboundRecursiveSelfRefs.back().erase(recId);
       }
     }
