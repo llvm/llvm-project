@@ -25,8 +25,9 @@ void test() {
     static_assert(f1() == 1); // expected-error {{static assertion expression is not an integral constant expression}}
   }
 
-  { // Various failures
-    auto d = std::bind_back(do_nothing, 2); // expected-error {{no matching function for call to 'bind_back'}}
+  { // Test calling `bind_back` with template function
+    auto f1 = std::bind_back(do_nothing, 2);
+    // expected-error@-1 {{no matching function for call to 'bind_back'}}
   }
 
   { // Mandates: is_constructible_v<decay_t<F>, F>
