@@ -301,7 +301,6 @@ private:
     if (AddMemDefError)
       return AddMemDefError;
 
-    long ParentTID = SubprocessMemory::getCurrentTID();
     pid_t ParentOrChildPID = fork();
 
     if (ParentOrChildPID == -1) {
@@ -315,7 +314,7 @@ private:
       // Unregister handlers, signal handling is now handled through ptrace in
       // the host process.
       sys::unregisterHandlers();
-      prepareAndRunBenchmark(PipeFiles[0], Key, ParentTID);
+      prepareAndRunBenchmark(PipeFiles[0], Key);
       // The child process terminates in the above function, so we should never
       // get to this point.
       llvm_unreachable("Child process didn't exit when expected.");
@@ -416,8 +415,8 @@ private:
     setrlimit(RLIMIT_CORE, &rlim);
   }
 
-  [[noreturn]] void prepareAndRunBenchmark(int Pipe, const BenchmarkKey &Key,
-                                           long ParentTID) const {
+  [[noreturn]] void prepareAndRunBenchmark(int Pipe,
+                                           const BenchmarkKey &Key) const {
     // Disable core dumps in the child process as otherwise everytime we
     // encounter an execution failure like a segmentation fault, we will create
     // a core dump. We report the information directly rather than require the
@@ -474,7 +473,7 @@ private:
 
     Expected<int> AuxMemFDOrError =
         SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
-            Key.MemoryValues, ParentPID, ParentTID, CounterFileDescriptor);
+            Key.MemoryValues, ParentPID, CounterFileDescriptor);
     if (!AuxMemFDOrError)
       exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
 
