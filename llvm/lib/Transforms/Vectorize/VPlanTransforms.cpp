@@ -1192,10 +1192,10 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
-    LaneMask->insertAfter(WideCanonicalIV);
+    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
+    LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
+                              {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                              "active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace all compares of the form
