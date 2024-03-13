@@ -1756,6 +1756,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
    FeaturePrngInst,
+   FeaturePermlane16Swap,
    FeatureSupportsSRAMECC]>;
 
 //===----------------------------------------------------------------------===//
