@@ -119,9 +119,6 @@ template <Direction DIR> void InternalIoStatementState<DIR>::BackspaceRecord() {
 }
 
 template <Direction DIR> int InternalIoStatementState<DIR>::EndIoStatement() {
-  if constexpr (DIR == Direction::Output) {
-    unit_.EndIoStatement(); // fill
-  }
   auto result{IoStatementBase::EndIoStatement()};
   if (free_) {
     FreeMemory(this);
@@ -165,7 +162,8 @@ template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      format_.Finish(*this); // ignore any remaining input positioning actions
+      format_.Finish(*this);
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
@@ -190,7 +188,20 @@ InternalListIoStatementState<DIR>::InternalListIoStatementState(
       ioStatementState_{*this} {}
 
 template <Direction DIR>
+void InternalListIoStatementState<DIR>::CompleteOperation() {
+  if (!this->completedOperation()) {
+    if constexpr (DIR == Direction::Output) {
+      if (unit_.furthestPositionInRecord > 0) {
+        unit_.AdvanceRecord(*this);
+      }
+    }
+    IoStatementBase::CompleteOperation();
+  }
+}
+
+template <Direction DIR>
 int InternalListIoStatementState<DIR>::EndIoStatement() {
+  CompleteOperation();
   if constexpr (DIR == Direction::Input) {
     if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
         status != IostatOk) {
