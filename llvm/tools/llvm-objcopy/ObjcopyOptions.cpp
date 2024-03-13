@@ -528,7 +528,7 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
 // ArgValue, loads data from the file, and stores section name and data
 // into the vector of new sections \p NewSections.
 static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
-                                std::vector<NewSectionInfo> &NewSections) {
+                                SmallVector<NewSectionInfo, 0> &NewSections) {
   if (!ArgValue.contains('='))
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName + ": missing '='");
