@@ -318,7 +318,22 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // Not using Visibility specific text for group help.
     OS << ", (std::array<std::pair<std::array<unsigned, "
        << MaxVisibilityPerHelp << ">, const char*>, " << MaxVisibilityHelp
-       << ">{{std::make_pair(std::array<unsigned, 2>{{0, 0}}, nullptr)}})";
+       << ">{{";
+    for (unsigned HelpEmitted = 0; HelpEmitted < MaxVisibilityHelp;
+         ++HelpEmitted) {
+      OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
+         << ">{{";
+      for (unsigned VisibilityEmitted = 0;
+           VisibilityEmitted < MaxVisibilityPerHelp; ++VisibilityEmitted) {
+        OS << "0";
+        if ((VisibilityEmitted + 1) != MaxVisibilityPerHelp)
+          OS << ", ";
+      }
+      OS << "}}, nullptr)";
+      if ((HelpEmitted + 1) != MaxVisibilityHelp)
+        OS << ", ";
+    }
+    OS << "}})";
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
