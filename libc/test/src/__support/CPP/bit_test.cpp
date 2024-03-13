@@ -8,25 +8,47 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE::cpp {
 
-using UnsignedTypes =
-    testing::TypeList<unsigned char, unsigned short, unsigned int,
-                      unsigned long, unsigned long long,
-#if defined(__SIZEOF_INT128__)
-                      __uint128_t,
-#endif
-                      cpp::UInt<128>>;
+using UnsignedTypesNoBigInt = testing::TypeList<
+#if defined(LIBC_TYPES_HAS_INT128)
+    __uint128_t,
+#endif // LIBC_TYPES_HAS_INT128
+    unsigned char, unsigned short, unsigned int, unsigned long,
+    unsigned long long>;
+
+using UnsignedTypes = testing::TypeList<
+#if defined(LIBC_TYPES_HAS_INT128)
+    __uint128_t,
+#endif // LIBC_TYPES_HAS_INT128
+    unsigned char, unsigned short, unsigned int, unsigned long,
+    unsigned long long, UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
-  EXPECT_FALSE(has_single_bit<T>(T(0)));
-  EXPECT_FALSE(has_single_bit<T>(~T(0)));
+  constexpr auto ZERO = T(0);
+  constexpr auto ALL_ONES = T(~ZERO);
+  EXPECT_FALSE(has_single_bit<T>(ZERO));
+  EXPECT_FALSE(has_single_bit<T>(ALL_ONES));
+
   for (T value = 1; value; value <<= 1)
     EXPECT_TRUE(has_single_bit<T>(value));
+
+  // We test that if two bits are set has_single_bit returns false.
+  // We do this by setting the highest or lowest bit depending or where the
+  // current bit is. This is a bit convoluted but it helps catch a bug on BigInt
+  // where we have to work on an element-by-element basis.
+  constexpr auto MIDPOINT = T(ALL_ONES / 2);
+  constexpr auto LSB = T(1);
+  constexpr auto MSB = T(~(ALL_ONES >> 1));
+  for (T value = 1; value; value <<= 1) {
+    auto two_bits_value = value | ((value <= MIDPOINT) ? MSB : LSB);
+    EXPECT_FALSE(has_single_bit<T>(two_bits_value));
+  }
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountLZero, UnsignedTypes) {
@@ -204,6 +226,13 @@ TEST(LlvmLibcBitTest, Rotr) {
             rotr<uint64_t>(0x12345678deadbeefULL, 70));
   EXPECT_EQ(uint64_t(0xb3c6f56df77891a2ULL),
             rotr<uint64_t>(0x12345678deadbeefULL, -19));
+}
+
+TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypesNoBigInt) {
+  EXPECT_EQ(popcount(T(0)), 0);
+  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
+    EXPECT_EQ(popcount<T>(cpp::numeric_limits<T>::max() >> i),
+              cpp::numeric_limits<T>::digits - i);
 }
 
 } // namespace LIBC_NAMESPACE::cpp

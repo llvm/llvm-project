@@ -69,6 +69,7 @@ BUILTIN(__builtin_amdgcn_s_dcache_inv, "v", "n")
 BUILTIN(__builtin_amdgcn_buffer_wbinvl1, "v", "n")
 BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
 BUILTIN(__builtin_amdgcn_groupstaticsize, "Ui", "n")
+BUILTIN(__builtin_amdgcn_wavefrontsize, "Ui", "nc")
 
 BUILTIN(__builtin_amdgcn_atomic_inc32, "UZiUZiD*UZiUicC*", "n")
 BUILTIN(__builtin_amdgcn_atomic_inc64, "UWiUWiD*UWiUicC*", "n")
@@ -151,7 +152,7 @@ BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiWUiUiV4Ui", "nc")
 //===----------------------------------------------------------------------===//
 
 TARGET_BUILTIN(__builtin_amdgcn_ballot_w32, "ZUib", "nc", "wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_ballot_w64, "WUib", "nc", "wavefrontsize64")
+BUILTIN(__builtin_amdgcn_ballot_w64, "WUib", "nc")
 
 // Deprecated intrinsics in favor of __builtin_amdgn_ballot_{w32|w64}
 BUILTIN(__builtin_amdgcn_uicmp, "WUiUiUiIi", "nc")
@@ -255,10 +256,10 @@ TARGET_BUILTIN(__builtin_amdgcn_sudot4, "iIbiIbiiIb", "nc", "dot8-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSiIb", "nc", "dot1-insts")
 TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUiIb", "nc", "dot7-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sudot8, "iIbiIbiiIb", "nc", "dot8-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_bf8, "fUiUif", "nc", "gfx12-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_fp8, "fUiUif", "nc", "gfx12-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_fp8, "fUiUif", "nc", "gfx12-insts")
-TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_bf8, "fUiUif", "nc", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_bf8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_fp8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_fp8_fp8, "fUiUif", "nc", "dot11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_bf8, "fUiUif", "nc", "dot11-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX10+ only builtins.
@@ -323,6 +324,9 @@ BUILTIN(__builtin_amdgcn_read_exec_lo, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_read_exec_hi, "Ui", "nc")
 
 BUILTIN(__builtin_amdgcn_endpgm, "v", "nr")
+
+BUILTIN(__builtin_amdgcn_get_fpenv, "WUi", "n")
+BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.

@@ -1445,20 +1445,35 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %
 }
 
 define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %amt) nounwind {
-; SSE-LABEL: splatvar_funnnel_v16i8:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm1, %xmm4
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm0[8],xmm4[9],xmm0[9],xmm4[10],xmm0[10],xmm4[11],xmm0[11],xmm4[12],xmm0[12],xmm4[13],xmm0[13],xmm4[14],xmm0[14],xmm4[15],xmm0[15]
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    psrlw %xmm2, %xmm4
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSE-NEXT:    psrlw %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm3
-; SSE-NEXT:    packuswb %xmm4, %xmm3
-; SSE-NEXT:    movdqa %xmm3, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: splatvar_funnnel_v16i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm0[8],xmm4[9],xmm0[9],xmm4[10],xmm0[10],xmm4[11],xmm0[11],xmm4[12],xmm0[12],xmm4[13],xmm0[13],xmm4[14],xmm0[14],xmm4[15],xmm0[15]
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    psrlw %xmm2, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-NEXT:    psrlw %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    packuswb %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: splatvar_funnnel_v16i8:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm1, %xmm4
+; SSE41-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm0[8],xmm4[9],xmm0[9],xmm4[10],xmm0[10],xmm4[11],xmm0[11],xmm4[12],xmm0[12],xmm4[13],xmm0[13],xmm4[14],xmm0[14],xmm4[15],xmm0[15]
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE41-NEXT:    psrlw %xmm2, %xmm4
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm3, %xmm4
+; SSE41-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE41-NEXT:    psrlw %xmm2, %xmm1
+; SSE41-NEXT:    pand %xmm1, %xmm3
+; SSE41-NEXT:    packuswb %xmm4, %xmm3
+; SSE41-NEXT:    movdqa %xmm3, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: splatvar_funnnel_v16i8:
 ; AVX1:       # %bb.0:
@@ -1990,7 +2005,7 @@ define <16 x i8> @constant_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    pand %xmm3, %xmm2

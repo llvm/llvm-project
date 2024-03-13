@@ -11,6 +11,8 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -22,7 +24,7 @@ static lldb::addr_t GetCoroFramePtrFromHandle(ValueObjectSP valobj_sp) {
 
   // We expect a single pointer in the `coroutine_handle` class.
   // We don't care about its name.
-  if (valobj_sp->GetNumChildren() != 1)
+  if (valobj_sp->GetNumChildrenIgnoringErrors() != 1)
     return LLDB_INVALID_ADDRESS;
   ValueObjectSP ptr_sp(valobj_sp->GetChildAtIndex(0));
   if (!ptr_sp)
@@ -104,8 +106,8 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     ~StdlibCoroutineHandleSyntheticFrontEnd() = default;
 
-size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    StdlibCoroutineHandleSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
     return 0;
 
@@ -113,7 +115,7 @@ size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   switch (idx) {
   case 0:
     return m_resume_ptr_sp;
@@ -125,24 +127,24 @@ lldb::ValueObjectSP lldb_private::formatters::
   return lldb::ValueObjectSP();
 }
 
-bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
-    Update() {
+lldb::ChildCacheState
+lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   m_resume_ptr_sp.reset();
   m_destroy_ptr_sp.reset();
   m_promise_ptr_sp.reset();
 
   ValueObjectSP valobj_sp = m_backend.GetNonSyntheticValue();
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   lldb::addr_t frame_ptr_addr = GetCoroFramePtrFromHandle(valobj_sp);
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
   auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
   if (!ast_ctx)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   // Create the `resume` and `destroy` children.
   lldb::TargetSP target_sp = m_backend.GetTargetSP();
@@ -165,7 +167,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   CompilerType promise_type(
       valobj_sp->GetCompilerType().GetTypeTemplateArgument(0));
   if (!promise_type)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   // Try to infer the promise_type if it was type-erased
   if (promise_type.IsVoidType()) {
@@ -180,7 +182,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   // If we don't know the promise type, we don't display the `promise` member.
   // `CreateValueObjectFromAddress` below would fail for `void` types.
   if (promise_type.IsVoidType()) {
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   // Add the `promise` member. We intentionally add `promise` as a pointer type
@@ -194,7 +196,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   if (error.Success())
     m_promise_ptr_sp = promisePtr->Clone(ConstString("promise"));
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::

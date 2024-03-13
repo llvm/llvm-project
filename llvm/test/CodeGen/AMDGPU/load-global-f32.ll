@@ -82,8 +82,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v9f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <9 x float>, <9 x float> addrspace(1)* %in
-  store <9 x float> %tmp0, <9 x float> addrspace(1)* %out
+  %tmp0 = load <9 x float>, ptr addrspace(1) %in
+  store <9 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -101,8 +101,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v10f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <10 x float>, <10 x float> addrspace(1)* %in
-  store <10 x float> %tmp0, <10 x float> addrspace(1)* %out
+  %tmp0 = load <10 x float>, ptr addrspace(1) %in
+  store <10 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -122,8 +122,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v11f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <11 x float>, <11 x float> addrspace(1)* %in
-  store <11 x float> %tmp0, <11 x float> addrspace(1)* %out
+  %tmp0 = load <11 x float>, ptr addrspace(1) %in
+  store <11 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -140,8 +140,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v12f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <12 x float>, <12 x float> addrspace(1)* %in
-  store <12 x float> %tmp0, <12 x float> addrspace(1)* %out
+  %tmp0 = load <12 x float>, ptr addrspace(1) %in
+  store <12 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 

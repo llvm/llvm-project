@@ -18,6 +18,7 @@
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/OneToNFuncConversions.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
@@ -39,12 +40,14 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 // Common match failure reasons.
-static constexpr StringLiteral MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE(
+static constexpr StringLiteral kMatchFailureNotSMETileTypeMultiple(
     "op vector size is not multiple of SME tiles");
-static constexpr StringLiteral MATCH_FAILURE_UNSUPPORTED_MASK_OP(
+static constexpr StringLiteral kMatchFailureUnsupportedMaskOp(
     "op mask is unsupported for legalization/decomposition");
 static constexpr StringLiteral
-    MATCH_FAILURE_NON_PERMUTATION_MAP("op affine map is not a permutation");
+    kMatchFailureNonPermutationMap("op affine map is not a permutation");
+static constexpr StringLiteral kMatchFailureNotIllegalToLegal(
+    "expected transpose from illegal type to legal type");
 
 /// An SMESubTile represents a single SME-sized sub-tile from decomposing a
 /// larger vector type. The (`row`, `col`) are the position of the tile in the
@@ -173,8 +176,8 @@ struct LegalizeVectorOuterProductOpsByDecomposition
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = outerProductOp.getResultVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return rewriter.notifyMatchFailure(
-          outerProductOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
+      return rewriter.notifyMatchFailure(outerProductOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
 
     Value mask;
     Operation *rootOp = outerProductOp;
@@ -187,7 +190,7 @@ struct LegalizeVectorOuterProductOpsByDecomposition
 
     if (!isSupportedMaskOp(mask))
       return rewriter.notifyMatchFailure(outerProductOp,
-                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
+                                         kMatchFailureUnsupportedMaskOp);
 
     ValueRange accSMETiles = adaptor.getAcc();
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
@@ -251,18 +254,18 @@ struct LegalizeTransferReadOpsByDecomposition
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = readOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return rewriter.notifyMatchFailure(
-          readOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
+      return rewriter.notifyMatchFailure(readOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
 
     auto mask = readOp.getMask();
     if (!isSupportedMaskOp(mask))
       return rewriter.notifyMatchFailure(readOp,
-                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
+                                         kMatchFailureUnsupportedMaskOp);
 
     auto permutationMap = readOp.getPermutationMap();
     if (!permutationMap.isPermutation())
       return rewriter.notifyMatchFailure(readOp,
-                                         MATCH_FAILURE_NON_PERMUTATION_MAP);
+                                         kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
     // tranpose [1, 0].
@@ -299,18 +302,18 @@ struct LegalizeTransferWriteOpsByDecomposition
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = writeOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return rewriter.notifyMatchFailure(
-          writeOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
 
     auto mask = writeOp.getMask();
     if (!isSupportedMaskOp(mask))
       return rewriter.notifyMatchFailure(writeOp,
-                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
+                                         kMatchFailureUnsupportedMaskOp);
 
     auto permutationMap = writeOp.getPermutationMap();
     if (!permutationMap.isPermutation())
       return rewriter.notifyMatchFailure(writeOp,
-                                         MATCH_FAILURE_NON_PERMUTATION_MAP);
+                                         kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
     // tranpose [1, 0].
@@ -415,6 +418,200 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
   }
 };
 
+/// A vector type where no fixed dimension comes after a scalable dimension.
+bool isLegalVectorType(VectorType vType) {
+  bool seenFixedDim = false;
+  for (bool scalableFlag : llvm::reverse(vType.getScalableDims())) {
+    seenFixedDim |= !scalableFlag;
+    if (seenFixedDim && scalableFlag)
+      return false;
+  }
+  return true;
+}
+
+/// Lifts an illegal vector.transpose and vector.transfer_read to a
+/// memref.subview + memref.transpose, followed by a legal read.
+///
+/// 'Illegal' here means a leading scalable dimension and a fixed trailing
+/// dimension, which has no valid lowering.
+///
+/// The memref.transpose is metadata-only transpose that produces a strided
+/// memref, which eventually becomes a loop reading individual elements.
+///
+/// Example:
+///
+///  BEFORE:
+///  ```mlir
+///  %illegalRead = vector.transfer_read %memref[%a, %b]
+///                  : memref<?x?xf32>, vector<[8]x4xf32>
+///  %legalType = vector.transpose %illegalRead, [1, 0]
+///                  : vector<[8]x4xf32> to vector<4x[8]xf32>
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %readSubview = memref.subview %memref[%a, %b] [%c8_vscale, %c4] [%c1, %c1]
+///                  : memref<?x?xf32> to memref<?x?xf32>
+///  %transpose = memref.transpose %readSubview (d0, d1) -> (d1, d0)
+///                  : memref<?x?xf32> to memref<?x?xf32>
+///  %legalType = vector.transfer_read %transpose[%c0, %c0]
+///                  : memref<?x?xf32>, vector<4x[8]xf32>
+///  ```
+struct LiftIllegalVectorTransposeToMemory
+    : public OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+
+  static Value getExtensionSource(Operation *op) {
+    if (isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(op))
+      return op->getOperand(0);
+    return {};
+  }
+
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto sourceType = transposeOp.getSourceVectorType();
+    auto resultType = transposeOp.getResultVectorType();
+    if (isLegalVectorType(sourceType) || !isLegalVectorType(resultType))
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         kMatchFailureNotIllegalToLegal);
+
+    // Look through extend for transfer_read.
+    Value maybeRead = transposeOp.getVector();
+    auto *transposeSourceOp = maybeRead.getDefiningOp();
+    Operation *extendOp = nullptr;
+    if (Value extendSource = getExtensionSource(transposeSourceOp)) {
+      maybeRead = extendSource;
+      extendOp = transposeSourceOp;
+    }
+
+    auto illegalRead = maybeRead.getDefiningOp<vector::TransferReadOp>();
+    if (!illegalRead)
+      return rewriter.notifyMatchFailure(
+          transposeOp,
+          "expected source to be (possibly extended) transfer_read");
+
+    if (!illegalRead.getPermutationMap().isIdentity())
+      return rewriter.notifyMatchFailure(
+          illegalRead, "expected read to have identity permutation map");
+
+    auto loc = transposeOp.getLoc();
+    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+
+    // Create a subview that matches the size of the illegal read vector type.
+    auto readType = illegalRead.getVectorType();
+    auto readSizes = llvm::map_to_vector(
+        llvm::zip_equal(readType.getShape(), readType.getScalableDims()),
+        [&](auto dim) -> Value {
+          auto [size, isScalable] = dim;
+          auto dimSize = rewriter.create<arith::ConstantIndexOp>(loc, size);
+          if (!isScalable)
+            return dimSize;
+          auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
+          return rewriter.create<arith::MulIOp>(loc, vscale, dimSize);
+        });
+    SmallVector<Value> strides(readType.getRank(), Value(one));
+    auto readSubview = rewriter.create<memref::SubViewOp>(
+        loc, illegalRead.getSource(), illegalRead.getIndices(), readSizes,
+        strides);
+
+    // Apply the transpose to all values/attributes of the transfer_read:
+    // - The mask
+    Value mask = illegalRead.getMask();
+    if (mask) {
+      // Note: The transpose for the mask should fold into the
+      // vector.create_mask/constant_mask op, which will then become legal.
+      mask = rewriter.create<vector::TransposeOp>(loc, mask,
+                                                  transposeOp.getPermutation());
+    }
+    // - The source memref
+    mlir::AffineMap transposeMap = AffineMap::getPermutationMap(
+        transposeOp.getPermutation(), getContext());
+    auto transposedSubview = rewriter.create<memref::TransposeOp>(
+        loc, readSubview, AffineMapAttr::get(transposeMap));
+    ArrayAttr inBoundsAttr = illegalRead.getInBoundsAttr();
+    // - The `in_bounds` attribute
+    if (inBoundsAttr) {
+      SmallVector<Attribute> inBoundsValues(inBoundsAttr.begin(),
+                                            inBoundsAttr.end());
+      applyPermutationToVector(inBoundsValues, transposeOp.getPermutation());
+      inBoundsAttr = rewriter.getArrayAttr(inBoundsValues);
+    }
+
+    VectorType legalReadType = resultType.clone(readType.getElementType());
+    // Note: The indices are all zero as the subview is already offset.
+    SmallVector<Value> readIndices(illegalRead.getIndices().size(), zero);
+    auto legalRead = rewriter.create<vector::TransferReadOp>(
+        loc, legalReadType, transposedSubview, readIndices,
+        illegalRead.getPermutationMapAttr(), illegalRead.getPadding(), mask,
+        inBoundsAttr);
+
+    // Replace the transpose with the new read, extending the result if
+    // necessary.
+    rewriter.replaceOp(transposeOp, [&]() -> Operation * {
+      if (extendOp)
+        return rewriter.create(loc, extendOp->getName().getIdentifier(),
+                               Value(legalRead), resultType);
+      return legalRead;
+    }());
+
+    return success();
+  }
+};
+
+/// A rewrite to turn unit dim transpose-like vector.shape_casts into
+/// vector.transposes. The shape_cast has to be from an illegal vector type to a
+/// legal one (as defined by isLegalVectorType).
+///
+/// The reasoning for this is if we've got to this pass and we still have
+/// shape_casts of illegal types, then they likely will not cancel out. Turning
+/// them into transposes gives LiftIllegalVectorTransposeToMemory a chance to
+/// eliminate them.
+///
+/// Example:
+///
+///  BEFORE:
+///  ```mlir
+///  %0 = vector.shape_cast %a : vector<[4]x1xf32> to vector<1x[4]xf32>
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %0 = vector.transpose %0, [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
+///  ```
+struct ConvertIllegalShapeCastOpsToTransposes
+    : public OpRewritePattern<vector::ShapeCastOp> {
+  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto sourceType = shapeCastOp.getSourceVectorType();
+    auto resultType = shapeCastOp.getResultVectorType();
+    if (isLegalVectorType(sourceType) || !isLegalVectorType(resultType))
+      return rewriter.notifyMatchFailure(shapeCastOp,
+                                         kMatchFailureNotIllegalToLegal);
+
+    // Note: If we know that `sourceType` is an illegal vector type (and 2D)
+    // then dim 0 is scalable and dim 1 is fixed.
+    if (sourceType.getRank() != 2 || sourceType.getDimSize(1) != 1)
+      return rewriter.notifyMatchFailure(
+          shapeCastOp, "expected source to be a 2D scalable vector with a "
+                       "trailing unit dim");
+
+    auto loc = shapeCastOp.getLoc();
+    auto transpose = rewriter.create<vector::TransposeOp>(
+        loc, shapeCastOp.getSource(), ArrayRef<int64_t>{1, 0});
+
+    if (resultType.getRank() == 1)
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(shapeCastOp, resultType,
+                                                       transpose);
+    else
+      rewriter.replaceOp(shapeCastOp, transpose);
+
+    return success();
+  }
+};
+
 struct VectorLegalizationPass
     : public arm_sme::impl::VectorLegalizationBase<VectorLegalizationPass> {
   void runOnOperation() override {
@@ -434,7 +631,9 @@ struct VectorLegalizationPass
           return success();
         });
 
-    patterns.add<FoldExtractFromVectorOfSMELikeCreateMasks>(context);
+    patterns.add<FoldExtractFromVectorOfSMELikeCreateMasks,
+                 LiftIllegalVectorTransposeToMemory,
+                 ConvertIllegalShapeCastOpsToTransposes>(context);
     // Note: High benefit to ensure masked outer products are lowered first.
     patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition>(
         converter, context, 1024);

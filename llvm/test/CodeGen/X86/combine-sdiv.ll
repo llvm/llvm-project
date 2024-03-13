@@ -95,7 +95,7 @@ define <4 x i32> @combine_vec_sdiv_by_minsigned(<4 x i32> %x) {
 ; AVX512BW-LABEL: combine_vec_sdiv_by_minsigned:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
-; AVX512BW-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1]
 ; AVX512BW-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_minsigned:

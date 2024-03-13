@@ -30,27 +30,6 @@
 
 namespace clang {
 
-/// Bitfields of LangOptions, split out from LangOptions in order to ensure that
-/// this large collection of bitfields is a trivial class type.
-class LangOptionsBase {
-  friend class CompilerInvocation;
-  friend class CompilerInvocationBase;
-
-public:
-  // Define simple language options (with no accessors).
-#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
-#include "clang/Basic/LangOptions.def"
-
-protected:
-  // Define language options of enumeration type. These are private, and will
-  // have accessors (below).
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  unsigned Name : Bits;
-#include "clang/Basic/LangOptions.def"
-};
-
 /// In the Microsoft ABI, this controls the placement of virtual displacement
 /// members used to implement virtual inheritance.
 enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
@@ -78,9 +57,12 @@ enum class ShaderStage {
   Invalid,
 };
 
-/// Keeps track of the various options that can be
-/// enabled, which controls the dialect of C or C++ that is accepted.
-class LangOptions : public LangOptionsBase {
+/// Bitfields of LangOptions, split out from LangOptions in order to ensure that
+/// this large collection of bitfields is a trivial class type.
+class LangOptionsBase {
+  friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
+
 public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
@@ -416,6 +398,24 @@ public:
 
   enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
 
+  // Define simple language options (with no accessors).
+#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#include "clang/Basic/LangOptions.def"
+
+protected:
+  // Define language options of enumeration type. These are private, and will
+  // have accessors (below).
+#define LANGOPT(Name, Bits, Default, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+  LLVM_PREFERRED_TYPE(Type) \
+  unsigned Name : Bits;
+#include "clang/Basic/LangOptions.def"
+};
+
+/// Keeps track of the various options that can be
+/// enabled, which controls the dialect of C or C++ that is accepted.
+class LangOptions : public LangOptionsBase {
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -558,11 +558,6 @@ public:
   /// Are we compiling a module?
   bool isCompilingModule() const {
     return getCompilingModule() != CMK_None;
-  }
-
-  /// Are we compiling a standard c++ module interface?
-  bool isCompilingModuleInterface() const {
-    return getCompilingModule() == CMK_ModuleInterface;
   }
 
   /// Are we compiling a module implementation?
@@ -993,8 +988,8 @@ enum TranslationUnitKind {
   /// not complete.
   TU_Prefix,
 
-  /// The translation unit is a module.
-  TU_Module,
+  /// The translation unit is a clang module.
+  TU_ClangModule,
 
   /// The translation unit is a is a complete translation unit that we might
   /// incrementally extend later.

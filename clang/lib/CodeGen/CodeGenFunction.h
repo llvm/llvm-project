@@ -26,6 +26,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
@@ -203,6 +204,7 @@ template <> struct DominatingValue<RValue> {
 
     llvm::Value *Value;
     llvm::Type *ElementType;
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned K : 3;
     unsigned Align : 29;
     saved_type(llvm::Value *v, llvm::Type *e, Kind k, unsigned a = 0)
@@ -349,6 +351,25 @@ public:
   bool inSuspendBlock() const {
     return isCoroutine() && CurCoro.InSuspendBlock;
   }
+
+  // Holds FramePtr for await_suspend wrapper generation,
+  // so that __builtin_coro_frame call can be lowered
+  // directly to value of its second argument
+  struct AwaitSuspendWrapperInfo {
+    llvm::Value *FramePtr = nullptr;
+  };
+  AwaitSuspendWrapperInfo CurAwaitSuspendWrapper;
+
+  // Generates wrapper function for `llvm.coro.await.suspend.*` intrinisics.
+  // It encapsulates SuspendExpr in a function, to separate it's body
+  // from the main coroutine to avoid miscompilations. Intrinisic
+  // is lowered to this function call in CoroSplit pass
+  // Function signature is:
+  // <type> __await_suspend_wrapper_<name>(ptr %awaiter, ptr %hdl)
+  // where type is one of (void, i1, ptr)
+  llvm::Function *generateAwaitSuspendWrapper(Twine const &CoroName,
+                                              Twine const &SuspendPointName,
+                                              CoroutineSuspendExpr const &S);
 
   /// CurGD - The GlobalDecl for the current function being compiled.
   GlobalDecl CurGD;
@@ -650,9 +671,11 @@ public:
   struct LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
-    /// The kind of cleanup to push: a value from the CleanupKind enumeration.
+    /// The kind of cleanup to push.
+    LLVM_PREFERRED_TYPE(CleanupKind)
     unsigned Kind : 31;
     /// Whether this is a conditional cleanup.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsConditional : 1;
 
     size_t getSize() const { return Size; }
@@ -1541,7 +1564,7 @@ public:
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
         !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
-      PGO.emitCounterIncrement(Builder, S, StepV);
+      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
 
@@ -3808,6 +3831,8 @@ private:
     Expr *NextLB = nullptr;
     /// Update of UB after a whole chunk has been executed
     Expr *NextUB = nullptr;
+    /// Distinguish between the for distribute and sections
+    OpenMPDirectiveKind DKind = llvm::omp::OMPD_unknown;
     OMPLoopArguments() = default;
     OMPLoopArguments(Address LB, Address UB, Address ST, Address IL,
                      llvm::Value *Chunk = nullptr, Expr *EUB = nullptr,
@@ -3837,6 +3862,15 @@ private:
   void EmitSections(const OMPExecutableDirective &S);
 
 public:
+  //===--------------------------------------------------------------------===//
+  //                         OpenACC Emission
+  //===--------------------------------------------------------------------===//
+  void EmitOpenACCComputeConstruct(const OpenACCComputeConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its structured block, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getStructuredBlock());
+  }
 
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
@@ -4392,6 +4426,7 @@ public:
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -5000,9 +5035,9 @@ private:
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *
   FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
-
 
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {

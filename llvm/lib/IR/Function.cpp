@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -436,8 +437,10 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   if (Ty->getNumParams())
     setValueSubclassData(1);   // Set the "has lazy arguments" bit.
 
-  if (ParentModule)
+  if (ParentModule) {
     ParentModule->getFunctionList().push_back(this);
+    IsNewDbgInfoFormat = ParentModule->IsNewDbgInfoFormat;
+  }
 
   HasLLVMReservedName = getName().starts_with("llvm.");
   // Ensure intrinsics have the right parameter attributes.
@@ -695,6 +698,10 @@ Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
 
 Attribute Function::getFnAttribute(StringRef Kind) const {
   return AttributeSets.getFnAttr(Kind);
+}
+
+Attribute Function::getRetAttribute(Attribute::AttrKind Kind) const {
+  return AttributeSets.getRetAttr(Kind);
 }
 
 uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
@@ -1976,9 +1983,10 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_prof))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
       if (MDS->getString().equals("function_entry_count"))
-        for (const MDOperand &MDO : llvm::drop_begin(MD->operands(), 2))
-          R.insert(
-              mdconst::extract<ConstantInt>(MDO)->getValue().getZExtValue());
+        for (unsigned i = 2; i < MD->getNumOperands(); i++)
+          R.insert(mdconst::extract<ConstantInt>(MD->getOperand(i))
+                       ->getValue()
+                       .getZExtValue());
   return R;
 }
 

@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s --verify-machineinstrs -o - | FileCheck %s
 
 --- |
-  define i16 @predicated_livout(i8* %input_1_vect, i8* %input_2_vect, i32 %block_size) #0 {
+  define i16 @predicated_livout(ptr %input_1_vect, ptr %input_2_vect, i32 %block_size) #0 {
   entry:
     %rnd.up = add i32 %block_size, 7
     %div = lshr i32 %rnd.up, 3
@@ -14,21 +14,21 @@
 
   for.body:                                         ; preds = %for.body.preheader, %for.body
     %lsr.iv = phi i32 [ 0, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
-    %input_1_vect.addr.052 = phi i8* [ %add.ptr, %for.body ], [ %input_1_vect, %for.body.preheader ]
-    %input_2_vect.addr.051 = phi i8* [ %add.ptr14, %for.body ], [ %input_2_vect, %for.body.preheader ]
+    %input_1_vect.addr.052 = phi ptr [ %add.ptr, %for.body ], [ %input_1_vect, %for.body.preheader ]
+    %input_2_vect.addr.051 = phi ptr [ %add.ptr14, %for.body ], [ %input_2_vect, %for.body.preheader ]
     %num_elements.049 = phi i32 [ %sub, %for.body ], [ %block_size, %for.body.preheader ]
     %acc = phi <8 x i16> [ %acc.next, %for.body ], [ zeroinitializer, %for.body.preheader ]
-    %input_2_cast = bitcast i8* %input_2_vect.addr.051 to <8 x i8>*
-    %input_1_cast = bitcast i8* %input_1_vect.addr.052 to <8 x i8>*
+    %input_2_cast = bitcast ptr %input_2_vect.addr.051 to ptr
+    %input_1_cast = bitcast ptr %input_1_vect.addr.052 to ptr
     %pred = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %num_elements.049)
-    %load.1 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %input_1_cast, i32 1, <8 x i1> %pred, <8 x i8> undef)
+    %load.1 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %input_1_cast, i32 1, <8 x i1> %pred, <8 x i8> undef)
     %zext.load.1 = zext <8 x i8> %load.1 to <8 x i16>
-    %load.2 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %input_2_cast, i32 1, <8 x i1> %pred, <8 x i8> undef)
+    %load.2 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %input_2_cast, i32 1, <8 x i1> %pred, <8 x i8> undef)
     %zext.load.2 = zext <8 x i8> %load.2 to <8 x i16>
     %add = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %zext.load.1, <8 x i16> %zext.load.2, <8 x i1> %pred, <8 x i16> undef)
     %acc.next = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %add, <8 x i16> %acc, <8 x i1> %pred, <8 x i16> undef)
-    %add.ptr = getelementptr inbounds i8, i8* %input_1_vect.addr.052, i32 8
-    %add.ptr14 = getelementptr inbounds i8, i8* %input_2_vect.addr.051, i32 8
+    %add.ptr = getelementptr inbounds i8, ptr %input_1_vect.addr.052, i32 8
+    %add.ptr14 = getelementptr inbounds i8, ptr %input_2_vect.addr.051, i32 8
     %sub = add i32 %num_elements.049, -8
     %iv.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv, i32 1)
     %cmp = icmp ne i32 %iv.next, 0
@@ -44,7 +44,7 @@
   }
 
   declare <8 x i1> @llvm.arm.mve.vctp16(i32) #1
-  declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32 immarg, <8 x i1>, <8 x i8>) #2
+  declare <8 x i8> @llvm.masked.load.v8i8.p0(ptr, i32 immarg, <8 x i1>, <8 x i8>) #2
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>) #4

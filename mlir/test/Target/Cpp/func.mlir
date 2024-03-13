@@ -37,3 +37,9 @@ emitc.func @emitc_call() -> i32 {
 // CPP-DECLTOP-NEXT: int32_t [[V0:[^ ]*]];
 // CPP-DECLTOP-NEXT: [[V0:[^ ]*]] = return_i32();
 // CPP-DECLTOP-NEXT: return [[V0:[^ ]*]];
+
+emitc.func private @extern_func(i32) attributes {specifiers = ["extern"]}
+// CPP-DEFAULT: extern void extern_func(int32_t);
+
+emitc.func private @array_arg(!emitc.array<3xi32>) attributes {specifiers = ["extern"]}
+// CPP-DEFAULT: extern void array_arg(int32_t[3]);

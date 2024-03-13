@@ -448,32 +448,6 @@ enum WatchpointWriteType {
   eWatchpointWriteTypeOnModify
 };
 
-/// The hardware and native stub capabilities for a given target,
-/// for translating a user's watchpoint request into hardware
-/// capable watchpoint resources.
-FLAGS_ENUM(WatchpointHardwareFeature){
-    /// lldb will fall back to a default that assumes the target
-    /// can watch up to pointer-size power-of-2 regions, aligned to
-    /// power-of-2.
-    eWatchpointHardwareFeatureUnknown = (1u << 0),
-
-    /// Intel systems can watch 1, 2, 4, or 8 bytes (in 64-bit targets),
-    /// aligned naturally.
-    eWatchpointHardwareX86 = (1u << 1),
-
-    /// ARM systems with Byte Address Select watchpoints
-    /// can watch any consecutive series of bytes up to the
-    /// size of a pointer (4 or 8 bytes), at a pointer-size
-    /// alignment.
-    eWatchpointHardwareArmBAS = (1u << 2),
-
-    /// ARM systems with MASK watchpoints can watch any power-of-2
-    /// sized region from 8 bytes to 2 gigabytes, aligned to that
-    /// same power-of-2 alignment.
-    eWatchpointHardwareArmMASK = (1u << 3),
-};
-LLDB_MARK_AS_BITMASK_ENUM(WatchpointHardwareFeature)
-
 /// Programming language type.
 ///
 /// These enumerations use the same language enumerations as the DWARF
@@ -677,6 +651,9 @@ enum CommandArgumentType {
   eArgTypeTargetID,
   eArgTypeStopHookID,
   eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1329,6 +1306,37 @@ enum CompletionType {
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
   eTerminatorCompletion = (1ul << 27)
+};
+
+/// Specifies if children need to be re-computed
+/// after a call to \ref SyntheticChildrenFrontEnd::Update.
+enum class ChildCacheState {
+  eRefetch = 0, ///< Children need to be recomputed dynamically.
+
+  eReuse = 1, ///< Children did not change and don't need to be recomputed;
+              ///< re-use what we computed the last time we called Update.
+};
+
+enum SymbolDownload {
+  eSymbolDownloadOff = 0,
+  eSymbolDownloadBackground = 1,
+  eSymbolDownloadForeground = 2,
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskType {
+  eAddressMaskTypeCode = 0,
+  eAddressMaskTypeData,
+  eAddressMaskTypeAny,
+  eAddressMaskTypeAll = eAddressMaskTypeAny
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskRange {
+  eAddressMaskRangeLow = 0,
+  eAddressMaskRangeHigh,
+  eAddressMaskRangeAny,
+  eAddressMaskRangeAll = eAddressMaskRangeAny,
 };
 
 } // namespace lldb

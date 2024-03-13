@@ -1626,7 +1626,8 @@ public:
   /// SmallString. If Radix > 10, UpperCase determine the case of letter
   /// digits.
   void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false, bool UpperCase = true) const;
+                bool formatAsCLiteral = false, bool UpperCase = true,
+                bool InsertSeparators = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
@@ -2185,6 +2186,16 @@ inline const APInt &umin(const APInt &A, const APInt &B) {
 /// Determine the larger of two APInts considered to be unsigned.
 inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
+}
+
+/// Determine the absolute difference of two APInts considered to be signed.
+inline const APInt abds(const APInt &A, const APInt &B) {
+  return A.sge(B) ? (A - B) : (B - A);
+}
+
+/// Determine the absolute difference of two APInts considered to be unsigned.
+inline const APInt abdu(const APInt &A, const APInt &B) {
+  return A.uge(B) ? (A - B) : (B - A);
 }
 
 /// Compute GCD of two unsigned APInt values.

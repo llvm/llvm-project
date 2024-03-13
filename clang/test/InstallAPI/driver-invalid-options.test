@@ -1,0 +1,4 @@
+/// Check non-darwin triple is rejected.
+// RUN: not clang-installapi -target x86_64-unknown-unknown %s 2> %t 
+// RUN: FileCheck --check-prefix INVALID_INSTALLAPI -input-file %t %s
+// INVALID_INSTALLAPI: error: unsupported option 'installapi' for target 'x86_64-unknown-unknown'

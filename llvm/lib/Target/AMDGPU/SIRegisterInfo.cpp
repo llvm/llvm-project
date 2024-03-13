@@ -318,8 +318,9 @@ struct SGPRSpillBuilder {
 } // namespace llvm
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
-    : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour()), ST(ST),
-      SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
+    : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour(),
+                            ST.getAMDGPUDwarfFlavour()),
+      ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
          getSubRegIndexLaneMask(AMDGPU::sub31).getAsInteger() == (3ULL << 62) &&
@@ -2286,9 +2287,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           // The offset is always swizzled, just replace it
           if (FrameReg)
             FIOp.ChangeToRegister(FrameReg, false);
-
-          if (!Offset)
-            return false;
 
           MachineOperand *OffsetOp =
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset);

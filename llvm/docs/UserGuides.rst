@@ -57,7 +57,6 @@ intermediate LLVM representation.
    JITLink
    NewPassManager
    NVPTXUsage
-   Phabricator
    Passes
    ReportingGuide
    ResponseGuide
@@ -123,12 +122,13 @@ LLVM Builds and Distributions
 Optimizations
 -------------
 
-:doc:`WritingAnLLVMPass`
-   Information on how to write LLVM transformations and analyses.
-
 :doc:`WritingAnLLVMNewPMPass`
    Information on how to write LLVM transformations under the new pass
    manager.
+
+:doc:`WritingAnLLVMPass`
+   Information on how to write LLVM transformations and analyses under the
+   legacy pass manager.
 
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.

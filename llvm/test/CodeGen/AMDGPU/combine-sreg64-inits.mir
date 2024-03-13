@@ -7,7 +7,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: combine_sreg64_inits
-    ; GCN: dead %0:sgpr_64 = S_MOV_B64_IMM_PSEUDO 8589934593
+    ; GCN: dead [[S_MOV_B:%[0-9]+]]:sgpr_64 = S_MOV_B64_IMM_PSEUDO 8589934593
     ; GCN-NEXT: S_NOP 0
     undef %0.sub0:sgpr_64 = S_MOV_B32 1
     S_NOP 0
@@ -19,7 +19,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: combine_sreg64_inits_swap
-    ; GCN: dead %0:sgpr_64 = S_MOV_B64_IMM_PSEUDO 8589934593
+    ; GCN: dead [[S_MOV_B:%[0-9]+]]:sgpr_64 = S_MOV_B64_IMM_PSEUDO 8589934593
     ; GCN-NEXT: S_NOP 0
     undef %0.sub1:sgpr_64 = S_MOV_B32 2
     S_NOP 0
@@ -32,9 +32,9 @@ body: |
   bb.0:
     ; GCN-LABEL: name: sreg64_subreg_copy_0
     ; GCN: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: undef %1.sub0:sgpr_64 = COPY [[DEF]]
-    ; GCN-NEXT: %1.sub0:sgpr_64 = S_MOV_B32 1
-    ; GCN-NEXT: dead %1.sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN-NEXT: undef [[COPY:%[0-9]+]].sub0:sgpr_64 = COPY [[DEF]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
+    ; GCN-NEXT: dead [[COPY:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
     %0:sgpr_32 = IMPLICIT_DEF
     undef %1.sub0:sgpr_64 = COPY %0:sgpr_32
     %1.sub0:sgpr_64 = S_MOV_B32 1
@@ -47,9 +47,9 @@ body: |
   bb.0:
     ; GCN-LABEL: name: sreg64_subreg_copy_1
     ; GCN: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: undef %1.sub0:sgpr_64 = S_MOV_B32 1
-    ; GCN-NEXT: %1.sub1:sgpr_64 = COPY [[DEF]]
-    ; GCN-NEXT: dead %1.sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN-NEXT: undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = COPY [[DEF]]
+    ; GCN-NEXT: dead [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
     %0:sgpr_32 = IMPLICIT_DEF
     undef %1.sub0:sgpr_64 = S_MOV_B32 1
     %1.sub1:sgpr_64 = COPY %0:sgpr_32
@@ -62,9 +62,9 @@ body: |
   bb.0:
     ; GCN-LABEL: name: sreg64_subreg_copy_2
     ; GCN: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: undef %1.sub0:sgpr_64 = S_MOV_B32 1
-    ; GCN-NEXT: %1.sub1:sgpr_64 = S_MOV_B32 2
-    ; GCN-NEXT: dead %1.sub0:sgpr_64 = COPY [[DEF]]
+    ; GCN-NEXT: undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN-NEXT: dead [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = COPY [[DEF]]
     %0:sgpr_32 = IMPLICIT_DEF
     undef %1.sub0:sgpr_64 = S_MOV_B32 1
     %1.sub1:sgpr_64 = S_MOV_B32 2
@@ -78,10 +78,10 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   undef %0.sub0:sgpr_64 = S_MOV_B32 1
+  ; GCN-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   dead %0.sub1:sgpr_64 = S_MOV_B32 2
+  ; GCN-NEXT:   dead [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
   bb.0:
     undef %0.sub0:sgpr_64 = S_MOV_B32 1
 
@@ -94,9 +94,9 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: sreg64_inits_two_defs_sub1
-    ; GCN: undef %0.sub0:sgpr_64 = S_MOV_B32 1
-    ; GCN-NEXT: %0.sub1:sgpr_64 = S_MOV_B32 2
-    ; GCN-NEXT: dead %0.sub1:sgpr_64 = S_MOV_B32 3
+    ; GCN: undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN-NEXT: dead [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 3
     undef %0.sub0:sgpr_64 = S_MOV_B32 1
     %0.sub1:sgpr_64 = S_MOV_B32 2
     %0.sub1:sgpr_64 = S_MOV_B32 3
@@ -107,9 +107,9 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: sreg64_inits_two_defs_sub0
-    ; GCN: undef %0.sub0:sgpr_64 = S_MOV_B32 1
-    ; GCN-NEXT: %0.sub1:sgpr_64 = S_MOV_B32 2
-    ; GCN-NEXT: dead %0.sub0:sgpr_64 = S_MOV_B32 3
+    ; GCN: undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN-NEXT: dead [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 3
     undef %0.sub0:sgpr_64 = S_MOV_B32 1
     %0.sub1:sgpr_64 = S_MOV_B32 2
     %0.sub0:sgpr_64 = S_MOV_B32 3
@@ -120,8 +120,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: sreg64_inits_full_def
-    ; GCN: dead undef %1.sub0:sgpr_64 = S_MOV_B32 1
-    ; GCN-NEXT: dead %0:sgpr_64 = S_MOV_B64 3
+    ; GCN: dead undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1
+    ; GCN-NEXT: dead [[S_MOV_B64_:%[0-9]+]]:sgpr_64 = S_MOV_B64 3
     undef %0.sub0:sgpr_64 = S_MOV_B32 1
     %0:sgpr_64 = S_MOV_B64 3
 ...
@@ -131,8 +131,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: sreg64_inits_imp_use
-    ; GCN: undef %0.sub0:sgpr_64 = S_MOV_B32 1, implicit $m0
-    ; GCN-NEXT: dead %0.sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN: undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1, implicit $m0
+    ; GCN-NEXT: dead [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
     undef %0.sub0:sgpr_64 = S_MOV_B32 1, implicit $m0
     %0.sub1:sgpr_64 = S_MOV_B32 2
 ...
@@ -142,8 +142,8 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: sreg64_inits_imp_def
-    ; GCN: undef %0.sub0:sgpr_64 = S_MOV_B32 1, implicit-def $scc
-    ; GCN-NEXT: dead %0.sub1:sgpr_64 = S_MOV_B32 2
+    ; GCN: undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_64 = S_MOV_B32 1, implicit-def $scc
+    ; GCN-NEXT: dead [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = S_MOV_B32 2
     undef %0.sub0:sgpr_64 = S_MOV_B32 1, implicit-def $scc
     %0.sub1:sgpr_64 = S_MOV_B32 2
 ...

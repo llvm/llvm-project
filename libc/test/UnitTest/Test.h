@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_TEST_H
-#define LLVM_LIBC_UTILS_UNITTEST_TEST_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_TEST_H
+#define LLVM_LIBC_TEST_UNITTEST_TEST_H
 
 // This macro takes a file name and returns a value implicitly castable to
 // a const char*. That const char* is the path to a file with the provided name
@@ -24,4 +24,4 @@
 #include "LibcTest.h"
 #endif
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_TEST_H
+#endif // LLVM_LIBC_TEST_UNITTEST_TEST_H

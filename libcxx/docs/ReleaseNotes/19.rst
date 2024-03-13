@@ -40,17 +40,18 @@ Implemented Papers
 
 - P2637R3 - Member ``visit``
 - P2652R2 - Disallow User Specialization of ``allocator_traits``
-
+- P2819R2 - Add ``tuple`` protocol to ``complex``
+- P2495R3 - Interfacing ``stringstream``\s with ``string_view``
+- P2302R4 - ``std::ranges::contains``
+- P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 
 Improvements and New Features
 -----------------------------
-TODO
 
+- The performance of growing ``std::vector`` has been improved for trivially relocatable types.
 
 Deprecations and Removals
 -------------------------
-
-- TODO: The ``LIBCXX_EXECUTOR`` CMake variables have been removed.
 
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
@@ -64,7 +65,7 @@ Deprecations and Removals
   provided, and such a base template is bound to be incorrect for some types, which could currently cause unexpected behavior
   while going undetected.
 
-- TODO: The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
+- The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
   in ``std::variant`` has been removed in LLVM 19.
 
 - TODO: The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been removed in LLVM 19.
@@ -73,6 +74,11 @@ Deprecations and Removals
   been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
 
 - The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
+
+- The ``_LIBCPP_ATOMIC_ONLY_USE_BUILTINS`` configuration option has been removed in LLVM 19. This should not affect
+  many users, except perhaps users using the library with ``-ffreestanding`` with a toolchain where compiler-rt or
+  libatomic is not available. If you are one such user, please reach out to the libc++ developers so we can collaborate
+  on a path for supporting atomics properly on freestanding platforms.
 
 
 Upcoming Deprecations and Removals
@@ -97,4 +103,5 @@ TODO
 Build System Changes
 --------------------
 
-TODO
+- The ``LIBCXX_EXECUTOR`` and ``LIBCXXABI_EXECUTOR`` CMake variables have been removed. Please
+  set ``LIBCXX_TEST_PARAMS`` to ``executor=<...>`` instead.

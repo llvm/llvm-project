@@ -137,7 +137,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_IntelOclBicc:                                            \
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
-  case ParsedAttr::AT_M68kRTD
+  case ParsedAttr::AT_M68kRTD:                                                 \
+  case ParsedAttr::AT_PreserveNone
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -1560,7 +1561,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
-        !S.getLangOpts().SYCLIsDevice &&
+        !S.getLangOpts().SYCLIsDevice && !S.getLangOpts().CUDAIsDevice &&
         !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
@@ -7919,6 +7920,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveAllAttr>(Ctx, Attr);
   case ParsedAttr::AT_M68kRTD:
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
+  case ParsedAttr::AT_PreserveNone:
+    return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }

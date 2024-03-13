@@ -199,7 +199,7 @@ void MachineIRBuilder::validateShiftOp(const LLT Res, const LLT Op0,
 MachineInstrBuilder
 MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
                               const SrcOp &Op1, std::optional<unsigned> Flags) {
-  assert(Res.getLLTTy(*getMRI()).getScalarType().isPointer() &&
+  assert(Res.getLLTTy(*getMRI()).isPointerOrPointerVector() &&
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
   assert(Op1.getLLTTy(*getMRI()).getScalarType().isScalar() && "invalid offset type");
 
@@ -269,14 +269,19 @@ MachineIRBuilder::buildDeleteTrailingVectorElements(const DstOp &Res,
   LLT ResTy = Res.getLLTTy(*getMRI());
   LLT Op0Ty = Op0.getLLTTy(*getMRI());
 
-  assert((ResTy.isVector() && Op0Ty.isVector()) && "Non vector type");
-  assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
+  assert(Op0Ty.isVector() && "Non vector type");
+  assert(((ResTy.isScalar() && (ResTy == Op0Ty.getElementType())) ||
+          (ResTy.isVector() &&
+           (ResTy.getElementType() == Op0Ty.getElementType()))) &&
          "Different vector element types");
-  assert((ResTy.getNumElements() < Op0Ty.getNumElements()) &&
-         "Op0 has fewer elements");
+  assert(
+      (ResTy.isScalar() || (ResTy.getNumElements() < Op0Ty.getNumElements())) &&
+      "Op0 has fewer elements");
 
-  SmallVector<Register, 8> Regs;
   auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
+  if (ResTy.isScalar())
+    return buildCopy(Res, Unmerge.getReg(0));
+  SmallVector<Register, 8> Regs;
   for (unsigned i = 0; i < ResTy.getNumElements(); ++i)
     Regs.push_back(Unmerge.getReg(i));
   return buildMergeLikeInstr(Res, Regs);
@@ -321,7 +326,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
     auto Const = buildInstr(TargetOpcode::G_CONSTANT)
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addCImm(&Val);
-    return buildSplatVector(Res, Const);
+    return buildSplatBuildVector(Res, Const);
   }
 
   auto Const = buildInstr(TargetOpcode::G_CONSTANT);
@@ -358,7 +363,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addFPImm(&Val);
 
-    return buildSplatVector(Res, Const);
+    return buildSplatBuildVector(Res, Const);
   }
 
   auto Const = buildInstr(TargetOpcode::G_FCONSTANT);
@@ -706,8 +711,8 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
-                                                       const SrcOp &Src) {
+MachineInstrBuilder MachineIRBuilder::buildSplatBuildVector(const DstOp &Res,
+                                                            const SrcOp &Src) {
   SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
@@ -735,6 +740,13 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
   auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
   SmallVector<int, 16> ZeroMask(DstTy.getNumElements());
   return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
+                                                       const SrcOp &Src) {
+  assert(Src.getLLTTy(*getMRI()) == Res.getLLTTy(*getMRI()).getElementType() &&
+         "Expected Src to match Dst elt ty");
+  return buildInstr(TargetOpcode::G_SPLAT_VECTOR, Res, Src);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
@@ -779,6 +791,24 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   }
 
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  unsigned MinElts) {
+
+  auto IntN = IntegerType::get(getMF().getFunction().getContext(),
+                               Res.getLLTTy(*getMRI()).getScalarSizeInBits());
+  ConstantInt *CI = ConstantInt::get(IntN, MinElts);
+  return buildVScale(Res, *CI);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  const ConstantInt &MinElts) {
+  auto VScale = buildInstr(TargetOpcode::G_VSCALE);
+  VScale->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), VScale);
+  VScale.addCImm(&MinElts);
+  return VScale;
 }
 
 static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
@@ -863,6 +893,21 @@ MachineIRBuilder::buildSelect(const DstOp &Res, const SrcOp &Tst,
                               std::optional<unsigned> Flags) {
 
   return buildInstr(TargetOpcode::G_SELECT, {Res}, {Tst, Op0, Op1}, Flags);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildInsertSubvector(const DstOp &Res,
+                                                           const SrcOp &Src0,
+                                                           const SrcOp &Src1,
+                                                           unsigned Idx) {
+  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+                    {Src0, Src1, uint64_t(Idx)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildExtractSubvector(const DstOp &Res,
+                                                            const SrcOp &Src,
+                                                            unsigned Idx) {
+  return buildInstr(TargetOpcode::G_INSERT_SUBVECTOR, Res,
+                    {Src, uint64_t(Idx)});
 }
 
 MachineInstrBuilder
@@ -1282,8 +1327,8 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                SrcOps[1].getLLTTy(*getMRI()) &&
            "Type mismatch");
     assert(SrcOps[2].getLLTTy(*getMRI()).isScalar() && "Invalid index");
-    assert(DstOps[0].getLLTTy(*getMRI()).getNumElements() ==
-               SrcOps[0].getLLTTy(*getMRI()).getNumElements() &&
+    assert(DstOps[0].getLLTTy(*getMRI()).getElementCount() ==
+               SrcOps[0].getLLTTy(*getMRI()).getElementCount() &&
            "Type mismatch");
     break;
   }

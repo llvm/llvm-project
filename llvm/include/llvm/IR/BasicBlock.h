@@ -93,29 +93,20 @@ public:
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
 
-  /// Validate any DPMarkers / DPValues attached to instructions in this block,
-  /// and block-level stored data too (TrailingDPValues).
-  /// \p Assert Should this method fire an assertion if a problem is found?
-  /// \p Msg Should this method print a message to errs() if a problem is found?
-  /// \p OS Output stream to write errors to.
-  /// \returns True if a problem is found.
-  bool validateDbgValues(bool Assert = true, bool Msg = false,
-                         raw_ostream *OS = nullptr);
-
   /// Record that the collection of DPValues in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
   /// that exist at the end of a basic block with no terminator (a transient
   /// state that occurs regularly).
-  void setTrailingDPValues(DPMarker *M);
+  void setTrailingDbgRecords(DPMarker *M);
 
   /// Fetch the collection of DPValues that "trail" after the last instruction
-  /// of this block, see \ref setTrailingDPValues. If there are none, returns
+  /// of this block, see \ref setTrailingDbgRecords. If there are none, returns
   /// nullptr.
-  DPMarker *getTrailingDPValues();
+  DPMarker *getTrailingDbgRecords();
 
   /// Delete any trailing DPValues at the end of this block, see
-  /// \ref setTrailingDPValues.
-  void deleteTrailingDPValues();
+  /// \ref setTrailingDbgRecords.
+  void deleteTrailingDbgRecords();
 
   void dumpDbgValues() const;
 
@@ -130,10 +121,10 @@ public:
   DPMarker *getNextMarker(Instruction *I);
 
   /// Insert a DPValue into a block at the position given by \p I.
-  void insertDPValueAfter(DPValue *DPV, Instruction *I);
+  void insertDbgRecordAfter(DbgRecord *DPV, Instruction *I);
 
   /// Insert a DPValue into a block at the position given by \p Here.
-  void insertDPValueBefore(DPValue *DPV, InstListType::iterator Here);
+  void insertDbgRecordBefore(DbgRecord *DPV, InstListType::iterator Here);
 
   /// Eject any debug-info trailing at the end of a block. DPValues can
   /// transiently be located "off the end" of a block if the blocks terminator
@@ -146,8 +137,8 @@ public:
   /// happens in RemoveDIs debug-info mode, some special patching-up needs to
   /// occur: inserting into the middle of a sequence of dbg.value intrinsics
   /// does not have an equivalent with DPValues.
-  void reinsertInstInDPValues(Instruction *I,
-                              std::optional<DPValue::self_iterator> Pos);
+  void reinsertInstInDbgRecords(Instruction *I,
+                                std::optional<DbgRecord::self_iterator> Pos);
 
 private:
   void setParent(Function *parent);
@@ -194,8 +185,9 @@ public:
   friend void Instruction::moveBeforeImpl(BasicBlock &BB,
                                           InstListType::iterator I,
                                           bool Preserve);
-  friend iterator_range<DPValue::self_iterator> Instruction::cloneDebugInfoFrom(
-      const Instruction *From, std::optional<DPValue::self_iterator> FromHere,
+  friend iterator_range<DbgRecord::self_iterator>
+  Instruction::cloneDebugInfoFrom(
+      const Instruction *From, std::optional<DbgRecord::self_iterator> FromHere,
       bool InsertAtHead);
 
   /// Creates a new BasicBlock.

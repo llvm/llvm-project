@@ -46,6 +46,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
+  MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
+  assert(MaxNumWorkGroups.size() == 3);
 
   Occupancy = ST.computeOccupancy(F, getLDSSize());
   CallingConv::ID CC = F.getCallingConv();
@@ -552,14 +554,10 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
     return *ScavengeFI;
-  if (isBottomOfStack()) {
-    ScavengeFI = MFI.CreateFixedObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
-  } else {
-    ScavengeFI = MFI.CreateStackObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
-        TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
-  }
+
+  ScavengeFI =
+      MFI.CreateStackObject(TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
+                            TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
   return *ScavengeFI;
 }
 

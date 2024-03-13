@@ -815,6 +815,30 @@ private:
     return getFnValueByID(ValNo, Ty, TyID, ConstExprInsertBB);
   }
 
+  Expected<ConstantRange> readConstantRange(ArrayRef<uint64_t> Record,
+                                            unsigned &OpNum) {
+    if (Record.size() - OpNum < 3)
+      return error("Too few records for range");
+    unsigned BitWidth = Record[OpNum++];
+    if (BitWidth > 64) {
+      unsigned LowerActiveWords = Record[OpNum];
+      unsigned UpperActiveWords = Record[OpNum++] >> 32;
+      if (Record.size() - OpNum < LowerActiveWords + UpperActiveWords)
+        return error("Too few records for range");
+      APInt Lower =
+          readWideAPInt(ArrayRef(&Record[OpNum], LowerActiveWords), BitWidth);
+      OpNum += LowerActiveWords;
+      APInt Upper =
+          readWideAPInt(ArrayRef(&Record[OpNum], UpperActiveWords), BitWidth);
+      OpNum += UpperActiveWords;
+      return ConstantRange(Lower, Upper);
+    } else {
+      int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
+      int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
+      return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
+    }
+  }
+
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
   /// corresponding argument's pointee type. Also upgrades intrinsics that now
   /// require an elementtype attribute.
@@ -2103,6 +2127,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::CoroDestroyOnlyWhenComplete;
   case bitc::ATTR_KIND_DEAD_ON_UNWIND:
     return Attribute::DeadOnUnwind;
+  case bitc::ATTR_KIND_RANGE:
+    return Attribute::Range;
   }
 }
 
@@ -2272,6 +2298,21 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Not a type attribute");
 
           B.addTypeAttr(Kind, HasType ? getTypeByID(Record[++i]) : nullptr);
+        } else if (Record[i] == 7) {
+          Attribute::AttrKind Kind;
+
+          i++;
+          if (Error Err = parseAttrKind(Record[i++], &Kind))
+            return Err;
+          if (!Attribute::isConstantRangeAttrKind(Kind))
+            return error("Not a ConstantRange attribute");
+
+          Expected<ConstantRange> MaybeCR = readConstantRange(Record, i);
+          if (!MaybeCR)
+            return MaybeCR.takeError();
+          i--;
+
+          B.addConstantRangeAttr(Kind, MaybeCR.get());
         } else {
           return error("Invalid attribute group entry");
         }
@@ -3060,48 +3101,49 @@ Error BitcodeReader::parseConstants() {
       V = Constant::getNullValue(CurTy);
       break;
     case bitc::CST_CODE_INTEGER:   // INTEGER: [intval]
-      if (!CurTy->isIntegerTy() || Record.empty())
+      if (!CurTy->isIntOrIntVectorTy() || Record.empty())
         return error("Invalid integer const record");
       V = ConstantInt::get(CurTy, decodeSignRotatedValue(Record[0]));
       break;
     case bitc::CST_CODE_WIDE_INTEGER: {// WIDE_INTEGER: [n x intval]
-      if (!CurTy->isIntegerTy() || Record.empty())
+      if (!CurTy->isIntOrIntVectorTy() || Record.empty())
         return error("Invalid wide integer const record");
 
-      APInt VInt =
-          readWideAPInt(Record, cast<IntegerType>(CurTy)->getBitWidth());
-      V = ConstantInt::get(Context, VInt);
-
+      auto *ScalarTy = cast<IntegerType>(CurTy->getScalarType());
+      APInt VInt = readWideAPInt(Record, ScalarTy->getBitWidth());
+      V = ConstantInt::get(CurTy, VInt);
       break;
     }
     case bitc::CST_CODE_FLOAT: {    // FLOAT: [fpval]
       if (Record.empty())
         return error("Invalid float const record");
-      if (CurTy->isHalfTy())
-        V = ConstantFP::get(Context, APFloat(APFloat::IEEEhalf(),
-                                             APInt(16, (uint16_t)Record[0])));
-      else if (CurTy->isBFloatTy())
-        V = ConstantFP::get(Context, APFloat(APFloat::BFloat(),
-                                             APInt(16, (uint32_t)Record[0])));
-      else if (CurTy->isFloatTy())
-        V = ConstantFP::get(Context, APFloat(APFloat::IEEEsingle(),
-                                             APInt(32, (uint32_t)Record[0])));
-      else if (CurTy->isDoubleTy())
-        V = ConstantFP::get(Context, APFloat(APFloat::IEEEdouble(),
-                                             APInt(64, Record[0])));
-      else if (CurTy->isX86_FP80Ty()) {
+
+      auto *ScalarTy = CurTy->getScalarType();
+      if (ScalarTy->isHalfTy())
+        V = ConstantFP::get(CurTy, APFloat(APFloat::IEEEhalf(),
+                                           APInt(16, (uint16_t)Record[0])));
+      else if (ScalarTy->isBFloatTy())
+        V = ConstantFP::get(
+            CurTy, APFloat(APFloat::BFloat(), APInt(16, (uint32_t)Record[0])));
+      else if (ScalarTy->isFloatTy())
+        V = ConstantFP::get(CurTy, APFloat(APFloat::IEEEsingle(),
+                                           APInt(32, (uint32_t)Record[0])));
+      else if (ScalarTy->isDoubleTy())
+        V = ConstantFP::get(
+            CurTy, APFloat(APFloat::IEEEdouble(), APInt(64, Record[0])));
+      else if (ScalarTy->isX86_FP80Ty()) {
         // Bits are not stored the same way as a normal i80 APInt, compensate.
         uint64_t Rearrange[2];
         Rearrange[0] = (Record[1] & 0xffffLL) | (Record[0] << 16);
         Rearrange[1] = Record[0] >> 48;
-        V = ConstantFP::get(Context, APFloat(APFloat::x87DoubleExtended(),
-                                             APInt(80, Rearrange)));
-      } else if (CurTy->isFP128Ty())
-        V = ConstantFP::get(Context, APFloat(APFloat::IEEEquad(),
-                                             APInt(128, Record)));
-      else if (CurTy->isPPC_FP128Ty())
-        V = ConstantFP::get(Context, APFloat(APFloat::PPCDoubleDouble(),
-                                             APInt(128, Record)));
+        V = ConstantFP::get(
+            CurTy, APFloat(APFloat::x87DoubleExtended(), APInt(80, Rearrange)));
+      } else if (ScalarTy->isFP128Ty())
+        V = ConstantFP::get(CurTy,
+                            APFloat(APFloat::IEEEquad(), APInt(128, Record)));
+      else if (ScalarTy->isPPC_FP128Ty())
+        V = ConstantFP::get(
+            CurTy, APFloat(APFloat::PPCDoubleDouble(), APInt(128, Record)));
       else
         V = UndefValue::get(CurTy);
       break;
@@ -6632,9 +6674,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error Err = materializeMetadata())
     return Err;
 
-  bool NewDebugInfoRequested = F->IsNewDbgInfoFormat;
-  F->IsNewDbgInfoFormat = false;
-
   // Move the bit stream to the saved position of the deferred function body.
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
@@ -6709,14 +6748,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // Look for functions that rely on old function attribute behavior.
   UpgradeFunctionAttributes(*F);
-
-  // If we've materialized a function set up in "new" debug-info mode, the
-  // contents just loaded will still be in dbg.value mode. Switch to the new
-  // mode now. NB: we can add more complicated logic here in the future to
-  // correctly identify when we do and don't need to autoupgrade.
-  if (NewDebugInfoRequested) {
-    F->convertToNewDbgValues();
-  }
 
   // Bring in any functions that this function forward-referenced via
   // blockaddresses.
@@ -8041,14 +8072,6 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
     if (Error Err = R->materializeForwardReferencedFunctions())
       return std::move(Err);
   }
-
-  // If we are operating in a "new debug-info" context, upgrade the debug-info
-  // in the loaded module. This is a transitional approach as we enable "new"
-  // debug-info in LLVM, which will eventually be pushed down into the
-  // autoupgrade path once the bitcode-encoding is finalised. Non-materialised
-  // functions will be upgraded in the materialize method.
-  if (UseNewDbgInfoFormat && !M->IsNewDbgInfoFormat)
-    M->convertToNewDbgValues();
 
   return std::move(M);
 }

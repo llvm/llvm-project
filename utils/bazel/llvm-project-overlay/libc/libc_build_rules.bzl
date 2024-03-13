@@ -17,6 +17,7 @@ def libc_common_copts():
     libc_include_path = paths.join(root_label.workspace_root, root_label.package)
     return [
         "-I" + libc_include_path,
+        "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
     ]
 
@@ -82,10 +83,10 @@ def libc_function(
     # original list, where this creates a new list and stores it in deps.
     copts = copts or []
     copts = copts + [
-      "-O3",
-      "-fno-builtin",
-      "-fno-lax-vector-conversions",
-      "-ftrivial-auto-var-init=pattern"
+        "-O3",
+        "-fno-builtin",
+        "-fno-lax-vector-conversions",
+        "-ftrivial-auto-var-init=pattern",
     ]
 
     # We compile the code twice, the first target is suffixed with ".__internal__" and contains the

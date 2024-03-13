@@ -42,10 +42,6 @@ def StructDirentPtr : PtrType<StructDirent>;
 def StructDirentPtrPtr : PtrType<StructDirentPtr>;
 def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
-def StructTimeSpec : NamedType<"struct timespec">;
-def StructTimeSpecPtr : PtrType<StructTimeSpec>;
-def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
-
 def StructSchedParam : NamedType<"struct sched_param">;
 def StructSchedParamPtr : PtrType<StructSchedParam>;
 def ConstStructSchedParamPtr : ConstType<StructSchedParamPtr>;
@@ -308,6 +304,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "munlockall",
           RetValSpec<IntType>,
           [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+          "msync",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
         >,
       ]
   >;
@@ -1319,12 +1320,27 @@ def POSIX : StandardSpec<"POSIX"> {
             "hsearch",
             RetValSpec<EntryTypePtr>,
             [
-                ArgSpec<EntryType>, 
+                ArgSpec<EntryType>,
                 ArgSpec<ActionType>
             ]
         >,
+        FunctionSpec<
+            "insque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>,
+                ArgSpec<VoidPtr>
+            ]
+        >,
+        FunctionSpec<
+            "remque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>
+            ]
+        >,
     ]
-  >; 
+  >;
 
   HeaderSpec Termios = HeaderSpec<
     "termios.h",

@@ -1996,6 +1996,34 @@ Here is an example:
   }];
 }
 
+def CXXAssumeDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "assume";
+  let Content = [{
+The ``assume`` attribute is used to indicate to the optimizer that a
+certain condition is assumed to be true at a certain point in the
+program. If this condition is violated at runtime, the behavior is
+undefined. ``assume`` can only be applied to a null statement.
+
+Different optimisers are likely to react differently to the presence of
+this attribute; in some cases, adding ``assume`` may affect performance
+negatively. It should be used with parsimony and care.
+
+Note that `clang::assume` is a different attribute. Always write ``assume``
+without a namespace if you intend to use the standard C++ attribute.
+
+Example:
+
+.. code-block:: c++
+
+  int f(int x, int y) {
+    [[assume(x == 27)]];
+    [[assume(x == y)]];
+    return y + 1; // May be optimised to `return 28`.
+  }
+  }];
+}
+
 def LikelihoodDocs : Documentation {
   let Category = DocCatStmt;
   let Heading = "likely and unlikely";
@@ -2517,6 +2545,14 @@ function it instructs compiler to emit multiple function versions based on
 priority and target features availability. One of the versions is always
 ( implicitly or explicitly ) the ``default`` (fallback). Attribute strings can
 contain dependent features names joined by the "+" sign.
+
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -2702,6 +2738,33 @@ An error will be given if:
     attributes;
   - The AMDGPU target backend is unable to create machine code that can meet the
     request.
+  }];
+}
+
+def AMDGPUMaxNumWorkGroupsDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute specifies the max number of work groups when the kernel
+is dispatched.
+
+Clang supports the
+``__attribute__((amdgpu_max_num_work_groups(<x>, <y>, <z>)))`` or
+``[[clang::amdgpu_max_num_work_groups(<x>, <y>, <z>)]]`` attribute for the
+AMDGPU target. This attribute may be attached to HIP or OpenCL kernel function
+definitions and is an optimization hint.
+
+The ``<x>`` parameter specifies the maximum number of work groups in the x dimension.
+Similarly ``<y>`` and ``<z>`` are for the y and z dimensions respectively.
+Each of the three values must be greater than 0 when provided. The ``<x>`` parameter
+is required, while ``<y>`` and ``<z>`` are optional with default value of 1.
+
+If specified, the AMDGPU target backend might be able to produce better machine
+code.
+
+An error will be given if:
+  - Specified values violate subtarget specifications;
+  - Specified values are not compatible with values provided through other
+    attributes.
   }];
 }
 
@@ -4621,7 +4684,7 @@ For more information see
 }];
 }
 
-def AssumptionDocs : Documentation {
+def OMPAssumeDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assume";
   let Content = [{
@@ -5313,6 +5376,29 @@ Putting the attribute on a compound statement suppresses all warnings in scope:
     }
   }
 
+The attribute can also be placed on entire declarations of functions, classes,
+variables, member variables, and so on, to suppress warnings related
+to the declarations themselves. When used this way, the attribute additionally
+suppresses all warnings in the lexical scope of the declaration:
+
+.. code-block:: c++
+
+  class [[clang::suppress]] C {
+    int foo() {
+      int *x = nullptr;
+      ...
+      return *x;  // warnings suppressed in the entire class scope
+    }
+
+    int bar();
+  };
+
+  int C::bar() {
+    int *x = nullptr;
+    ...
+    return *x;  // warning NOT suppressed! - not lexically nested in 'class C{}'
+  }
+
 Some static analysis warnings are accompanied by one or more notes, and the
 line of code against which the warning is emitted isn't necessarily the best
 for suppression purposes. In such cases the tools are allowed to implement
@@ -5506,6 +5592,23 @@ experimental at this time.
   }];
 }
 
+def PreserveNoneDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 target, this attribute changes the calling convention of a function.
+The ``preserve_none`` calling convention tries to preserve as few general
+registers as possible. So all general registers are caller saved registers. It
+also uses more general registers to pass arguments. This attribute doesn't
+impact floating-point registers (XMMs/YMMs). Floating-point registers still
+follow the c calling convention.
+
+- Only RSP and RBP are preserved by callee.
+
+- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+  be used to pass function arguments.
+  }];
+}
+
 def DeprecatedDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -5557,6 +5660,25 @@ def LTOVisibilityDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 See :doc:`LTOVisibility`.
+  }];
+}
+
+def TypeVisibilityDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``type_visibility`` attribute allows the visibility of a type and its vague
+linkage objects (vtable, typeinfo, typeinfo name) to be controlled separately from
+the visibility of functions and data members of the type.
+
+For example, this can be used to give default visibility to the typeinfo and the vtable
+of a type while still keeping hidden visibility on its member functions and static data
+members.
+
+This attribute can only be applied to types and namespaces.
+
+If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
+visibility specified with the ``type_visibility`` attribute overrides the visibility
+provided with the regular ``visibility`` attribute.
   }];
 }
 

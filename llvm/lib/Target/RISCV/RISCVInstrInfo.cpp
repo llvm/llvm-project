@@ -1115,7 +1115,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // FIXME: A virtual register must be used initially, as the register
   // scavenger won't work with empty blocks (SIInstrInfo::insertIndirectBranch
   // uses the same workaround).
-  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRJALRRegClass);
   auto II = MBB.end();
   // We may also update the jump target to RestoreBB later.
   MachineInstr &MI = *BuildMI(MBB, II, DL, get(RISCV::PseudoJump))
@@ -1172,7 +1172,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   SmallVector<MachineOperand, 3> Cond;
   if (analyzeBranch(*MBB, TBB, FBB, Cond, /*AllowModify=*/false))
     return false;
-  (void)FBB;
 
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
@@ -1212,13 +1211,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!Op.isReg())
       return false;
     Register Reg = Op.getReg();
-    if (Reg == RISCV::X0) {
-      Imm = 0;
-      return true;
-    }
-    if (!Reg.isVirtual())
-      return false;
-    return isLoadImm(MRI.getVRegDef(Op.getReg()), Imm);
+    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
   };
 
   MachineOperand &LHS = MI.getOperand(0);
@@ -1229,7 +1222,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
     auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
       int64_t Imm;
-      return isLoadImm(&I, Imm) && Imm == C1;
+      return isLoadImm(&I, Imm) && Imm == C1 &&
+             I.getOperand(0).getReg().isVirtual();
     });
     if (DefC1 != E)
       return DefC1->getOperand(0).getReg();
@@ -2201,7 +2195,7 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
 
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore())
     return false;
@@ -2306,7 +2300,7 @@ bool RISCVInstrInfo::shouldClusterMemOps(
 // function) and set it as appropriate.
 bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    unsigned &Width, const TargetRegisterInfo *TRI) const {
+    LocationSize &Width, const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -2345,14 +2339,15 @@ bool RISCVInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  unsigned int WidthA = 0, WidthB = 0;
+  LocationSize WidthA = 0, WidthB = 0;
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
-      int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-      if (LowOffset + LowWidth <= HighOffset)
+      LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+      if (LowWidth.hasValue() &&
+          LowOffset + (int)LowWidth.getValue() <= HighOffset)
         return true;
     }
   }
@@ -3065,11 +3060,11 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
          "Reserve the stack by the multiple of one vector size.");
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  int64_t NumOfVReg = Amount / 8;
+  assert(isInt<32>(Amount / 8) &&
+         "Expect the number of vector registers within 32-bits.");
+  uint32_t NumOfVReg = Amount / 8;
 
   BuildMI(MBB, II, DL, get(RISCV::PseudoReadVLENB), DestReg).setMIFlag(Flag);
-  assert(isInt<32>(NumOfVReg) &&
-         "Expect the number of vector registers within 32-bits.");
   if (llvm::has_single_bit<uint32_t>(NumOfVReg)) {
     uint32_t ShiftAmount = Log2_32(NumOfVReg);
     if (ShiftAmount == 0)
@@ -3136,30 +3131,36 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(N, RegState::Kill)
         .setMIFlag(Flag);
   } else {
-    Register Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, II, DL, get(RISCV::ADDI), Acc)
-        .addReg(RISCV::X0)
-        .addImm(0)
-        .setMIFlag(Flag);
+    Register Acc;
     uint32_t PrevShiftAmount = 0;
     for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
-      if (NumOfVReg & (1LL << ShiftAmount)) {
+      if (NumOfVReg & (1U << ShiftAmount)) {
         if (ShiftAmount)
           BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
               .addReg(DestReg, RegState::Kill)
               .addImm(ShiftAmount - PrevShiftAmount)
               .setMIFlag(Flag);
-        if (NumOfVReg >> (ShiftAmount + 1))
-          BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
-              .addReg(Acc, RegState::Kill)
-              .addReg(DestReg)
-              .setMIFlag(Flag);
+        if (NumOfVReg >> (ShiftAmount + 1)) {
+          // If we don't have an accmulator yet, create it and copy DestReg.
+          if (!Acc) {
+            Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+            BuildMI(MBB, II, DL, get(TargetOpcode::COPY), Acc)
+                .addReg(DestReg)
+                .setMIFlag(Flag);
+          } else {
+            BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
+                .addReg(Acc, RegState::Kill)
+                .addReg(DestReg)
+                .setMIFlag(Flag);
+          }
+        }
         PrevShiftAmount = ShiftAmount;
       }
     }
+    assert(Acc && "Expected valid accumulator");
     BuildMI(MBB, II, DL, get(RISCV::ADD), DestReg)
         .addReg(DestReg, RegState::Kill)
-        .addReg(Acc)
+        .addReg(Acc, RegState::Kill)
         .setMIFlag(Flag);
   }
 }

@@ -1864,11 +1864,11 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm3[8],xmm2[8],xmm3[9],xmm2[9],xmm3[10],xmm2[10],xmm3[11],xmm2[11],xmm3[12],xmm2[12],xmm3[13],xmm2[13],xmm3[14],xmm2[14],xmm3[15],xmm2[15]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [1,128,64,32,16,8,4,2]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm5 = [1,128,64,32,16,8,4,2]
 ; AVX1-NEXT:    vpmullw %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
 ; AVX1-NEXT:    vpmullw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2

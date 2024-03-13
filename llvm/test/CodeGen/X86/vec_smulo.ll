@@ -1354,7 +1354,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm4, %xmm0
 ; SSE41-NEXT:    psrlw $8, %xmm0
 ; SSE41-NEXT:    packuswb %xmm3, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm1, %xmm5
 ; SSE41-NEXT:    pand %xmm1, %xmm4
 ; SSE41-NEXT:    packuswb %xmm5, %xmm4
@@ -1674,7 +1674,7 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm3, %xmm7
 ; SSE41-NEXT:    psrlw $8, %xmm7
 ; SSE41-NEXT:    packuswb %xmm5, %xmm7
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm5, %xmm6
 ; SSE41-NEXT:    pand %xmm5, %xmm3
 ; SSE41-NEXT:    packuswb %xmm6, %xmm3
@@ -2260,7 +2260,7 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm7, %xmm10
 ; SSE41-NEXT:    psrlw $8, %xmm10
 ; SSE41-NEXT:    packuswb %xmm8, %xmm10
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm8, %xmm9
 ; SSE41-NEXT:    pand %xmm8, %xmm7
 ; SSE41-NEXT:    packuswb %xmm9, %xmm7

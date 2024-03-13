@@ -22,7 +22,7 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
   auto LINK_VAL = libc_make_test_file_path(FILENAME);
   constexpr const char *FILENAME2 = "readlink.test.link";
   auto LINK = libc_make_test_file_path(FILENAME2);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   // The test strategy is as follows:
   //   1. Create a symlink with value LINK_VAL.
