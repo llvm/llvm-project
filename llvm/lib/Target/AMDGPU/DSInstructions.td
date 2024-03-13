@@ -65,6 +65,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate = ps.SubtargetPredicate;
   let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
+  let TSFlags            = ps.TSFlags;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;

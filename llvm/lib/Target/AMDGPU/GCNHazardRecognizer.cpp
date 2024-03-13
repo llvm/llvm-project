@@ -2163,13 +2163,25 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
 }
 
 static int
-GFX940_XDL_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(int NumPasses, bool IsGFX950) {
+GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(int NumPasses,
+                                                              bool IsGFX950) {
   // xdl def cycles | gfx940 | gfx950
   // 2 pass         |  3        4
   // 4 pass         |  5        6
   // 8 pass         |  9        10
   // 16 pass        |  17       18
   return NumPasses + 1 + IsGFX950;
+}
+
+static int
+GFX940_XDL_N_PassWritesVGPROverlappedSGEMMDGEMMSrcCWaitStates(int NumPasses,
+                                                              bool IsGFX950) {
+  // xdl def cycles | gfx940 | gfx950
+  // 2 pass         |  3        3
+  // 4 pass         |  5        6
+  // 8 pass         |  9        10
+  // 16 pass        |  17       18
+  return NumPasses + 1 + (NumPasses != 2 && IsGFX950);
 }
 
 static int
@@ -2309,8 +2321,11 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
 
             NeedWaitStates =
                 isXDL(ST, *MI1)
-                    ? GFX940_XDL_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
-                          NumPasses, ST.hasGFX950Insts())
+                    ? (isXDL(ST, *MI)
+                           ? GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(
+                                 NumPasses, ST.hasGFX950Insts())
+                           : GFX940_XDL_N_PassWritesVGPROverlappedSGEMMDGEMMSrcCWaitStates(
+                                 NumPasses, ST.hasGFX950Insts()))
                     : GFX940_SMFMA_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
                           NumPasses);
             break;

@@ -793,6 +793,24 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
 }
 
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  unsigned MinElts) {
+
+  auto IntN = IntegerType::get(getMF().getFunction().getContext(),
+                               Res.getLLTTy(*getMRI()).getScalarSizeInBits());
+  ConstantInt *CI = ConstantInt::get(IntN, MinElts);
+  return buildVScale(Res, *CI);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
+                                                  const ConstantInt &MinElts) {
+  auto VScale = buildInstr(TargetOpcode::G_VSCALE);
+  VScale->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), VScale);
+  VScale.addCImm(&MinElts);
+  return VScale;
+}
+
 static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
   if (HasSideEffects && IsConvergent)
     return TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS;
