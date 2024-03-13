@@ -2,7 +2,7 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
-# RUN: ld.lld -T a.lds a.o --compress-nonalloc-sections nonalloc=zlib --compress-nonalloc-sections str=zlib -o out
+# RUN: ld.lld -T a.lds a.o --compress-sections nonalloc=zlib --compress-sections str=zlib -o out
 # RUN: llvm-readelf -SsXz -p str out | FileCheck %s
 
 # CHECK:      Name     Type            Address   Off      Size     ES Flg  Lk Inf Al
@@ -17,7 +17,7 @@
 
 ## TODO The uncompressed size of 'nonalloc' is dependent on linker script
 ## commands, which is not handled. We should report an error.
-# RUN: ld.lld -T b.lds a.o --compress-nonalloc-sections nonalloc=zlib
+# RUN: ld.lld -T b.lds a.o --compress-sections nonalloc=zlib
 
 #--- a.s
 .globl _start

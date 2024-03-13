@@ -118,7 +118,7 @@ public:
   void sortCtorsDtors();
 
   // Used for implementation of --compress-debug-sections and
-  // --compress-nonalloc-sections.
+  // --compress-sections.
   CompressedData compressed;
 
 private:
