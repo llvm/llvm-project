@@ -875,8 +875,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CharLiteralConstant &x) {
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::HollerithLiteralConstant &x) {
   int kind{GetDefaultKind(TypeCategory::Character)};
-  auto value{x.v};
-  return AnalyzeString(std::move(value), kind);
+  auto result{AnalyzeString(std::string{x.v}, kind)};
+  if (auto *constant{UnwrapConstantValue<Ascii>(result)}) {
+    constant->set_wasHollerith(true);
+  }
+  return result;
 }
 
 // .TRUE. and .FALSE. of various kinds
