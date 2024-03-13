@@ -1081,6 +1081,11 @@ private:
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
   };
+  static_assert(sizeof(AllocationRingBuffer) %
+                        alignof(typename AllocationRingBuffer::Entry) ==
+                    0,
+                "invalid alignment");
+
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
   atomic_uptr RingBufferAddress = {};
@@ -1553,16 +1558,6 @@ private:
     constexpr u32 kFramesPerStack = 16;
     static_assert(isPowerOfTwo(kFramesPerStack));
 
-    // We need StackDepot to be aligned to 8-bytes so the ring we store after
-    // is correctly assigned.
-    static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
-
-    // Make sure the maximum sized StackDepot fits withint a uintptr_t to
-    // simplify the overflow checking.
-    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
-                                           UINT32_MAX * sizeof(atomic_u32) <
-                  UINTPTR_MAX);
-
     if (AllocationRingBufferSize > kMaxU32Pow2 / kStacksPerRingBufferEntry)
       return;
     u32 TabSize = static_cast<u32>(roundUpPowerOfTwo(kStacksPerRingBufferEntry *
@@ -1570,7 +1565,6 @@ private:
     if (TabSize > UINT32_MAX / kFramesPerStack)
       return;
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
-    DCHECK(isPowerOfTwo(RingSize));
 
     uptr StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
                           sizeof(atomic_u32) * TabSize;
@@ -1596,10 +1590,6 @@ private:
 
     atomic_store(&RingBufferAddress, reinterpret_cast<uptr>(RB),
                  memory_order_release);
-    static_assert(sizeof(AllocationRingBuffer) %
-                          alignof(typename AllocationRingBuffer::Entry) ==
-                      0,
-                  "invalid alignment");
   }
 
   void unmapRingBuffer() {
@@ -1610,8 +1600,12 @@ private:
     // is very important.
     RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
                                RB->RawStackDepotMap.getCapacity());
-    RB->RawRingBufferMap.unmap(RB->RawRingBufferMap.getBase(),
-                               RB->RawRingBufferMap.getCapacity());
+    // Note that the `RB->RawRingBufferMap` is stored on the pages managed by
+    // itself. Take over the ownership before calling unmap() so that any
+    // operation along with unmap() won't touch inaccessible pages.
+    MemMapT RawRingBufferMap = RB->RawRingBufferMap;
+    RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
+                           RawRingBufferMap.getCapacity());
     atomic_store(&RingBufferAddress, 0, memory_order_release);
   }
 

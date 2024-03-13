@@ -56,6 +56,7 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
+class ConstantRangeAttributeImpl;
 struct DiagnosticHandler;
 class DPMarker;
 class ElementCount;
@@ -1562,6 +1563,8 @@ public:
 
   BumpPtrAllocator Alloc;
   UniqueStringSaver Saver{Alloc};
+  SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
+      ConstantRangeAttributeAlloc;
 
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 
@@ -1681,21 +1684,19 @@ public:
   /// such a way. These are stored in LLVMContext because typically LLVM only
   /// edits a small number of blocks at a time, so there's no need to bloat
   /// BasicBlock with such a data structure.
-  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDPValues;
+  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDbgRecords;
 
-  // Set, get and delete operations for TrailingDPValues.
-  void setTrailingDPValues(BasicBlock *B, DPMarker *M) {
-    assert(!TrailingDPValues.count(B));
-    TrailingDPValues[B] = M;
+  // Set, get and delete operations for TrailingDbgRecords.
+  void setTrailingDbgRecords(BasicBlock *B, DPMarker *M) {
+    assert(!TrailingDbgRecords.count(B));
+    TrailingDbgRecords[B] = M;
   }
 
-  DPMarker *getTrailingDPValues(BasicBlock *B) {
-    return TrailingDPValues.lookup(B);
+  DPMarker *getTrailingDbgRecords(BasicBlock *B) {
+    return TrailingDbgRecords.lookup(B);
   }
 
-  void deleteTrailingDPValues(BasicBlock *B) {
-    TrailingDPValues.erase(B);
-  }
+  void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDbgRecords.erase(B); }
 };
 
 } // end namespace llvm

@@ -1462,6 +1462,23 @@ TEST(SignatureHelpTest, FunctionPointers) {
     typedef void (__stdcall *fn)(int x, int y);
     fn foo;
     int main() { foo(^); }
+  )cpp",
+      // Field of function pointer type
+      R"cpp(
+    struct S {
+      void (*foo)(int x, int y);
+    };
+    S s;
+    int main() { s.foo(^); }
+  )cpp",
+      // Field of function pointer typedef type
+      R"cpp(
+    typedef void (*fn)(int x, int y);
+    struct S {
+      fn foo;
+    };
+    S s;
+    int main() { s.foo(^); }
   )cpp"};
   for (auto Test : Tests)
     EXPECT_THAT(signatures(Test).signatures,

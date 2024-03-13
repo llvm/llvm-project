@@ -891,8 +891,7 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
 
   // Conservatively reject Ops that could lead to indices with stride other
   // than 1.
-  if (!isa<arith::AddIOp, arith::SubIOp, arith::ConstantOp, linalg::IndexOp>(
-          ancestor))
+  if (!isa<arith::AddIOp, arith::ConstantOp, linalg::IndexOp>(ancestor))
     return false;
 
   bool result = false;

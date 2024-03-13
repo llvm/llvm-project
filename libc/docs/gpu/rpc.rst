@@ -188,6 +188,8 @@ in the GPU executable as an indicator for whether or not the server can be
 checked. These details should ideally be handled by the GPU language runtime,
 but the following example shows how it can be used by a standard user.
 
+.. _libc_gpu_cuda_server:
+
 .. code-block:: cuda
 
   #include <cstdio>
