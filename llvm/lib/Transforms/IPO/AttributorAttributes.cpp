@@ -12371,7 +12371,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
       A.registerManifestAddedBasicBlock(*ThenTI->getParent());
-      A.registerManifestAddedBasicBlock(*CBBB);
+      A.registerManifestAddedBasicBlock(*IP->getParent());
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
       if (&*IP == CB) {
