@@ -33,6 +33,7 @@ all_categories = {
     "lldb-server": "Tests related to lldb-server",
     "lldb-dap": "Tests for the Debug Adaptor Protocol with lldb-dap",
     "llgs": "Tests for the gdb-server functionality of lldb-server",
+    "pexpect": "Tests requiring the pexpect library to be available",
     "objc": "Tests related to the Objective-C programming language support",
     "pyapi": "Tests related to the Python API",
     "std-module": "Tests related to importing the std module",
