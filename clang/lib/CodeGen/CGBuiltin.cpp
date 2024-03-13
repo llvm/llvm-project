@@ -21379,6 +21379,16 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
   switch (BuiltinID) {
   default: llvm_unreachable("unexpected builtin ID");
+  // Zicsr
+  case RISCV::BI__builtin_riscv_csrr:
+  case RISCV::BI__builtin_riscv_csrw:
+    if (IntPtrTy->getScalarSizeInBits() == 32)
+      ID = BuiltinID == RISCV::BI__builtin_riscv_csrr ? Intrinsic::riscv_csrr
+                                                      : Intrinsic::riscv_csrw;
+    else
+      ID = BuiltinID == RISCV::BI__builtin_riscv_csrr ? Intrinsic::riscv_csrr64
+                                                      : Intrinsic::riscv_csrw64;
+    break;
   case RISCV::BI__builtin_riscv_orc_b_32:
   case RISCV::BI__builtin_riscv_orc_b_64:
   case RISCV::BI__builtin_riscv_clz_32:

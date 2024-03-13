@@ -567,6 +567,13 @@ class CSR_ir<bits<3> funct3, string opcodestr>
 
 let hasNoSchedulingInfo = 1,
     hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class CSR_ir_x0<bits<3> funct3, string opcodestr>
+    : RVInstI<funct3, OPC_SYSTEM, (outs), (ins csr_sysreg:$imm12, GPR:$rs1),
+              opcodestr, "$imm12, $rs1">, Sched<[WriteCSR]> {
+  let rd = 0;
+}
+let hasNoSchedulingInfo = 1,
+    hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class CSR_ii<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_SYSTEM, (outs GPR:$rd),
               (ins csr_sysreg:$imm12, uimm5:$rs1),
@@ -733,6 +740,8 @@ def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
 
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
+let isCodeGenOnly = 1 in
+def CSRW : CSR_ir_x0<0b001, "csrw">;
 def CSRRW : CSR_ir<0b001, "csrrw">;
 def CSRRS : CSR_ir<0b010, "csrrs">;
 def CSRRC : CSR_ir<0b011, "csrrc">;
@@ -1844,6 +1853,14 @@ def ReadCounterWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins i32imm:$csr_lo, i32im
                              [(set GPR:$lo, GPR:$hi,
                               (riscv_read_counter_wide csr_sysreg:$csr_lo, csr_sysreg:$csr_hi))],
                              "", "">;
+
+// Zicsr
+let Predicates = [IsRV64] in {
+  def : Pat<(i64 (int_riscv_csrr64 timm:$I)), (CSRRS csr_sysreg:$I, (XLenVT X0))>;
+  def : Pat<(int_riscv_csrw64 timm:$I, i64:$D), (CSRW csr_sysreg:$I, i64:$D)>;
+}
+def : Pat<(i32 (int_riscv_csrr timm:$I)), (CSRRS csr_sysreg:$I, (XLenVT X0))>;
+def : Pat<(int_riscv_csrw timm:$I, i32:$D), (CSRW csr_sysreg:$I, i32:$D)>;
 
 /// traps
 
