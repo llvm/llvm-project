@@ -99,8 +99,8 @@ func.func @erf_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[zero:.*]] = arith.constant dense<0.000000e+00> : vector<[8]xf32>
 // CHECK-NOT:       erf
 // CHECK-NOT:       vector<8xf32>
-// CHECK-COUNT-20:  select
-// CHECK:           %[[res:.*]] = arith.select
+// CHECK-COUNT-20:  select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[res:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
 // CHECK:           return %[[res]] : vector<[8]xf32>
 // CHECK:         }
 func.func @erf_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
@@ -166,11 +166,11 @@ func.func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 }
 
 // CHECK-LABEL:   func @exp_scalable_vector
-// CHECK-NOT:  math.exp
-// CHECK-NOT:  vector<8xf32>
-// CHECK:      vector<[8]xf32>
-// CHECK-NOT:  vector<8xf32>
-// CHECK-NOT:  math.exp
+// CHECK-NOT:      math.exp
+// CHECK-NOT:      vector<8xf32>
+// CHECK-COUNT-46: vector<[8]x{{(i32)|(f32)}}>
+// CHECK-NOT:      vector<8xf32>
+// CHECK-NOT:      math.exp
 func.func @exp_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
   %0 = math.exp %arg0 : vector<[8]xf32>
   return %0 : vector<[8]xf32>
@@ -308,7 +308,7 @@ func.func @expm1_vector(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
 // CHECK-NOT:       exp
 // CHECK-NOT:       log
 // CHECK-NOT:       expm1
-// CHECK:           vector<8x[8]xf32>
+// CHECK-COUNT-127: vector<8x[8]x{{(i32)|(f32)|(i1)}}>
 // CHECK-NOT:       vector<8x8xf32>
 // CHECK-NOT:       exp
 // CHECK-NOT:       log
@@ -401,8 +401,8 @@ func.func @log_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK-LABEL:   func @log_scalable_vector(
 // CHECK-SAME:                     %{{.*}}: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK:           %[[CST_LN2:.*]] = arith.constant dense<0.693147182> : vector<[8]xf32>
-// CHECK-COUNT-5:   select
-// CHECK:           %[[VAL_71:.*]] = arith.select
+// CHECK-COUNT-5:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_71:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
 // CHECK:           return %[[VAL_71]] : vector<[8]xf32>
 // CHECK:         }
 func.func @log_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
@@ -437,8 +437,8 @@ func.func @log2_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK-LABEL:   func @log2_scalable_vector(
 // CHECK-SAME:                      %{{.*}}: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK:           %[[CST_LOG2E:.*]] = arith.constant dense<1.44269502> : vector<[8]xf32>
-// CHECK-COUNT-5:   select
-// CHECK:           %[[VAL_71:.*]] = arith.select
+// CHECK-COUNT-5:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_71:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
 // CHECK:           return %[[VAL_71]] : vector<[8]xf32>
 // CHECK:         }
 func.func @log2_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
@@ -482,8 +482,8 @@ func.func @log1p_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK-LABEL:   func @log1p_scalable_vector(
 // CHECK-SAME:                       %[[VAL_0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK:           %[[CST_ONE:.*]] = arith.constant dense<1.000000e+00> : vector<[8]xf32>
-// CHECK-COUNT-6:   select
-// CHECK:           %[[VAL_79:.*]] = arith.select
+// CHECK-COUNT-6:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_79:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
 // CHECK:           return %[[VAL_79]] : vector<[8]xf32>
 // CHECK:         }
 func.func @log1p_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
@@ -550,8 +550,8 @@ func.func @tanh_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK-SAME:                      %[[VAL_0:.*]]: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant dense<-7.99881172> : vector<[8]xf32>
 // CHECK-NOT:       tanh
-// CHECK-COUNT-2:   select
-// CHECK:           %[[VAL_33:.*]] = arith.select
+// CHECK-COUNT-2:   select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
+// CHECK:           %[[VAL_33:.*]] = arith.select {{.*}} : vector<[8]xi1>, vector<[8]xf32>
 // CHECK:           return %[[VAL_33]] : vector<[8]xf32>
 // CHECK:         }
 func.func @tanh_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
