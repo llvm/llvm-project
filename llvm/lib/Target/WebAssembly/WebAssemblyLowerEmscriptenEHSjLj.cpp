@@ -318,8 +318,9 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Function *ResumeF = nullptr;            // __resumeException() (Emscripten)
   Function *EHTypeIDF = nullptr;          // llvm.eh.typeid.for() (intrinsic)
   Function *EmLongjmpF = nullptr;         // emscripten_longjmp() (Emscripten)
-  Function *SaveSetjmpF = nullptr;        // saveSetjmp() (Emscripten)
-  Function *TestSetjmpF = nullptr;        // testSetjmp() (Emscripten)
+  Function *SaveSetjmpF = nullptr; // saveSetjmp()/__wasm_setjmp() (Emscripten)
+  Function *TestSetjmpF =
+      nullptr; // testSetjmp()/__wasm_setjmp_test() (Emscripten)
   Function *WasmLongjmpF = nullptr;       // __wasm_longjmp() (Emscripten)
   Function *CatchF = nullptr;             // wasm.catch() (intrinsic)
 
@@ -1019,14 +1020,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       Type *Int32Ty = IRB.getInt32Ty();
 
       if (EnableWasmSjLj) {
-        // Register saveSetjmp function
+        // Register __wasm_setjmp function
         FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
         FunctionType *FTy = FunctionType::get(
             IRB.getVoidTy(), {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy},
             false);
         SaveSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp", &M);
 
-        // Register testSetjmp function
+        // Register __wasm_setjmp_test function
         FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
         TestSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp_test", &M);
       } else {
