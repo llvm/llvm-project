@@ -472,6 +472,8 @@ FBSCreateOptionsDictionary(const char *app_bundle_path,
   // And there are some other options at the top level in this dictionary:
   [options setObject:[NSNumber numberWithBool:YES]
               forKey:FBSOpenApplicationOptionKeyUnlockDevice];
+  [options setObject:[NSNumber numberWithBool:YES]
+              forKey:FBSOpenApplicationOptionKeyPromptUnlockDevice];
 
   // We have to get the "sequence ID & UUID" for this app bundle path and send
   // them to FBS:
