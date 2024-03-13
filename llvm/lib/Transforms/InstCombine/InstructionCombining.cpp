@@ -3426,7 +3426,7 @@ void InstCombinerImpl::handleUnreachableFrom(
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
     // RemoveDIs: erase debug-info on this instruction manually.
-    Inst.dropDbgValues();
+    Inst.dropDbgRecords();
     eraseInstFromFunction(Inst);
     MadeIRChange = true;
   }
@@ -4697,7 +4697,7 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
       for (DPValue &DPV :
-           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
+           llvm::reverse(DPValue::filter(Inst->getDbgRecordRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());
@@ -4762,7 +4762,7 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
   //   InsertPtInst
   assert(InsertPos.getHeadBit());
   for (DPValue *DPVClone : DPVClones) {
-    InsertPos->getParent()->insertDPValueBefore(DPVClone, InsertPos);
+    InsertPos->getParent()->insertDbgRecordBefore(DPVClone, InsertPos);
     LLVM_DEBUG(dbgs() << "SINK: " << *DPVClone << '\n');
   }
 }
@@ -5202,7 +5202,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(Opts.MaxIterations) + " iterations");
+              Twine(Opts.MaxIterations) + " iterations",
+          /*GenCrashDiag=*/false);
     }
   }
 

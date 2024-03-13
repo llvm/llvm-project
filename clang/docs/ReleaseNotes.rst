@@ -183,6 +183,9 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
+  ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
+  ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
 Removed Compiler Flags
 -------------------------
@@ -191,6 +194,12 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- Introduced a new function attribute ``__attribute__((amdgpu_max_num_work_groups(x, y, z)))`` or
+  ``[[clang::amdgpu_max_num_work_groups(x, y, z)]]`` for the AMDGPU target. This attribute can be
+  attached to HIP or OpenCL kernel function definitions to provide an optimization hint. The parameters
+  ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
+  and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
+  ``z`` are optional with default value of 1.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -251,6 +260,9 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (#GH64356).
 
+- ``__is_trivially_relocatable`` no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH77091).
+
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
@@ -258,6 +270,9 @@ Bug Fixes in This Version
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
   Fixes (#GH83267).
+
+- Clang now correctly generates overloads for bit-precise integer types for
+  builtin operators in C++. Fixes #GH82998.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -345,6 +360,8 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Allow access to a public template alias declaration that refers to friend's
+  private nested type. (#GH25708).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -441,6 +458,8 @@ AST Matchers
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 - Add ``isExplicitObjectMemberFunction``.
+- Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
+  not skip the explicit object parameter for operator calls.
 
 clang-format
 ------------
@@ -490,6 +509,11 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+
+OpenMP Support
+--------------
+
+- Added support for the `[[omp::assume]]` attribute.
 
 Additional Information
 ======================
