@@ -1561,7 +1561,9 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // form a tree.
 
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                      SSP};
   auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
@@ -1603,7 +1605,9 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // contain a diamond.
 
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                      SSP};
   auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
@@ -1627,7 +1631,9 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // contain a cycle.
 
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                      SSP};
   auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
@@ -1711,7 +1717,9 @@ TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
 TEST(CoreAPIsExtraTest, SessionTeardownByFailedToMaterialize) {
 
   auto RunTestCase = []() -> Error {
-    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+    auto SSP = std::make_shared<SymbolStringPool>();
+    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                        SSP};
     auto Foo = ES.intern("foo");
     auto FooFlags = JITSymbolFlags::Exported;
 

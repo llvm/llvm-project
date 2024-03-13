@@ -37,7 +37,8 @@ public:
   }
 
 protected:
-  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(),
+                      std::make_shared<SymbolStringPool>()};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
       ES, std::make_unique<InProcessMemoryManager>(4096)};
@@ -208,7 +209,8 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
     }
   };
 
-  ExecutionSession ES{std::make_unique<TestEPC>()};
+  auto SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES{std::make_unique<TestEPC>(), SSP};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
       ES, std::make_unique<InProcessMemoryManager>(4096)};

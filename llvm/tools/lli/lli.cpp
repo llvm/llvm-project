@@ -964,7 +964,8 @@ int runOrcJIT(const char *ProgName) {
   // unsupported architectures).
   if (UseJITKind != JITKind::OrcLazy) {
     auto ES = std::make_unique<orc::ExecutionSession>(
-        ExitOnErr(orc::SelfExecutorProcessControl::Create()));
+        ExitOnErr(orc::SelfExecutorProcessControl::Create()),
+        std::make_shared<orc::SymbolStringPool>());
     Builder.setLazyCallthroughManager(
         std::make_unique<orc::LazyCallThroughManager>(*ES, orc::ExecutorAddr(),
                                                       nullptr));

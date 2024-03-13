@@ -954,7 +954,7 @@ Session::~Session() {
 }
 
 Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
-    : ES(std::move(EPC)),
+    : ES(std::move(EPC), std::make_shared<SymbolStringPool>()),
       ObjLayer(ES, ES.getExecutorProcessControl().getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the

@@ -71,7 +71,9 @@ public:
     if (!EPC)
       return EPC.takeError();
 
-    auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
+    auto SSP = std::make_shared<SymbolStringPool>();
+    auto ES =
+        std::make_unique<ExecutionSession>(std::move(*EPC), std::move(SSP));
 
     JITTargetMachineBuilder JTMB(
         ES->getExecutorProcessControl().getTargetTriple());
