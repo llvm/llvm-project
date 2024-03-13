@@ -36,10 +36,12 @@ extern inline const char *const kDefaultSplitMarker = "// -----";
 /// and writes all results to `os`.
 ///
 /// This is used to allow a large number of small independent tests to be put
-/// into a single file. The input split marker is configurable. If it is empty
+/// into a single file. The input split marker is configurable. If it is empty,
 /// merging is disabled, which allows for merging split and non-split code
-/// paths. Output split markers (`//-----` by default) are placed between each
-/// of the processed output chunks.
+/// paths. Output split markers (`//-----` by default) followed by a new line
+/// character, respectively, are placed between each of the processed output
+/// chunks. (The new line character is inserted even if the split marker is
+/// empty.)
 LogicalResult
 splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
                       ChunkBufferHandler processChunkBuffer, raw_ostream &os,
