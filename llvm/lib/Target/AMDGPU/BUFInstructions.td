@@ -2616,7 +2616,6 @@ defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12<0x042, "buffer
 defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11<0x050, "buffer_atomic_cmpswap_f32">;
 defm BUFFER_ATOMIC_COND_SUB_U32   : MUBUF_Real_Atomic_gfx12<0x050>;
 defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
-def : Mnem_gfx11_gfx12<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
 defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12<0x040, "buffer_atomic_dec_u32">;
 defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04D, "buffer_atomic_dec_u64">;
 defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_gfx12<0x03F, "buffer_atomic_inc_u32">;
