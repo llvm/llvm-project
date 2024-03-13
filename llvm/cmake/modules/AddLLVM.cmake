@@ -263,6 +263,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   # -no_warn_duplicate_libraries, but only in versions of the linker that
   # support that flag.
   if(NOT LLVM_USE_LINKER AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    include(CheckLinkerFlag)
     check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
   else()
     set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
