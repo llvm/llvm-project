@@ -107,7 +107,8 @@ entry:
 define i32 @test9(i32 %a, i32 %b) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rlwimi 3, 4, 8, 20, 26
+; CHECK-NEXT:    rlwimi 4, 3, 8, 20, 26
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 8, i32 4064)
