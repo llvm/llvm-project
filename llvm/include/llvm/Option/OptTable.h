@@ -65,7 +65,9 @@ public:
     // because OptTable is used in constexpr contexts. Increase the array sizes
     // here if you need more entries and adjust the constants in
     // OptParserEmitter::EmitHelpTextsForVariants.
-    std::array<std::pair<std::array<unsigned int, 2>, const char *>, 1>
+    std::array<std::pair<std::array<unsigned int, 2 /*MaxVisibilityPerHelp*/>,
+                         const char *>,
+               1 /*MaxVisibilityHelp*/>
         HelpTextsForVariants;
     const char *MetaVar;
     unsigned ID;

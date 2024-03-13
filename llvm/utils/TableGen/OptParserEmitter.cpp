@@ -195,8 +195,8 @@ static void EmitHelpTextsForVariants(
     raw_ostream &OS, std::vector<std::pair<std::vector<std::string>, StringRef>>
                          HelpTextsForVariants) {
   // OptTable must be constexpr so it uses std::arrays with these capacities.
-  const unsigned MaxVisibilityHelp = 1;
   const unsigned MaxVisibilityPerHelp = 2;
+  const unsigned MaxVisibilityHelp = 1;
 
   // This function must initialise any unused elements of those arrays.
   for (auto [Visibilities, _] : HelpTextsForVariants)
