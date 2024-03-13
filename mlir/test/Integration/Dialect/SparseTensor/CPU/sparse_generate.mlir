@@ -78,20 +78,13 @@ module {
     }
 
     %sv = sparse_tensor.convert %output : tensor<?xf64> to tensor<?xf64, #SparseVector>
+    %n0 = sparse_tensor.number_of_entries %sv : tensor<?xf64, #SparseVector>
 
+    // Print the number of non-zeros for verification
+    // as shuffle may generate different numbers.
     //
-    // Verify the outputs.
-    //
-    // CHECK:      ---- Sparse Tensor ----
-    // CHECK-NEXT: nse = 5
-    // CHECK-NEXT: dim = ( 50 )
-    // CHECK-NEXT: lvl = ( 50 )
-    // CHECK-NEXT: pos[0] : ( 0, 5
-    // CHECK-NEXT: crd[0] : ( 1, 9, 17, 27, 30
-    // CHECK-NEXT: values : ( 84, 34, 8, 40, 93
-    // CHECK-NEXT: ----
-    //
-    sparse_tensor.print %sv : tensor<?xf64, #SparseVector>
+    // CHECK: 5
+    vector.print %n0 : index
 
     // Release the resources.
     bufferization.dealloc_tensor %sv : tensor<?xf64, #SparseVector>
