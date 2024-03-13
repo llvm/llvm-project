@@ -2770,6 +2770,12 @@ public:
     return true;
   }
 
+  /// Return true if the specified immediate is legal add of a scalable
+  /// immediate, that is the target has add instructions which can add a
+  /// register with the immediate (multiplied by vscale) without having to
+  /// materialize the immediate into a register.
+  virtual bool isLegalAddScalableImmediate(int64_t) const { return false; }
+
   /// Return true if the specified immediate is legal for the value input of a
   /// store instruction.
   virtual bool isLegalStoreImmediate(int64_t Value) const {

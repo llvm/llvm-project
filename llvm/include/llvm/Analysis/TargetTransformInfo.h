@@ -696,6 +696,12 @@ public:
   /// immediate without having to materialize the immediate into a register.
   bool isLegalAddImmediate(int64_t Imm) const;
 
+  /// Return true if the specified immediate is legal add of a scalable
+  /// immediate, that is the target has add instructions which can add a
+  /// register with the immediate (multiplied by vscale) without having to
+  /// materialize the immediate into a register.
+  bool isLegalAddScalableImmediate(int64_t Imm) const;
+
   /// Return true if the specified immediate is legal icmp immediate,
   /// that is the target has icmp instructions which can compare a register
   /// against the immediate without having to materialize the immediate into a
@@ -1835,6 +1841,7 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
+  virtual bool isLegalAddScalableImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
@@ -2294,6 +2301,9 @@ public:
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);
+  }
+  bool isLegalAddScalableImmediate(int64_t Imm) override {
+    return Impl.isLegalAddScalableImmediate(Imm);
   }
   bool isLegalICmpImmediate(int64_t Imm) override {
     return Impl.isLegalICmpImmediate(Imm);

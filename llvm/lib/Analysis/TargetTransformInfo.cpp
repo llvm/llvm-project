@@ -395,6 +395,10 @@ bool TargetTransformInfo::isLegalAddImmediate(int64_t Imm) const {
   return TTIImpl->isLegalAddImmediate(Imm);
 }
 
+bool TargetTransformInfo::isLegalAddScalableImmediate(int64_t Imm) const {
+  return TTIImpl->isLegalAddScalableImmediate(Imm);
+}
+
 bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
   return TTIImpl->isLegalICmpImmediate(Imm);
 }
