@@ -5496,6 +5496,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return Legalized;
   }
 
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT: {
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (TypeIdx == 0) {
+      DstTy = MoreTy;
+      SrcTy = MoreTy.changeElementType(SrcTy.getElementType());
+    } else if (TypeIdx == 1) {
+      SrcTy = MoreTy;
+      DstTy = MoreTy.changeElementType(DstTy.getElementType());
+    }
+
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, SrcTy, 1);
+    moreElementsVectorDst(MI, DstTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+
   default:
     return UnableToLegalize;
   }
