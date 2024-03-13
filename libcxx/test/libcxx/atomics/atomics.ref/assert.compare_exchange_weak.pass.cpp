@@ -18,46 +18,51 @@
 
 #include <atomic>
 
+#include "atomic_helpers.h"
 #include "check_assertion.h"
 
 template <typename T>
-void test_compare_exchange_weak_invalid_memory_order() {
-  {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
-    T t(T(2));
-    a.compare_exchange_weak(t, T(3), std::memory_order_relaxed, std::memory_order_relaxed);
+struct TestCompareExchangeWeakInvalidMemoryOrder {
+  void operator()() const {
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
+      T t(T(2));
+      a.compare_exchange_weak(t, T(3), std::memory_order_relaxed, std::memory_order_relaxed);
+    }
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          T t(T(2));
+          a.compare_exchange_weak(t, T(3), std::memory_order_relaxed, std::memory_order_release);
+        }()),
+        "atomic_ref: failure memory order argument to weak atomic compare-and-exchange operation is invalid");
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          T t(T(2));
+          a.compare_exchange_weak(t, T(3), std::memory_order_relaxed, std::memory_order_acq_rel);
+        }()),
+        "atomic_ref: failure memory order argument to weak atomic compare-and-exchange operation is invalid");
   }
+};
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        T t(T(2));
-        a.compare_exchange_weak(t, T(3), std::memory_order_relaxed, std::memory_order_release);
-      }()),
-      "atomic_ref: failure memory order argument to weak atomic compare-and-exchange operation is invalid");
+void test() {
+  TestEachIntegralType<TestCompareExchangeWeakInvalidMemoryOrder>()();
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        T t(T(2));
-        a.compare_exchange_weak(t, T(3), std::memory_order_relaxed, std::memory_order_acq_rel);
-      }()),
-      "atomic_ref: failure memory order argument to weak atomic compare-and-exchange operation is invalid");
+  TestEachFloatingPointType<TestCompareExchangeWeakInvalidMemoryOrder>()();
+
+  TestEachPointerType<TestCompareExchangeWeakInvalidMemoryOrder>()();
+
+  TestCompareExchangeWeakInvalidMemoryOrder<UserAtomicType>()();
+  TestCompareExchangeWeakInvalidMemoryOrder<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {
-  test_compare_exchange_weak_invalid_memory_order<int>();
-  test_compare_exchange_weak_invalid_memory_order<float>();
-  test_compare_exchange_weak_invalid_memory_order<int*>();
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_compare_exchange_weak_invalid_memory_order<X>();
-
+  test();
   return 0;
 }

@@ -18,43 +18,48 @@
 
 #include <atomic>
 
+#include "atomic_helpers.h"
 #include "check_assertion.h"
 
 template <typename T>
-void test_load_invalid_memory_order() {
-  {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
-    (void)a.load(std::memory_order_relaxed);
+struct TestLoadInvalidMemoryOrder {
+  void operator()() const {
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
+      (void)a.load(std::memory_order_relaxed);
+    }
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          (void)a.load(std::memory_order_release);
+        }()),
+        "atomic_ref: memory order argument to atomic load operation is invalid");
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          (void)a.load(std::memory_order_acq_rel);
+        }()),
+        "atomic_ref: memory order argument to atomic load operation is invalid");
   }
+};
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        (void)a.load(std::memory_order_release);
-      }()),
-      "atomic_ref: memory order argument to atomic load operation is invalid");
+void test() {
+  TestEachIntegralType<TestLoadInvalidMemoryOrder>()();
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        (void)a.load(std::memory_order_acq_rel);
-      }()),
-      "atomic_ref: memory order argument to atomic load operation is invalid");
+  TestEachFloatingPointType<TestLoadInvalidMemoryOrder>()();
+
+  TestEachPointerType<TestLoadInvalidMemoryOrder>()();
+
+  TestLoadInvalidMemoryOrder<UserAtomicType>()();
+  TestLoadInvalidMemoryOrder<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {
-  test_load_invalid_memory_order<int>();
-  test_load_invalid_memory_order<float>();
-  test_load_invalid_memory_order<int*>();
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_load_invalid_memory_order<X>();
-
+  test();
   return 0;
 }

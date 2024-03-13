@@ -18,51 +18,56 @@
 
 #include <atomic>
 
+#include "atomic_helpers.h"
 #include "check_assertion.h"
 
 template <typename T>
-void test_store_invalid_memory_order() {
-  {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
-    a.store(T(2), std::memory_order_relaxed);
+struct TestStoreInvalidMemoryOrder {
+  void operator()() const {
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
+      a.store(T(2), std::memory_order_relaxed);
+    }
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          a.store(T(2), std::memory_order_consume);
+        }()),
+        "atomic_ref: memory order argument to atomic store operation is invalid");
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          a.store(T(2), std::memory_order_acquire);
+        }()),
+        "atomic_ref: memory order argument to atomic store operation is invalid");
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          T x(T(1));
+          std::atomic_ref<T> const a(x);
+          a.store(T(2), std::memory_order_acq_rel);
+        }()),
+        "atomic_ref: memory order argument to atomic store operation is invalid");
   }
+};
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        a.store(T(2), std::memory_order_consume);
-      }()),
-      "atomic_ref: memory order argument to atomic store operation is invalid");
+void test() {
+  TestEachIntegralType<TestStoreInvalidMemoryOrder>()();
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        a.store(T(2), std::memory_order_acquire);
-      }()),
-      "atomic_ref: memory order argument to atomic store operation is invalid");
+  TestEachFloatingPointType<TestStoreInvalidMemoryOrder>()();
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ([] {
-        T x(T(1));
-        std::atomic_ref<T> const a(x);
-        a.store(T(2), std::memory_order_acq_rel);
-      }()),
-      "atomic_ref: memory order argument to atomic store operation is invalid");
+  TestEachPointerType<TestStoreInvalidMemoryOrder>()();
+
+  TestStoreInvalidMemoryOrder<UserAtomicType>()();
+  TestStoreInvalidMemoryOrder<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {
-  test_store_invalid_memory_order<int>();
-  test_store_invalid_memory_order<float>();
-  test_store_invalid_memory_order<int*>();
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_store_invalid_memory_order<X>();
-
+  test();
   return 0;
 }
