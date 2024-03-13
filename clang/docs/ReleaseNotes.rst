@@ -293,7 +293,7 @@ Bug Fixes to C++ Support
   of templates. Previously we were diagnosing on any non-function template
   instead of only on class, alias, and variable templates, as last updated by
   CWG2032. Fixes (#GH#83461)
-- Fixed a bug and crashes in constant evaluation when trying to access a
+- Fixed a crash in constant evaluation when trying to access a
   captured ``this`` pointer in a lambda with an explicit object parameter.
   Fixes (#GH80997)
 
