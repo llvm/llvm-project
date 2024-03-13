@@ -192,8 +192,8 @@ body:             |
 
 ...
 ---
+# This test checks that this combine runs after the insertvec->build_vector
 name:            extract_from_insert
-alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
@@ -203,8 +203,6 @@ frameInfo:
 body:             |
   bb.1:
     liveins: $x0, $x1
-    ; This test checks that this combine runs after the insertvec->build_vector
-    ; combine.
     ; CHECK-LABEL: name: extract_from_insert
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
@@ -247,3 +245,214 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+---
+name:            extract_from_vector_undef
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_vector_undef
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = G_IMPLICIT_DEF
+    %idx:_(s32) = G_CONSTANT i32 -2
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_index_undef
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: extract_from_index_undef
+    ; CHECK: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = G_IMPLICIT_DEF
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_index_too_large
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_index_too_large
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = G_CONSTANT i32 3000
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_with_freeze
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_with_freeze
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %idx:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s32)
+    ; CHECK-NEXT: %extract:_(s64) = G_FREEZE [[EVEC]]
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = COPY $w1
+    %fvec:_(<2 x s64>) = G_FREEZE %vec
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %fvec(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_insert_symmetry
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_insert_symmetry
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %element:_(s64) = COPY $x1
+    ; CHECK-NEXT: $x0 = COPY %element(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = COPY $w1
+    %element:_(s64) = COPY $x1
+    %invec:_(<2 x s64>) = G_INSERT_VECTOR_ELT %vec(<2 x s64>), %element(s64), %idx(s32)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %invec(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_insert_with_different_consts
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_insert_with_different_consts
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %idx2:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx2(s32)
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = G_CONSTANT i32 0
+    %idx2:_(s32) = G_CONSTANT i32 1
+    %element:_(s64) = COPY $x1
+    %invec:_(<2 x s64>) = G_INSERT_VECTOR_ELT %vec(<2 x s64>), %element(s64), %idx(s32)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %invec(<2 x s64>), %idx2(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_build_vector_non_const
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_non_const
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %idx:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s32)
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = COPY $w0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_build_vector_const
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_const
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY %arg1(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = G_CONSTANT i32 0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
