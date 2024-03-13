@@ -11,6 +11,7 @@
 
 #include "clang/AST/Availability.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
 
 namespace clang {
