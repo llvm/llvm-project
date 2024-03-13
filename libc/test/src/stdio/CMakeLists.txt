@@ -355,6 +355,23 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 endif()
 
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_libc_test(
+    rename_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      rename_test.cpp
+    DEPENDS
+      libc.include.unistd
+      libc.src.errno.errno
+      libc.src.fcntl.open
+      libc.src.stdio.rename
+      libc.src.unistd.access
+      libc.src.unistd.close
+  )
+endif()
+
 add_libc_test(
   fgetc_test
   SUITE
