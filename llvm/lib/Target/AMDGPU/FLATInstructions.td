@@ -3127,11 +3127,6 @@ defm SCRATCH_STORE_D16_HI_B16      : VSCRATCH_Real_AllAddr_gfx12<0x25, "SCRATCH_
 defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53>;
 defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
 
-let SubtargetPredicate = isGFX12_10Plus in {
-defm FLAT_PREFETCH_B8              : VFLAT_Real_Base_gfx12<0x05d>;
-defm GLOBAL_PREFETCH_B8            : VGLOBAL_Real_AllAddr_gfx12<0x05d>;
-}
-
 //===----------------------------------------------------------------------===//
 // GFX1210
 //===----------------------------------------------------------------------===//
@@ -3192,6 +3187,9 @@ multiclass VGLOBAL_Real_Atomics_gfx1210<bits<8> op, string ps = NAME, string opN
   VGLOBAL_Real_AllAddr_gfx1210<op, ps, opName, renamed, alias>,
   VFLAT_Real_RTN_gfx1210<op, ps, opName>,
   VFLAT_Real_SADDR_RTN_gfx1210<op, ps, opName>;
+
+defm FLAT_PREFETCH_B8              : VFLAT_Real_Base_gfx1210<0x05d>;
+defm GLOBAL_PREFETCH_B8            : VGLOBAL_Real_AllAddr_gfx1210<0x05d>;
 
 defm FLAT_LOAD_MONITOR_B32     : VFLAT_Real_Base_gfx1210<0x070>;
 defm FLAT_LOAD_MONITOR_B64     : VFLAT_Real_Base_gfx1210<0x071>;
