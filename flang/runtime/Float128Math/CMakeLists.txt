@@ -33,6 +33,7 @@ set(sources
   exp.cpp
   exponent.cpp
   floor.cpp
+  fma.cpp
   fraction.cpp
   hypot.cpp
   j0.cpp
