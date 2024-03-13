@@ -39,6 +39,14 @@ struct InputRange : std::ranges::view_interface<InputRange> {
   constexpr InputIter end() const { return InputIter(buff + 8); }
 };
 
+struct SizedInputRange : std::ranges::view_interface<SizedInputRange> {
+  int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+  constexpr InputIter begin() const { return InputIter(buff); }
+  constexpr sized_sentinel<InputIter> end() const { return sized_sentinel(InputIter(buff + 8)); }
+  constexpr std::size_t size() const { return 8; }
+};
+static_assert(std::ranges::sized_range<SizedInputRange>);
+
 struct NotSizedSentinel {
   using value_type = int;
   using difference_type = std::ptrdiff_t;
@@ -155,9 +163,12 @@ concept BoolOpInvocable = requires (T const& obj) { bool(obj); };
 
 constexpr bool testEmpty() {
   static_assert(!EmptyInvocable<InputRange>);
+  // LWG 3715: `view_interface::empty` is overconstrained
+  static_assert( EmptyInvocable<SizedInputRange>);
   static_assert( EmptyInvocable<ForwardRange>);
 
   static_assert(!BoolOpInvocable<InputRange>);
+  static_assert( BoolOpInvocable<SizedInputRange>);
   static_assert( BoolOpInvocable<ForwardRange>);
 
   ForwardRange forwardRange;
