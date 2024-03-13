@@ -18,6 +18,7 @@
 namespace clang {
 namespace installapi {
 class FrontendRecordsSlice;
+class DylibVerifier;
 
 /// Struct used for generating validating InstallAPI.
 /// The attributes captured represent all necessary information
@@ -44,6 +45,9 @@ struct InstallAPIContext {
 
   /// DiagnosticsEngine for all error reporting.
   DiagnosticsEngine *Diags = nullptr;
+
+  /// Verifier when binary dylib is passed as input.
+  std::unique_ptr<DylibVerifier> Verifier = nullptr;
 
   /// File Path of output location.
   llvm::StringRef OutputLoc{};
