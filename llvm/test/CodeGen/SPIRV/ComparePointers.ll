@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --mattr=+spirv1.3  %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; kernel void test(int global *in, int global *in2) {
 ;;   if (!in)
