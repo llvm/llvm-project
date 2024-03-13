@@ -103,7 +103,6 @@ def SiFiveP600VST          : ProcResource<1>;
 def SiFiveP600VDiv         : ProcResource<1>;
 def SiFiveP600VFloatDiv    : ProcResource<1>;
 
-let Latency = 1 in {
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU, [SiFiveP600IntArith]>;
 def : WriteRes<WriteIALU32, [SiFiveP600IntArith]>;
@@ -115,7 +114,6 @@ def : WriteRes<WriteShiftReg32, [SiFiveP600IntArith]>;
 def : WriteRes<WriteJmp, [SiFiveP600Branch]>;
 def : WriteRes<WriteJal, [SiFiveP600Branch]>;
 def : WriteRes<WriteJalr, [SiFiveP600Branch]>;
-}
 
 // CMOV
 def P600WriteCMOV : SchedWriteRes<[SiFiveP600Branch, SiFiveP600CMOV]> {
@@ -153,7 +151,6 @@ def : WriteRes<WriteIRem32, [SiFiveP600MulI2F, SiFiveP600Div]> {
   let ReleaseAtCycles = [1, 19];
 }
 
-let Latency = 1 in {
 // Bitmanip
 def : WriteRes<WriteRotateImm, [SiFiveP600IntArith]>;
 def : WriteRes<WriteRotateImm32, [SiFiveP600IntArith]>;
@@ -176,10 +173,8 @@ def : WriteRes<WriteSingleBit, [SiFiveP600IntArith]>;
 def : WriteRes<WriteSingleBitImm, [SiFiveP600IntArith]>;
 def : WriteRes<WriteBEXT, [SiFiveP600IntArith]>;
 def : WriteRes<WriteBEXTI, [SiFiveP600IntArith]>;
-}
 
 // Memory
-let Latency = 1 in {
 def : WriteRes<WriteSTB, [SiFiveP600LDST]>;
 def : WriteRes<WriteSTH, [SiFiveP600LDST]>;
 def : WriteRes<WriteSTW, [SiFiveP600LDST]>;
@@ -187,7 +182,7 @@ def : WriteRes<WriteSTD, [SiFiveP600LDST]>;
 def : WriteRes<WriteFST16, [SiFiveP600LDST]>;
 def : WriteRes<WriteFST32, [SiFiveP600LDST]>;
 def : WriteRes<WriteFST64, [SiFiveP600LDST]>;
-}
+
 let Latency = 4 in {
 def : WriteRes<WriteLDB, [SiFiveP600LDST]>;
 def : WriteRes<WriteLDH, [SiFiveP600LDST]>;
