@@ -331,9 +331,12 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
-  let VM_CNT = 1;
-  let EXP_CNT = 1;
-  let MUBUF = 1;
+  // I see no reason to hard-code these bits in Real. We are copying
+  // TSFlags from Pseudo, so these values won't go into Real's TSFlags.
+  // If we don't use these bits in Real, we should not set them here.
+  //let VM_CNT = 1;
+  //let EXP_CNT = 1;
+  //let MUBUF = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
@@ -341,15 +344,15 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let OtherPredicates      = ps.OtherPredicates;
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
-  let TSFlags              = ps.TSFlags;
+  let TSFlags              = ps.TSFlags; // TSFlags from pseudo carry everything.
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
-  let VALU                 = ps.VALU;
-  let LGKM_CNT             = ps.LGKM_CNT;
+  //let VALU                 = ps.VALU;      // Have we ever used  VALU in real?
+  //let LGKM_CNT             = ps.LGKM_CNT;  // Have we ever used  LGKM in real?
 
   bits<12> offset;
   bits<5>  cpol;
