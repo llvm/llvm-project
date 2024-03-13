@@ -37,7 +37,7 @@ end subroutine
 
 ! ONE_DIM-NEXT: } copy {
 ! ONE_DIM-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
-! ONE_DIM-NEXT:  hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]] temporary_lhs
+! ONE_DIM:        hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]] temporary_lhs
 ! ONE_DIM-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]] : [[TYPE]])
 ! ONE_DIM-NEXT: }
 
@@ -70,6 +70,6 @@ end subroutine
 
 ! TWO_DIM-NEXT: } copy {
 ! TWO_DIM-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
-! TWO_DIM-NEXT:  hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]] temporary_lhs
+! TWO_DIM:        hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]] temporary_lhs
 ! TWO_DIM-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]] : [[TYPE]])
 ! TWO_DIM-NEXT: }

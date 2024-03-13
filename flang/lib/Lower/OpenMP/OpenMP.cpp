@@ -654,20 +654,31 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
     llvm::transform(privateVars, std::back_inserter(privateVarLocs),
                     [](mlir::Value v) { return v.getLoc(); });
 
-    converter.getFirOpBuilder().createBlock(&region, /*insertPt=*/{},
-                                            privateVarTypes, privateVarLocs);
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    builder.createBlock(&region, /*insertPt=*/{}, privateVarTypes,
+                        privateVarLocs);
 
     llvm::SmallVector<const Fortran::semantics::Symbol *> allSymbols =
         reductionSymbols;
     allSymbols.append(delayedPrivatizationInfo.symbols);
-    for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      converter.bindSymbol(*arg, prv);
-    }
+    for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments()))
+      if (fir::BoxCharType boxCharTy =
+              prv.getType().dyn_cast<fir::BoxCharType>()) {
+        mlir::Type charRefType = builder.getRefType(boxCharTy.getEleTy());
+
+        fir::UnboxCharOp unboxedArg = builder.create<fir::UnboxCharOp>(
+            builder.getUnknownLoc(), charRefType,
+            builder.getCharacterLengthType(), prv);
+
+        fir::CharBoxValue newBox(unboxedArg.getResult(0),
+                                 unboxedArg.getResult(1));
+        converter.bindSymbol(*arg, newBox);
+      } else
+        converter.bindSymbol(*arg, prv);
 
     return allSymbols;
   };
 
-  // TODO Merge with the reduction CB.
   genInfo.setGenRegionEntryCb(genRegionEntryCB).setDataSharingProcessor(&dsp);
 
   llvm::SmallVector<mlir::Attribute> privatizers(

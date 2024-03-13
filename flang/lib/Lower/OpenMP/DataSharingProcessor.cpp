@@ -16,6 +16,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
@@ -369,8 +370,50 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
                        : mlir::omp::DataSharingClauseType::Private);
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
-
     symTable->pushScope();
+
+    auto addSymbol = [&](mlir::Region &region, unsigned argIdx,
+                         bool force = false) {
+      symExV.match(
+          [&](const fir::ArrayBoxValue &box) {
+            auto idxTy = firOpBuilder.getIndexType();
+            llvm::SmallVector<mlir::Value> extents;
+            llvm::SmallVector<mlir::Value> lBounds;
+
+            for (unsigned dim = 0; dim < box.getExtents().size(); ++dim) {
+              mlir::Value dimVal =
+                  firOpBuilder.createIntegerConstant(symLoc, idxTy, dim);
+              fir::BoxDimsOp dimInfo = firOpBuilder.create<fir::BoxDimsOp>(
+                  symLoc, idxTy, idxTy, idxTy, region.getArgument(argIdx),
+                  dimVal);
+              extents.push_back(dimInfo.getExtent());
+              lBounds.push_back(dimInfo.getLowerBound());
+            }
+
+            symTable->addSymbol(*sym,
+                                fir::ArrayBoxValue(region.getArgument(argIdx),
+                                                   extents, lBounds),
+                                force);
+          },
+          [&](const fir::CharBoxValue &box) {
+            fir::BoxCharType boxCharType = symType.cast<fir::BoxCharType>();
+            mlir::Type charRefType =
+                firOpBuilder.getRefType(boxCharType.getEleTy());
+
+            fir::UnboxCharOp unboxedArg = firOpBuilder.create<fir::UnboxCharOp>(
+                symLoc, charRefType, firOpBuilder.getCharacterLengthType(),
+                region.getArgument(argIdx));
+            hlfir::DeclareOp localVar = firOpBuilder.create<hlfir::DeclareOp>(
+                symLoc, unboxedArg.getResult(0), converter.mangleName(*sym),
+                nullptr,
+                llvm::SmallVector<mlir::Value>{unboxedArg.getResult(1)});
+            symTable->addVariableDefinition(*sym, localVar, force);
+          },
+          [&](const auto &box) {
+            symTable->addSymbol(
+                *sym, fir::substBase(box, region.getArgument(argIdx)), force);
+          });
+    };
 
     // Populate the `alloc` region.
     {
@@ -380,30 +423,7 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
 
-      fir::ExtendedValue localExV = symExV.match(
-          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            auto idxTy = firOpBuilder.getIndexType();
-            llvm::SmallVector<mlir::Value> extents;
-            llvm::SmallVector<mlir::Value> lBounds;
-
-            for (unsigned dim = 0; dim < box.getExtents().size(); ++dim) {
-              mlir::Value dimVal =
-                  firOpBuilder.createIntegerConstant(symLoc, idxTy, dim);
-              fir::BoxDimsOp dimInfo = firOpBuilder.create<fir::BoxDimsOp>(
-                  symLoc, idxTy, idxTy, idxTy, allocRegion.getArgument(0),
-                  dimVal);
-              extents.push_back(dimInfo.getExtent());
-              lBounds.push_back(dimInfo.getLowerBound());
-            }
-
-            return fir::ArrayBoxValue(allocRegion.getArgument(0), extents,
-                                      lBounds);
-          },
-          [&](const auto &box) -> fir::ExtendedValue {
-            return fir::substBase(symExV, allocRegion.getArgument(0));
-          });
-
-      symTable->addSymbol(*sym, localExV);
+      addSymbol(allocRegion, 0);
       symTable->pushScope();
       cloneSymbol(sym);
       firOpBuilder.create<mlir::omp::YieldOp>(
@@ -420,12 +440,10 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
           &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(0)),
-                          /*force=*/true);
+
+      addSymbol(copyRegion, 0, true);
       symTable->pushScope();
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(1)));
+      addSymbol(copyRegion, 1);
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 
