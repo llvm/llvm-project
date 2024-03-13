@@ -327,6 +327,9 @@ void kmp_topology_t::_insert_windows_proc_groups() {
   KMP_CPU_FREE(mask);
   _insert_layer(KMP_HW_PROC_GROUP, ids);
   __kmp_free(ids);
+
+  // sort topology after adding proc groups
+  __kmp_topology->sort_ids();
 }
 #endif
 
