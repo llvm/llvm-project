@@ -27555,10 +27555,10 @@ in example below:
     %cond = call i1 @llvm.experimental.widenable.condition()
     br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Apply memory-consuming but fast solution for a task.
 
-  label %slow_path:
+  slow_path:
     ; Cheap in memory but slow solution.
 
 Whether the result of intrinsic's call is `true` or `false`,
@@ -27652,11 +27652,11 @@ Syntax:
 Overview:
 """""""""
 
-This intrinsic returns true iff it's known that containing basic block is hot in
-profile.
+This intrinsic returns ``true`` iff it's known that containing basic block is
+hot in profile.
 
 When used with profile based optimization allows to change program behaviour
-deppending on the code hotness.
+depending on the code hotness.
 
 Arguments:
 """"""""""
@@ -27666,11 +27666,11 @@ None.
 Semantics:
 """"""""""
 
-The intrinsic ``@llvm.experimental.hot()`` returns either `true` or `false`,
-deppending on profile used. Expresion is evaluated as `true` iff profile and
-summary are availible and profile counter for the block reach hotness threshold.
+The intrinsic ``@llvm.experimental.hot()`` returns either ``true`` or ``false``,
+depending on profile used. Expresion is evaluated as ``true`` iff profile and
+summary are available and profile counter for the block reach hotness threshold.
 For each evaluation of a call to this intrinsic, the program must be valid and
-correct both if it returns `true` and if it returns `false`.
+correct both if it returns ``true`` and if it returns ``false``.
 
 When used in a branch condition, it allows us to choose between
 two alternative correct solutions for the same problem, like
@@ -27681,10 +27681,10 @@ in example below:
     %cond = call i1 @llvm.experimental.hot()
     br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Omit diagnostics.
 
-  label %slow_path:
+  slow_path:
     ; Additional diagnostics.
 
 
