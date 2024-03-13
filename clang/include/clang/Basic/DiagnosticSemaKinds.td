@@ -12078,6 +12078,14 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
+def err_cuda_cluster_dims_not_supported : Error<
+  "__cluster_dims__ is not supported for this GPU architecture"
+>;
+
+def err_cuda_cluster_dims_too_large : Error<
+  "Only a maximum of %0 thread blocks in a cluster is supported."
+>;
+
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "

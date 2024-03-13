@@ -33,6 +33,7 @@
 // CHECK-NEXT: CFUnknownTransfer (SubjectMatchRule_function)
 // CHECK-NEXT: CPUDispatch (SubjectMatchRule_function)
 // CHECK-NEXT: CPUSpecific (SubjectMatchRule_function)
+// CHECK-NEXT: CUDAClusterDims (SubjectMatchRule_function)
 // CHECK-NEXT: CUDAConstant (SubjectMatchRule_variable)
 // CHECK-NEXT: CUDADevice (SubjectMatchRule_function, SubjectMatchRule_variable)
 // CHECK-NEXT: CUDADeviceBuiltinSurfaceType (SubjectMatchRule_record)
