@@ -2823,14 +2823,14 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
 // Attempt to form avgflooru(A, B) from add(and(A, B), lshr(xor(A, B), 1))
 static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::ADD and "ADD node is required here");
+  assert(N->getOpcode() == ISD::ADD && "ADD node is required here");
   SDValue And = N->getOperand(0);
   SDValue Lshr = N->getOperand(1);
-  if (And.getOpcode() == ISD::SRL and Lshr.getOpcode() == ISD::AND) {
+  if (And.getOpcode() == ISD::SRL && Lshr.getOpcode() == ISD::AND) {
     SDValue temp = And;
     And = Lshr;
     Lshr = temp;
-  } else if (And.getOpcode() != ISD::AND or Lshr.getOpcode() != ISD::SRL)
+  } else if (And.getOpcode() != ISD::AND || Lshr.getOpcode() != ISD::SRL)
     return SDValue();
   SDValue Xor = Lshr.getOperand(0);
   if (Xor.getOpcode() != ISD::XOR)
@@ -2839,11 +2839,11 @@ static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
   SDValue And2 = And.getOperand(1);
   SDValue Xor1 = Xor.getOperand(0);
   SDValue Xor2 = Xor.getOperand(1);
-  if (And1 == Xor2 and And2 == Xor1) {
+  if (And1 == Xor2 && And2 == Xor1) {
     SDValue temp = And1;
     And1 = And2;
     And2 = temp;
-  } else if (And1 != Xor1 or And2 != Xor2)
+  } else if (And1 != Xor1 || And2 != Xor2)
     return SDValue();
   // Is the right shift using an immediate value of 1?
   ConstantSDNode *N1C = isConstOrConstSplat(Lshr.getOperand(1));
