@@ -185,8 +185,10 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
 // RUN:   -march=rv64ia -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-A-EXT %s
+// CHECK-A-EXT: __INTPTR_WIDTH__ [[WIDTH:[1-9]+]]
 // CHECK-A-EXT: __riscv_a 2001000{{$}}
 // CHECK-A-EXT: __riscv_atomic 1
+// CHECK-A-EXT: __riscv_cmdline_arch_string "rv[[WIDTH]]i2p1_a2p1"
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ic -E -dM %s \
@@ -203,6 +205,8 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
 // RUN:   -march=rv64ifd -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-D-EXT %s
+// CHECK-D-EXT: __INTPTR_WIDTH__ [[WIDTH:[1-9]+]]
+// CHECK-D-EXT: __riscv_cmdline_arch_string "rv[[WIDTH]]i2p1_f2p2_d2p2_zicsr2p0"
 // CHECK-D-EXT: __riscv_d 2002000{{$}}
 // CHECK-D-EXT: __riscv_fdiv 1
 // CHECK-D-EXT: __riscv_flen 64
@@ -217,6 +221,8 @@
 // CHECK-RV32E: __riscv_32e 1
 // CHECK-RV64E: __riscv_64e 1
 // CHECK-E-EXT: __riscv_abi_rve 1
+// CHECK-RV32E: __riscv_cmdline_arch_string "rv32e2p0"
+// CHECK-RV64E: __riscv_cmdline_arch_string "rv64e2p0"
 // CHECK-E-EXT: __riscv_e 2000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
@@ -225,6 +231,8 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
 // RUN:   -march=rv64if -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-F-EXT %s
+// CHECK-F-EXT: __INTPTR_WIDTH__ [[WIDTH:[1-9]+]]
+// CHECK-F-EXT: __riscv_cmdline_arch_string "rv[[WIDTH]]i2p1_f2p2_zicsr2p0"
 // CHECK-F-EXT: __riscv_f 2002000{{$}}
 // CHECK-F-EXT: __riscv_fdiv 1
 // CHECK-F-EXT: __riscv_flen 32

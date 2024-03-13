@@ -139,6 +139,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   unsigned MinVLen = ISAInfo->getMinVLen();
   unsigned MaxELen = ISAInfo->getMaxELen();
   unsigned MaxELenFp = ISAInfo->getMaxELenFp();
+  std::string ArchString = "\"" + ISAInfo->toString() + "\"";
   if (CodeModel == "default")
     CodeModel = "small";
 
@@ -222,6 +223,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     else
       Builder.defineMacro("__riscv_32e");
   }
+  Builder.defineMacro("__riscv_cmdline_arch_string", ArchString);
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
