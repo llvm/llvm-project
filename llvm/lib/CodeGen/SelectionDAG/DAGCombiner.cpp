@@ -2822,7 +2822,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 }
 
 // Attempt to form ext(avgflooru(A, B)) from add(and(A, B), lshr(xor(A, B), 1))
-static SDValue combineFixedwidthToAVG(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::ADD && "ADD node is required here");
   SDValue And = N->getOperand(0);
   SDValue Lshr = N->getOperand(1);
@@ -2869,8 +2869,8 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue V = foldAddSubOfSignBit(N, DAG))
     return V;
 
-  // Try to match AVG fixedwidth pattern
-  if (SDValue V = combineFixedwidthToAVG(N, DAG))
+  // Try to match AVGFLOORU fixedwidth pattern
+  if (SDValue V = combineFixedwidthToAVGFLOORU(N, DAG))
     return V;
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
