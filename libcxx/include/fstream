@@ -78,8 +78,7 @@ public:
     basic_ifstream();
     explicit basic_ifstream(const char* s, ios_base::openmode mode = ios_base::in);
     explicit basic_ifstream(const string& s, ios_base::openmode mode = ios_base::in);
-    explicit basic_ifstream(const filesystem::path& p,
-                            ios_base::openmode mode = ios_base::in); // C++17
+    template<class T> explicit basic_ifstream(const T& s, ios_base::openmode mode = ios_base::in); // Since C++17
     basic_ifstream(basic_ifstream&& rhs);
 
     basic_ifstream& operator=(basic_ifstream&& rhs);
@@ -117,8 +116,7 @@ public:
     basic_ofstream();
     explicit basic_ofstream(const char* s, ios_base::openmode mode = ios_base::out);
     explicit basic_ofstream(const string& s, ios_base::openmode mode = ios_base::out);
-    explicit basic_ofstream(const filesystem::path& p,
-                            ios_base::openmode mode = ios_base::out); // C++17
+    template<class T> explicit basic_ofstream(const T& s, ios_base::openmode mode = ios_base::out); // Since C++17
     basic_ofstream(basic_ofstream&& rhs);
 
     basic_ofstream& operator=(basic_ofstream&& rhs);
@@ -158,8 +156,8 @@ public:
     basic_fstream();
     explicit basic_fstream(const char* s, ios_base::openmode mode = ios_base::in|ios_base::out);
     explicit basic_fstream(const string& s, ios_base::openmode mode = ios_base::in|ios_base::out);
-    explicit basic_fstream(const filesystem::path& p,
-                           ios_base::openmode mode = ios_base::in|ios_base::out); C++17
+    template<class T>
+    explicit basic_fstream(const T& s, ios_base::openmode mode = ios_base::in | ios_base::out); // Since C++17
     basic_fstream(basic_fstream&& rhs);
 
     basic_fstream& operator=(basic_fstream&& rhs);
@@ -1043,8 +1041,9 @@ public:
 #  endif
   _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(const string& __s, ios_base::openmode __mode = ios_base::in);
 #  if _LIBCPP_STD_VER >= 17
+  template <class _Tp, std::enable_if_t<std::is_same_v<_Tp, std::filesystem::path>>* = nullptr>
   _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_ifstream(
-      const filesystem::path& __p, ios_base::openmode __mode = ios_base::in)
+      const _Tp& __p, ios_base::openmode __mode = ios_base::in)
       : basic_ifstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI basic_ifstream(basic_ifstream&& __rhs);
@@ -1197,8 +1196,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(const string& __s, ios_base::openmode __mode = ios_base::out);
 
 #  if _LIBCPP_STD_VER >= 17
+  template <class _Tp, std::enable_if_t<std::is_same_v<_Tp, std::filesystem::path>>* = nullptr>
   _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_ofstream(
-      const filesystem::path& __p, ios_base::openmode __mode = ios_base::out)
+      const _Tp& __p, ios_base::openmode __mode = ios_base::out)
       : basic_ofstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
 
@@ -1356,8 +1356,9 @@ public:
                                                ios_base::openmode __mode = ios_base::in | ios_base::out);
 
 #  if _LIBCPP_STD_VER >= 17
+  template <class _Tp, std::enable_if_t<std::is_same_v<_Tp, std::filesystem::path>>* = nullptr>
   _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(
-      const filesystem::path& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
+      const _Tp& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
       : basic_fstream(__p.c_str(), __mode) {}
 #  endif // _LIBCPP_STD_VER >= 17
 

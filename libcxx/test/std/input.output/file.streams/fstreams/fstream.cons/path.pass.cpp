@@ -21,10 +21,17 @@
 #include <fstream>
 #include <filesystem>
 #include <cassert>
+#include <type_traits>
+
 #include "test_macros.h"
 #include "platform_support.h"
 
 namespace fs = std::filesystem;
+
+struct fake_path {};
+
+static_assert(std::is_constructible_v<std::fstream, fs::path>);
+static_assert(!std::is_constructible_v<std::fstream, fake_path>);
 
 int main(int, char**) {
   fs::path p = get_temp_file_name();

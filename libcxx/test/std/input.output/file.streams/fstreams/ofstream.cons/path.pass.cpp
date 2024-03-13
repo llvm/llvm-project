@@ -27,6 +27,11 @@
 
 namespace fs = std::filesystem;
 
+struct fake_path {};
+
+static_assert(std::is_constructible_v<std::ofstream, fs::path>);
+static_assert(!std::is_constructible_v<std::ofstream, fake_path>);
+
 int main(int, char**) {
   fs::path p = get_temp_file_name();
   {

@@ -29,6 +29,11 @@
 
 namespace fs = std::filesystem;
 
+struct fake_path {};
+
+static_assert(std::is_constructible_v<std::ifstream, fs::path>);
+static_assert(!std::is_constructible_v<std::ifstream, fake_path>);
+
 int main(int, char**) {
   {
     fs::path p;
