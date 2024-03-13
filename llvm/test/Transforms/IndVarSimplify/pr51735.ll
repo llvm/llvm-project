@@ -1,4 +1,9 @@
-; RUN: opt -passes=indvars -S -o - < %s | FileCheck %s
+; RUN: opt -passes="loop(indvars)" \
+; RUN:     --experimental-debuginfo-iterators=false -S -o - < %s | \
+; RUN: FileCheck --check-prefix=PRE-CHECK %s
+; RUN: opt -passes="loop(indvars,loop-deletion)" \
+; RUN:     --experimental-debuginfo-iterators=false -S -o - < %s | \
+; RUN: FileCheck --check-prefix=POST-CHECK %s
 
 ; Make sure that when we delete the loop in the code below, that the variable
 ; Index has the 777 value.
@@ -20,13 +25,28 @@
 ; 15	  bar();
 ; 16	}
 
-; CHECK: for.cond:
-; CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG:[0-9]+]], {{.*}}
-; CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG]], {{.*}}
-; CHECK:   br i1 false, label %for.cond, label %for.end, {{.*}}
-; CHECK: for.end:
-; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG]], {{.*}}
-; CHECK-DAG: ![[DBG]] = !DILocalVariable(name: "Index"{{.*}})
+; Only the 'indvars' pass is executed.
+; As this test case does not fire the 'indvars' transformation, no debug values
+; are preserved and or added.
+
+; PRE-CHECK: for.cond:
+; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG_1:[0-9]+]], {{.*}}
+; PRE-CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG_1]], {{.*}}
+; PRE-CHECK:   br i1 false, label %for.cond, label %for.end
+
+; PRE-CHECK: for.end:
+; PRE-CHECK-NOT: call void @llvm.dbg.value
+; PRE-CHECK:   ret void
+; PRE-CHECK-DAG: ![[DBG_1]] = !DILocalVariable(name: "Index"{{.*}})
+
+; The 'indvars' and 'loop-deletion' passes are executed.
+; The loop is deleted and the debug values collected by 'indvars' are used by
+; 'loop-deletion' to add the induction variable debug value.
+
+; POST-CHECK: for.end:
+; POST-CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG_2:[0-9]+]], {{.*}}
+; POST-CHECK:   ret void
+; POST-CHECK-DAG: ![[DBG_2]] = !DILocalVariable(name: "Index"{{.*}})
 
 define dso_local void @_Z3barv() local_unnamed_addr #1 !dbg !15 {
 entry:

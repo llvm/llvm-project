@@ -1,7 +1,16 @@
-; RUN: opt -passes=indvars -S -o - < %s | FileCheck %s
+; RUN: opt -passes="loop(indvars)" \
+; RUN:     --experimental-debuginfo-iterators=false -S -o - < %s | \
+; RUN: FileCheck --check-prefix=CHECK %s
+; RUN: opt -passes="loop(indvars,loop-deletion)" \
+; RUN:     --experimental-debuginfo-iterators=false -S -o - < %s | \
+; RUN: FileCheck --check-prefix=CHECK %s
 
 ; Make sure that when we delete the loop, that the variable Index has
 ; the 777 value.
+
+; As this test case does fire the 'indvars' transformation, the debug values
+; are added to the 'for.end' exit block. No debug values are preserved by the
+; pass to be used by the 'loop-deletion' pass.
 
 ; CHECK: for.cond:
 ; CHECK:   call void @llvm.dbg.value(metadata i32 %Index.0, metadata ![[DBG:[0-9]+]], {{.*}}
