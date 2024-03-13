@@ -297,22 +297,8 @@ module {
     sparse_tensor.print %6 : tensor<3x4xi64, #SparseMatrix>
     sparse_tensor.print %7 : tensor<3x4xi64, #SparseMatrix>
 
-    // Release resources.
-    bufferization.dealloc_tensor %sv : tensor<8xi64, #SparseVector>
-    bufferization.dealloc_tensor %dv : tensor<8xi64, #SparseVector>
-    bufferization.dealloc_tensor %0 : tensor<8xi64, #SparseVector>
-    bufferization.dealloc_tensor %1 : tensor<8xi64, #SparseVector>
-    bufferization.dealloc_tensor %2 : tensor<8xi64, #SparseVector>
-    bufferization.dealloc_tensor %3 : tensor<8xi64, #SparseVector>
-    bufferization.dealloc_tensor %sm : tensor<3x4xi64, #SparseMatrix>
-    bufferization.dealloc_tensor %dm : tensor<3x4xi64, #SparseMatrix>
-    bufferization.dealloc_tensor %4 : tensor<3x4xi64, #SparseMatrix>
-    bufferization.dealloc_tensor %5 : tensor<3x4xi64, #SparseMatrix>
-    bufferization.dealloc_tensor %6 : tensor<3x4xi64, #SparseMatrix>
-    bufferization.dealloc_tensor %7 : tensor<3x4xi64, #SparseMatrix>
-
     //
-    // Call the f32 kernel, verify the result, release the resources.
+    // Call the f32 kernel, verify the result.
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 6
@@ -329,6 +315,19 @@ module {
       -> tensor<2x3xf32, #SparseMatrix>
     sparse_tensor.print %100 : tensor<2x3xf32, #SparseMatrix>
 
+    // Release resources.
+    bufferization.dealloc_tensor %sv : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %dv : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %0 : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %1 : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %2 : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %3 : tensor<8xi64, #SparseVector>
+    bufferization.dealloc_tensor %sm : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %dm : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %4 : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %5 : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %6 : tensor<3x4xi64, #SparseMatrix>
+    bufferization.dealloc_tensor %7 : tensor<3x4xi64, #SparseMatrix>
     bufferization.dealloc_tensor %sf32 : tensor<2x3xf32, #SparseMatrix>
     bufferization.dealloc_tensor %100 : tensor<2x3xf32, #SparseMatrix>
 
