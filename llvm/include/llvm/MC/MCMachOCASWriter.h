@@ -55,6 +55,8 @@ public:
       std::optional<MCTargetOptions::ResultCallBackTy> CallBack,
       raw_pwrite_stream *CasIDOS = nullptr);
 
+  uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
+
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override {
