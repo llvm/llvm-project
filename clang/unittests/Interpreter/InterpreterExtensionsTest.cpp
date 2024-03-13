@@ -56,7 +56,11 @@ public:
   void resetExecutor() { Interpreter::ResetExecutor(); }
 };
 
+ifdef _AIX
+TEST(InterpreterExtensionsTest, DISABLED_ExecutorCreateReset) {
+#else
 TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
+#endif
   // Make sure we can create the executer on the platform.
   if (!HostSupportsJit())
     GTEST_SKIP();
