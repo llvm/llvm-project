@@ -377,11 +377,24 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
 
   bool isKnownNegative = false;
   bool isKnownNonNegative = false;
+  const APInt *C;
+  unsigned BitWidth = Known.getBitWidth();
+
   // If the multiplication is known not to overflow, compute the sign bit.
   if (NSW) {
     if (Op0 == Op1) {
       // The product of a number with itself is non-negative.
       isKnownNonNegative = true;
+    } else if (((match(Op0, m_Mul(m_Specific(Op1), m_APInt(C))) &&
+                 cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap()) ||
+                (match(Op0, m_Shl(m_Specific(Op1), m_APInt(C))) &&
+                 C->ult(BitWidth))) &&
+               !C->isZero() && !Known.isZero()) {
+      // The product of a number with itself and a constant depends on the sign
+      // of the constant.
+      KnownBits KnownC = KnownBits::makeConstant(*C);
+      isKnownNonNegative = KnownC.isNonNegative();
+      isKnownNegative = KnownC.isNegative();
     } else {
       bool isKnownNonNegativeOp1 = Known.isNonNegative();
       bool isKnownNonNegativeOp0 = Known2.isNonNegative();

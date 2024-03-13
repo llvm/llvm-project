@@ -2049,3 +2049,64 @@ define i32 @zext_negpow2_use(i8 %x) {
   %r = mul i32 %zx, -16777216 ; -1 << 24
   ret i32 %r
 }
+
+define i1 @self_with_constant_greater_than_zero(i8 %a) {
+; CHECK-LABEL: @self_with_constant_greater_than_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %mul = mul nsw i8 %a, 3
+  %mul1 = mul nsw i8 %mul, %a
+  %cmp = icmp sge i8 %mul1, 0
+  ret i1 %cmp
+}
+
+define i8 @abs_of_self_with_constant(i8 %a) {
+; CHECK-LABEL: @abs_of_self_with_constant(
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[MUL]], [[A]]
+; CHECK-NEXT:    ret i8 [[MUL1]]
+;
+  %mul = mul nsw i8 %a, 2
+  %mul1 = mul nsw i8 %mul, %a
+  %r = tail call i8 @llvm.abs.i8(i8 %mul1, i1 true)
+  ret i8 %r
+}
+
+define i8 @abs_of_self_with_constant_neg_constant(i8 %a) {
+; CHECK-LABEL: @abs_of_self_with_constant_neg_constant(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i8 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL1_NEG:%.*]] = mul nsw i8 [[MUL_NEG]], [[A]]
+; CHECK-NEXT:    ret i8 [[MUL1_NEG]]
+;
+  %mul = mul nsw i8 %a, -3
+  %mul1 = mul nsw i8 %mul, %a
+  %r = tail call i8 @llvm.abs.i8(i8 %mul1, i1 true)
+  ret i8 %r
+}
+
+define i8 @abs_of_self_with_constant_2_inv_ops(i8 %a) {
+; CHECK-LABEL: @abs_of_self_with_constant_2_inv_ops(
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[MUL]], [[A]]
+; CHECK-NEXT:    ret i8 [[MUL1]]
+;
+  %mul = mul nsw i8 4, %a
+  %mul1 = mul nsw i8 %a, %mul
+  %r = tail call i8 @llvm.abs.i8(i8 %mul1, i1 true)
+  ret i8 %r
+}
+
+define i8 @abs_of_self_with_constant_no_nsw(i8 %a) {
+; CHECK-LABEL: @abs_of_self_with_constant_no_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[MUL]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = tail call i8 @llvm.abs.i8(i8 [[MUL1]], i1 true)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %mul = mul i8 %a, 3
+  %mul1 = mul nsw i8 %mul, %a
+  %r = tail call i8 @llvm.abs.i8(i8 %mul1, i1 true)
+  ret i8 %r
+}
