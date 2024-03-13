@@ -23,7 +23,9 @@ extern char **environ;
 
 namespace Fortran::runtime {
 
-ExecutionEnvironment executionEnvironment;
+RT_OFFLOAD_VAR_GROUP_BEGIN
+RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
+RT_OFFLOAD_VAR_GROUP_END
 
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
