@@ -707,6 +707,10 @@ public:
   /// The type may be VoidTy, in which case only return true if the addressing
   /// mode is legal for a load/store of any legal type.
   /// If target returns true in LSRWithInstrQueries(), I may be valid.
+  /// \param ScalableOffset represents a quantity of bytes multiplied by vscale,
+  /// an invariant value known only at runtime. Most targets should not accept
+  /// a scalable offset.
+  ///
   /// TODO: Handle pre/postinc as well.
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, int64_t Scale,
