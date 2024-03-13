@@ -187,9 +187,8 @@ public:
     ExecutorAddr JITDispatchContext;
   };
 
-  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
-                         std::unique_ptr<TaskDispatcher> D)
-    : SSP(std::move(SSP)), D(std::move(D)) {}
+  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP)
+    : SSP(std::move(SSP)) {}
 
   virtual ~ExecutorProcessControl();
 
@@ -421,11 +420,11 @@ public:
 protected:
 
   std::shared_ptr<SymbolStringPool> SSP;
-  std::unique_ptr<TaskDispatcher> D;
   ExecutionSession *ES = nullptr;
   Triple TargetTriple;
   unsigned PageSize = 0;
   JITDispatchInfo JDI;
+  TaskDispatcher *D;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
@@ -465,11 +464,10 @@ class UnsupportedExecutorProcessControl : public ExecutorProcessControl,
 public:
   UnsupportedExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP = nullptr,
-      std::unique_ptr<TaskDispatcher> D = nullptr, const std::string &TT = "",
+      const std::string &TT = "",
       unsigned PageSize = 0)
       : ExecutorProcessControl(
-            SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>(),
-            D ? std::move(D) : std::make_unique<InPlaceTaskDispatcher>()),
+            SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()),
         InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
     this->TargetTriple = Triple(TT);
     this->PageSize = PageSize;
@@ -549,6 +547,7 @@ private:
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
                                        const char *Data, size_t Size);
 
+  std::unique_ptr<TaskDispatcher> OwnedTaskDispatcher;
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;
 };

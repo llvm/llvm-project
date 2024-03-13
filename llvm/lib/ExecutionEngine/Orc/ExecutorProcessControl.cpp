@@ -29,7 +29,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
     Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)),
+    : ExecutorProcessControl(std::move(SSP)),
       InProcessMemoryAccess(TargetTriple.isArch64Bit()) {
 
   OwnedMemMgr = std::move(MemMgr);
@@ -37,10 +37,20 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
     OwnedMemMgr = std::make_unique<jitlink::InProcessMemoryManager>(
         sys::Process::getPageSizeEstimate());
 
+  OwnedTaskDispatcher = std::move(D);
+  if (!OwnedTaskDispatcher) {
+#if LLVM_ENABLE_THREADS
+    OwnedTaskDispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>();
+#else
+    OwnedTaskDispatcher = std::make_unique<InPlaceTaskDispatcher>();
+#endif
+  }
+
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = this;
+  this->D = OwnedTaskDispatcher.get();
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
@@ -60,14 +70,6 @@ SelfExecutorProcessControl::Create(
 
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
-
-  if (!D) {
-#if LLVM_ENABLE_THREADS
-    D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
-#else
-    D = std::make_unique<InPlaceTaskDispatcher>();
-#endif
-  }
 
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
