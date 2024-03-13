@@ -30,14 +30,13 @@ public:
 
 private:
   VariadicKind Kind;
+  MCContext &Ctx;
+  const MCExpr **RawArgs;
   ArrayRef<const MCExpr *> Args;
 
-  AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args)
-      : Kind(Kind), Args(Args) {
-    assert(Args.size() >= 1 && "Needs a minimum of one expression.");
-    assert(Kind != AGVK_None &&
-           "Cannot construct AMDGPUVariadicMCExpr of kind none.");
-  }
+  AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
+                       MCContext &Ctx);
+  ~AMDGPUVariadicMCExpr();
 
 public:
   static const AMDGPUVariadicMCExpr *

@@ -17,19 +17,31 @@
 
 using namespace llvm;
 
+AMDGPUVariadicMCExpr::AMDGPUVariadicMCExpr(VariadicKind Kind,
+                                           ArrayRef<const MCExpr *> Args,
+                                           MCContext &Ctx)
+    : Kind(Kind), Ctx(Ctx) {
+  assert(Args.size() >= 1 && "Needs a minimum of one expression.");
+  assert(Kind != AGVK_None &&
+         "Cannot construct AMDGPUVariadicMCExpr of kind none.");
+
+  // Allocating the variadic arguments through the same allocation mechanism
+  // that the object itself is allocated with so they end up in the same memory.
+  //
+  // Will result in an asan failure if allocated on the heap through standard
+  // allocation (e.g., through SmallVector's grow).
+  RawArgs = static_cast<const MCExpr **>(
+      Ctx.allocate(sizeof(const MCExpr *) * Args.size()));
+  std::uninitialized_copy(Args.begin(), Args.end(), RawArgs);
+  this->Args = ArrayRef<const MCExpr *>(RawArgs, Args.size());
+}
+
+AMDGPUVariadicMCExpr::~AMDGPUVariadicMCExpr() { Ctx.deallocate(RawArgs); }
+
 const AMDGPUVariadicMCExpr *
 AMDGPUVariadicMCExpr::create(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
                              MCContext &Ctx) {
-  // Storage for the argument's 'const MCExpr*' allocated through MCContext new
-  // placement which means that AMDGPUVariadicMCExpr objects and all of its
-  // contents will now be allocated through MCContext new placement.
-  //
-  // Will result in an asan failure if allocated on the heap (e.g., through
-  // SmallVector's grow).
-  const MCExpr **CtxArgs = static_cast<const MCExpr **>(
-      Ctx.allocate(sizeof(const MCExpr *) * Args.size()));
-  std::uninitialized_copy(Args.begin(), Args.end(), CtxArgs);
-  return new (Ctx) AMDGPUVariadicMCExpr(Kind, ArrayRef(CtxArgs, Args.size()));
+  return new (Ctx) AMDGPUVariadicMCExpr(Kind, Args, Ctx);
 }
 
 const MCExpr *AMDGPUVariadicMCExpr::getSubExpr(size_t Index) const {
