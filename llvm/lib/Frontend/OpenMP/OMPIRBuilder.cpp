@@ -2110,7 +2110,7 @@ Function *getFreshReductionFunc(Module &M) {
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
-    ArrayRef<ReductionInfo> ReductionInfos, bool IsNoWait) {
+    ArrayRef<ReductionInfo> ReductionInfos, bool IsNoWait, bool IsByRef) {
   for (const ReductionInfo &RI : ReductionInfos) {
     (void)RI;
     assert(RI.Variable && "expected non-null variable");
@@ -2197,17 +2197,29 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Type *ValueType = RI.ElementType;
-    Value *RedValue = Builder.CreateLoad(ValueType, RI.Variable,
-                                         "red.value." + Twine(En.index()));
+    // We have one less load for by-ref case because that load is now inside of
+    // the reduction region
+    Value *RedValue = nullptr;
+    if (!IsByRef) {
+      RedValue = Builder.CreateLoad(ValueType, RI.Variable,
+                                    "red.value." + Twine(En.index()));
+    }
     Value *PrivateRedValue =
         Builder.CreateLoad(ValueType, RI.PrivateVariable,
                            "red.private.value." + Twine(En.index()));
     Value *Reduced;
-    Builder.restoreIP(
-        RI.ReductionGen(Builder.saveIP(), RedValue, PrivateRedValue, Reduced));
+    if (IsByRef) {
+      Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RI.Variable,
+                                        PrivateRedValue, Reduced));
+    } else {
+      Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RedValue,
+                                        PrivateRedValue, Reduced));
+    }
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
-    Builder.CreateStore(Reduced, RI.Variable);
+    // for by-ref case, the load is inside of the reduction region
+    if (!IsByRef)
+      Builder.CreateStore(Reduced, RI.Variable);
   }
   Function *EndReduceFunc = getOrCreateRuntimeFunctionPtr(
       IsNoWait ? RuntimeFunction::OMPRTL___kmpc_end_reduce_nowait
@@ -2219,7 +2231,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   // function. There are no loads/stores here because they will be happening
   // inside the atomic elementwise reduction.
   Builder.SetInsertPoint(AtomicRedBlock);
-  if (CanGenerateAtomic) {
+  if (CanGenerateAtomic && !IsByRef) {
     for (const ReductionInfo &RI : ReductionInfos) {
       Builder.restoreIP(RI.AtomicReductionGen(Builder.saveIP(), RI.ElementType,
                                               RI.Variable, RI.PrivateVariable));
@@ -2257,7 +2269,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced));
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
-    Builder.CreateStore(Reduced, LHSPtr);
+    // store is inside of the reduction region when using by-ref
+    if (!IsByRef)
+      Builder.CreateStore(Reduced, LHSPtr);
   }
   Builder.CreateRetVoid();
 
