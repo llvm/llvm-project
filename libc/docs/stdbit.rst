@@ -110,10 +110,10 @@ Macros
 =========================  =========
 Macro Name                 Available
 =========================  =========
-__STDC_VERSION_STDBIT_H__
-__STDC_ENDIAN_LITTLE__
-__STDC_ENDIAN_BIG__
-__STDC_ENDIAN_NATIVE__
+__STDC_VERSION_STDBIT_H__  |check|
+__STDC_ENDIAN_LITTLE__     |check|
+__STDC_ENDIAN_BIG__        |check|
+__STDC_ENDIAN_NATIVE__     |check|
 stdc_leading_zeros         |check|
 stdc_leading_ones          |check|
 stdc_trailing_zeros        |check|
