@@ -4592,7 +4592,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
   // There's no formal representation of a DPMarker -- print purely as a
   // debugging aid.
-  for (const DbgRecord &DPR : Marker.StoredDPValues) {
+  for (const DbgRecord &DPR : Marker.StoredDbgRecords) {
     printDbgRecord(DPR);
     Out << "\n";
   }
