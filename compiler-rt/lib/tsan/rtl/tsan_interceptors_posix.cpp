@@ -2861,6 +2861,8 @@ void InitializeInterceptors() {
   REAL(memcpy) = internal_memcpy;
 #endif
 
+  __interception::DoesNotSupportStaticLinking();
+
   new(interceptor_ctx()) InterceptorContext();
 
   // Interpose __tls_get_addr before the common interposers. This is needed
