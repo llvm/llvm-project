@@ -1519,8 +1519,10 @@ void DeclPrinter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *OID) {
     return;
   }
   bool eolnOut = false;
-  prettyPrintAttributes(OID);
-  if (OID->hasAttrs()) Out << "\n";
+  if (OID->hasAttrs()) {
+    prettyPrintAttributes(OID);
+    Out << "\n";
+  }
 
   Out << "@interface " << I;
 
