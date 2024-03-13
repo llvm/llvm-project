@@ -211,12 +211,17 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
     return __this.load(__order);
   }
 
-  static _LIBCPP_HIDE_FROM_ABI const __cxx_atomic_impl<_Tp>*
+  using __contention_type =
+      _If<__is_same(__cxx_atomic_impl<_Tp>, __cxx_atomic_contention_t),
+          __atomic_waitable_contention_self,
+          __atomic_waitable_contention_global>;
+
+  static _LIBCPP_HIDE_FROM_ABI __contention_type
   __atomic_contention_address(const __atomic_base<_Tp, _IsIntegral>& __a) {
     return std::addressof(__a.__a_);
   }
 
-  static _LIBCPP_HIDE_FROM_ABI const volatile __cxx_atomic_impl<_Tp>*
+  static _LIBCPP_HIDE_FROM_ABI __contention_type
   __atomic_contention_address(const volatile __atomic_base<_Tp, _IsIntegral>& __this) {
     return std::addressof(__this.__a_);
   }

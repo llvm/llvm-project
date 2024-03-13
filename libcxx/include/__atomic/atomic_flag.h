@@ -90,12 +90,11 @@ struct __atomic_waitable_traits<atomic_flag> {
     return std::__cxx_atomic_load(&__a.__a_, __order);
   }
 
-  static _LIBCPP_HIDE_FROM_ABI const __cxx_atomic_impl<_LIBCPP_ATOMIC_FLAG_TYPE>*
-  __atomic_contention_address(const atomic_flag& __a) {
+  static _LIBCPP_HIDE_FROM_ABI __atomic_waitable_contention_global __atomic_contention_address(const atomic_flag& __a) {
     return std::addressof(__a.__a_);
   }
 
-  static _LIBCPP_HIDE_FROM_ABI const volatile __cxx_atomic_impl<_LIBCPP_ATOMIC_FLAG_TYPE>*
+  static _LIBCPP_HIDE_FROM_ABI __atomic_waitable_contention_global
   __atomic_contention_address(const volatile atomic_flag& __a) {
     return std::addressof(__a.__a_);
   }
