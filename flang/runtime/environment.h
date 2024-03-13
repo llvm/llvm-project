@@ -48,6 +48,7 @@ struct ExecutionEnvironment {
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   bool defaultUTF8{false}; // DEFAULT_UTF8
+  bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
 };
 
 extern ExecutionEnvironment executionEnvironment;
