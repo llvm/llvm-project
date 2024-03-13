@@ -12592,6 +12592,11 @@ Value *BoUpSLP::vectorizeTree(
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
+          // If necessary, sign-extend or zero-extend ScalarRoot
+          // to the larger type.
+          if (Scalar->getType() != Ex->getType())
+            Ex = Builder.CreateIntCast(Ex, Scalar->getType(),
+                                       MinBWs.find(E)->second.second);
           if (auto *I = dyn_cast<Instruction>(Ex))
             ScalarToEEs[Scalar].try_emplace(Builder.GetInsertBlock(), I);
         }
@@ -12601,11 +12606,6 @@ Value *BoUpSLP::vectorizeTree(
           GatherShuffleExtractSeq.insert(ExI);
           CSEBlocks.insert(ExI->getParent());
         }
-        // If necessary, sign-extend or zero-extend ScalarRoot
-        // to the larger type.
-        if (Scalar->getType() != Ex->getType())
-          return Builder.CreateIntCast(Ex, Scalar->getType(),
-                                       MinBWs.find(E)->second.second);
         return Ex;
       }
       assert(isa<FixedVectorType>(Scalar->getType()) &&
