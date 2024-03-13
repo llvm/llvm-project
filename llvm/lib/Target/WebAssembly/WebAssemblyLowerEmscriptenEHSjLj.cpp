@@ -315,7 +315,6 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool EnableEmEH;     // Enable Emscripten exception handling
   bool EnableEmSjLj;   // Enable Emscripten setjmp/longjmp handling
   bool EnableWasmSjLj; // Enable Wasm setjmp/longjmp handling
-  bool EnableWasmAltSjLj; // Alt ABI for EnableWasmSjLj
   bool DoSjLj;         // Whether we actually perform setjmp/longjmp handling
 
   GlobalVariable *ThrewGV = nullptr;      // __THREW__ (Emscripten)
@@ -384,8 +383,7 @@ public:
   WebAssemblyLowerEmscriptenEHSjLj()
       : ModulePass(ID), EnableEmEH(WebAssembly::WasmEnableEmEH),
         EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
-        EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
-        EnableWasmAltSjLj(WebAssembly::WasmEnableAltSjLj) {
+        EnableWasmSjLj(WebAssembly::WasmEnableSjLj) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&
            "Two SjLj modes cannot be turned on at the same time");
     assert(!(EnableEmEH && EnableWasmSjLj) &&
@@ -1017,7 +1015,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       // Register __wasm_longjmp function, which calls __builtin_wasm_longjmp.
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {Int8PtrTy, IRB.getInt32Ty()}, false);
-      if (EnableWasmAltSjLj) {
+      if (EnableWasmSjLj) {
         WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_longjmp", &M);
       } else {
         WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_longjmp", &M);
@@ -1030,7 +1028,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       Type *Int32PtrTy = IRB.getPtrTy();
       Type *Int32Ty = IRB.getInt32Ty();
 
-      if (EnableWasmAltSjLj) {
+      if (EnableWasmSjLj) {
         // Register saveSetjmp function
         FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
         FunctionType *FTy = FunctionType::get(
@@ -1317,7 +1315,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
 
   BinaryOperator *SetjmpTableSize;
   Instruction *SetjmpTable;
-  if (EnableWasmAltSjLj) {
+  if (EnableWasmSjLj) {
     IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
     // This alloca'ed pointer is used by the runtime to identify function
     // inovactions. It's just for pointer comparisons. It will never
@@ -1397,7 +1395,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     // Our index in the function is our place in the array + 1 to avoid index
     // 0, because index 0 means the longjmp is not ours to handle.
     IRB.SetInsertPoint(CI);
-    if (EnableWasmAltSjLj) {
+    if (EnableWasmSjLj) {
       Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
                        SetjmpTable};
       IRB.CreateCall(SaveSetjmpF, Args);
@@ -1426,7 +1424,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   for (Instruction *I : ToErase)
     I->eraseFromParent();
 
-  if (!EnableWasmAltSjLj) {
+  if (!EnableWasmSjLj) {
     // Free setjmpTable buffer before each return instruction + function-exiting
     // call
     SmallVector<Instruction *, 16> ExitingInsts;
@@ -1794,16 +1792,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", &F);
   BasicBlock *EndBB = BasicBlock::Create(C, "if.end", &F);
   Value *EnvP = IRB.CreateBitCast(Env, getAddrPtrType(&M), "env.p");
-  Value *Label;
-  if (EnableWasmAltSjLj) {
-    Label = IRB.CreateCall(TestSetjmpF, {EnvP, SetjmpTable},
-                           OperandBundleDef("funclet", CatchPad), "label");
-  } else {
-    Value *SetjmpID = IRB.CreateLoad(getAddrIntType(&M), EnvP, "setjmp.id");
-    Label =
-        IRB.CreateCall(TestSetjmpF, {SetjmpID, SetjmpTable, SetjmpTableSize},
-                       OperandBundleDef("funclet", CatchPad), "label");
-  }
+  Value *Label = IRB.CreateCall(TestSetjmpF, {EnvP, SetjmpTable},
+                                OperandBundleDef("funclet", CatchPad), "label");
   Value *Cmp = IRB.CreateICmpEQ(Label, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp, ThenBB, EndBB);
 
