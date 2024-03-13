@@ -1047,6 +1047,11 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
     llvm::EnableStatistics(false);
 
+  // Sort vectors containing toc data and no toc data variables to facilitate
+  // binary search later.
+  llvm::sort(getCodeGenOpts().TocDataVarsUserSpecified);
+  llvm::sort(getCodeGenOpts().NoTocDataVars);
+
   for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
     // regular files.
