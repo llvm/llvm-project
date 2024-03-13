@@ -2154,7 +2154,7 @@ public:
 
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
-                         
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
