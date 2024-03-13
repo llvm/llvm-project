@@ -793,6 +793,13 @@ def : GCNPat <
   (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPR_32:$ptr, Offset:$offset, (i1 0))
 >;
 
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VReg_64>;
+
+def : GCNPat<
+  (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
+  (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
+>;
+
 } //let SubtargetPredicate = isGFX12_10Plus
 
 //===----------------------------------------------------------------------===//
@@ -1318,6 +1325,7 @@ defm DS_ADD_F64     : DS_Real_gfx12<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12<0x074>;
 
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12<0x075>;
 
 // New aliases added in GFX12 without renaming the instructions.
 def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;

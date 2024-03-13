@@ -134,3 +134,14 @@ void test_amdgcn_ds_atomic_async_barrier_arrive_b64(local long* addr)
 {
   __builtin_amdgcn_ds_atomic_async_barrier_arrive_b64(addr);
 }
+
+// CHECK-GFX1210-LABEL: @test_amdgcn_ds_atomic_barrier_arrive_rtn_b64(
+// CHECK-GFX1210-NEXT:  entry:
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64(ptr addrspace(3) [[ADDR:%.*]], i64 [[DATA:%.*]])
+// CHECK-GFX1210-NEXT:    store i64 [[TMP0]], ptr [[OUT:%.*]], align 8, !tbaa [[TBAA4:![0-9]+]]
+// CHECK-GFX1210-NEXT:    ret void
+//
+void test_amdgcn_ds_atomic_barrier_arrive_rtn_b64(local long* addr, long data, long *out)
+{
+  *out = __builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64(addr, data);
+}

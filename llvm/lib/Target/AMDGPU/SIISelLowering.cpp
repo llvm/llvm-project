@@ -1358,8 +1358,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
-  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64: {
-    Info.opc = ISD::INTRINSIC_VOID;
+  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+  case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64: {
+    Info.opc = (IntrID == Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64)
+                   ? ISD::INTRINSIC_W_CHAIN
+                   : ISD::INTRINSIC_VOID;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.memVT = MVT::i64;
@@ -1587,6 +1590,7 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+  case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fmax:

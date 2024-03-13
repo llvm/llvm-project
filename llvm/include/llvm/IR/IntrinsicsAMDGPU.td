@@ -3412,6 +3412,12 @@ def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
             [IntrConvergent, IntrWillReturn, IntrInaccessibleMemOrArgMemOnly],
             "", [SDNPMemOperand]>;
 
+def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
+  ClangBuiltin<"__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64">,
+  Intrinsic<[llvm_i64_ty], [local_ptr_ty, llvm_i64_ty],
+            [IntrConvergent, IntrWillReturn, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
+            "", [SDNPMemOperand]>;
+
 def int_amdgcn_bitop3 :
   DefaultAttrsIntrinsic<[llvm_anyint_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
