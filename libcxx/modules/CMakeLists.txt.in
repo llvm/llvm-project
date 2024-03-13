@@ -57,7 +57,7 @@ target_compile_options(std
     -Wno-reserved-module-identifier
     -Wno-reserved-user-defined-literal
 )
-target_link_options(std PUBLIC -nostdlib++ -Wl,-rpath,${LIBCXX_BUILD}/lib/x86_64-unknown-linux-gnu/ -L${LIBCXX_BUILD}/lib/x86_64-unknown-linux-gnu)
+target_link_options(std PUBLIC -nostdlib++ -Wl,-rpath,@LIBCXX_LIBRARY_DIR@ -L@LIBCXX_LIBRARY_DIR@)
 target_link_libraries(std c++)
 set_target_properties(std
   PROPERTIES
