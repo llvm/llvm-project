@@ -162,10 +162,20 @@ def ROCDL_BallotOp :
   ROCDL_Op<"ballot">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins I1:$pred)> {
+  let summary = "Vote across thread group";
+
+  let description = [{
+      This operation applies a reduction to the source predicate across all the active threads within a warp, 
+      resulting in a destination predicate value that is uniform for every thread in the warp.
+
+      i1 -> i32
+  }];
+
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder,
             llvm::Intrinsic::amdgcn_ballot, {$pred}, {llvm::Type::getInt32Ty(moduleTranslation.getLLVMContext())});
   }];
+
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
