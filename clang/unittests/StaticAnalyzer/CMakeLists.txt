@@ -11,6 +11,7 @@ add_clang_unittest(StaticAnalysisTests
   CallEventTest.cpp
   ConflictingEvalCallsTest.cpp
   FalsePositiveRefutationBRVisitorTest.cpp
+  IsCLibraryFunctionTest.cpp
   NoStateChangeFuncVisitorTest.cpp
   ParamRegionTest.cpp
   RangeSetTest.cpp
