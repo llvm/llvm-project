@@ -356,6 +356,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
       })
+      .customIf([=](const LegalityQuery &Query) {
+        // We need custom legalization for loads greater than 128-bits as they
+        // need to be split up into chunks.
+        return Query.Types[0].isFixedVector() &&
+               Query.Types[0].getSizeInBits() > 128;
+      })
       .legalForTypesWithMemDesc({{s8, p0, s8, 8},
                                  {s16, p0, s16, 8},
                                  {s32, p0, s32, 8},
@@ -1631,6 +1637,70 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
 
   Register ValReg = MI.getOperand(0).getReg();
   const LLT ValTy = MRI.getType(ValReg);
+
+  if (ValTy.isFixedVector() && ValTy.getSizeInBits() > 128) {
+    // Break fixed-width vector loads of sizes greater than 128 bits into chunks
+    // of 128-bit vector loads with the same element type.
+    Register LoadReg = MI.getOperand(1).getReg();
+    Register LoadRegWithOffset = LoadReg;
+
+    unsigned EltSize = ValTy.getScalarSizeInBits();
+    // Only support element types which can cleanly divide into 128-bit wide
+    // vectors.
+    if (128 % EltSize != 0)
+      return false;
+
+    unsigned NewEltCount = 128 / EltSize;
+    LLT NewTy = LLT::fixed_vector(NewEltCount, ValTy.getElementType());
+
+    unsigned OldEltCount = ValTy.getNumElements();
+    unsigned NumVecs = OldEltCount / NewEltCount;
+
+    // Create registers to represent each element of ValReg. Load into these,
+    // then combine them at the end.
+    SmallVector<Register, 16> ComponentRegs;
+    for (unsigned i = 0, e = ValTy.getNumElements(); i != e; i++)
+      ComponentRegs.push_back(
+          MRI.createGenericVirtualRegister(ValTy.getElementType()));
+
+    MachineMemOperand &MMO = **MI.memoperands_begin();
+    auto GetMMO = [&MMO, &MI](int64_t Offset, LLT Ty) {
+      return MI.getMF()->getMachineMemOperand(&MMO, Offset, Ty);
+    };
+
+    for (unsigned i = 0, e = NumVecs; i != e; i++) {
+      auto LoadChunk = MIRBuilder.buildLoad(
+          NewTy, LoadRegWithOffset, *GetMMO(i * NewTy.getSizeInBytes(), NewTy));
+
+      auto LoadOffset = MIRBuilder.buildConstant(
+          LLT::scalar(64), (i + 1) * NewTy.getSizeInBytes());
+
+      LoadRegWithOffset =
+          MIRBuilder.buildPtrAdd(MRI.getType(LoadReg), LoadReg, LoadOffset)
+              .getReg(0);
+
+      Register *ChunkFirstReg = ComponentRegs.begin() + (i * NewEltCount);
+      MIRBuilder.buildUnmerge({ChunkFirstReg, ChunkFirstReg + NewEltCount},
+                              LoadChunk.getReg(0));
+    }
+
+    unsigned ExtraElems = OldEltCount % NewEltCount;
+    if (ExtraElems != 0) {
+      LLT ExtraTy = LLT::fixed_vector(ExtraElems, ValTy.getElementType());
+
+      auto ExtraLoadChunk = MIRBuilder.buildLoad(
+          ExtraTy, LoadRegWithOffset,
+          *GetMMO(NumVecs * NewTy.getSizeInBytes(), ExtraTy));
+
+      MIRBuilder.buildUnmerge({ComponentRegs.begin() + (NumVecs * NewEltCount),
+                               ComponentRegs.end()},
+                              ExtraLoadChunk.getReg(0));
+    }
+
+    MIRBuilder.buildBuildVector(ValReg, ComponentRegs);
+    MI.eraseFromParent();
+    return true;
+  }
 
   if (ValTy == LLT::scalar(128)) {
 
