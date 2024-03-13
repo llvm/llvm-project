@@ -124,7 +124,7 @@ private:
   /// DIType.
   llvm::MapVector<DistinctAttr, llvm::DIType *> recursiveTypeMap;
 
-  /// A mapping between DistinctAttr ID and the translated LLVM metadata node.
+  /// A mapping between a distinct ID and the translated LLVM metadata node.
   /// This helps identify attrs that should translate into the same LLVM debug
   /// node.
   DenseMap<DistinctAttr, llvm::DINode *> distinctAttrToNode;
