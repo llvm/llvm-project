@@ -7647,9 +7647,10 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   case ARM::VLSTM_T2: {
     // Since in some cases both T1 and T2 are valid, tablegen can not always
     // pick the correct instruction.
-    if (Operands.size() == 4) { // a register list has been provided
+    if (Operands.size() ==
+        MnemonicOpsEndInd + 2) { // a register list has been provided
       ARMOperand &Op = static_cast<ARMOperand &>(
-          *Operands[3]); // the register list, a dpr_reglist
+          *Operands[MnemonicOpsEndInd + 1]); // the register list, a dpr_reglist
       assert(Op.isDPRRegList());
       auto &RegList = Op.getRegList();
       // T2 requires v8.1-M.Main (cannot be handled by tablegen)
@@ -8828,9 +8829,10 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   case ARM::VLSTM: {
     // In some cases both T1 and T2 are valid, causing tablegen pick T1 instead
     // of T2
-    if (Operands.size() == 4) { // a register list has been provided
+    if (Operands.size() ==
+        MnemonicOpsEndInd + 2) { // a register list has been provided
       ARMOperand &Op = static_cast<ARMOperand &>(
-          *Operands[3]); // the register list, a dpr_reglist
+          *Operands[MnemonicOpsEndInd + 1]); // the register list, a dpr_reglist
       assert(Op.isDPRRegList());
       auto &RegList = Op.getRegList();
       // When the register list is {d0-d31} the instruction has to be the T2
