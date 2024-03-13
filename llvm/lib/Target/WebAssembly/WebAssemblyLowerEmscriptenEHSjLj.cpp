@@ -353,7 +353,8 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
       InstVector &SetjmpTableSizeInsts,
       SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
   void
-  handleLongjmpableCallsForWasmSjLj(Function &F, InstVector &SetjmpTableInsts,
+  handleLongjmpableCallsForWasmSjLj(Function &F,
+                                    Instruction *FunctionInvocationId,
                                     SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
@@ -1309,14 +1310,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
 
   BinaryOperator *SetjmpTableSize;
   Instruction *SetjmpTable;
+  Instruction *FunctionInvocationId;
   if (EnableWasmSjLj) {
     IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
     // This alloca'ed pointer is used by the runtime to identify function
     // inovactions. It's just for pointer comparisons. It will never
     // be dereferenced.
-    SetjmpTable = IRB.CreateAlloca(IRB.getInt32Ty());
-    SetjmpTable->setDebugLoc(FirstDL);
-    SetjmpTableInsts.push_back(SetjmpTable);
+    FunctionInvocationId = IRB.CreateAlloca(IRB.getInt32Ty());
+    FunctionInvocationId->setDebugLoc(FirstDL);
   } else {
     // This instruction effectively means %setjmpTableSize = 4.
     // We create this as an instruction intentionally, and we don't want to fold
@@ -1411,7 +1412,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     handleLongjmpableCallsForEmscriptenSjLj(
         F, SetjmpTableInsts, SetjmpTableSizeInsts, SetjmpRetPHIs);
   else // EnableWasmSjLj
-    handleLongjmpableCallsForWasmSjLj(F, SetjmpTableInsts, SetjmpRetPHIs);
+    handleLongjmpableCallsForWasmSjLj(F, FunctionInvocationId, SetjmpRetPHIs);
 
   // Erase everything we no longer need in this function
   for (Instruction *I : ToErase)
@@ -1705,7 +1706,7 @@ static BasicBlock *getCleanupRetUnwindDest(const CleanupPadInst *CPI) {
 // BBs. Refer to 4) of "Wasm setjmp/longjmp handling" section in the comments at
 // top of the file for details.
 void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
-    Function &F, InstVector &SetjmpTableInsts,
+    Function &F, Instruction *FunctionInvocationId,
     SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
@@ -1728,10 +1729,6 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   BasicBlock *Entry = &F.getEntryBlock();
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   IRB.SetCurrentDebugLocation(FirstDL);
-
-  // Arbitrarily use the ones defined in the beginning of the function.
-  // SSAUpdater will later update them to the correct values.
-  Instruction *SetjmpTable = *SetjmpTableInsts.begin();
 
   // Add setjmp.dispatch BB right after the entry block. Because we have
   // initialized setjmpTable/setjmpTableSize in the entry block and split the
@@ -1777,14 +1774,14 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   // int val = __wasm_longjmp_args.val;
   Instruction *Val = IRB.CreateLoad(IRB.getInt32Ty(), ValField, "val");
 
-  // %label = testSetjmp(mem[%env], setjmpTable, setjmpTableSize);
+  // %label = __wasm_setjmp_test(%env, functionInvocatinoId);
   // if (%label == 0)
   //   __wasm_longjmp(%env, %val)
   // catchret to %setjmp.dispatch
   BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", &F);
   BasicBlock *EndBB = BasicBlock::Create(C, "if.end", &F);
   Value *EnvP = IRB.CreateBitCast(Env, getAddrPtrType(&M), "env.p");
-  Value *Label = IRB.CreateCall(TestSetjmpF, {EnvP, SetjmpTable},
+  Value *Label = IRB.CreateCall(TestSetjmpF, {EnvP, FunctionInvocationId},
                                 OperandBundleDef("funclet", CatchPad), "label");
   Value *Cmp = IRB.CreateICmpEQ(Label, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp, ThenBB, EndBB);
