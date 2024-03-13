@@ -1735,11 +1735,11 @@ def DS_WRITE_B128_vi      : DS_Real_vi<0xdf, DS_WRITE_B128>;
 def DS_READ_B96_vi        : DS_Real_vi<0xfe, DS_READ_B96>;
 def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
 
-// GFX90APlus.
+// GFX90A+.
 def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
 def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
 
-// GFX940Plus.
+// GFX940+.
 def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
 def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
 def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
