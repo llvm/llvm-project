@@ -16,6 +16,8 @@ struct S {
   S &operator--(int);
 };
 
+S &operator-=(S&, S);
+
 S returnValue();
 S const &returnRef();
 
@@ -31,6 +33,8 @@ void bar() {
   a.operator=(returnRef());
 
   a += returnRef();
+  a -= returnRef();
+
   a++;
   ++a;
   a--;
