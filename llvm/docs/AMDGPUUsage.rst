@@ -1317,15 +1317,16 @@ LLVM IR Metadata
 
 The AMDGPU backend implements the following LLVM IR metadata.
 
-.. table:: AMDGPU LLVM IR Metadata
+.. list-table:: AMDGPU LLVM IR Metatdata
   :name: amdgpu-llvm-ir-metadata-table
 
-  ==============================================   ==========================================================
-  LLVM IR Metadata                                   Description
-  ==============================================   ==========================================================
-  !amdgpu.last.use                                 Sets TH_LOAD_LU temporal hint on load instructions that support it.
-                                                   Takes priority over nontemporal hint (TH_LOAD_NT).
-  ==============================================   ==========================================================
+  * - Metadata Name
+    - Description
+    - Values
+  * - !amdgpu.last.use
+    - Sets TH_LOAD_LU temporal hint on load instructions that support it.
+      Takes priority over nontemporal hint (TH_LOAD_NT).
+    - {}
 
 LLVM IR Attributes
 ------------------
