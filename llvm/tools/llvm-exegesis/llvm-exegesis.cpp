@@ -269,6 +269,11 @@ static cl::list<ValidationEvent> ValidationCounters(
         "counter to validate benchmarking assumptions"),
     cl::CommaSeparated, cl::cat(BenchmarkOptions), ValidationEventOptions());
 
+static cl::opt<int> BenchmarkProcessCPU(
+    "benchmark-process-cpu",
+    cl::desc("The CPU number that the benchmarking process should executon on"),
+    cl::cat(BenchmarkOptions), cl::init(-1));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -418,8 +423,15 @@ static void runBenchmarkConfigurations(
         std::optional<StringRef> DumpFile;
         if (DumpObjectToDisk.getNumOccurrences())
           DumpFile = DumpObjectToDisk;
+        std::optional<int> BenchmarkCPU = std::nullopt;
+        if (BenchmarkProcessCPU != -1) {
+          if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess)
+            ExitWithError("--benchmark-process-cpu is only supported in the "
+                          "subprocess execution mode");
+          BenchmarkCPU = BenchmarkProcessCPU;
+        }
         auto [Err, BenchmarkResult] =
-            Runner.runConfiguration(std::move(RC), DumpFile);
+            Runner.runConfiguration(std::move(RC), DumpFile, BenchmarkCPU);
         if (Err) {
           // Errors from executing the snippets are fine.
           // All other errors are a framework issue and should fail.
