@@ -21423,8 +21423,12 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // These optimizations only work on little endian.
-  if (!DAG.getDataLayout().isLittleEndian())
+  // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
+  // Only implemented on little-endian subtargets.
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+
+  // This optimization only works on little endian.
+  if (!IsLittleEndian)
     return SDValue();
 
   // uzp1(bitcast(x), bitcast(y)) -> uzp1(x, y)
@@ -21443,28 +21447,21 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (ResVT != MVT::v2i32 && ResVT != MVT::v4i16 && ResVT != MVT::v8i8)
     return SDValue();
 
-  SDValue SourceOp0 = peekThroughBitcasts(Op0);
-  SDValue SourceOp1 = peekThroughBitcasts(Op1);
-
-  // truncating uzp1(x, y) -> xtn(concat (x, y))
-  if (SourceOp0.getValueType() == SourceOp1.getValueType()) {
-    EVT Op0Ty = SourceOp0.getValueType();
-    if ((ResVT == MVT::v4i16 && Op0Ty == MVT::v2i32) ||
-        (ResVT == MVT::v8i8 && Op0Ty == MVT::v4i16)) {
-      SDValue Concat =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL,
-                      Op0Ty.getDoubleNumVectorElementsVT(*DAG.getContext()),
-                      SourceOp0, SourceOp1);
-      return DAG.getNode(ISD::TRUNCATE, DL, ResVT, Concat);
-    }
-  }
-
-  // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
-  if (SourceOp0.getOpcode() != ISD::TRUNCATE ||
-      SourceOp1.getOpcode() != ISD::TRUNCATE)
+  auto getSourceOp = [](SDValue Operand) -> SDValue {
+    const unsigned Opcode = Operand.getOpcode();
+    if (Opcode == ISD::TRUNCATE)
+      return Operand->getOperand(0);
+    if (Opcode == ISD::BITCAST &&
+        Operand->getOperand(0).getOpcode() == ISD::TRUNCATE)
+      return Operand->getOperand(0)->getOperand(0);
     return SDValue();
-  SourceOp0 = SourceOp0.getOperand(0);
-  SourceOp1 = SourceOp1.getOperand(0);
+  };
+
+  SDValue SourceOp0 = getSourceOp(Op0);
+  SDValue SourceOp1 = getSourceOp(Op1);
+
+  if (!SourceOp0 || !SourceOp1)
+    return SDValue();
 
   if (SourceOp0.getValueType() != SourceOp1.getValueType() ||
       !SourceOp0.getValueType().isSimple())
