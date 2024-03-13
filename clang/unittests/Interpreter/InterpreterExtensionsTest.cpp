@@ -56,7 +56,7 @@ public:
   void resetExecutor() { Interpreter::ResetExecutor(); }
 };
 
-ifdef _AIX
+#ifdef _AIX
 TEST(InterpreterExtensionsTest, DISABLED_ExecutorCreateReset) {
 #else
 TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
