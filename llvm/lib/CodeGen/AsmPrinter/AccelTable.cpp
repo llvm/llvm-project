@@ -369,7 +369,8 @@ void AppleAccelTableWriter::emit() const {
 DWARF5AccelTableData::DWARF5AccelTableData(const DIE &Die,
                                            const uint32_t UnitID,
                                            const bool IsTU)
-    : OffsetVal(&Die), DieTag(Die.getTag()), IsTU(IsTU), UnitID(UnitID) {}
+    : OffsetVal(&Die), DieTag(Die.getTag()), AbbrevNumber(0), IsTU(IsTU),
+      UnitID(UnitID) {}
 
 void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
