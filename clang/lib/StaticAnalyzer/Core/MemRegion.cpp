@@ -722,8 +722,8 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     }
     // Index is a SymbolVal.
     else if (auto SI = ER->getIndex().getAs<nonloc::SymbolVal>()) {
-      if (auto SR = SI->getAsSymbol()) {
-        if (auto OR = SR->getOriginRegion()) {
+      if (SymbolRef SR = SI->getAsSymbol()) {
+        if (const MemRegion *OR = SR->getOriginRegion()) {
           std::string Idx = OR->getDescriptiveName(false);
           ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
         }
