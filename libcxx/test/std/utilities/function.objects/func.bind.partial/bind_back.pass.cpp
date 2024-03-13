@@ -92,10 +92,13 @@ constexpr void test_basic_bindings() {
   }
 
   { // Basic tests with fundamental types
-    int n      = 2;
-    int m      = 1;
-    auto add   = [](int x, int y) { return x + y; };
-    auto add_n = [](int a, int b, int c, int d, int e, int f) { return a + b + c + d + e + f; };
+    int n         = 2;
+    int m         = 1;
+    int sum       = 0;
+    auto add      = [](int x, int y) { return x + y; };
+    auto add_n    = [](int a, int b, int c, int d, int e, int f) { return a + b + c + d + e + f; };
+    auto add_ref  = [&](int x, int y) -> int& { return sum = x + y; };
+    auto add_rref = [&](int x, int y) -> int&& { return std::move(sum = x + y); };
 
     auto a = std::bind_back(add, m, n);
     assert(a() == 3);
@@ -106,6 +109,14 @@ constexpr void test_basic_bindings() {
     auto c = std::bind_back(add_n, n, m);
     assert(c(1, 1, 1, 1) == 7);
 
+    auto d = std::bind_back(add_ref, n, m);
+    std::same_as<int&> decltype(auto) dresult(d());
+    assert(dresult == 3);
+
+    auto e = std::bind_back(add_rref, n, m);
+    std::same_as<int&&> decltype(auto) eresult(e());
+    assert(eresult == 3);
+
     auto f = std::bind_back(add, n);
     assert(f(3) == 5);
 
@@ -114,6 +125,14 @@ constexpr void test_basic_bindings() {
 
     auto h = std::bind_back(add_n, 1, 1, 1);
     assert(h(2, 2, 2) == 9);
+
+    auto i = std::bind_back(add_ref, n);
+    std::same_as<int&> decltype(auto) iresult(i(5));
+    assert(iresult == 7);
+
+    auto j = std::bind_back(add_rref, m);
+    std::same_as<int&&> decltype(auto) jresult(j(4));
+    assert(jresult == 5);
   }
 }
 
