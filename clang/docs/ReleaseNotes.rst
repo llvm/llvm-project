@@ -360,6 +360,8 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Allow access to a public template alias declaration that refers to friend's
+  private nested type. (#GH25708).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
