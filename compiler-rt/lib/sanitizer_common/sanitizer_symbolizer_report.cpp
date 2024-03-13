@@ -39,7 +39,11 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
                internal_strstr(file, "/include/c++/") ||
                internal_strstr(file, "/include/g++")))
     return true;
+  if (file && internal_strstr(file, "\\compiler-rt\\lib\\"))
+    return true;
   if (module && (internal_strstr(module, "libclang_rt.")))
+    return true;
+  if (module && (internal_strstr(module, "clang_rt.")))
     return true;
   return false;
 }

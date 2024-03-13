@@ -65,6 +65,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate = ps.SubtargetPredicate;
   let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
+  let TSFlags            = ps.TSFlags;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;
@@ -1210,13 +1211,13 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 // GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
+multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
   defvar ps = !cast<DS_Pseudo>(NAME);
   let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in
     def _gfx12 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
                                                name, /*hasGDS=*/false>;
-  if !ne(ps.Mnemonic, name) then
+  if !and(needAlias, !ne(ps.Mnemonic, name)) then
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
 }
 

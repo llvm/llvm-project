@@ -4347,6 +4347,11 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         *this, /*PointOfInstantiation=*/AliasTemplate->getBeginLoc(),
         /*Template=*/AliasTemplate,
         /*TemplateArgs=*/TemplateArgLists.getInnermost());
+
+    std::optional<ContextRAII> SavedContext;
+    if (!AliasTemplate->getDeclContext()->isFileContext())
+      SavedContext.emplace(*this, AliasTemplate->getDeclContext());
+
     CanonType =
         SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
                   AliasTemplate->getLocation(), AliasTemplate->getDeclName());
