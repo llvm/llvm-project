@@ -66,3 +66,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
 }
+
+def UCharAPI : PublicAPI<"uchar.h"> {
+  let Types = ["mbstate_t"];
+}
