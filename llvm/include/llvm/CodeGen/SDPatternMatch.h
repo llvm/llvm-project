@@ -663,6 +663,7 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
 }
 
 inline SpecificInt_match m_Zero() { return m_SpecificInt(0U); }
+inline SpecificInt_match m_One() { return m_SpecificInt(1U); }
 inline SpecificInt_match m_AllOnes() { return m_SpecificInt(~0U); }
 
 /// Match true boolean value based on the information provided by
