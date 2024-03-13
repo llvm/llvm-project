@@ -6153,26 +6153,39 @@ defm UZP2 : SIMDZipVector<0b101, "uzp2", AArch64uzp2>;
 defm ZIP1 : SIMDZipVector<0b011, "zip1", AArch64zip1>;
 defm ZIP2 : SIMDZipVector<0b111, "zip2", AArch64zip2>;
 
-def : Pat<(v16i8 (concat_vectors (v8i8 (trunc (v8i16 V128:$Vn))),
-                                 (v8i8 (trunc (v8i16 V128:$Vm))))),
-          (UZP1v16i8 V128:$Vn, V128:$Vm)>;
-def : Pat<(v8i16 (concat_vectors (v4i16 (trunc (v4i32 V128:$Vn))),
-                                 (v4i16 (trunc (v4i32 V128:$Vm))))),
-          (UZP1v8i16 V128:$Vn, V128:$Vm)>;
-def : Pat<(v4i32 (concat_vectors (v2i32 (trunc (v2i64 V128:$Vn))),
-                                 (v2i32 (trunc (v2i64 V128:$Vm))))),
-          (UZP1v4i32 V128:$Vn, V128:$Vm)>;
-// These are the same as above, with an optional assertzext node that can be
-// generated from fptoi lowering.
-def : Pat<(v16i8 (concat_vectors (v8i8 (assertzext (trunc (v8i16 V128:$Vn)))),
-                                 (v8i8 (assertzext (trunc (v8i16 V128:$Vm)))))),
-          (UZP1v16i8 V128:$Vn, V128:$Vm)>;
-def : Pat<(v8i16 (concat_vectors (v4i16 (assertzext (trunc (v4i32 V128:$Vn)))),
-                                 (v4i16 (assertzext (trunc (v4i32 V128:$Vm)))))),
-          (UZP1v8i16 V128:$Vn, V128:$Vm)>;
-def : Pat<(v4i32 (concat_vectors (v2i32 (assertzext (trunc (v2i64 V128:$Vn)))),
-                                 (v2i32 (assertzext (trunc (v2i64 V128:$Vm)))))),
-          (UZP1v4i32 V128:$Vn, V128:$Vm)>;
+def trunc_optional_assert_ext : PatFrags<(ops node:$op0),
+                                         [(trunc node:$op0),
+                                          (assertzext (trunc node:$op0)),
+                                          (assertsext (trunc node:$op0))]>;
+
+// concat_vectors(trunc(x), trunc(y)) -> uzp1(x, y)
+// concat_vectors(assertzext(trunc(x)), assertzext(trunc(y))) -> uzp1(x, y)
+// concat_vectors(assertsext(trunc(x)), assertsext(trunc(y))) -> uzp1(x, y)
+class concat_trunc_to_uzp1_pat<ValueType SrcTy, ValueType TruncTy, ValueType ConcatTy>
+  : Pat<(ConcatTy (concat_vectors (TruncTy (trunc_optional_assert_ext (SrcTy V128:$Vn))),
+                                  (TruncTy (trunc_optional_assert_ext (SrcTy V128:$Vm))))),
+        (!cast<Instruction>("UZP1"#ConcatTy) V128:$Vn, V128:$Vm)>;
+def : concat_trunc_to_uzp1_pat<v8i16, v8i8, v16i8>;
+def : concat_trunc_to_uzp1_pat<v4i32, v4i16, v8i16>;
+def : concat_trunc_to_uzp1_pat<v2i64, v2i32, v4i32>;
+
+// trunc(concat_vectors(trunc(x), trunc(y))) -> xtn(uzp1(x, y))
+// trunc(concat_vectors(assertzext(trunc(x)), assertzext(trunc(y)))) -> xtn(uzp1(x, y))
+// trunc(concat_vectors(assertsext(trunc(x)), assertsext(trunc(y)))) -> xtn(uzp1(x, y))
+class trunc_concat_trunc_to_xtn_uzp1_pat<ValueType SrcTy, ValueType TruncTy, ValueType ConcatTy,
+                                         ValueType Ty>
+  : Pat<(Ty (trunc_optional_assert_ext
+                    (ConcatTy (concat_vectors
+                                  (TruncTy (trunc_optional_assert_ext (SrcTy V128:$Vn))),
+                                  (TruncTy (trunc_optional_assert_ext (SrcTy V128:$Vm))))))),
+        (!cast<Instruction>("XTN"#Ty) (!cast<Instruction>("UZP1"#ConcatTy) V128:$Vn, V128:$Vm))>;
+def : trunc_concat_trunc_to_xtn_uzp1_pat<v4i32, v4i16, v8i16, v8i8>;
+def : trunc_concat_trunc_to_xtn_uzp1_pat<v2i64, v2i32, v4i32, v4i16>;
+
+def : Pat<(v8i8 (trunc (concat_vectors (v4i16 V64:$Vn), (v4i16 V64:$Vm)))),
+          (UZP1v8i8 V64:$Vn, V64:$Vm)>;
+def : Pat<(v4i16 (trunc (concat_vectors (v2i32 V64:$Vn), (v2i32 V64:$Vm)))),
+          (UZP1v4i16 V64:$Vn, V64:$Vm)>;
 
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vn), (i32 8)))),
