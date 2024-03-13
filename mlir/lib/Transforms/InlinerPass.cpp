@@ -24,6 +24,8 @@ namespace mlir {
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
+#define DEBUG_TYPE "inliner-pass"
+
 using namespace mlir;
 
 /// This function implements the inliner optimization pipeline.
@@ -88,6 +90,35 @@ InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
   config.setOpPipelines(std::move(opPipelines));
 }
 
+// Return true if the inlining ratio does not exceed the threshold.
+static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
+                                 unsigned inliningThreshold) {
+  Region *callerRegion = resolvedCall.sourceNode->getCallableRegion();
+  Region *calleeRegion = resolvedCall.targetNode->getCallableRegion();
+
+  // We should not get external nodes here, but just return true
+  // for now to preserve the original behavior of the inliner pass.
+  if (!calleeRegion || !calleeRegion)
+    return true;
+
+  auto countOps = [](Region *region) {
+    unsigned count = 0;
+    region->walk([&](Operation *) { ++count; });
+    return count;
+  };
+
+  unsigned callerOps = countOps(callerRegion);
+
+  // Always inline empty callees (if it is possible at all).
+  if (callerOps == 0)
+    return true;
+
+  unsigned ratio = countOps(calleeRegion) * 100 / callerOps;
+  LLVM_DEBUG(llvm::dbgs() << "Callee / caller operation ratio (max: "
+                          << inliningThreshold << "%): " << ratio << "%\n");
+  return ratio <= inliningThreshold;
+}
+
 void InlinerPass::runOnOperation() {
   CallGraph &cg = getAnalysis<CallGraph>();
 
@@ -100,9 +131,14 @@ void InlinerPass::runOnOperation() {
     return signalPassFailure();
   }
 
+  // By default, assume that any inlining is profitable.
+  auto profitabilityCb = [=](const Inliner::ResolvedCall &call) {
+    return isProfitableToInline(call, inliningThreshold);
+  };
+
   // Get an instance of the inliner.
   Inliner inliner(op, cg, *this, getAnalysisManager(), runPipelineHelper,
-                  config);
+                  config, profitabilityCb);
 
   // Run the inlining.
   if (failed(inliner.doInlining()))
