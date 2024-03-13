@@ -96,7 +96,8 @@ public:
 private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
                   std::unique_ptr<TaskDispatcher> D)
-      : ExecutorProcessControl(std::move(SSP)), OwnedTaskDispatcher(std::move(D)) {
+      : ExecutorProcessControl(std::move(SSP)),
+        OwnedTaskDispatcher(std::move(D)) {
     this->D = OwnedTaskDispatcher.get();
   }
 

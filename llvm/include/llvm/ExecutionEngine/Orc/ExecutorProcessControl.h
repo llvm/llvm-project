@@ -188,7 +188,7 @@ public:
   };
 
   ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP)
-    : SSP(std::move(SSP)) {}
+      : SSP(std::move(SSP)) {}
 
   virtual ~ExecutorProcessControl();
 
@@ -418,7 +418,6 @@ public:
   virtual Error disconnect() = 0;
 
 protected:
-
   std::shared_ptr<SymbolStringPool> SSP;
   ExecutionSession *ES = nullptr;
   Triple TargetTriple;
@@ -464,10 +463,9 @@ class UnsupportedExecutorProcessControl : public ExecutorProcessControl,
 public:
   UnsupportedExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP = nullptr,
-      const std::string &TT = "",
-      unsigned PageSize = 0)
-      : ExecutorProcessControl(
-            SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()),
+      const std::string &TT = "", unsigned PageSize = 0)
+      : ExecutorProcessControl(SSP ? std::move(SSP)
+                                   : std::make_shared<SymbolStringPool>()),
         InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
     this->TargetTriple = Triple(TT);
     this->PageSize = PageSize;
