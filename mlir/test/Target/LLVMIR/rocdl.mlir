@@ -88,6 +88,13 @@ llvm.func @rocdl.bpermute(%src : i32) -> i32 {
   llvm.return %0 : i32
 }
 
+llvm.func @rocdl.ballot(%pred : i1) -> i32 {
+  // CHECK-LABEL: rocdl.ballot
+  // CHECK: call i32 @llvm.amdgcn.ballot
+  %0 = rocdl.ballot %pred : i32
+  llvm.return %0 : i32
+}
+
 llvm.func @rocdl.waitcnt() {
   // CHECK-LABEL: rocdl.waitcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)

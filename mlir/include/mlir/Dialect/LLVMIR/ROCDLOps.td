@@ -158,6 +158,16 @@ Arguments<(ins I32:$index,
    }];
 }
 
+def ROCDL_BallotOp :
+  ROCDL_Op<"ballot">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins I1:$pred)> {
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {llvm::Type::getInt32Ty(moduleTranslation.getLLVMContext())});
+  }];
+  let assemblyFormat = "$pred attr-dict `:` type($res)";
+}
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
