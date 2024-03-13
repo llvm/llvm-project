@@ -168,8 +168,8 @@ public:
   // Implicitly convert \class ConstString instances to \class StringRef.
   operator llvm::StringRef() const { return GetStringRef(); }
 
-  // Implicitly convert \class ConstString instances to \class std::string_view.
-  operator std::string_view() const {
+  // Explicitly convert \class ConstString instances to \class std::string_view.
+  explicit operator std::string_view() const {
     return std::string_view(m_string, GetLength());
   }
 

@@ -221,15 +221,14 @@ Error Object::compressOrDecompressSections(const CommonConfig &Config) {
   SmallVector<std::pair<SectionBase *, std::function<SectionBase *()>>, 0>
       ToReplace;
   for (SectionBase &Sec : sections()) {
-    if (!StringRef(Sec.Name).starts_with(".debug"))
+    if ((Sec.Flags & SHF_ALLOC) || !StringRef(Sec.Name).starts_with(".debug"))
       continue;
     if (auto *CS = dyn_cast<CompressedSection>(&Sec)) {
       if (Config.DecompressDebugSections) {
         ToReplace.emplace_back(
             &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
       }
-    } else if (!(Sec.Flags & SHF_ALLOC) &&
-               Config.CompressionType != DebugCompressionType::None) {
+    } else if (Config.CompressionType != DebugCompressionType::None) {
       auto *S = &Sec;
       ToReplace.emplace_back(S, [=] {
         return &addSection<CompressedSection>(
