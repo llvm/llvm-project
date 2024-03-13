@@ -145,7 +145,7 @@ DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
 void DebugTranslation::translateImplFillPlaceholder(
     DICompositeTypeAttr attr, llvm::DICompositeType *placeholder) {
   SmallVector<llvm::Metadata *> elements;
-  for (auto member : attr.getElements())
+  for (DINodeAttr member : attr.getElements())
     elements.push_back(translate(member));
   placeholder->replaceElements(llvm::MDNode::get(llvmCtx, elements));
 }

@@ -352,12 +352,6 @@ def LLVM_DIRecursiveTypeAttrInterface
     Note that a rec-self without an outer rec-decl with the same recId is
     conceptually the same as an "unbound" variable. The context needs to provide
     meaning to the rec-self.
-
-    This can be avoided by calling the `getUnfoldedBaseType()` method on a
-    rec-decl, which returns the same type with all matching rec-self instances
-    replaced with this rec-decl again. This is useful, for example, for fetching
-    a field out of a recursive struct and maintaining the legality of the field
-    type.
   }];
   let cppNamespace = "::mlir::LLVM";
   let methods = [

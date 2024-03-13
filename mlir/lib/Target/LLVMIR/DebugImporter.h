@@ -88,7 +88,7 @@ private:
 
   /// Get the `getRecSelf` constructor for the translated type of `node` if its
   /// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
-  llvm::function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+  function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
   getRecSelfConstructor(llvm::DINode *node);
 
   /// A mapping between LLVM debug metadata and the corresponding attribute.

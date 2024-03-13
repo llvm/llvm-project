@@ -318,10 +318,10 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   if (DINodeAttr attr = translateNode(node)) {
     // If this node was marked as recursive, set its recId.
     if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(attr)) {
-      if (DistinctAttr id = translationStack.lookup(node)) {
-        attr = cast<DINodeAttr>(recType.withRecId(id));
+      if (DistinctAttr recId = translationStack.lookup(node)) {
+        attr = cast<DINodeAttr>(recType.withRecId(recId));
         // Remove the unbound recursive DistinctAttr ID.
-        unboundRecursiveSelfRefs.back().erase(id);
+        unboundRecursiveSelfRefs.back().erase(recId);
       }
     }
 
@@ -394,8 +394,7 @@ DistinctAttr DebugImporter::getOrCreateDistinctID(llvm::DINode *node) {
 
 function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
 DebugImporter::getRecSelfConstructor(llvm::DINode *node) {
-  using CtorType =
-      llvm::function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
+  using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
   return TypeSwitch<llvm::DINode *, CtorType>(node)
       .Case<llvm::DICompositeType>([](auto *concreteNode) {
         return CtorType(decltype(translateImpl(concreteNode))::getRecSelf);
