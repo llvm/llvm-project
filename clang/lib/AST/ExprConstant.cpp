@@ -8500,16 +8500,16 @@ static bool HandleLambdaCapture(EvalInfo &Info, const Expr *E, LValue &Result,
   // Start with 'Result' referring to the complete closure object...
   if (MD->isExplicitObjectMemberFunction()) {
     // Self may be passed by reference or by value.
-    auto *Self = MD->getParamDecl(0);
+    const ParmVarDecl *Self = MD->getParamDecl(0);
     if (Self->getType()->isReferenceType()) {
       APValue *RefValue = Info.getParamSlot(Info.CurrentCall->Arguments, Self);
       Result.setFrom(Info.Ctx, *RefValue);
     } else {
-      auto *VD = Info.CurrentCall->Arguments.getOrigParam(Self);
-      auto *Frame =
+      const ParmVarDecl *VD = Info.CurrentCall->Arguments.getOrigParam(Self);
+      CallStackFrame *Frame =
           Info.getCallFrameAndDepth(Info.CurrentCall->Arguments.CallIndex)
               .first;
-      auto Version = Info.CurrentCall->Arguments.Version;
+      unsigned Version = Info.CurrentCall->Arguments.Version;
       Result.set({VD, Frame->Index, Version});
     }
   } else
