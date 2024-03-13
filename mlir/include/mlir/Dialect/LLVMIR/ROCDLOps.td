@@ -171,7 +171,7 @@ def ROCDL_BallotOp :
 
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder,
-            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$res.getType()});
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$res->getType()});
   }];
 
   let assemblyFormat = "$pred attr-dict `:` type($res)";
