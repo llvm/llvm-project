@@ -19,3 +19,5 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
+
+* SystemZ support added.
