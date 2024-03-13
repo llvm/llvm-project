@@ -808,3 +808,35 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "VFNRCLIP_XU_F_QF">;
   defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "VFNRCLIP_X_F_QF">;
 }
+
+let Predicates = [HasVendorXSiFivecdiscarddlone] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSiFivecdiscarddlone" in
+  def SF_CDISCARD_D_L1
+      : RVInstIUnary<0b111111000010, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
+                     "sf.cdiscard.d.l1", "$rs1">, Sched<[]> {
+    let rd = 0;
+  }
+  def : InstAlias<"sf.cdiscard.d.l1", (SF_CDISCARD_D_L1 X0)>;
+} // Predicates = [HasVendorXSifivecdiscarddlone]
+
+let Predicates = [HasVendorXSiFivecflushdlone] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSiFivecflushdlone" in
+  def SF_CFLUSH_D_L1
+      : RVInstIUnary<0b111111000000, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
+                     "sf.cflush.d.l1", "$rs1">, Sched<[]> {
+    let rd = 0;
+  }
+  def : InstAlias<"sf.cflush.d.l1", (SF_CFLUSH_D_L1 X0)>;
+} // Predicates = [HasVendorXSifivecflushdlone]
+
+let Predicates = [HasVendorXSfcease] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSfcease" in
+  def SF_CEASE : RVInstIUnary<0b001100000101, 0b000, OPC_SYSTEM, (outs), (ins),
+                              "sf.cease", "">, Sched<[]> {
+    let rs1 = 0b00000;
+    let rd = 0b00000;
+}
+}
