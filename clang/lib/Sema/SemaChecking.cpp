@@ -7988,16 +7988,14 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // non-compitable streaming attribute. If it passed any VL-based arguments
     // or return VL-based value, then warn that the streaming and non-streaming
     // vector lengths may be different.
-    if (CallerFD && Context.getTargetInfo().hasFeature("sme") && !IsBuiltin) {
+    if (CallerFD && !IsBuiltin && AnyScalableArgsOrRet) {
       ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
       if ((CallerFnType != ArmStreaming &&
-           CallerFnType != ArmStreamingCompatible && IsCalleeStreaming &&
-           AnyScalableArgsOrRet) ||
+           CallerFnType != ArmStreamingCompatible && IsCalleeStreaming) ||
           (CallerFnType == ArmStreaming && !IsCalleeStreaming &&
-           !IsCalleeStreamingCompatible && AnyScalableArgsOrRet) ||
+           !IsCalleeStreamingCompatible) ||
           (CallerFnType == ArmStreamingCompatible &&
-           (IsCalleeStreaming || !IsCalleeStreamingCompatible) &&
-           AnyScalableArgsOrRet))
+           (IsCalleeStreaming || !IsCalleeStreamingCompatible)))
         Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
     }
 
