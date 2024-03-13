@@ -8064,13 +8064,13 @@ public:
 
   /// The parser has processed a module import translated from a
   /// #include or similar preprocessing directive.
-  void ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
   void BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
 
   /// The parsed has entered a submodule.
-  void ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
   /// The parser has left a submodule.
-  void ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
 
   /// Create an implicit import of the given module at the given
   /// source location, for error recovery, if possible.
