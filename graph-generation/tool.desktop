@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=tool
+Type=Application
+Terminal=true
+NoDisplay=true
+Exec=thebesttv
+Icon=tool
+Categories=Development;
+X-AppImage-Integrate=false
