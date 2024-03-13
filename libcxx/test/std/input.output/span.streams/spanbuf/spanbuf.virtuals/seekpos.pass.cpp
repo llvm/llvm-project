@@ -164,7 +164,7 @@ void test() {
       SpBuf spBuf{sp, std::ios_base::out};
 
       assert(spBuf.pubseekpos(999, std::ios_base::in) == -1);
-      
+
       assert(spBuf.pubseekpos(999, std::ios_base::out) == -1);
 
       assert(spBuf.pubseekpos(0, std::ios_base::in) == 0);
