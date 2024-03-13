@@ -9,22 +9,22 @@
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before --output-style=JSON 0xa | FileCheck --check-prefix=APPROX-JSON %s
 
 # APPROX-NONE: main
-# APPROX-NONE-NEXT: /home/ampandey/test-hip/main.c:0:6
+# APPROX-NONE-NEXT: /tmp/test/main.c:0:6
 # APPROX-BEFORE: main
-# APPROX-BEFORE-NEXT: /home/ampandey/test-hip/main.c:4:6 (approximate)
+# APPROX-BEFORE-NEXT: /tmp/test/main.c:4:6 (approximate)
 # APPROX-AFTER: main
-# APPROX-AFTER-NEXT: /home/ampandey/test-hip/main.c:8:2 (approximate)
+# APPROX-AFTER-NEXT: /tmp/test/main.c:8:2 (approximate)
 # NO-APPROX: main
-# NO-APPROX-NEXT: /home/ampandey/test-hip/main.c:8:2
+# NO-APPROX-NEXT: /tmp/test/main.c:8:2
 
 #APPROX-VERBOSE: main
-#APPROX-VERBOSE-NEXT: Filename: /home/ampandey/test-hip/main.c
+#APPROX-VERBOSE-NEXT: Filename: /tmp/test/main.c
 #APPROX-VERBOSE-NEXT: Function start address: 0x0
 #APPROX-VERBOSE-NEXT: Line: 4
 #APPROX-VERBOSE-NEXT: Column: 6
 #APPROX-VERBOSE-NEXT: Approximate: 1
 
-#APPROX-JSON: [{"Address":"0xa","ModuleName":"{{.*}}/test/tools/llvm-symbolizer/Output/approximate-line-info.s.tmp.o","Symbol":[{"Approximate":true,"Column":6,"Discriminator":0,"FileName":"/home/ampandey/test-hip/main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
+#APPROX-JSON: [{"Address":"0xa","ModuleName":"{{.*}}/test/tools/llvm-symbolizer/Output/approximate-line-info.s.tmp.o","Symbol":[{"Approximate":true,"Column":6,"Discriminator":0,"FileName":"/tmp/test/main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
 
 ## Generated from C Code
 ##
@@ -46,7 +46,7 @@
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
-	.file	0 "/home/ampandey/test-hip" "main.c" md5 0x26c3fbaea8e6febaf09ef44d37ec5ecc
+	.file	0 "/tmp/test" "main.c" md5 0x26c3fbaea8e6febaf09ef44d37ec5ecc
 	.cfi_startproc
 # %bb.0:                                # %entry
 	.loc	0 4 6 prologue_end              # main.c:4:6
@@ -135,7 +135,7 @@ x:
 .Linfo_string1:
 	.asciz	"main.c"                        # string offset=113
 .Linfo_string2:
-	.asciz	"/home/ampandey/test-hip"       # string offset=120
+	.asciz	"/tmp/test"       # string offset=120
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Linfo_string0
 	.long	.Linfo_string1

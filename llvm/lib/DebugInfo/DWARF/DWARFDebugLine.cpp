@@ -1340,25 +1340,28 @@ std::pair<uint32_t, bool> DWARFDebugLine::LineTable::lookupAddressImpl(
   if (It == Sequences.end() || It->SectionIndex != Address.SectionIndex)
     return {UnknownRowIndex, false};
 
-  uint32_t RowIndex = UnknownRowIndex;bool IsApproximate = false;
+  uint32_t RowIndex = UnknownRowIndex;
+  bool IsApproximate = false;
   if (LineKind == DILineInfoSpecifier::ApproximateLineKind::Before) {
     while (Address.Address >= It->LowPC) {
       RowIndex = findRowInSeq(*It, Address);
-      if(RowIndex!=UnknownRowIndex && Rows[RowIndex].Line)
+      if (RowIndex != UnknownRowIndex && Rows[RowIndex].Line)
         break;
       IsApproximate = true;
-      if(RowIndex!=UnknownRowIndex && Rows[RowIndex].PrologueEnd)break;
+      if (RowIndex != UnknownRowIndex && Rows[RowIndex].PrologueEnd)
+        break;
       --Address.Address;
-      }
+    }
   } else if (LineKind == DILineInfoSpecifier::ApproximateLineKind::After) {
     while (Address.Address <= It->HighPC) {
       RowIndex = findRowInSeq(*It, Address);
-      if (RowIndex!=UnknownRowIndex && Rows[RowIndex].Line)
+      if (RowIndex != UnknownRowIndex && Rows[RowIndex].Line)
         break;
       IsApproximate = true;
-      if(RowIndex!=UnknownRowIndex && Rows[RowIndex].EpilogueBegin)break;
+      if (RowIndex != UnknownRowIndex && Rows[RowIndex].EpilogueBegin)
+        break;
       ++Address.Address;
-      }
+    }
   } else {
     RowIndex = findRowInSeq(*It, Address);
   }
