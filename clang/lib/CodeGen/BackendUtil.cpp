@@ -77,6 +77,7 @@
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/RemoveTrapsPass.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SoftPointerAuth.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
@@ -85,6 +86,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -99,6 +101,10 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> PrintPipelinePasses;
+
+cl::opt<bool> ClRemoveTraps("clang-remove-traps", cl::Optional,
+                            cl::desc("Insert remove-traps pass."),
+                            cl::init(false));
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
@@ -762,6 +768,21 @@ static void addSanitizers(const Triple &TargetTriple,
   } else {
     // LastEP does not need GlobalsAA.
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
+  }
+
+  if (ClRemoveTraps) {
+    // We can optimize after inliner, and PGO profile matching. The hook below
+    // is called at the end `buildFunctionSimplificationPipeline`, which called
+    // from `buildInlinerPipeline`, which called after profile matching.
+    PB.registerScalarOptimizerLateEPCallback(
+        [](FunctionPassManager &FPM, OptimizationLevel Level) {
+          // RemoveTrapsPass expects trap blocks preceded by conditional
+          // branches, which usually is not the case without SimplifyCFG.
+          // TODO: Remove `SimplifyCFGPass` after switching to dedicated
+          // intrinsic.
+          FPM.addPass(SimplifyCFGPass());
+          FPM.addPass(RemoveTrapsPass());
+        });
   }
 }
 
