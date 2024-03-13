@@ -139,6 +139,12 @@ void ClangTidyCheck::OptionsView::storeInt(ClangTidyOptions::OptionMap &Options,
   store(Options, LocalName, llvm::itostr(Value));
 }
 
+void ClangTidyCheck::OptionsView::storeUnsigned(
+    ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+    uint64_t Value) const {
+  store(Options, LocalName, llvm::utostr(Value));
+}
+
 template <>
 void ClangTidyCheck::OptionsView::store<bool>(
     ClangTidyOptions::OptionMap &Options, StringRef LocalName,

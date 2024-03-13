@@ -64,3 +64,11 @@
 
 // Validate that check options are printed in alphabetical order:
 // RUN: clang-tidy --checks="-*,readability-identifier-naming" --dump-config %S/Inputs/config-files/- -- | grep "readability-identifier-naming\." | sort --check
+
+// Dumped config does not overflow for unsigned options
+// RUN: clang-tidy --dump-config \
+// RUN: --checks="-*,misc-throw-by-value-catch-by-reference" \
+// RUN: -- | grep -v -q "misc-throw-by-value-catch-by-reference.MaxSize: '-1'"
+
+// RUN: clang-tidy --dump-config %S/Inputs/config-files/5/- \
+// RUN: -- | grep -q "misc-throw-by-value-catch-by-reference.MaxSize: '1152921504606846976'"
