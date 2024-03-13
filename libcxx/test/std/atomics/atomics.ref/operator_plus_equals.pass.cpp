@@ -16,49 +16,54 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
 concept has_operator_plus_equals = requires { std::declval<T const>() += std::declval<T>(); };
 
-static_assert(!has_operator_plus_equals<std::atomic_ref<bool>>);
-struct X {
-  int i;
-  X(int ii) noexcept : i(ii) {}
-  bool operator==(X o) const { return i == o.i; }
+template <typename T>
+struct TestDoesNotHaveOperatorPlusEquals {
+  void operator()() const { static_assert(!has_operator_plus_equals<std::atomic_ref<T>>); }
 };
-static_assert(!has_operator_plus_equals<std::atomic_ref<X>>);
 
 template <typename T>
-void test_arithmetic() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestOperatorPlusEquals {
+  void operator()() const {
+    if constexpr (std::is_arithmetic_v<T>) {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
 
-  std::same_as<T> auto y = (a += T(2));
-  assert(y == T(3));
-  assert(x == T(3));
-  ASSERT_NOEXCEPT(a += T(0));
-}
+      std::same_as<T> auto y = (a += T(2));
+      assert(y == T(3));
+      assert(x == T(3));
+      ASSERT_NOEXCEPT(a += T(0));
+    } else if constexpr (std::is_pointer_v<T>) {
+      using U = std::remove_pointer_t<T>;
+      U t[9]  = {};
+      T p{&t[1]};
+      std::atomic_ref<T> const a(p);
 
-template <typename T>
-void test_pointer() {
-  using U = std::remove_pointer_t<T>;
-  U t[9]  = {};
-  T p{&t[1]};
-  std::atomic_ref<T> const a(p);
-
-  std::same_as<T> auto y = (a += 2);
-  assert(y == &t[3]);
-  assert(a == &t[3]);
-  ASSERT_NOEXCEPT(a += 0);
-}
+      std::same_as<T> auto y = (a += 2);
+      assert(y == &t[3]);
+      assert(a == &t[3]);
+      ASSERT_NOEXCEPT(a += 0);
+    } else {
+      static_assert(std::is_void_v<T>);
+    }
+  }
+};
 
 void test() {
-  test_arithmetic<int>();
-  test_arithmetic<float>();
+  TestEachIntegralType<TestOperatorPlusEquals>()();
 
-  test_pointer<int*>();
-  test_pointer<const int*>();
+  TestEachFloatingPointType<TestOperatorPlusEquals>()();
+
+  TestEachPointerType<TestOperatorPlusEquals>()();
+
+  TestDoesNotHaveOperatorPlusEquals<bool>()();
+  TestDoesNotHaveOperatorPlusEquals<UserAtomicType>()();
+  TestDoesNotHaveOperatorPlusEquals<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

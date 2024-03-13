@@ -14,39 +14,38 @@
 #include <concepts>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_exchange() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestExchange {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  {
-    std::same_as<T> auto y = a.exchange(T(2));
-    assert(y == T(1));
-    ASSERT_NOEXCEPT(a.exchange(T(2)));
-  }
+    {
+      std::same_as<T> auto y = a.exchange(T(2));
+      assert(y == T(1));
+      ASSERT_NOEXCEPT(a.exchange(T(2)));
+    }
 
-  {
-    std::same_as<T> auto y = a.exchange(T(3), std::memory_order_seq_cst);
-    assert(y == T(2));
-    ASSERT_NOEXCEPT(a.exchange(T(3), std::memory_order_seq_cst));
+    {
+      std::same_as<T> auto y = a.exchange(T(3), std::memory_order_seq_cst);
+      assert(y == T(2));
+      ASSERT_NOEXCEPT(a.exchange(T(3), std::memory_order_seq_cst));
+    }
   }
-}
+};
 
 void test() {
-  test_exchange<int>();
+  TestEachIntegralType<TestExchange>()();
 
-  test_exchange<float>();
+  TestEachFloatingPointType<TestExchange>()();
 
-  test_exchange<int*>();
+  TestEachPointerType<TestExchange>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_exchange<X>();
+  TestExchange<UserAtomicType>()();
+  TestExchange<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

@@ -14,34 +14,43 @@
 #include <concepts>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
 concept has_bitwise_and_assign = requires { std::declval<T const>() &= std::declval<T>(); };
 
-static_assert(!has_bitwise_and_assign<std::atomic_ref<float>>);
-static_assert(!has_bitwise_and_assign<std::atomic_ref<int*>>);
-static_assert(!has_bitwise_and_assign<std::atomic_ref<const int*>>);
-static_assert(!has_bitwise_and_assign<std::atomic_ref<bool>>);
-struct X {
-  int i;
-  X(int ii) noexcept : i(ii) {}
-  bool operator==(X o) const { return i == o.i; }
+template <typename T>
+struct TestDoesNotHaveBitwiseAndAssign {
+  void operator()() const { static_assert(!has_bitwise_and_assign<std::atomic_ref<T>>); }
 };
-static_assert(!has_bitwise_and_assign<std::atomic_ref<X>>);
 
 template <typename T>
-void test_integral() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestBitwiseAndAssign {
+  void operator()() const {
+    static_assert(std::is_integral_v<T>);
 
-  std::same_as<T> auto y = (a &= T(2));
-  assert(y == T(0));
-  assert(x == T(0));
-  ASSERT_NOEXCEPT(a &= T(0));
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
+
+    std::same_as<T> auto y = (a &= T(2));
+    assert(y == T(0));
+    assert(x == T(0));
+    ASSERT_NOEXCEPT(a &= T(0));
+  }
+};
+
+void test() {
+  TestEachIntegralType<TestBitwiseAndAssign>()();
+
+  TestEachFloatingPointType<TestDoesNotHaveBitwiseAndAssign>()();
+
+  TestEachPointerType<TestDoesNotHaveBitwiseAndAssign>()();
+
+  TestDoesNotHaveBitwiseAndAssign<bool>()();
+  TestDoesNotHaveBitwiseAndAssign<UserAtomicType>()();
+  TestDoesNotHaveBitwiseAndAssign<LargeUserAtomicType>()();
 }
-
-void test() { test_integral<int>(); }
 
 int main(int, char**) {
   test();

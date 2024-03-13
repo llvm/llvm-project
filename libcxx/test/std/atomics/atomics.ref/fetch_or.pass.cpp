@@ -14,6 +14,7 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -22,38 +23,46 @@ concept has_fetch_or = requires {
   std::declval<T const>().fetch_or(std::declval<T>(), std::declval<std::memory_order>());
 };
 
-static_assert(!has_fetch_or<std::atomic_ref<float>>);
-static_assert(!has_fetch_or<std::atomic_ref<int*>>);
-static_assert(!has_fetch_or<std::atomic_ref<const int*>>);
-static_assert(!has_fetch_or<std::atomic_ref<bool>>);
-struct X {
-  int i;
-  X(int ii) noexcept : i(ii) {}
-  bool operator==(X o) const { return i == o.i; }
+template <typename T>
+struct TestDoesNotHaveFetchOr {
+  void operator()() const { static_assert(!has_fetch_or<std::atomic_ref<T>>); }
 };
-static_assert(!has_fetch_or<std::atomic_ref<X>>);
 
 template <typename T>
-void test_integral() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestFetchOr {
+  void operator()() const {
+    static_assert(std::is_integral_v<T>);
 
-  {
-    std::same_as<T> auto y = a.fetch_or(T(2));
-    assert(y == T(1));
-    assert(x == T(3));
-    ASSERT_NOEXCEPT(a.fetch_or(T(0)));
-  }
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  {
-    std::same_as<T> auto y = a.fetch_or(T(2), std::memory_order_relaxed);
-    assert(y == T(3));
-    assert(x == T(3));
-    ASSERT_NOEXCEPT(a.fetch_or(T(0), std::memory_order_relaxed));
+    {
+      std::same_as<T> auto y = a.fetch_or(T(2));
+      assert(y == T(1));
+      assert(x == T(3));
+      ASSERT_NOEXCEPT(a.fetch_or(T(0)));
+    }
+
+    {
+      std::same_as<T> auto y = a.fetch_or(T(2), std::memory_order_relaxed);
+      assert(y == T(3));
+      assert(x == T(3));
+      ASSERT_NOEXCEPT(a.fetch_or(T(0), std::memory_order_relaxed));
+    }
   }
+};
+
+void test() {
+  TestEachIntegralType<TestFetchOr>()();
+
+  TestEachFloatingPointType<TestDoesNotHaveFetchOr>()();
+
+  TestEachPointerType<TestDoesNotHaveFetchOr>()();
+
+  TestDoesNotHaveFetchOr<bool>()();
+  TestDoesNotHaveFetchOr<UserAtomicType>()();
+  TestDoesNotHaveFetchOr<LargeUserAtomicType>()();
 }
-
-void test() { test_integral<int>(); }
 
 int main(int, char**) {
   test();

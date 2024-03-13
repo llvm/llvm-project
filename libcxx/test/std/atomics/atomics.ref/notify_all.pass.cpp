@@ -15,69 +15,68 @@
 #include <type_traits>
 #include <vector>
 
+#include "atomic_helpers.h"
 #include "make_test_thread.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_notify_all() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestNotifyAll {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  bool done                      = false;
-  std::atomic<int> started_num   = 0;
-  std::atomic<int> wait_done_num = 0;
+    bool done                      = false;
+    std::atomic<int> started_num   = 0;
+    std::atomic<int> wait_done_num = 0;
 
-  constexpr auto number_of_threads = 8;
-  std::vector<std::thread> threads;
-  threads.reserve(number_of_threads);
+    constexpr auto number_of_threads = 8;
+    std::vector<std::thread> threads;
+    threads.reserve(number_of_threads);
 
-  for (auto j = 0; j < number_of_threads; ++j) {
-    threads.push_back(support::make_test_thread([&a, &started_num, &done, &wait_done_num] {
-      started_num.fetch_add(1, std::memory_order::relaxed);
+    for (auto j = 0; j < number_of_threads; ++j) {
+      threads.push_back(support::make_test_thread([&a, &started_num, &done, &wait_done_num] {
+        started_num.fetch_add(1, std::memory_order::relaxed);
 
-      a.wait(T(1));
-      wait_done_num.fetch_add(1, std::memory_order::relaxed);
+        a.wait(T(1));
+        wait_done_num.fetch_add(1, std::memory_order::relaxed);
 
-      // likely to fail if wait did not block
-      assert(done);
-    }));
+        // likely to fail if wait did not block
+        assert(done);
+      }));
+    }
+
+    while (started_num.load(std::memory_order::relaxed) != number_of_threads) {
+      std::this_thread::yield();
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+    done = true;
+    a.store(T(3));
+    a.notify_all();
+
+    // notify_all should unblock all the threads so that the loop below won't stuck
+    while (wait_done_num.load(std::memory_order::relaxed) != number_of_threads) {
+      std::this_thread::yield();
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    ASSERT_NOEXCEPT(a.notify_all());
   }
-
-  while (started_num.load(std::memory_order::relaxed) != number_of_threads) {
-    std::this_thread::yield();
-  }
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
-  done = true;
-  a.store(T(3));
-  a.notify_all();
-
-  // notify_all should unblock all the threads so that the loop below won't stuck
-  while (wait_done_num.load(std::memory_order::relaxed) != number_of_threads) {
-    std::this_thread::yield();
-  }
-
-  for (auto& thread : threads) {
-    thread.join();
-  }
-
-  ASSERT_NOEXCEPT(a.notify_all());
-}
+};
 
 void test() {
-  test_notify_all<int>();
+  TestEachIntegralType<TestNotifyAll>()();
 
-  test_notify_all<float>();
+  TestEachFloatingPointType<TestNotifyAll>()();
 
-  test_notify_all<int*>();
+  TestEachPointerType<TestNotifyAll>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_notify_all<X>();
+  TestNotifyAll<UserAtomicType>()();
+  TestNotifyAll<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

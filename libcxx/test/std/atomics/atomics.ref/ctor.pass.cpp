@@ -15,29 +15,31 @@
 #include <atomic>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-auto make_atomic_ref(T& obj) {
-  // check that the constructor is explicit
-  static_assert(!std::is_convertible_v<T, std::atomic_ref<T>>);
-  static_assert(std::is_constructible_v<std::atomic_ref<T>, T&>);
-  return std::atomic_ref<T>(obj);
-}
+struct TestCtor {
+  void operator()() const {
+    // check that the constructor is explicit
+    static_assert(!std::is_convertible_v<T, std::atomic_ref<T>>);
+    static_assert(std::is_constructible_v<std::atomic_ref<T>, T&>);
+
+    T x(T(0));
+    std::atomic_ref<T> a(x);
+    (void)a;
+  }
+};
 
 void test() {
-  int i = 0;
-  (void)make_atomic_ref(i);
+  TestEachIntegralType<TestCtor>()();
 
-  float f = 0.f;
-  (void)make_atomic_ref(f);
+  TestEachFloatingPointType<TestCtor>()();
 
-  int* p = &i;
-  (void)make_atomic_ref(p);
+  TestEachPointerType<TestCtor>()();
 
-  struct X {
-  } x;
-  (void)make_atomic_ref(x);
+  TestCtor<UserAtomicType>()();
+  TestCtor<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

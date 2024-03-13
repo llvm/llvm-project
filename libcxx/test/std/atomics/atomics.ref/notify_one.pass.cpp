@@ -15,37 +15,36 @@
 #include <type_traits>
 #include <vector>
 
+#include "atomic_helpers.h"
 #include "make_test_thread.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_notify_one() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestNotifyOne {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  std::thread t = support::make_test_thread([&]() {
-    a.store(T(3));
-    a.notify_one();
-  });
-  a.wait(T(1));
-  assert(a.load() == T(3));
-  t.join();
-  ASSERT_NOEXCEPT(a.notify_one());
-}
+    std::thread t = support::make_test_thread([&]() {
+      a.store(T(3));
+      a.notify_one();
+    });
+    a.wait(T(1));
+    assert(a.load() == T(3));
+    t.join();
+    ASSERT_NOEXCEPT(a.notify_one());
+  }
+};
 
 void test() {
-  test_notify_one<int>();
+  TestEachIntegralType<TestNotifyOne>()();
 
-  test_notify_one<float>();
+  TestEachFloatingPointType<TestNotifyOne>()();
 
-  test_notify_one<int*>();
+  TestEachPointerType<TestNotifyOne>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_notify_one<X>();
+  TestNotifyOne<UserAtomicType>()();
+  TestNotifyOne<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

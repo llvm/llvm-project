@@ -13,35 +13,34 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_assign() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestAssign {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  a = T(2);
-  assert(x == T(2));
+    a = T(2);
+    assert(x == T(2));
 
-  ASSERT_NOEXCEPT(a = T(0));
-  static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, T>);
+    ASSERT_NOEXCEPT(a = T(0));
+    static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, T>);
 
-  static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
-}
+    static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
+  }
+};
 
 void test() {
-  test_assign<int>();
+  TestEachIntegralType<TestAssign>()();
 
-  test_assign<float>();
+  TestEachFloatingPointType<TestAssign>()();
 
-  test_assign<int*>();
+  TestEachPointerType<TestAssign>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_assign<X>();
+  TestAssign<UserAtomicType>()();
+  TestAssign<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

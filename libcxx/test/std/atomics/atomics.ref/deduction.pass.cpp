@@ -10,26 +10,32 @@
 
 // <atomic>
 
+// explicit atomic_ref(T&);
+
 #include <atomic>
 #include <type_traits>
 
+#include "atomic_helpers.h"
+#include "test_macros.h"
+
+template <typename T>
+struct TestDeduction {
+  void operator()() const {
+    T x(T(0));
+    std::atomic_ref a(x);
+    ASSERT_SAME_TYPE(decltype(a), std::atomic_ref<T>);
+  }
+};
+
 void test() {
-  int i = 0;
-  std::atomic_ref a0(i);
-  static_assert(std::is_same_v<decltype(a0), std::atomic_ref<int>>);
+  TestEachIntegralType<TestDeduction>()();
 
-  float f = 0.f;
-  std::atomic_ref a1(f);
-  static_assert(std::is_same_v<decltype(a1), std::atomic_ref<float>>);
+  TestEachFloatingPointType<TestDeduction>()();
 
-  int* p = &i;
-  std::atomic_ref a2(p);
-  static_assert(std::is_same_v<decltype(a2), std::atomic_ref<int*>>);
+  TestEachPointerType<TestDeduction>()();
 
-  struct X {
-  } x;
-  std::atomic_ref a3(x);
-  static_assert(std::is_same_v<decltype(a3), std::atomic_ref<X>>);
+  TestDeduction<UserAtomicType>()();
+  TestDeduction<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

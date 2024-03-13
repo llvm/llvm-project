@@ -13,50 +13,49 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "make_test_thread.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_wait() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestWait {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  assert(a.load() == T(1));
-  a.wait(T(0));
-  std::thread t1 = support::make_test_thread([&]() {
-    a.store(T(3));
-    a.notify_one();
-  });
-  a.wait(T(1));
-  assert(a.load() == T(3));
-  t1.join();
-  ASSERT_NOEXCEPT(a.wait(T(0)));
+    assert(a.load() == T(1));
+    a.wait(T(0));
+    std::thread t1 = support::make_test_thread([&]() {
+      a.store(T(3));
+      a.notify_one();
+    });
+    a.wait(T(1));
+    assert(a.load() == T(3));
+    t1.join();
+    ASSERT_NOEXCEPT(a.wait(T(0)));
 
-  assert(a.load() == T(3));
-  a.wait(T(0), std::memory_order_seq_cst);
-  std::thread t2 = support::make_test_thread([&]() {
-    a.store(T(5));
-    a.notify_one();
-  });
-  a.wait(T(3), std::memory_order_seq_cst);
-  assert(a.load() == T(5));
-  t2.join();
-  ASSERT_NOEXCEPT(a.wait(T(0), std::memory_order_seq_cst));
-}
+    assert(a.load() == T(3));
+    a.wait(T(0), std::memory_order_seq_cst);
+    std::thread t2 = support::make_test_thread([&]() {
+      a.store(T(5));
+      a.notify_one();
+    });
+    a.wait(T(3), std::memory_order_seq_cst);
+    assert(a.load() == T(5));
+    t2.join();
+    ASSERT_NOEXCEPT(a.wait(T(0), std::memory_order_seq_cst));
+  }
+};
 
 void test() {
-  test_wait<int>();
+  TestEachIntegralType<TestWait>()();
 
-  test_wait<float>();
+  TestEachFloatingPointType<TestWait>()();
 
-  test_wait<int*>();
+  TestEachPointerType<TestWait>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_wait<X>();
+  TestWait<UserAtomicType>()();
+  TestWait<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

@@ -13,36 +13,34 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_convert(T const& x) {
-  T copy = x;
-  std::atomic_ref<T> const a(copy);
+struct TestConvert {
+  void operator()() const {
+    T x(T(1));
 
-  T converted = a;
-  assert(converted == x);
+    T copy = x;
+    std::atomic_ref<T> const a(copy);
 
-  ASSERT_NOEXCEPT(T(a));
-  static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
-}
+    T converted = a;
+    assert(converted == x);
+
+    ASSERT_NOEXCEPT(T(a));
+    static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
+  }
+};
 
 void test() {
-  int i = 1;
-  test_convert<int>(i);
+  TestEachIntegralType<TestConvert>()();
 
-  float f = 1;
-  test_convert<float>(f);
+  TestEachFloatingPointType<TestConvert>()();
 
-  int* p = &i;
-  test_convert<int*>(p);
+  TestEachPointerType<TestConvert>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  } x{1};
-  test_convert<X>(x);
+  TestConvert<UserAtomicType>()();
+  TestConvert<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

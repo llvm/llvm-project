@@ -13,35 +13,34 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_store() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestStore {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  a.store(T(2));
-  assert(x == T(2));
-  ASSERT_NOEXCEPT(a.store(T(1)));
+    a.store(T(2));
+    assert(x == T(2));
+    ASSERT_NOEXCEPT(a.store(T(1)));
 
-  a.store(T(3), std::memory_order_seq_cst);
-  assert(x == T(3));
-  ASSERT_NOEXCEPT(a.store(T(0), std::memory_order_seq_cst));
-}
+    a.store(T(3), std::memory_order_seq_cst);
+    assert(x == T(3));
+    ASSERT_NOEXCEPT(a.store(T(0), std::memory_order_seq_cst));
+  }
+};
 
 void test() {
-  test_store<int>();
+  TestEachIntegralType<TestStore>()();
 
-  test_store<float>();
+  TestEachFloatingPointType<TestStore>()();
 
-  test_store<int*>();
+  TestEachPointerType<TestStore>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_store<X>();
+  TestStore<UserAtomicType>()();
+  TestStore<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

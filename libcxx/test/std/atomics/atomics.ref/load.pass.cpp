@@ -14,39 +14,38 @@
 #include <cassert>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_load() {
-  T x(T(1));
-  std::atomic_ref<T> const a(x);
+struct TestLoad {
+  void operator()() const {
+    T x(T(1));
+    std::atomic_ref<T> const a(x);
 
-  {
-    std::same_as<T> auto y = a.load();
-    assert(y == T(1));
-    ASSERT_NOEXCEPT(a.load());
-  }
+    {
+      std::same_as<T> auto y = a.load();
+      assert(y == T(1));
+      ASSERT_NOEXCEPT(a.load());
+    }
 
-  {
-    std::same_as<T> auto y = a.load(std::memory_order_seq_cst);
-    assert(y == T(1));
-    ASSERT_NOEXCEPT(a.load(std::memory_order_seq_cst));
+    {
+      std::same_as<T> auto y = a.load(std::memory_order_seq_cst);
+      assert(y == T(1));
+      ASSERT_NOEXCEPT(a.load(std::memory_order_seq_cst));
+    }
   }
-}
+};
 
 void test() {
-  test_load<int>();
+  TestEachIntegralType<TestLoad>()();
 
-  test_load<float>();
+  TestEachFloatingPointType<TestLoad>()();
 
-  test_load<int*>();
+  TestEachPointerType<TestLoad>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_load<X>();
+  TestLoad<UserAtomicType>()();
+  TestLoad<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {

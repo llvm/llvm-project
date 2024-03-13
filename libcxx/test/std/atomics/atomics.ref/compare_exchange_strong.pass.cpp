@@ -15,74 +15,73 @@
 #include <concepts>
 #include <type_traits>
 
+#include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-void test_compare_exchange_strong() {
-  {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
+struct TestCompareExchangeStrong {
+  void operator()() const {
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
 
-    T t(T(1));
-    std::same_as<bool> auto y = a.compare_exchange_strong(t, T(2));
-    assert(y == true);
-    assert(a == T(2));
-    assert(t == T(1));
-    y = a.compare_exchange_strong(t, T(3));
-    assert(y == false);
-    assert(a == T(2));
-    assert(t == T(2));
+      T t(T(1));
+      std::same_as<bool> auto y = a.compare_exchange_strong(t, T(2));
+      assert(y == true);
+      assert(a == T(2));
+      assert(t == T(1));
+      y = a.compare_exchange_strong(t, T(3));
+      assert(y == false);
+      assert(a == T(2));
+      assert(t == T(2));
 
-    ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2)));
+      ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2)));
+    }
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
+
+      T t(T(1));
+      std::same_as<bool> auto y = a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst);
+      assert(y == true);
+      assert(a == T(2));
+      assert(t == T(1));
+      y = a.compare_exchange_strong(t, T(3), std::memory_order_seq_cst);
+      assert(y == false);
+      assert(a == T(2));
+      assert(t == T(2));
+
+      ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst));
+    }
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
+
+      T t(T(1));
+      std::same_as<bool> auto y =
+          a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed);
+      assert(y == true);
+      assert(a == T(2));
+      assert(t == T(1));
+      y = a.compare_exchange_strong(t, T(3), std::memory_order_release, std::memory_order_relaxed);
+      assert(y == false);
+      assert(a == T(2));
+      assert(t == T(2));
+
+      ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed));
+    }
   }
-  {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
-
-    T t(T(1));
-    std::same_as<bool> auto y = a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst);
-    assert(y == true);
-    assert(a == T(2));
-    assert(t == T(1));
-    y = a.compare_exchange_strong(t, T(3), std::memory_order_seq_cst);
-    assert(y == false);
-    assert(a == T(2));
-    assert(t == T(2));
-
-    ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst));
-  }
-  {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
-
-    T t(T(1));
-    std::same_as<bool> auto y =
-        a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed);
-    assert(y == true);
-    assert(a == T(2));
-    assert(t == T(1));
-    y = a.compare_exchange_strong(t, T(3), std::memory_order_release, std::memory_order_relaxed);
-    assert(y == false);
-    assert(a == T(2));
-    assert(t == T(2));
-
-    ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed));
-  }
-}
+};
 
 void test() {
-  test_compare_exchange_strong<int>();
+  TestEachIntegralType<TestCompareExchangeStrong>()();
 
-  test_compare_exchange_strong<float>();
+  TestEachFloatingPointType<TestCompareExchangeStrong>()();
 
-  test_compare_exchange_strong<int*>();
+  TestEachPointerType<TestCompareExchangeStrong>()();
 
-  struct X {
-    int i;
-    X(int ii) noexcept : i(ii) {}
-    bool operator==(X o) const { return i == o.i; }
-  };
-  test_compare_exchange_strong<X>();
+  TestCompareExchangeStrong<UserAtomicType>()();
+  TestCompareExchangeStrong<LargeUserAtomicType>()();
 }
 
 int main(int, char**) {
