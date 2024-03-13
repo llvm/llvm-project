@@ -6,6 +6,7 @@ mkdir build-release && cd build-release
 cmake -G Ninja \
       -DLLVM_ENABLE_PROJECTS='clang' \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
       ../llvm
 
 # 打开对 typeid 的支持（感觉没用）
