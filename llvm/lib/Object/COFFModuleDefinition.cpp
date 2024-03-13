@@ -39,7 +39,6 @@ enum Kind {
   KwConstant,
   KwData,
   KwExports,
-  KwExportAs,
   KwHeapsize,
   KwLibrary,
   KwName,
@@ -119,7 +118,6 @@ public:
                    .Case("CONSTANT", KwConstant)
                    .Case("DATA", KwData)
                    .Case("EXPORTS", KwExports)
-                   .Case("EXPORTAS", KwExportAs)
                    .Case("HEAPSIZE", KwHeapsize)
                    .Case("LIBRARY", KwLibrary)
                    .Case("NAME", KwName)
@@ -288,16 +286,7 @@ private:
           E.AliasTarget = std::string("_").append(E.AliasTarget);
         continue;
       }
-      // EXPORTAS must be at the end of export definition
-      if (Tok.K == KwExportAs) {
-        read();
-        if (Tok.K == Eof)
-          return createError(
-              "unexpected end of file, EXPORTAS identifier expected");
-        E.ExportAs = std::string(Tok.Value);
-      } else {
-        unget();
-      }
+      unget();
       Info.Exports.push_back(E);
       return Error::success();
     }

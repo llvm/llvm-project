@@ -675,9 +675,6 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
     std::string ExportName;
     if (E.Noname) {
       NameType = IMPORT_ORDINAL;
-    } else if (!E.ExportAs.empty()) {
-      NameType = IMPORT_NAME_EXPORTAS;
-      ExportName = E.ExportAs;
     } else {
       NameType = getNameType(SymbolName, E.Name, Machine, MinGW);
     }
