@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/shm_open.h"
+#include "llvm-libc-macros/fcntl-macros.h"
 #include "src/fcntl/open.h"
 #include "src/sys/mman/linux/shm_common.h"
-#include <fcntl.h>
 
 namespace LIBC_NAMESPACE {
 

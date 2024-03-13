@@ -174,7 +174,8 @@ add_entrypoint_object(
     ../shm_open.h
   DEPENDS
     libc.src.fcntl.open
-    libc.include.fcntl
+    libc.include.llvm-libc-macros.fcntl_macros
+    libc.include.llvm-libc-types.mode_t
     .shm_common
 )
 
