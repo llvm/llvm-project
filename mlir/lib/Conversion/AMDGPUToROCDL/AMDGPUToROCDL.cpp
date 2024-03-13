@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/SystemDesc.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -28,6 +29,8 @@ namespace mlir {
 
 using namespace mlir;
 using namespace mlir::amdgpu;
+
+#define DEBUG_TYPE "amd-gpu-to-rocdl"
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
@@ -49,7 +52,6 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       : ConvertOpToLLVMPattern<GpuOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
-  static constexpr uint32_t maxVectorOpWidth = 128;
 
   LogicalResult
   matchAndRewrite(GpuOp gpuOp, typename GpuOp::Adaptor adaptor,
@@ -111,6 +113,16 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
       uint32_t totalBits = elemBits * dataVector.getNumElements();
+      uint32_t maxVectorOpWidth = 128; // default value
+      if (std::optional<int64_t> v = gpuOp.getContext()
+                                         ->getSystemDesc()
+                                         .getDeviceDesc(1 /* gpuID */)
+                                         .getMaxVectorWidth()) {
+        maxVectorOpWidth = static_cast<uint32_t>(*v);
+      }
+      LLVM_DEBUG(llvm::dbgs() << "[CostModel] GPU MaxVectorWidth:"
+                              << maxVectorOpWidth << "\n");
+
       if (totalBits > maxVectorOpWidth)
         return gpuOp.emitOpError(
             "Total width of loads or stores must be no more than " +

@@ -176,6 +176,11 @@ public:
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
 
+  /// System description file
+  StringRef getSystemDescriptionFileName() const {
+    return systemDescriptionFileFlag;
+  }
+
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
@@ -234,6 +239,9 @@ protected:
 
   /// The reproducer output filename (no crash required).
   std::string generateReproducerFileFlag = "";
+
+  /// The hardware config file
+  std::string systemDescriptionFileFlag = "";
 };
 
 /// This defines the function type used to setup the pass manager. This can be

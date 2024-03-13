@@ -1,5 +1,6 @@
 set(LLVM_OPTIONAL_SOURCES
   FileUtilities.cpp
+  SystemDesc.cpp
   InterfaceSupport.cpp
   StorageUniquer.cpp
   Timing.cpp
@@ -9,6 +10,7 @@ set(LLVM_OPTIONAL_SOURCES
 
 add_mlir_library(MLIRSupport
   FileUtilities.cpp
+  SystemDesc.cpp
   InterfaceSupport.cpp
   RawOstreamExtras.cpp
   StorageUniquer.cpp

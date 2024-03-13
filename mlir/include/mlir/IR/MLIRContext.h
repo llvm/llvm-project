@@ -34,6 +34,7 @@ class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
+class SystemDesc;
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -239,6 +240,9 @@ public:
   /// context registry correlates to loaded dialects and their entities
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
+
+  /// Get context-specific system description
+  SystemDesc &getSystemDesc();
 
   //===--------------------------------------------------------------------===//
   // Action API
