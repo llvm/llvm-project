@@ -1711,8 +1711,7 @@ TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
 TEST(CoreAPIsExtraTest, SessionTeardownByFailedToMaterialize) {
 
   auto RunTestCase = []() -> Error {
-    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>())};
+    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
     auto Foo = ES.intern("foo");
     auto FooFlags = JITSymbolFlags::Exported;
 

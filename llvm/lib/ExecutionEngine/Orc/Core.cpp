@@ -1589,9 +1589,11 @@ void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 
 void LookupTask::run() { LS.continueLookup(Error::success()); }
 
-ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
-    : EPC(std::move(EPC)) {
-  // Associated EPC and this.
+ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC,
+                                   std::shared_ptr<SymbolStringPool> SSP)
+    : EPC(std::move(EPC)),
+      SSP(SSP ? std::move(SSP) : std::make_unique<SymbolStringPool>()) {
+  // Associate EPC with this session.
   this->EPC->ES = this;
 }
 
@@ -2001,8 +2003,7 @@ Error ExecutionSession::removeResourceTracker(ResourceTracker &RT) {
                      L->handleRemoveResources(JD, RT.getKeyUnsafe()));
 
   for (auto &Q : QueriesToFail)
-    Q->handleFailed(
-        make_error<FailedToMaterialize>(getSymbolStringPool(), FailedSymbols));
+    Q->handleFailed(make_error<FailedToMaterialize>(SSP, FailedSymbols));
 
   return Err;
 }
@@ -2075,15 +2076,14 @@ Error ExecutionSession::IL_updateCandidatesFor(
         // weakly referenced" specific error here to reduce confusion.
         if (SymI->second.getFlags().hasMaterializationSideEffectsOnly() &&
             SymLookupFlags != SymbolLookupFlags::WeaklyReferencedSymbol)
-          return make_error<SymbolsNotFound>(getSymbolStringPool(),
-                                             SymbolNameVector({Name}));
+          return make_error<SymbolsNotFound>(SSP, SymbolNameVector({Name}));
 
         // If we matched against this symbol but it is in the error state
         // then bail out and treat it as a failure to materialize.
         if (SymI->second.getFlags().hasError()) {
           auto FailedSymbolsMap = std::make_shared<SymbolDependenceMap>();
           (*FailedSymbolsMap)[&JD] = {Name};
-          return make_error<FailedToMaterialize>(getSymbolStringPool(),
+          return make_error<FailedToMaterialize>(SSP,
                                                  std::move(FailedSymbolsMap));
         }
 
@@ -2341,7 +2341,7 @@ void ExecutionSession::OL_applyQueryPhase1(
   } else {
     LLVM_DEBUG(dbgs() << "Phase 1 failed with unresolved symbols.\n");
     IPLS->fail(make_error<SymbolsNotFound>(
-        getSymbolStringPool(), IPLS->DefGeneratorCandidates.getSymbolNames()));
+        SSP, IPLS->DefGeneratorCandidates.getSymbolNames()));
   }
 }
 
@@ -2411,8 +2411,7 @@ void ExecutionSession::OL_completeLookup(
                 dbgs() << "error: "
                           "required, but symbol is has-side-effects-only\n";
               });
-              return make_error<SymbolsNotFound>(getSymbolStringPool(),
-                                                 SymbolNameVector({Name}));
+              return make_error<SymbolsNotFound>(SSP, SymbolNameVector({Name}));
             }
 
             // If we matched against this symbol but it is in the error state
@@ -2422,7 +2421,7 @@ void ExecutionSession::OL_completeLookup(
               auto FailedSymbolsMap = std::make_shared<SymbolDependenceMap>();
               (*FailedSymbolsMap)[&JD] = {Name};
               return make_error<FailedToMaterialize>(
-                  getSymbolStringPool(), std::move(FailedSymbolsMap));
+                  SSP, std::move(FailedSymbolsMap));
             }
 
             // Otherwise this is a match.
@@ -2526,8 +2525,7 @@ void ExecutionSession::OL_completeLookup(
 
     if (!IPLS->LookupSet.empty()) {
       LLVM_DEBUG(dbgs() << "Failing due to unresolved symbols\n");
-      return make_error<SymbolsNotFound>(getSymbolStringPool(),
-                                         IPLS->LookupSet.getSymbolNames());
+      return make_error<SymbolsNotFound>(SSP, IPLS->LookupSet.getSymbolNames());
     }
 
     // Record whether the query completed.
@@ -2652,8 +2650,7 @@ void ExecutionSession::OL_completeLookupFlags(
 
     if (!IPLS->LookupSet.empty()) {
       LLVM_DEBUG(dbgs() << "Failing due to unresolved symbols\n");
-      return make_error<SymbolsNotFound>(getSymbolStringPool(),
-                                         IPLS->LookupSet.getSymbolNames());
+      return make_error<SymbolsNotFound>(SSP, IPLS->LookupSet.getSymbolNames());
     }
 
     LLVM_DEBUG(dbgs() << "Succeded, result = " << Result << "\n");
@@ -3465,8 +3462,7 @@ void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
   });
 
   for (auto &Q : FailedQueries)
-    Q->handleFailed(
-        make_error<FailedToMaterialize>(getSymbolStringPool(), FailedSymbols));
+    Q->handleFailed(make_error<FailedToMaterialize>(SSP, FailedSymbols));
 }
 
 Error ExecutionSession::OL_replace(MaterializationResponsibility &MR,

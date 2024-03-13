@@ -1453,7 +1453,8 @@ public:
 
   /// Construct an ExecutionSession with the given ExecutorProcessControl
   /// object.
-  ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
+  ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC,
+                   std::shared_ptr<SymbolStringPool> SSP = nullptr);
 
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
@@ -1474,12 +1475,10 @@ public:
   size_t getPageSize() const { return EPC->getPageSize(); }
 
   /// Get the SymbolStringPool for this instance.
-  std::shared_ptr<SymbolStringPool> getSymbolStringPool() {
-    return EPC->getSymbolStringPool();
-  }
+  std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
 
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
-  SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
+  SymbolStringPtr intern(StringRef SymName) { return SSP->intern(SymName); }
 
   /// Set the Platform for this ExecutionSession.
   void setPlatform(std::unique_ptr<Platform> P) { this->P = std::move(P); }
@@ -1856,6 +1855,7 @@ private:
   mutable std::recursive_mutex SessionMutex;
   bool SessionOpen = true;
   std::unique_ptr<ExecutorProcessControl> EPC;
+  std::shared_ptr<SymbolStringPool> SSP;
   std::unique_ptr<Platform> P;
   ErrorReporter ReportError = logErrorsToStdErr;
   DispatchTaskFunction DispatchTask = runOnCurrentThread;

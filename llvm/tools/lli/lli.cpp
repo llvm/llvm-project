@@ -1024,8 +1024,7 @@ int runOrcJIT(const char *ProgName) {
 
   std::unique_ptr<orc::ExecutorProcessControl> EPC = nullptr;
   if (JITLinker == JITLinkerKind::JITLink) {
-    EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
-        std::make_shared<orc::SymbolStringPool>()));
+    EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create());
 
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)

@@ -936,7 +936,6 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
     if (!PageSize)
       return PageSize.takeError();
     EPC = std::make_unique<SelfExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>(),
         std::make_unique<InPlaceTaskDispatcher>(), std::move(TT), *PageSize,
         createInProcessMemoryManager());
   }

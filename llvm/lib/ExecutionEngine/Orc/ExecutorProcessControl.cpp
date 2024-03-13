@@ -25,11 +25,16 @@ ExecutorProcessControl::MemoryAccess::~MemoryAccess() = default;
 
 ExecutorProcessControl::~ExecutorProcessControl() = default;
 
+std::shared_ptr<SymbolStringPool>
+ExecutorProcessControl::getSymbolStringPool() const {
+  assert(ES && "Create an ExecutionSession with this EPC first");
+  return ES->getSymbolStringPool();
+}
+
 SelfExecutorProcessControl::SelfExecutorProcessControl(
-    std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
-    Triple TargetTriple, unsigned PageSize,
+    std::unique_ptr<TaskDispatcher> D, Triple TargetTriple, unsigned PageSize,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)),
+    : ExecutorProcessControl(std::move(D)),
       InProcessMemoryAccess(TargetTriple.isArch64Bit()) {
 
   OwnedMemMgr = std::move(MemMgr);
@@ -54,13 +59,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
 SelfExecutorProcessControl::Create(
-    std::shared_ptr<SymbolStringPool> SSP,
     std::unique_ptr<TaskDispatcher> D,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr) {
-
-  if (!SSP)
-    SSP = std::make_shared<SymbolStringPool>();
-
   if (!D) {
 #if LLVM_ENABLE_THREADS
     D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
@@ -76,8 +76,7 @@ SelfExecutorProcessControl::Create(
   Triple TT(sys::getProcessTriple());
 
   return std::make_unique<SelfExecutorProcessControl>(
-      std::move(SSP), std::move(D), std::move(TT), *PageSize,
-      std::move(MemMgr));
+      std::move(D), std::move(TT), *PageSize, std::move(MemMgr));
 }
 
 Expected<tpctypes::DylibHandle>
@@ -106,8 +105,8 @@ void SelfExecutorProcessControl::lookupSymbolsAsync(
         // FIXME: Collect all failing symbols before erroring out.
         SymbolNameVector MissingSymbols;
         MissingSymbols.push_back(Sym);
-        return Complete(
-            make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols)));
+        return Complete(make_error<SymbolsNotFound>(ES->getSymbolStringPool(),
+                                                    std::move(MissingSymbols)));
       }
       // FIXME: determine accurate JITSymbolFlags.
       R.back().push_back(

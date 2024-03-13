@@ -50,9 +50,7 @@ public:
   static Expected<std::unique_ptr<SimpleRemoteEPC>>
   Create(std::unique_ptr<TaskDispatcher> D, Setup S,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
-    std::unique_ptr<SimpleRemoteEPC> SREPC(
-        new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
-                            std::move(D)));
+    std::unique_ptr<SimpleRemoteEPC> SREPC(new SimpleRemoteEPC(std::move(D)));
     auto T = TransportT::Create(
         *SREPC, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
     if (!T)
@@ -94,9 +92,8 @@ public:
   void handleDisconnect(Error Err) override;
 
 private:
-  SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
-                  std::unique_ptr<TaskDispatcher> D)
-    : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
+  SimpleRemoteEPC(std::unique_ptr<TaskDispatcher> D)
+      : ExecutorProcessControl(std::move(D)) {}
 
   static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
   createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
