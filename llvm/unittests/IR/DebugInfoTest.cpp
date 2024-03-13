@@ -951,7 +951,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   ExitBlock->createMarker(FirstInst);
   ExitBlock->createMarker(RetInst);
 
-  // Insert DPValues into markers, order should come out DPV2, DPV1.
+  // Insert DbgRecords into markers, order should come out DPV2, DPV1.
   FirstInst->DbgMarker->insertDbgRecord(DPV1, false);
   FirstInst->DbgMarker->insertDbgRecord(DPV2, true);
   unsigned int ItCount = 0;
@@ -964,7 +964,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
 
   // Clone them onto the second marker -- should allocate new DPVs.
   RetInst->DbgMarker->cloneDebugInfoFrom(FirstInst->DbgMarker, std::nullopt, false);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2u);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 2u);
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
@@ -980,25 +980,25 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   }
 
   RetInst->DbgMarker->dropDbgRecords();
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 0u);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 0u);
 
   // Try cloning one single DPValue.
   auto DIIt = std::next(FirstInst->DbgMarker->getDbgRecordRange().begin());
   RetInst->DbgMarker->cloneDebugInfoFrom(FirstInst->DbgMarker, DIIt, false);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 1u);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 1u);
   // The second DPValue should have been cloned; it should have the same values
   // as DPV1.
-  EXPECT_EQ(cast<DPValue>(RetInst->DbgMarker->StoredDPValues.begin())
+  EXPECT_EQ(cast<DPValue>(RetInst->DbgMarker->StoredDbgRecords.begin())
                 ->getRawLocation(),
             DPV1->getRawLocation());
-  // We should be able to drop individual DPValues.
+  // We should be able to drop individual DbgRecords.
   RetInst->DbgMarker->dropOneDbgRecord(
-      &*RetInst->DbgMarker->StoredDPValues.begin());
+      &*RetInst->DbgMarker->StoredDbgRecords.begin());
 
   // "Aborb" a DPMarker: this means pretend that the instruction it's attached
   // to is disappearing so it needs to be transferred into "this" marker.
   RetInst->DbgMarker->absorbDebugValues(*FirstInst->DbgMarker, true);
-  EXPECT_EQ(RetInst->DbgMarker->StoredDPValues.size(), 2u);
+  EXPECT_EQ(RetInst->DbgMarker->StoredDbgRecords.size(), 2u);
   // Should be the DPV1 and DPV2 objects.
   ItCount = 0;
   for (DbgRecord &Item : RetInst->DbgMarker->getDbgRecordRange()) {
@@ -1009,7 +1009,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   }
 
   // Finally -- there are two DPValues left over. If we remove evrything in the
-  // basic block, then they should sink down into the "TrailingDPValues"
+  // basic block, then they should sink down into the "TrailingDbgRecords"
   // container for dangling debug-info. Future facilities will restore them
   // back when a terminator is inserted.
   FirstInst->DbgMarker->removeMarker();
@@ -1019,7 +1019,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
 
   DPMarker *EndMarker = ExitBlock->getTrailingDbgRecords();
   ASSERT_NE(EndMarker, nullptr);
-  EXPECT_EQ(EndMarker->StoredDPValues.size(), 2u);
+  EXPECT_EQ(EndMarker->StoredDbgRecords.size(), 2u);
   // Test again that it's those two DPValues, DPV1 and DPV2.
   ItCount = 0;
   for (DbgRecord &Item : EndMarker->getDbgRecordRange()) {
@@ -1115,14 +1115,14 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_EQ(FirstInst, FirstInst->DbgMarker->MarkedInstr);
   EXPECT_EQ(SecondInst, SecondInst->DbgMarker->MarkedInstr);
 
-  EXPECT_EQ(FirstInst->DbgMarker->StoredDPValues.size(), 1u);
+  EXPECT_EQ(FirstInst->DbgMarker->StoredDbgRecords.size(), 1u);
   DPValue *DPV1 =
       cast<DPValue>(&*FirstInst->DbgMarker->getDbgRecordRange().begin());
   EXPECT_EQ(DPV1->getMarker(), FirstInst->DbgMarker);
   // Should point at %a, an argument.
   EXPECT_TRUE(isa<Argument>(DPV1->getVariableLocationOp(0)));
 
-  EXPECT_EQ(SecondInst->DbgMarker->StoredDPValues.size(), 1u);
+  EXPECT_EQ(SecondInst->DbgMarker->StoredDbgRecords.size(), 1u);
   DPValue *DPV2 =
       cast<DPValue>(&*SecondInst->DbgMarker->getDbgRecordRange().begin());
   EXPECT_EQ(DPV2->getMarker(), SecondInst->DbgMarker);
@@ -1135,7 +1135,7 @@ TEST(MetadataTest, DPValueConversionRoutines) {
   EXPECT_TRUE(BB2->IsNewDbgInfoFormat);
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
-    EXPECT_TRUE(!Inst.DbgMarker || Inst.DbgMarker->StoredDPValues.empty());
+    EXPECT_TRUE(!Inst.DbgMarker || Inst.DbgMarker->StoredDbgRecords.empty());
 
   // Validating the first block should continue to not be a problem,
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);

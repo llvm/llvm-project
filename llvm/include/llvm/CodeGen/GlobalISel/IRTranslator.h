@@ -205,7 +205,7 @@ private:
   bool translate(const Constant &C, Register Reg);
 
   /// Examine any debug-info attached to the instruction (in the form of
-  /// DPValues) and translate it.
+  /// DbgRecords) and translate it.
   void translateDbgInfo(const Instruction &Inst,
                           MachineIRBuilder &MIRBuilder);
 

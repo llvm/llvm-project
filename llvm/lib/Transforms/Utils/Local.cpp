@@ -2848,7 +2848,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
       Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
     DTU->applyUpdates(Updates);
   }
-  BB->flushTerminatorDbgValues();
+  BB->flushTerminatorDbgRecords();
   return NumInstrsRemoved;
 }
 

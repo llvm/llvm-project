@@ -146,7 +146,7 @@ public:
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
-  void remapDPValue(DbgRecord &DPV);
+  void remapDbgRecord(DbgRecord &DPV);
 
   Constant *mapConstant(const Constant *C) {
     return cast_or_null<Constant>(mapValue(C));
@@ -537,7 +537,7 @@ Value *Mapper::mapValue(const Value *V) {
   return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
 }
 
-void Mapper::remapDPValue(DbgRecord &DR) {
+void Mapper::remapDbgRecord(DbgRecord &DR) {
   if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
     DPL->setLabel(cast<DILabel>(mapMetadata(DPL->getLabel())));
     return;
@@ -1067,7 +1067,7 @@ void Mapper::remapFunction(Function &F) {
     for (Instruction &I : BB) {
       remapInstruction(&I);
       for (DbgRecord &DR : I.getDbgRecordRange())
-        remapDPValue(DR);
+        remapDbgRecord(DR);
     }
   }
 }
@@ -1234,7 +1234,7 @@ void ValueMapper::remapInstruction(Instruction &I) {
 }
 
 void ValueMapper::remapDPValue(Module *M, DPValue &V) {
-  FlushingMapper(pImpl)->remapDPValue(V);
+  FlushingMapper(pImpl)->remapDbgRecord(V);
 }
 
 void ValueMapper::remapDPValueRange(
