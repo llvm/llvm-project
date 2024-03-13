@@ -324,23 +324,16 @@ static DebugVariable getAggregateVariable(DPValue *DPV) {
                        DPV->getDebugLoc().getInlinedAt());
 }
 
-static DPValue *createLinkedAssign(DPValue *, DIBuilder &DIB,
-                                   Instruction *LinkedInstr, Value *NewValue,
-                                   DILocalVariable *Variable,
-                                   DIExpression *Expression, Value *Address,
-                                   DIExpression *AddressExpression,
-                                   const DILocation *DI) {
-  (void)DIB;
-  return DPValue::createLinkedDPVAssign(LinkedInstr, NewValue, Variable,
-                                        Expression, Address, AddressExpression,
-                                        DI);
+/// Helpers for handling new and old debug info modes in migrateDebugInfo.
+/// These overloads unwrap a DbgInstPtr {Instruction* | DbgRecord*} union based
+/// on the \p Unused parameter type.
+DPValue *UnwrapDbgInstPtr(DbgInstPtr P, DPValue *Unused) {
+  (void)Unused;
+  return static_cast<DPValue *>(cast<DbgRecord *>(P));
 }
-static DbgAssignIntrinsic *createLinkedAssign(
-    DbgAssignIntrinsic *, DIBuilder &DIB, Instruction *LinkedInstr,
-    Value *NewValue, DILocalVariable *Variable, DIExpression *Expression,
-    Value *Address, DIExpression *AddressExpression, const DILocation *DI) {
-  return DIB.insertDbgAssign(LinkedInstr, NewValue, Variable, Expression,
-                             Address, AddressExpression, DI);
+DbgAssignIntrinsic *UnwrapDbgInstPtr(DbgInstPtr P, DbgAssignIntrinsic *Unused) {
+  (void)Unused;
+  return static_cast<DbgAssignIntrinsic *>(cast<Instruction *>(P));
 }
 
 /// Find linked dbg.assign and generate a new one with the correct
@@ -398,7 +391,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto DbgAssign) {
+  auto MigrateDbgAssign = [&](auto *DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -452,10 +445,12 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     }
 
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-    auto *NewAssign = createLinkedAssign(
-        DbgAssign, DIB, Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
-        DIExpression::get(Expr->getContext(), std::nullopt),
-        DbgAssign->getDebugLoc());
+    auto *NewAssign = UnwrapDbgInstPtr(
+        DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
+                            Dest,
+                            DIExpression::get(Expr->getContext(), std::nullopt),
+                            DbgAssign->getDebugLoc()),
+        DbgAssign);
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -1853,7 +1848,7 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
   Tail->setName(Head->getName() + ".cont");
   PHINode *PN;
   if (isa<LoadInst>(I))
-    PN = PHINode::Create(I.getType(), 2, "", &I);
+    PN = PHINode::Create(I.getType(), 2, "", I.getIterator());
   for (BasicBlock *SuccBB : successors(Head)) {
     bool IsThen = SuccBB == HeadBI->getSuccessor(0);
     int SuccIdx = IsThen ? 0 : 1;
@@ -2257,6 +2252,41 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
   return nullptr;
 }
 
+static VectorType *createAndCheckVectorTypesForPromotion(
+    SetVector<Type *> &OtherTys, ArrayRef<VectorType *> CandidateTysCopy,
+    function_ref<void(Type *)> CheckCandidateType, Partition &P,
+    const DataLayout &DL, SmallVectorImpl<VectorType *> &CandidateTys,
+    bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
+    bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy) {
+  [[maybe_unused]] VectorType *OriginalElt =
+      CandidateTysCopy.size() ? CandidateTysCopy[0] : nullptr;
+  // Consider additional vector types where the element type size is a
+  // multiple of load/store element size.
+  for (Type *Ty : OtherTys) {
+    if (!VectorType::isValidElementType(Ty))
+      continue;
+    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
+    // Make a copy of CandidateTys and iterate through it, because we
+    // might append to CandidateTys in the loop.
+    for (VectorType *const VTy : CandidateTysCopy) {
+      // The elements in the copy should remain invariant throughout the loop
+      assert(CandidateTysCopy[0] == OriginalElt && "Different Element");
+      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
+      unsigned ElementSize =
+          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+      if (TypeSize != VectorSize && TypeSize != ElementSize &&
+          VectorSize % TypeSize == 0) {
+        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
+        CheckCandidateType(NewVTy);
+      }
+    }
+  }
+
+  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
+                                      CommonEltTy, HaveVecPtrTy,
+                                      HaveCommonVecPtrTy, CommonVecPtrTy);
+}
+
 /// Test whether the given alloca partitioning and range of slices can be
 /// promoted to a vector.
 ///
@@ -2271,6 +2301,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // we have different element types.
   SmallVector<VectorType *, 4> CandidateTys;
   SetVector<Type *> LoadStoreTys;
+  SetVector<Type *> DeferredTys;
   Type *CommonEltTy = nullptr;
   VectorType *CommonVecPtrTy = nullptr;
   bool HaveVecPtrTy = false;
@@ -2314,42 +2345,32 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       Ty = SI->getValueOperand()->getType();
     else
       continue;
+
+    auto CandTy = Ty->getScalarType();
+    if (CandTy->isPointerTy() && (S.beginOffset() != P.beginOffset() ||
+                                  S.endOffset() != P.endOffset())) {
+      DeferredTys.insert(Ty);
+      continue;
+    }
+
     LoadStoreTys.insert(Ty);
     // Consider any loads or stores that are the exact size of the slice.
     if (S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset())
       CheckCandidateType(Ty);
   }
 
-  if (auto *VTy = checkVectorTypesForPromotion(
-          P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
+  if (auto *VTy = createAndCheckVectorTypesForPromotion(
+          LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
+          CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
           HaveCommonVecPtrTy, CommonVecPtrTy))
     return VTy;
 
-  // Consider additional vector types where the element type size is a
-  // multiple of load/store element size.
-  for (Type *Ty : LoadStoreTys) {
-    if (!VectorType::isValidElementType(Ty))
-      continue;
-    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
-    // Make a copy of CandidateTys and iterate through it, because we might
-    // append to CandidateTys in the loop.
-    SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
-    CandidateTys.clear();
-    for (VectorType *&VTy : CandidateTysCopy) {
-      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
-      unsigned ElementSize =
-          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-      if (TypeSize != VectorSize && TypeSize != ElementSize &&
-          VectorSize % TypeSize == 0) {
-        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
-        CheckCandidateType(NewVTy);
-      }
-    }
-  }
-
-  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
-                                      CommonEltTy, HaveVecPtrTy,
-                                      HaveCommonVecPtrTy, CommonVecPtrTy);
+  CandidateTys.clear();
+  return createAndCheckVectorTypesForPromotion(
+      DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
+      HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
+      CommonVecPtrTy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
@@ -3956,11 +3977,11 @@ private:
     return false;
   }
 
-  // Fold gep (select cond, ptr1, ptr2), idx
+  // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
   //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
-  bool foldGEPSelect(GetElementPtrInst &GEPI) {
+  bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
     SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
@@ -4029,67 +4050,108 @@ private:
     return true;
   }
 
-  // Fold gep (phi ptr1, ptr2) => phi gep(ptr1), gep(ptr2)
-  bool foldGEPPhi(GetElementPtrInst &GEPI) {
-    if (!GEPI.hasAllConstantIndices())
-      return false;
+  // Unfold gep (phi ptr1, ptr2), idx
+  //   => phi ((gep ptr1, idx), (gep ptr2, idx))
+  // and  gep ptr, (phi idx1, idx2)
+  //   => phi ((gep ptr, idx1), (gep ptr, idx2))
+  bool unfoldGEPPhi(GetElementPtrInst &GEPI) {
+    // To prevent infinitely expanding recursive phis, bail if the GEP pointer
+    // operand (looking through the phi if it is the phi we want to unfold) is
+    // an instruction besides a static alloca.
+    PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
+    auto IsInvalidPointerOperand = [](Value *V) {
+      if (!isa<Instruction>(V))
+        return false;
+      if (auto *AI = dyn_cast<AllocaInst>(V))
+        return !AI->isStaticAlloca();
+      return true;
+    };
+    if (Phi) {
+      if (any_of(Phi->operands(), IsInvalidPointerOperand))
+        return false;
+    } else {
+      if (IsInvalidPointerOperand(GEPI.getPointerOperand()))
+        return false;
+    }
+    // Check whether the GEP has exactly one phi operand (including the pointer
+    // operand) and all indices will become constant after the transform.
+    for (Value *Op : GEPI.indices()) {
+      if (auto *SI = dyn_cast<PHINode>(Op)) {
+        if (Phi)
+          return false;
 
-    PHINode *PHI = cast<PHINode>(GEPI.getPointerOperand());
-    if (GEPI.getParent() != PHI->getParent() ||
-        llvm::any_of(PHI->incoming_values(), [](Value *In) {
-          Instruction *I = dyn_cast<Instruction>(In);
-          return !I || isa<GetElementPtrInst>(I) || isa<PHINode>(I) ||
-                 succ_empty(I->getParent()) ||
-                 !I->getParent()->isLegalToHoistInto();
-        }))
+        Phi = SI;
+        if (!all_of(Phi->incoming_values(),
+                    [](Value *V) { return isa<ConstantInt>(V); }))
+          return false;
+        continue;
+      }
+
+      if (!isa<ConstantInt>(Op))
+        return false;
+    }
+
+    if (!Phi)
       return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(phi) -> phi(gep):\n";
-               dbgs() << "    original: " << *PHI << "\n";
+               dbgs() << "    original: " << *Phi << "\n";
                dbgs() << "              " << GEPI << "\n";);
 
-    SmallVector<Value *, 4> Index(GEPI.indices());
-    bool IsInBounds = GEPI.isInBounds();
-    IRB.SetInsertPoint(GEPI.getParent(), GEPI.getParent()->getFirstNonPHIIt());
-    PHINode *NewPN = IRB.CreatePHI(GEPI.getType(), PHI->getNumIncomingValues(),
-                                   PHI->getName() + ".sroa.phi");
-    for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
-      BasicBlock *B = PHI->getIncomingBlock(I);
-      Value *NewVal = nullptr;
-      int Idx = NewPN->getBasicBlockIndex(B);
-      if (Idx >= 0) {
-        NewVal = NewPN->getIncomingValue(Idx);
-      } else {
-        Instruction *In = cast<Instruction>(PHI->getIncomingValue(I));
+    auto GetNewOps = [&](Value *PhiOp) {
+      SmallVector<Value *> NewOps;
+      for (Value *Op : GEPI.operands())
+        if (Op == Phi)
+          NewOps.push_back(PhiOp);
+        else
+          NewOps.push_back(Op);
+      return NewOps;
+    };
 
-        IRB.SetInsertPoint(In->getParent(), std::next(In->getIterator()));
-        Type *Ty = GEPI.getSourceElementType();
-        NewVal = IRB.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep",
-                               IsInBounds);
+    IRB.SetInsertPoint(Phi);
+    PHINode *NewPhi = IRB.CreatePHI(GEPI.getType(), Phi->getNumIncomingValues(),
+                                    Phi->getName() + ".sroa.phi");
+
+    bool IsInBounds = GEPI.isInBounds();
+    Type *SourceTy = GEPI.getSourceElementType();
+    // We only handle arguments, constants, and static allocas here, so we can
+    // insert GEPs at the end of the entry block.
+    IRB.SetInsertPoint(GEPI.getFunction()->getEntryBlock().getTerminator());
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+      Value *Op = Phi->getIncomingValue(I);
+      BasicBlock *BB = Phi->getIncomingBlock(I);
+      Value *NewGEP;
+      if (int NI = NewPhi->getBasicBlockIndex(BB); NI >= 0) {
+        NewGEP = NewPhi->getIncomingValue(NI);
+      } else {
+        SmallVector<Value *> NewOps = GetNewOps(Op);
+        NewGEP =
+            IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
+                          Phi->getName() + ".sroa.gep", IsInBounds);
       }
-      NewPN->addIncoming(NewVal, B);
+      NewPhi->addIncoming(NewGEP, BB);
     }
 
     Visited.erase(&GEPI);
-    GEPI.replaceAllUsesWith(NewPN);
+    GEPI.replaceAllUsesWith(NewPhi);
     GEPI.eraseFromParent();
-    Visited.insert(NewPN);
-    enqueueUsers(*NewPN);
+    Visited.insert(NewPhi);
+    enqueueUsers(*NewPhi);
 
     LLVM_DEBUG(dbgs() << "          to: ";
                for (Value *In
-                    : NewPN->incoming_values()) dbgs()
+                    : NewPhi->incoming_values()) dbgs()
                << "\n              " << *In;
-               dbgs() << "\n              " << *NewPN << '\n');
+               dbgs() << "\n              " << *NewPhi << '\n');
 
     return true;
   }
 
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-    if (foldGEPSelect(GEPI))
+    if (unfoldGEPSelect(GEPI))
       return true;
 
-    if (isa<PHINode>(GEPI.getPointerOperand()) && foldGEPPhi(GEPI))
+    if (unfoldGEPPhi(GEPI))
       return true;
 
     enqueueUsers(GEPI);
@@ -4846,7 +4908,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     NewAI = new AllocaInst(
         SliceTy, AI.getAddressSpace(), nullptr,
         IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
-        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()), &AI);
+        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
+        AI.getIterator());
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
     ++NumNewAllocas;
@@ -4963,9 +5026,11 @@ static void insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig,
     NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
                          DIAssignID::getDistinct(NewAddr->getContext()));
   }
-  auto *NewAssign = DIB.insertDbgAssign(
-      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
-      Orig->getAddressExpression(), Orig->getDebugLoc());
+  Instruction *NewAssign =
+      DIB.insertDbgAssign(NewAddr, Orig->getValue(), Orig->getVariable(),
+                          NewFragmentExpr, NewAddr,
+                          Orig->getAddressExpression(), Orig->getDebugLoc())
+          .get<Instruction *>();
   LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
   (void)NewAssign;
 }
@@ -4976,15 +5041,15 @@ static void insertNewDbgInst(DIBuilder &DIB, DPValue *Orig, AllocaInst *NewAddr,
   if (Orig->isDbgDeclare()) {
     DPValue *DPV = DPValue::createDPVDeclare(
         NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
-    BeforeInst->getParent()->insertDPValueBefore(DPV,
-                                                 BeforeInst->getIterator());
+    BeforeInst->getParent()->insertDbgRecordBefore(DPV,
+                                                   BeforeInst->getIterator());
     return;
   }
   if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
     NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
                          DIAssignID::getDistinct(NewAddr->getContext()));
   }
-  auto *NewAssign = DPValue::createLinkedDPVAssign(
+  DPValue *NewAssign = DPValue::createLinkedDPVAssign(
       NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
       Orig->getAddressExpression(), Orig->getDebugLoc());
   LLVM_DEBUG(dbgs() << "Created new DPVAssign: " << *NewAssign << "\n");

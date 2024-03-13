@@ -2655,12 +2655,10 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isDirect = false;
 
   const TargetMachine &TM = getTargetMachine();
-  const Module *Mod = MF.getFunction().getParent();
   const GlobalValue *GVal = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GVal = G->getGlobal();
-  bool isStub =
-      !TM.shouldAssumeDSOLocal(*Mod, GVal) && Subtarget->isTargetMachO();
+  bool isStub = !TM.shouldAssumeDSOLocal(GVal) && Subtarget->isTargetMachO();
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
@@ -2737,7 +2735,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned TargetFlags = ARMII::MO_NO_FLAG;
         if (GVal->hasDLLImportStorageClass())
           TargetFlags = ARMII::MO_DLLIMPORT;
-        else if (!TM.shouldAssumeDSOLocal(*GVal->getParent(), GVal))
+        else if (!TM.shouldAssumeDSOLocal(GVal))
           TargetFlags = ARMII::MO_COFFSTUB;
         Callee = DAG.getTargetGlobalAddress(GVal, dl, PtrVt, /*offset=*/0,
                                             TargetFlags);
@@ -4021,7 +4019,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
   ARMII::TOF TargetFlags = ARMII::MO_NO_FLAG;
   if (GV->hasDLLImportStorageClass())
     TargetFlags = ARMII::MO_DLLIMPORT;
-  else if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  else if (!TM.shouldAssumeDSOLocal(GV))
     TargetFlags = ARMII::MO_COFFSTUB;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result;
@@ -20154,7 +20152,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // CSNEG: KnownOp0 or KnownOp1 * -1
     if (Op.getOpcode() == ARMISD::CSINC)
       KnownOp1 = KnownBits::computeForAddSub(
-          true, false, KnownOp1, KnownBits::makeConstant(APInt(32, 1)));
+          /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KnownOp1,
+          KnownBits::makeConstant(APInt(32, 1)));
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)

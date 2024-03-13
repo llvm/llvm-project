@@ -3233,7 +3233,9 @@ struct VIDSequence {
 
 static std::optional<uint64_t> getExactInteger(const APFloat &APF,
                                                uint32_t BitWidth) {
-  APSInt ValInt(BitWidth, !APF.isNegative());
+  // We will use a SINT_TO_FP to materialize this constant so we should use a
+  // signed APSInt here.
+  APSInt ValInt(BitWidth, /*IsUnsigned*/ false);
   // We use an arbitrary rounding mode here. If a floating-point is an exact
   // integer (e.g., 1.0), the rounding mode does not affect the output value. If
   // the rounding mode changes the output value, then it is not an exact
@@ -7244,25 +7246,25 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select c, -1, y) -> -c | y
     if (isAllOnesConstant(TrueV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, -1) -> (c-1) | y
     if (isAllOnesConstant(FalseV)) {
       SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
                                 DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
     // (select c, 0, y) -> (c-1) & y
     if (isNullConstant(TrueV)) {
       SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
                                 DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     // (select c, y, 0) -> -c & y
     if (isNullConstant(FalseV)) {
       SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
   }
 
@@ -7288,13 +7290,13 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     // (select !x, x, y) -> x & y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, TrueV)) {
       return DAG.getNode(*MatchResult ? ISD::OR : ISD::AND, DL, VT, TrueV,
-                         FalseV);
+                         DAG.getFreeze(FalseV));
     }
     // (select x, y, x) -> x & y
     // (select !x, y, x) -> x | y
     if (std::optional<bool> MatchResult = matchSetCC(LHS, RHS, CC, FalseV)) {
-      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT, TrueV,
-                         FalseV);
+      return DAG.getNode(*MatchResult ? ISD::AND : ISD::OR, DL, VT,
+                         DAG.getFreeze(TrueV), FalseV);
     }
   }
 
@@ -9078,15 +9080,20 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue Result, Chain;
 
     // TODO: We restrict this to unmasked loads currently in consideration of
-    // the complexity of hanlding all falses masks.
-    if (IsUnmasked && isNullConstant(Stride)) {
-      MVT ScalarVT = ContainerVT.getVectorElementType();
+    // the complexity of handling all falses masks.
+    MVT ScalarVT = ContainerVT.getVectorElementType();
+    if (IsUnmasked && isNullConstant(Stride) && ContainerVT.isInteger()) {
       SDValue ScalarLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
                          ScalarVT, Load->getMemOperand());
       Chain = ScalarLoad.getValue(1);
       Result = lowerScalarSplat(SDValue(), ScalarLoad, VL, ContainerVT, DL, DAG,
                                 Subtarget);
+    } else if (IsUnmasked && isNullConstant(Stride) && isTypeLegal(ScalarVT)) {
+      SDValue ScalarLoad = DAG.getLoad(ScalarVT, DL, Load->getChain(), Ptr,
+                                       Load->getMemOperand());
+      Chain = ScalarLoad.getValue(1);
+      Result = DAG.getSplat(ContainerVT, DL, ScalarLoad);
     } else {
       SDValue IntID = DAG.getTargetConstant(
           IsUnmasked ? Intrinsic::riscv_vlse : Intrinsic::riscv_vlse_mask, DL,
@@ -13483,6 +13490,7 @@ struct NodeExtensionHelper {
     MVT NarrowVT = getNarrowType(Root, *SupportsExt);
 
     SDValue Source = getSource();
+    assert(Subtarget.getTargetLowering()->isTypeLegal(Source.getValueType()));
     if (Source.getValueType() == NarrowVT)
       return Source;
 
@@ -13650,10 +13658,6 @@ struct NodeExtensionHelper {
       unsigned ScalarBits = VT.getScalarSizeInBits();
       unsigned NarrowScalarBits = NarrowVT.getScalarSizeInBits();
 
-      // Ensure the narrowing element type is legal
-      if (!Subtarget.getTargetLowering()->isTypeLegal(NarrowElt.getValueType()))
-        break;
-
       // Ensure the extension's semantic is equivalent to rvv vzext or vsext.
       if (ScalarBits != NarrowScalarBits * 2)
         break;
@@ -13725,14 +13729,11 @@ struct NodeExtensionHelper {
   }
 
   /// Check if \p Root supports any extension folding combines.
-  static bool isSupportedRoot(const SDNode *Root, const SelectionDAG &DAG) {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  static bool isSupportedRoot(const SDNode *Root) {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL: {
-      if (!TLI.isTypeLegal(Root->getValueType(0)))
-        return false;
       return Root->getValueType(0).isScalableVector();
     }
     // Vector Widening Integer Add/Sub/Mul Instructions
@@ -13749,7 +13750,7 @@ struct NodeExtensionHelper {
     case RISCVISD::FMUL_VL:
     case RISCVISD::VFWADD_W_VL:
     case RISCVISD::VFWSUB_W_VL:
-      return TLI.isTypeLegal(Root->getValueType(0));
+      return true;
     default:
       return false;
     }
@@ -13758,9 +13759,10 @@ struct NodeExtensionHelper {
   /// Build a NodeExtensionHelper for \p Root.getOperand(\p OperandIdx).
   NodeExtensionHelper(SDNode *Root, unsigned OperandIdx, SelectionDAG &DAG,
                       const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root, DAG) && "Trying to build an helper with an "
-                                         "unsupported root");
+    assert(isSupportedRoot(Root) && "Trying to build an helper with an "
+                                    "unsupported root");
     assert(OperandIdx < 2 && "Requesting something else than LHS or RHS");
+    assert(DAG.getTargetLoweringInfo().isTypeLegal(Root->getValueType(0)));
     OrigOperand = Root->getOperand(OperandIdx);
 
     unsigned Opc = Root->getOpcode();
@@ -13810,7 +13812,7 @@ struct NodeExtensionHelper {
   static std::pair<SDValue, SDValue>
   getMaskAndVL(const SDNode *Root, SelectionDAG &DAG,
                const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root, DAG) && "Unexpected root");
+    assert(isSupportedRoot(Root) && "Unexpected root");
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
@@ -14110,8 +14112,10 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
+  if (DCI.isBeforeLegalize())
+    return SDValue();
 
-  if (!NodeExtensionHelper::isSupportedRoot(N, DAG))
+  if (!NodeExtensionHelper::isSupportedRoot(N))
     return SDValue();
 
   SmallVector<SDNode *> Worklist;
@@ -14122,7 +14126,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
 
   while (!Worklist.empty()) {
     SDNode *Root = Worklist.pop_back_val();
-    if (!NodeExtensionHelper::isSupportedRoot(Root, DAG))
+    if (!NodeExtensionHelper::isSupportedRoot(Root))
       return SDValue();
 
     NodeExtensionHelper LHS(N, 0, DAG, Subtarget);
@@ -15281,13 +15285,62 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
 }
 
+// Recursively split up concat_vectors with more than 2 operands:
+//
+// concat_vector op1, op2, op3, op4
+// ->
+// concat_vector (concat_vector op1, op2), (concat_vector op3, op4)
+//
+// This reduces the length of the chain of vslideups and allows us to perform
+// the vslideups at a smaller LMUL, limited to MF2.
+//
+// We do this as a DAG combine rather than during lowering so that any undef
+// operands can get combined away.
+static SDValue
+performCONCAT_VECTORSSplitCombine(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVTargetLowering &TLI) {
+  SDLoc DL(N);
+
+  if (N->getNumOperands() <= 2)
+    return SDValue();
+
+  if (!TLI.isTypeLegal(N->getValueType(0)))
+    return SDValue();
+  MVT VT = N->getSimpleValueType(0);
+
+  // Don't split any further than MF2.
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, TLI.getSubtarget());
+  if (ContainerVT.bitsLT(getLMUL1VT(ContainerVT)))
+    return SDValue();
+
+  MVT HalfVT = VT.getHalfNumVectorElementsVT();
+  assert(isPowerOf2_32(N->getNumOperands()));
+  size_t HalfNumOps = N->getNumOperands() / 2;
+  SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                           N->ops().take_front(HalfNumOps));
+  SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                           N->ops().drop_front(HalfNumOps));
+
+  // Lower to an insert_subvector directly so the concat_vectors don't get
+  // recombined.
+  SDValue Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Lo,
+                            DAG.getVectorIdxConstant(0, DL));
+  Vec = DAG.getNode(
+      ISD::INSERT_SUBVECTOR, DL, VT, Vec, Hi,
+      DAG.getVectorIdxConstant(HalfVT.getVectorMinNumElements(), DL));
+  return Vec;
+}
+
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
 // vlse32 p, stride=n
-static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
-                                            const RISCVSubtarget &Subtarget,
-                                            const RISCVTargetLowering &TLI) {
+static SDValue
+performCONCAT_VECTORSStridedLoadCombine(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget,
+                                        const RISCVTargetLowering &TLI) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -16392,7 +16445,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case ISD::CONCAT_VECTORS:
-    if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
+    if (SDValue V =
+            performCONCAT_VECTORSStridedLoadCombine(N, DAG, Subtarget, *this))
+      return V;
+    if (SDValue V = performCONCAT_VECTORSSplitCombine(N, DAG, *this))
       return V;
     break;
   case ISD::INSERT_VECTOR_ELT:
@@ -20040,11 +20096,12 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
 
 bool RISCVTargetLowering::shouldRemoveExtendFromGSIndex(SDValue Extend,
                                                         EVT DataVT) const {
-  // We have indexed loads for all legal index types.  Indices are always
-  // zero extended
+  // We have indexed loads for all supported EEW types. Indices are always
+  // zero extended.
   return Extend.getOpcode() == ISD::ZERO_EXTEND &&
-    isTypeLegal(Extend.getValueType()) &&
-    isTypeLegal(Extend.getOperand(0).getValueType());
+         isTypeLegal(Extend.getValueType()) &&
+         isTypeLegal(Extend.getOperand(0).getValueType()) &&
+         Extend.getOperand(0).getValueType().getVectorElementType() != MVT::i1;
 }
 
 bool RISCVTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
@@ -20865,7 +20922,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   unsigned Op = Inst.getOpcode();
   if (Op == Instruction::Add || Op == Instruction::Sub ||
       Op == Instruction::And || Op == Instruction::Or ||
-      Op == Instruction::Xor || Op == Instruction::InsertElement)
+      Op == Instruction::Xor || Op == Instruction::InsertElement ||
+      Op == Instruction::Xor || Op == Instruction::ShuffleVector)
     return false;
 
   if (Inst.getType()->isScalableTy())

@@ -626,6 +626,26 @@ static bool checkAliasedGlobal(
   return true;
 }
 
+// Emit a warning if toc-data attribute is requested for global variables that
+// have aliases and remove the toc-data attribute.
+static void checkAliasForTocData(llvm::GlobalVariable *GVar,
+                                 const CodeGenOptions &CodeGenOpts,
+                                 DiagnosticsEngine &Diags,
+                                 SourceLocation Location) {
+  if (GVar->hasAttribute("toc-data")) {
+    auto GVId = GVar->getName();
+    // Is this a global variable specified by the user as local?
+    if ((llvm::binary_search(CodeGenOpts.TocDataVarsUserSpecified, GVId))) {
+      Diags.Report(Location, diag::warn_toc_unsupported_type)
+          << GVId << "the variable has an alias";
+    }
+    llvm::AttributeSet CurrAttributes = GVar->getAttributes();
+    llvm::AttributeSet NewAttributes =
+        CurrAttributes.removeAttribute(GVar->getContext(), "toc-data");
+    GVar->setAttributes(NewAttributes);
+  }
+}
+
 void CodeGenModule::checkAliases() {
   // Check if the constructed aliases are well formed. It is really unfortunate
   // that we have to do this in CodeGen, but we only construct mangled names
@@ -651,6 +671,12 @@ void CodeGenModule::checkAliases() {
       Error = true;
       continue;
     }
+
+    if (getContext().getTargetInfo().getTriple().isOSAIX())
+      if (const llvm::GlobalVariable *GVar =
+              dyn_cast<const llvm::GlobalVariable>(GV))
+        checkAliasForTocData(const_cast<llvm::GlobalVariable *>(GVar),
+                             getCodeGenOpts(), Diags, Location);
 
     llvm::Constant *Aliasee =
         IsIFunc ? cast<llvm::GlobalIFunc>(Alias)->getResolver()
@@ -872,12 +898,12 @@ void CodeGenModule::Release() {
     EmitMainVoidAlias();
 
   if (getTriple().isAMDGPU()) {
-    // Emit amdgpu_code_object_version module flag, which is code object version
+    // Emit amdhsa_code_object_version module flag, which is code object version
     // times 100.
     if (getTarget().getTargetOpts().CodeObjectVersion !=
         llvm::CodeObjectVersionKind::COV_None) {
       getModule().addModuleFlag(llvm::Module::Error,
-                                "amdgpu_code_object_version",
+                                "amdhsa_code_object_version",
                                 getTarget().getTargetOpts().CodeObjectVersion);
     }
 
@@ -916,7 +942,7 @@ void CodeGenModule::Release() {
         llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
-  if (LangOpts.HIP) {
+  if (LangOpts.HIP && !getLangOpts().OffloadingNewDriver) {
     // Emit a unique ID so that host and device binaries from the same
     // compilation unit can be associated.
     auto *GV = new llvm::GlobalVariable(

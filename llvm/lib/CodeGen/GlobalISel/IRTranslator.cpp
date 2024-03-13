@@ -1598,10 +1598,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
   if (WantSplatVector && !PtrTy.isVector()) {
-    BaseReg =
-        MIRBuilder
-            .buildSplatVector(LLT::fixed_vector(VectorWidth, PtrTy), BaseReg)
-            .getReg(0);
+    BaseReg = MIRBuilder
+                  .buildSplatBuildVector(LLT::fixed_vector(VectorWidth, PtrTy),
+                                         BaseReg)
+                  .getReg(0);
     PtrIRTy = FixedVectorType::get(PtrIRTy, VectorWidth);
     PtrTy = getLLTForType(*PtrIRTy, *DL);
     OffsetIRTy = DL->getIndexType(PtrIRTy);
@@ -1639,8 +1639,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       LLT IdxTy = MRI->getType(IdxReg);
       if (IdxTy != OffsetTy) {
         if (!IdxTy.isVector() && WantSplatVector) {
-          IdxReg = MIRBuilder.buildSplatVector(
-            OffsetTy.changeElementType(IdxTy), IdxReg).getReg(0);
+          IdxReg = MIRBuilder
+                       .buildSplatBuildVector(OffsetTy.changeElementType(IdxTy),
+                                              IdxReg)
+                       .getReg(0);
         }
 
         IdxReg = MIRBuilder.buildSExtOrTrunc(OffsetTy, IdxReg).getReg(0);
@@ -2997,6 +2999,19 @@ bool IRTranslator::translateExtractElement(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
+  // A ShuffleVector that has operates on scalable vectors is a splat vector
+  // where the value of the splat vector is the 0th element of the first
+  // operand, since the index mask operand is the zeroinitializer (undef and
+  // poison are treated as zeroinitializer here).
+  if (U.getOperand(0)->getType()->isScalableTy()) {
+    Value *Op0 = U.getOperand(0);
+    auto SplatVal = MIRBuilder.buildExtractVectorElementConstant(
+        LLT::scalar(Op0->getType()->getScalarSizeInBits()),
+        getOrCreateVReg(*Op0), 0);
+    MIRBuilder.buildSplatVector(getOrCreateVReg(U), SplatVal);
+    return true;
+  }
+
   ArrayRef<int> Mask;
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(&U))
     Mask = SVI->getShuffleMask();
@@ -3262,7 +3277,7 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DbgRecord &DR : Inst.getDbgValueRange()) {
+  for (DbgRecord &DR : Inst.getDbgRecordRange()) {
     if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
       MIRBuilder.setDebugLoc(DPL->getDebugLoc());
       assert(DPL->getLabel() && "Missing label");

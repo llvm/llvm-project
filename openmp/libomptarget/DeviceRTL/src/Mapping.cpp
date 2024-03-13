@@ -172,10 +172,7 @@ uint32_t getThreadIdInBlock(int32_t Dim) {
   UNREACHABLE("Dim outside range!");
 }
 
-uint32_t getThreadIdInWarp() {
-  return impl::getThreadIdInBlock(mapping::DIM_X) &
-         (mapping::getWarpSize() - 1);
-}
+uint32_t getThreadIdInWarp() { return __nvvm_read_ptx_sreg_laneid(); }
 
 uint32_t getBlockIdInKernel(int32_t Dim) {
   switch (Dim) {

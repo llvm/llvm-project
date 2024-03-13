@@ -8,6 +8,7 @@
 
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/AST/Availability.h"
+#include "clang/InstallAPI/FrontendRecords.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -19,9 +20,10 @@ namespace clang::installapi {
 GlobalRecord *FrontendRecordsSlice::addGlobal(
     StringRef Name, RecordLinkage Linkage, GlobalRecord::Kind GV,
     const clang::AvailabilityInfo Avail, const Decl *D, const HeaderType Access,
-    SymbolFlags Flags) {
+    SymbolFlags Flags, bool Inlined) {
 
-  auto *GR = llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags);
+  auto *GR =
+      llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
   FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
   return GR;
 }
@@ -37,6 +39,31 @@ ObjCInterfaceRecord *FrontendRecordsSlice::addObjCInterface(
       llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
   FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
   return ObjCR;
+}
+
+ObjCCategoryRecord *FrontendRecordsSlice::addObjCCategory(
+    StringRef ClassToExtend, StringRef CategoryName,
+    const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access) {
+  auto *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
+  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  return ObjCR;
+}
+
+ObjCIVarRecord *FrontendRecordsSlice::addObjCIVar(
+    ObjCContainerRecord *Container, StringRef IvarName, RecordLinkage Linkage,
+    const clang::AvailabilityInfo Avail, const Decl *D, HeaderType Access,
+    const clang::ObjCIvarDecl::AccessControl AC) {
+  // If the decl otherwise would have been exported, check their access control.
+  // Ivar's linkage is also determined by this.
+  if ((Linkage == RecordLinkage::Exported) &&
+      ((AC == ObjCIvarDecl::Private) || (AC == ObjCIvarDecl::Package)))
+    Linkage = RecordLinkage::Internal;
+  auto *ObjCR =
+      llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
+  FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+
+  return nullptr;
 }
 
 std::optional<HeaderType>
@@ -111,9 +138,9 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
     else
       OS << "#import ";
     if (H.useIncludeName())
-      OS << "<" << H.getIncludeName() << ">";
+      OS << "<" << H.getIncludeName() << ">\n";
     else
-      OS << "\"" << H.getPath() << "\"";
+      OS << "\"" << H.getPath() << "\"\n";
 
     Ctx.addKnownHeader(H);
   }

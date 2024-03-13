@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -69,14 +70,12 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
       ++NumCoveredExits;
     }
   }
-  // If there's a mix of covered and non-covered exits, just put the untag
-  // on exits, so we avoid the redundancy of untagging twice.
   if (NumCoveredExits == ReachableRetVec.size()) {
-    for (auto *End : Ends)
-      Callback(End);
+    for_each(Ends, Callback);
   } else {
-    for (auto *RI : ReachableRetVec)
-      Callback(RI);
+    // If there's a mix of covered and non-covered exits, just put the untag
+    // on exits, so we avoid the redundancy of untagging twice.
+    for_each(ReachableRetVec, Callback);
     // We may have inserted untag outside of the lifetime interval.
     // Signal the caller to remove the lifetime end call for this alloca.
     return false;
@@ -111,7 +110,7 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 
 void StackInfoBuilder::visit(Instruction &Inst) {
   // Visit non-intrinsic debug-info records attached to Inst.
-  for (DPValue &DPV : DPValue::filter(Inst.getDbgValueRange())) {
+  for (DPValue &DPV : DPValue::filter(Inst.getDbgRecordRange())) {
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))

@@ -1,4 +1,4 @@
-//===- ConvergenceVerifier.cpp - Verify convergence control -----*- C++ -*-===//
+//===- MachineConvergenceVerifier.cpp - Verify convergencectrl ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,8 +51,9 @@ GenericConvergenceVerifier<MachineSSAContext>::findAndCheckConvergenceTokenUsed(
   const MachineRegisterInfo &MRI = Context.getFunction()->getRegInfo();
   const MachineInstr *TokenDef = nullptr;
 
-  for (const MachineOperand &MO : MI.uses()) {
-    if (!MO.isReg())
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg() || !MO.isUse())
       continue;
     Register OpReg = MO.getReg();
     if (!OpReg.isVirtual())

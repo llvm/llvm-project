@@ -1077,7 +1077,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::LIS8:
   case PPC::ADDIStocHA:
   case PPC::ADDIStocHA8:
-  case PPC::ADDItocL:
+  case PPC::ADDItocL8:
   case PPC::LOAD_STACK_GUARD:
   case PPC::PPCLdFixedAddr:
   case PPC::XXLXORz:
@@ -2821,7 +2821,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
 bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
@@ -2913,7 +2913,7 @@ bool PPCInstrInfo::shouldClusterMemOps(
     return false;
 
   int64_t Offset1 = 0, Offset2 = 0;
-  unsigned Width1 = 0, Width2 = 0;
+  LocationSize Width1 = 0, Width2 = 0;
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
   if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
       !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
@@ -2924,7 +2924,7 @@ bool PPCInstrInfo::shouldClusterMemOps(
          "getMemOperandWithOffsetWidth return incorrect base op");
   // The caller should already have ordered FirstMemOp/SecondMemOp by offset.
   assert(Offset1 <= Offset2 && "Caller should have ordered offsets.");
-  return Offset1 + Width1 == Offset2;
+  return Offset1 + (int64_t)Width1.getValue() == Offset2;
 }
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -3453,7 +3453,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
             break;
           case PPC::LI:
           case PPC::LI8:
-          case PPC::ADDItocL:
+          case PPC::ADDItocL8:
           case PPC::ADDI:
           case PPC::ADDI8:
             OpNoForForwarding = i;
@@ -4420,7 +4420,7 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
                                                MachineOperand *&ImmMO,
                                                MachineOperand *&RegMO) const {
   unsigned Opc = DefMI.getOpcode();
-  if (Opc != PPC::ADDItocL && Opc != PPC::ADDI && Opc != PPC::ADDI8)
+  if (Opc != PPC::ADDItocL8 && Opc != PPC::ADDI && Opc != PPC::ADDI8)
     return false;
 
   assert(DefMI.getNumOperands() >= 3 &&
@@ -4485,8 +4485,8 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
                                              int64_t &Imm,
                                              int64_t BaseImm) const {
   assert(isAnImmediateOperand(ImmMO) && "ImmMO is NOT an immediate");
-  if (DefMI.getOpcode() == PPC::ADDItocL) {
-    // The operand for ADDItocL is CPI, which isn't imm at compiling time,
+  if (DefMI.getOpcode() == PPC::ADDItocL8) {
+    // The operand for ADDItocL8 is CPI, which isn't imm at compiling time,
     // However, we know that, it is 16-bit width, and has the alignment of 4.
     // Check if the instruction met the requirement.
     if (III.ImmMustBeMultipleOf > 4 ||
@@ -4899,7 +4899,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(
     // register with ImmMO.
     // Before that, we need to fixup the target flags for imm.
     // For some reason, we miss to set the flag for the ImmMO if it is CPI.
-    if (DefMI.getOpcode() == PPC::ADDItocL)
+    if (DefMI.getOpcode() == PPC::ADDItocL8)
       ImmMO->setTargetFlags(PPCII::MO_TOC_LO);
 
     // MI didn't have the interface such as MI.setOperand(i) though
@@ -5504,7 +5504,7 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 // memory width. Width is the size of memory that is being loaded/stored.
 bool PPCInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    unsigned &Width, const TargetRegisterInfo *TRI) const {
+    LocationSize &Width, const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore() || LdSt.getNumExplicitOperands() != 3)
     return false;
 
@@ -5542,14 +5542,15 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  unsigned int WidthA = 0, WidthB = 0;
+  LocationSize WidthA = 0, WidthB = 0;
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
-      int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
-      if (LowOffset + LowWidth <= HighOffset)
+      LocationSize LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+      if (LowWidth.hasValue() &&
+          LowOffset + (int)LowWidth.getValue() <= HighOffset)
         return true;
     }
   }

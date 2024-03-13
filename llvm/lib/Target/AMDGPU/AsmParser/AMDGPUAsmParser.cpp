@@ -1926,6 +1926,11 @@ static const fltSemantics *getFltSemantics(MVT VT) {
 
 static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   switch (OperandType) {
+  // When floating-point immediate is used as operand of type i16, the 32-bit
+   // representation of the constant truncated to the 16 LSBs should be used.
+  case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_IMM_INT32:
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -1949,13 +1954,10 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return &APFloat::IEEEdouble();
-  case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
-  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -2001,10 +2003,8 @@ static bool isSafeTruncation(int64_t Val, unsigned Size) {
 }
 
 static bool isInlineableLiteralOp16(int64_t Val, MVT VT, bool HasInv2Pi) {
-  if (VT.getScalarType() == MVT::i16) {
-    // FP immediate values are broken.
-    return isInlinableIntLiteral(Val);
-  }
+  if (VT.getScalarType() == MVT::i16)
+    return isInlinableLiteral32(Val, HasInv2Pi);
 
   if (VT.getScalarType() == MVT::f16)
     return AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
@@ -2045,9 +2045,30 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
       return false;
 
     if (type.getScalarSizeInBits() == 16) {
-      return isInlineableLiteralOp16(
-        static_cast<int16_t>(FPLiteral.bitcastToAPInt().getZExtValue()),
-        type, AsmParser->hasInv2PiInlineImm());
+      bool Lost = false;
+      switch (type.getScalarType().SimpleTy) {
+      default:
+        llvm_unreachable("unknown 16-bit type");
+      case MVT::bf16:
+        FPLiteral.convert(APFloatBase::BFloat(), APFloat::rmNearestTiesToEven,
+                          &Lost);
+        break;
+      case MVT::f16:
+        FPLiteral.convert(APFloatBase::IEEEhalf(), APFloat::rmNearestTiesToEven,
+                          &Lost);
+        break;
+      case MVT::i16:
+        FPLiteral.convert(APFloatBase::IEEEsingle(),
+                          APFloat::rmNearestTiesToEven, &Lost);
+        break;
+      }
+      // We need to use 32-bit representation here because when a floating-point
+      // inline constant is used as an i16 operand, its 32-bit representation
+      // representation will be used. We will need the 32-bit value to check if
+      // it is FP inline constant.
+      uint32_t ImmVal = FPLiteral.bitcastToAPInt().getZExtValue();
+      return isInlineableLiteralOp16(ImmVal, type,
+                                     AsmParser->hasInv2PiInlineImm());
     }
 
     // Check if single precision literal is inlinable
@@ -2383,7 +2404,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     if (isSafeTruncation(Val, 16) &&
         AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val))) {
-      Inst.addOperand(MCOperand::createImm(Val));
+      Inst.addOperand(MCOperand::createImm(Val & 0xffffffff));
       setImmKindConst();
       return;
     }
@@ -3562,7 +3583,7 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
     if (OperandType == AMDGPU::OPERAND_REG_IMM_INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_INT16)
-      return AMDGPU::isInlinableIntLiteral(Val);
+      return AMDGPU::isInlinableLiteralI16(Val, hasInv2PiInlineImm());
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16 ||
@@ -5376,8 +5397,8 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
       NumSGPRs = IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
   }
 
-  VGPRBlocks =
-      IsaInfo::getNumVGPRBlocks(&getSTI(), NumVGPRs, EnableWavefrontSize32);
+  VGPRBlocks = IsaInfo::getEncodedNumVGPRBlocks(&getSTI(), NumVGPRs,
+                                                EnableWavefrontSize32);
   SGPRBlocks = IsaInfo::getNumSGPRBlocks(&getSTI(), NumSGPRs);
 
   return false;

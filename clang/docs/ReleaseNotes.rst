@@ -42,6 +42,8 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
+  This error can be disabled via `-Wno-strict-primary-template-shadow` for compatibility with previous versions of clang.
 
 ABI Changes in This Version
 ---------------------------
@@ -84,11 +86,23 @@ C++20 Feature Support
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
+- Clang now implements [module.import]p7 fully. Clang now will import module
+  units transitively for the module units coming from the same module of the
+  current module units.
+  Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
+
+- Initial support for class template argument deduction (CTAD) for type alias
+  templates (`P1814R0 <https://wg21.link/p1814r0>`_).
+  (#GH54051).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+- Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
+
+- Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -105,6 +119,10 @@ Resolutions to C++ Defect Reports
 - Type qualifications are now ignored when evaluating layout compatibility
   of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
+
+- Alignment of members is now respected when evaluating layout compatibility
+  of structs.
+  (`CWG2583: Common initial sequence should consider over-alignment <https://cplusplus.github.io/CWG/issues/2583.html>`_).
 
 - ``[[no_unique_address]]`` is now respected when evaluating layout
   compatibility of two types.
@@ -136,6 +154,9 @@ C23 Feature Support
   macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
   (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
 
+- Clang now supports `N3018 The constexpr specifier for object definitions`
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -145,14 +166,26 @@ Non-comprehensive list of changes in this release
 - ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
   builtins are now constexpr and may be used in constant expressions.
 
+- Added ``__builtin_popcountg`` as a type-generic alternative to
+  ``__builtin_popcount{,l,ll}`` with support for any unsigned integer type. Like
+  the previous builtins, this new builtin is constexpr and may be used in
+  constant expressions.
+
 New Compiler Flags
 ------------------
+
+- ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
+  This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
+  like it did before Clang 18.x. Fixes (`#56628 <https://github.com/llvm/llvm-project/issues/68933>`_)
 
 Deprecated Compiler Flags
 -------------------------
 
 Modified Compiler Flags
 -----------------------
+- Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
+  ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
+  ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
 Removed Compiler Flags
 -------------------------
@@ -161,6 +194,12 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- Introduced a new function attribute ``__attribute__((amdgpu_max_num_work_groups(x, y, z)))`` or
+  ``[[clang::amdgpu_max_num_work_groups(x, y, z)]]`` for the AMDGPU target. This attribute can be
+  attached to HIP or OpenCL kernel function definitions to provide an optimization hint. The parameters
+  ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
+  and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
+  ``z`` are optional with default value of 1.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -174,6 +213,9 @@ Improvements to Clang's diagnostics
 
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes #GH69444.
+
+- Clang now uses thousand separators when printing large numbers in integer overflow diagnostics.
+  Fixes #GH80939.
 
 - Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
@@ -194,6 +236,10 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
   Fixes #GH82512.
+
+- Clang now provides improved warnings for the ``cleanup`` attribute to detect misuse scenarios,
+  such as attempting to call ``free`` on an unallocated object. Fixes
+  `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -218,9 +264,26 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (#GH64356).
 
+- ``__is_trivially_relocatable`` no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH77091).
+
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
+
+- Clang now emits errors for explicit specializations/instatiations of lambda call
+  operator.
+  Fixes (#GH83267).
+
+- Clang now correctly generates overloads for bit-precise integer types for
+  builtin operators in C++. Fixes #GH82998.
+
+- When performing mixed arithmetic between ``_Complex`` floating-point types and integers,
+  Clang now correctly promotes the integer to its corresponding real floating-point
+  type only rather than to the complex type (e.g. ``_Complex float / int`` is now evaluated
+  as ``_Complex float / float`` rather than ``_Complex float / _Complex float``), as mandated
+  by the C standard. This significantly improves codegen of `*` and `/` especially.
+  Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -263,6 +326,8 @@ Bug Fixes to C++ Support
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter. (#GH80971)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
+- Fix parsing of abominable function types inside type traits.
+  Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
 - Clang now classifies aggregate initialization in C++17 and newer as constant
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Partially fixes
@@ -292,11 +357,25 @@ Bug Fixes to C++ Support
 - Clang now properly diagnoses missing 'default' template arguments on a variety
   of templates. Previously we were diagnosing on any non-function template
   instead of only on class, alias, and variable templates, as last updated by
-  CWG2032. Fixes (#GH#83461)
+  CWG2032. Fixes (#GH83461)
+- Fixed an issue where an attribute on a declarator would cause the attribute to
+  be destructed prematurely. This fixes a pair of Chromium that were brought to
+  our attention by an attempt to fix in (#GH77703). Fixes (#GH83385).
+- Fix evaluation of some immediate calls in default arguments.
+  Fixes (#GH80630)
+- Fixed an issue where the ``RequiresExprBody`` was involved in the lambda dependency
+  calculation. (#GH56556), (#GH82849).
+- Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
+  a member-function against a non member function or a member-function with an
+  explicit object parameter against a member function with no explicit object parameter
+  when one of the function had more specialized templates.
+  Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
+  and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Allow access to a public template alias declaration that refers to friend's
+  private nested type. (#GH25708).
 - Fixed a crash in constant evaluation when trying to access a
   captured ``this`` pointer in a lambda with an explicit object parameter.
   Fixes (#GH80997)
-
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -341,6 +420,8 @@ Arm and AArch64 Support
   instructions (rdm). The identifier is available on the command line as
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-A78AE (cortex-a78ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -358,6 +439,9 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- PTX is no longer included by default when compiling for CUDA. Using
+  ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -387,6 +471,9 @@ AST Matchers
 ------------
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
+- Add ``isExplicitObjectMemberFunction``.
+- Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
+  not skip the explicit object parameter for operator calls.
 
 clang-format
 ------------
@@ -436,6 +523,11 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+
+OpenMP Support
+--------------
+
+- Added support for the `[[omp::assume]]` attribute.
 
 Additional Information
 ======================

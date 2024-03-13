@@ -313,20 +313,22 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB4_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -334,10 +336,11 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB4_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB4_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -370,9 +373,9 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB4_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -407,20 +410,22 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, -1025
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB5_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -428,10 +433,11 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB5_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB5_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -464,9 +470,9 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB5_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -501,20 +507,22 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB6_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmin)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -522,10 +530,11 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB6_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB6_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -558,10 +567,10 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB6_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmin.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -596,20 +605,22 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB7_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmax)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -617,10 +628,11 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB7_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB7_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -653,10 +665,10 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB7_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -991,20 +1003,22 @@ define double @double_fadd_release(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 3
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB12_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1012,10 +1026,11 @@ define double @double_fadd_release(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB12_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB12_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -1048,9 +1063,9 @@ define double @double_fadd_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB12_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1085,20 +1100,22 @@ define double @double_fsub_release(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, -1025
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 3
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB13_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1106,10 +1123,11 @@ define double @double_fsub_release(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB13_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB13_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -1142,9 +1160,9 @@ define double @double_fsub_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB13_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1179,20 +1197,22 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 3
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB14_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmin)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1200,10 +1220,11 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB14_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB14_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -1236,10 +1257,10 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB14_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmin.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1274,20 +1295,22 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 3
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB15_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmax)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1295,10 +1318,11 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB15_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB15_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -1331,10 +1355,10 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB15_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1661,30 +1685,32 @@ define float @float_fmax_acq_rel(ptr %p) nounwind {
 define double @double_fadd_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: double_fadd_acq_rel:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -80
-; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -96
+; LA64F-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s6, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    ori $s4, $zero, 4
 ; LA64F-NEXT:    ori $s5, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB20_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s6
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s6, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1692,19 +1718,20 @@ define double @double_fadd_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s5
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB20_1
+; LA64F-NEXT:    ld.d $s6, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB20_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 80
+; LA64F-NEXT:    move $a0, $s6
+; LA64F-NEXT:    ld.d $s6, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s5, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s4, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 96
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fadd_acq_rel:
@@ -1731,9 +1758,9 @@ define double @double_fadd_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB20_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1761,30 +1788,32 @@ define double @double_fadd_acq_rel(ptr %p) nounwind {
 define double @double_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: double_fsub_acq_rel:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -80
-; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -96
+; LA64F-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s6, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, -1025
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    ori $s4, $zero, 4
 ; LA64F-NEXT:    ori $s5, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB21_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s6
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s6, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1792,19 +1821,20 @@ define double @double_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s5
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB21_1
+; LA64F-NEXT:    ld.d $s6, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB21_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 80
+; LA64F-NEXT:    move $a0, $s6
+; LA64F-NEXT:    ld.d $s6, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s5, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s4, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 96
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fsub_acq_rel:
@@ -1831,9 +1861,9 @@ define double @double_fsub_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB21_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1861,30 +1891,32 @@ define double @double_fsub_acq_rel(ptr %p) nounwind {
 define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: double_fmin_acq_rel:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -80
-; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -96
+; LA64F-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s6, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    ori $s4, $zero, 4
 ; LA64F-NEXT:    ori $s5, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB22_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s6
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmin)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s6, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1892,19 +1924,20 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s5
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB22_1
+; LA64F-NEXT:    ld.d $s6, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB22_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 80
+; LA64F-NEXT:    move $a0, $s6
+; LA64F-NEXT:    ld.d $s6, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s5, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s4, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 96
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fmin_acq_rel:
@@ -1931,10 +1964,10 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB22_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmin.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -1962,30 +1995,32 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: double_fmax_acq_rel:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -80
-; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -96
+; LA64F-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s6, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    ori $s4, $zero, 4
 ; LA64F-NEXT:    ori $s5, $zero, 2
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB23_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s6
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmax)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s6, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -1993,19 +2028,20 @@ define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s5
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB23_1
+; LA64F-NEXT:    ld.d $s6, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB23_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 80
+; LA64F-NEXT:    move $a0, $s6
+; LA64F-NEXT:    ld.d $s6, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s5, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s4, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 96
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fmax_acq_rel:
@@ -2032,10 +2068,10 @@ define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB23_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -2371,20 +2407,22 @@ define double @double_fadd_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 5
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB28_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -2392,10 +2430,11 @@ define double @double_fadd_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB28_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB28_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -2428,9 +2467,9 @@ define double @double_fadd_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB28_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -2465,20 +2504,22 @@ define double @double_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, -1025
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 5
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB29_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -2486,10 +2527,11 @@ define double @double_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB29_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB29_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -2522,9 +2564,9 @@ define double @double_fsub_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB29_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -2559,20 +2601,22 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 5
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB30_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmin)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -2580,10 +2624,11 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB30_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB30_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -2616,10 +2661,10 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB30_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmin.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -2654,20 +2699,22 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s5, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 16
-; LA64F-NEXT:    addi.d $s3, $sp, 8
+; LA64F-NEXT:    addi.d $s2, $sp, 8
+; LA64F-NEXT:    addi.d $s3, $sp, 0
 ; LA64F-NEXT:    ori $s4, $zero, 5
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB31_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 16
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmax)
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    st.d $s5, $sp, 8
+; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -2675,10 +2722,11 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $s4
 ; LA64F-NEXT:    move $a5, $s4
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16
-; LA64F-NEXT:    beqz $a1, .LBB31_1
+; LA64F-NEXT:    ld.d $s5, $sp, 8
+; LA64F-NEXT:    beqz $a0, .LBB31_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:    move $a0, $s5
+; LA64F-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
@@ -2711,10 +2759,10 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB31_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 16
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 8
+; LA64D-NEXT:    fst.d $fa1, $sp, 8
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -3041,26 +3089,28 @@ define float @float_fmax_monotonic(ptr %p) nounwind {
 define double @double_fadd_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: double_fadd_monotonic:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -64
-; LA64F-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -80
+; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s4, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB36_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s4
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s4, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -3068,17 +3118,18 @@ define double @double_fadd_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB36_1
+; LA64F-NEXT:    ld.d $s4, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB36_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s3, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 64
+; LA64F-NEXT:    move $a0, $s4
+; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 80
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fadd_monotonic:
@@ -3101,9 +3152,9 @@ define double @double_fadd_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB36_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -3129,26 +3180,28 @@ define double @double_fadd_monotonic(ptr %p) nounwind {
 define double @double_fsub_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: double_fsub_monotonic:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -64
-; LA64F-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -80
+; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s4, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, -1025
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB37_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s4
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(__adddf3)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s4, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -3156,17 +3209,18 @@ define double @double_fsub_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB37_1
+; LA64F-NEXT:    ld.d $s4, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB37_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s3, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 64
+; LA64F-NEXT:    move $a0, $s4
+; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 80
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fsub_monotonic:
@@ -3189,9 +3243,9 @@ define double @double_fsub_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB37_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fadd.d $fa1, $fa0, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fadd.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -3217,26 +3271,28 @@ define double @double_fsub_monotonic(ptr %p) nounwind {
 define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: double_fmin_monotonic:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -64
-; LA64F-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -80
+; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s4, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB38_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s4
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmin)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s4, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -3244,17 +3300,18 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB38_1
+; LA64F-NEXT:    ld.d $s4, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB38_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s3, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 64
+; LA64F-NEXT:    move $a0, $s4
+; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 80
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fmin_monotonic:
@@ -3277,10 +3334,10 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB38_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmin.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1
@@ -3306,26 +3363,28 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: double_fmax_monotonic:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -64
-; LA64F-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s0, $sp, 40 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s1, $sp, 32 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
-; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
+; LA64F-NEXT:    addi.d $sp, $sp, -80
+; LA64F-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
+; LA64F-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.d $a0, $a0, 0
+; LA64F-NEXT:    ld.d $s4, $a0, 0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1023
 ; LA64F-NEXT:    ori $s1, $zero, 8
-; LA64F-NEXT:    addi.d $s2, $sp, 8
-; LA64F-NEXT:    addi.d $s3, $sp, 0
+; LA64F-NEXT:    addi.d $s2, $sp, 16
+; LA64F-NEXT:    addi.d $s3, $sp, 8
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB39_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64F-NEXT:    st.d $a0, $sp, 8
+; LA64F-NEXT:    move $a0, $s4
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    bl %plt(fmax)
-; LA64F-NEXT:    st.d $a0, $sp, 0
+; LA64F-NEXT:    st.d $s4, $sp, 16
+; LA64F-NEXT:    st.d $a0, $sp, 8
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a2, $s2
@@ -3333,17 +3392,18 @@ define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
 ; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
-; LA64F-NEXT:    move $a1, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 8
-; LA64F-NEXT:    beqz $a1, .LBB39_1
+; LA64F-NEXT:    ld.d $s4, $sp, 16
+; LA64F-NEXT:    beqz $a0, .LBB39_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
-; LA64F-NEXT:    ld.d $s3, $sp, 16 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s2, $sp, 24 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s1, $sp, 32 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $s0, $sp, 40 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; LA64F-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 64
+; LA64F-NEXT:    move $a0, $s4
+; LA64F-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 80
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: double_fmax_monotonic:
@@ -3366,10 +3426,10 @@ define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB39_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fs0
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
-; LA64D-NEXT:    fmax.d $fa0, $fa0, $fs0
-; LA64D-NEXT:    fst.d $fa0, $sp, 0
+; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    move $a0, $s0
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a2, $s1

@@ -727,6 +727,15 @@ HANDLE_TARGET_OPCODE(G_BR)
 /// Generic branch to jump table entry.
 HANDLE_TARGET_OPCODE(G_BRJT)
 
+/// Generic vscale.
+HANDLE_TARGET_OPCODE(G_VSCALE)
+
+/// Generic insert subvector.
+HANDLE_TARGET_OPCODE(G_INSERT_SUBVECTOR)
+
+/// Generic extract subvector.
+HANDLE_TARGET_OPCODE(G_EXTRACT_SUBVECTOR)
+
 /// Generic insertelement.
 HANDLE_TARGET_OPCODE(G_INSERT_VECTOR_ELT)
 
@@ -735,6 +744,9 @@ HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
 
 /// Generic shufflevector.
 HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
+
+/// Generic splatvector.
+HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)

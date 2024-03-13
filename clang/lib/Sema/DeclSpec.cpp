@@ -1377,6 +1377,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
     }
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+  }
+
+  if (S.getLangOpts().C23 &&
+      getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
+      StorageClassSpec == SCS_extern) {
+    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getStorageClassSpec())
+        << SourceRange(getStorageClassSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where

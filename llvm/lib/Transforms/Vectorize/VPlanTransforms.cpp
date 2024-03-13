@@ -618,8 +618,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
       Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
   const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *C =
-      SE.getConstant(TripCount->getType(), BestVF.getKnownMinValue() * BestUF);
+  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
   if (TripCount->isZero() ||
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
@@ -1192,10 +1192,10 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
-    LaneMask->insertAfter(WideCanonicalIV);
+    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
+    LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
+                              {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                              "active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace all compares of the form

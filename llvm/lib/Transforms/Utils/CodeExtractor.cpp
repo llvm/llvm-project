@@ -999,6 +999,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::WriteOnly:
       case Attribute::Writable:
       case Attribute::DeadOnUnwind:
+      case Attribute::Range:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1601,7 +1602,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   };
 
   auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
-    for (DbgRecord &DR : I.getDbgValueRange()) {
+    for (DbgRecord &DR : I.getDbgRecordRange()) {
       if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
         UpdateDbgLabel(DPL);
         continue;
@@ -1658,7 +1659,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   for (auto *DII : DebugIntrinsicsToDelete)
     DII->eraseFromParent();
   for (auto *DPV : DPVsToDelete)
-    DPV->getMarker()->MarkedInstr->dropOneDbgValue(DPV);
+    DPV->getMarker()->MarkedInstr->dropOneDbgRecord(DPV);
   DIB.finalizeSubprogram(NewSP);
 
   // Fix up the scope information attached to the line locations in the new
@@ -1667,7 +1668,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     if (const DebugLoc &DL = I.getDebugLoc())
       I.setDebugLoc(
           DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
-    for (DbgRecord &DR : I.getDbgValueRange())
+    for (DbgRecord &DR : I.getDbgRecordRange())
       DR.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DR.getDebugLoc(),
                                                           *NewSP, Ctx, Cache));
 
