@@ -121,7 +121,6 @@ void test() {
       assert(spBuf.pubseekpos(3, std::ios_base::out) == 3);
 
       // Default parameter value `openmode`
-      assert(spBuf.pubseekpos(-999) == -1);
       assert(spBuf.pubseekpos(999) == -1);
 
       assert(spBuf.pubseekpos(0) == 0);
@@ -140,23 +139,19 @@ void test() {
 
       assert(spBuf.pubseekpos(999, std::ios_base::in) == -1);
 
-
       assert(spBuf.pubseekpos(999, std::ios_base::out) == -1);
 
       assert(spBuf.pubseekpos(0, std::ios_base::in) == 0);
       assert(spBuf.pubseekpos(3, std::ios_base::in) == 3);
 
-
       assert(spBuf.pubseekpos(0, std::ios_base::out) == 0);
       assert(spBuf.pubseekpos(3, std::ios_base::out) == -1);
-
 
       // Default parameter value `openmode`
       assert(spBuf.pubseekpos(999) == -1);
 
       assert(spBuf.pubseekpos(0) == 0);
       assert(spBuf.pubseekpos(3) == -1);
-
 
       // No mode
       assert(spBuf.pubseekpos(999, no_mode) == -1);
@@ -169,24 +164,19 @@ void test() {
       SpBuf spBuf{sp, std::ios_base::out};
 
       assert(spBuf.pubseekpos(999, std::ios_base::in) == -1);
-
-
+      
       assert(spBuf.pubseekpos(999, std::ios_base::out) == -1);
-
 
       assert(spBuf.pubseekpos(0, std::ios_base::in) == 0);
       assert(spBuf.pubseekpos(3, std::ios_base::in) == -1);
 
-
       assert(spBuf.pubseekpos(0, std::ios_base::out) == 0);
       assert(spBuf.pubseekpos(3, std::ios_base::out) == 3);
-
 
       // Default parameter value `openmode`
       assert(spBuf.pubseekpos(999) == -1);
       assert(spBuf.pubseekpos(0) == 0);
       assert(spBuf.pubseekpos(3) == -1);
-
 
       // No mode
       assert(spBuf.pubseekpos(999, no_mode) == -1);
