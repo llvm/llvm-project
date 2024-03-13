@@ -1046,7 +1046,7 @@ void comment_to_xml_conversion_todo_4();
 /// Aaa.
 /// \throws Bbb.
 void comment_to_xml_conversion_exceptions_1();
-// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_1:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_1</Name><USR>c:@F@comment_to_xml_conversion_exceptions_1#</USR><Declaration>void comment_to_xml_conversion_exceptions_1()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions></Exceptions></Function>]
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_1:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_1</Name><USR>c:@F@comment_to_xml_conversion_exceptions_1#</USR><Declaration>void comment_to_xml_conversion_exceptions_1()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb. </Para></Exceptions></Function>]
 // CHECK-NEXT:  CommentAST=[
 // CHECK-NEXT:    (CXComment_FullComment
 // CHECK-NEXT:       (CXComment_Paragraph
@@ -1058,7 +1058,7 @@ void comment_to_xml_conversion_exceptions_1();
 /// Aaa.
 /// \throw Bbb.
 void comment_to_xml_conversion_exceptions_2();
-// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_2:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_2</Name><USR>c:@F@comment_to_xml_conversion_exceptions_2#</USR><Declaration>void comment_to_xml_conversion_exceptions_2()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions></Exceptions></Function>]
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_2:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_2</Name><USR>c:@F@comment_to_xml_conversion_exceptions_2#</USR><Declaration>void comment_to_xml_conversion_exceptions_2()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb. </Para></Exceptions></Function>]
 // CHECK-NEXT:  CommentAST=[
 // CHECK-NEXT:    (CXComment_FullComment
 // CHECK-NEXT:       (CXComment_Paragraph
@@ -1070,7 +1070,7 @@ void comment_to_xml_conversion_exceptions_2();
 /// Aaa.
 /// \exception Bbb.
 void comment_to_xml_conversion_exceptions_3();
-// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_3:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_3</Name><USR>c:@F@comment_to_xml_conversion_exceptions_3#</USR><Declaration>void comment_to_xml_conversion_exceptions_3()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions></Exceptions></Function>]
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_3:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_3</Name><USR>c:@F@comment_to_xml_conversion_exceptions_3#</USR><Declaration>void comment_to_xml_conversion_exceptions_3()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb. </Para></Exceptions></Function>]
 // CHECK-NEXT:  CommentAST=[
 // CHECK-NEXT:    (CXComment_FullComment
 // CHECK-NEXT:       (CXComment_Paragraph
@@ -1084,7 +1084,7 @@ void comment_to_xml_conversion_exceptions_3();
 /// \throws Ccc.
 /// \throws Ddd.
 void comment_to_xml_conversion_exceptions_4();
-// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_4:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_4</Name><USR>c:@F@comment_to_xml_conversion_exceptions_4#</USR><Declaration>void comment_to_xml_conversion_exceptions_4()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions></Exceptions></Function>]
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_4:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_4</Name><USR>c:@F@comment_to_xml_conversion_exceptions_4#</USR><Declaration>void comment_to_xml_conversion_exceptions_4()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb. </Para><Para>Ccc. </Para><Para>Ddd. </Para></Exceptions></Function>]
 // CHECK-NEXT:  CommentAST=[
 // CHECK-NEXT:    (CXComment_FullComment
 // CHECK-NEXT:       (CXComment_Paragraph
@@ -1101,7 +1101,7 @@ void comment_to_xml_conversion_exceptions_4();
 /// \throws Bbb.
 /// \throw Ccc.
 void comment_to_xml_conversion_exceptions_5();
-// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_5:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_5</Name><USR>c:@F@comment_to_xml_conversion_exceptions_5#</USR><Declaration>void comment_to_xml_conversion_exceptions_5()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions></Exceptions></Function>]
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_5:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_5</Name><USR>c:@F@comment_to_xml_conversion_exceptions_5#</USR><Declaration>void comment_to_xml_conversion_exceptions_5()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb. </Para><Para>Ccc. </Para></Exceptions></Function>]
 // CHECK-NEXT:  CommentAST=[
 // CHECK-NEXT:    (CXComment_FullComment
 // CHECK-NEXT:       (CXComment_Paragraph
@@ -1112,5 +1112,35 @@ void comment_to_xml_conversion_exceptions_5();
 // CHECK-NEXT:       (CXComment_BlockCommand CommandName=[throw] Arg[0]=Ccc.
 // CHECK-NEXT:         (CXComment_Paragraph IsWhitespace)))]
 
-#endif
+/// Aaa.
+/// \throws Bbb subsequent arg text
+void comment_to_xml_conversion_exceptions_6();
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_6:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_6</Name><USR>c:@F@comment_to_xml_conversion_exceptions_6#</USR><Declaration>void comment_to_xml_conversion_exceptions_6()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb subsequent arg text</Para></Exceptions></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa.] HasTrailingNewline)
+// CHECK-NEXT:         (CXComment_Text Text=[ ] IsWhitespace))
+// CHECK-NEXT:       (CXComment_BlockCommand CommandName=[throws] Arg[0]=Bbb
+// CHECK-NEXT:         (CXComment_Paragraph
+// CHECK-NEXT:           (CXComment_Text Text=[subsequent arg text]))))]
 
+/// Aaa.
+/// \throws Bbb subsequent arg text
+/// \throw Ccc subsequent arg text
+void comment_to_xml_conversion_exceptions_7();
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-1]]:6: FunctionDecl=comment_to_xml_conversion_exceptions_7:{{.*}} FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-1]]" column="6"><Name>comment_to_xml_conversion_exceptions_7</Name><USR>c:@F@comment_to_xml_conversion_exceptions_7#</USR><Declaration>void comment_to_xml_conversion_exceptions_7()</Declaration><Abstract><Para> Aaa. </Para></Abstract><Exceptions><Para>Bbb subsequent arg text </Para><Para>Ccc subsequent arg text</Para></Exceptions></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa.] HasTrailingNewline)
+// CHECK-NEXT:         (CXComment_Text Text=[ ] IsWhitespace))
+// CHECK-NEXT:       (CXComment_BlockCommand CommandName=[throws] Arg[0]=Bbb
+// CHECK-NEXT:         (CXComment_Paragraph
+// CHECK-NEXT:           (CXComment_Text Text=[subsequent arg text] HasTrailingNewline)
+// CHECK-NEXT:           (CXComment_Text Text=[ ] IsWhitespace)))
+// CHECK-NEXT:       (CXComment_BlockCommand CommandName=[throw] Arg[0]=Ccc
+// CHECK-NEXT:         (CXComment_Paragraph
+// CHECK-NEXT:           (CXComment_Text Text=[subsequent arg text]))))]
+
+#endif
