@@ -165,15 +165,15 @@ def ROCDL_BallotOp :
   let summary = "Vote across thread group";
 
   let description = [{
-      This operation applies a reduction to the source predicate across all the active threads within a warp, 
-      resulting in a destination predicate value that is uniform for every thread in the warp.
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      The nth bit of the result contains the 1 bit contributed by the nth warp lane
 
-      i1 -> i32
+      i1 -> anyint
   }];
 
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder,
-            llvm::Intrinsic::amdgcn_ballot, {$pred}, {llvm::Type::getInt32Ty(moduleTranslation.getLLVMContext())});
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$res.getType()});
   }];
 
   let assemblyFormat = "$pred attr-dict `:` type($res)";
