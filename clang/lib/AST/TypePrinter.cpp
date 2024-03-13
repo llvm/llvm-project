@@ -1719,7 +1719,7 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
 }
 
 static void printCountAttributedImpl(const CountAttributedType *T,
-                                     raw_ostream &OS, PrintingPolicy Policy) {
+                                     raw_ostream &OS, const PrintingPolicy &Policy) {
   if (T->isCountInBytes() && T->isOrNull())
     OS << " __sized_by_or_null(";
   else if (T->isCountInBytes())
