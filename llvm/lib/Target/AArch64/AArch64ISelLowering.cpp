@@ -7751,13 +7751,23 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   // register allocator to pass call args in callee saved regs, without extra
   // copies to avoid these fake clobbers of actually-preserved GPRs.
   if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 ||
-      MI.getOpcode() == AArch64::MSRpstatePseudo)
+      MI.getOpcode() == AArch64::MSRpstatePseudo) {
     for (unsigned I = MI.getNumOperands() - 1; I > 0; --I)
       if (MachineOperand &MO = MI.getOperand(I);
           MO.isReg() && MO.isImplicit() && MO.isDef() &&
           (AArch64::GPR32RegClass.contains(MO.getReg()) ||
            AArch64::GPR64RegClass.contains(MO.getReg())))
         MI.removeOperand(I);
+
+    // The SVE vector length can change when entering/leaving streaming mode.
+    if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
+        MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
+                                              /*IsImplicit=*/true));
+      MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
+                                              /*IsImplicit=*/true));
+    }
+  }
 
   // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that
   // have nothing to do with VG, were it not that they are used to materialise a
@@ -21413,12 +21423,8 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
-  // Only implemented on little-endian subtargets.
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
-
-  // This optimization only works on little endian.
-  if (!IsLittleEndian)
+  // These optimizations only work on little endian.
+  if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
   // uzp1(bitcast(x), bitcast(y)) -> uzp1(x, y)
@@ -21437,21 +21443,28 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (ResVT != MVT::v2i32 && ResVT != MVT::v4i16 && ResVT != MVT::v8i8)
     return SDValue();
 
-  auto getSourceOp = [](SDValue Operand) -> SDValue {
-    const unsigned Opcode = Operand.getOpcode();
-    if (Opcode == ISD::TRUNCATE)
-      return Operand->getOperand(0);
-    if (Opcode == ISD::BITCAST &&
-        Operand->getOperand(0).getOpcode() == ISD::TRUNCATE)
-      return Operand->getOperand(0)->getOperand(0);
-    return SDValue();
-  };
+  SDValue SourceOp0 = peekThroughBitcasts(Op0);
+  SDValue SourceOp1 = peekThroughBitcasts(Op1);
 
-  SDValue SourceOp0 = getSourceOp(Op0);
-  SDValue SourceOp1 = getSourceOp(Op1);
+  // truncating uzp1(x, y) -> xtn(concat (x, y))
+  if (SourceOp0.getValueType() == SourceOp1.getValueType()) {
+    EVT Op0Ty = SourceOp0.getValueType();
+    if ((ResVT == MVT::v4i16 && Op0Ty == MVT::v2i32) ||
+        (ResVT == MVT::v8i8 && Op0Ty == MVT::v4i16)) {
+      SDValue Concat =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                      Op0Ty.getDoubleNumVectorElementsVT(*DAG.getContext()),
+                      SourceOp0, SourceOp1);
+      return DAG.getNode(ISD::TRUNCATE, DL, ResVT, Concat);
+    }
+  }
 
-  if (!SourceOp0 || !SourceOp1)
+  // uzp1(xtn x, xtn y) -> xtn(uzp1 (x, y))
+  if (SourceOp0.getOpcode() != ISD::TRUNCATE ||
+      SourceOp1.getOpcode() != ISD::TRUNCATE)
     return SDValue();
+  SourceOp0 = SourceOp0.getOperand(0);
+  SourceOp1 = SourceOp1.getOperand(0);
 
   if (SourceOp0.getValueType() != SourceOp1.getValueType() ||
       !SourceOp0.getValueType().isSimple())
