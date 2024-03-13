@@ -802,9 +802,10 @@ void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
     if (isUntypedPointerTy(Arg.getType()) &&
         DeducedElTys.find(&Arg) == DeducedElTys.end() &&
         !HasPointeeTypeAttr(&Arg))
-      Args[i++] = &Arg;
+      Args[i] = &Arg;
+    i++;
   }
-  if (i == 0)
+  if (Args.size() == 0)
     return;
 
   // Args contains opaque pointers without element type definition
@@ -825,7 +826,8 @@ void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
         continue;
       // maybe we already know the operand's element type
       auto DeducedIt = DeducedElTys.find(OpArg);
-      Type *ElemTy = DeducedIt == DeducedElTys.end() ? nullptr : DeducedIt->second;
+      Type *ElemTy =
+          DeducedIt == DeducedElTys.end() ? nullptr : DeducedIt->second;
       if (!ElemTy) {
         for (User *OpU : OpArg->users()) {
           if (Instruction *Inst = dyn_cast<Instruction>(OpU)) {

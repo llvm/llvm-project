@@ -18,7 +18,7 @@
 define spir_kernel void @bar(ptr addrspace(1) %unknown_type_ptr) {
 entry:
   %elem = getelementptr inbounds i32, ptr addrspace(1) %unknown_type_ptr, i64 0
-  call spir_func void @foo(ptr addrspace(1) %unknown_type_ptr)
+  call void @foo(ptr addrspace(1) %unknown_type_ptr)
   ret void
 }
 
