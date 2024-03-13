@@ -209,7 +209,7 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   Argument *Arg = F.getArg(ArgIdx);
-  if (Arg->hasByValAttr() || Arg->hasByRefAttr()) {
+  if (HasPointeeTypeAttr(Arg)) {
     Type *ByValRefType = Arg->hasByValAttr() ? Arg->getParamByValType()
                                              : Arg->getParamByRefType();
     SPIRVType *ElementType = GR->getOrCreateSPIRVType(ByValRefType, MIRBuilder);
