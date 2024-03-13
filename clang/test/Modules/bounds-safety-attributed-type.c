@@ -18,7 +18,7 @@ struct Test {
 
 struct Test *p;
 
-// CHECK: |-RecordDecl {{.*/}}bounds_safety.map:4:1, line:7:1> line:4:8 imported in bounds_safety <undeserialized declarations> struct Test definition
+// CHECK: |-RecordDecl {{.*}}bounds_safety.map:4:1, line:7:1> line:4:8 imported in bounds_safety <undeserialized declarations> struct Test definition
 // CHECK: | |-FieldDecl {{.*}} imported in bounds_safety referenced count 'int'
 // CHECK: | `-FieldDecl {{.*}} imported in bounds_safety fam 'int[] __counted_by(count)':'int[]'
 
