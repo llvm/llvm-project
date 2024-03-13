@@ -52,9 +52,9 @@ public:
 };
 
 /// This class represents a LLVM attribute that describes a debug info type.
-class DITypeAttr : public DIScopeAttr {
+class DITypeAttr : public DINodeAttr {
 public:
-  using DIScopeAttr::DIScopeAttr;
+  using DINodeAttr::DINodeAttr;
 
   /// Support LLVM type casting.
   static bool classof(Attribute attr);
