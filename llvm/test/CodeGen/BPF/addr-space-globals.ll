@@ -18,7 +18,7 @@
 
 ; Verify that a,b,c reside in the same section
 
-; CHECK:     .section .arena.272,"aw",@progbits
+; CHECK:     .section .address_space.272,"aw",@progbits
 ; CHECK-NOT: .section
 ; CHECK:     .globl  a
 ; CHECK:     .ascii  "\001\002"

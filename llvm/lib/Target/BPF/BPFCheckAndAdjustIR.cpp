@@ -15,7 +15,7 @@
 //   - remove llvm.bpf.getelementptr.and.load builtins.
 //   - remove llvm.bpf.getelementptr.and.store builtins.
 //   - for loads and stores with base addresses from non-zero address space
-//     cast base address to zero address space (support for BPF arenas).
+//     cast base address to zero address space (support for BPF address spaces).
 //
 //===----------------------------------------------------------------------===//
 
@@ -482,7 +482,7 @@ static void aspaceWrapOperand(DenseMap<Value *, Value *> &Cache, Instruction *I,
   }
 }
 
-// Support for BPF arenas:
+// Support for BPF address spaces:
 // - for each function in the module M, update pointer operand of
 //   each memory access instruction (load/store/cmpxchg/atomicrmw)
 //   by casting it from non-zero address space to zero address space, e.g:
@@ -490,7 +490,7 @@ static void aspaceWrapOperand(DenseMap<Value *, Value *> &Cache, Instruction *I,
 //   (load (ptr addrspace (N) %p) ...)
 //     -> (load (addrspacecast ptr addrspace (N) %p to ptr))
 //
-// - assign section with name .arena.N for globals defined in
+// - assign section with name .address_space.N for globals defined in
 //   non-zero address space N
 bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
   bool Changed = false;
@@ -517,13 +517,13 @@ bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
     Changed |= !CastsCache.empty();
   }
   // Merge all globals within same address space into single
-  // .arena.<addr space no> section
+  // .address_space.<addr space no> section
   for (GlobalVariable &G : M.globals()) {
     if (G.getAddressSpace() == 0 || G.hasSection())
       continue;
     SmallString<16> SecName;
     raw_svector_ostream OS(SecName);
-    OS << ".arena." << G.getAddressSpace();
+    OS << ".address_space." << G.getAddressSpace();
     G.setSection(SecName);
     // Prevent having separate section for constants
     G.setConstant(false);
