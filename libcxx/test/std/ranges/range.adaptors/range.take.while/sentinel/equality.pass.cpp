@@ -86,8 +86,8 @@ static_assert(!weakly_equality_comparable_with<iterator_t<take_while_view<R, Les
 static_assert(weakly_equality_comparable_with<iterator_t<const take_while_view<R, LessThan3>>, //
                                               sentinel_t<const take_while_view<R, LessThan3>>>);
 
-static_assert(weakly_equality_comparable_with<iterator_t<take_while_view<R, LessThan3>>, //
-                                              sentinel_t<take_while_view<R, LessThan3>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<take_while_view<CrossComparableR, LessThan3>>, //
+                                              sentinel_t<take_while_view<CrossComparableR, LessThan3>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const take_while_view<CrossComparableR, LessThan3>>, //
                                               sentinel_t<take_while_view<CrossComparableR, LessThan3>>>);

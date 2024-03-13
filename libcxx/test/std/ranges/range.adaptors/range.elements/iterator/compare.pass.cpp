@@ -140,7 +140,7 @@ constexpr bool test() {
     auto it = ev.begin();
 
     using ElemIter = decltype(it);
-    static_assert(!weakly_equality_comparable_with<ElemIter>);
+    static_assert(!weakly_equality_comparable_with<ElemIter, ElemIter>);
     inequalityOperatorsDoNotExistTest(it, it);
   }
 

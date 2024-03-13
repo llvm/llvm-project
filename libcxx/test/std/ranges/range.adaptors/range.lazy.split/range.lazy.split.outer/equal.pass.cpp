@@ -66,7 +66,7 @@ constexpr bool test() {
     auto b = v.begin();
     std::same_as<std::default_sentinel_t> decltype(auto) e = v.end();
 
-    static_assert(!weakly_equality_comparable_with<decltype(b)>);
+    static_assert(!weakly_equality_comparable_with<decltype(b), decltype(b)>);
 
     assert(!(b == std::default_sentinel));
     assert(b != std::default_sentinel);

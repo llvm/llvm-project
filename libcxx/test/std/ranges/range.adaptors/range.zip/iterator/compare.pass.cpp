@@ -242,7 +242,7 @@ constexpr bool test() {
     std::ranges::zip_view r(IterNoEqualView{buffer});
     auto it = r.begin();
     using Iter = decltype(it);
-    static_assert(!weakly_equality_comparable_with<Iter>);
+    static_assert(!weakly_equality_comparable_with<Iter, Iter>);
     inequalityOperatorsDoNotExistTest(it, it);
   }
   return true;

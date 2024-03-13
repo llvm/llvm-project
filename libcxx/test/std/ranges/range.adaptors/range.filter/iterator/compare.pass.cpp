@@ -76,7 +76,7 @@ constexpr bool tests() {
     using Sentinel = sentinel_wrapper<Iterator>;
     using FilterView = std::ranges::filter_view<minimal_view<Iterator, Sentinel>, AlwaysTrue>;
     using FilterIterator = std::ranges::iterator_t<FilterView>;
-    static_assert(!weakly_equality_comparable_with<FilterIterator>);
+    static_assert(!weakly_equality_comparable_with<FilterIterator, FilterIterator>);
   }
 
   return true;

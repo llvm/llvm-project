@@ -13,8 +13,8 @@
 #include <functional>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 
-#include "__concepts/invocable.h"
 #include "test_iterators.h"
 
 #if TEST_STD_VER < 17
@@ -96,8 +96,8 @@ concept CanBePiped = requires(View&& view, T&& t) {
   { std::forward<View>(view) | std::forward<T>(t) };
 };
 
-template <class T, class U = T>
-concept weakly_equality_comparable_with = requires(const T& t, const U& u) {
+template <class T, class U>
+concept weakly_equality_comparable_with = requires(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u) {
   { t == u } -> std::same_as<bool>;
   { t != u } -> std::same_as<bool>;
   { u == t } -> std::same_as<bool>;
