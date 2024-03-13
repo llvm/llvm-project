@@ -198,11 +198,6 @@
 ///
 /// If there are calls to setjmp()
 ///
-/// 2) and 3): The same as 2) and 3) in Emscripten SjLj.
-/// (setjmpTable/setjmpTableSize initialization + setjmp callsite
-/// transformation)
-/// functionInvocationId
-///
 /// 2) In the function entry that calls setjmp, initialize
 ///    functionInvocationId as follows:
 ///
