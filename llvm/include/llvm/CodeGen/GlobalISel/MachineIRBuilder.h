@@ -1143,6 +1143,28 @@ public:
   MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
                                   const SrcOp &Op, unsigned Index);
 
+  /// Build and insert \p Res = G_VSCALE \p MinElts
+  ///
+  /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildVScale(const DstOp &Res, unsigned MinElts);
+
+  /// Build and insert \p Res = G_VSCALE \p MinElts
+  ///
+  /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildVScale(const DstOp &Res, const ConstantInt &MinElts);
+
   /// Build and insert a G_INTRINSIC instruction.
   ///
   /// There are four different opcodes based on combinations of whether the
