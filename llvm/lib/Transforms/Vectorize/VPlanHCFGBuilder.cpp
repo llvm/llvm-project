@@ -296,8 +296,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // recipes.
       if (Br->isConditional()) {
         VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
-        VPBB->appendRecipe(
-            new VPInstruction(VPInstruction::BranchOnCond, {Cond}));
+        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst);
       }
 
       // Skip the rest of the Instruction processing for Branch instructions.
