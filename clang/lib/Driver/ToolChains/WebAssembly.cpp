@@ -409,20 +409,6 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       // Backend needs '-exception-model=wasm' to use Wasm EH instructions
       CC1Args.push_back("-exception-model=wasm");
     }
-
-    if (Opt.starts_with("-experimental-wasm-enable-alt-sjlj")) {
-      // '-mllvm -experimental-wasm-enable-alt-sjlj' should be used with
-      // '-mllvm -wasm-enable-sjlj'
-      bool HasWasmEnableSjlj = false;
-      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
-        if (StringRef(A->getValue(0)) == "-wasm-enable-sjlj")
-          HasWasmEnableSjlj = true;
-      }
-      if (!HasWasmEnableSjlj)
-        getDriver().Diag(diag::err_drv_argument_only_allowed_with)
-            << "-mllvm -experimental-wasm-enable-alt-sjlj"
-            << "-mllvm -wasm-enable-sjlj";
-    }
   }
 }
 

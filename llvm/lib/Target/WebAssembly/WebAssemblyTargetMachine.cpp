@@ -370,7 +370,6 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
-using WebAssembly::WasmEnableAltSjLj;
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
@@ -406,9 +405,6 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
     report_fatal_error(
         "-exception-model=wasm only allowed with at least one of "
         "-wasm-enable-eh or -wasm-enable-sjlj");
-  if (!WasmEnableSjLj && WasmEnableAltSjLj)
-    report_fatal_error("-experimental-wasm-enable-alt-sjlj only allowed with "
-                       "-wasm-enable-sjlj");
 
   // You can't enable two modes of EH at the same time
   if (WasmEnableEmEH && WasmEnableEH)
