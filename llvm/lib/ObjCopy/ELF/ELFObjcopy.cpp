@@ -229,8 +229,7 @@ Error Object::compressOrDecompressSections(const CommonConfig &Config) {
             &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
       }
     } else if (Config.CompressionType != DebugCompressionType::None) {
-      auto *S = &Sec;
-      ToReplace.emplace_back(S, [=] {
+      ToReplace.emplace_back(&Sec, [&, S = &Sec] {
         return &addSection<CompressedSection>(
             CompressedSection(*S, Config.CompressionType, Is64Bits));
       });
