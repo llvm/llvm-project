@@ -96,3 +96,32 @@ subroutine pointers_in_atomic_capture()
         b = a
     !$omp end atomic
 end subroutine
+
+!CHECK-LABEL: func.func @_QPreal_to_double() {
+subroutine real_to_double()
+    !CHECK:     %[[C_ALLOC:.*]] = fir.alloca f64
+    !CHECK:     %[[C_REF:.*]] = fir.alloca f32 {bindc_name = "c", uniq_name = "_QFreal_to_doubleEc"}
+    !CHECK:     %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] {uniq_name = "_QFreal_to_doubleEc"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+    !CHECK:     %[[C2_ALLOC:.*]] = fir.alloca f64 {bindc_name = "c2", uniq_name = "_QFreal_to_doubleEc2"}
+    !CHECK:     %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2_ALLOC]] {uniq_name = "_QFreal_to_doubleEc2"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+        real :: c
+        double precision :: c2
+    !CHECK:     %[[C_LOAD:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<f32>
+    !CHECK:     %[[C_CVT:.*]] = fir.convert %[[C_LOAD]] : (f32) -> f64
+    !CHECK:     fir.store %[[C_CVT]] to %[[C_ALLOC]] : !fir.ref<f64>
+    !CHECK:     %cst = arith.constant 2.000000e+00 : f32
+    !CHECK:     omp.atomic.capture {
+    !CHECK:       omp.atomic.read %[[C2_DECL]]#1 = %[[C_ALLOC]] : !fir.ref<f64>, f32
+    !CHECK:       omp.atomic.update %[[C_ALLOC]] : !fir.ref<f64> {
+    !CHECK:       ^bb0(%arg0: f32):
+    !CHECK:         %[[RES:.*]] = arith.mulf %cst, %arg0 fastmath<contract> : f32
+    !CHECK:         omp.yield(%[[RES]] : f32)
+    !CHECK:       }
+    !CHECK:     }
+    !CHECK:     return
+    !CHECK:   }
+    !$omp atomic capture
+        c2 = c
+        c = 2.0 * c
+    !$omp end atomic
+    end

@@ -71,3 +71,39 @@ subroutine atomic_write_typed_assign
   !$omp atomic write
   r2 = 0
 end subroutine
+
+
+!CHECK-LABEL: func.func @_QPatomic_write_logical() {
+!CHECK: %[[L_REF:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFatomic_write_logicalEl"}
+!CHECK: %[[L_DECL:.*]]:2 = hlfir.declare %[[L_REF]] {uniq_name = "_QFatomic_write_logicalEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!CHECK: %false = arith.constant false
+!CHECK: omp.atomic.write %[[L_DECL]]#1 = %false : !fir.ref<!fir.logical<4>>, i1
+!CHECK: return
+!CHECK: }
+
+subroutine atomic_write_logical()
+  logical :: l
+  !$omp atomic write
+  l = .false.
+end
+
+
+!CHECK-DAG: %[[X_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_write_castingEx"}
+!CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFatomic_write_castingEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK-DAG: %[[Y_REF:.*]] = fir.alloca i32 {bindc_name = "y", fir.target, uniq_name = "_QFatomic_write_castingEy"}
+!CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFatomic_write_castingEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG: %[[Z_REF:.*]] = fir.alloca f32 {bindc_name = "z", fir.target, uniq_name = "_QFatomic_write_castingEz"}
+!CHECK-DAG: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFatomic_write_castingEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK-DAG: %[[Z_LOAD:.*]] = fir.load %[[Z_DECL]]#0 : !fir.ref<f32>
+!CHECK-DAG: %[[Z_CVT:.*]] = fir.convert %[[Z_LOAD]] : (f32) -> i32
+!CHECK-DAG: %[[X_LOAD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG: %[[X_ADDR:.*]] = fir.box_addr %[[X_LOAD]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK-DAG: omp.atomic.write %[[X_ADDR:.*]] = %[[Z_CVT]] : !fir.ptr<i32>, i32
+subroutine atomic_write_casting()
+  integer, pointer :: x
+  integer, target :: y
+  real, target :: z
+  x => y
+  !$omp atomic write
+      x = z
+end

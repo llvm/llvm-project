@@ -703,26 +703,6 @@ func.func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
 
 // -----
 
-func.func @omp_atomic_write(%addr : memref<memref<i32>>, %val : i32) {
-  // expected-error @below {{address must dereference to value type}}
-  omp.atomic.write %addr = %val : memref<memref<i32>>, i32
-  return
-}
-
-// -----
-
-func.func @omp_atomic_update1(%x: memref<i32>, %expr: f32) {
-  // expected-error @below {{the type of the operand must be a pointer type whose element type is the same as that of the region argument}}
-  omp.atomic.update %x : memref<i32> {
-  ^bb0(%xval: f32):
-    %newval = llvm.fadd %xval, %expr : f32
-    omp.yield (%newval : f32)
-  }
-  return
-}
-
-// -----
-
 func.func @omp_atomic_update2(%x: memref<i32>, %expr: i32) {
   // expected-error @+2 {{op expects regions to end with 'omp.yield', found 'omp.terminator'}}
   // expected-note @below {{in custom textual format, the absence of terminator implies 'omp.yield'}}

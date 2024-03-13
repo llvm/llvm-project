@@ -184,3 +184,24 @@ program OmpAtomicUpdate
     w = max(w,x,y,z)
 
 end program OmpAtomicUpdate
+
+!CHECK-DAG: %[[X_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_update_castingEx"}
+!CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFatomic_update_castingEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK-DAG: %[[Z_REF:.*]] = fir.alloca f32 {bindc_name = "z", fir.target, uniq_name = "_QFatomic_update_castingEz"}
+!CHECK-DAG: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFatomic_update_castingEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK-DAG: %[[X_LOAD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK-DAG: %[[X_ADDR:.*]] = fir.box_addr %[[X_LOAD]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK-DAG: %[[Z_LOAD:.*]] = fir.load %[[Z_DECL]]#0 : !fir.ref<f32>
+!CHECK-DAG: omp.atomic.update %[[X_ADDR]] : !fir.ptr<i32> {
+!CHECK-DAG: ^bb0(%[[ARG0:.*]]: i32):
+!CHECK-DAG:   %[[ARG0_CVT:.*]] = fir.convert %[[ARG0]] : (i32) -> f32
+!CHECK-DAG:   %[[RES:.*]] = arith.addf %[[ARG0_CVT]], %[[Z_LOAD]] fastmath<contract> : f32
+!CHECK-DAG:   %[[RES_CVT:.*]] = fir.convert %[[RES]] : (f32) -> i32
+!CHECK-DAG:   omp.yield(%[[RES_CVT]] : i32)
+!CHECK-DAG: }
+subroutine atomic_update_casting()
+    integer, pointer :: x
+    real, target :: z
+    !$omp atomic update
+        x = x + z
+end
