@@ -12,7 +12,7 @@
 # CHECK-INST: sf.cflush.d.l1     zero
 # CHECK-ENC: encoding: [0x73,0x00,0x00,0xfc]
 sf.cflush.d.l1 x0
-# CHECK-INST: sf.cflush.d.l1
+# CHECK-INST: sf.cflush.d.l1     zero
 # CHECK-ENC: encoding: [0x73,0x00,0x00,0xfc]
 sf.cflush.d.l1
 
@@ -23,7 +23,7 @@ sf.cflush.d.l1 x7
 # CHECK-INST: sf.cdiscard.d.l1   zero
 # CHECK-ENC: encoding: [0x73,0x00,0x20,0xfc]
 sf.cdiscard.d.l1 x0
-# CHECK-INST: sf.cdiscard.d.l1
+# CHECK-INST: sf.cdiscard.d.l1   zero
 # CHECK-ENC: encoding: [0x73,0x00,0x20,0xfc]
 sf.cdiscard.d.l1
 
