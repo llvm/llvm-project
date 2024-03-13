@@ -214,33 +214,48 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                            SecName.str().c_str());
 }
 
-static bool isCompressable(const SectionBase &Sec) {
-  return !(Sec.Flags & ELF::SHF_COMPRESSED) &&
-         StringRef(Sec.Name).starts_with(".debug");
-}
-
-static Error replaceDebugSections(
-    Object &Obj, function_ref<bool(const SectionBase &)> ShouldReplace,
-    function_ref<Expected<SectionBase *>(const SectionBase *)> AddSection) {
-  // Build a list of the debug sections we are going to replace.
+Error Object::compressOrDecompressSections(const CommonConfig &Config) {
+  // Build a list of sections we are going to replace.
   // We can't call `AddSection` while iterating over sections,
   // because it would mutate the sections array.
-  SmallVector<SectionBase *, 13> ToReplace;
-  for (auto &Sec : Obj.sections())
-    if (ShouldReplace(Sec))
-      ToReplace.push_back(&Sec);
+  SmallVector<std::pair<SectionBase *, std::function<SectionBase *()>>, 0>
+      ToReplace;
+  for (SectionBase &Sec : sections()) {
+    std::optional<DebugCompressionType> CType;
+    for (auto &[Matcher, T] : Config.compressSections)
+      if (Matcher.matches(Sec.Name))
+        CType = T;
+    if (!(Sec.Flags & SHF_ALLOC) && StringRef(Sec.Name).starts_with(".debug")) {
+      if (Config.CompressionType != DebugCompressionType::None)
+        CType = Config.CompressionType;
+      else if (Config.DecompressDebugSections)
+        CType = DebugCompressionType::None;
+    }
+    if (!CType)
+      continue;
 
-  // Build a mapping from original section to a new one.
-  DenseMap<SectionBase *, SectionBase *> FromTo;
-  for (SectionBase *S : ToReplace) {
-    Expected<SectionBase *> NewSection = AddSection(S);
-    if (!NewSection)
-      return NewSection.takeError();
+    if (Sec.ParentSegment)
+      return createStringError(
+          errc::invalid_argument,
+          "section '" + Sec.Name +
+              "' within a segment cannot be (de)compressed");
 
-    FromTo[S] = *NewSection;
+    if (auto *CS = dyn_cast<CompressedSection>(&Sec)) {
+      if (*CType == DebugCompressionType::None)
+        ToReplace.emplace_back(
+            &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
+    } else if (*CType != DebugCompressionType::None) {
+      ToReplace.emplace_back(&Sec, [=, S = &Sec] {
+        return &addSection<CompressedSection>(
+            CompressedSection(*S, *CType, Is64Bits));
+      });
+    }
   }
 
-  return Obj.replaceSections(FromTo);
+  DenseMap<SectionBase *, SectionBase *> FromTo;
+  for (auto [S, Func] : ToReplace)
+    FromTo[S] = Func();
+  return replaceSections(FromTo);
 }
 
 static bool isAArch64MappingSymbol(const Symbol &Sym) {
@@ -534,24 +549,8 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
   if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
     return E;
 
-  if (Config.CompressionType != DebugCompressionType::None) {
-    if (Error Err = replaceDebugSections(
-            Obj, isCompressable,
-            [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
-              return &Obj.addSection<CompressedSection>(
-                  CompressedSection(*S, Config.CompressionType, Obj.Is64Bits));
-            }))
-      return Err;
-  } else if (Config.DecompressDebugSections) {
-    if (Error Err = replaceDebugSections(
-            Obj,
-            [](const SectionBase &S) { return isa<CompressedSection>(&S); },
-            [&Obj](const SectionBase *S) {
-              const CompressedSection *CS = cast<CompressedSection>(S);
-              return &Obj.addSection<DecompressedSection>(*CS);
-            }))
-      return Err;
-  }
+  if (Error E = Obj.compressOrDecompressSections(Config))
+    return E;
 
   return Error::success();
 }
