@@ -840,8 +840,7 @@ define i64 @zext_nneg_demanded_constant(i8 %a) nounwind {
 define i32 @zext_nneg_i1(i1 %x) {
 ; CHECK-LABEL: @zext_nneg_i1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = zext nneg i1 [[X:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %res = zext nneg i1 %x to i32
@@ -851,8 +850,7 @@ entry:
 define <2 x i32> @zext_nneg_i1_vec(<2 x i1> %x) {
 ; CHECK-LABEL: @zext_nneg_i1_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i1> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[RES]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
 entry:
   %res = zext nneg <2 x i1> %x to <2 x i32>
