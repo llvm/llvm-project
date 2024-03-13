@@ -25,18 +25,16 @@ int main(int, char**)
 {
   static_assert(!std::is_assignable<std::variant<int, int>, int>::value, "");
   static_assert(!std::is_assignable<std::variant<long, long long>, int>::value, "");
-  static_assert(std::is_assignable<std::variant<char>, int>::value == VariantAllowsNarrowingConversions, "");
+  static_assert(!std::is_assignable<std::variant<char>, int>::value, "");
 
-  static_assert(std::is_assignable<std::variant<std::string, float>, int>::value == VariantAllowsNarrowingConversions, "");
-  static_assert(std::is_assignable<std::variant<std::string, double>, int>::value == VariantAllowsNarrowingConversions, "");
+  static_assert(!std::is_assignable<std::variant<std::string, float>, int>::value, "");
+  static_assert(!std::is_assignable<std::variant<std::string, double>, int>::value, "");
   static_assert(!std::is_assignable<std::variant<std::string, bool>, int>::value, "");
 
   static_assert(!std::is_assignable<std::variant<int, bool>, decltype("meow")>::value, "");
   static_assert(!std::is_assignable<std::variant<int, const bool>, decltype("meow")>::value, "");
 
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
   static_assert(std::is_assignable<std::variant<bool>, std::true_type>::value, "");
-#endif
   static_assert(!std::is_assignable<std::variant<bool>, std::unique_ptr<char> >::value, "");
   static_assert(!std::is_assignable<std::variant<bool>, decltype(nullptr)>::value, "");
 
