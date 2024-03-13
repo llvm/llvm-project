@@ -201,6 +201,20 @@
 /// 2) and 3): The same as 2) and 3) in Emscripten SjLj.
 /// (setjmpTable/setjmpTableSize initialization + setjmp callsite
 /// transformation)
+/// functionInvocationId
+///
+/// 2) In the function entry that calls setjmp, initialize
+///    functionInvocationId as follows:
+///
+///    functionInvocationId = alloca()
+///
+/// 3) Lower
+///      setjmp(env)
+///    into
+///      __wasm_setjmp(env, label, functionInvocationId)
+///
+///    A BB with setjmp is split into two after setjmp call in order to
+///    make the post-setjmp BB the possible destination of longjmp BB.
 ///
 /// 4) Create a catchpad with a wasm.catch() intrinsic, which returns the value
 /// thrown by __wasm_longjmp function. In Emscripten library, we have this
@@ -232,12 +246,12 @@
 /// function, we jump to the beginning of the function, which contains a switch
 /// to each post-setjmp BB. Again, in Emscripten SjLj, this switch is added for
 /// every longjmpable callsite; in Wasm SjLj we do this only once at the top of
-/// the function. (after setjmpTable/setjmpTableSize initialization)
+/// the function. (after functionInvocationId initialization)
 ///
 /// The below is the pseudocode for what we have described
 ///
 /// entry:
-///   Initialize setjmpTable and setjmpTableSize
+///   Initialize functionInvocationId
 ///
 /// setjmp.dispatch:
 ///    switch %label {
@@ -260,24 +274,10 @@
 ///   %longjmp.args = wasm.catch() ;; struct __WasmLongjmpArgs
 ///   %env = load 'env' field from __WasmLongjmpArgs
 ///   %val = load 'val' field from __WasmLongjmpArgs
-///   %label = testSetjmp(mem[%env], setjmpTable, setjmpTableSize);
+///   %label = __wasm_setjmp_test(%env, functionInvocationId);
 ///   if (%label == 0)
 ///     __wasm_longjmp(%env, %val)
 ///   catchret to %setjmp.dispatch
-///
-/// * Wasm setjmp / longjmp handling (with -experimental-wasm-enable-alt-sjlj)
-///
-/// The translation is basically same as what we do for
-/// "Wasm setjmp / longjmp handling" w/o -experimental-wasm-enable-alt-sjlj.
-///
-/// The differences are:
-///
-/// - We do not use malloc'ed tables.
-///
-/// - On the entry of setjmp-calling functions, we initialize a pointer
-///   to identify the function invocation using alloc().
-///
-/// - We use simpler ABI functions with different names.
 ///
 ///===----------------------------------------------------------------------===//
 
