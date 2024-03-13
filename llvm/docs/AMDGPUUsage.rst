@@ -1312,24 +1312,73 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu_metadata:
+
 LLVM IR Metadata
-------------------
+================
 
-The AMDGPU backend implements the following LLVM IR metadata.
+The AMDGPU backend implements the following target custom LLVM IR
+metadata.
 
-.. list-table:: AMDGPU LLVM IR Metatdata
-  :name: amdgpu-llvm-ir-metadata-table
+.. _amdgpu_last_use:
 
-  * - Metadata Name
+'``amdgpu.last.use``' Metadata
+------------------------------
+
+Sets TH_LOAD_LU temporal hint on load instructions that support it.
+Takes priority over nontemporal hint (TH_LOAD_NT). This takes no
+arguments.
+
+.. code-block:: llvm
+
+  %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
+
+.. _amdgpu_no_access_location_types:
+
+'``amdgpu.no.access.location.types``' Metadata
+----------------------------------------------
+
+Asserts a memory access does not access bytes residing in certain
+allocation kinds. This is intended for use with :ref:`atomicrmw
+<i_atomicrmw>` and other atomic instructions. This is required to emit
+a native hardware instruction for some :ref:`system scope
+<amdgpu-memory-scopes>` atomic operations on some subtargets. An
+:ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
+conservatively as required to preserve the operation behavior in all
+cases.
+
+If the memory operation does access an address in an indicated region,
+any stored values and any returned results are :ref:`poison
+<poisonvalues>`. This has a single integer argument, interpreted as a
+bitfield. A 0 value is equivalent to removing the metadata.
+
+.. list-table::
+
+  * - Bit
     - Description
-    - Values
-  * - !amdgpu.last.use
-    - Sets TH_LOAD_LU temporal hint on load instructions that support it.
-      Takes priority over nontemporal hint (TH_LOAD_NT).
-    - {}
+  * - 0
+    - Not in fine-grained host memory.
+  * - 1
+    - Not in a remote connected peer device (address must be device local)
+
+.. code-block:: llvm
+
+  ; Indicates the access does not access fine-grained memory, or
+  ; remote device memory.
+  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.access.location.types !0
+
+  ; Indicates the access does not access fine-grained memory.
+  %old1 = atomicrmw sub ptr %ptr1, i32 1 acquire, !amdgpu.no.access.location.types !1
+
+  ; Indicates the access does not access peer device memory.
+  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.access.location.types !2
+
+  !0 = !{i32 3}
+  !1 = !{i32 1}
+  !2 = !{i32 2}
 
 LLVM IR Attributes
-------------------
+==================
 
 The AMDGPU backend supports the following LLVM IR attributes.
 
@@ -1451,7 +1500,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
      ======================================= ==========================================================
 
 Calling Conventions
--------------------
+===================
 
 The AMDGPU backend supports the following calling conventions:
 
