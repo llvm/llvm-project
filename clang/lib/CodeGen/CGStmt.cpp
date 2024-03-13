@@ -2698,7 +2698,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
       ArgTypes.push_back(DestAddr.getType());
       ArgElemTypes.push_back(DestAddr.getElementType());
-      Args.push_back(DestAddr.getRawPointer(*this));
+      Args.push_back(DestAddr.emitRawPointer(*this));
       Constraints += "=*";
       Constraints += OutputConstraint;
       ReadOnly = ReadNone = false;

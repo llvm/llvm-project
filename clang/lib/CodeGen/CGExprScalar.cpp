@@ -5599,7 +5599,7 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     return Builder.CreateInBoundsGEP(Addr, IdxList, elementType, Align, Name);
 
   return RawAddress(
-      EmitCheckedInBoundsGEP(Addr.getElementType(), Addr.getRawPointer(*this),
+      EmitCheckedInBoundsGEP(Addr.getElementType(), Addr.emitRawPointer(*this),
                              IdxList, SignedIndices, IsSubtraction, Loc, Name),
       elementType, Align);
 }

@@ -1263,7 +1263,7 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                           Builder.getInt64(FunctionHash),
                           Builder.getInt32(RegionMCDCState->BitmapBytes),
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
-                          MCDCCondBitmapAddr.getRawPointer(CGF)};
+                          MCDCCondBitmapAddr.emitRawPointer(CGF)};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
@@ -1314,7 +1314,7 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
                           Builder.getInt32(Branch.ID),
-                          MCDCCondBitmapAddr.getRawPointer(CGF), Val};
+                          MCDCCondBitmapAddr.emitRawPointer(CGF), Val};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),
       Args);

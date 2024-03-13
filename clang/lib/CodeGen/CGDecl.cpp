@@ -1513,7 +1513,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // variable (C++0x [class.copy]p34).
       address = ReturnValue;
       AllocaAddr =
-          RawAddress(ReturnValue.getRawPointer(*this),
+          RawAddress(ReturnValue.emitRawPointer(*this),
                      ReturnValue.getElementType(), ReturnValue.getAlignment());
       ;
 
@@ -1669,7 +1669,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   }
 
   if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
-    EmitVarAnnotations(&D, address.getRawPointer(*this));
+    EmitVarAnnotations(&D, address.emitRawPointer(*this));
 
   // Make sure we call @llvm.lifetime.end.
   if (emission.useLifetimeMarkers())
@@ -1842,12 +1842,13 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     llvm::Value *BaseSizeInChars =
         llvm::ConstantInt::get(IntPtrTy, EltSize.getQuantity());
     Address Begin = Loc.withElementType(Int8Ty);
-    llvm::Value *End = Builder.CreateInBoundsGEP(
-        Begin.getElementType(), Begin.getRawPointer(*this), SizeVal, "vla.end");
+    llvm::Value *End = Builder.CreateInBoundsGEP(Begin.getElementType(),
+                                                 Begin.emitRawPointer(*this),
+                                                 SizeVal, "vla.end");
     llvm::BasicBlock *OriginBB = Builder.GetInsertBlock();
     EmitBlock(LoopBB);
     llvm::PHINode *Cur = Builder.CreatePHI(Begin.getType(), 2, "vla.cur");
-    Cur->addIncoming(Begin.getRawPointer(*this), OriginBB);
+    Cur->addIncoming(Begin.emitRawPointer(*this), OriginBB);
     CharUnits CurAlign = Loc.getAlignment().alignmentOfArrayElement(EltSize);
     auto *I =
         Builder.CreateMemCpy(Address(Cur, Int8Ty, CurAlign),
@@ -2274,7 +2275,7 @@ void CodeGenFunction::emitDestroy(Address addr, QualType type,
     checkZeroLength = false;
   }
 
-  llvm::Value *begin = addr.getRawPointer(*this);
+  llvm::Value *begin = addr.emitRawPointer(*this);
   llvm::Value *end =
       Builder.CreateInBoundsGEP(addr.getElementType(), begin, length);
   emitArrayDestroy(begin, end, type, elementAlign, destroyer,
@@ -2546,7 +2547,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Indirect argument is in alloca address space, which may be different
     // from the default address space.
     auto AllocaAS = CGM.getASTAllocaAddressSpace();
-    auto *V = DeclPtr.getRawPointer(*this);
+    auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 
     // For truly ABI indirect arguments -- those that are not `byval` -- store
@@ -2686,7 +2687,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   }
 
   if (D.hasAttr<AnnotateAttr>())
-    EmitVarAnnotations(&D, DeclPtr.getRawPointer(*this));
+    EmitVarAnnotations(&D, DeclPtr.emitRawPointer(*this));
 
   // We can only check return value nullability if all arguments to the
   // function satisfy their nullability preconditions. This makes it necessary

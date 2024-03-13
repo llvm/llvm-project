@@ -1070,7 +1070,7 @@ public:
       QualType VarTy = LocalVD->getType();
       if (VarTy->isReferenceType()) {
         Address Temp = CGF.CreateMemTemp(VarTy);
-        CGF.Builder.CreateStore(TempAddr.getRawPointer(CGF), Temp);
+        CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
       }
       SavedTempAddresses.try_emplace(LocalVD, TempAddr);
@@ -1270,7 +1270,7 @@ public:
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
     auto store =
-        new llvm::StoreInst(value, addr.getRawPointer(CGF), &block->back());
+        new llvm::StoreInst(value, addr.emitRawPointer(CGF), &block->back());
     store->setAlignment(addr.getAlignment().getAsAlign());
   }
 
@@ -3158,7 +3158,7 @@ public:
                      llvm::Value *ArraySize = nullptr) {
     if (!sanitizePerformTypeCheck())
       return;
-    EmitTypeCheck(TCK, Loc, LV.getRawPointer(*this), Type, LV.getAlignment(),
+    EmitTypeCheck(TCK, Loc, LV.emitRawPointer(*this), Type, LV.getAlignment(),
                   SkippedChecks, ArraySize);
   }
 
@@ -3168,7 +3168,7 @@ public:
                      llvm::Value *ArraySize = nullptr) {
     if (!sanitizePerformTypeCheck())
       return;
-    EmitTypeCheck(TCK, Loc, Addr.getRawPointer(*this), Type, Alignment,
+    EmitTypeCheck(TCK, Loc, Addr.emitRawPointer(*this), Type, Alignment,
                   SkippedChecks, ArraySize);
   }
 
@@ -5165,7 +5165,7 @@ DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {
       CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
   CGF.Builder.CreateStore(value, alloca);
 
-  return saved_type(alloca.getRawPointer(CGF), true);
+  return saved_type(alloca.emitRawPointer(CGF), true);
 }
 
 inline llvm::Value *DominatingLLVMValue::restore(CodeGenFunction &CGF,

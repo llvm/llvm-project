@@ -706,7 +706,7 @@ protected:
                               llvm::Value *cmd, MessageSendInfo &MSI) override {
     CGBuilderTy &Builder = CGF.Builder;
     llvm::Value *lookupArgs[] = {
-        EnforceType(Builder, ObjCSuper.getRawPointer(CGF), PtrToObjCSuperTy),
+        EnforceType(Builder, ObjCSuper.emitRawPointer(CGF), PtrToObjCSuperTy),
         cmd};
     return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFn, lookupArgs);
   }
@@ -801,7 +801,7 @@ class CGObjCGNUstep : public CGObjCGNU {
                                 llvm::Value *cmd,
                                 MessageSendInfo &MSI) override {
       CGBuilderTy &Builder = CGF.Builder;
-      llvm::Value *lookupArgs[] = {ObjCSuper.getRawPointer(CGF), cmd};
+      llvm::Value *lookupArgs[] = {ObjCSuper.emitRawPointer(CGF), cmd};
 
       llvm::CallInst *slot =
         CGF.EmitNounwindRuntimeCall(SlotLookupSuperFn, lookupArgs);
@@ -1223,7 +1223,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // Don't access the slot unless we're trying to cache the result.
     CGBuilderTy &Builder = CGF.Builder;
     llvm::Value *lookupArgs[] = {
-        CGObjCGNU::EnforceType(Builder, ObjCSuper.getRawPointer(CGF),
+        CGObjCGNU::EnforceType(Builder, ObjCSuper.emitRawPointer(CGF),
                                PtrToObjCSuperTy),
         cmd};
     return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFn, lookupArgs);
@@ -2187,7 +2187,7 @@ protected:
                               llvm::Value *cmd, MessageSendInfo &MSI) override {
     CGBuilderTy &Builder = CGF.Builder;
     llvm::Value *lookupArgs[] = {
-        EnforceType(Builder, ObjCSuper.getRawPointer(CGF), PtrToObjCSuperTy),
+        EnforceType(Builder, ObjCSuper.emitRawPointer(CGF), PtrToObjCSuperTy),
         cmd,
     };
 
@@ -4204,14 +4204,14 @@ llvm::Value * CGObjCGNU::EmitObjCWeakRead(CodeGenFunction &CGF,
                                           Address AddrWeakObj) {
   CGBuilderTy &B = CGF.Builder;
   return B.CreateCall(
-      WeakReadFn, EnforceType(B, AddrWeakObj.getRawPointer(CGF), PtrToIdTy));
+      WeakReadFn, EnforceType(B, AddrWeakObj.emitRawPointer(CGF), PtrToIdTy));
 }
 
 void CGObjCGNU::EmitObjCWeakAssign(CodeGenFunction &CGF,
                                    llvm::Value *src, Address dst) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  llvm::Value *dstVal = EnforceType(B, dst.getRawPointer(CGF), PtrToIdTy);
+  llvm::Value *dstVal = EnforceType(B, dst.emitRawPointer(CGF), PtrToIdTy);
   B.CreateCall(WeakAssignFn, {src, dstVal});
 }
 
@@ -4220,7 +4220,7 @@ void CGObjCGNU::EmitObjCGlobalAssign(CodeGenFunction &CGF,
                                      bool threadlocal) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  llvm::Value *dstVal = EnforceType(B, dst.getRawPointer(CGF), PtrToIdTy);
+  llvm::Value *dstVal = EnforceType(B, dst.emitRawPointer(CGF), PtrToIdTy);
   // FIXME. Add threadloca assign API
   assert(!threadlocal && "EmitObjCGlobalAssign - Threal Local API NYI");
   B.CreateCall(GlobalAssignFn, {src, dstVal});
@@ -4231,7 +4231,7 @@ void CGObjCGNU::EmitObjCIvarAssign(CodeGenFunction &CGF,
                                    llvm::Value *ivarOffset) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  llvm::Value *dstVal = EnforceType(B, dst.getRawPointer(CGF), IdTy);
+  llvm::Value *dstVal = EnforceType(B, dst.emitRawPointer(CGF), IdTy);
   B.CreateCall(IvarAssignFn, {src, dstVal, ivarOffset});
 }
 
@@ -4239,7 +4239,7 @@ void CGObjCGNU::EmitObjCStrongCastAssign(CodeGenFunction &CGF,
                                          llvm::Value *src, Address dst) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  llvm::Value *dstVal = EnforceType(B, dst.getRawPointer(CGF), PtrToIdTy);
+  llvm::Value *dstVal = EnforceType(B, dst.emitRawPointer(CGF), PtrToIdTy);
   B.CreateCall(StrongCastAssignFn, {src, dstVal});
 }
 
@@ -4248,8 +4248,8 @@ void CGObjCGNU::EmitGCMemmoveCollectable(CodeGenFunction &CGF,
                                          Address SrcPtr,
                                          llvm::Value *Size) {
   CGBuilderTy &B = CGF.Builder;
-  llvm::Value *DestPtrVal = EnforceType(B, DestPtr.getRawPointer(CGF), PtrTy);
-  llvm::Value *SrcPtrVal = EnforceType(B, SrcPtr.getRawPointer(CGF), PtrTy);
+  llvm::Value *DestPtrVal = EnforceType(B, DestPtr.emitRawPointer(CGF), PtrTy);
+  llvm::Value *SrcPtrVal = EnforceType(B, SrcPtr.emitRawPointer(CGF), PtrTy);
 
   B.CreateCall(MemMoveFn, {DestPtrVal, SrcPtrVal, Size});
 }

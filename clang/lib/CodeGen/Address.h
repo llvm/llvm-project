@@ -124,7 +124,7 @@ class Address {
   /// Offset from the base pointer.
   llvm::Value *Offset = nullptr;
 
-  llvm::Value *getRawPointerSlow(CodeGenFunction &CGF) const;
+  llvm::Value *emitRawPointerSlow(CodeGenFunction &CGF) const;
 
 protected:
   Address(std::nullptr_t) : ElementType(nullptr) {}
@@ -217,7 +217,7 @@ public:
 
   /// Return the pointer contained in this class after authenticating it and
   /// adding offset to it if necessary.
-  llvm::Value *getRawPointer(CodeGenFunction &CGF) const {
+  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
     return getBasePointer();
   }
 

@@ -940,7 +940,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       if (CI.isNested())
         byrefPointer = Builder.CreateLoad(src, "byref.capture");
       else
-        byrefPointer = src.getRawPointer(*this);
+        byrefPointer = src.emitRawPointer(*this);
 
       // Write that void* into the capture field.
       Builder.CreateStore(byrefPointer, blockField);
@@ -963,7 +963,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
     // If it's a reference variable, copy the reference into the block field.
     } else if (auto refType = type->getAs<ReferenceType>()) {
-      Builder.CreateStore(src.getRawPointer(*this), blockField);
+      Builder.CreateStore(src.emitRawPointer(*this), blockField);
 
       // If type is const-qualified, copy the value into the block field.
     } else if (type.isConstQualified() &&
@@ -1498,7 +1498,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     // frame setup instruction by llvm::DwarfDebug::beginFunction().
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     Builder.CreateStore(BlockPointer, Alloca);
-    BlockPointerDbgLoc = Alloca.getRawPointer(*this);
+    BlockPointerDbgLoc = Alloca.emitRawPointer(*this);
   }
 
   // If we have a C++ 'this' reference, go ahead and force it into
@@ -1556,7 +1556,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
         if (capture.isConstant()) {
           auto addr = LocalDeclMap.find(variable)->second;
           (void)DI->EmitDeclareOfAutoVariable(
-              variable, addr.getRawPointer(*this), Builder);
+              variable, addr.emitRawPointer(*this), Builder);
           continue;
         }
 
@@ -1660,7 +1660,7 @@ struct CallBlockRelease final : EHScopeStack::Cleanup {
     if (LoadBlockVarAddr) {
       BlockVarAddr = CGF.Builder.CreateLoad(Addr);
     } else {
-      BlockVarAddr = Addr.getRawPointer(CGF);
+      BlockVarAddr = Addr.emitRawPointer(CGF);
     }
 
     CGF.BuildBlockRelease(BlockVarAddr, FieldFlags, CanThrow);
@@ -1968,7 +1968,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
     }
     case BlockCaptureEntityKind::BlockObject: {
       llvm::Value *srcValue = Builder.CreateLoad(srcField, "blockcopy.src");
-      llvm::Value *dstAddr = dstField.getRawPointer(*this);
+      llvm::Value *dstAddr = dstField.emitRawPointer(*this);
       llvm::Value *args[] = {
         dstAddr, srcValue, llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
       };
@@ -2139,7 +2139,7 @@ public:
     llvm::Value *flagsVal = llvm::ConstantInt::get(CGF.Int32Ty, flags);
     llvm::FunctionCallee fn = CGF.CGM.getBlockObjectAssign();
 
-    llvm::Value *args[] = {destField.getRawPointer(CGF), srcValue, flagsVal};
+    llvm::Value *args[] = {destField.emitRawPointer(CGF), srcValue, flagsVal};
     CGF.EmitNounwindRuntimeCall(fn, args);
   }
 
@@ -2696,7 +2696,7 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   storeHeaderField(V, getPointerSize(), "byref.isa");
 
   // Store the address of the variable into its own forwarding pointer.
-  storeHeaderField(addr.getRawPointer(*this), getPointerSize(),
+  storeHeaderField(addr.emitRawPointer(*this), getPointerSize(),
                    "byref.forwarding");
 
   // Blocks ABI:

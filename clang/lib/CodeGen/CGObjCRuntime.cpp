@@ -233,7 +233,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       llvm::Instruction *CPICandidate = Handler.Block->getFirstNonPHI();
       if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
         CGF.CurrentFuncletPad = CPI;
-        CPI->setOperand(2, CGF.getExceptionSlot().getRawPointer(CGF));
+        CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
         CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
       }
     }
@@ -405,7 +405,7 @@ bool CGObjCRuntime::canMessageReceiverBeNull(CodeGenFunction &CGF,
     auto self = curMethod->getSelfDecl();
     if (self->getType().isConstQualified()) {
       if (auto LI = dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
-        llvm::Value *selfAddr = CGF.GetAddrOfLocalVar(self).getRawPointer(CGF);
+        llvm::Value *selfAddr = CGF.GetAddrOfLocalVar(self).emitRawPointer(CGF);
         if (selfAddr == LI->getPointerOperand()) {
           return false;
         }

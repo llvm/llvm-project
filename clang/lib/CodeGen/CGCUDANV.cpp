@@ -331,11 +331,11 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
       llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
   // Store pointers to the arguments in a locally allocated launch_args.
   for (unsigned i = 0; i < Args.size(); ++i) {
-    llvm::Value *VarPtr = CGF.GetAddrOfLocalVar(Args[i]).getRawPointer(CGF);
+    llvm::Value *VarPtr = CGF.GetAddrOfLocalVar(Args[i]).emitRawPointer(CGF);
     llvm::Value *VoidVarPtr = CGF.Builder.CreatePointerCast(VarPtr, PtrTy);
     CGF.Builder.CreateDefaultAlignedStore(
         VoidVarPtr, CGF.Builder.CreateConstGEP1_32(
-                        PtrTy, KernelArgs.getRawPointer(CGF), i));
+                        PtrTy, KernelArgs.emitRawPointer(CGF), i));
   }
 
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
@@ -393,10 +393,10 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                               /*isVarArg=*/false),
       addUnderscoredPrefixToName("PopCallConfiguration"));
 
-  CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn, {GridDim.getRawPointer(CGF),
-                                                BlockDim.getRawPointer(CGF),
-                                                ShmemSize.getRawPointer(CGF),
-                                                Stream.getRawPointer(CGF)});
+  CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn, {GridDim.emitRawPointer(CGF),
+                                                BlockDim.emitRawPointer(CGF),
+                                                ShmemSize.emitRawPointer(CGF),
+                                                Stream.emitRawPointer(CGF)});
 
   // Emit the call to cudaLaunch
   llvm::Value *Kernel =
@@ -440,7 +440,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
     Offset = Offset.alignTo(TInfo.Align);
     llvm::Value *Args[] = {
         CGF.Builder.CreatePointerCast(
-            CGF.GetAddrOfLocalVar(A).getRawPointer(CGF), PtrTy),
+            CGF.GetAddrOfLocalVar(A).emitRawPointer(CGF), PtrTy),
         llvm::ConstantInt::get(SizeTy, TInfo.Width.getQuantity()),
         llvm::ConstantInt::get(SizeTy, Offset.getQuantity()),
     };

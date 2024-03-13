@@ -56,7 +56,7 @@ class CGBuilderTy : public CGBuilderBaseTy {
 
   CodeGenFunction *getCGF() const { return getInserter().CGF; }
 
-  llvm::Value *getRawPointerFromAddress(Address Addr) const {
+  llvm::Value *emitRawPointerFromAddress(Address Addr) const {
     return Addr.getBasePointer();
   }
 
@@ -67,12 +67,12 @@ class CGBuilderTy : public CGBuilderBaseTy {
     llvm::GetElementPtrInst *GEP;
     if (IsInBounds)
       GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
-          Addr.getElementType(), getRawPointerFromAddress(Addr), Idx0, Idx1,
+          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
           Name));
     else
-      GEP = cast<llvm::GetElementPtrInst>(
-          CreateConstGEP2_32(Addr.getElementType(),
-                             getRawPointerFromAddress(Addr), Idx0, Idx1, Name));
+      GEP = cast<llvm::GetElementPtrInst>(CreateConstGEP2_32(
+          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
+          Name));
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
         /*isSigned=*/true);
@@ -107,20 +107,20 @@ public:
   // take an alignment.
   llvm::LoadInst *CreateLoad(Address Addr, const llvm::Twine &Name = "") {
     return CreateAlignedLoad(Addr.getElementType(),
-                             getRawPointerFromAddress(Addr),
+                             emitRawPointerFromAddress(Addr),
                              Addr.getAlignment().getAsAlign(), Name);
   }
   llvm::LoadInst *CreateLoad(Address Addr, const char *Name) {
     // This overload is required to prevent string literals from
     // ending up in the IsVolatile overload.
     return CreateAlignedLoad(Addr.getElementType(),
-                             getRawPointerFromAddress(Addr),
+                             emitRawPointerFromAddress(Addr),
                              Addr.getAlignment().getAsAlign(), Name);
   }
   llvm::LoadInst *CreateLoad(Address Addr, bool IsVolatile,
                              const llvm::Twine &Name = "") {
     return CreateAlignedLoad(
-        Addr.getElementType(), getRawPointerFromAddress(Addr),
+        Addr.getElementType(), emitRawPointerFromAddress(Addr),
         Addr.getAlignment().getAsAlign(), IsVolatile, Name);
   }
 
@@ -135,7 +135,7 @@ public:
   // take an alignment.
   llvm::StoreInst *CreateStore(llvm::Value *Val, Address Addr,
                                bool IsVolatile = false) {
-    return CreateAlignedStore(Val, getRawPointerFromAddress(Addr),
+    return CreateAlignedStore(Val, emitRawPointerFromAddress(Addr),
                               Addr.getAlignment().getAsAlign(), IsVolatile);
   }
 
@@ -171,7 +171,7 @@ public:
                       llvm::AtomicOrdering FailureOrdering,
                       llvm::SyncScope::ID SSID = llvm::SyncScope::System) {
     return CGBuilderBaseTy::CreateAtomicCmpXchg(
-        Addr.getRawPointer(*getCGF()), Cmp, New,
+        Addr.emitRawPointer(*getCGF()), Cmp, New,
         Addr.getAlignment().getAsAlign(), SuccessOrdering, FailureOrdering,
         SSID);
   }
@@ -181,7 +181,7 @@ public:
                   llvm::AtomicOrdering Ordering,
                   llvm::SyncScope::ID SSID = llvm::SyncScope::System) {
     return CGBuilderBaseTy::CreateAtomicRMW(
-        Op, Addr.getRawPointer(*getCGF()), Val,
+        Op, Addr.emitRawPointer(*getCGF()), Val,
         Addr.getAlignment().getAsAlign(), Ordering, SSID);
   }
 
@@ -195,8 +195,8 @@ public:
                      Addr.isKnownNonNull());
     // Eagerly force a raw address if these is an offset.
     return RawAddress(
-        CreateAddrSpaceCast(Addr.getRawPointer(*getCGF()), Ty, Name), ElementTy,
-        Addr.getAlignment(), Addr.isKnownNonNull());
+        CreateAddrSpaceCast(Addr.emitRawPointer(*getCGF()), Ty, Name),
+        ElementTy, Addr.getAlignment(), Addr.isKnownNonNull());
   }
 
   using CGBuilderBaseTy::CreatePointerBitCastOrAddrSpaceCast;
@@ -296,7 +296,7 @@ public:
         CharUnits::fromQuantity(DL.getTypeAllocSize(Addr.getElementType()));
 
     return Address(
-        CreateGEP(Addr.getElementType(), Addr.getRawPointer(CGF), Index, Name),
+        CreateGEP(Addr.getElementType(), Addr.emitRawPointer(CGF), Index, Name),
         Addr.getElementType(),
         Addr.getAlignment().alignmentOfArrayElement(EltSize));
   }
@@ -336,7 +336,7 @@ public:
   Address CreateGEP(Address Addr, ArrayRef<llvm::Value *> IdxList,
                     llvm::Type *ElementType, CharUnits Align,
                     const Twine &Name = "") {
-    llvm::Value *Ptr = getRawPointerFromAddress(Addr);
+    llvm::Value *Ptr = emitRawPointerFromAddress(Addr);
     return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name),
                       ElementType, Align);
   }
@@ -346,8 +346,8 @@ public:
                             llvm::Type *ElementType, CharUnits Align,
                             const Twine &Name = "") {
     return RawAddress(CreateInBoundsGEP(Addr.getElementType(),
-                                        getRawPointerFromAddress(Addr), IdxList,
-                                        Name),
+                                        emitRawPointerFromAddress(Addr),
+                                        IdxList, Name),
                       ElementType, Align, Addr.isKnownNonNull());
   }
 
@@ -363,23 +363,23 @@ public:
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {
-    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
-    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    llvm::Value *DestPtr = emitRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = emitRawPointerFromAddress(Src);
     return CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                         Src.getAlignment().getAsAlign(), Size, IsVolatile);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
-    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
-    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    llvm::Value *DestPtr = emitRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = emitRawPointerFromAddress(Src);
     return CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                         Src.getAlignment().getAsAlign(), Size, IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemCpyInline;
   llvm::CallInst *CreateMemCpyInline(Address Dest, Address Src, uint64_t Size) {
-    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
-    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    llvm::Value *DestPtr = emitRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = emitRawPointerFromAddress(Src);
     return CreateMemCpyInline(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                               Src.getAlignment().getAsAlign(), getInt64(Size));
   }
@@ -387,8 +387,8 @@ public:
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
-    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
-    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    llvm::Value *DestPtr = emitRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = emitRawPointerFromAddress(Src);
     return CreateMemMove(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                          Src.getAlignment().getAsAlign(), Size, IsVolatile);
   }
@@ -396,14 +396,14 @@ public:
   using CGBuilderBaseTy::CreateMemSet;
   llvm::CallInst *CreateMemSet(Address Dest, llvm::Value *Value,
                                llvm::Value *Size, bool IsVolatile = false) {
-    return CreateMemSet(getRawPointerFromAddress(Dest), Value, Size,
+    return CreateMemSet(emitRawPointerFromAddress(Dest), Value, Size,
                         Dest.getAlignment().getAsAlign(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemSetInline;
   llvm::CallInst *CreateMemSetInline(Address Dest, llvm::Value *Value,
                                      uint64_t Size) {
-    return CreateMemSetInline(getRawPointerFromAddress(Dest),
+    return CreateMemSetInline(emitRawPointerFromAddress(Dest),
                               Dest.getAlignment().getAsAlign(), Value,
                               getInt64(Size));
   }
@@ -418,7 +418,7 @@ public:
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
     return Address(
-        CreatePreserveStructAccessIndex(ElTy, getRawPointerFromAddress(Addr),
+        CreatePreserveStructAccessIndex(ElTy, emitRawPointerFromAddress(Addr),
                                         Index, FieldIndex, DbgInfo),
         ElTy->getElementType(Index),
         Addr.getAlignment().alignmentAtOffset(Offset));

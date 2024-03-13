@@ -933,7 +933,7 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
   }
 
   CodeGenFunction::AutoVarEmission var = CGF.EmitAutoVarAlloca(*CatchParam);
-  CPI->setArgOperand(2, var.getObjectAddress(CGF).getRawPointer(CGF));
+  CPI->setArgOperand(2, var.getObjectAddress(CGF).emitRawPointer(CGF));
   CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
   CGF.EmitAutoVarCleanups(var);
 }
@@ -970,7 +970,7 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
   llvm::Value *Offset =
     GetVirtualBaseClassOffset(CGF, Value, SrcDecl, PolymorphicBase);
   llvm::Value *Ptr = CGF.Builder.CreateInBoundsGEP(
-      Value.getElementType(), Value.getRawPointer(CGF), Offset);
+      Value.getElementType(), Value.emitRawPointer(CGF), Offset);
   CharUnits VBaseAlign =
     CGF.CGM.getVBaseAlignment(Value.getAlignment(), SrcDecl, PolymorphicBase);
   return std::make_tuple(Address(Ptr, CGF.Int8Ty, VBaseAlign), Offset,
@@ -1007,7 +1007,7 @@ llvm::Value *MicrosoftCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                          llvm::Type *StdTypeInfoPtrTy) {
   std::tie(ThisPtr, std::ignore, std::ignore) =
       performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
-  llvm::CallBase *Typeid = emitRTtypeidCall(CGF, ThisPtr.getRawPointer(CGF));
+  llvm::CallBase *Typeid = emitRTtypeidCall(CGF, ThisPtr.emitRawPointer(CGF));
   return CGF.Builder.CreateBitCast(Typeid, StdTypeInfoPtrTy);
 }
 
@@ -1029,7 +1029,7 @@ llvm::Value *MicrosoftCXXABI::emitDynamicCastCall(
   llvm::Value *Offset;
   std::tie(This, Offset, std::ignore) =
       performBaseAdjustment(CGF, This, SrcRecordTy);
-  llvm::Value *ThisPtr = This.getRawPointer(CGF);
+  llvm::Value *ThisPtr = This.emitRawPointer(CGF);
   Offset = CGF.Builder.CreateTrunc(Offset, CGF.Int32Ty);
 
   // PVOID __RTDynamicCast(
@@ -1061,7 +1061,7 @@ llvm::Value *MicrosoftCXXABI::emitDynamicCastToVoid(CodeGenFunction &CGF,
   llvm::FunctionCallee Function = CGF.CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(CGF.Int8PtrTy, ArgTypes, false),
       "__RTCastToVoid");
-  llvm::Value *Args[] = {Value.getRawPointer(CGF)};
+  llvm::Value *Args[] = {Value.emitRawPointer(CGF)};
   return CGF.EmitRuntimeCall(Function, Args);
 }
 
@@ -1489,7 +1489,7 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
     llvm::Value *VBaseOffset =
       GetVirtualBaseClassOffset(CGF, Result, Derived, VBase);
     llvm::Value *VBasePtr = CGF.Builder.CreateInBoundsGEP(
-        Result.getElementType(), Result.getRawPointer(CGF), VBaseOffset);
+        Result.getElementType(), Result.emitRawPointer(CGF), VBaseOffset);
     CharUnits VBaseAlign =
       CGF.CGM.getVBaseAlignment(Result.getAlignment(), Derived, VBase);
     Result = Address(VBasePtr, CGF.Int8Ty, VBaseAlign);
@@ -2004,7 +2004,7 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
 
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
   RValue RV =
-      CGF.EmitCXXDestructorCall(GD, Callee, This.getRawPointer(CGF), ThisTy,
+      CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
                                 ImplicitParam, Context.IntTy, CE);
   return RV.getScalarVal();
 }
@@ -2203,13 +2203,13 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
                                                     Address This,
                                                     const ThisAdjustment &TA) {
   if (TA.isEmpty())
-    return This.getRawPointer(CGF);
+    return This.emitRawPointer(CGF);
 
   This = This.withElementType(CGF.Int8Ty);
 
   llvm::Value *V;
   if (TA.Virtual.isEmpty()) {
-    V = This.getRawPointer(CGF);
+    V = This.emitRawPointer(CGF);
   } else {
     assert(TA.Virtual.Microsoft.VtordispOffset < 0);
     // Adjust the this argument based on the vtordisp value.
@@ -2218,7 +2218,7 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
                  CharUnits::fromQuantity(TA.Virtual.Microsoft.VtordispOffset));
     VtorDispPtr = VtorDispPtr.withElementType(CGF.Int32Ty);
     llvm::Value *VtorDisp = CGF.Builder.CreateLoad(VtorDispPtr, "vtordisp");
-    V = CGF.Builder.CreateGEP(This.getElementType(), This.getRawPointer(CGF),
+    V = CGF.Builder.CreateGEP(This.getElementType(), This.emitRawPointer(CGF),
                               CGF.Builder.CreateNeg(VtorDisp));
 
     // Unfortunately, having applied the vtordisp means that we no
@@ -2255,11 +2255,11 @@ llvm::Value *
 MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
                                          const ReturnAdjustment &RA) {
   if (RA.isEmpty())
-    return Ret.getRawPointer(CGF);
+    return Ret.emitRawPointer(CGF);
 
   Ret = Ret.withElementType(CGF.Int8Ty);
 
-  llvm::Value *V = Ret.getRawPointer(CGF);
+  llvm::Value *V = Ret.emitRawPointer(CGF);
   if (RA.Virtual.Microsoft.VBIndex) {
     assert(RA.Virtual.Microsoft.VBIndex > 0);
     int32_t IntSize = CGF.getIntSize().getQuantity();
@@ -3115,7 +3115,7 @@ MicrosoftCXXABI::GetVBaseOffsetFromVBPtr(CodeGenFunction &CGF,
   CGBuilderTy &Builder = CGF.Builder;
   // Load the vbtable pointer from the vbptr in the instance.
   llvm::Value *VBPtr = Builder.CreateInBoundsGEP(
-      CGM.Int8Ty, This.getRawPointer(CGF), VBPtrOffset, "vbptr");
+      CGM.Int8Ty, This.emitRawPointer(CGF), VBPtrOffset, "vbptr");
   if (VBPtrOut)
     *VBPtrOut = VBPtr;
 
@@ -3194,7 +3194,7 @@ llvm::Value *MicrosoftCXXABI::AdjustVirtualBase(
     Builder.CreateBr(SkipAdjustBB);
     CGF.EmitBlock(SkipAdjustBB);
     llvm::PHINode *Phi = Builder.CreatePHI(CGM.Int8PtrTy, 2, "memptr.base");
-    Phi->addIncoming(Base.getRawPointer(CGF), OriginalBB);
+    Phi->addIncoming(Base.emitRawPointer(CGF), OriginalBB);
     Phi->addIncoming(AdjustedBase, VBaseAdjustBB);
     return Phi;
   }
@@ -3229,7 +3229,7 @@ llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     Addr = AdjustVirtualBase(CGF, E, RD, Base, VirtualBaseAdjustmentOffset,
                              VBPtrOffset);
   } else {
-    Addr = Base.getRawPointer(CGF);
+    Addr = Base.emitRawPointer(CGF);
   }
 
   // Apply the offset, which we assume is non-null.
@@ -3517,7 +3517,7 @@ CGCallee MicrosoftCXXABI::EmitLoadOfMemberFunctionPointer(
     ThisPtrForCall = AdjustVirtualBase(CGF, E, RD, This,
                                    VirtualBaseAdjustmentOffset, VBPtrOffset);
   } else {
-    ThisPtrForCall = This.getRawPointer(CGF);
+    ThisPtrForCall = This.emitRawPointer(CGF);
   }
 
   if (NonVirtualBaseAdjustment)
@@ -4436,7 +4436,7 @@ void MicrosoftCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
   llvm::GlobalVariable *TI = getThrowInfo(ThrowType);
 
   // Call into the runtime to throw the exception.
-  llvm::Value *Args[] = {AI.getRawPointer(CGF), TI};
+  llvm::Value *Args[] = {AI.emitRawPointer(CGF), TI};
   CGF.EmitNoreturnRuntimeCallOrInvoke(getThrowFn(), Args);
 }
 

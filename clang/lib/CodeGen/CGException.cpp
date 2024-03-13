@@ -397,7 +397,7 @@ namespace {
 void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
   // Make sure the exception object is cleaned up if there's an
   // exception during initialization.
-  pushFullExprCleanup<FreeException>(EHCleanup, addr.getRawPointer(*this));
+  pushFullExprCleanup<FreeException>(EHCleanup, addr.emitRawPointer(*this));
   EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
 
   // __cxa_allocate_exception returns a void*;  we need to cast this
@@ -417,7 +417,7 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
 
   // Deactivate the cleanup block.
   DeactivateCleanupBlock(
-      cleanup, cast<llvm::Instruction>(typedAddr.getRawPointer(*this)));
+      cleanup, cast<llvm::Instruction>(typedAddr.emitRawPointer(*this)));
 }
 
 Address CodeGenFunction::getExceptionSlot() {
@@ -1853,7 +1853,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
     // Just clone the existing localrecover call, but tweak the FP argument to
     // use our FP value. All other arguments are constants.
     auto *ParentRecover = cast<llvm::IntrinsicInst>(
-        ParentVar.getRawPointer(*this)->stripPointerCasts());
+        ParentVar.emitRawPointer(*this)->stripPointerCasts());
     assert(ParentRecover->getIntrinsicID() == llvm::Intrinsic::localrecover &&
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
@@ -1988,7 +1988,8 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         LValue ThisFieldLValue =
             EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
-          CXXThisValue = ThisFieldLValue.getAddress(*this).getRawPointer(*this);
+          CXXThisValue =
+              ThisFieldLValue.getAddress(*this).emitRawPointer(*this);
         } else {
           CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
                              .getScalarVal();

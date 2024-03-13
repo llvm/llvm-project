@@ -1324,8 +1324,8 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   RawAddress Tmp =
       CreateTempAllocaForCoercion(CGF, Ty, Src.getAlignment(), Src.getName());
   CGF.Builder.CreateMemCpy(
-      Tmp.getPointer(), Tmp.getAlignment().getAsAlign(), Src.getRawPointer(CGF),
-      Src.getAlignment().getAsAlign(),
+      Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
+      Src.emitRawPointer(CGF), Src.getAlignment().getAsAlign(),
       llvm::ConstantInt::get(CGF.IntPtrTy, SrcSize.getKnownMinValue()));
   return CGF.Builder.CreateLoad(Tmp);
 }
@@ -1413,7 +1413,7 @@ static void CreateCoercedStore(llvm::Value *Src,
         CreateTempAllocaForCoercion(CGF, SrcTy, Dst.getAlignment());
     CGF.Builder.CreateStore(Src, Tmp);
     CGF.Builder.CreateMemCpy(
-        Dst.getRawPointer(CGF), Dst.getAlignment().getAsAlign(),
+        Dst.emitRawPointer(CGF), Dst.getAlignment().getAsAlign(),
         Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
         llvm::ConstantInt::get(CGF.IntPtrTy, DstSize.getFixedValue()));
   }
@@ -3034,7 +3034,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           CharUnits Size = getContext().getTypeSizeInChars(Ty);
           Builder.CreateMemCpy(
               AlignedTemp.getPointer(), AlignedTemp.getAlignment().getAsAlign(),
-              ParamAddr.getRawPointer(*this),
+              ParamAddr.emitRawPointer(*this),
               ParamAddr.getAlignment().getAsAlign(),
               llvm::ConstantInt::get(IntPtrTy, Size.getQuantity()));
           ParamAddr = AlignedTemp;
@@ -4275,13 +4275,13 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   bool provablyNonNull = isProvablyNonNull(srcAddr, CGF);
 
   if (provablyNonNull) {
-    finalArgument = temp.getRawPointer(CGF);
+    finalArgument = temp.emitRawPointer(CGF);
   } else {
     llvm::Value *isNull = CGF.Builder.CreateIsNull(srcAddr, "icr.isnull");
 
     finalArgument = CGF.Builder.CreateSelect(
         isNull, llvm::ConstantPointerNull::get(destType),
-        temp.getRawPointer(CGF), "icr.argument");
+        temp.emitRawPointer(CGF), "icr.argument");
 
     // If we need to copy, then the load has to be conditional, which
     // means we need control flow.
@@ -4765,7 +4765,7 @@ CodeGenFunction::EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                          const llvm::Twine &name) {
   SmallVector<llvm::Value *, 3> values;
   for (auto arg : args)
-    values.push_back(arg.getRawPointer(*this));
+    values.push_back(arg.emitRawPointer(*this));
   return EmitNounwindRuntimeCall(callee, values, name);
 }
 
@@ -5207,7 +5207,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         bool NeedCopy = false;
         if (Addr.getAlignment() < Align &&
-            llvm::getOrEnforceKnownAlignment(Addr.getRawPointer(*this),
+            llvm::getOrEnforceKnownAlignment(Addr.emitRawPointer(*this),
                                              Align.getAsAlign(),
                                              *TD) < Align.getAsAlign()) {
           NeedCopy = true;

@@ -139,7 +139,7 @@ namespace {
     const LValue &getAtomicLValue() const { return LVal; }
     llvm::Value *getAtomicPointer() const {
       if (LVal.isSimple())
-        return LVal.getRawPointer(CGF);
+        return LVal.emitRawPointer(CGF);
       else if (LVal.isBitField())
         return LVal.getRawBitFieldPointer(CGF);
       else if (LVal.isVectorElt())
@@ -368,7 +368,7 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
     return false;
 
   CGF.Builder.CreateMemSet(
-      addr.getRawPointer(CGF), llvm::ConstantInt::get(CGF.Int8Ty, 0),
+      addr.emitRawPointer(CGF), llvm::ConstantInt::get(CGF.Int8Ty, 0),
       CGF.getContext().toCharUnitsFromBits(AtomicSizeInBits).getQuantity(),
       LVal.getAlignment().getAsAlign());
   return true;
@@ -1056,7 +1056,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
           *this, V, AS, LangAS::opencl_generic, DestType, false);
     };
 
-    Args.add(RValue::get(CastToGenericAddrSpace(Ptr.getRawPointer(*this),
+    Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(*this),
                                                 E->getPtr()->getType())),
              getContext().VoidPtrTy);
 
@@ -1087,10 +1087,10 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       LibCallName = "__atomic_compare_exchange";
       RetTy = getContext().BoolTy;
       HaveRetTy = true;
-      Args.add(RValue::get(CastToGenericAddrSpace(Val1.getRawPointer(*this),
+      Args.add(RValue::get(CastToGenericAddrSpace(Val1.emitRawPointer(*this),
                                                   E->getVal1()->getType())),
                getContext().VoidPtrTy);
-      Args.add(RValue::get(CastToGenericAddrSpace(Val2.getRawPointer(*this),
+      Args.add(RValue::get(CastToGenericAddrSpace(Val2.emitRawPointer(*this),
                                                   E->getVal2()->getType())),
                getContext().VoidPtrTy);
       Args.add(RValue::get(Order), getContext().IntTy);
@@ -1106,7 +1106,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__scoped_atomic_exchange:
     case AtomicExpr::AO__scoped_atomic_exchange_n:
       LibCallName = "__atomic_exchange";
-      Args.add(RValue::get(CastToGenericAddrSpace(Val1.getRawPointer(*this),
+      Args.add(RValue::get(CastToGenericAddrSpace(Val1.emitRawPointer(*this),
                                                   E->getVal1()->getType())),
                getContext().VoidPtrTy);
       break;
@@ -1121,7 +1121,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       LibCallName = "__atomic_store";
       RetTy = getContext().VoidTy;
       HaveRetTy = true;
-      Args.add(RValue::get(CastToGenericAddrSpace(Val1.getRawPointer(*this),
+      Args.add(RValue::get(CastToGenericAddrSpace(Val1.emitRawPointer(*this),
                                                   E->getVal1()->getType())),
                getContext().VoidPtrTy);
       break;
@@ -1200,9 +1200,9 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     if (!HaveRetTy) {
       // Value is returned through parameter before the order.
       RetTy = getContext().VoidTy;
-      Args.add(
-          RValue::get(CastToGenericAddrSpace(Dest.getRawPointer(*this), RetTy)),
-          getContext().VoidPtrTy);
+      Args.add(RValue::get(
+                   CastToGenericAddrSpace(Dest.emitRawPointer(*this), RetTy)),
+               getContext().VoidPtrTy);
     }
     // Order is always the last parameter.
     Args.add(RValue::get(Order),
@@ -1515,7 +1515,7 @@ RValue AtomicInfo::EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
     } else
       TempAddr = CreateTempAlloca();
 
-    EmitAtomicLoadLibcall(TempAddr.getRawPointer(CGF), AO, IsVolatile);
+    EmitAtomicLoadLibcall(TempAddr.emitRawPointer(CGF), AO, IsVolatile);
 
     // Okay, turn that back into the original value or whole atomic (for
     // non-simple lvalues) type.
@@ -1675,8 +1675,8 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
   if (shouldUseLibcall()) {
     // Produce a source address.
     Address ExpectedAddr = materializeRValue(Expected);
-    llvm::Value *ExpectedPtr = ExpectedAddr.getRawPointer(CGF);
-    llvm::Value *DesiredPtr = materializeRValue(Desired).getRawPointer(CGF);
+    llvm::Value *ExpectedPtr = ExpectedAddr.emitRawPointer(CGF);
+    llvm::Value *DesiredPtr = materializeRValue(Desired).emitRawPointer(CGF);
     auto *Res = EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr,
                                                  Success, Failure);
     return std::make_pair(
@@ -1759,7 +1759,7 @@ void AtomicInfo::EmitAtomicUpdateLibcall(
 
   Address ExpectedAddr = CreateTempAlloca();
 
-  EmitAtomicLoadLibcall(ExpectedAddr.getRawPointer(CGF), AO, IsVolatile);
+  EmitAtomicLoadLibcall(ExpectedAddr.emitRawPointer(CGF), AO, IsVolatile);
   auto *ContBB = CGF.createBasicBlock("atomic_cont");
   auto *ExitBB = CGF.createBasicBlock("atomic_exit");
   CGF.EmitBlock(ContBB);
@@ -1773,8 +1773,8 @@ void AtomicInfo::EmitAtomicUpdateLibcall(
                                            AggValueSlot::ignored(),
                                            SourceLocation(), /*AsValue=*/false);
   EmitAtomicUpdateValue(CGF, *this, OldRVal, UpdateOp, DesiredAddr);
-  llvm::Value *ExpectedPtr = ExpectedAddr.getRawPointer(CGF);
-  llvm::Value *DesiredPtr = DesiredAddr.getRawPointer(CGF);
+  llvm::Value *ExpectedPtr = ExpectedAddr.emitRawPointer(CGF);
+  llvm::Value *DesiredPtr = DesiredAddr.emitRawPointer(CGF);
   auto *Res =
       EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr, AO, Failure);
   CGF.Builder.CreateCondBr(Res, ExitBB, ContBB);
@@ -1845,7 +1845,7 @@ void AtomicInfo::EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO,
 
   Address ExpectedAddr = CreateTempAlloca();
 
-  EmitAtomicLoadLibcall(ExpectedAddr.getRawPointer(CGF), AO, IsVolatile);
+  EmitAtomicLoadLibcall(ExpectedAddr.emitRawPointer(CGF), AO, IsVolatile);
   auto *ContBB = CGF.createBasicBlock("atomic_cont");
   auto *ExitBB = CGF.createBasicBlock("atomic_exit");
   CGF.EmitBlock(ContBB);
@@ -1856,8 +1856,8 @@ void AtomicInfo::EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO,
     CGF.Builder.CreateStore(OldVal, DesiredAddr);
   }
   EmitAtomicUpdateValue(CGF, *this, UpdateRVal, DesiredAddr);
-  llvm::Value *ExpectedPtr = ExpectedAddr.getRawPointer(CGF);
-  llvm::Value *DesiredPtr = DesiredAddr.getRawPointer(CGF);
+  llvm::Value *ExpectedPtr = ExpectedAddr.emitRawPointer(CGF);
+  llvm::Value *DesiredPtr = DesiredAddr.emitRawPointer(CGF);
   auto *Res =
       EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr, AO, Failure);
   CGF.Builder.CreateCondBr(Res, ExitBB, ContBB);
@@ -1959,7 +1959,7 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
       args.add(RValue::get(atomics.getAtomicSizeValue()),
                getContext().getSizeType());
       args.add(RValue::get(atomics.getAtomicPointer()), getContext().VoidPtrTy);
-      args.add(RValue::get(srcAddr.getRawPointer(*this)),
+      args.add(RValue::get(srcAddr.emitRawPointer(*this)),
                getContext().VoidPtrTy);
       args.add(
           RValue::get(llvm::ConstantInt::get(IntTy, (int)llvm::toCABI(AO))),

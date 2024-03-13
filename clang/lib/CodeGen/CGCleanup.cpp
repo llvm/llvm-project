@@ -295,14 +295,14 @@ void EHScopeStack::Cleanup::anchor() {}
 static void createStoreInstBefore(llvm::Value *value, Address addr,
                                   llvm::Instruction *beforeInst,
                                   CodeGenFunction &CGF) {
-  auto store = new llvm::StoreInst(value, addr.getRawPointer(CGF), beforeInst);
+  auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF), beforeInst);
   store->setAlignment(addr.getAlignment().getAsAlign());
 }
 
 static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
                                             llvm::Instruction *beforeInst,
                                             CodeGenFunction &CGF) {
-  return new llvm::LoadInst(addr.getElementType(), addr.getRawPointer(CGF),
+  return new llvm::LoadInst(addr.getElementType(), addr.emitRawPointer(CGF),
                             name, false, addr.getAlignment().getAsAlign(),
                             beforeInst);
 }

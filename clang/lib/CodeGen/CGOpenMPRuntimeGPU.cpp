@@ -1216,7 +1216,7 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   if (IsBareKernel)
     OutlinedFnArgs.push_back(llvm::ConstantPointerNull::get(CGM.VoidPtrTy));
   else
-    OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getRawPointer(CGF));
+    OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).emitRawPointer(CGF));
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
@@ -1290,7 +1290,7 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
         llvm::ConstantInt::get(CGF.Int32Ty, -1),
         FnPtr,
         ID,
-        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.getRawPointer(CGF),
+        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
                                    CGF.VoidPtrPtrTy),
         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
@@ -1504,15 +1504,15 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
       CGF.EmitBlock(PreCondBB);
       llvm::PHINode *PhiSrc =
           Bld.CreatePHI(Ptr.getType(), /*NumReservedValues=*/2);
-      PhiSrc->addIncoming(Ptr.getRawPointer(CGF), CurrentBB);
+      PhiSrc->addIncoming(Ptr.emitRawPointer(CGF), CurrentBB);
       llvm::PHINode *PhiDest =
           Bld.CreatePHI(ElemPtr.getType(), /*NumReservedValues=*/2);
-      PhiDest->addIncoming(ElemPtr.getRawPointer(CGF), CurrentBB);
+      PhiDest->addIncoming(ElemPtr.emitRawPointer(CGF), CurrentBB);
       Ptr = Address(PhiSrc, Ptr.getElementType(), Ptr.getAlignment());
       ElemPtr =
           Address(PhiDest, ElemPtr.getElementType(), ElemPtr.getAlignment());
-      llvm::Value *PtrEndRaw = PtrEnd.getRawPointer(CGF);
-      llvm::Value *PtrRaw = Ptr.getRawPointer(CGF);
+      llvm::Value *PtrEndRaw = PtrEnd.emitRawPointer(CGF);
+      llvm::Value *PtrRaw = Ptr.emitRawPointer(CGF);
       llvm::Value *PtrDiff = Bld.CreatePtrDiff(
           CGF.Int8Ty, PtrEndRaw,
           Bld.CreatePointerBitCastOrAddrSpaceCast(PtrRaw, CGF.VoidPtrTy));
@@ -1530,8 +1530,8 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
                             TBAAAccessInfo());
       Address LocalPtr = Bld.CreateConstGEP(Ptr, 1);
       Address LocalElemPtr = Bld.CreateConstGEP(ElemPtr, 1);
-      PhiSrc->addIncoming(LocalPtr.getRawPointer(CGF), ThenBB);
-      PhiDest->addIncoming(LocalElemPtr.getRawPointer(CGF), ThenBB);
+      PhiSrc->addIncoming(LocalPtr.emitRawPointer(CGF), ThenBB);
+      PhiDest->addIncoming(LocalElemPtr.emitRawPointer(CGF), ThenBB);
       CGF.EmitBranch(PreCondBB);
       CGF.EmitBlock(ExitBB);
     } else {
@@ -1680,7 +1680,7 @@ static void emitReductionListCopy(
     if (UpdateDestListPtr) {
       CGF.EmitStoreOfScalar(
           Bld.CreatePointerBitCastOrAddrSpaceCast(
-              DestElementAddr.getRawPointer(CGF), CGF.VoidPtrTy),
+              DestElementAddr.emitRawPointer(CGF), CGF.VoidPtrTy),
           DestElementPtrAddr, /*Volatile=*/false, C.VoidPtrTy);
     }
 
@@ -2107,9 +2107,9 @@ static llvm::Function *emitShuffleAndReduceFunction(
   CGF.EmitBlock(ThenBB);
   // reduce_function(LocalReduceList, RemoteReduceList)
   llvm::Value *LocalReduceListPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-      LocalReduceList.getRawPointer(CGF), CGF.VoidPtrTy);
+      LocalReduceList.emitRawPointer(CGF), CGF.VoidPtrTy);
   llvm::Value *RemoteReduceListPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-      RemoteReduceList.getRawPointer(CGF), CGF.VoidPtrTy);
+      RemoteReduceList.emitRawPointer(CGF), CGF.VoidPtrTy);
   CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
       CGF, Loc, ReduceFn, {LocalReduceListPtr, RemoteReduceListPtr});
   Bld.CreateBr(MergeBB);
@@ -2222,7 +2222,7 @@ static llvm::Value *emitListToGlobalCopyFunction(
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    GlobLVal.setAddress(Address(GlobAddr.getRawPointer(CGF),
+    GlobLVal.setAddress(Address(GlobAddr.emitRawPointer(CGF),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
@@ -2323,8 +2323,8 @@ static llvm::Value *emitListToGlobalReduceFunction(
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    CGF.EmitStoreOfScalar(GlobAddr.getRawPointer(CGF), Elem, /*Volatile=*/false,
-                          C.VoidPtrTy);
+    CGF.EmitStoreOfScalar(GlobAddr.emitRawPointer(CGF), Elem,
+                          /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
@@ -2429,7 +2429,7 @@ static llvm::Value *emitGlobalToListCopyFunction(
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    GlobLVal.setAddress(Address(GlobAddr.getRawPointer(CGF),
+    GlobLVal.setAddress(Address(GlobAddr.emitRawPointer(CGF),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
@@ -2530,8 +2530,8 @@ static llvm::Value *emitGlobalToListReduceFunction(
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    CGF.EmitStoreOfScalar(GlobAddr.getRawPointer(CGF), Elem, /*Volatile=*/false,
-                          C.VoidPtrTy);
+    CGF.EmitStoreOfScalar(GlobAddr.emitRawPointer(CGF), Elem,
+                          /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
@@ -2547,7 +2547,7 @@ static llvm::Value *emitGlobalToListReduceFunction(
   }
 
   // Call reduce_function(ReduceList, GlobalReduceList)
-  llvm::Value *GlobalReduceList = ReductionList.getRawPointer(CGF);
+  llvm::Value *GlobalReduceList = ReductionList.emitRawPointer(CGF);
   Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
   llvm::Value *ReducedPtr = CGF.EmitLoadOfScalar(
       AddrReduceListArg, /*Volatile=*/false, C.VoidPtrTy, Loc);
@@ -2878,7 +2878,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
   }
 
   llvm::Value *RL = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReductionList.getRawPointer(CGF), CGF.VoidPtrTy);
+      ReductionList.emitRawPointer(CGF), CGF.VoidPtrTy);
   llvm::Function *ReductionFn = emitReductionFunction(
       CGF.CurFn->getName(), Loc, CGF.ConvertTypeForMem(ReductionArrayTy),
       Privates, LHSExprs, RHSExprs, ReductionOps);
@@ -3108,8 +3108,8 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   // Get the array of arguments.
   SmallVector<llvm::Value *, 8> Args;
 
-  Args.emplace_back(CGF.GetAddrOfLocalVar(&WrapperArg).getRawPointer(CGF));
-  Args.emplace_back(ZeroAddr.getRawPointer(CGF));
+  Args.emplace_back(CGF.GetAddrOfLocalVar(&WrapperArg).emitRawPointer(CGF));
+  Args.emplace_back(ZeroAddr.emitRawPointer(CGF));
 
   CGBuilderTy &Bld = CGF.Builder;
   auto CI = CS.capture_begin();
@@ -3402,7 +3402,7 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
         VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
                                                VD->getType().getCanonicalType())
                      .getAddress(CGF);
-      CGF.EmitStoreOfScalar(VDAddr.getRawPointer(CGF), VarLVal);
+      CGF.EmitStoreOfScalar(VDAddr.emitRawPointer(CGF), VarLVal);
     }
   }
 }

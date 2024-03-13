@@ -361,7 +361,7 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
     } else {
       CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(
           GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete));
-      CleanupArg = cast<llvm::Constant>(ReferenceTemporary.getRawPointer(CGF));
+      CleanupArg = cast<llvm::Constant>(ReferenceTemporary.emitRawPointer(CGF));
     }
     CGF.CGM.getCXXABI().registerGlobalDtor(
         CGF, *cast<VarDecl>(M->getExtendingDecl()), CleanupFn, CleanupArg);
@@ -1113,12 +1113,12 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
   } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
     LValue LV = EmitMemberExpr(ME);
     Address Addr = LV.getAddress(*this);
-    Res = Addr.getRawPointer(*this);
+    Res = Addr.emitRawPointer(*this);
   } else if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
-    Res = Addr.getRawPointer(*this);
+    Res = Addr.emitRawPointer(*this);
   } else {
     return nullptr;
   }
@@ -2451,9 +2451,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       assert(Dst.getBaseIvarExp() && "BaseIvarExp is NULL");
       llvm::Type *ResultType = IntPtrTy;
       Address dst = EmitPointerWithAlignment(Dst.getBaseIvarExp());
-      llvm::Value *RHS = dst.getRawPointer(*this);
+      llvm::Value *RHS = dst.emitRawPointer(*this);
       RHS = Builder.CreatePtrToInt(RHS, ResultType, "sub.ptr.rhs.cast");
-      llvm::Value *LHS = Builder.CreatePtrToInt(LvalueDst.getRawPointer(*this),
+      llvm::Value *LHS = Builder.CreatePtrToInt(LvalueDst.emitRawPointer(*this),
                                                 ResultType, "sub.ptr.lhs.cast");
       llvm::Value *BytesBetween = Builder.CreateSub(LHS, RHS, "ivar.offset");
       CGM.getObjCRuntime().EmitObjCIvarAssign(*this, src, dst, BytesBetween);
@@ -3036,7 +3036,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
             EmitCapturedFieldLValue(*this, CapturedStmtInfo->lookup(VD),
                                     CapturedStmtInfo->getContextValue());
         Address LValueAddress = CapLVal.getAddress(*this);
-        CapLVal = MakeAddrLValue(Address(LValueAddress.getRawPointer(*this),
+        CapLVal = MakeAddrLValue(Address(LValueAddress.emitRawPointer(*this),
                                          LValueAddress.getElementType(),
                                          getContext().getDeclAlign(VD)),
                                  CapLVal.getType(),
@@ -3984,7 +3984,7 @@ static Address wrapWithBPFPreserveStaticOffset(CodeGenFunction &CGF,
 
   llvm::Function *Fn =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::preserve_static_offset);
-  llvm::CallInst *Call = CGF.Builder.CreateCall(Fn, {Addr.getRawPointer(CGF)});
+  llvm::CallInst *Call = CGF.Builder.CreateCall(Fn, {Addr.emitRawPointer(CGF)});
   return Address(Call, Addr.getElementType(), Addr.getAlignment());
 }
 
@@ -4067,8 +4067,8 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
     if (arrayType)
       DbgInfo = CGF.getDebugInfo()->getOrCreateStandaloneType(*arrayType, loc);
     eltPtr = CGF.Builder.CreatePreserveArrayAccessIndex(
-        addr.getElementType(), addr.getRawPointer(CGF), indices.size() - 1, idx,
-        DbgInfo);
+        addr.getElementType(), addr.emitRawPointer(CGF), indices.size() - 1,
+        idx, DbgInfo);
   }
 
   return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
@@ -4237,7 +4237,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     CharUnits EltAlign =
       getArrayElementAlign(Addr.getAlignment(), Idx, InterfaceSize);
     llvm::Value *EltPtr =
-        emitArraySubscriptGEP(*this, Int8Ty, Addr.getRawPointer(*this),
+        emitArraySubscriptGEP(*this, Int8Ty, Addr.emitRawPointer(*this),
                               ScaledIdx, false, SignedIndices, E->getExprLoc());
     Addr = Address(EltPtr, OrigBaseElemTy, EltAlign);
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
@@ -4284,7 +4284,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
             llvm::Type *CountTy = ConvertType(CountFD->getType());
             llvm::Value *Res = Builder.CreateInBoundsGEP(
-                Int8Ty, Addr.getRawPointer(*this),
+                Int8Ty, Addr.emitRawPointer(*this),
                 Builder.getInt32(OffsetDiff.getQuantity()), ".counted_by.gep");
             Res = Builder.CreateAlignedLoad(CountTy, Res, getIntAlign(),
                                             ".counted_by.load");
@@ -4860,7 +4860,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       // fields may leak the real address of dynamic object, which could result
       // in miscompilation when leaked pointer would be compared.
       auto *stripped =
-          Builder.CreateStripInvariantGroup(addr.getRawPointer(*this));
+          Builder.CreateStripInvariantGroup(addr.emitRawPointer(*this));
       addr = Address(stripped, addr.getElementType(), addr.getAlignment());
     }
   }
@@ -4881,7 +4881,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
           rec->getLocation());
       addr =
           Address(Builder.CreatePreserveUnionAccessIndex(
-                      addr.getRawPointer(*this),
+                      addr.emitRawPointer(*this),
                       getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo),
                   addr.getElementType(), addr.getAlignment());
     }

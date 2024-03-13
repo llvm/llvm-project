@@ -261,7 +261,7 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
 
   // If we don't need an array cookie, bail out early.
   if (!requiresArrayCookie(expr, eltTy)) {
-    allocPtr = ptr.getRawPointer(CGF);
+    allocPtr = ptr.emitRawPointer(CGF);
     numElements = nullptr;
     cookieSize = CharUnits::Zero();
     return;
@@ -269,7 +269,7 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
 
   cookieSize = getArrayCookieSizeImpl(eltTy);
   Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
-  allocPtr = allocAddr.getRawPointer(CGF);
+  allocPtr = allocAddr.emitRawPointer(CGF);
   numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
 }
 

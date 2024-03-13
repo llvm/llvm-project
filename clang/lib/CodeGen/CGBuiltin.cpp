@@ -2161,7 +2161,7 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
 
   // Ignore argument 1, the format string. It is not currently used.
   CallArgList Args;
-  Args.add(RValue::get(BufAddr.getRawPointer(*this)), Ctx.VoidPtrTy);
+  Args.add(RValue::get(BufAddr.emitRawPointer(*this)), Ctx.VoidPtrTy);
 
   for (const auto &Item : Layout.Items) {
     int Size = Item.getSizeByte();
@@ -2983,7 +2983,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // Check NonnullAttribute/NullabilityArg and Alignment.
   auto EmitArgCheck = [&](TypeCheckKind Kind, Address A, const Expr *Arg,
                           unsigned ParmNum) {
-    Value *Val = A.getRawPointer(*this);
+    Value *Val = A.emitRawPointer(*this);
     EmitNonNullArgCheck(RValue::get(Val), Arg->getType(), Arg->getExprLoc(), FD,
                         ParmNum);
 
@@ -3012,12 +3012,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_va_end:
     EmitVAStartEnd(BuiltinID == Builtin::BI__va_start
                        ? EmitScalarExpr(E->getArg(0))
-                       : EmitVAListRef(E->getArg(0)).getRawPointer(*this),
+                       : EmitVAListRef(E->getArg(0)).emitRawPointer(*this),
                    BuiltinID != Builtin::BI__builtin_va_end);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_va_copy: {
-    Value *DstPtr = EmitVAListRef(E->getArg(0)).getRawPointer(*this);
-    Value *SrcPtr = EmitVAListRef(E->getArg(1)).getRawPointer(*this);
+    Value *DstPtr = EmitVAListRef(E->getArg(0)).emitRawPointer(*this);
+    Value *SrcPtr = EmitVAListRef(E->getArg(1)).emitRawPointer(*this);
     Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy), {DstPtr, SrcPtr});
     return RValue::get(nullptr);
   }
@@ -3817,11 +3817,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     bool IsVolatile = PtrTy->getPointeeType().isVolatileQualified();
 
     Address Src = EmitPointerWithAlignment(E->getArg(0));
-    EmitNonNullArgCheck(RValue::get(Src.getRawPointer(*this)),
+    EmitNonNullArgCheck(RValue::get(Src.emitRawPointer(*this)),
                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(), FD,
                         0);
     Value *Result = MB.CreateColumnMajorLoad(
-        Src.getElementType(), Src.getRawPointer(*this),
+        Src.getElementType(), Src.emitRawPointer(*this),
         Align(Src.getAlignment().getQuantity()), Stride, IsVolatile,
         ResultTy->getNumRows(), ResultTy->getNumColumns(), "matrix");
     return RValue::get(Result);
@@ -3838,11 +3838,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     assert(PtrTy && "arg1 must be of pointer type");
     bool IsVolatile = PtrTy->getPointeeType().isVolatileQualified();
 
-    EmitNonNullArgCheck(RValue::get(Dst.getRawPointer(*this)),
+    EmitNonNullArgCheck(RValue::get(Dst.emitRawPointer(*this)),
                         E->getArg(1)->getType(), E->getArg(1)->getExprLoc(), FD,
                         0);
     Value *Result = MB.CreateColumnMajorStore(
-        Matrix, Dst.getRawPointer(*this),
+        Matrix, Dst.emitRawPointer(*this),
         Align(Dst.getAlignment().getQuantity()), Stride, IsVolatile,
         MatrixTy->getNumRows(), MatrixTy->getNumColumns());
     return RValue::get(Result);
@@ -4014,10 +4014,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Src = EmitPointerWithAlignment(E->getArg(0));
     Address Dest = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
-    EmitNonNullArgCheck(RValue::get(Src.getRawPointer(*this)),
+    EmitNonNullArgCheck(RValue::get(Src.emitRawPointer(*this)),
                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(), FD,
                         0);
-    EmitNonNullArgCheck(RValue::get(Dest.getRawPointer(*this)),
+    EmitNonNullArgCheck(RValue::get(Dest.emitRawPointer(*this)),
                         E->getArg(1)->getType(), E->getArg(1)->getExprLoc(), FD,
                         0);
     Builder.CreateMemMove(Dest, Src, SizeVal, false);
@@ -4037,7 +4037,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (BuiltinID == Builtin::BImempcpy ||
         BuiltinID == Builtin::BI__builtin_mempcpy)
       return RValue::get(Builder.CreateInBoundsGEP(
-          Dest.getElementType(), Dest.getRawPointer(*this), SizeVal));
+          Dest.getElementType(), Dest.emitRawPointer(*this), SizeVal));
     else
       return RValue::get(Dest, *this);
   }
@@ -4127,7 +4127,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateTrunc(EmitScalarExpr(E->getArg(1)), Builder.getInt8Ty());
     uint64_t Size =
         E->getArg(2)->EvaluateKnownConstInt(getContext()).getZExtValue();
-    EmitNonNullArgCheck(RValue::get(Dest.getRawPointer(*this)),
+    EmitNonNullArgCheck(RValue::get(Dest.emitRawPointer(*this)),
                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(), FD,
                         0);
     Builder.CreateMemSetInline(Dest, ByteVal, Size);
@@ -4370,14 +4370,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     // Store the stack pointer to the setjmp buffer.
     Value *StackAddr = Builder.CreateStackSave();
-    assert(Buf.getRawPointer(*this)->getType() == StackAddr->getType());
+    assert(Buf.emitRawPointer(*this)->getType() == StackAddr->getType());
 
     Address StackSaveSlot = Builder.CreateConstInBoundsGEP(Buf, 2);
     Builder.CreateStore(StackAddr, StackSaveSlot);
 
     // Call LLVM's EH setjmp, which is lightweight.
     Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
-    return RValue::get(Builder.CreateCall(F, Buf.getRawPointer(*this)));
+    return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));
   }
   case Builtin::BI__builtin_longjmp: {
     Value *Buf = EmitScalarExpr(E->getArg(0));
@@ -5483,7 +5483,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Queue = EmitScalarExpr(E->getArg(0));
     llvm::Value *Flags = EmitScalarExpr(E->getArg(1));
     LValue NDRangeL = EmitAggExprToLValue(E->getArg(2));
-    llvm::Value *Range = NDRangeL.getAddress(*this).getRawPointer(*this);
+    llvm::Value *Range = NDRangeL.getAddress(*this).emitRawPointer(*this);
     llvm::Type *RangeTy = NDRangeL.getAddress(*this).getType();
 
     if (NumArgs == 4) {
@@ -5594,7 +5594,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       } else {
         EventWaitList =
             E->getArg(4)->getType()->isArrayType()
-                ? EmitArrayToPointerDecay(E->getArg(4)).getRawPointer(*this)
+                ? EmitArrayToPointerDecay(E->getArg(4)).emitRawPointer(*this)
                 : EmitScalarExpr(E->getArg(4));
         // Convert to generic address space.
         EventWaitList = Builder.CreatePointerCast(EventWaitList, PtrTy);
@@ -5691,7 +5691,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *GenericVoidPtrTy = Builder.getPtrTy(
         getContext().getTargetAddressSpace(LangAS::opencl_generic));
     LValue NDRangeL = EmitAggExprToLValue(E->getArg(0));
-    llvm::Value *NDRange = NDRangeL.getAddress(*this).getRawPointer(*this);
+    llvm::Value *NDRange = NDRangeL.getAddress(*this).emitRawPointer(*this);
     auto Info =
         CGM.getOpenCLRuntime().emitOpenCLEnqueuedBlock(*this, E->getArg(1));
     Value *Kernel =
@@ -5776,7 +5776,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto PTy0 = FTy->getParamType(0);
     if (PTy0 != Arg0Val->getType()) {
       if (Arg0Ty->isArrayType())
-        Arg0Val = EmitArrayToPointerDecay(Arg0).getRawPointer(*this);
+        Arg0Val = EmitArrayToPointerDecay(Arg0).emitRawPointer(*this);
       else
         Arg0Val = Builder.CreatePointerCast(Arg0Val, PTy0);
     }
@@ -5814,7 +5814,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto PTy1 = FTy->getParamType(1);
     if (PTy1 != Arg1Val->getType()) {
       if (Arg1Ty->isArrayType())
-        Arg1Val = EmitArrayToPointerDecay(Arg1).getRawPointer(*this);
+        Arg1Val = EmitArrayToPointerDecay(Arg1).emitRawPointer(*this);
       else
         Arg1Val = Builder.CreatePointerCast(Arg1Val, PTy1);
     }
@@ -5828,7 +5828,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ms_va_start:
   case Builtin::BI__builtin_ms_va_end:
     return RValue::get(
-        EmitVAStartEnd(EmitMSVAListRef(E->getArg(0)).getRawPointer(*this),
+        EmitVAStartEnd(EmitMSVAListRef(E->getArg(0)).emitRawPointer(*this),
                        BuiltinID == Builtin::BI__builtin_ms_va_start));
 
   case Builtin::BI__builtin_ms_va_copy: {
@@ -8758,7 +8758,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         PtrOp0 = EmitPointerWithAlignment(E->getArg(0));
-        Ops.push_back(PtrOp0.getRawPointer(*this));
+        Ops.push_back(PtrOp0.emitRawPointer(*this));
         continue;
       }
     }
@@ -8785,7 +8785,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         PtrOp1 = EmitPointerWithAlignment(E->getArg(1));
-        Ops.push_back(PtrOp1.getRawPointer(*this));
+        Ops.push_back(PtrOp1.emitRawPointer(*this));
         continue;
       }
     }
@@ -11380,7 +11380,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         PtrOp0 = EmitPointerWithAlignment(E->getArg(0));
-        Ops.push_back(PtrOp0.getRawPointer(*this));
+        Ops.push_back(PtrOp0.emitRawPointer(*this));
         continue;
       }
     }
@@ -13247,14 +13247,14 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
       CGM.Error(E->getExprLoc(),
                 "using __builtin_preserve_field_info() without -g");
       return IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
-                        : EmitLValue(Arg).getRawPointer(*this);
+                        : EmitLValue(Arg).emitRawPointer(*this);
     }
 
     // Enable underlying preserve_*_access_index() generation.
     bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
     IsInPreservedAIRegion = true;
     Value *FieldAddr = IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
-                                  : EmitLValue(Arg).getRawPointer(*this);
+                                  : EmitLValue(Arg).emitRawPointer(*this);
     IsInPreservedAIRegion = OldIsInPreservedAIRegion;
 
     ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
@@ -17529,7 +17529,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
       if (E->getArg(i)->getType()->isArrayType())
         Ops.push_back(
-            EmitArrayToPointerDecay(E->getArg(i)).getRawPointer(*this));
+            EmitArrayToPointerDecay(E->getArg(i)).emitRawPointer(*this));
       else
         Ops.push_back(EmitScalarExpr(E->getArg(i)));
     // The first argument of these two builtins is a pointer used to store their
@@ -19980,14 +19980,14 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     // Save returned values.
     assert(II.NumResults);
     if (II.NumResults == 1) {
-      Builder.CreateAlignedStore(Result, Dst.getRawPointer(*this),
+      Builder.CreateAlignedStore(Result, Dst.emitRawPointer(*this),
                                  CharUnits::fromQuantity(4));
     } else {
       for (unsigned i = 0; i < II.NumResults; ++i) {
         Builder.CreateAlignedStore(
             Builder.CreateBitCast(Builder.CreateExtractValue(Result, i),
                                   Dst.getElementType()),
-            Builder.CreateGEP(Dst.getElementType(), Dst.getRawPointer(*this),
+            Builder.CreateGEP(Dst.getElementType(), Dst.emitRawPointer(*this),
                               llvm::ConstantInt::get(IntTy, i)),
             CharUnits::fromQuantity(4));
       }
@@ -20027,7 +20027,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i < II.NumResults; ++i) {
       Value *V = Builder.CreateAlignedLoad(
           Src.getElementType(),
-          Builder.CreateGEP(Src.getElementType(), Src.getRawPointer(*this),
+          Builder.CreateGEP(Src.getElementType(), Src.emitRawPointer(*this),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, ParamType));
@@ -20099,7 +20099,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i < MI.NumEltsA; ++i) {
       Value *V = Builder.CreateAlignedLoad(
           SrcA.getElementType(),
-          Builder.CreateGEP(SrcA.getElementType(), SrcA.getRawPointer(*this),
+          Builder.CreateGEP(SrcA.getElementType(), SrcA.emitRawPointer(*this),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, AType));
@@ -20109,7 +20109,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i < MI.NumEltsB; ++i) {
       Value *V = Builder.CreateAlignedLoad(
           SrcB.getElementType(),
-          Builder.CreateGEP(SrcB.getElementType(), SrcB.getRawPointer(*this),
+          Builder.CreateGEP(SrcB.getElementType(), SrcB.emitRawPointer(*this),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, BType));
@@ -20120,7 +20120,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i < MI.NumEltsC; ++i) {
       Value *V = Builder.CreateAlignedLoad(
           SrcC.getElementType(),
-          Builder.CreateGEP(SrcC.getElementType(), SrcC.getRawPointer(*this),
+          Builder.CreateGEP(SrcC.getElementType(), SrcC.emitRawPointer(*this),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
       Values.push_back(Builder.CreateBitCast(V, CType));
@@ -20130,7 +20130,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i < MI.NumEltsD; ++i)
       Builder.CreateAlignedStore(
           Builder.CreateBitCast(Builder.CreateExtractValue(Result, i), DType),
-          Builder.CreateGEP(Dst.getElementType(), Dst.getRawPointer(*this),
+          Builder.CreateGEP(Dst.getElementType(), Dst.emitRawPointer(*this),
                             llvm::ConstantInt::get(IntTy, i)),
           CharUnits::fromQuantity(4));
     return Result;
@@ -20388,7 +20388,7 @@ struct BuiltinAlignArgs {
   BuiltinAlignArgs(const CallExpr *E, CodeGenFunction &CGF) {
     QualType AstType = E->getArg(0)->getType();
     if (AstType->isArrayType())
-      Src = CGF.EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(CGF);
+      Src = CGF.EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(CGF);
     else
       Src = CGF.EmitScalarExpr(E->getArg(0));
     SrcType = Src->getType();
@@ -21006,7 +21006,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_get: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(*this);
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
     Value *Index = EmitScalarExpr(E->getArg(1));
     Function *Callee;
     if (E->getType().isWebAssemblyExternrefType())
@@ -21020,7 +21020,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_set: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(*this);
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
     Value *Index = EmitScalarExpr(E->getArg(1));
     Value *Val = EmitScalarExpr(E->getArg(2));
     Function *Callee;
@@ -21035,13 +21035,13 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_size: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Value = EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(*this);
+    Value *Value = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_table_size);
     return Builder.CreateCall(Callee, Value);
   }
   case WebAssembly::BI__builtin_wasm_table_grow: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(*this);
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
     Value *Val = EmitScalarExpr(E->getArg(1));
     Value *NElems = EmitScalarExpr(E->getArg(2));
 
@@ -21058,7 +21058,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_fill: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(*this);
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
     Value *Index = EmitScalarExpr(E->getArg(1));
     Value *Val = EmitScalarExpr(E->getArg(2));
     Value *NElems = EmitScalarExpr(E->getArg(3));
@@ -21076,8 +21076,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_copy: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *TableX = EmitArrayToPointerDecay(E->getArg(0)).getRawPointer(*this);
-    Value *TableY = EmitArrayToPointerDecay(E->getArg(1)).getRawPointer(*this);
+    Value *TableX = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
+    Value *TableY = EmitArrayToPointerDecay(E->getArg(1)).emitRawPointer(*this);
     Value *DstIdx = EmitScalarExpr(E->getArg(2));
     Value *SrcIdx = EmitScalarExpr(E->getArg(3));
     Value *NElems = EmitScalarExpr(E->getArg(4));
@@ -21156,7 +21156,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
   auto MakeCircOp = [this, E](unsigned IntID, bool IsLoad) {
     // The base pointer is passed by address, so it needs to be loaded.
     Address A = EmitPointerWithAlignment(E->getArg(0));
-    Address BP = Address(A.getRawPointer(*this), Int8PtrTy, A.getAlignment());
+    Address BP = Address(A.emitRawPointer(*this), Int8PtrTy, A.getAlignment());
     llvm::Value *Base = Builder.CreateLoad(BP);
     // The treatment of both loads and stores is the same: the arguments for
     // the builtin are the same as the arguments for the intrinsic.
@@ -21198,7 +21198,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
     // per call.
     Address DestAddr = EmitPointerWithAlignment(E->getArg(1));
     DestAddr = DestAddr.withElementType(Int8Ty);
-    llvm::Value *DestAddress = DestAddr.getRawPointer(*this);
+    llvm::Value *DestAddress = DestAddr.emitRawPointer(*this);
 
     // Operands are Base, Dest, Modifier.
     // The intrinsic format in LLVM IR is defined as
@@ -21249,7 +21249,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), PredIn});
 
     llvm::Value *PredOut = Builder.CreateExtractValue(Result, 1);
-    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.getRawPointer(*this),
+    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.emitRawPointer(*this),
                                PredAddr.getAlignment());
     return Builder.CreateExtractValue(Result, 0);
   }
@@ -21268,7 +21268,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
 
     llvm::Value *PredOut = Builder.CreateExtractValue(Result, 1);
-    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.getRawPointer(*this),
+    Builder.CreateAlignedStore(Q2V(PredOut), PredAddr.emitRawPointer(*this),
                                PredAddr.getAlignment());
     return Builder.CreateExtractValue(Result, 0);
   }

@@ -102,7 +102,7 @@ public:
     return ER;
   }
   static RValue get(Address Addr, CodeGenFunction &CGF) {
-    return RValue::get(Addr.getRawPointer(CGF));
+    return RValue::get(Addr.emitRawPointer(CGF));
   }
   static RValue getComplex(llvm::Value *V1, llvm::Value *V2) {
     RValue ER;
@@ -361,9 +361,9 @@ public:
     assert(isSimple());
     return Addr.getBasePointer();
   }
-  llvm::Value *getRawPointer(CodeGenFunction &CGF) const {
+  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
     assert(isSimple());
-    return Addr.isValid() ? Addr.getRawPointer(CGF) : nullptr;
+    return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;
   }
 
   Address getAddress(CodeGenFunction &CGF) const {
@@ -380,7 +380,7 @@ public:
   }
   llvm::Value *getRawVectorPointer(CodeGenFunction &CGF) const {
     assert(isVectorElt());
-    return Addr.getRawPointer(CGF);
+    return Addr.emitRawPointer(CGF);
   }
   llvm::Value *getVectorPointer() const {
     assert(isVectorElt());
@@ -411,7 +411,7 @@ public:
   }
   llvm::Value *getRawExtVectorPointer(CodeGenFunction &CGF) const {
     assert(isExtVectorElt());
-    return Addr.getRawPointer(CGF);
+    return Addr.emitRawPointer(CGF);
   }
   llvm::Constant *getExtVectorElts() const {
     assert(isExtVectorElt());
@@ -425,7 +425,7 @@ public:
   }
   llvm::Value *getRawBitFieldPointer(CodeGenFunction &CGF) const {
     assert(isBitField());
-    return Addr.getRawPointer(CGF);
+    return Addr.emitRawPointer(CGF);
   }
 
   const CGBitFieldInfo &getBitFieldInfo() const {
@@ -644,8 +644,8 @@ public:
 
   llvm::Value *getPointer(QualType PointeeTy, CodeGenFunction &CGF) const;
 
-  llvm::Value *getRawPointer(CodeGenFunction &CGF) const {
-    return Addr.isValid() ? Addr.getRawPointer(CGF) : nullptr;
+  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
+    return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;
   }
 
   Address getAddress() const {

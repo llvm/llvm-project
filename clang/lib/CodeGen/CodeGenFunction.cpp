@@ -535,7 +535,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   }
   if (ReturnValue.isValid()) {
     auto *RetAlloca =
-        dyn_cast<llvm::AllocaInst>(ReturnValue.getRawPointer(*this));
+        dyn_cast<llvm::AllocaInst>(ReturnValue.emitRawPointer(*this));
     if (RetAlloca && RetAlloca->use_empty()) {
       RetAlloca->eraseFromParent();
       ReturnValue = Address::invalid();
@@ -1138,7 +1138,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (!CurFnInfo->getReturnInfo().getIndirectByVal()) {
       ReturnValuePointer =
           CreateDefaultAlignTempAlloca(ReturnValue.getType(), "result.ptr");
-      Builder.CreateStore(ReturnValue.getRawPointer(*this), ReturnValuePointer);
+      Builder.CreateStore(ReturnValue.emitRawPointer(*this),
+                          ReturnValuePointer);
     }
   } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::InAlloca &&
              !hasScalarEvaluationKind(CurFnInfo->getReturnType())) {
@@ -2021,8 +2022,9 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
     = llvm::ConstantInt::get(CGF.IntPtrTy, baseSize.getQuantity());
 
   Address begin = dest.withElementType(CGF.Int8Ty);
-  llvm::Value *end = Builder.CreateInBoundsGEP(
-      begin.getElementType(), begin.getRawPointer(CGF), sizeInChars, "vla.end");
+  llvm::Value *end = Builder.CreateInBoundsGEP(begin.getElementType(),
+                                               begin.emitRawPointer(CGF),
+                                               sizeInChars, "vla.end");
 
   llvm::BasicBlock *originBB = CGF.Builder.GetInsertBlock();
   llvm::BasicBlock *loopBB = CGF.createBasicBlock("vla-init.loop");
@@ -2033,7 +2035,7 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
   CGF.EmitBlock(loopBB);
 
   llvm::PHINode *cur = Builder.CreatePHI(begin.getType(), 2, "vla.cur");
-  cur->addIncoming(begin.getRawPointer(CGF), originBB);
+  cur->addIncoming(begin.emitRawPointer(CGF), originBB);
 
   CharUnits curAlign =
     dest.getAlignment().alignmentOfArrayElement(baseSize);
@@ -2228,7 +2230,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
   } else {
     // Create the actual GEP.
     addr = Address(Builder.CreateInBoundsGEP(addr.getElementType(),
-                                             addr.getRawPointer(*this),
+                                             addr.emitRawPointer(*this),
                                              gepIndices, "array.begin"),
                    ConvertTypeForMem(eltType), addr.getAlignment());
   }
@@ -2570,7 +2572,7 @@ void CodeGenFunction::EmitVarAnnotations(const VarDecl *D, llvm::Value *V) {
 Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
                                               Address Addr) {
   assert(D->hasAttr<AnnotateAttr>() && "no annotate attribute");
-  llvm::Value *V = Addr.getRawPointer(*this);
+  llvm::Value *V = Addr.emitRawPointer(*this);
   llvm::Type *VTy = V->getType();
   auto *PTy = dyn_cast<llvm::PointerType>(VTy);
   unsigned AS = PTy ? PTy->getAddressSpace() : 0;

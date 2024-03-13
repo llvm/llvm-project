@@ -271,7 +271,7 @@ ApplyNonVirtualAndVirtualOffset(CodeGenFunction &CGF, Address addr,
   }
 
   // Apply the base offset.
-  llvm::Value *ptr = addr.getRawPointer(CGF);
+  llvm::Value *ptr = addr.emitRawPointer(CGF);
   ptr = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, ptr, baseOffset, "add.ptr");
 
   // If we have a virtual component, the alignment of the result will
@@ -339,7 +339,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     if (sanitizePerformTypeCheck()) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::Null, !NullCheckValue);
-      EmitTypeCheck(TCK_Upcast, Loc, Value.getRawPointer(*this), DerivedTy,
+      EmitTypeCheck(TCK_Upcast, Loc, Value.emitRawPointer(*this), DerivedTy,
                     DerivedAlign, SkippedChecks);
     }
     return Value.withElementType(BaseValueTy);
@@ -364,7 +364,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     SanitizerSet SkippedChecks;
     SkippedChecks.set(SanitizerKind::Null, true);
     EmitTypeCheck(VBase ? TCK_UpcastToVirtualBase : TCK_Upcast, Loc,
-                  Value.getRawPointer(*this), DerivedTy, DerivedAlign,
+                  Value.emitRawPointer(*this), DerivedTy, DerivedAlign,
                   SkippedChecks);
   }
 
@@ -389,7 +389,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     EmitBlock(endBB);
 
     llvm::PHINode *PHI = Builder.CreatePHI(PtrTy, 2, "cast.result");
-    PHI->addIncoming(Value.getRawPointer(*this), notNullBB);
+    PHI->addIncoming(Value.emitRawPointer(*this), notNullBB);
     PHI->addIncoming(llvm::Constant::getNullValue(PtrTy), origBB);
     Value = Value.withPointer(PHI, NotKnownNonNull);
   }
@@ -447,7 +447,7 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
     Builder.CreateBr(CastEnd);
     EmitBlock(CastEnd);
 
-    llvm::Value *Value = Addr.getRawPointer(*this);
+    llvm::Value *Value = Addr.emitRawPointer(*this);
     llvm::PHINode *PHI = Builder.CreatePHI(Value->getType(), 2);
     PHI->addIncoming(Value, CastNotNull);
     PHI->addIncoming(llvm::Constant::getNullValue(Value->getType()), CastNull);
@@ -1727,7 +1727,7 @@ namespace {
       // Use the base class declaration location as inline DebugLocation. All
       // fields of the class are destroyed.
       DeclAsInlineDebugLocation InlineHere(CGF, *BaseClass);
-      EmitSanitizerDtorFieldsCallback(CGF, Addr.getRawPointer(CGF),
+      EmitSanitizerDtorFieldsCallback(CGF, Addr.emitRawPointer(CGF),
                                       BaseSize.getQuantity());
 
       // Prevent the current stack frame from disappearing from the stack trace.
@@ -2030,7 +2030,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
 
   // Find the end of the array.
   llvm::Type *elementType = arrayBase.getElementType();
-  llvm::Value *arrayBegin = arrayBase.getRawPointer(*this);
+  llvm::Value *arrayBegin = arrayBase.emitRawPointer(*this);
   llvm::Value *arrayEnd = Builder.CreateInBoundsGEP(
       elementType, arrayBegin, numElements, "arrayctor.end");
 
@@ -2789,7 +2789,7 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
 
   if (MayBeNull) {
     llvm::Value *DerivedNotNull =
-        Builder.CreateIsNotNull(Derived.getRawPointer(*this), "cast.nonnull");
+        Builder.CreateIsNotNull(Derived.emitRawPointer(*this), "cast.nonnull");
 
     llvm::BasicBlock *CheckBlock = createBasicBlock("cast.check");
     ContBlock = createBasicBlock("cast.cont");
@@ -3018,7 +3018,7 @@ void CodeGenFunction::EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
   QualType LambdaType = getContext().getRecordType(Lambda);
   QualType ThisType = getContext().getPointerType(LambdaType);
   Address ThisPtr = CreateMemTemp(LambdaType, "unused.capture");
-  CallArgs.add(RValue::get(ThisPtr.getRawPointer(*this)), ThisType);
+  CallArgs.add(RValue::get(ThisPtr.emitRawPointer(*this)), ThisType);
 
   EmitLambdaDelegatingInvokeBody(MD, CallArgs);
 }

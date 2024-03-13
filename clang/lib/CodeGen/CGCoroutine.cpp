@@ -868,7 +868,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
     auto *PromiseAddrVoidPtr = new llvm::BitCastInst(
-        PromiseAddr.getRawPointer(*this), VoidPtrTy, "", CoroId);
+        PromiseAddr.emitRawPointer(*this), VoidPtrTy, "", CoroId);
     // Update CoroId to refer to the promise. We could not do it earlier because
     // promise local variable was not emitted yet.
     CoroId->setArgOperand(1, PromiseAddrVoidPtr);
