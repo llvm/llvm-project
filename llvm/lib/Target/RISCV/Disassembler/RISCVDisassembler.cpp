@@ -601,8 +601,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSiFivecflushdlone,
                           DecoderTableXSiFivecflushdlone32,
                           "SiFive sf.cflush.d.l1 custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcease,
-                          DecoderTableXSfcease32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcease, DecoderTableXSfcease32,
                           "SiFive sf.cease custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                           DecoderTableXCVbitmanip32,
