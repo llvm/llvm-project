@@ -2152,14 +2152,15 @@ public:
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
 
+  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
+                         const FunctionProtoType *Proto);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
 
-  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
-                         const FunctionProtoType *Proto);
   bool CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation loc,
                            ArrayRef<const Expr *> Args);
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
