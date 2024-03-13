@@ -1623,16 +1623,10 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
 
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   auto *VTy = dyn_cast<VectorType>(DataTy);
-  if (!VTy || VTy->isScalableTy() || !ST->hasVInstructions())
-    return false;
-
-  if (!TLI->isLegalElementTypeForRVV(
-          TLI->getValueType(DL, VTy->getElementType())))
+  if (!VTy || VTy->isScalableTy())
     return false;
 
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
-
-  // Splitting of vcompress for LMUL > 8 is yet not implemented.
-  return getRegUsageForType(VTy) <= 8;
+  return true;
 }
