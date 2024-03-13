@@ -21,7 +21,9 @@ Subcommands
   * :ref:`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
   * :ref:`instruction-count_subcommand` - Output function instruction counts.
   * :ref:`annotation-count_subcommand` - Output remark type count from annotation remarks.
+  * :ref:`count_subcommand` - Output generic remark count.
   * :ref:`size-diff_subcommand` - Compute diff in size remarks.
+  * :ref:`diff_subcommand` - Compute diff between remarks
 
 .. _bitstream2yaml_subcommand:
 
@@ -425,3 +427,144 @@ EXIT STATUS
 
 :program:`llvm-remarkutil size-diff` returns 0 on success, and a non-zero value
 otherwise.
+
+.. _diff_subcommand:
+
+diff
+~~~~~
+
+.. program:: llvm-remarkutil diff
+
+
+USAGE: :program:`llvm-remarkutil diff` [*options*] <remarka_file>  <remarkb_file>
+
+Summary
+^^^^^^^
+
+:program:`llvm-remarkutil diff` hilights the difference between two versions of `remarks <https://llvm.org/docs/Remarks.html>`_ based on specified properties.
+The tool will organise remarks based on the debug location and highlight the differences between remarks with the same header i.e remark name, pass name and function name. The tool by default highlights the differences in arguments between two remarks and the difference in remark type.
+The tool contains utilities to filter the remark diff based on remark name, pass name, argument value and remark type.
+
+
+Example
+^^^^^^^
+
+``remarks-passed.yaml``
+
+::
+
+    --- !Passed
+  Pass:            Pass 
+  Name:            RemarkName 
+  DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
+  Function:        func0
+  Args:
+    - String:   '2'
+    - String:          'Info2'
+
+
+``remarks-missed.yaml``
+
+::
+
+  --- !Missed
+  Pass:            Pass 
+  Name:            RemarkName 
+  DebugLoc:        { File: path/to/anno.c, Line: 1, Column: 2 }
+  Function:        func0
+  Args:
+    - String:   '2'
+    - String:          'Info2'
+
+
+Output
+::
+
+  File A: remarks-passed.yaml
+  File B: remarks-missed.yaml
+  ----------
+  path/to/anno.c:func0  Ln: 1 Col: 2
+  --- Has the same header ---
+  Name: RemarkName
+  FunctionName: func0
+  PassName: Pass
+  Only at A >>>>
+  Type: Passed
+  =====
+  Only at B <<<<
+  Type: Missed
+  =====
+
+Notes
+^^^^^
+
+* Duplicate remarks in each remark file are discared.
+* If a remark doesn't contain a debug location then it won't be taken into account when caluclating diffs.
+
+Options
+^^^^^^^
+
+Options are similar to the ones for :ref:`count_subcommand` in terms of filtering remarks based on properties. 
+Additional options include the following. 
+
+.. option:: --only-show-a
+
+  Show remarks that are only in A.
+
+.. option:: --only-show-b
+
+  Show remarks that are only in B.
+
+.. option:: --only-show-common-remarks
+
+  Show intersecting remarks between A and B.
+
+.. option:: --only-show-different-remarks
+
+  Show all the remarks that are unique to A and B.
+
+.. option:: --report_style=<value> 
+
+    * human Human-readable format
+    * json  JSON format
+.. option:: -show-arg-diff-only
+  
+   Show only the remarks that have the same header and differ in arguments
+
+.. option:: --show-remark-type-diff-only
+  
+  Only show diff if remarks have the same header but different typ
+
+JSON format 
+^^^^^^^^^^^
+
+Given the above example the corresponding ``json`` format is
+
+.. code-block:: json
+
+  {
+    "Files": {
+      "A": "remarks-passed.yaml",
+      "B": "remarks-missed.yaml"
+    },
+    "path/to/anno.c": {
+      "func0": {
+        "Ln: 1 Col: 2": {
+          "HasSameHeaderObj": [
+            {
+              "Diff": {
+                "RemarkTypeA": "Passed",
+                "RemarkTypeB": "Missed"
+              },
+              "FunctionName": "func0",
+              "PassName": "Pass",
+              "RemarkName": "RemarkName"
+            }
+          ],
+          "OnlyA": [],
+          "OnlyB": []
+        }
+      }
+    }
+  }
+
