@@ -17,7 +17,6 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/syscall.h>
 #include <unistd.h>
 #endif // __linux__
 
@@ -50,9 +49,7 @@ protected:
 
   std::string getSharedMemoryName(const unsigned TestNumber,
                                   const unsigned DefinitionNumber) {
-    long CurrentTID = syscall(SYS_gettid);
-    return "/" + std::to_string(getSharedMemoryNumber(TestNumber)) + "t" +
-           std::to_string(CurrentTID) + "memdef" +
+    return "/" + std::to_string(getSharedMemoryNumber(TestNumber)) + "memdef" +
            std::to_string(DefinitionNumber);
   }
 
