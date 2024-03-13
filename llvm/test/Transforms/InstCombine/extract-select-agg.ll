@@ -5,8 +5,7 @@ define i64 @test_select_agg_constant_agg(i64 %val, i1 %cond) {
 ; CHECK-LABEL: define i64 @test_select_agg_constant_agg(
 ; CHECK-SAME: i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], { i64, i64 } { i64 1, i64 2 }, { i64, i64 } { i64 0, i64 3 }
-; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i64, i64 } [[SEL]], 0
+; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[COND]] to i64
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
 entry:
@@ -19,10 +18,9 @@ define void @test_select_agg_constant_agg_multiuse(i64 %val, i1 %cond) {
 ; CHECK-LABEL: define void @test_select_agg_constant_agg_multiuse(
 ; CHECK-SAME: i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], { i64, i64 } { i64 1, i64 2 }, { i64, i64 } { i64 0, i64 3 }
-; CHECK-NEXT:    [[RET:%.*]] = extractvalue { i64, i64 } [[SEL]], 0
+; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[COND]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[RET]])
-; CHECK-NEXT:    [[V1:%.*]] = extractvalue { i64, i64 } [[SEL]], 1
+; CHECK-NEXT:    [[V1:%.*]] = select i1 [[COND]], i64 2, i64 3
 ; CHECK-NEXT:    call void @use(i64 [[V1]])
 ; CHECK-NEXT:    ret void
 ;
