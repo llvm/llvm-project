@@ -2048,6 +2048,17 @@ def CustomDimensionListAttrOp : TEST_Op<"custom_dimension_list_attr"> {
   }];
 }
 
+def OptionalCustomAttrOp : TEST_Op<"optional_custom_attr"> {
+  let description = [{
+    Test using a custom directive as the optional group anchor and the first
+    element to parse. It is expected to return an `OptionalParseResult`.
+  }];
+  let arguments = (ins OptionalAttr<I1Attr>:$attr);
+  let assemblyFormat = [{
+    attr-dict (custom<OptionalCustomParser>($attr)^) : (`bar`)?
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test OpAsmInterface.
 
