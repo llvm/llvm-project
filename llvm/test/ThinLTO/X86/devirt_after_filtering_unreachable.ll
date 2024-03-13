@@ -71,7 +71,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define hidden i32 @main() {
 entry:
   %call = tail call ptr @_Znwm(i64 8)
-  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, inrange i32 0, i64 2), ptr %call
+  store ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV7Derived, i64 0, i32 0, i64 2), ptr %call
   tail call void @_Z3fooP4Base(ptr nonnull %call)
   ret i32 0
 }
