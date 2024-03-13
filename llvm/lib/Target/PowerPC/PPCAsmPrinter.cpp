@@ -2659,6 +2659,8 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // If the Global Variable has the toc-data attribute, it needs to be emitted
   // when we emit the .toc section.
   if (GV->hasAttribute("toc-data")) {
+    unsigned PointerSize = GV->getParent()->getDataLayout().getPointerSize();
+    Subtarget->tocDataChecks(PointerSize, GV);
     TOCDataGlobalVars.push_back(GV);
     return;
   }
