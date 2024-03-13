@@ -28,8 +28,6 @@
 #include "nasty_string.h"
 #include "test_macros.h"
 
-// #include <iostream>
-
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
@@ -174,18 +172,24 @@ void test() {
     {
       SpBuf spBuf{sp};
 
-      // Out-of-range
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end, std::ios_base::in) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end, std::ios_base::in) == -1);
+
       assert(spBuf.pubseekoff(-999, std::ios_base::beg, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(-999, std::ios_base::cur, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(-999, std::ios_base::end, std::ios_base::out) == -1);
+
       assert(spBuf.pubseekoff(999, std::ios_base::beg, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(999, std::ios_base::cur, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(999, std::ios_base::end, std::ios_base::out) == -1);
 
-      // In-range
       assert(spBuf.pubseekoff(0, std::ios_base::beg, std::ios_base::in) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, std::ios_base::in) == 0);
-      // std::cerr << spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::in) << std::endl;
       assert(spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::in) == 10); // ???
 
       assert(spBuf.pubseekoff(3, std::ios_base::beg, std::ios_base::in) == 3);
@@ -194,7 +198,6 @@ void test() {
 
       assert(spBuf.pubseekoff(0, std::ios_base::beg, std::ios_base::out) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, std::ios_base::out) == 0);
-      // std::cerr << spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::out) << std::endl;
       assert(spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::out) == 10); // ???
 
       assert(spBuf.pubseekoff(3, std::ios_base::beg, std::ios_base::out) == 3);
@@ -202,8 +205,15 @@ void test() {
       assert(spBuf.pubseekoff(-3, std::ios_base::end, std::ios_base::out) == 7);
 
       // Default parameter value `openmode`
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end) == -1);
+
       assert(spBuf.pubseekoff(0, std::ios_base::beg) == 0);
-      // std::cerr << spBuf.pubseekoff(0, std::ios_base::cur) << std::endl;
       assert(spBuf.pubseekoff(0, std::ios_base::cur) == -1); // ???
       assert(spBuf.pubseekoff(0, std::ios_base::end) == 10);
 
@@ -212,6 +222,14 @@ void test() {
       assert(spBuf.pubseekoff(-3, std::ios_base::end) == 7);
 
       // No mode
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg, no_mode) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur, no_mode) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end, no_mode) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg, no_mode) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur, no_mode) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end, no_mode) == -1);
+
       assert(spBuf.pubseekoff(0, std::ios_base::beg, no_mode) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, no_mode) == -1);
       assert(spBuf.pubseekoff(0, std::ios_base::end, no_mode) == 10); // ???
@@ -224,15 +242,22 @@ void test() {
     {
       SpBuf spBuf{sp, std::ios_base::in};
 
-      // Out-of-range
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end, std::ios_base::in) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end, std::ios_base::in) == -1);
+
       assert(spBuf.pubseekoff(-999, std::ios_base::beg, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(-999, std::ios_base::cur, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(-999, std::ios_base::end, std::ios_base::out) == -1);
+
       assert(spBuf.pubseekoff(999, std::ios_base::beg, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(999, std::ios_base::cur, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(999, std::ios_base::end, std::ios_base::out) == -1);
 
-      // In-range
       assert(spBuf.pubseekoff(0, std::ios_base::beg, std::ios_base::in) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, std::ios_base::in) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::in) == 10); // ???
@@ -243,7 +268,6 @@ void test() {
 
       assert(spBuf.pubseekoff(0, std::ios_base::beg, std::ios_base::out) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, std::ios_base::out) == 0);
-      // std::cerr << spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::out) << std::endl;
       assert(spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::out) == -1); // ???
 
       assert(spBuf.pubseekoff(3, std::ios_base::beg, std::ios_base::out) == -1);
@@ -251,6 +275,14 @@ void test() {
       assert(spBuf.pubseekoff(-3, std::ios_base::end, std::ios_base::out) == -1);
 
       // Default parameter value `openmode`
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end) == -1);
+
       assert(spBuf.pubseekoff(0, std::ios_base::beg) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur) == -1); // ???
       assert(spBuf.pubseekoff(0, std::ios_base::end) == -1); // ???
@@ -260,6 +292,14 @@ void test() {
       assert(spBuf.pubseekoff(-3, std::ios_base::end) == -1);
 
       // No mode
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg, no_mode) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur, no_mode) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end, no_mode) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg, no_mode) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur, no_mode) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end, no_mode) == -1);
+
       assert(spBuf.pubseekoff(0, std::ios_base::beg, no_mode) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, no_mode) == -1);
       assert(spBuf.pubseekoff(0, std::ios_base::end, no_mode) == 10); // ???
@@ -272,15 +312,22 @@ void test() {
     {
       SpBuf spBuf{sp, std::ios_base::out};
 
-      // Out-of-range
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end, std::ios_base::in) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur, std::ios_base::in) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end, std::ios_base::in) == -1);
+
       assert(spBuf.pubseekoff(-999, std::ios_base::beg, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(-999, std::ios_base::cur, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(-999, std::ios_base::end, std::ios_base::out) == -1);
+
       assert(spBuf.pubseekoff(999, std::ios_base::beg, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(999, std::ios_base::cur, std::ios_base::out) == -1);
       assert(spBuf.pubseekoff(999, std::ios_base::end, std::ios_base::out) == -1);
 
-      // In-range
       assert(spBuf.pubseekoff(0, std::ios_base::beg, std::ios_base::in) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, std::ios_base::in) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::end, std::ios_base::in) == 0);
@@ -298,6 +345,14 @@ void test() {
       assert(spBuf.pubseekoff(-3, std::ios_base::end, std::ios_base::out) == 3);
 
       // Default parameter value `openmode`
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end) == -1);
+
       assert(spBuf.pubseekoff(0, std::ios_base::beg) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur) == -1); // ???
       assert(spBuf.pubseekoff(0, std::ios_base::end) == 0);
@@ -307,6 +362,14 @@ void test() {
       assert(spBuf.pubseekoff(-3, std::ios_base::end) == -1);
 
       // No mode
+      assert(spBuf.pubseekoff(-999, std::ios_base::beg, no_mode) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::cur, no_mode) == -1);
+      assert(spBuf.pubseekoff(-999, std::ios_base::end, no_mode) == -1);
+
+      assert(spBuf.pubseekoff(999, std::ios_base::beg, no_mode) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::cur, no_mode) == -1);
+      assert(spBuf.pubseekoff(999, std::ios_base::end, no_mode) == -1);
+
       assert(spBuf.pubseekoff(0, std::ios_base::beg, no_mode) == 0);
       assert(spBuf.pubseekoff(0, std::ios_base::cur, no_mode) == -1);
       assert(spBuf.pubseekoff(0, std::ios_base::end, no_mode) == 0); // ???
