@@ -11155,15 +11155,12 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
   if (hasUncompilableErrorOccurred())
     return;
 
-#if 0
-// TODO: Does anything break if we don't do this?
-
   // For code in dependent contexts, we'll do this at instantiation time
-  // (??? This was copied from something else in AnalysisBasedWarnings ???)
+  // Without this check, we would analyze the function based on placeholder
+  // template parameters, and potentially generate spurious diagnostics.
   if (cast<DeclContext>(D)->isDependentContext()) {
     return;
   }
-#endif
 
   // Filter out declarations that the FunctionEffect analysis should skip
   // and not verify.

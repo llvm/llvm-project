@@ -50,6 +50,9 @@ void nl1() [[clang::nolock]] [[clang::noalloc]];
 void nl2() [[clang::noalloc]] [[clang::nolock]];
 // CHECK: FunctionDecl {{.*}} nl2 'void () __attribute__((clang_nolock))'
 
+decltype(nl1) nl3;
+// CHECK: FunctionDecl {{.*}} nl3 'decltype(nl1)':'void () __attribute__((clang_nolock))'
+
 // --- Blocks ---
 
 // On the type of the VarDecl holding a BlockDecl
@@ -63,8 +66,11 @@ int (^nl_block2)() [[clang::nolock]] = ^() [[clang::nolock]] { return 0; };
 static void blockCaller() { nl_block1(); }
 // CHECK: DeclRefExpr {{.*}} 'nl_block1' 'void (^)() __attribute__((clang_nolock))'
 
-// $$$ TODO: There are still some loose ends in all the methods of the lambda
+// --- Lambdas ---
+
+// On the operator() of a lambda's CXXMethodDecl
 auto nl_lambda = []() [[clang::nolock]] {};
+// CHECK: CXXMethodDecl {{.*}} operator() 'void () const __attribute__((clang_nolock))' inline
 
 // =========================================================================================
 // Square brackets, false
@@ -72,10 +78,16 @@ auto nl_lambda = []() [[clang::nolock]] {};
 void nl_func_false() [[clang::nolock(false)]];
 // CHECK: FunctionDecl {{.*}} nl_func_false 'void () __attribute__((clang_nolock(false)))'
 
+// TODO: This exposes a bug where a type attribute is lost when inferring a lambda's
+// return type.
+auto nl_lambda_false = []() [[clang::nolock(false)]] {};
+
 } // namespace square_brackets
 
 // =========================================================================================
 // GNU-style attribute, true
+
+// TODO: Duplicate more of the above for GNU-style attribute
 
 namespace gnu_style {
 
@@ -96,4 +108,3 @@ void (*nl_func_a)() __attribute__((clang_nolock));
 } // namespace gnu_style
 
 // TODO: Duplicate the above for noalloc
-// TODO: Duplicate the above for GNU-style attribute?
