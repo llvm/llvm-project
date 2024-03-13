@@ -397,7 +397,7 @@ function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
 DebugImporter::getRecSelfConstructor(llvm::DINode *node) {
   using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
   return TypeSwitch<llvm::DINode *, CtorType>(node)
-      .Case<llvm::DICompositeType>([](auto *concreteNode) {
+      .Case<llvm::DICompositeType>([&](auto *concreteNode) {
         return CtorType(decltype(translateImpl(concreteNode))::getRecSelf);
       })
       .Default(CtorType());
