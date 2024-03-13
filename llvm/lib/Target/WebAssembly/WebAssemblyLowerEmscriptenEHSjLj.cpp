@@ -278,7 +278,6 @@
 ///   to identify the function invocation using alloc().
 ///
 /// - We use simpler ABI functions with different names.
-///   (prefixed with "__wasm_sjlj_")
 ///
 ///===----------------------------------------------------------------------===//
 
@@ -633,7 +632,7 @@ static bool canLongjmp(const Value *Callee) {
   // There are functions in Emscripten's JS glue code or compiler-rt
   if (CalleeName == "__resumeException" || CalleeName == "llvm_eh_typeid_for" ||
       CalleeName == "saveSetjmp" || CalleeName == "testSetjmp" ||
-      CalleeName == "__wasm_sjlj_setjmp" || CalleeName == "__wasm_sjlj_test" ||
+      CalleeName == "__wasm_setjmp" || CalleeName == "__wasm_setjmp_test" ||
       CalleeName == "getTempRet0" || CalleeName == "setTempRet0")
     return false;
 
@@ -1014,11 +1013,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       // Register __wasm_longjmp function, which calls __builtin_wasm_longjmp.
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {Int8PtrTy, IRB.getInt32Ty()}, false);
-      if (EnableWasmSjLj) {
-        WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_longjmp", &M);
-      } else {
-        WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_longjmp", &M);
-      }
+      WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_longjmp", &M);
       WasmLongjmpF->addFnAttr(Attribute::NoReturn);
     }
 
@@ -1033,11 +1028,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
         FunctionType *FTy = FunctionType::get(
             IRB.getVoidTy(), {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy},
             false);
-        SaveSetjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_setjmp", &M);
+        SaveSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp", &M);
 
         // Register testSetjmp function
         FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
-        TestSetjmpF = getEmscriptenFunction(FTy, "__wasm_sjlj_test", &M);
+        TestSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp_test", &M);
       } else {
         // Register saveSetjmp function
         FunctionType *SetjmpFTy = SetjmpF->getFunctionType();
