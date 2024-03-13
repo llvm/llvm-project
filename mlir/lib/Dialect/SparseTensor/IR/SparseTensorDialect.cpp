@@ -1741,15 +1741,6 @@ LogicalResult ConcatenateOp::verify() {
   return success();
 }
 
-LogicalResult InsertOp::verify() {
-  const auto stt = getSparseTensorType(getTensor());
-  if (stt.getEncoding().getBatchLvlRank() > 0)
-    return emitOpError("batched sparse tensor insertion not implemented");
-  if (stt.getLvlRank() != static_cast<Level>(getLvlCoords().size()))
-    return emitOpError("incorrect number of coordinates");
-  return success();
-}
-
 void PushBackOp::build(OpBuilder &builder, OperationState &result,
                        Value curSize, Value inBuffer, Value value) {
   build(builder, result, curSize, inBuffer, value, Value());

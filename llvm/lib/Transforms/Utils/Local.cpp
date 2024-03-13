@@ -1649,15 +1649,15 @@ static void insertDbgValueOrDPValue(DIBuilder &Builder, Value *DV,
                                     const DebugLoc &NewLoc,
                                     BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertBefore(Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
     ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
     DPValue *DV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDPValueBefore(DV, Instr);
+    Instr->getParent()->insertDbgRecordBefore(DV, Instr);
   }
 }
 
@@ -1667,15 +1667,15 @@ static void insertDbgValueOrDPValueAfter(DIBuilder &Builder, Value *DV,
                                          const DebugLoc &NewLoc,
                                          BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto *DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                   (Instruction *)nullptr);
-    DbgVal->insertAfter(&*Instr);
+    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
+                                                  (Instruction *)nullptr);
+    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DPValue directly instead of a dbg.value intrinsic.
     ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
     DPValue *DV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDPValueAfter(DV, &*Instr);
+    Instr->getParent()->insertDbgRecordAfter(DV, &*Instr);
   }
 }
 
@@ -1794,7 +1794,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, StoreInst *SI,
   DV = UndefValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DPValue *NewDPV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-  SI->getParent()->insertDPValueBefore(NewDPV, SI->getIterator());
+  SI->getParent()->insertDbgRecordBefore(NewDPV, SI->getIterator());
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
@@ -1856,7 +1856,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, LoadInst *LI,
   // Create a DPValue directly and insert.
   ValueAsMetadata *LIVAM = ValueAsMetadata::get(LI);
   DPValue *DV = new DPValue(LIVAM, DIVar, DIExpr, NewLoc.get());
-  LI->getParent()->insertDPValueAfter(DV, LI);
+  LI->getParent()->insertDbgRecordAfter(DV, LI);
 }
 
 /// Determine whether this alloca is either a VLA or an array.
@@ -1911,7 +1911,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     for (Instruction &BI : FI) {
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
-      for (DPValue &DPV : DPValue::filter(BI.getDbgValueRange())) {
+      for (DPValue &DPV : DPValue::filter(BI.getDbgRecordRange())) {
         if (DPV.getType() == DPValue::LocationType::Declare)
           DPVs.push_back(&DPV);
       }
@@ -1996,7 +1996,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   // Map existing PHI nodes to their DPValues.
   DenseMap<Value *, DPValue *> DbgValueMap;
   for (auto &I : *BB) {
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
       for (Value *V : DPV.location_ops())
         if (auto *Loc = dyn_cast_or_null<PHINode>(V))
           DbgValueMap.insert({Loc, &DPV});
@@ -2044,7 +2044,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
     auto InsertionPt = Parent->getFirstInsertionPt();
     assert(InsertionPt != Parent->end() && "Ill-formed basic block");
 
-    Parent->insertDPValueBefore(NewDbgII, InsertionPt);
+    Parent->insertDbgRecordBefore(NewDbgII, InsertionPt);
   }
 }
 
@@ -2620,7 +2620,7 @@ static bool rewriteDebugUsers(
         LLVM_DEBUG(dbgs() << "MOVE:  " << *DPV << '\n');
         DPV->removeFromParent();
         // Ensure there's a marker.
-        DomPoint.getParent()->insertDPValueAfter(DPV, &DomPoint);
+        DomPoint.getParent()->insertDbgRecordAfter(DPV, &DomPoint);
         Changed = true;
       } else if (!DT.dominates(&DomPoint, MarkedInstr)) {
         UndefOrSalvageDPV.insert(DPV);
@@ -2766,7 +2766,7 @@ bool llvm::handleUnreachableTerminator(
     Instruction *I, SmallVectorImpl<Value *> &PoisonedValues) {
   bool Changed = false;
   // RemoveDIs: erase debug-info on this instruction manually.
-  I->dropDbgValues();
+  I->dropDbgRecords();
   for (Use &U : I->operands()) {
     Value *Op = U.get();
     if (isa<Instruction>(Op) && !Op->getType()->isTokenTy()) {
@@ -2797,7 +2797,7 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
     if (Inst->isEHPad() || Inst->getType()->isTokenTy()) {
       // EHPads can't have DPValues attached to them, but it might be possible
       // for things with token type.
-      Inst->dropDbgValues();
+      Inst->dropDbgRecords();
       EndInst = Inst;
       continue;
     }
@@ -2806,7 +2806,7 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
     else
       ++NumDeadInst;
     // RemoveDIs: erasing debug-info must be done manually.
-    Inst->dropDbgValues();
+    Inst->dropDbgRecords();
     Inst->eraseFromParent();
   }
   return {NumDeadInst, NumDeadDbgInst};
@@ -3582,7 +3582,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
     // RemoveDIs: drop debug-info too as the following code does.
-    I->dropDbgValues();
+    I->dropDbgRecords();
     if (I->isDebugOrPseudoInst()) {
       // Remove DbgInfo and pseudo probe Intrinsics.
       II = I->eraseFromParent();

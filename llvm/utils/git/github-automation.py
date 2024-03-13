@@ -586,7 +586,7 @@ class ReleaseWorkflow:
                 body=body,
                 base=release_branch_for_issue,
                 head=head,
-                maintainer_can_modify=False,
+                maintainer_can_modify=True,
             )
 
             pull.as_issue().edit(milestone=self.issue.milestone)
