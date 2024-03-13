@@ -231,7 +231,7 @@ OPTIONS
 
   Print the approximate non-zero line number nearest to an input address.
   Nearest lookup is performed by querying the line-table structure for an
-  address having non-zero line information with close proxmity.
+  address having non-zero line information with close proximity.
 
 .. option:: --basenames, -s
 
