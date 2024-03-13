@@ -2486,9 +2486,7 @@ class Mnem_gfx12 <string mnemonic, string real_name> :
   MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
 
 class Mnem_gfx1210 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12_10Plus]> {
-  Predicate AssemblerPredicate;
-}
+  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12_10Plus]>;
 
 multiclass MUBUF_Real_AllAddr_gfx11_Impl2<bits<8> op, string real_name> {
   defm _BOTHEN : MUBUF_Real_gfx11<op, real_name>;
@@ -2674,11 +2672,9 @@ defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04B, "buffer
 defm BUFFER_ATOMIC_PK_ADD_F16     : MUBUF_Real_Atomic_gfx12<0x059>;
 defm BUFFER_ATOMIC_PK_ADD_BF16    : MUBUF_Real_Atomic_gfx12<0x05a>;
 
-let AssemblerPredicate = isGFX12_10Plus in {
-  defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_gfx12<0x055>;
-  defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05b, "buffer_atomic_min_num_f64">;
-  defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05c, "buffer_atomic_max_num_f64">;
-}
+defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_gfx12<0x055>;
+defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05b, "buffer_atomic_min_num_f64">;
+defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05c, "buffer_atomic_max_num_f64">;
 
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX10.
