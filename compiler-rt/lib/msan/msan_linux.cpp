@@ -147,12 +147,12 @@ static bool InitShadow(bool init_origins, bool dry_run) {
     if (!map && !protect) {
       CHECK(type == MappingDesc::APP || type == MappingDesc::ALLOCATOR);
 
-      if (type == MappingDesc::ALLOCATOR &&
+      if (dry_run && type == MappingDesc::ALLOCATOR &&
           !CheckMemoryRangeAvailability(start, size, !dry_run))
         return false;
     }
     if (map) {
-      if (!CheckMemoryRangeAvailability(start, size, !dry_run))
+      if (dry_run && !CheckMemoryRangeAvailability(start, size, !dry_run))
         return false;
       if (!dry_run &&
           !MmapFixedSuperNoReserve(start, size, kMemoryLayout[i].name))
@@ -161,7 +161,7 @@ static bool InitShadow(bool init_origins, bool dry_run) {
         DontDumpShadowMemory(start, size);
     }
     if (protect) {
-      if (!CheckMemoryRangeAvailability(start, size, !dry_run))
+      if (dry_run && !CheckMemoryRangeAvailability(start, size, !dry_run))
         return false;
       if (!dry_run && !ProtectMemoryRange(start, size, kMemoryLayout[i].name))
         return false;
