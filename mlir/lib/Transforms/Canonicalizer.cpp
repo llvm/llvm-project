@@ -14,6 +14,7 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/SystemDesc.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -47,8 +48,26 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     // Set the config from possible pass options set in the meantime.
     config.useTopDownTraversal = topDownProcessingEnabled;
     config.enableRegionSimplification = enableRegionSimplification;
-    config.maxIterations = maxIterations;
-    config.maxNumRewrites = maxNumRewrites;
+    DeviceDesc::DeviceID cpuID = 0;
+    if (std::optional<int64_t> v = context->getSystemDesc()
+                                       .getDeviceDesc(cpuID)
+                                       .getCanonicalizerMaxIterations()) {
+      config.maxIterations = *v;
+    } else {
+      config.maxIterations = maxIterations;
+    }
+
+    if (std::optional<int64_t> v = context->getSystemDesc()
+                                       .getDeviceDesc(cpuID)
+                                       .getCanonicalizerMaxNumRewrites()) {
+      config.maxNumRewrites = *v;
+    } else {
+      config.maxNumRewrites = maxNumRewrites;
+    }
+    LLVM_DEBUG(llvm::dbgs() << "[CostModel] Canonicalizer MaxIterations:"
+                            << config.maxIterations << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "[CostModel] Canonicalizer MaxNumRewrites:"
+                            << config.maxNumRewrites << "\n");
 
     LLVM_DEBUG(llvm::dbgs()
                << "[CostModel] Canonicalizer MaxIterations (default):"
