@@ -27,21 +27,21 @@ ldr r4, [r3], q12
 ldr r4, [r3], cpsr
 @ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, s1, lsl #2
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, d1, lsl #2
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, q1, lsl #2
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, cpsr, lsl #2
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, r1, lsl s6
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, r1, lsl d6
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, r1, lsl q6
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 add r3, r0, r1, lsl cpsr
-@ CHECK: [[@LINE-1]]{{.*}} too many operands for instruction
+@ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 ldrd r2, r3, [s4]
 @ CHECK: [[@LINE-1]]{{.*}} invalid operand for instruction
 ldrd r2, r3, [r4, s5]
