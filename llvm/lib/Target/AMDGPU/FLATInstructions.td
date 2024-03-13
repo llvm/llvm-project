@@ -3148,17 +3148,11 @@ class VFLAT_Real_gfx1210 <bits<8> op, FLAT_Pseudo ps,
   let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
 }
 
-class MnemonicAlias_gfx1210<string from, string to> :
-  MnemonicAlias<from, to>, Requires<[isGFX12_10Plus]> {
-  Predicate AssemblerPredicate = isGFX12_10Plus;
-  Predicate WaveSizePredicate;
-}
-
 multiclass VFLAT_Aliases_gfx1210<string ps, string opName, int renamed, string alias> {
   if renamed then
-    def _renamed_gfx1210 : MnemonicAlias_gfx1210<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>;
+    def _renamed_gfx1210 : MnemonicAlias<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>, Requires<[isGFX12_10Plus]>;
   if !not(!empty(alias)) then
-    def _alias_gfx1210 : MnemonicAlias_gfx1210<alias, opName>;
+    def _alias_gfx1210 : MnemonicAlias<alias, opName>, Requires<[isGFX12_10Plus]>;
 }
 
 multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
