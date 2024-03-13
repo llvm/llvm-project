@@ -73,7 +73,7 @@ macro(add_orc_unittest testname)
           SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
           RUNTIME "${ORC_RUNTIME_LIBS}"
           COMPILE_DEPS ${TEST_HEADERS} ${ORC_HEADERS}
-          DEPS llvm_gtest ${ORC_DEPS}
+          DEPS ${ORC_DEPS}
           CFLAGS ${ORC_UNITTEST_CFLAGS} ${COMPILER_RT_GTEST_CFLAGS}
           LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
       endif()

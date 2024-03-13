@@ -12582,6 +12582,7 @@ Value *BoUpSLP::vectorizeTree(
             Ex = I;
           }
         }
+        Value *ExV = Ex;
         if (!Ex) {
           // "Reuse" the existing extract to improve final codegen.
           if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
@@ -12594,10 +12595,11 @@ Value *BoUpSLP::vectorizeTree(
           }
           // If necessary, sign-extend or zero-extend ScalarRoot
           // to the larger type.
+          ExV = Ex;
           if (Scalar->getType() != Ex->getType())
-            Ex = Builder.CreateIntCast(Ex, Scalar->getType(),
-                                       MinBWs.find(E)->second.second);
-          if (auto *I = dyn_cast<Instruction>(Ex))
+            ExV = Builder.CreateIntCast(Ex, Scalar->getType(),
+                                        MinBWs.find(E)->second.second);
+          if (auto *I = dyn_cast<Instruction>(ExV))
             ScalarToEEs[Scalar].try_emplace(Builder.GetInsertBlock(), I);
         }
         // The then branch of the previous if may produce constants, since 0
@@ -12606,7 +12608,7 @@ Value *BoUpSLP::vectorizeTree(
           GatherShuffleExtractSeq.insert(ExI);
           CSEBlocks.insert(ExI->getParent());
         }
-        return Ex;
+        return ExV;
       }
       assert(isa<FixedVectorType>(Scalar->getType()) &&
              isa<InsertElementInst>(Scalar) &&

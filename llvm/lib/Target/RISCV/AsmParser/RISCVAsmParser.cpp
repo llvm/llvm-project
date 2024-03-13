@@ -2716,7 +2716,7 @@ ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
                                  bool FromOptionDirective) {
-  for (auto Feature : RISCVFeatureKV)
+  for (auto &Feature : RISCVFeatureKV)
     if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
       clearFeatureBits(Feature.Value, Feature.Key);
 
@@ -2735,7 +2735,7 @@ bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
   }
   auto &ISAInfo = *ParseResult;
 
-  for (auto Feature : RISCVFeatureKV)
+  for (auto &Feature : RISCVFeatureKV)
     if (ISAInfo->hasExtension(Feature.Key))
       setFeatureBits(Feature.Value, Feature.Key);
 
@@ -2823,9 +2823,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
         break;
       }
 
-      ArrayRef<SubtargetFeatureKV> KVArray(RISCVFeatureKV);
-      auto Ext = llvm::lower_bound(KVArray, Arch);
-      if (Ext == KVArray.end() || StringRef(Ext->Key) != Arch ||
+      auto Ext = llvm::lower_bound(RISCVFeatureKV, Arch);
+      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Arch ||
           !RISCVISAInfo::isSupportedExtension(Arch)) {
         if (isDigit(Arch.back()))
           return Error(
@@ -2858,7 +2857,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
         // It is invalid to disable an extension that there are other enabled
         // extensions depend on it.
         // TODO: Make use of RISCVISAInfo to handle this
-        for (auto Feature : KVArray) {
+        for (auto &Feature : RISCVFeatureKV) {
           if (getSTI().hasFeature(Feature.Value) &&
               Feature.Implies.test(Ext->Value))
             return Error(Loc,
