@@ -110,7 +110,7 @@ module __fortran_builtins
   public :: operator(==)
 
   interface operator(/=)
-    module procedure __builtin_c_ptr_eq
+    module procedure __builtin_c_ptr_ne
   end interface
   public :: operator(/=)
 
