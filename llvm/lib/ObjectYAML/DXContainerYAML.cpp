@@ -74,8 +74,12 @@ DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
   memcpy(&Info, P, sizeof(dxbc::PSV::v2::RuntimeInfo));
 }
 
-DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P)
-    : Version(3) {
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P,
+                                  StringRef StringTable)
+    : Version(3),
+      EntryFunctionName(StringTable.substr(
+          P->EntryFunctionName, StringTable.find('\0', P->EntryFunctionName) -
+                                    P->EntryFunctionName)) {
   memset(&Info, 0, sizeof(Info));
   memcpy(&Info, P, sizeof(dxbc::PSV::v3::RuntimeInfo));
 }
@@ -357,7 +361,7 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   if (Version == 2)
     return;
 
-  IO.mapRequired("EntryFunctionName", Info.EntryFunctionName);
+  IO.mapRequired("EntryFunctionName", EntryFunctionName);
 }
 
 } // namespace llvm

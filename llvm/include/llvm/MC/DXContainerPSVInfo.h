@@ -9,9 +9,11 @@
 #ifndef LLVM_MC_DXCONTAINERPSVINFO_H
 #define LLVM_MC_DXCONTAINERPSVINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <array>
@@ -45,6 +47,7 @@ struct PSVSignatureElement {
 // modifiable format, and can be used to serialize the data back into valid PSV
 // RuntimeInfo.
 struct PSVRuntimeInfo {
+  PSVRuntimeInfo() : DXConStrTabBuilder(StringTableBuilder::DXContainer) {}
   bool IsFinalized = false;
   dxbc::PSV::v3::RuntimeInfo BaseData;
   SmallVector<dxbc::PSV::v2::ResourceBindInfo> Resources;
@@ -65,11 +68,66 @@ struct PSVRuntimeInfo {
   SmallVector<uint32_t> InputPatchMap;
   SmallVector<uint32_t> PatchOutputMap;
 
+  StringTableBuilder DXConStrTabBuilder;
+  SmallVector<uint32_t, 64> IndexBuffer;
+  SmallVector<llvm::dxbc::PSV::v0::SignatureElement, 32> SignatureElements;
+  SmallVector<StringRef, 32> SemanticNames;
+
+  llvm::StringRef EntryFunctionName;
+
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
   // the highest supported version.
   void write(raw_ostream &OS,
              uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
+
+  static constexpr size_t npos = StringRef::npos;
+  static size_t FindSequence(ArrayRef<uint32_t> Buffer,
+                             ArrayRef<uint32_t> Sequence) {
+    if (Buffer.size() < Sequence.size())
+      return npos;
+    for (size_t Idx = 0; Idx <= Buffer.size() - Sequence.size(); ++Idx) {
+      if (0 == memcmp(static_cast<const void *>(&Buffer[Idx]),
+                      static_cast<const void *>(Sequence.begin()),
+                      Sequence.size() * sizeof(uint32_t)))
+        return Idx;
+    }
+    return npos;
+  }
+
+  static void ProcessElementList(
+      StringTableBuilder &StrTabBuilder, SmallVectorImpl<uint32_t> &IndexBuffer,
+      SmallVectorImpl<llvm::dxbc::PSV::v0::SignatureElement> &FinalElements,
+      SmallVectorImpl<StringRef> &SemanticNames,
+      ArrayRef<PSVSignatureElement> Elements) {
+    for (const auto &El : Elements) {
+      // Put the name in the string table and the name list.
+      StrTabBuilder.add(El.Name);
+      SemanticNames.push_back(El.Name);
+
+      llvm::dxbc::PSV::v0::SignatureElement FinalElement;
+      memset(&FinalElement, 0, sizeof(llvm::dxbc::PSV::v0::SignatureElement));
+      FinalElement.Rows = static_cast<uint8_t>(El.Indices.size());
+      FinalElement.StartRow = El.StartRow;
+      FinalElement.Cols = El.Cols;
+      FinalElement.StartCol = El.StartCol;
+      FinalElement.Allocated = El.Allocated;
+      FinalElement.Kind = El.Kind;
+      FinalElement.Type = El.Type;
+      FinalElement.Mode = El.Mode;
+      FinalElement.DynamicMask = El.DynamicMask;
+      FinalElement.Stream = El.Stream;
+
+      size_t Idx = FindSequence(IndexBuffer, El.Indices);
+      if (Idx == npos) {
+        FinalElement.IndicesOffset = static_cast<uint32_t>(IndexBuffer.size());
+        IndexBuffer.insert(IndexBuffer.end(), El.Indices.begin(),
+                           El.Indices.end());
+      } else
+        FinalElement.IndicesOffset = static_cast<uint32_t>(Idx);
+      FinalElements.push_back(FinalElement);
+    }
+  }
 
   void finalize(Triple::EnvironmentType Stage) {
     IsFinalized = true;
@@ -77,6 +135,30 @@ struct PSVRuntimeInfo {
     BaseData.SigOutputElements = static_cast<uint32_t>(OutputElements.size());
     BaseData.SigPatchOrPrimElements =
         static_cast<uint32_t>(PatchOrPrimElements.size());
+
+    // Build a string table and set associated offsets to be written when
+    // write() is called
+    ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
+                       SemanticNames, InputElements);
+    ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
+                       SemanticNames, OutputElements);
+    ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
+                       SemanticNames, PatchOrPrimElements);
+
+    DXConStrTabBuilder.add(EntryFunctionName);
+
+    DXConStrTabBuilder.finalize();
+    for (auto ElAndName : zip(SignatureElements, SemanticNames)) {
+      llvm::dxbc::PSV::v0::SignatureElement &El = std::get<0>(ElAndName);
+      StringRef Name = std::get<1>(ElAndName);
+      El.NameOffset = static_cast<uint32_t>(DXConStrTabBuilder.getOffset(Name));
+      if (sys::IsBigEndianHost)
+        El.swapBytes();
+    }
+
+    BaseData.EntryFunctionName =
+        static_cast<uint32_t>(DXConStrTabBuilder.getOffset(EntryFunctionName));
+
     if (!sys::IsBigEndianHost)
       return;
     BaseData.swapBytes();

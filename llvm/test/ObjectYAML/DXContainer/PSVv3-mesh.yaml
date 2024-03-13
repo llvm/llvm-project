@@ -29,7 +29,7 @@ Parts:
       NumThreadsX:     512
       NumThreadsY:     1024
       NumThreadsZ:     2048
-      EntryFunctionName: 1
+      EntryFunctionName: MSEntry
       ResourceStride:       24
       Resources:
         - Type:            1
@@ -83,7 +83,7 @@ Parts:
 # CHECK-NEXT: NumThreadsX:     512
 # CHECK-NEXT: NumThreadsY:     1024
 # CHECK-NEXT: NumThreadsZ:     2048
-# CHECK-NEXT: EntryFunctionName: 1
+# CHECK-NEXT: EntryFunctionName: MSEntry
 # CHECK-NEXT: ResourceStride: 24
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            1

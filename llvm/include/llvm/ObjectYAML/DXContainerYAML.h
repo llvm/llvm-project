@@ -121,13 +121,15 @@ struct PSVInfo {
   MaskVector InputPatchMap;
   MaskVector PatchOutputMap;
 
+  StringRef EntryFunctionName;
+
   void mapInfoForVersion(yaml::IO &IO);
 
   PSVInfo();
   PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
   PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
-  PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P);
+  PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P, StringRef StringTable);
 };
 
 struct SignatureParameter {

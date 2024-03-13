@@ -200,6 +200,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::PSVRuntimeInfo PSV;
       memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v3::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
+      PSV.EntryFunctionName = P.Info->EntryFunctionName;
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
