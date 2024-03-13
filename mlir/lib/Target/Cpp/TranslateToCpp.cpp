@@ -96,6 +96,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
         }
         return op->emitError("unsupported cmp predicate");
       })
+      .Case<emitc::ConditionalOp>([&](auto op) { return 2; })
       .Case<emitc::DivOp>([&](auto op) { return 13; })
       .Case<emitc::LogicalAndOp>([&](auto op) { return 4; })
       .Case<emitc::LogicalNotOp>([&](auto op) { return 15; })
@@ -444,6 +445,29 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CmpOp cmpOp) {
   }
 
   return printBinaryOperation(emitter, operation, binaryOperator);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::ConditionalOp conditionalOp) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*conditionalOp)))
+    return failure();
+
+  if (failed(emitter.emitOperand(conditionalOp.getCondition())))
+    return failure();
+
+  os << " ? ";
+
+  if (failed(emitter.emitOperand(conditionalOp.getTrueValue())))
+    return failure();
+
+  os << " : ";
+
+  if (failed(emitter.emitOperand(conditionalOp.getFalseValue())))
+    return failure();
+
+  return success();
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -1383,12 +1407,13 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
-                emitc::ConstantOp, emitc::DeclareFuncOp, emitc::DivOp,
-                emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
-                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
-                emitc::SubOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
-                emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::ConditionalOp, emitc::ConstantOp, emitc::DeclareFuncOp,
+                emitc::DivOp, emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp,
+                emitc::IfOp, emitc::IncludeOp, emitc::LogicalAndOp,
+                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
+                emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
+                emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
