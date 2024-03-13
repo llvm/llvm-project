@@ -50,7 +50,8 @@ _Unwind_Reason_Code stop(int version, _Unwind_Action actions,
   // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
   uintptr_t ip = _Unwind_GetIP(context);
-  if (ip >= (uintptr_t)&__start_main_func && ip < (uintptr_t)&__stop_main_func) {
+  if (ip >= (uintptr_t)&__start_main_func &&
+      ip < (uintptr_t)&__stop_main_func) {
     _Exit(0);
   }
 

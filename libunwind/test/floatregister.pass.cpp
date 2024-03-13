@@ -28,7 +28,8 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
   // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
   uintptr_t ip = _Unwind_GetIP(ctx);
-  if (ip >= (uintptr_t)&__start_main_func && ip < (uintptr_t)&__stop_main_func) {
+  if (ip >= (uintptr_t)&__start_main_func &&
+      ip < (uintptr_t)&__stop_main_func) {
     _Exit(0);
   }
 
