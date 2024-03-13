@@ -520,6 +520,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
 #  if HWASAN_WITH_INTERCEPTORS
+  __interception::DoesNotSupportStaticLinking();
   InitializeCommonInterceptors();
 
   (void)(read_iovec);
