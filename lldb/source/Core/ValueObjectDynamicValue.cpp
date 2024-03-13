@@ -440,23 +440,3 @@ void ValueObjectDynamicValue::SetLanguageFlags(uint64_t flags) {
   else
     this->ValueObject::SetLanguageFlags(flags);
 }
-
-bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
-  if (GetPreferredDisplayLanguage() != eLanguageTypeSwift)
-    return false;
-
-  if (!m_dynamic_type_info.HasType())
-    return false;
-
-#ifdef LLDB_ENABLE_SWIFT
-  auto cached_ctx = m_value.GetCompilerType().GetTypeSystem();
-  std::optional<SwiftScratchContextReader> scratch_ctx(
-      GetSwiftScratchContext());
-
-  if (!scratch_ctx || !cached_ctx)
-    return true;
-  return (void*)cached_ctx.GetSharedPointer().get() != (void*)scratch_ctx->get();
-#else // !LLDB_ENABLE_SWIFT
-  return false;
-#endif // LLDB_ENABLE_SWIFT
-}

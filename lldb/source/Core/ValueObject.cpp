@@ -129,17 +129,6 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
   bool did_change_formats = false;
 
-  // BEGIN SWIFT
-  // Swift: Check whether the dynamic type system became stale.
-  if (m_dynamic_value) {
-    auto *dyn_val = static_cast<ValueObjectDynamicValue *>(m_dynamic_value);
-    if (dyn_val->DynamicValueTypeInfoNeedsUpdate()) {
-      dyn_val->SetNeedsUpdate();
-      SetNeedsUpdate();
-    }
-  }
-  // END SWIFT
-
   if (update_format)
     did_change_formats = UpdateFormatsIfNeeded();
 
