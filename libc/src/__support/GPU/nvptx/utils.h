@@ -97,7 +97,7 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
 
 /// Returns the id of the thread inside of a CUDA warp executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {
-  return get_thread_id() & (get_lane_size() - 1);
+  return __nvvm_read_ptx_sreg_laneid();
 }
 
 /// Returns the bit-mask of active threads in the current warp.
