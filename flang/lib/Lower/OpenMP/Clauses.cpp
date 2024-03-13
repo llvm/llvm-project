@@ -311,6 +311,8 @@ Allocator make(const parser::OmpClause::Allocator &inp,
   return Allocator{makeExpr(inp.v, semaCtx)};
 }
 
+// Never called, but needed for using "make" as a Clause visitor.
+// See comment about "requires" clauses in Clauses.h.
 AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
                            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAtomicDefaultMemOrderClause
