@@ -1511,9 +1511,6 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   case AArch64::PTRUE_C_B:
   case AArch64::LD1B_2Z_IMM:
   case AArch64::ST1B_2Z_IMM:
-    assert((I->getMF()->getSubtarget<AArch64Subtarget>().hasSVE2p1() ||
-            I->getMF()->getSubtarget<AArch64Subtarget>().hasSME2()) &&
-           "Expected SME2 or SVE2.1 Targer Architecture.");
   case AArch64::STR_ZXI:
   case AArch64::STR_PXI:
   case AArch64::LDR_ZXI:
@@ -2787,6 +2784,28 @@ struct RegPairInfo {
 
 } // end anonymous namespace
 
+static unsigned getPredicateAsCounterReg(unsigned Reg) {
+  switch (Reg) {
+  case AArch64::P8:
+    return AArch64::PN8;
+  case AArch64::P9:
+    return AArch64::PN9;
+  case AArch64::P10:
+    return AArch64::PN10;
+  case AArch64::P11:
+    return AArch64::PN11;
+  case AArch64::P12:
+    return AArch64::PN12;
+  case AArch64::P13:
+    return AArch64::PN13;
+  case AArch64::P14:
+    return AArch64::PN14;
+  case AArch64::P15:
+    return AArch64::PN15;
+  }
+  return 0;
+}
+
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -3075,48 +3094,57 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       std::swap(FrameIdxReg1, FrameIdxReg2);
     }
 
-    unsigned PairRegs;
-    unsigned PnReg;
     if (RPI.isPaired() && RPI.isScalable()) {
-      PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
+      AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+      unsigned PnReg = AFI->getPredicateRegForFillSpill();
       if (!PtrueCreated) {
         PtrueCreated = true;
-        // Any one of predicate-as-count will be free to use
-        // This can be replaced in the future if needed
-        PnReg = AArch64::PN8;
         BuildMI(MBB, MI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
             .setMIFlags(MachineInstr::FrameSetup);
       }
-    }
-
-    MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
-    if (!MRI.isReserved(Reg1))
-      MBB.addLiveIn(Reg1);
-    if (RPI.isPaired()) {
+      MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
+      if (!MRI.isReserved(Reg1))
+        MBB.addLiveIn(Reg1);
       if (!MRI.isReserved(Reg2))
         MBB.addLiveIn(Reg2);
-      if (RPI.isScalable())
-        MIB.addReg(PairRegs);
-      else
-        MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
+      unsigned PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
+      MIB.addReg(PairRegs);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOStore, Size, Alignment));
-    }
-    if (RPI.isPaired() && RPI.isScalable())
       MIB.addReg(PnReg);
-    else
-      MIB.addReg(Reg1, getPrologueDeath(MF, Reg1));
-    MIB.addReg(AArch64::SP)
-        .addImm(RPI.Offset) // [sp, #offset*scale],
-                            // where factor*scale is implicit
-        .setMIFlag(MachineInstr::FrameSetup);
-    MIB.addMemOperand(MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
-        MachineMemOperand::MOStore, Size, Alignment));
-    if (NeedsWinCFI)
-      InsertSEH(MIB, TII, MachineInstr::FrameSetup);
-
+      MIB.addReg(AArch64::SP)
+          .addImm(RPI.Offset) // [sp, #offset*scale],
+                              // where factor*scale is implicit
+          .setMIFlag(MachineInstr::FrameSetup);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
+          MachineMemOperand::MOStore, Size, Alignment));
+      if (NeedsWinCFI)
+        InsertSEH(MIB, TII, MachineInstr::FrameSetup);
+    } else { // The code when the pair of ZReg is not present
+      MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
+      if (!MRI.isReserved(Reg1))
+        MBB.addLiveIn(Reg1);
+      if (RPI.isPaired()) {
+        if (!MRI.isReserved(Reg2))
+          MBB.addLiveIn(Reg2);
+        MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
+            MachineMemOperand::MOStore, Size, Alignment));
+      }
+      MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
+          .addReg(AArch64::SP)
+          .addImm(RPI.Offset) // [sp, #offset*scale],
+                              // where factor*scale is implicit
+          .setMIFlag(MachineInstr::FrameSetup);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
+          MachineMemOperand::MOStore, Size, Alignment));
+      if (NeedsWinCFI)
+        InsertSEH(MIB, TII, MachineInstr::FrameSetup);
+    }
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
     if (RPI.Type == RegPairInfo::ZPR || RPI.Type == RegPairInfo::PPR) {
@@ -3124,7 +3152,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       if (RPI.isPaired())
          MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
     }
-
   }
   return true;
 }
@@ -3222,30 +3249,38 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       std::swap(FrameIdxReg1, FrameIdxReg2);
     }
 
-    unsigned PnReg;
-    unsigned PairRegs;
+    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (RPI.isPaired() && RPI.isScalable()) {
-      PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
+      unsigned PnReg = AFI->getPredicateRegForFillSpill();
       if (!PtrueCreated) {
         PtrueCreated = true;
-        // Any one of predicate-as-count will be free to use
-        // This can be replaced in the future if needed
-        PnReg = AArch64::PN8;
         BuildMI(MBB, MBBI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
             .setMIFlags(MachineInstr::FrameDestroy);
       }
-    }
-
-    MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
-    if (RPI.isPaired()) {
-      MIB.addReg(RPI.isScalable() ? PairRegs : Reg2, getDefRegState(true));
+      MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
+      unsigned PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
+      MIB.addReg(PairRegs, getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOLoad, Size, Alignment));
-    }
-    if (RPI.isPaired() && RPI.isScalable())
       MIB.addReg(PnReg);
-    else
+      MIB.addReg(AArch64::SP)
+          .addImm(RPI.Offset) // [sp, #offset*scale]
+                              // where factor*scale is implicit
+          .setMIFlag(MachineInstr::FrameDestroy);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
+          MachineMemOperand::MOLoad, Size, Alignment));
+      if (NeedsWinCFI)
+        InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
+    } else {
+      MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
+      if (RPI.isPaired()) {
+        MIB.addReg(Reg2, getDefRegState(true));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
+            MachineMemOperand::MOLoad, Size, Alignment));
+      }
       MIB.addReg(Reg1, getDefRegState(true));
     MIB.addReg(AArch64::SP)
         .addImm(RPI.Offset) // [sp, #offset*scale]
@@ -3256,8 +3291,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
         MachineMemOperand::MOLoad, Size, Alignment));
     if (NeedsWinCFI)
       InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
+    }
   }
-
   return true;
 }
 
@@ -3286,6 +3321,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   unsigned ExtraCSSpill = 0;
   bool HasUnpairedGPR64 = false;
+  bool HasPairZReg = false;
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
@@ -3339,6 +3375,29 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
           !RegInfo->isReservedReg(MF, PairedReg))
         ExtraCSSpill = PairedReg;
     }
+
+    // Save PReg in FunctionInfo to build PTRUE instruction later. The PTRUE is
+    // being used in the function to save and restore the pair of ZReg
+    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+    if (Subtarget.hasSVE2p1() || Subtarget.hasSME2()) {
+      if (AArch64::PPRRegClass.contains(Reg) &&
+          (Reg > AArch64::P8 || Reg < AArch64::P15) && SavedRegs.test(Reg) &&
+          AFI->getPredicateRegForFillSpill() == 0)
+        AFI->setPredicateRegForFillSpill(getPredicateAsCounterReg(Reg));
+
+      // Check if there is a pair of ZRegs, so it can select P8 to create PTRUE,
+      // in case there is no PRege being saved(above)
+      HasPairZReg =
+          HasPairZReg || (AArch64::ZPRRegClass.contains(Reg, CSRegs[i ^ 1]) &&
+                          SavedRegs.test(CSRegs[i ^ 1]));
+    }
+  }
+
+  // Make sure there is a PReg saved to be used in save and restore when there
+  // is ZReg pair.
+  if (AFI->getPredicateRegForFillSpill() == 0 && HasPairZReg) {
+    SavedRegs.set(AArch64::P8);
+    AFI->setPredicateRegForFillSpill(AArch64::PN8);
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
