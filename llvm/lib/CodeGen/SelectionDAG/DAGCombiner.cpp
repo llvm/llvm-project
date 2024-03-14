@@ -2850,11 +2850,6 @@ static SDValue combineFixedwidthToAVGFLOORU(SDNode *N, SelectionDAG &DAG) {
   if (!N1C or N1C->getAPIntValue() != 1)
     return SDValue();
   EVT VT = And1.getValueType();
-  EVT NVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  if (VT.isVector())
-    VT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
-  else
-    VT = NVT;
   SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isOperationLegalOrCustom(ISD::AVGFLOORU, VT))

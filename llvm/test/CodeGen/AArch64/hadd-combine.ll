@@ -859,34 +859,16 @@ define <4 x i32> @urhadd_v4i32(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
-define i4 @uhadd_fixedwidth_i4(i4 %a0, i4 %a1)  {
-; CHECK-LABEL: uhadd_fixedwidth_i4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w0, w1
-; CHECK-NEXT:    and w9, w0, w1
-; CHECK-NEXT:    and w8, w8, #0xe
-; CHECK-NEXT:    add w0, w9, w8, lsr #1
-; CHECK-NEXT:    ret
-  %and = and i4 %a0, %a1
-  %xor = xor i4 %a0, %a1
-  %srl = lshr i4 %xor, 1
-  %res = add i4 %and, %srl
-  ret i4 %res
-}
-
-define <4 x i32> @uhadd_fixedwidth_v4i32(<4 x i32> %a0, <4 x i32> %a1)  {
+define <8 x i16> @uhadd_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
 ; CHECK-LABEL: uhadd_fixedwidth_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    usra v2.4s, v0.4s, #1
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
-  %and = and <4 x i32> %a0, %a1
-  %xor = xor <4 x i32> %a0, %a1
-  %srl = lshr <4 x i32> %xor, <i32 1,i32 1,i32 1,i32 1>
-  %res = add <4 x i32> %and, %srl
-  ret <4 x i32> %res
+  %and = and <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = lshr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = add <8 x i16> %and, %srl
+  ret <8 x i16> %res
 }
 
 declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)
