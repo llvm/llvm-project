@@ -160,11 +160,11 @@ constexpr bool test() {
     auto c = std::bind_front(addN, n, m);
     assert(c(1, 1, 1, 1) == 7);
 
-    auto d = std::bind_back(add_ref, n, m);
+    auto d = std::bind_front(add_ref, n, m);
     std::same_as<int&> decltype(auto) dresult(d());
     assert(dresult == 3);
 
-    auto e = std::bind_back(add_rref, n, m);
+    auto e = std::bind_front(add_rref, n, m);
     std::same_as<int&&> decltype(auto) eresult(e());
     assert(eresult == 3);
 
@@ -177,11 +177,11 @@ constexpr bool test() {
     auto h = std::bind_front(addN, 1, 1, 1);
     assert(h(2, 2, 2) == 9);
 
-    auto i = std::bind_back(add_ref, n);
+    auto i = std::bind_front(add_ref, n);
     std::same_as<int&> decltype(auto) iresult(i(5));
     assert(iresult == 7);
 
-    auto j = std::bind_back(add_rref, m);
+    auto j = std::bind_front(add_rref, m);
     std::same_as<int&&> decltype(auto) jresult(j(4));
     assert(jresult == 5);
   }
