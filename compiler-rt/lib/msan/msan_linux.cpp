@@ -86,7 +86,7 @@ static void CheckMemoryLayoutSanity() {
     CHECK(addr_is_type(start, type));
     CHECK(addr_is_type((start + end) / 2, type));
     CHECK(addr_is_type(end - 1, type));
-    if (type == MappingDesc::APP) {
+    if (type == MappingDesc::APP || type == MappingDesc::ALLOCATOR) {
       uptr addr = start;
       CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
       CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
@@ -138,8 +138,13 @@ bool InitShadow(bool init_origins) {
     bool protect = type == MappingDesc::INVALID ||
                    (!init_origins && type == MappingDesc::ORIGIN);
     CHECK(!(map && protect));
-    if (!map && !protect)
-      CHECK(type == MappingDesc::APP);
+    if (!map && !protect) {
+      CHECK(type == MappingDesc::APP || type == MappingDesc::ALLOCATOR);
+
+      if (type == MappingDesc::ALLOCATOR &&
+          !CheckMemoryRangeAvailability(start, size))
+        return false;
+    }
     if (map) {
       if (!CheckMemoryRangeAvailability(start, size))
         return false;
