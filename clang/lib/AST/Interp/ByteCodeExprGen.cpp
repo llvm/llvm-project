@@ -308,14 +308,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Location for the SubExpr.
     // Since SubExpr is of complex type, visiting it results in a pointer
     // anyway, so we just create a temporary pointer variable.
-    std::optional<unsigned> SubExprOffset = allocateLocalPrimitive(
+    unsigned SubExprOffset = allocateLocalPrimitive(
         SubExpr, PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
-    if (!SubExprOffset)
-      return false;
-
     if (!this->visit(SubExpr))
       return false;
-    if (!this->emitSetLocal(PT_Ptr, *SubExprOffset, CE))
+    if (!this->emitSetLocal(PT_Ptr, SubExprOffset, CE))
       return false;
 
     PrimType SourceElemT = classifyComplexElementType(SubExpr->getType());
@@ -324,7 +321,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     PrimType DestElemT = classifyPrim(DestElemType);
     // Cast both elements individually.
     for (unsigned I = 0; I != 2; ++I) {
-      if (!this->emitGetLocal(PT_Ptr, *SubExprOffset, CE))
+      if (!this->emitGetLocal(PT_Ptr, SubExprOffset, CE))
         return false;
       if (!this->emitArrayElemPop(SourceElemT, I, CE))
         return false;
@@ -1245,22 +1242,19 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   // At this point we either have the evaluated source expression or a pointer
   // to an object on the stack. We want to create a local variable that stores
   // this value.
-  std::optional<unsigned> LocalIndex =
-      allocateLocalPrimitive(E, SubExprT, /*IsConst=*/true);
-  if (!LocalIndex)
-    return false;
-  if (!this->emitSetLocal(SubExprT, *LocalIndex, E))
+  unsigned LocalIndex = allocateLocalPrimitive(E, SubExprT, /*IsConst=*/true);
+  if (!this->emitSetLocal(SubExprT, LocalIndex, E))
     return false;
 
   // Here the local variable is created but the value is removed from the stack,
   // so we put it back if the caller needs it.
   if (!DiscardResult) {
-    if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
+    if (!this->emitGetLocal(SubExprT, LocalIndex, E))
       return false;
   }
 
   // This is cleaned up when the local variable is destroyed.
-  OpaqueExprs.insert({E, *LocalIndex});
+  OpaqueExprs.insert({E, LocalIndex});
 
   return true;
 }
@@ -1654,14 +1648,13 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    if (std::optional<unsigned> LocalIndex = allocateLocalPrimitive(
-            SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true)) {
-      if (!this->visit(SubExpr))
-        return false;
-      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
-        return false;
-      return this->emitGetPtrLocal(*LocalIndex, E);
-    }
+    unsigned LocalIndex = allocateLocalPrimitive(
+        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
+      return false;
+    return this->emitGetPtrLocal(LocalIndex, E);
   } else {
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
 
