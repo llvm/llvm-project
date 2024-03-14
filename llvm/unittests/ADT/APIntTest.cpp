@@ -3050,34 +3050,6 @@ TEST(APIntTest, smul_ov) {
 }
 
 TEST(APIntTest, sfloordiv_ov) {
-  // test negative quotient
-  {
-    APInt divisor(32, -3, true);
-    APInt dividend(32, 2, true);
-    bool Overflow = false;
-    auto quotient = divisor.sfloordiv_ov(dividend, Overflow);
-    EXPECT_FALSE(Overflow);
-    EXPECT_EQ(-2, quotient.getSExtValue());
-  }
-  // test positive quotient
-  {
-    APInt divisor(32, 3, true);
-    APInt dividend(32, 2, true);
-    bool Overflow = false;
-    auto quotient = divisor.sfloordiv_ov(dividend, Overflow);
-    EXPECT_FALSE(Overflow);
-    EXPECT_EQ(1, quotient.getSExtValue());
-  }
-  // int8 test overflow
-  {
-    using IntTy = int8_t;
-    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
-                  true);
-    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
-    bool Overflow = false;
-    (void)divisor.sfloordiv_ov(dividend, Overflow);
-    EXPECT_TRUE(Overflow);
-  }
   // int16 test overflow
   {
     using IntTy = int16_t;
@@ -3110,24 +3082,30 @@ TEST(APIntTest, sfloordiv_ov) {
   }
   // test all of int8
   {
-    bool Overflow = true;
+    bool Overflow = false;
     for (int i = -128; i < 128; ++i) {
       for (int j = -128; j < 128; ++j) {
-        if (j == 0 || (i == -128 && j == -1))
+        if (j == 0)
           continue;
+
         int8_t a = static_cast<int8_t>(i);
         int8_t b = static_cast<int8_t>(j);
 
         APInt divisor(8, a, true);
         APInt dividend(8, b, true);
+        APInt quotient = divisor.sfloordiv_ov(dividend, Overflow);
+
+        if (i == -128 && j == -1) {
+          EXPECT_TRUE(Overflow);
+          continue;
+        }
+
         if (((i >= 0 && j > 0) || (i <= 0 && j < 0)) ||
             (i % j == 0)) // if quotient >= 0 and remain == 0 floordiv
                           // equivalent to div
-          EXPECT_EQ(divisor.sfloordiv_ov(dividend, Overflow).getSExtValue(),
-                    a / b);
+          EXPECT_EQ(quotient.getSExtValue(), a / b);
         else
-          EXPECT_EQ(divisor.sfloordiv_ov(dividend, Overflow).getSExtValue(),
-                    a / b - 1);
+          EXPECT_EQ(quotient.getSExtValue(), a / b - 1);
         EXPECT_FALSE(Overflow);
       }
     }
