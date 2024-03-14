@@ -1,0 +1,461 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+// RUN: yaml2obj %t/Mismatch.yaml -o %t/System/Library/Frameworks/MismatchCpp.framework/MismatchCpp
+
+// RUN: not clang-installapi --target=arm64-apple-macos13 -x objective-c++  \
+// RUN: -F %t/System/Library/Frameworks \
+// RUN: -install_name /System/Library/Frameworks/MismatchCpp.framework/Versions/A/MismatchCpp \
+// RUN: -current_version 1 -compatibility_version 1 %t/inputs.json \
+// RUN: --verify-against=%t/System/Library/Frameworks/MismatchCpp.framework/MismatchCpp \
+// RUN: --verify-mode=Pedantic -o output.tbd --demangle 2>&1 | FileCheck %s 
+
+CHECK: warning: violations found for arm64-apple-macos13
+CHECK: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'vtable for Bar'
+CHECK-NEXT: class Bar : Foo {
+CHECK-NEXT:       ^
+CHECK-NEXT: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'typeinfo for Bar'
+CHECK-NEXT: CPP.h:5:7: error: declaration has external linkage, but symbol has internal linkage in dynamic library 'typeinfo name for Bar'
+CHECK-NEXT: CPP.h:6:7: error: dynamic library symbol '(weak-def) Bar::init()' is weak defined, but its declaration is not
+CHECK-NEXT:   int init();
+CHECK-NEXT:       ^
+
+//--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/System/Library/Frameworks/MismatchCpp.framework/Headers/CPP.h",
+    "type" : "public"
+  }
+  ],
+  "version": "3"
+}
+
+//--- System/Library/Frameworks/MismatchCpp.framework/Headers/CPP.h
+class Foo {
+  virtual int init() = 0;
+};
+
+class Bar : Foo { 
+  int init();
+};
+
+/// Created from: 
+// With LD flags: -exported_symbol,"__ZN3Bar4initEv" -exported_symbol,"__Z3fooIjEiT_"
+// class Foo { virtual int init() = 0;};
+// 
+// class Bar : Foo {int init() { return 1;}};
+// Bar bar;
+// 
+// template <typename T> int foo(T val) { return 1; }
+// template <> int foo(unsigned val) { return 1; }
+
+//--- Mismatch.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           15
+  sizeofcmds:      1224
+  flags:           0x118085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x10E8
+        size:            16
+        offset:          0x10E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         20008052C0035FD620008052C0035FD6
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x10F8
+        size:            10
+        offset:          0x10F8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         334261720033466F6F00
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x1104
+        size:            4152
+        offset:          0x1104
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000010000002000000000000000200000000200000000000002E81000003800000038000000F81000000000000038000000030000000C0001001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DATA_CONST
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          2
+    flags:           16
+    Sections:
+      - sectname:        __const
+        segname:         __DATA_CONST
+        addr:            0x4000
+        size:            80
+        offset:          0x4000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00000000000000002840000000000000F0100000000000001000000000000000FD100000000000801000000000000000F810000000000080000000000100000018400000000000000000000000000000
+      - sectname:        __objc_imageinfo
+        segname:         __DATA_CONST
+        addr:            0x4050
+        size:            8
+        offset:          0x4050
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000040000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          32768
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x8000
+        size:            8
+        offset:          0x8000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '1040000000000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          49152
+    vmsize:          1104
+    fileoff:         49152
+    filesize:        1104
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      49152
+    rebase_size:     16
+    bind_off:        49168
+    bind_size:       96
+    weak_bind_off:   49264
+    weak_bind_size:  24
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      49288
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          49344
+    nsyms:           11
+    stroff:          49520
+    strsize:         192
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       6
+    iextdefsym:      6
+    nextdefsym:      2
+    iundefsym:       8
+    nundefsym:       3
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         96
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/System/Library/Frameworks/MismatchCpp.framework/Versions/A/MismatchCpp'
+    ZeroPadBytes:    1
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C44F3-5555-3144-A13F-B3FE15787197
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1245184
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 117985024
+      compatibility_version: 65536
+    Content:         '/usr/lib/libc++.1.dylib'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 88473600
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         49336
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         49344
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         49712
+    datasize:        544
+LinkEditData:
+  RebaseOpcodes:
+    - Opcode:          REBASE_OPCODE_SET_TYPE_IMM
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             1
+      ExtraData:       [ 0x8 ]
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             2
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB
+      Imm:             0
+      ExtraData:       [ 0x3, 0x8 ]
+    - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ExtraData:       [ 0x0 ]
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DONE
+      Imm:             0
+  BindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZTVN10__cxxabiv117__class_type_infoE
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             1
+      ULEBExtraData:   [ 0x18 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_ADDEND_SLEB
+      Imm:             0
+      SLEBExtraData:   [ 16 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZTVN10__cxxabiv121__vmi_class_type_infoE
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_ADD_ADDR_ULEB
+      Imm:             0
+      ULEBExtraData:   [ 0x8 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  WeakBindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZN3Bar4initEv
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             1
+      ULEBExtraData:   [ 0x10 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      7
+        Name:            __Z
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      35
+            Name:            3fooIjEiT_
+            Flags:           0x0
+            Address:         0x10E8
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      40
+            Name:            N3Bar4initEv
+            Flags:           0x4
+            Address:         0x10F0
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          32
+      n_type:          0x1E
+      n_sect:          4
+      n_desc:          0
+      n_value:         16384
+    - n_strx:          42
+      n_type:          0x1E
+      n_sect:          4
+      n_desc:          0
+      n_value:         16408
+    - n_strx:          52
+      n_type:          0x1E
+      n_sect:          4
+      n_desc:          0
+      n_value:         16424
+    - n_strx:          62
+      n_type:          0x1E
+      n_sect:          6
+      n_desc:          0
+      n_value:         32768
+    - n_strx:          67
+      n_type:          0x1E
+      n_sect:          2
+      n_desc:          0
+      n_value:         4344
+    - n_strx:          77
+      n_type:          0x1E
+      n_sect:          2
+      n_desc:          0
+      n_value:         4349
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4328
+    - n_strx:          16
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          128
+      n_value:         4336
+    - n_strx:          87
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+    - n_strx:          126
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+    - n_strx:          169
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+  StringTable:
+    - ' '
+    - __Z3fooIjEiT_
+    - __ZN3Bar4initEv
+    - __ZTV3Bar
+    - __ZTI3Foo
+    - __ZTI3Bar
+    - _bar
+    - __ZTS3Bar
+    - __ZTS3Foo
+    - __ZTVN10__cxxabiv117__class_type_infoE
+    - __ZTVN10__cxxabiv121__vmi_class_type_infoE
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+  FunctionStarts:  [ 0x10E8, 0x10F0 ]
+...
