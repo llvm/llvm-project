@@ -10,7 +10,7 @@ define i32 @foo() nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    ret i32 60
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -27,7 +27,7 @@ define ptr @bar() nounwind {
 ;
 entry:
   %retval = alloca ptr
-  %0 = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %0 = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
   %cmp = icmp ne i32 %0, -1
   br i1 %cmp, label %cond.true, label %cond.false
 
@@ -44,7 +44,7 @@ define i32 @f() nounwind {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr getelementptr ([60 x i8], ptr @a, i32 1, i32 0), i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr getelementptr ([60 x i8], ptr @a, i32 1, i32 0), i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -52,11 +52,11 @@ define i32 @f() nounwind {
 
 define i1 @baz() nounwind {
 ; CHECK-LABEL: @baz(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.objectsize.i32.p0(ptr @window, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.objectsize.i32.p0(ptr @window, i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr @window, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr @window, i1 false, i1 false, i1 false, i1 true, i64 0)
   %2 = icmp eq i32 %1, -1
   ret i1 %2
 }
@@ -64,7 +64,7 @@ define i1 @baz() nounwind {
 define void @test1(ptr %q, i32 %x) nounwind noinline {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds ([0 x i8], ptr @window, i32 0, i32 10), i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds ([0 x i8], ptr @window, i32 0, i32 10), i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %"47", label %"46"
 ; CHECK:       "46":
@@ -73,7 +73,7 @@ define void @test1(ptr %q, i32 %x) nounwind noinline {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %0 = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds ([0 x i8], ptr @window, i32 0, i32 10), i1 false, i1 false, i1 false, i1 true, i64 0, i64 0) ; <i64> [#uses=1]
+  %0 = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds ([0 x i8], ptr @window, i32 0, i32 10), i1 false, i1 false, i1 false, i1 true, i64 0) ; <i64> [#uses=1]
   %1 = icmp eq i32 %0, -1                         ; <i1> [#uses=1]
   br i1 %1, label %"47", label %"46"
 
@@ -90,7 +90,7 @@ define i32 @test2() nounwind {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    ret i32 34
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr getelementptr (i8, ptr @.str5, i32 2), i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr getelementptr (i8, ptr @.str5, i32 2), i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -99,9 +99,9 @@ define i32 @test2() nounwind {
 
 declare ptr @__memcpy_chk(ptr, ptr, i32, i32) nounwind
 
-declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1, i1, i64, i64) nounwind readonly
+declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1, i1, i64) nounwind readonly
 
-declare i32 @llvm.objectsize.i32.p1(ptr addrspace(1), i1, i1, i1, i1, i64, i64) nounwind readonly
+declare i32 @llvm.objectsize.i32.p1(ptr addrspace(1), i1, i1, i1, i1, i64) nounwind readonly
 
 declare ptr @__inline_memcpy_chk(ptr, ptr, i32) nounwind inlinehint
 
@@ -120,7 +120,7 @@ entry:
 
 bb11:
   %0 = getelementptr inbounds float, ptr getelementptr inbounds ([480 x float], ptr @array, i32 0, i32 128), i32 -127 ; <ptr> [#uses=1]
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0) ; <i32> [#uses=1]
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0) ; <i32> [#uses=1]
   %2 = call ptr @__memcpy_chk(ptr %ptr1, ptr %ptr2, i32 512, i32 %1) nounwind ; <ptr> [#uses=0]
   unreachable
 
@@ -144,7 +144,7 @@ define i32 @test4(ptr %esc) nounwind ssp {
 ;
 entry:
   %0 = alloca %struct.data, align 8
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0) nounwind
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0) nounwind
   %2 = call ptr @__memset_chk(ptr %0, i32 0, i32 1824, i32 %1) nounwind
   store ptr %0, ptr %esc
   ret i32 0
@@ -163,7 +163,7 @@ define ptr @test5(i32 %n) nounwind ssp {
 ;
 entry:
   %0 = tail call noalias ptr @malloc(i32 20) nounwind
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0)
   %2 = load ptr, ptr @s, align 8
   %3 = tail call ptr @__memcpy_chk(ptr %0, ptr %2, i32 10, i32 %1) nounwind
   ret ptr %0
@@ -179,7 +179,7 @@ define void @test6(i32 %n) nounwind ssp {
 ;
 entry:
   %0 = tail call noalias ptr @malloc(i32 20) nounwind
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %0, i1 false, i1 false, i1 false, i1 true, i64 0)
   %2 = load ptr, ptr @s, align 8
   %3 = tail call ptr @__memcpy_chk(ptr %0, ptr %2, i32 30, i32 %1) nounwind
   ret void
@@ -198,7 +198,7 @@ define i32 @test7(ptr %esc) {
   %alloc = call noalias ptr @malloc(i32 48) nounwind
   store ptr %alloc, ptr %esc
   %gep = getelementptr inbounds i8, ptr %alloc, i32 16
-  %objsize = call i32 @llvm.objectsize.i32.p0(ptr %gep, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0) nounwind readonly
+  %objsize = call i32 @llvm.objectsize.i32.p0(ptr %gep, i1 false, i1 false, i1 false, i1 true, i64 0) nounwind readonly
   ret i32 %objsize
 }
 
@@ -213,7 +213,7 @@ define i32 @test8(ptr %esc) {
   %alloc = call noalias ptr @calloc(i32 5, i32 7) nounwind
   store ptr %alloc, ptr %esc
   %gep = getelementptr inbounds i8, ptr %alloc, i32 5
-  %objsize = call i32 @llvm.objectsize.i32.p0(ptr %gep, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0) nounwind readonly
+  %objsize = call i32 @llvm.objectsize.i32.p0(ptr %gep, i1 false, i1 false, i1 false, i1 true, i64 0) nounwind readonly
   ret i32 %objsize
 }
 
@@ -228,7 +228,7 @@ define i32 @test9(ptr %esc) {
 ;
   %call = tail call ptr @strdup(ptr @.str) nounwind
   store ptr %call, ptr %esc, align 8
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -240,7 +240,7 @@ define i32 @test10(ptr %esc) {
 ;
   %call = tail call ptr @strndup(ptr @.str, i32 3) nounwind
   store ptr %call, ptr %esc, align 8
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -252,7 +252,7 @@ define i32 @test11(ptr %esc) {
 ;
   %call = tail call ptr @strndup(ptr @.str, i32 7) nounwind
   store ptr %call, ptr %esc, align 8
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -264,7 +264,7 @@ define i32 @test12(ptr %esc) {
 ;
   %call = tail call ptr @strndup(ptr @.str, i32 8) nounwind
   store ptr %call, ptr %esc, align 8
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -276,7 +276,7 @@ define i32 @test13(ptr %esc) {
 ;
   %call = tail call ptr @strndup(ptr @.str, i32 57) nounwind
   store ptr %call, ptr %esc, align 8
-  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = tail call i32 @llvm.objectsize.i32.p0(ptr %call, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -286,7 +286,7 @@ define i32 @test18() {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    ret i32 60
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr @globalalias, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr @globalalias, i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -294,10 +294,10 @@ define i32 @test18() {
 
 define i32 @test19() {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @globalalias2, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @globalalias2, i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr @globalalias2, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr @globalalias2, i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -305,7 +305,7 @@ define i32 @test20() {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 false, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
@@ -313,65 +313,65 @@ define i32 @test21() {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 true, i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
 define i32 @test22() {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr null, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr null, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
 define i32 @test23() {
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr null, i1 true, i1 true, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr null, i1 true, i1 true, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
-  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 true, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %1 = call i32 @llvm.objectsize.i32.p0(ptr null, i1 true, i1 true, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
 ; 1 is an arbitrary non-zero address space.
 define i32 @test24() {
 ; CHECK-LABEL: @test24(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 false,
-  i1 false, i1 false, i1 true, i64 0, i64 0)
+  i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
 define i32 @test25() {
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 true, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 true,
-  i1 false, i1 false, i1 true, i64 0, i64 0)
+  i1 false, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
 define i32 @test26() {
 ; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 false, i1 true, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 false,
-  i1 true, i1 false, i1 true, i64 0, i64 0)
+  i1 true, i1 false, i1 true, i64 0)
   ret i32 %1
 }
 
 define i32 @test27() {
 ; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 true, i1 true, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 true, i1 true, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.objectsize.i32.p1(ptr addrspace(1) null, i1 true,
-  i1 true, i1 false, i1 true, i64 0, i64 0)
+  i1 true, i1 false, i1 true, i64 0)
   ret i32 %1
 }

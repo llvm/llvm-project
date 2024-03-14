@@ -11,7 +11,7 @@ target triple = "arm64-apple-ios13.0.0"
 ; CHECK: bl _memcpy
 define void @usqrt(i32 %x, ptr %q) local_unnamed_addr #0 {
   %a = alloca i32, align 4
-  %obj = tail call i64 @llvm.objectsize.i64.p0(ptr %q, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %obj = tail call i64 @llvm.objectsize.i64.p0(ptr %q, i1 false, i1 true, i1 false, i1 true, i64 0)
   %call = call ptr @__memcpy_chk(ptr %q, ptr nonnull %a, i64 1000, i64 %obj) #4
   ret void
 }
@@ -20,7 +20,7 @@ define void @usqrt(i32 %x, ptr %q) local_unnamed_addr #0 {
 declare ptr @__memcpy_chk(ptr, ptr, i64, i64) local_unnamed_addr #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg, i64 immarg) #3
+declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg) #3
 attributes #0 = { optsize "disable-tail-calls"="false" "frame-pointer"="all" }
 attributes #2 = { nofree nounwind "disable-tail-calls"="false" "frame-pointer"="all" }
 attributes #3 = { nounwind readnone speculatable willreturn }

@@ -47,7 +47,7 @@ define void @test_malloc_fails(ptr %p, ptr %r, i32 %n) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[R:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @my_malloc(ptr null, i32 [[N]])
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP1]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP1]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[R]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -64,11 +64,11 @@ define void @test_calloc_fails(ptr %p, ptr %r, i32 %n) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[R:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @my_calloc(ptr null, ptr null, i32 [[N]], i32 5)
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP1]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP1]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[R]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @my_calloc(ptr null, ptr null, i32 100, i32 [[N]])
 ; CHECK-NEXT:    store ptr [[TMP3]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP3]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP3]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[R]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -127,14 +127,14 @@ define void @test_overflow(ptr %p, ptr %r) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[R:%.*]]) {
 ; CHECK-NEXT:    [[BIG_MALLOC:%.*]] = call dereferenceable_or_null(4294967298) ptr @my_calloc(ptr null, ptr null, i32 -2147483647, i32 2)
 ; CHECK-NEXT:    store ptr [[BIG_MALLOC]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr [[BIG_MALLOC]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr [[BIG_MALLOC]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[R]], align 4
 ; CHECK-NEXT:    [[BIG_LITTLE_MALLOC:%.*]] = call dereferenceable_or_null(508) ptr @my_tiny_calloc(ptr null, ptr null, i8 127, i8 4)
 ; CHECK-NEXT:    store ptr [[BIG_LITTLE_MALLOC]], ptr [[P]], align 8
 ; CHECK-NEXT:    store i32 508, ptr [[R]], align 4
 ; CHECK-NEXT:    [[BIG_MALLOC_I64:%.*]] = call dereferenceable_or_null(8589934592) ptr @my_malloc_i64(ptr null, i64 8589934592)
 ; CHECK-NEXT:    store ptr [[BIG_MALLOC_I64]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr [[BIG_MALLOC_I64]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr [[BIG_MALLOC_I64]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    store i64 8589934592, ptr [[R]], align 8
 ; CHECK-NEXT:    [[VARIED_CALLOC:%.*]] = call dereferenceable_or_null(5000) ptr @my_varied_calloc(ptr null, ptr null, i32 1000, i8 5)

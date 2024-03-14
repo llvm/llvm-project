@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 declare dso_local noalias noundef ptr @malloc(i64 noundef) local_unnamed_addr
-declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg, i64 immarg)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg)
 declare noalias ptr @strdup(ptr);
 declare noalias ptr @__strdup(ptr);
 declare noalias ptr @strndup(ptr, i64);
@@ -20,7 +20,7 @@ define dso_local i64 @check_strdup(i32 noundef %n) local_unnamed_addr {
 ; CHECK-NEXT:    ret i64 11
 ;
   %ptr = call noalias ptr @strdup(ptr noundef @str)
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -30,7 +30,7 @@ define dso_local i64 @check_dunder_strdup(i32 noundef %n) local_unnamed_addr {
 ; CHECK-NEXT:    ret i64 11
 ;
   %ptr = call noalias ptr @__strdup(ptr noundef @str)
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -40,7 +40,7 @@ define dso_local i64 @check_strndup(i32 noundef %n) local_unnamed_addr {
 ; CHECK-NEXT:    ret i64 5
 ;
   %ptr = call noalias ptr @strndup(ptr noundef @str, i64 4)
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }
 
@@ -50,6 +50,6 @@ define dso_local i64 @check_dunder_strndup(i32 noundef %n) local_unnamed_addr {
 ; CHECK-NEXT:    ret i64 5
 ;
   %ptr = call noalias ptr @__strndup(ptr noundef @str, i64 4)
-  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0, i64 0)
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %ptr, i1 false, i1 true, i1 false, i1 true, i64 0)
   ret i64 %size
 }

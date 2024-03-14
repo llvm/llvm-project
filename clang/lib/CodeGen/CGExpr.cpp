@@ -749,10 +749,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       llvm::Value *Dynamic = Builder.getFalse();
       llvm::Value *WholeObj = Builder.getTrue();
       llvm::Value *SubobjectSize = Builder.getInt64(0);
-      llvm::Value *SubobjectOffset = Builder.getInt64(0);
       llvm::Value *LargeEnough = Builder.CreateICmpUGE(
           Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic, WholeObj,
-                                 SubobjectSize, SubobjectOffset}),
+                                 SubobjectSize}),
           Size);
       Checks.push_back(std::make_pair(LargeEnough, SanitizerKind::ObjectSize));
     }

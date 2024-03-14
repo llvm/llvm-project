@@ -55,7 +55,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
-; CHECK: call i64 @llvm.objectsize.i64.p0(ptr %call, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK: call i64 @llvm.objectsize.i64.p0(ptr %call, i1 false, i1 false, i1 false, i1 true, i64 0)
   %0 = tail call i64 @llvm.objectsize.i64(ptr %call, i1 false)
   ret i64 %0
 

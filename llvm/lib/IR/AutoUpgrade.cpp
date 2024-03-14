@@ -4395,7 +4395,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *Dynamic = nullptr;
     Value *WholeObj = nullptr;
     Value *SubobjectSize = nullptr;
-    Value *SubobjectOffset = nullptr;
 
     switch (CI->arg_size()) {
     case 2:
@@ -4404,7 +4403,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Dynamic = Builder.getFalse();
       WholeObj = Builder.getTrue();
       SubobjectSize = Builder.getInt64(0);
-      SubobjectOffset = Builder.getInt64(0);
       break;
     case 3:
       UnknownVal = CI->getArgOperand(1);
@@ -4412,7 +4410,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Dynamic = Builder.getFalse();
       WholeObj = Builder.getTrue();
       SubobjectSize = Builder.getInt64(0);
-      SubobjectOffset = Builder.getInt64(0);
       break;
     case 4:
       UnknownVal = CI->getArgOperand(1);
@@ -4420,7 +4417,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Dynamic = CI->getArgOperand(3);
       WholeObj = Builder.getTrue();
       SubobjectSize = Builder.getInt64(0);
-      SubobjectOffset = Builder.getInt64(0);
       break;
     case 5:
       UnknownVal = CI->getArgOperand(1);
@@ -4428,7 +4424,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Dynamic = CI->getArgOperand(3);
       WholeObj = CI->getArgOperand(4);
       SubobjectSize = Builder.getInt64(0);
-      SubobjectOffset = Builder.getInt64(0);
       break;
     case 6:
       UnknownVal = CI->getArgOperand(1);
@@ -4436,21 +4431,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Dynamic = CI->getArgOperand(3);
       WholeObj = CI->getArgOperand(4);
       SubobjectSize = CI->getArgOperand(5);
-      SubobjectOffset = Builder.getInt64(0);
-      break;
-    case 7:
-      UnknownVal = CI->getArgOperand(1);
-      NullIsUnknownSize = CI->getArgOperand(2);
-      Dynamic = CI->getArgOperand(3);
-      WholeObj = CI->getArgOperand(4);
-      SubobjectSize = CI->getArgOperand(5);
-      SubobjectOffset = CI->getArgOperand(6);
       break;
     }
 
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), UnknownVal,
                                          NullIsUnknownSize, Dynamic, WholeObj,
-                                         SubobjectSize, SubobjectOffset});
+                                         SubobjectSize});
     break;
   }
 

@@ -78,12 +78,12 @@ define ptr @test_simplify4_tail() {
 
 define ptr @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__memcpy_chk(ptr nonnull @a, ptr nonnull @.str, i32 12, i32 [[LEN]])
 ; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i32 0, i32 11)
 ;
 
-  %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
   %ret = call ptr @__stpcpy_chk(ptr @a, ptr @.str, i32 %len)
   ret ptr %ret
 }
@@ -97,7 +97,7 @@ define ptr @test_simplify6() {
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
-  %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false, i1 true, i64 0)
   %ret = call ptr @__stpcpy_chk(ptr @a, ptr @a, i32 %len)
   ret ptr %ret
 }
@@ -127,4 +127,4 @@ define ptr @test_no_simplify1() {
 }
 
 declare ptr @__stpcpy_chk(ptr, ptr, i32) nounwind
-declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1, i1, i64, i64) nounwind readonly
+declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1, i1, i64) nounwind readonly

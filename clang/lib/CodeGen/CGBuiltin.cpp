@@ -1106,48 +1106,35 @@ struct SubobjectFinder
 
 } // end anonymous namespace
 
-/// getFieldInfo - Gather the size and offset of the field \p VD in \p RD.
-static std::pair<uint64_t, uint64_t> getFieldInfo(CodeGenFunction &CGF,
-                                                  const RecordDecl *RD,
-                                                  const ValueDecl *VD,
-                                                  uint64_t Offset = 0) {
+/// getFieldInfo - Gather the size of the field \p VD in \p RD.
+static uint64_t getFieldInfo(CodeGenFunction &CGF, const RecordDecl *RD,
+                             const ValueDecl *VD) {
   if (!RD)
-    return std::make_pair(0, 0);
+    return 0;
 
   ASTContext &Ctx = CGF.getContext();
-  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-  unsigned FieldNo = 0;
 
   for (const Decl *D : RD->decls()) {
     if (const auto *Record = dyn_cast<RecordDecl>(D)) {
-      std::pair<uint64_t, uint64_t> Res =
-          getFieldInfo(CGF, Record->getDefinition(), VD,
-                       Offset + Layout.getFieldOffset(FieldNo));
-      if (Res.first != 0)
+      uint64_t Res = getFieldInfo(CGF, Record->getDefinition(), VD);
+      if (Res != 0)
         return Res;
       continue;
     }
 
-    if (const auto *FD = dyn_cast<FieldDecl>(D); FD == VD) {
-      Offset += Layout.getFieldOffset(FieldNo);
-      return std::make_pair(Ctx.getTypeSizeInChars(FD->getType()).getQuantity(),
-                            Ctx.toCharUnitsFromBits(Offset).getQuantity());
-    }
-
-    if (isa<FieldDecl>(D))
-      ++FieldNo;
+    if (const auto *FD = dyn_cast<FieldDecl>(D); FD == VD)
+      return Ctx.getTypeSizeInChars(FD->getType()).getQuantity();
   }
 
-  return std::make_pair(0, 0);
+  return 0;
 }
 
 /// getSubobjectInfo - Find the sub-object that \p E points to. If it lives
 /// inside a struct, return the "size" and "offset" of that sub-object.
-static std::pair<uint64_t, uint64_t> getSubobjectInfo(CodeGenFunction &CGF,
-                                                      const Expr *E) {
+static uint64_t getSubobjectInfo(CodeGenFunction &CGF, const Expr *E) {
   const Expr *Subobject = SubobjectFinder().Visit(E);
   if (!Subobject)
-    return std::make_pair(0, 0);
+    return 0;
 
   const RecordDecl *OuterRD = nullptr;
   const ValueDecl *VD = nullptr;
@@ -1172,12 +1159,12 @@ static std::pair<uint64_t, uint64_t> getSubobjectInfo(CodeGenFunction &CGF,
     //
     // In that case, we want the size of the whole struct. So we don't have to
     // worry about finding a suboject.
-    return std::make_pair(0, 0);
+    return 0;
   }
 
   if (!VD || !OuterRD)
     // The expression is referencing an object that's not in a struct.
-    return std::make_pair(0, 0);
+    return 0;
 
   return getFieldInfo(CGF, OuterRD->getDefinition(), VD);
 }
@@ -1223,8 +1210,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
-  std::pair<Value *, Value *> SubobjectInfo =
-      std::make_pair(Builder.getInt64(0), Builder.getInt64(0));
+  Value *SubobjectSize = Builder.getInt64(0);
 
   if (IsDynamic) {
     // Emit special code for a flexible array member with the "counted_by"
@@ -1236,10 +1222,9 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
       // The object size is constrained to the sub-object containing the
       // element. If it's in a structure, get the size and offset information
       // for back-end processing.
-      std::pair<uint64_t, uint64_t> Info = getSubobjectInfo(*this, E);
-      if (Info.first != 0)
-        SubobjectInfo = std::make_pair(Builder.getInt64(Info.first),
-                                       Builder.getInt64(Info.second));
+      uint64_t Info = getSubobjectInfo(*this, E);
+      if (Info != 0)
+        SubobjectSize = Builder.getInt64(Info);
     }
   }
 
@@ -1260,7 +1245,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   // pointer points to.
   Value *WholeObj = Builder.getInt1((Type & 1) == 0);
   return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic, WholeObj,
-                                SubobjectInfo.first, SubobjectInfo.second});
+                                SubobjectSize});
 }
 
 namespace {

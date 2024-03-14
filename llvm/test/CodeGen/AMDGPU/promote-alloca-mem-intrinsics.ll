@@ -10,7 +10,7 @@ declare void @llvm.memmove.p5.p5.i64(ptr addrspace(5) nocapture, ptr addrspace(5
 
 declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture, i8, i32, i1) #0
 
-declare i32 @llvm.objectsize.i32.p5(ptr addrspace(5), i1, i1, i1, i1, i64, i64) #1
+declare i32 @llvm.objectsize.i32.p5(ptr addrspace(5), i1, i1, i1, i1, i64) #1
 
 ; CHECK-LABEL: @promote_with_memcpy(
 ; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_memcpy.alloca, i32 0, i32 %{{[0-9]+}}
@@ -45,10 +45,10 @@ define amdgpu_kernel void @promote_with_memset(ptr addrspace(1) %out, ptr addrsp
 
 ; CHECK-LABEL: @promote_with_objectsize(
 ; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_objectsize.alloca, i32 0, i32 %{{[0-9]+}}
-; CHECK: call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) [[PTR]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK: call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) [[PTR]], i1 false, i1 false, i1 false, i1 true, i64 0)
 define amdgpu_kernel void @promote_with_objectsize(ptr addrspace(1) %out) #0 {
   %alloca = alloca [17 x i32], align 4, addrspace(5)
-  %size = call i32 @llvm.objectsize.i32.p5(ptr addrspace(5) %alloca, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %size = call i32 @llvm.objectsize.i32.p5(ptr addrspace(5) %alloca, i1 false, i1 false, i1 false, i1 true, i64 0)
   store i32 %size, ptr addrspace(1) %out
   ret void
 }
@@ -57,7 +57,7 @@ define amdgpu_kernel void @promote_with_objectsize(ptr addrspace(1) %out) #0 {
 ; CHECK: store i32 32, ptr addrspace(1) %out, align 4
 define amdgpu_kernel void @promote_with_objectsize_8(ptr addrspace(1) %out) #0 {
   %alloca = alloca [8 x i32], align 4, addrspace(5)
-  %size = call i32 @llvm.objectsize.i32.p5(ptr addrspace(5) %alloca, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %size = call i32 @llvm.objectsize.i32.p5(ptr addrspace(5) %alloca, i1 false, i1 false, i1 false, i1 true, i64 0)
   store i32 %size, ptr addrspace(1) %out
   ret void
 }

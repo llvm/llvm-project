@@ -91,7 +91,7 @@ define i32 @test_rauw(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL49:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[A:%.*]])
 ; CHECK-NEXT:    [[ADD180:%.*]] = add i64 [[CALL49]], 1
-; CHECK-NEXT:    [[YO107:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[B:%.*]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[YO107:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[B:%.*]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    [[CALL50:%.*]] = call ptr @__memmove_chk(ptr [[B]], ptr [[A]], i64 [[ADD180]], i64 [[YO107]])
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[B]])
 ; CHECK-NEXT:    [[STRCHR1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[STRLEN]]
@@ -106,7 +106,7 @@ define i32 @test_rauw(ptr %a, ptr %b, ptr %c) {
 entry:
   %call49 = call i64 @strlen(ptr %a)
   %add180 = add i64 %call49, 1
-  %yo107 = call i64 @llvm.objectsize.i64.p0(ptr %b, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %yo107 = call i64 @llvm.objectsize.i64.p0(ptr %b, i1 false, i1 false, i1 false, i1 true, i64 0)
   %call50 = call ptr @__memmove_chk(ptr %b, ptr %a, i64 %add180, i64 %yo107)
   %call51i = call ptr @strrchr(ptr %b, i32 0)
   %d = load ptr, ptr %c, align 8
@@ -121,7 +121,7 @@ entry:
 declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 declare ptr @strrchr(ptr, i32)
 declare i64 @strlen(ptr nocapture)
-declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64, i64)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64)
 
 declare ptr @__memset_chk(ptr, i32, i64, i64)
 
@@ -134,7 +134,7 @@ define ptr @pr25892(i64 %size) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call i64 @llvm.objectsize.i64.p0(ptr nonnull [[CALL]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i64 @llvm.objectsize.i64.p0(ptr nonnull [[CALL]], i1 false, i1 false, i1 false, i1 true, i64 0)
 ; CHECK-NEXT:    [[CALL3:%.*]] = tail call ptr @__memset_chk(ptr nonnull [[CALL]], i32 0, i64 [[SIZE]], i64 [[CALL2]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
@@ -146,7 +146,7 @@ entry:
   %cmp = icmp eq ptr %call, null
   br i1 %cmp, label %cleanup, label %if.end
 if.end:
-  %call2 = tail call i64 @llvm.objectsize.i64.p0(ptr nonnull %call, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %call2 = tail call i64 @llvm.objectsize.i64.p0(ptr nonnull %call, i1 false, i1 false, i1 false, i1 true, i64 0)
   %call3 = tail call ptr @__memset_chk(ptr nonnull %call, i32 0, i64 %size, i64 %call2) #1
   br label %cleanup
 cleanup:

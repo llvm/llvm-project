@@ -85,16 +85,16 @@ void test1(unsigned long sz) {
 
   char *ptr = (char *)malloc(sz);
 
-  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0({{.*}}, i1 false, i1 true, i1 true, i1 true, i64 0, i64 0)
+  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0({{.*}}, i1 false, i1 true, i1 true, i1 true, i64 0)
   // CHECK: call i32 @DynamicObjectSize0(ptr noundef %{{.*}}, i64 noundef [[REG]])
   gi = DynamicObjectSize0(ptr);
 
   // CHECK: [[WITH_OFFSET:%.*]] = getelementptr
-  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[WITH_OFFSET]], i1 false, i1 true, i1 true, i1 true, i64 0, i64 0)
+  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[WITH_OFFSET]], i1 false, i1 true, i1 true, i1 true, i64 0)
   // CHECK: call i32 @DynamicObjectSize0(ptr noundef {{.*}}, i64 noundef [[REG]])
   gi = DynamicObjectSize0(ptr+10);
 
-  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0({{.*}}, i1 true, i1 true, i1 true, i1 true, i64 0, i64 0)
+  // CHECK: [[REG:%.*]] = call i64 @llvm.objectsize.i64.p0({{.*}}, i1 true, i1 true, i1 true, i1 true, i64 0)
   // CHECK: call i32 @DynamicObjectSize2(ptr noundef {{.*}}, i64 noundef [[REG]])
   gi = DynamicObjectSize2(ptr);
 }

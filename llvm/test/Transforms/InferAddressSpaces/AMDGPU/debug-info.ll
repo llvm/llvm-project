@@ -25,10 +25,10 @@ define void @simplified_constexpr_gep_addrspacecast(i64 %idx0, i64 %idx1) #0 !db
 }
 
 ; CHECK-LABEL: @objectsize_group_to_flat_i32(
-; CHECK: %val = call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) %group.ptr, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0), !dbg ![[DEBUG_LOC_VAL:[0-9]+]]
+; CHECK: %val = call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) %group.ptr, i1 true, i1 false, i1 false, i1 true, i64 0), !dbg ![[DEBUG_LOC_VAL:[0-9]+]]
 define i32 @objectsize_group_to_flat_i32(ptr addrspace(3) %group.ptr) #0 !dbg !16 {
   %cast = addrspacecast ptr addrspace(3) %group.ptr to ptr, !dbg !17
-  %val = call i32 @llvm.objectsize.i32.p0(ptr %cast, i1 true, i1 false, i1 false, i1 true, i64 0, i64 0), !dbg !18
+  %val = call i32 @llvm.objectsize.i32.p0(ptr %cast, i1 true, i1 false, i1 false, i1 true, i64 0), !dbg !18
   ret i32 %val, !dbg !19
 }
 
@@ -66,7 +66,7 @@ entry:
   ret float %arrayidx.load, !dbg !45
 }
 
-declare i32 @llvm.objectsize.i32.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg, i64 immarg) #1
+declare i32 @llvm.objectsize.i32.p0(ptr, i1 immarg, i1 immarg, i1 immarg, i1 immarg, i64 immarg) #1
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64) #3
 declare i1 @llvm.amdgcn.is.shared(ptr nocapture) #4

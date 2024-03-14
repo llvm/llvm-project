@@ -19,7 +19,7 @@ declare i1 @llvm.is.constant.sl_i32i32s({i32, i32} %a) nounwind readnone
 declare i1 @llvm.is.constant.a2i64([2 x i64] %a) nounwind readnone
 declare i1 @llvm.is.constant.p0(ptr %a) nounwind readnone
 
-declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64, i64) nounwind readnone
+declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1, i1, i64) nounwind readnone
 
 declare i32 @subfun_1()
 declare i32 @subfun_2()
@@ -45,7 +45,7 @@ define i1 @test_objectsize(ptr %obj) nounwind {
 ;; CHECK-NOT:      llvm.objectsize
 ;; CHECK-NOT:      llvm.is.constant
 ;; CHECK:          ret i1 true
-  %os = call i64 @llvm.objectsize.i64.p0(ptr %obj, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %os = call i64 @llvm.objectsize.i64.p0(ptr %obj, i1 false, i1 false, i1 false, i1 true, i64 0)
   %os1 = add i64 %os, 1
   %v = call i1 @llvm.is.constant.i64(i64 %os1)
   ret i1 %v

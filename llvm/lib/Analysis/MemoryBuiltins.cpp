@@ -634,8 +634,6 @@ Value *llvm::lowerObjectSizeCall(
 
   EvalOptions.SubobjectSize =
       cast<ConstantInt>(ObjectSize->getArgOperand(5))->getZExtValue();
-  EvalOptions.SubobjectOffset =
-      cast<ConstantInt>(ObjectSize->getArgOperand(6))->getZExtValue();
 
   auto *ResultType = cast<IntegerType>(ObjectSize->getType());
   if (cast<ConstantInt>(ObjectSize->getArgOperand(3))->isZero()) {
@@ -663,13 +661,8 @@ Value *llvm::lowerObjectSizeCall(
       Value *Size = SizeOffsetPair.Size;
       Value *Offset = SizeOffsetPair.Offset;
 
-      if (!EvalOptions.WholeObjectSize && EvalOptions.SubobjectSize) {
+      if (!EvalOptions.WholeObjectSize && EvalOptions.SubobjectSize)
         Size = ConstantInt::get(Size->getType(), EvalOptions.SubobjectSize);
-        if (EvalOptions.SubobjectOffset)
-          Offset = Builder.CreateSub(
-              Offset,
-              ConstantInt::get(Offset->getType(), EvalOptions.SubobjectOffset));
-      }
 
       // If we've outside the end of the object, then we can always access
       // exactly 0 bytes.
@@ -1209,7 +1202,15 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitGEPOperator(GEPOperator &GEP) {
     return ObjectSizeOffsetEvaluator::unknown();
 
   Value *Offset = emitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
-  Offset = Builder.CreateAdd(PtrData.Offset, Offset);
+
+  if (!EvalOpts.WholeObjectSize)
+    if (auto *Add = dyn_cast<AddOperator>(Offset))
+      for (auto I = Add->op_begin(), E = Add->op_end(); I != E; ++I)
+        if (auto *C = dyn_cast<Constant>(I)) {
+          Offset = Builder.CreateSub(Offset, C);
+          break;
+        }
+
   return SizeOffsetValue(PtrData.Size, Offset);
 }
 

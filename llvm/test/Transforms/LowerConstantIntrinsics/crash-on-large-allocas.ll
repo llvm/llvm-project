@@ -8,9 +8,9 @@ target datalayout = "p:16:16"
 ; CHECK-LABEL: @alloca_overflow_is_unknown(
 define i16 @alloca_overflow_is_unknown() {
   %i = alloca i8, i32 65537
-  %j = call i16 @llvm.objectsize.i16.p0(ptr %i, i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  %j = call i16 @llvm.objectsize.i16.p0(ptr %i, i1 false, i1 false, i1 false, i1 true, i64 0)
   ; CHECK: ret i16 -1
   ret i16 %j
 }
 
-declare i16 @llvm.objectsize.i16.p0(ptr, i1, i1, i1, i1, i64, i64)
+declare i16 @llvm.objectsize.i16.p0(ptr, i1, i1, i1, i1, i64)

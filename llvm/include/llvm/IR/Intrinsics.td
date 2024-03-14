@@ -1077,11 +1077,11 @@ def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
 // Internal interface for object size checking
 def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                [llvm_anyptr_ty, llvm_i1_ty, llvm_i1_ty,
-                                llvm_i1_ty, llvm_i1_ty, llvm_i64_ty, llvm_i64_ty],
+                                llvm_i1_ty, llvm_i1_ty, llvm_i64_ty],
                                [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
                                 ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
-                                ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>]>,
+                                ImmArg<ArgIndex<5>>]>,
                                ClangBuiltin<"__builtin_object_size">;
 
 //===--------------- Access to Floating Point Environment -----------------===//

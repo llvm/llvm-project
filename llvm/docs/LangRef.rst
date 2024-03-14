@@ -27031,8 +27031,8 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.objectsize.i32(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>, i1 <wholeobj>, i64 <subobj_size>, i64 <subobj_offset>)
-      declare i64 @llvm.objectsize.i64(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>, i1 <wholeobj>, i64 <subobj_size>, i64 <subobj_offset>)
+      declare i32 @llvm.objectsize.i32(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>, i1 <wholeobj>, i64 <subobj_size>)
+      declare i64 @llvm.objectsize.i64(ptr <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>, i1 <wholeobj>, i64 <subobj_size>)
 
 Overview:
 """""""""
@@ -27070,14 +27070,11 @@ The ``llvm.objectsize`` intrinsic takes six arguments:
     surrounding subobject.
   - If it's ``true``, ``llvm.objectsize`` returns the size of the whole object.
 
-- If non-zero, the sixth and seventh arguments encode the size and offset
-  information, respectively, of the original subobject's layout and is used
-  when the fifth argument is ``false``.
-- The seventh argument encodes the offset information of the original
-  subobject's layout and is used when the fifth argument is ``false``.
+- If non-zero, the sixth argument encodes the size information, respectively,
+  of the original subobject's layout and is used when the fifth argument is
+  ``false``.
 
-The second, third, fourth, fifth, sixth, and seventh arguments accept only
-constants.
+The second, third, fourth, fifth, and sixth arguments accept only constants.
 
 Semantics:
 """"""""""

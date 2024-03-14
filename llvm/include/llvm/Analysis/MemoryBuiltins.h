@@ -169,7 +169,6 @@ struct ObjectSizeOpts {
   /// The layout of the sub-object: Size/Offset pair. Useful if WholeObjectSize
   /// is false.
   uint64_t SubobjectSize = 0;
-  uint64_t SubobjectOffset = 0;
   /// If set, used for more accurate evaluation
   AAResults *AA = nullptr;
 };

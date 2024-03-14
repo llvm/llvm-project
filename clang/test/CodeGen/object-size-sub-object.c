@@ -44,7 +44,7 @@ size_t ret;
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP0]], i1 false, i1 true, i1 true, i1 false, i64 0, i64 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[TMP0]], i1 false, i1 true, i1 true, i1 false, i64 0)
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 size_t test1(struct test_struct *p, int idx) {
@@ -63,7 +63,7 @@ size_t test1(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i8], ptr [[BUF1]], i64 0, i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 5, i64 8)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 5)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test2(struct test_struct *p, int idx) {
@@ -82,7 +82,7 @@ size_t test2(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Z]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 116, i64 16)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 116)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test3(struct test_struct *p, int idx) {
@@ -101,7 +101,7 @@ size_t test3(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Z]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 116, i64 16)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 116)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test4(struct test_struct *p, int idx) {
@@ -121,7 +121,7 @@ size_t test4(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 1, i64 16)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 1)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test5(struct test_struct *p, int idx) {
@@ -141,7 +141,7 @@ size_t test5(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 104, i64 20)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 104)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test6(struct test_struct *p, int idx) {
@@ -161,7 +161,7 @@ size_t test6(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 4, i64 124)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 4)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test7(struct test_struct *p, int idx) {
@@ -181,7 +181,7 @@ size_t test7(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 4, i64 128)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 4)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test8(struct test_struct *p, int idx) {
@@ -202,7 +202,7 @@ size_t test8(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 8, i64 0)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 8)
 // CHECK-NEXT:    ret i64 [[TMP3]]
 //
 size_t test9(struct test_struct *p, int idx) {
@@ -223,7 +223,7 @@ size_t test9(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X_1]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 1, i64 145)
+// CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 1)
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
 size_t test10(struct test_struct *p, int idx) {
@@ -244,7 +244,7 @@ size_t test10(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X_2]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 37, i64 146)
+// CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 37)
 // CHECK-NEXT:    ret i64 [[TMP4]]
 //
 size_t test11(struct test_struct *p, int idx) {
@@ -264,7 +264,7 @@ size_t test11(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [20 x i8], ptr [[_Z]], i64 0, i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 20, i64 183)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 20)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test12(struct test_struct *p, int idx) {
@@ -284,7 +284,7 @@ size_t test12(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i8], ptr [[_Y]], i64 0, i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 13, i64 183)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 13)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test13(struct test_struct *p, int idx) {
@@ -303,7 +303,7 @@ size_t test13(struct test_struct *p, int idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [7 x i8], ptr [[BUF2]], i64 0, i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 7, i64 203)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[ARRAYIDX]], i1 false, i1 true, i1 true, i1 false, i64 7)
 // CHECK-NEXT:    ret i64 [[TMP2]]
 //
 size_t test14(struct test_struct *p, int idx) {

@@ -35,7 +35,7 @@
 void foo(void) {
   union { int i; } u;
 
-  // CHECK-COMMON: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(ptr %[[PTR:.*]], i1 false, i1 false, i1 false, i1 true, i64 0, i64 0)
+  // CHECK-COMMON: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0(ptr %[[PTR:.*]], i1 false, i1 false, i1 false, i1 true, i64 0)
   // CHECK-COMMON-NEXT: %[[OK:.*]] = icmp uge i64 %[[SIZE]], 4
 
   // CHECK-UBSAN: br i1 %[[OK]], {{.*}} !prof ![[WEIGHT_MD:.*]], !nosanitize
