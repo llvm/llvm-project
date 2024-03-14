@@ -191,6 +191,82 @@ public:
     return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
                                      src);
   }
+
+  //
+  // Block handling helpers
+  // ----------------------
+  //
+  OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
+    auto lastAlloca =
+        std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
+          return mlir::isa<mlir::cir::AllocaOp>(&op);
+        });
+
+    if (lastAlloca != block->rend())
+      return OpBuilder::InsertPoint(block,
+                                    ++mlir::Block::iterator(&*lastAlloca));
+    return OpBuilder::InsertPoint(block, block->begin());
+  };
+
+  mlir::IntegerAttr getSizeFromCharUnits(mlir::MLIRContext *ctx,
+                                         clang::CharUnits size) {
+    // Note that mlir::IntegerType is used instead of mlir::cir::IntType here
+    // because we don't need sign information for this to be useful, so keep
+    // it simple.
+    return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
+                                  size.getQuantity());
+  }
+
+  mlir::cir::PointerType getPointerTo(mlir::Type ty,
+                                      unsigned addressSpace = 0) {
+    return mlir::cir::PointerType::get(getContext(), ty);
+  }
+
+  /// Create a do-while operation.
+  mlir::cir::DoWhileOp createDoWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<mlir::cir::DoWhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
+  /// Create a while operation.
+  mlir::cir::WhileOp createWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<mlir::cir::WhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
+  /// Create a for operation.
+  mlir::cir::ForOp createFor(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
+    return create<mlir::cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
+  mlir::TypedAttr getConstPtrAttr(mlir::Type t, uint64_t v) {
+    assert(t.isa<mlir::cir::PointerType>() && "expected cir.ptr");
+    return mlir::cir::ConstPtrAttr::get(getContext(), t, v);
+  }
+
+  // Creates constant nullptr for pointer type ty.
+  mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    return create<mlir::cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
+  }
+
+  /// Create a loop condition.
+  mlir::cir::ConditionOp createCondition(mlir::Value condition) {
+    return create<mlir::cir::ConditionOp>(condition.getLoc(), condition);
+  }
+
+  /// Create a yield operation.
+  mlir::cir::YieldOp createYield(mlir::Location loc,
+                                 mlir::ValueRange value = {}) {
+    return create<mlir::cir::YieldOp>(loc, value);
+  }
 };
 
 } // namespace cir
