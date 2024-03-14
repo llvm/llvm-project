@@ -691,7 +691,9 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitAsTypeExpr(AsTypeExpr *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitAtomicExpr(AtomicExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitAtomicExpr(AtomicExpr *E) {
+    return CGF.buildAtomicExpr(E).getScalarVal();
+  }
 
   // Emit a conversion from the specified type to the specified destination
   // type, both of which are CIR scalar types.

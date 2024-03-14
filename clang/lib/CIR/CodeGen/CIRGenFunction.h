@@ -1478,6 +1478,8 @@ public:
 
   void buildCXXThrowExpr(const CXXThrowExpr *E);
 
+  RValue buildAtomicExpr(AtomicExpr *E);
+
   /// Return the address of a local variable.
   Address GetAddrOfLocalVar(const clang::VarDecl *VD) {
     auto it = LocalDeclMap.find(VD);
