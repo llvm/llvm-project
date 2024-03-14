@@ -3140,13 +3140,34 @@ const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
   return cast<FunctionType>(Result.getTypePtr());
 }
 
+QualType ASTContext::adjustFunctionResultType(QualType FunctionType,
+                                              QualType ResultType) {
+  // Might be wrapped in a macro qualified type.
+  if (const auto *MQT = dyn_cast<MacroQualifiedType>(FunctionType)) {
+    return getMacroQualifiedType(
+        adjustFunctionResultType(MQT->getUnderlyingType(), ResultType),
+        MQT->getMacroIdentifier());
+  }
+
+  // Might have a calling-convention attribute.
+  if (const auto *AT = dyn_cast<AttributedType>(FunctionType)) {
+    return getAttributedType(
+        AT->getAttrKind(),
+        adjustFunctionResultType(AT->getModifiedType(), ResultType),
+        adjustFunctionResultType(AT->getEquivalentType(), ResultType));
+  }
+
+  // Anything else must be a function type. Rebuild it with the new return value.
+  const auto *FPT = FunctionType->castAs<FunctionProtoType>();
+  return getFunctionType(ResultType, FPT->getParamTypes(),
+                         FPT->getExtProtoInfo());
+}
+
 void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
                                                  QualType ResultType) {
   FD = FD->getMostRecentDecl();
   while (true) {
-    const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-    FD->setType(getFunctionType(ResultType, FPT->getParamTypes(), EPI));
+    FD->setType(adjustFunctionResultType(FD->getType(), ResultType));
     if (FunctionDecl *Next = FD->getPreviousDecl())
       FD = Next;
     else
