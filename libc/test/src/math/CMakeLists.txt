@@ -1518,6 +1518,8 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.generic.explogxf
+    libc.src.math.fabs
+    libc.src.math.fabsf
     libc.src.__support.FPUtil.fp_bits
 )
 

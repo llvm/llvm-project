@@ -15,8 +15,8 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include <errno.h>
-#include <math.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 

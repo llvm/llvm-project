@@ -12,6 +12,7 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include <array>
+#include <cmath>
 #include <limits>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -36,7 +37,8 @@ class LlvmLibcFModTest : public LIBC_NAMESPACE::testing::Test {
       T(1.0) + std::numeric_limits<T>::epsilon(),
       T(M_PI),
       T(M_SQRT2),
-      T(M_E)};
+      T(M_E),
+  };
 
 public:
   void testExtensive() {
