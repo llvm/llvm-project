@@ -32,9 +32,7 @@ int main() {
 }
 
 // CLANG-PGO: ======== Counters =========
-// CLANG-PGO-NEXT: [ 0 11 20 ]
-// CLANG-PGO-NEXT: [ 10 ]
-// CLANG-PGO-NEXT: [ 20 ]
+// CLANG-PGO-NEXT: 0 11 20 10 20
 // CLANG-PGO-NEXT: ========== Data ===========
 // CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
@@ -55,9 +53,7 @@ int main() {
 // CLANG-PGO-NEXT: test2
 
 // LLVM-PGO: ======== Counters =========
-// LLVM-PGO-NEXT: [ 20 ]
-// LLVM-PGO-NEXT: [ 10 ]
-// LLVM-PGO-NEXT: [ 20 10 1 1 ]
+// LLVM-PGO-NEXT: 20 10 20 10 1 1
 // LLVM-PGO-NEXT: ========== Data ===========
 // LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
