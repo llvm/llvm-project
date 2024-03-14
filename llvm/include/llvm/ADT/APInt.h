@@ -2188,10 +2188,27 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
+/// Determine the absolute difference of two APInts considered to be signed.
+inline const APInt abds(const APInt &A, const APInt &B) {
+  return A.sge(B) ? (A - B) : (B - A);
+}
+
 /// Determine the absolute difference of two APInts considered to be unsigned.
-inline const APInt absdiff(const APInt &A, const APInt &B) {
+inline const APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
+
+/// Compute the floor of the signed average of C1 and C2
+APInt avgFloorS(const APInt &C1, const APInt &C2);
+
+/// Compute the floor of the unsigned average of C1 and C2
+APInt avgFloorU(const APInt &C1, const APInt &C2);
+
+/// Compute the ceil of the signed average of C1 and C2
+APInt avgCeilS(const APInt &C1, const APInt &C2);
+
+/// Compute the ceil of the unsigned average of C1 and C2
+APInt avgCeilU(const APInt &C1, const APInt &C2);
 
 /// Compute GCD of two unsigned APInt values.
 ///

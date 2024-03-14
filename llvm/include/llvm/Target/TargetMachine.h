@@ -241,7 +241,7 @@ public:
 
   bool isPositionIndependent() const;
 
-  bool shouldAssumeDSOLocal(const Module &M, const GlobalValue *GV) const;
+  bool shouldAssumeDSOLocal(const GlobalValue *GV) const;
 
   /// Returns true if this target uses emulated TLS.
   bool useEmulatedTLS() const;
@@ -455,7 +455,7 @@ public:
 
   virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                                      raw_pwrite_stream *, CodeGenFileType,
-                                     CGPassBuilderOption,
+                                     const CGPassBuilderOption &,
                                      PassInstrumentationCallbacks *) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());

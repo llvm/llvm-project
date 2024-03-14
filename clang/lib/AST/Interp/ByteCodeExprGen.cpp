@@ -82,15 +82,27 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (DiscardResult)
       return this->discard(SubExpr);
 
-    if (SubExpr->getType()->isAnyComplexType())
-      return this->delegate(SubExpr);
+    std::optional<PrimType> SubExprT = classify(SubExpr->getType());
+    // Prepare storage for the result.
+    if (!Initializing && !SubExprT) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(SubExpr, /*IsExtended=*/false);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
 
     if (!this->visit(SubExpr))
       return false;
 
-    if (std::optional<PrimType> SubExprT = classify(SubExpr->getType()))
+    if (SubExprT)
       return this->emitLoadPop(*SubExprT, CE);
-    return false;
+
+    // If the subexpr type is not primitive, we need to perform a copy here.
+    // This happens for example in C when dereferencing a pointer of struct
+    // type.
+    return this->emitMemcpy(CE);
   }
 
   case CK_UncheckedDerivedToBase:
@@ -296,14 +308,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Location for the SubExpr.
     // Since SubExpr is of complex type, visiting it results in a pointer
     // anyway, so we just create a temporary pointer variable.
-    std::optional<unsigned> SubExprOffset = allocateLocalPrimitive(
+    unsigned SubExprOffset = allocateLocalPrimitive(
         SubExpr, PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
-    if (!SubExprOffset)
-      return false;
-
     if (!this->visit(SubExpr))
       return false;
-    if (!this->emitSetLocal(PT_Ptr, *SubExprOffset, CE))
+    if (!this->emitSetLocal(PT_Ptr, SubExprOffset, CE))
       return false;
 
     PrimType SourceElemT = classifyComplexElementType(SubExpr->getType());
@@ -312,7 +321,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     PrimType DestElemT = classifyPrim(DestElemType);
     // Cast both elements individually.
     for (unsigned I = 0; I != 2; ++I) {
-      if (!this->emitGetLocal(PT_Ptr, *SubExprOffset, CE))
+      if (!this->emitGetLocal(PT_Ptr, SubExprOffset, CE))
         return false;
       if (!this->emitArrayElemPop(SourceElemT, I, CE))
         return false;
@@ -1233,22 +1242,19 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   // At this point we either have the evaluated source expression or a pointer
   // to an object on the stack. We want to create a local variable that stores
   // this value.
-  std::optional<unsigned> LocalIndex =
-      allocateLocalPrimitive(E, SubExprT, /*IsConst=*/true);
-  if (!LocalIndex)
-    return false;
-  if (!this->emitSetLocal(SubExprT, *LocalIndex, E))
+  unsigned LocalIndex = allocateLocalPrimitive(E, SubExprT, /*IsConst=*/true);
+  if (!this->emitSetLocal(SubExprT, LocalIndex, E))
     return false;
 
   // Here the local variable is created but the value is removed from the stack,
   // so we put it back if the caller needs it.
   if (!DiscardResult) {
-    if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
+    if (!this->emitGetLocal(SubExprT, LocalIndex, E))
       return false;
   }
 
   // This is cleaned up when the local variable is destroyed.
-  OpaqueExprs.insert({E, *LocalIndex});
+  OpaqueExprs.insert({E, LocalIndex});
 
   return true;
 }
@@ -1642,14 +1648,13 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    if (std::optional<unsigned> LocalIndex = allocateLocalPrimitive(
-            SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true)) {
-      if (!this->visit(SubExpr))
-        return false;
-      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
-        return false;
-      return this->emitGetPtrLocal(*LocalIndex, E);
-    }
+    unsigned LocalIndex = allocateLocalPrimitive(
+        SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
+      return false;
+    return this->emitGetPtrLocal(LocalIndex, E);
   } else {
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
 
@@ -2660,18 +2665,12 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (P.getGlobal(VD))
       return true;
 
-    // Ignore external declarations. We will instead emit a dummy
-    // pointer when we see a DeclRefExpr for them.
-    if (VD->hasExternalStorage())
-      return true;
-
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
       return false;
 
-    assert(Init);
-    {
+    if (Init) {
       DeclScope<Emitter> LocalScope(this, VD);
 
       if (VarT) {
@@ -2681,6 +2680,7 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
       }
       return this->visitGlobalInitializer(Init, *GlobalIndex);
     }
+    return true;
   } else {
     VariableScope<Emitter> LocalScope(this);
     if (VarT) {
@@ -2959,6 +2959,8 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
+  if (SubExpr->getType()->isAnyComplexType())
+    return this->VisitComplexUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -3109,16 +3111,97 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real: // __real x
-    if (T)
-      return this->delegate(SubExpr);
-    return this->emitComplexReal(SubExpr);
+    assert(T);
+    return this->delegate(SubExpr);
   case UO_Imag: { // __imag x
-    if (T) {
-      if (!this->discard(SubExpr))
+    assert(T);
+    if (!this->discard(SubExpr))
+      return false;
+    return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+  }
+  case UO_Extension:
+    return this->delegate(SubExpr);
+  case UO_Coawait:
+    assert(false && "Unhandled opcode");
+  }
+
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
+    const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isAnyComplexType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  std::optional<PrimType> ResT = classify(E);
+  auto prepareResult = [=]() -> bool {
+    if (!ResT && !Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(SubExpr, /*IsExtended=*/false);
+      if (!LocalIndex)
         return false;
-      return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+      return this->emitGetPtrLocal(*LocalIndex, E);
     }
 
+    return true;
+  };
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset = ~0u;
+  auto createTemp = [=, &SubExprOffset]() -> bool {
+    SubExprOffset = this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitSetLocal(PT_Ptr, SubExprOffset, E);
+  };
+
+  PrimType ElemT = classifyComplexElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (E->getOpcode()) {
+  case UO_Minus:
+    if (!prepareResult())
+      return false;
+    if (!createTemp())
+      return false;
+    for (unsigned I = 0; I != 2; ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+
+  case UO_Plus:   // +x
+  case UO_AddrOf: // &x
+  case UO_Deref:  // *x
+    return this->delegate(SubExpr);
+
+  case UO_LNot:
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitComplexBoolCast(SubExpr))
+      return false;
+    if (!this->emitInvBool(E))
+      return false;
+    if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
+      return this->emitCast(PT_Bool, ET, E);
+    return true;
+
+  case UO_Real:
+    return this->emitComplexReal(SubExpr);
+
+  case UO_Imag:
     if (!this->visit(SubExpr))
       return false;
 
@@ -3131,14 +3214,12 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // Since our _Complex implementation does not map to a primitive type,
     // we sometimes have to do the lvalue-to-rvalue conversion here manually.
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
-  }
-  case UO_Extension:
-    return this->delegate(SubExpr);
-  case UO_Coawait:
-    assert(false && "Unhandled opcode");
+
+  default:
+    return this->emitInvalid(E);
   }
 
-  return false;
+  return true;
 }
 
 template <class Emitter>
@@ -3166,53 +3247,20 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // pointer to the actual value) instead of a pointer to the pointer to the
   // value.
   bool IsReference = D->getType()->isReferenceType();
-  // Complex values are copied in the AST via a simply assignment or
-  // ltor cast. But we represent them as two-element arrays, which means
-  // we pass them around as pointers. So, to assignm from them, we will
-  // have to copy both (primitive) elements instead.
-  bool IsComplex = D->getType()->isAnyComplexType();
 
   // Check for local/global variables and parameters.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
-    // FIXME: Fix the code duplication here with the code in the global case.
-    if (Initializing && IsComplex) {
-      PrimType ElemT = classifyComplexElementType(D->getType());
-      for (unsigned I = 0; I != 2; ++I) {
-        if (!this->emitGetPtrLocal(Offset, E))
-          return false;
-        if (!this->emitArrayElemPop(ElemT, I, E))
-          return false;
-        if (!this->emitInitElem(ElemT, I, E))
-          return false;
-      }
-      return true;
-    }
-
     if (IsReference)
       return this->emitGetLocal(PT_Ptr, Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
-    if (Initializing && IsComplex) {
-      PrimType ElemT = classifyComplexElementType(D->getType());
-      for (unsigned I = 0; I != 2; ++I) {
-        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
-          return false;
-        if (!this->emitArrayElemPop(ElemT, I, E))
-          return false;
-        if (!this->emitInitElem(ElemT, I, E))
-          return false;
-      }
-      return true;
-    }
-
     if (IsReference)
       return this->emitGetGlobalPtr(*GlobalIndex, E);
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-      // FIXME: _Complex initializing case?
       if (IsReference || !It->second.IsPtr)
         return this->emitGetParamPtr(It->second.Offset, E);
 
@@ -3241,9 +3289,6 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         // Retry.
         return this->VisitDeclRefExpr(E);
       }
-
-      if (VD->hasExternalStorage())
-        return this->emitInvalidDeclRef(E, E);
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);

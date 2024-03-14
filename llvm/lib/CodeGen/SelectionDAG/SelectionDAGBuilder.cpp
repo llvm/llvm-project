@@ -1255,7 +1255,7 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
   bool SkipDPValues = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
   // DbgRecord non-instruction debug-info records.
-  for (DbgRecord &DR : I.getDbgValueRange()) {
+  for (DbgRecord &DR : I.getDbgRecordRange()) {
     if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
       assert(DPL->getLabel() && "Missing label");
       SDDbgLabel *SDV =

@@ -101,7 +101,10 @@ bb:
 define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm(<4 x i16> %A, <4 x i16> %B, ptr addrspace(1) %out) {
 ; GFX12-LABEL: test_wmma_bf16_16x16x16_bf16_imm:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_wmma_bf16_16x16x16_bf16 v[6:7], v[0:1], v[2:3], 1.0
+; GFX12-NEXT:    v_mov_b32_e32 v6, 0x3f803f80
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_mov_b32_e32 v7, v6
+; GFX12-NEXT:    v_wmma_bf16_16x16x16_bf16 v[6:7], v[0:1], v[2:3], v[6:7]
 ; GFX12-NEXT:    global_store_b64 v[4:5], v[6:7], off
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

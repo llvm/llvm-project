@@ -53,11 +53,7 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
     Offset = align(primSize(T));
 
   APSInt R;
-  INT_TYPE_SWITCH(T, {
-    T Val = Stk.peek<T>(Offset);
-    R = APSInt(APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()),
-               !T::isSigned());
-  });
+  INT_TYPE_SWITCH(T, R = Stk.peek<T>(Offset).toAPSInt());
 
   return R;
 }
@@ -1052,6 +1048,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:
@@ -1327,6 +1324,51 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
   FieldPtr.initialize();
   return true;
+}
+
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+  assert(Src.isLive() && Dest.isLive());
+
+  [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
+  const Descriptor *DestDesc = Dest.getFieldDesc();
+
+  assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
+
+  if (DestDesc->isPrimitiveArray()) {
+    assert(SrcDesc->isPrimitiveArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    PrimType ET = DestDesc->getPrimType();
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      Pointer DestElem = Dest.atIndex(I);
+      TYPE_SWITCH(ET, {
+        DestElem.deref<T>() = Src.atIndex(I).deref<T>();
+        DestElem.initialize();
+      });
+    }
+    return true;
+  }
+
+  if (DestDesc->isRecord()) {
+    assert(SrcDesc->isRecord());
+    assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
+    const Record *R = DestDesc->ElemRecord;
+    for (const Record::Field &F : R->fields()) {
+      Pointer DestField = Dest.atField(F.Offset);
+      if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
+        TYPE_SWITCH(*FT, {
+          DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
+          DestField.initialize();
+        });
+      } else {
+        return Invalid(S, OpPC);
+      }
+    }
+    return true;
+  }
+
+  // FIXME: Composite types.
+
+  return Invalid(S, OpPC);
 }
 
 } // namespace interp

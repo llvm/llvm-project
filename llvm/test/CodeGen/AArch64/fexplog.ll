@@ -332,7 +332,6 @@ define <3 x float> @exp_v3f32(<3 x float> %a) {
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #64
 ; CHECK-GI-NEXT:    ret
@@ -703,7 +702,6 @@ define <7 x half> @exp_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #160
 ; CHECK-GI-NEXT:    ret
@@ -1591,7 +1589,6 @@ define <3 x float> @exp2_v3f32(<3 x float> %a) {
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #64
 ; CHECK-GI-NEXT:    ret
@@ -1962,7 +1959,6 @@ define <7 x half> @exp2_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #160
 ; CHECK-GI-NEXT:    ret
@@ -2850,7 +2846,6 @@ define <3 x float> @log_v3f32(<3 x float> %a) {
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #64
 ; CHECK-GI-NEXT:    ret
@@ -3221,7 +3216,6 @@ define <7 x half> @log_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #160
 ; CHECK-GI-NEXT:    ret
@@ -4109,7 +4103,6 @@ define <3 x float> @log2_v3f32(<3 x float> %a) {
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #64
 ; CHECK-GI-NEXT:    ret
@@ -4480,7 +4473,6 @@ define <7 x half> @log2_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #160
 ; CHECK-GI-NEXT:    ret
@@ -5368,7 +5360,6 @@ define <3 x float> @log10_v3f32(<3 x float> %a) {
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #64
 ; CHECK-GI-NEXT:    ret
@@ -5739,7 +5730,6 @@ define <7 x half> @log10_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    add sp, sp, #160
 ; CHECK-GI-NEXT:    ret

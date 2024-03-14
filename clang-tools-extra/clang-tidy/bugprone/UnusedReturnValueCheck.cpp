@@ -11,6 +11,8 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/OperatorKinds.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
@@ -27,6 +29,11 @@ AST_MATCHER_P(FunctionDecl, isInstantiatedFrom, Matcher<FunctionDecl>,
   FunctionDecl *InstantiatedFrom = Node.getInstantiatedFromMemberFunction();
   return InnerMatcher.matches(InstantiatedFrom ? *InstantiatedFrom : Node,
                               Finder, Builder);
+}
+
+AST_MATCHER_P(CXXMethodDecl, isOperatorOverloading,
+              llvm::SmallVector<OverloadedOperatorKind>, Kinds) {
+  return llvm::is_contained(Kinds, Node.getOverloadedOperator());
 }
 } // namespace
 
@@ -157,16 +164,22 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
-  auto MatchedDirectCallExpr =
-      expr(callExpr(callee(functionDecl(
-                        // Don't match void overloads of checked functions.
-                        unless(returns(voidType())),
-                        anyOf(isInstantiatedFrom(matchers::matchesAnyListedName(
-                                  CheckedFunctions)),
-                              returns(hasCanonicalType(hasDeclaration(
-                                  namedDecl(matchers::matchesAnyListedName(
-                                      CheckedReturnTypes)))))))))
-               .bind("match"));
+  auto MatchedDirectCallExpr = expr(
+      callExpr(
+          callee(functionDecl(
+              // Don't match void overloads of checked functions.
+              unless(returns(voidType())),
+              // Don't match copy or move assignment operator.
+              unless(cxxMethodDecl(isOperatorOverloading(
+                  {OO_Equal, OO_PlusEqual, OO_MinusEqual, OO_StarEqual,
+                   OO_SlashEqual, OO_PercentEqual, OO_CaretEqual, OO_AmpEqual,
+                   OO_PipeEqual, OO_LessLessEqual, OO_GreaterGreaterEqual}))),
+              anyOf(
+                  isInstantiatedFrom(
+                      matchers::matchesAnyListedName(CheckedFunctions)),
+                  returns(hasCanonicalType(hasDeclaration(namedDecl(
+                      matchers::matchesAnyListedName(CheckedReturnTypes)))))))))
+          .bind("match"));
 
   auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();

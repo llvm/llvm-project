@@ -403,6 +403,7 @@ public:
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  void CompleteOperation();
   int EndIoStatement();
 
 private:
