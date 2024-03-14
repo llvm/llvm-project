@@ -10516,6 +10516,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
           TTI->getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
                                   I, Constant::getNullValue(VecTy), V);
   };
+  SmallVector<int> ShuffleMask(VL.size(), -1);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
@@ -10526,6 +10527,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
     if (!UniqueElements.insert(V).second) {
       DuplicateNonConst = true;
       ShuffledElements.setBit(I);
+      ShuffleMask[I] = I;
       continue;
     }
     EstimateInsertCost(I, V);
@@ -10535,8 +10537,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
         TTI->getScalarizationOverhead(VecTy, ~ShuffledElements, /*Insert*/ true,
                                       /*Extract*/ false, CostKind);
   if (DuplicateNonConst)
-    Cost +=
-        TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+    Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                VecTy, ShuffleMask);
   return Cost;
 }
 
