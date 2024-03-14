@@ -9,6 +9,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -874,7 +875,22 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CxtI,
+    const TargetLibraryInfo *TLibInfo) const {
+
+  // Use call cost for frem intructions that have platform specific vector math
+  // functions, as those will be replaced with calls later by SelectionDAG or
+  // ReplaceWithVecLib pass.
+  if (TLibInfo && Opcode == Instruction::FRem) {
+    VectorType *VecTy = dyn_cast<VectorType>(Ty);
+    LibFunc Func;
+    if (VecTy &&
+        TLibInfo->getLibFunc(Instruction::FRem, Ty->getScalarType(), Func) &&
+        TLibInfo->isFunctionVectorizable(TLibInfo->getName(Func),
+                                         VecTy->getElementCount()))
+      return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
+  }
+
   InstructionCost Cost =
       TTIImpl->getArithmeticInstrCost(Opcode, Ty, CostKind,
                                       Op1Info, Op2Info,
