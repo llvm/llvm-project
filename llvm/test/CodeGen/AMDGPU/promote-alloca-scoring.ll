@@ -1,10 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -debug-only=amdgpu-promote-alloca -amdgpu-promote-alloca-to-vector-limit=512 -passes=amdgpu-promote-alloca %s -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
-; CHECK:      Before sorting allocas:
-; CHECK-NEXT:     %simpleuser = alloca [4 x i64], align 4, addrspace(5)
-; CHECK-NEXT:     %manyusers = alloca [4 x i64], align 4, addrspace(5)
-; CHECK-NEXT: Scoring:   %simpleuser = alloca [4 x i64], align 4, addrspace(5)
+; CHECK:      Scoring:   %simpleuser = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:   [+1]:   store i32 42, ptr addrspace(5) %simpleuser, align 4
 ; CHECK-NEXT:   => Final Score:1
 ; CHECK-NEXT: Scoring:   %manyusers = alloca [4 x i64], align 4, addrspace(5)
@@ -13,7 +10,7 @@
 ; CHECK-NEXT:   [+1]:   store i32 %v1.ext, ptr addrspace(5) %manyusers.2, align 4
 ; CHECK-NEXT:   [+1]:   %v1 = load i8, ptr addrspace(5) %manyusers.2, align 1
 ; CHECK-NEXT:   => Final Score:4
-; CHECK-NEXT: After sorting allocas:
+; CHECK-NEXT: Sorted Worklist:
 ; CHECK-NEXT:     %manyusers = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:     %simpleuser = alloca [4 x i64], align 4, addrspace(5)
 define amdgpu_kernel void @simple_users_scores() #0 {

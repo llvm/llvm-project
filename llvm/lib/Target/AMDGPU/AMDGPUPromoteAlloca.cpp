@@ -220,7 +220,7 @@ char &llvm::AMDGPUPromoteAllocaToVectorID = AMDGPUPromoteAllocaToVector::ID;
 PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, LI).run(F, /*PromoteToLDS*/ true);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, LI).run(F, /*PromoteToLDS=*/true);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -232,7 +232,7 @@ PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
 PreservedAnalyses
 AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, LI).run(F, /*PromoteToLDS*/ false);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, LI).run(F, /*PromoteToLDS=*/false);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -257,7 +257,7 @@ static void collectAllocaUses(AllocaInst &Alloca,
     for (auto &U : Cur->uses()) {
       Uses.push_back(&U);
 
-      if (isa<GetElementPtrInst>(U.getUser()) || isa<BitCastInst>(U.getUser()))
+      if (isa<GetElementPtrInst>(U.getUser()))
         WorkList.push_back(cast<Instruction>(U.getUser()));
     }
   }
@@ -267,10 +267,6 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     SmallVectorImpl<AllocaInst *> &Allocas) {
   DenseMap<AllocaInst *, unsigned> Scores;
 
-  LLVM_DEBUG(dbgs() << "Before sorting allocas:\n"; for (auto *A
-                                                         : Allocas) dbgs()
-                                                    << "  " << *A << "\n";);
-
   for (auto *Alloca : Allocas) {
     LLVM_DEBUG(dbgs() << "Scoring: " << *Alloca << "\n");
     unsigned &Score = Scores[Alloca];
@@ -279,7 +275,7 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     collectAllocaUses(*Alloca, Uses);
     for (auto *U : Uses) {
       Instruction *Inst = cast<Instruction>(U->getUser());
-      if (isa<GetElementPtrInst>(Inst) || isa<BitCastInst>(Inst))
+      if (isa<GetElementPtrInst>(Inst))
         continue;
       unsigned UserScore =
           1 + (LoopUserWeight * LI.getLoopDepth(Inst->getParent()));
@@ -293,9 +289,13 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
     return Scores.at(A) > Scores.at(B);
   });
 
-  LLVM_DEBUG(dbgs() << "After sorting allocas:\n"; for (auto *A
-                                                        : Allocas) dbgs()
-                                                   << "  " << *A << "\n";);
+  // clang-format off
+  LLVM_DEBUG(
+    dbgs() << "Sorted Worklist:\n";
+    for (auto *A: Allocas)
+      dbgs() << "  " << *A << "\n";
+  );
+  // clang-format on
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
