@@ -52,8 +52,8 @@ public:
       Abbrev->~DebugNamesAbbrev();
   }
   /// Add DWARF5 Accelerator table entry.
-  /// Input is DWARFUnit being processed, DIE that belongs to it, and potential
-  /// SkeletonCU if the Unit comes from a DWO section.
+  /// Input is DWARFUnit being processed, DIE that belongs to it, potential
+  /// DWOID if the Unit comes from a DWO section, and potential parent entry.
   std::optional<BOLTDWARF5AccelTableData *>
   addAccelTableEntry(DWARFUnit &Unit, const DIE &Die,
                      const std::optional<uint64_t> &DWOID,

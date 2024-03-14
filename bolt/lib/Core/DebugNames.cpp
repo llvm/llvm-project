@@ -523,8 +523,9 @@ void DWARF5AcceleratorTable::writeEntries() {
               &EntriesBuffer.get()->data()[PatchOffset]);
           *Ptr = Iter->second;
         } else {
-          BC.errs() << "Could not find entry with offset " << *ParentOffset
-                    << "\n";
+          BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
+                       "entry with offset "
+                    << *ParentOffset << "\n";
         }
       }
     }
