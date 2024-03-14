@@ -91,6 +91,7 @@ class SPIRVEmitIntrinsics
                                         IRBuilder<> &B);
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
+  void processParamTypes(Function *F, IRBuilder<> &B);
 
 public:
   static char ID;
@@ -794,6 +795,64 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   }
 }
 
+void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
+  DenseMap<unsigned, Argument *> Args;
+  unsigned i = 0;
+  for (Argument &Arg : F->args()) {
+    if (isUntypedPointerTy(Arg.getType()) &&
+        DeducedElTys.find(&Arg) == DeducedElTys.end() &&
+        !HasPointeeTypeAttr(&Arg))
+      Args[i] = &Arg;
+    i++;
+  }
+  if (Args.size() == 0)
+    return;
+
+  // Args contains opaque pointers without element type definition
+  B.SetInsertPointPastAllocas(F);
+  std::unordered_set<Value *> Visited;
+  for (User *U : F->users()) {
+    CallInst *CI = dyn_cast<CallInst>(U);
+    if (!CI)
+      continue;
+    for (unsigned OpIdx = 0; OpIdx < CI->arg_size() && Args.size() > 0;
+         OpIdx++) {
+      auto It = Args.find(OpIdx);
+      Argument *Arg = It == Args.end() ? nullptr : It->second;
+      if (!Arg)
+        continue;
+      Value *OpArg = CI->getArgOperand(OpIdx);
+      if (!isPointerTy(OpArg->getType()))
+        continue;
+      // maybe we already know the operand's element type
+      auto DeducedIt = DeducedElTys.find(OpArg);
+      Type *ElemTy =
+          DeducedIt == DeducedElTys.end() ? nullptr : DeducedIt->second;
+      if (!ElemTy) {
+        for (User *OpU : OpArg->users()) {
+          if (Instruction *Inst = dyn_cast<Instruction>(OpU)) {
+            Visited.clear();
+            ElemTy = deduceElementTypeHelper(Inst, Visited, DeducedElTys);
+            if (ElemTy)
+              break;
+          }
+        }
+      }
+      if (ElemTy) {
+        unsigned AddressSpace = getPointerAddressSpace(Arg->getType());
+        CallInst *AssignPtrTyCI = buildIntrWithMD(
+            Intrinsic::spv_assign_ptr_type, {Arg->getType()},
+            Constant::getNullValue(ElemTy), Arg, {B.getInt32(AddressSpace)}, B);
+        DeducedElTys[AssignPtrTyCI] = ElemTy;
+        DeducedElTys[Arg] = ElemTy;
+        Args.erase(It);
+      }
+    }
+    if (Args.size() == 0)
+      break;
+  }
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -839,6 +898,11 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
       continue;
     processInstrAfterVisit(I, B);
   }
+
+  // check if function parameter types are set
+  if (!F->isIntrinsic())
+    processParamTypes(F, B);
+
   return true;
 }
 
