@@ -2665,18 +2665,12 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
     if (P.getGlobal(VD))
       return true;
 
-    // Ignore external declarations. We will instead emit a dummy
-    // pointer when we see a DeclRefExpr for them.
-    if (VD->hasExternalStorage())
-      return true;
-
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
       return false;
 
-    assert(Init);
-    {
+    if (Init) {
       DeclScope<Emitter> LocalScope(this, VD);
 
       if (VarT) {
@@ -2686,6 +2680,7 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
       }
       return this->visitGlobalInitializer(Init, *GlobalIndex);
     }
+    return true;
   } else {
     VariableScope<Emitter> LocalScope(this);
     if (VarT) {
