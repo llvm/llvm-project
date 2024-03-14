@@ -1992,6 +1992,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     // When optional operands are involved, formal and actual operand indices
     // may differ. Map the former to the latter by subtracting the number of
     // absent optional operands.
+    // FIXME: This is not an operand index in the CVT_Tied case
     CvtOS << "    unsigned OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
     CvtOS << "    unsigned OpIdx = *(p + 1);\n";
