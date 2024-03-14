@@ -867,6 +867,8 @@ protected:
     return SemaPtr->getDiagnostics();
   }
 
+  virtual Module *getEmittingModule(ASTContext &Ctx);
+
 public:
   PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
@@ -886,10 +888,12 @@ public:
 };
 
 class ReducedBMIGenerator : public PCHGenerator {
+protected:
+  virtual Module *getEmittingModule(ASTContext &Ctx) override;
+
 public:
   ReducedBMIGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                      StringRef OutputFile, std::shared_ptr<PCHBuffer> Buffer,
-                      bool IncludeTimestamps);
+                      StringRef OutputFile);
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
