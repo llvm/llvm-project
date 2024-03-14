@@ -1113,6 +1113,9 @@ namespace InvalidDeclRefs {
   int b03 = 3; // both-note {{declared here}}
   static_assert(b03, ""); // both-error {{not an integral constant expression}} \
                           // both-note {{read of non-const variable}}
+
+  extern int var;
+  constexpr int *varp = &var; // Ok.
 }
 
 namespace NonConstReads {
@@ -1182,8 +1185,11 @@ namespace incdecbool {
 }
 
 #if __cplusplus >= 201402L
+/// NOTE: The diagnostics of the two interpreters are a little
+/// different here, but they both make sense.
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
-  extern char arr[]; // both-note {{declared here}}
-  return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
+  extern char arr[]; // ref-note {{declared here}}
+   return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
+                  // expected-note {{indexing of array without known bound}}
 }
 #endif

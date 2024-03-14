@@ -3301,9 +3301,6 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         // Retry.
         return this->VisitDeclRefExpr(E);
       }
-
-      if (VD->hasExternalStorage())
-        return this->emitInvalidDeclRef(E, E);
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
