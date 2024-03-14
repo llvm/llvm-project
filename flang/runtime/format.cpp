@@ -9,14 +9,18 @@
 #include "format-implementation.h"
 
 namespace Fortran::runtime::io {
+RT_OFFLOAD_API_GROUP_BEGIN
 template class FormatControl<
     InternalFormattedIoStatementState<Direction::Output>>;
 template class FormatControl<
     InternalFormattedIoStatementState<Direction::Input>>;
+#if !defined(RT_DEVICE_COMPILATION)
 template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Output>>;
 template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Input>>;
 template class FormatControl<ChildFormattedIoStatementState<Direction::Output>>;
 template class FormatControl<ChildFormattedIoStatementState<Direction::Input>>;
+#endif // !defined(RT_DEVICE_COMPILATION)
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io

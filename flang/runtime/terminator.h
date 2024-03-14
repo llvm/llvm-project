@@ -67,7 +67,7 @@ public:
 
   template <typename... Args>
   RT_API_ATTRS void PrintCrashArgs(const char *message, Args... args) const {
-#if RT_DEVICE_COMPILATION
+#if defined(RT_DEVICE_COMPILATION)
     std::printf(message, args...);
 #else
     std::fprintf(stderr, message, args...);

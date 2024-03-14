@@ -128,12 +128,21 @@ inline RT_API_ATTRS bool operator!=(std::nullptr_t, const OwningPtr<X> &x) {
 
 template <typename A> class SizedNew {
 public:
-  explicit SizedNew(const Terminator &terminator) : terminator_{terminator} {}
+  explicit RT_API_ATTRS SizedNew(const Terminator &terminator)
+      : terminator_{terminator} {}
+
+  // Disable warnings about calling constructors for host-only
+  // classes (those thare are not supposed to be constructed)
+  // on the device.
+  RT_DIAG_PUSH
+  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   template <typename... X>
-  [[nodiscard]] OwningPtr<A> operator()(std::size_t bytes, X &&...x) {
+  [[nodiscard]] RT_API_ATTRS OwningPtr<A> operator()(
+      std::size_t bytes, X &&...x) {
     return OwningPtr<A>{new (AllocateMemoryOrCrash(terminator_, bytes))
             A{std::forward<X>(x)...}};
   }
+  RT_DIAG_POP
 
 private:
   const Terminator &terminator_;
@@ -141,7 +150,8 @@ private:
 
 template <typename A> struct New : public SizedNew<A> {
   using SizedNew<A>::SizedNew;
-  template <typename... X> [[nodiscard]] OwningPtr<A> operator()(X &&...x) {
+  template <typename... X>
+  [[nodiscard]] RT_API_ATTRS OwningPtr<A> operator()(X &&...x) {
     return SizedNew<A>::operator()(sizeof(A), std::forward<X>(x)...);
   }
 };

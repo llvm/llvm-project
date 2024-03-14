@@ -179,18 +179,29 @@ set(supported_files
   array-constructor.cpp
   assign.cpp
   character.cpp
+  connection.cpp
   copy.cpp
   derived-api.cpp
   derived.cpp
   descriptor.cpp
   dot-product.cpp
+  edit-input.cpp
+  edit-output.cpp
+  environment.cpp
   extrema.cpp
   findloc.cpp
+  format.cpp
   inquiry.cpp
+  internal-unit.cpp
+  io-api.cpp
+  io-error.cpp
+  io-stmt.cpp
+  iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
   memory.cpp
   misc-intrinsic.cpp
+  namelist.cpp
   numeric.cpp
   pointer.cpp
   product.cpp
@@ -203,6 +214,7 @@ set(supported_files
   transformational.cpp
   type-code.cpp
   type-info.cpp
+  utf.cpp
   )
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)

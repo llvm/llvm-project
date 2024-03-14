@@ -9,7 +9,9 @@
 #include "flang/Runtime/iostat.h"
 
 namespace Fortran::runtime::io {
-const char *IostatErrorString(int iostat) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS const char *IostatErrorString(int iostat) {
   switch (iostat) {
   case IostatOk:
     return "No error";
@@ -121,5 +123,7 @@ const char *IostatErrorString(int iostat) {
     return nullptr;
   }
 }
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io

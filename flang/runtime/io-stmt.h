@@ -16,7 +16,8 @@
 #include "format.h"
 #include "internal-unit.h"
 #include "io-error.h"
-#include "flang/Common/visit.h"
+#include "flang/Common/optional.h"
+#include "flang/Common/reference-wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include <functional>
@@ -59,8 +60,8 @@ using IoDirectionState = std::conditional_t<D == Direction::Input,
 template <Direction D> class FormattedIoStatementState {};
 template <> class FormattedIoStatementState<Direction::Input> {
 public:
-  std::size_t GetEditDescriptorChars() const;
-  void GotChar(int);
+  RT_API_ATTRS std::size_t GetEditDescriptorChars() const;
+  RT_API_ATTRS void GotChar(int);
 
 private:
   // Account of characters read for edit descriptors (i.e., formatted I/O
@@ -71,7 +72,7 @@ private:
 // The Cookie type in the I/O API is a pointer (for C) to this class.
 class IoStatementState {
 public:
-  template <typename A> explicit IoStatementState(A &x) : u_{x} {}
+  template <typename A> explicit RT_API_ATTRS IoStatementState(A &x) : u_{x} {}
 
   // These member functions each project themselves into the active alternative.
   // They're used by per-data-item routines in the I/O API (e.g., OutputReal64)
@@ -83,35 +84,38 @@ public:
   // It is called by EndIoStatement(), but it can be invoked earlier to
   // catch errors for (e.g.) GetIoMsg() and GetNewUnit().  If called
   // more than once, it is a no-op.
-  void CompleteOperation();
+  RT_API_ATTRS void CompleteOperation();
   // Completes an I/O statement and reclaims storage.
-  int EndIoStatement();
+  RT_API_ATTRS int EndIoStatement();
 
-  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
-  bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
-  std::size_t GetNextInputBytes(const char *&);
-  bool AdvanceRecord(int = 1);
-  void BackspaceRecord();
-  void HandleRelativePosition(std::int64_t byteOffset);
-  void HandleAbsolutePosition(std::int64_t byteOffset); // for r* in list I/O
-  std::optional<DataEdit> GetNextDataEdit(int maxRepeat = 1);
+  RT_API_ATTRS bool Emit(
+      const char *, std::size_t bytes, std::size_t elementBytes = 0);
+  RT_API_ATTRS bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
+  RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS bool AdvanceRecord(int = 1);
+  RT_API_ATTRS void BackspaceRecord();
+  RT_API_ATTRS void HandleRelativePosition(std::int64_t byteOffset);
+  RT_API_ATTRS void HandleAbsolutePosition(
+      std::int64_t byteOffset); // for r* in list I/O
+  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
+      int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
-  bool BeginReadingRecord();
-  void FinishReadingRecord();
+  RT_API_ATTRS bool BeginReadingRecord();
+  RT_API_ATTRS void FinishReadingRecord();
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &); // PENDING=
   bool Inquire(InquiryKeywordHash, std::int64_t &);
-  std::int64_t InquirePos();
-  void GotChar(signed int = 1); // for READ(SIZE=); can be <0
+  RT_API_ATTRS std::int64_t InquirePos();
+  RT_API_ATTRS void GotChar(signed int = 1); // for READ(SIZE=); can be <0
 
-  MutableModes &mutableModes();
-  ConnectionState &GetConnectionState();
-  IoErrorHandler &GetIoErrorHandler() const;
+  RT_API_ATTRS MutableModes &mutableModes();
+  RT_API_ATTRS ConnectionState &GetConnectionState();
+  RT_API_ATTRS IoErrorHandler &GetIoErrorHandler() const;
 
   // N.B.: this also works with base classes
-  template <typename A> A *get_if() const {
-    return common::visit(
+  template <typename A> RT_API_ATTRS A *get_if() const {
+    return visit(
         [](auto &x) -> A * {
           if constexpr (std::is_convertible_v<decltype(x.get()), A &>) {
             return &x.get();
@@ -122,7 +126,8 @@ public:
   }
 
   // Vacant after the end of the current record
-  std::optional<char32_t> GetCurrentChar(std::size_t &byteCount);
+  RT_API_ATTRS Fortran::common::optional<char32_t> GetCurrentChar(
+      std::size_t &byteCount);
 
   // The "remaining" arguments to CueUpInput(), SkipSpaces(), & NextInField()
   // are always in units of bytes, not characters; the distinction matters
@@ -130,8 +135,8 @@ public:
 
   // For fixed-width fields, return the number of remaining bytes.
   // Skip over leading blanks.
-  std::optional<int> CueUpInput(const DataEdit &edit) {
-    std::optional<int> remaining;
+  RT_API_ATTRS Fortran::common::optional<int> CueUpInput(const DataEdit &edit) {
+    Fortran::common::optional<int> remaining;
     if (edit.IsListDirected()) {
       std::size_t byteCount{0};
       GetNextNonBlank(byteCount);
@@ -148,7 +153,8 @@ public:
     return remaining;
   }
 
-  std::optional<char32_t> SkipSpaces(std::optional<int> &remaining) {
+  RT_API_ATTRS Fortran::common::optional<char32_t> SkipSpaces(
+      Fortran::common::optional<int> &remaining) {
     while (!remaining || *remaining > 0) {
       std::size_t byteCount{0};
       if (auto ch{GetCurrentChar(byteCount)}) {
@@ -167,34 +173,36 @@ public:
         break;
       }
     }
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 
   // Acquires the next input character, respecting any applicable field width
   // or separator character.
-  std::optional<char32_t> NextInField(
-      std::optional<int> &remaining, const DataEdit &);
+  RT_API_ATTRS Fortran::common::optional<char32_t> NextInField(
+      Fortran::common::optional<int> &remaining, const DataEdit &);
 
   // Detect and signal any end-of-record condition after input.
   // Returns true if at EOR and remaining input should be padded with blanks.
-  bool CheckForEndOfRecord(std::size_t afterReading);
+  RT_API_ATTRS bool CheckForEndOfRecord(std::size_t afterReading);
 
   // Skips spaces, advances records, and ignores NAMELIST comments
-  std::optional<char32_t> GetNextNonBlank(std::size_t &byteCount) {
+  RT_API_ATTRS Fortran::common::optional<char32_t> GetNextNonBlank(
+      std::size_t &byteCount) {
     auto ch{GetCurrentChar(byteCount)};
     bool inNamelist{mutableModes().inNamelist};
     while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
       if (ch && (*ch == ' ' || *ch == '\t')) {
         HandleRelativePosition(byteCount);
       } else if (!AdvanceRecord()) {
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
       ch = GetCurrentChar(byteCount);
     }
     return ch;
   }
 
-  template <Direction D> bool CheckFormattedStmtType(const char *name) {
+  template <Direction D>
+  RT_API_ATTRS bool CheckFormattedStmtType(const char *name) {
     if (get_if<FormattedIoStatementState<D>>()) {
       return true;
     } else {
@@ -208,39 +216,102 @@ public:
   }
 
 private:
-  std::variant<std::reference_wrapper<OpenStatementState>,
-      std::reference_wrapper<CloseStatementState>,
-      std::reference_wrapper<NoopStatementState>,
-      std::reference_wrapper<
+  // Define special visitor for the variants of IoStatementState.
+  // During the device code compilation the visitor only allows
+  // visiting those variants that are supported on the device.
+  // In particular, only the internal IO variants are supported.
+  // TODO: parameterize Fortran::common::log2visit instead of
+  //       creating a copy here.
+  template <class T, class... Ts>
+  struct is_any_type : std::bool_constant<(std::is_same_v<T, Ts> || ...)> {};
+
+  template <std::size_t LOW, std::size_t HIGH, typename RESULT,
+      typename VISITOR, typename VARIANT>
+  static inline RT_API_ATTRS RESULT Log2VisitHelper(
+      VISITOR &&visitor, std::size_t which, VARIANT &&u) {
+#if !defined(RT_DEVICE_COMPILATION)
+    constexpr bool isDevice{false};
+#else
+    constexpr bool isDevice{true};
+#endif
+    if constexpr (LOW == HIGH) {
+      if constexpr (!isDevice ||
+          is_any_type<
+              std::variant_alternative_t<LOW, std::decay_t<decltype(u)>>,
+              Fortran::common::reference_wrapper<
+                  InternalListIoStatementState<Direction::Output>>,
+              Fortran::common::reference_wrapper<
+                  InternalFormattedIoStatementState<Direction::Output>>>::
+              value) {
+        return visitor(std::get<LOW>(std::forward<VARIANT>(u)));
+      } else {
+        Terminator{__FILE__, __LINE__}.Crash(
+            "not implemented yet: IoStatementState variant %d\n",
+            static_cast<int>(LOW));
+      }
+    } else {
+      static constexpr std::size_t mid{(HIGH + LOW) / 2};
+      if (which <= mid) {
+        return Log2VisitHelper<LOW, mid, RESULT>(
+            std::forward<VISITOR>(visitor), which, std::forward<VARIANT>(u));
+      } else {
+        return Log2VisitHelper<(mid + 1), HIGH, RESULT>(
+            std::forward<VISITOR>(visitor), which, std::forward<VARIANT>(u));
+      }
+    }
+  }
+
+  template <typename VISITOR, typename VARIANT>
+  static inline RT_API_ATTRS auto visit(VISITOR &&visitor, VARIANT &&u)
+      -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u)))) {
+    using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))));
+    static constexpr std::size_t high{
+        std::variant_size_v<std::decay_t<decltype(u)>> - 1};
+    return Log2VisitHelper<0, high, Result>(
+        std::forward<VISITOR>(visitor), u.index(), std::forward<VARIANT>(u));
+  }
+
+  std::variant<Fortran::common::reference_wrapper<OpenStatementState>,
+      Fortran::common::reference_wrapper<CloseStatementState>,
+      Fortran::common::reference_wrapper<NoopStatementState>,
+      Fortran::common::reference_wrapper<
           InternalFormattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           InternalFormattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<InternalListIoStatementState<Direction::Output>>,
-      std::reference_wrapper<InternalListIoStatementState<Direction::Input>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
+          InternalListIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          InternalListIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
           ExternalFormattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           ExternalFormattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<ExternalListIoStatementState<Direction::Output>>,
-      std::reference_wrapper<ExternalListIoStatementState<Direction::Input>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
+          ExternalListIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          ExternalListIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
           ExternalUnformattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           ExternalUnformattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<ChildFormattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<ChildFormattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<ChildListIoStatementState<Direction::Output>>,
-      std::reference_wrapper<ChildListIoStatementState<Direction::Input>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
+          ChildFormattedIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          ChildFormattedIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
+          ChildListIoStatementState<Direction::Output>>,
+      Fortran::common::reference_wrapper<
+          ChildListIoStatementState<Direction::Input>>,
+      Fortran::common::reference_wrapper<
           ChildUnformattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<
+      Fortran::common::reference_wrapper<
           ChildUnformattedIoStatementState<Direction::Input>>,
-      std::reference_wrapper<InquireUnitState>,
-      std::reference_wrapper<InquireNoUnitState>,
-      std::reference_wrapper<InquireUnconnectedFileState>,
-      std::reference_wrapper<InquireIOLengthState>,
-      std::reference_wrapper<ExternalMiscIoStatementState>,
-      std::reference_wrapper<ErroneousIoStatementState>>
+      Fortran::common::reference_wrapper<InquireUnitState>,
+      Fortran::common::reference_wrapper<InquireNoUnitState>,
+      Fortran::common::reference_wrapper<InquireUnconnectedFileState>,
+      Fortran::common::reference_wrapper<InquireIOLengthState>,
+      Fortran::common::reference_wrapper<ExternalMiscIoStatementState>,
+      Fortran::common::reference_wrapper<ErroneousIoStatementState>>
       u_;
 };
 
@@ -249,29 +320,31 @@ class IoStatementBase : public IoErrorHandler {
 public:
   using IoErrorHandler::IoErrorHandler;
 
-  bool completedOperation() const { return completedOperation_; }
+  RT_API_ATTRS bool completedOperation() const { return completedOperation_; }
 
-  void CompleteOperation() { completedOperation_ = true; }
-  int EndIoStatement() { return GetIoStat(); }
+  RT_API_ATTRS void CompleteOperation() { completedOperation_ = true; }
+  RT_API_ATTRS int EndIoStatement() { return GetIoStat(); }
 
   // These are default no-op backstops that can be overridden by descendants.
-  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
-  bool Receive(char *, std::size_t bytes, std::size_t elementBytes = 0);
-  std::size_t GetNextInputBytes(const char *&);
-  bool AdvanceRecord(int);
-  void BackspaceRecord();
-  void HandleRelativePosition(std::int64_t);
-  void HandleAbsolutePosition(std::int64_t);
-  std::optional<DataEdit> GetNextDataEdit(
+  RT_API_ATTRS bool Emit(
+      const char *, std::size_t bytes, std::size_t elementBytes = 0);
+  RT_API_ATTRS bool Receive(
+      char *, std::size_t bytes, std::size_t elementBytes = 0);
+  RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS bool AdvanceRecord(int);
+  RT_API_ATTRS void BackspaceRecord();
+  RT_API_ATTRS void HandleRelativePosition(std::int64_t);
+  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t);
+  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const;
-  bool BeginReadingRecord();
-  void FinishReadingRecord();
+  RT_API_ATTRS bool BeginReadingRecord();
+  RT_API_ATTRS void FinishReadingRecord();
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t &);
-  std::int64_t InquirePos();
+  RT_API_ATTRS std::int64_t InquirePos();
 
   void BadInquiryKeywordHashCrash(InquiryKeywordHash);
 
@@ -285,14 +358,14 @@ template <>
 class ListDirectedStatementState<Direction::Output>
     : public FormattedIoStatementState<Direction::Output> {
 public:
-  bool EmitLeadingSpaceOrAdvance(
+  RT_API_ATTRS bool EmitLeadingSpaceOrAdvance(
       IoStatementState &, std::size_t = 1, bool isCharacter = false);
-  std::optional<DataEdit> GetNextDataEdit(
+  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
-  bool lastWasUndelimitedCharacter() const {
+  RT_API_ATTRS bool lastWasUndelimitedCharacter() const {
     return lastWasUndelimitedCharacter_;
   }
-  void set_lastWasUndelimitedCharacter(bool yes = true) {
+  RT_API_ATTRS void set_lastWasUndelimitedCharacter(bool yes = true) {
     lastWasUndelimitedCharacter_ = yes;
   }
 
@@ -303,20 +376,20 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  bool inNamelistSequence() const { return inNamelistSequence_; }
-  int EndIoStatement();
+  RT_API_ATTRS bool inNamelistSequence() const { return inNamelistSequence_; }
+  RT_API_ATTRS int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
   // when a null value appears.
-  std::optional<DataEdit> GetNextDataEdit(
+  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
 
   // Each NAMELIST input item is treated like a distinct list-directed
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  void ResetForNextNamelistItem(bool inNamelistSequence) {
+  RT_API_ATTRS void ResetForNextNamelistItem(bool inNamelistSequence) {
     remaining_ = 0;
     if (repeatPosition_) {
       repeatPosition_->Cancel();
@@ -328,7 +401,7 @@ public:
 
 private:
   int remaining_{0}; // for "r*" repetition
-  std::optional<SavedPosition> repeatPosition_;
+  Fortran::common::optional<SavedPosition> repeatPosition_;
   bool eatComma_{false}; // consume comma after previously read item
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
@@ -342,21 +415,23 @@ class InternalIoStatementState : public IoStatementBase,
 public:
   using Buffer =
       std::conditional_t<DIR == Direction::Input, const char *, char *>;
-  InternalIoStatementState(Buffer, std::size_t,
-      const char *sourceFile = nullptr, int sourceLine = 0);
-  InternalIoStatementState(
+  RT_API_ATTRS InternalIoStatementState(Buffer, std::size_t,
+      const char *sourceFile = nullptr, int sourceLine = 0,
+      bool allocateOwnOutput = false);
+  RT_API_ATTRS InternalIoStatementState(
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
-  int EndIoStatement();
+  RT_API_ATTRS int EndIoStatement();
 
-  bool Emit(const char *data, std::size_t bytes, std::size_t elementBytes = 0);
-  std::size_t GetNextInputBytes(const char *&);
-  bool AdvanceRecord(int = 1);
-  void BackspaceRecord();
-  ConnectionState &GetConnectionState() { return unit_; }
-  MutableModes &mutableModes() { return unit_.modes; }
-  void HandleRelativePosition(std::int64_t);
-  void HandleAbsolutePosition(std::int64_t);
-  std::int64_t InquirePos();
+  RT_API_ATTRS bool Emit(
+      const char *data, std::size_t bytes, std::size_t elementBytes = 0);
+  RT_API_ATTRS std::size_t GetNextInputBytes(const char *&);
+  RT_API_ATTRS bool AdvanceRecord(int = 1);
+  RT_API_ATTRS void BackspaceRecord();
+  RT_API_ATTRS ConnectionState &GetConnectionState() { return unit_; }
+  RT_API_ATTRS MutableModes &mutableModes() { return unit_.modes; }
+  RT_API_ATTRS void HandleRelativePosition(std::int64_t);
+  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t);
+  RT_API_ATTRS std::int64_t InquirePos();
 
 protected:
   bool free_{true};
@@ -370,17 +445,21 @@ class InternalFormattedIoStatementState
 public:
   using CharType = CHAR;
   using typename InternalIoStatementState<DIR>::Buffer;
-  InternalFormattedIoStatementState(Buffer internal, std::size_t internalLength,
+  RT_API_ATTRS InternalFormattedIoStatementState(Buffer internal,
+      std::size_t internalLength, const CharType *format,
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0,
+      bool allocateOwnOutput = false);
+  RT_API_ATTRS InternalFormattedIoStatementState(const Descriptor &,
       const CharType *format, std::size_t formatLength,
       const Descriptor *formatDescriptor = nullptr,
       const char *sourceFile = nullptr, int sourceLine = 0);
-  InternalFormattedIoStatementState(const Descriptor &, const CharType *format,
-      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
-      const char *sourceFile = nullptr, int sourceLine = 0);
-  IoStatementState &ioStatementState() { return ioStatementState_; }
-  void CompleteOperation();
-  int EndIoStatement();
-  std::optional<DataEdit> GetNextDataEdit(
+  RT_API_ATTRS IoStatementState &ioStatementState() {
+    return ioStatementState_;
+  }
+  RT_API_ATTRS void CompleteOperation();
+  RT_API_ATTRS int EndIoStatement();
+  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
@@ -397,14 +476,17 @@ class InternalListIoStatementState : public InternalIoStatementState<DIR>,
                                      public ListDirectedStatementState<DIR> {
 public:
   using typename InternalIoStatementState<DIR>::Buffer;
-  InternalListIoStatementState(Buffer internal, std::size_t internalLength,
-      const char *sourceFile = nullptr, int sourceLine = 0);
-  InternalListIoStatementState(
+  RT_API_ATTRS InternalListIoStatementState(Buffer internal,
+      std::size_t internalLength, const char *sourceFile = nullptr,
+      int sourceLine = 0, bool allocateOwnOutput = false);
+  RT_API_ATTRS InternalListIoStatementState(
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
-  IoStatementState &ioStatementState() { return ioStatementState_; }
+  RT_API_ATTRS IoStatementState &ioStatementState() {
+    return ioStatementState_;
+  }
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
-  void CompleteOperation();
-  int EndIoStatement();
+  RT_API_ATTRS void CompleteOperation();
+  RT_API_ATTRS int EndIoStatement();
 
 private:
   IoStatementState ioStatementState_; // points to *this
@@ -465,7 +547,7 @@ public:
       const char *sourceFile = nullptr, int sourceLine = 0);
   void CompleteOperation();
   int EndIoStatement();
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
@@ -523,7 +605,7 @@ public:
   void CompleteOperation();
   int EndIoStatement();
   bool AdvanceRecord(int = 1);
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
@@ -571,14 +653,14 @@ public:
 private:
   bool wasExtant_;
   bool isNewUnit_;
-  std::optional<OpenStatus> status_;
-  std::optional<Position> position_;
-  std::optional<Action> action_;
+  Fortran::common::optional<OpenStatus> status_;
+  Fortran::common::optional<Position> position_;
+  Fortran::common::optional<Action> action_;
   Convert convert_{Convert::Unknown};
   OwningPtr<char> path_;
   std::size_t pathLength_;
-  std::optional<bool> isUnformatted_;
-  std::optional<Access> access_;
+  Fortran::common::optional<bool> isUnformatted_;
+  Fortran::common::optional<Access> access_;
 };
 
 class CloseStatementState : public ExternalIoStatementBase {

@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/memory.h"
+#include "freestanding-tools.h"
 #include "terminator.h"
 #include "tools.h"
 #include <cstdlib>
 
 namespace Fortran::runtime {
-RT_OFFLOAD_VAR_GROUP_BEGIN
+RT_OFFLOAD_API_GROUP_BEGIN
 
 RT_API_ATTRS void *AllocateMemoryOrCrash(
     const Terminator &terminator, std::size_t bytes) {
@@ -42,5 +43,5 @@ RT_API_ATTRS void *ReallocateMemoryOrCrash(
 
 RT_API_ATTRS void FreeMemory(void *p) { std::free(p); }
 
-RT_OFFLOAD_VAR_GROUP_END
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime
