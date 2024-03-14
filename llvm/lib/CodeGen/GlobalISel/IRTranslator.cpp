@@ -1771,6 +1771,37 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   return true;
 }
 
+bool IRTranslator::translateVectorInterleave2Intrinsic(
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+  // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG)
+  Register Op0 = getOrCreateVReg(*CI.getOperand(0));
+  Register Op1 = getOrCreateVReg(*CI.getOperand(1));
+  Register Res = getOrCreateVReg(CI);
+
+  LLT OpTy = MRI->getType(Op0);
+  MIRBuilder.buildShuffleVector(Res, Op0, Op1,
+                                createInterleaveMask(OpTy.getNumElements(), 2));
+
+  return true;
+}
+
+bool IRTranslator::translateVectorDeinterleave2Intrinsic(
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+  // Canonicalize deinterleave2 shuffles that extract sub-vectors (similar to
+  // SelectionDAG)
+  Register Op = getOrCreateVReg(*CI.getOperand(0));
+  auto Undef = MIRBuilder.buildUndef(MRI->getType(Op));
+  ArrayRef<Register> Res = getOrCreateVRegs(CI);
+
+  LLT ResTy = MRI->getType(Res[0]);
+  MIRBuilder.buildShuffleVector(Res[0], Op, Undef,
+                                createStrideMask(0, 2, ResTy.getNumElements()));
+  MIRBuilder.buildShuffleVector(Res[1], Op, Undef,
+                                createStrideMask(1, 2, ResTy.getNumElements()));
+
+  return true;
+}
+
 void IRTranslator::getStackGuard(Register DstReg,
                                  MachineIRBuilder &MIRBuilder) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
@@ -2476,46 +2507,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
 
-  case Intrinsic::experimental_vector_interleave2: {
-    Value *Src0 = CI.getOperand(0);
-    Value *Src1 = CI.getOperand(1);
-
-    // Canonicalize fixed-width vector types to G_SHUFFLE_VECTOR
-    // (similar to SelectionDAG)
-    LLT OpType = getLLTForType(*Src0->getType(), MIRBuilder.getDataLayout());
-    if (!OpType.isFixedVector())
-      break;
-
-    Register Op0 = getOrCreateVReg(*Src0);
-    Register Op1 = getOrCreateVReg(*Src1);
-    Register Res = getOrCreateVReg(CI);
-
-    MIRBuilder.buildShuffleVector(
-        Res, Op0, Op1, createInterleaveMask(OpType.getNumElements(), 2));
-
-    return true;
-  }
-
+  case Intrinsic::experimental_vector_interleave2:
   case Intrinsic::experimental_vector_deinterleave2: {
-    Value *Src = CI.getOperand(0);
-
-    // Canonicalize fixed-width vector types to shuffles that extract
-    // sub-vectors (similar to SelectionDAG)
-    ArrayRef<Register> Res = getOrCreateVRegs(CI);
-    LLT ResTy = MRI->getType(Res[0]);
+    // Both intrinsics have at least one operand.
+    Value *Op0 = CI.getOperand(0);
+    LLT ResTy = getLLTForType(*Op0->getType(), MIRBuilder.getDataLayout());
     if (!ResTy.isFixedVector())
-      break;
+      return false;
 
-    Register Op = getOrCreateVReg(*Src);
-    LLT OpType = getLLTForType(*Src->getType(), MIRBuilder.getDataLayout());
+    if (CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+      return translateVectorInterleave2Intrinsic(CI, MIRBuilder);
 
-    auto Undef = MIRBuilder.buildUndef(OpType);
-    MIRBuilder.buildShuffleVector(
-        Res[0], Op, Undef, createStrideMask(0, 2, ResTy.getNumElements()));
-    MIRBuilder.buildShuffleVector(
-        Res[1], Op, Undef, createStrideMask(1, 2, ResTy.getNumElements()));
-
-    return true;
+    return translateVectorDeinterleave2Intrinsic(CI, MIRBuilder);
   }
 
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
