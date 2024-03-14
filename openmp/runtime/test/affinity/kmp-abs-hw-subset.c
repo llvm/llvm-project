@@ -18,7 +18,9 @@ static int compare_abs_hw_subset_places(const place_list_t *openmp_places,
                                         int nthreads, int offset) {
   int i, j, expected_per_place;
   if (openmp_places->num_places != nthreads) {
-    fprintf(stderr, "error: KMP_HW_SUBSET did not restrict the thread resource layer!\n");
+    fprintf(
+        stderr,
+        "error: KMP_HW_SUBSET did not restrict the thread resource layer!\n");
     printf("openmp_places places:\n");
     topology_print_places(openmp_places);
     printf("\n");
@@ -57,8 +59,7 @@ static int check_places(int nthreads, int offset) {
 
   value = getenv("OMP_PLACES");
   if (!value) {
-    fprintf(stderr,
-            "error: OMP_PLACES must be set to threads!\n");
+    fprintf(stderr, "error: OMP_PLACES must be set to threads!\n");
     return EXIT_FAILURE;
   }
 
