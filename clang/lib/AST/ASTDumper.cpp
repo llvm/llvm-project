@@ -361,3 +361,11 @@ LLVM_DUMP_METHOD void ConceptReference::dump(raw_ostream &OS) const {
   ASTDumper P(OS, Ctx, Ctx.getDiagnostics().getShowColors());
   P.Visit(this);
 }
+
+//===----------------------------------------------------------------------===//
+// Attr method implementations
+//===----------------------------------------------------------------------===//
+LLVM_DUMP_METHOD void Attr::dump() const {
+  ASTDumper P(llvm::errs(), /*ShowColors=*/false);
+  P.Visit(this);
+}
