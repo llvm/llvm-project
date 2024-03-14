@@ -3112,5 +3112,5 @@ APInt APIntOps::avgCeilS(const APInt &C1, const APInt &C2) {
 
 APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
   // Return ceil((C1 + C2) / 2)
-  return (C1 | C2) - (C1 ^ C2).ashr(1);
+  return (C1 | C2) - (C1 ^ C2).lshr(1);
 }
