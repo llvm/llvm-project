@@ -7751,7 +7751,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
       transform(VL, ShuffleMask.begin(), [](Value *V) {
-        return !isa<UndefValue>(V);
+        return isa<PoisonValue>(V) ? PoisonMaskElem : 0;   
       });
       InstructionCost InsertCost = TTI.getVectorInstrCost(
           Instruction::InsertElement, VecTy, CostKind, 0,
