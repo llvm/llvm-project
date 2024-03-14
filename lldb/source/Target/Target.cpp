@@ -2867,7 +2867,9 @@ std::optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
   }
   
   // Opt into the per-module scratch context if we find incompatible triples.
-  if (!m_use_scratch_typesystem_per_module) {
+  if (!m_use_scratch_typesystem_per_module &&
+      !ModuleList::GetGlobalModuleListProperties()
+           .GetUseSwiftPreciseCompilerInvocation()) {
     TargetSP target_sp = exe_scope.CalculateTarget();
     if (lldb_module) {
       auto module_arch = lldb_module->GetArchitecture();
