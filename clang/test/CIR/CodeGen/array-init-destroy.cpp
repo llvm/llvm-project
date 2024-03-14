@@ -37,9 +37,10 @@ void x() {
 // AFTER: cir.func @_Z1xv()
 // AFTER: %[[ArrayAddr0:.*]] = cir.alloca !cir.array<!ty_22xpto22 x 2>
 // AFTER: %[[ConstTwo:.*]] = cir.const(#cir.int<2> : !u64i) : !u64i
-// AFTER: %[[Cast2:.*]] = cir.cast(array_to_ptrdecay, %[[ArrayAddr0]] : !cir.ptr<!cir.array<!ty_22xpto22 x 2>>), !cir.ptr<!ty_22xpto22>
-// AFTER: %[[ArrayPastEnd:.*]] = cir.ptr_stride(%[[Cast2]] : !cir.ptr<!ty_22xpto22>, %[[ConstTwo]] : !u64i), !cir.ptr<!ty_22xpto22>
+// AFTER: %[[ArrayBegin:.*]] = cir.cast(array_to_ptrdecay, %[[ArrayAddr0]] : !cir.ptr<!cir.array<!ty_22xpto22 x 2>>), !cir.ptr<!ty_22xpto22>
+// AFTER: %[[ArrayPastEnd:.*]] = cir.ptr_stride(%[[ArrayBegin]] : !cir.ptr<!ty_22xpto22>, %[[ConstTwo]] : !u64i), !cir.ptr<!ty_22xpto22>
 // AFTER: %[[TmpIdx:.*]] = cir.alloca !cir.ptr<!ty_22xpto22>, cir.ptr <!cir.ptr<!ty_22xpto22>>, ["__array_idx"] {alignment = 1 : i64}
+// AFTER: cir.store %[[ArrayBegin]], %[[TmpIdx]] : !cir.ptr<!ty_22xpto22>, cir.ptr <!cir.ptr<!ty_22xpto22>>
 // AFTER: cir.do {
 // AFTER:   %[[ArrayElt:.*]] = cir.load %[[TmpIdx]] : cir.ptr <!cir.ptr<!ty_22xpto22>>, !cir.ptr<!ty_22xpto22>
 // AFTER:   %[[ConstOne:.*]] = cir.const(#cir.int<1> : !u64i) : !u64i
