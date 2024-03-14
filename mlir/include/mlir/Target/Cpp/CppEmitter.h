@@ -13,7 +13,7 @@
 #ifndef MLIR_TARGET_CPP_CPPEMITTER_H
 #define MLIR_TARGET_CPP_CPPEMITTER_H
 
-#include "llvm/Support/raw_ostream.h"
+#include "mlir/Support/LLVM.h"
 
 namespace mlir {
 struct LogicalResult;

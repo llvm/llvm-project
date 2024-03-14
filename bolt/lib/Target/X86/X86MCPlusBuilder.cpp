@@ -2367,11 +2367,13 @@ public:
 
   bool createNoop(MCInst &Inst) const override {
     Inst.setOpcode(X86::NOOP);
+    Inst.clear();
     return true;
   }
 
   bool createReturn(MCInst &Inst) const override {
     Inst.setOpcode(X86::RET64);
+    Inst.clear();
     return true;
   }
 
@@ -2732,6 +2734,7 @@ public:
   bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                           MCContext *Ctx) const override {
     Inst.setOpcode(X86::JMP_1);
+    Inst.clear();
     Inst.addOperand(MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
     return true;
@@ -2740,6 +2743,7 @@ public:
   bool createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
     Inst.setOpcode(X86::CALL64pcrel32);
+    Inst.clear();
     Inst.addOperand(MCOperand::createExpr(
         MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
     return true;
@@ -3066,6 +3070,7 @@ public:
   void createSwap(MCInst &Inst, MCPhysReg Source, MCPhysReg MemBaseReg,
                   int64_t Disp) const {
     Inst.setOpcode(X86::XCHG64rm);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(Source));
     Inst.addOperand(MCOperand::createReg(Source));
     Inst.addOperand(MCOperand::createReg(MemBaseReg));      // BaseReg
@@ -3078,6 +3083,7 @@ public:
   void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(X86::JMP64m);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(MemBaseReg));      // BaseReg
     Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
@@ -3543,6 +3549,7 @@ private:
   bool createMove(MCInst &Inst, const MCSymbol *Src, unsigned Reg,
                   MCContext *Ctx) const {
     Inst.setOpcode(X86::MOV64rm);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(Reg));
     Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
     Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
@@ -3558,6 +3565,7 @@ private:
   bool createLea(MCInst &Inst, const MCSymbol *Src, unsigned Reg,
                  MCContext *Ctx) const {
     Inst.setOpcode(X86::LEA64r);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(Reg));
     Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
     Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt

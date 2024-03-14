@@ -14369,7 +14369,8 @@ StmtResult Sema::ActOnOpenMPTargetParallelForSimdDirective(
   // The point of exit cannot be a branch out of the structured block.
   // longjmp() and throw() must not violate the entry/exit criteria.
   CS->getCapturedDecl()->setNothrow();
-  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_parallel_for);
+  for (int ThisCaptureLevel =
+           getOpenMPCaptureLevels(OMPD_target_parallel_for_simd);
        ThisCaptureLevel > 1; --ThisCaptureLevel) {
     CS = cast<CapturedStmt>(CS->getCapturedStmt());
     // 1.2.2 OpenMP Language Terminology
