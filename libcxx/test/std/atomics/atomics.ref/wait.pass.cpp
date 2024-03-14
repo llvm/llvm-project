@@ -47,16 +47,7 @@ struct TestWait {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestWait>()();
-
-  TestEachFloatingPointType<TestWait>()();
-
-  TestEachPointerType<TestWait>()();
-
-  TestWait<UserAtomicType>()();
-  TestWait<LargeUserAtomicType>()();
-}
+void test() { TestEachAtomicType<TestWait>()(); }
 
 int main(int, char**) {
   test();

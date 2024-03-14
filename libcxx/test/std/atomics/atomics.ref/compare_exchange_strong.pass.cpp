@@ -73,16 +73,7 @@ struct TestCompareExchangeStrong {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestCompareExchangeStrong>()();
-
-  TestEachFloatingPointType<TestCompareExchangeStrong>()();
-
-  TestEachPointerType<TestCompareExchangeStrong>()();
-
-  TestCompareExchangeStrong<UserAtomicType>()();
-  TestCompareExchangeStrong<LargeUserAtomicType>()();
-}
+void test() { TestEachAtomicType<TestCompareExchangeStrong>()(); }
 
 int main(int, char**) {
   test();

@@ -68,16 +68,7 @@ struct TestNotifyAll {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestNotifyAll>()();
-
-  TestEachFloatingPointType<TestNotifyAll>()();
-
-  TestEachPointerType<TestNotifyAll>()();
-
-  TestNotifyAll<UserAtomicType>()();
-  TestNotifyAll<LargeUserAtomicType>()();
-}
+void test() { TestEachAtomicType<TestNotifyAll>()(); }
 
 int main(int, char**) {
   test();
