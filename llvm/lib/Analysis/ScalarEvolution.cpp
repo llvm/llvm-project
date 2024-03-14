@@ -9197,19 +9197,18 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   const SCEV *LHS = getSCEV(ExitCond->getOperand(0));
   const SCEV *RHS = getSCEV(ExitCond->getOperand(1));
 
-    ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
-                                            AllowPredicates);
-    if (EL.hasAnyInfo())
-      return EL;
+  ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
+                                          AllowPredicates);
+  if (EL.hasAnyInfo())
+    return EL;
 
-    auto *ExhaustiveCount =
-        computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
+  auto *ExhaustiveCount = computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 
-    if (!isa<SCEVCouldNotCompute>(ExhaustiveCount))
-      return ExhaustiveCount;
+  if (!isa<SCEVCouldNotCompute>(ExhaustiveCount))
+    return ExhaustiveCount;
 
-    return computeShiftCompareExitLimit(
-        ExitCond->getOperand(0), ExitCond->getOperand(1), L, OriginalPred);
+  return computeShiftCompareExitLimit(ExitCond->getOperand(0),
+                                      ExitCond->getOperand(1), L, OriginalPred);
 }
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
