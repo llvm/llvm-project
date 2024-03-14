@@ -34,8 +34,8 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
 def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
   let description = [{
     OpenMP operations which own a list of omp::MapInfoOp's implement this interface
-    to allow generic access to deal with map operands to more easily manipulate 
-    this class of operations. 
+    to allow generic access to deal with map operands to more easily manipulate
+    this class of operations.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -45,7 +45,7 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
       (ins), [{
         return $_op.getMapOperands();
       }]>,
-      InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange", 
+      InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange",
                       "getMapOperandsMutable",
       (ins), [{
         return $_op.getMapOperandsMutable();
