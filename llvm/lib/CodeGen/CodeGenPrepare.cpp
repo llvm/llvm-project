@@ -1949,6 +1949,13 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
   if (!FCmp)
     return false;
 
+  // Don't fold if the target offers free fabs and the predicate is legal.
+  EVT VT = TLI.getValueType(DL, Cmp->getOperand(0)->getType());
+  if (TLI.isFAbsFree(VT) &&
+      TLI.isCondCodeLegal(getFCmpCondCode(FCmp->getPredicate()),
+                          VT.getSimpleVT()))
+    return false;
+
   // Reverse the canonicalization if it is a FP class test
   auto ShouldReverseTransform = [](FPClassTest ClassTest) {
     return ClassTest == fcInf || ClassTest == (fcInf | fcNan);
@@ -1960,10 +1967,6 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
     return false;
 
   if (!ShouldReverseTransform(ClassTest) && !ShouldReverseTransform(~ClassTest))
-    return false;
-
-  // Don't fold if the target offers free fabs.
-  if (TLI.isFAbsFree(TLI.getValueType(DL, ClassVal->getType())))
     return false;
 
   IRBuilder<> Builder(Cmp);
