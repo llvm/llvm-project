@@ -13830,18 +13830,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   TypeSourceInfo *NewCallOpTSI =
       NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
 
-  auto ExtractParams = [](TypeLoc TL) {
-    auto Impl = [](auto Self, TypeLoc TL) -> ArrayRef<ParmVarDecl *> {
-      if (auto FPTL = TL.getAs<FunctionProtoTypeLoc>())
-        return FPTL.getParams();
-      if (auto ATL = TL.getAs<AttributedTypeLoc>())
-        return Self(Self, ATL.getModifiedLoc());
-      if (auto MQTL = TL.getAs<MacroQualifiedTypeLoc>())
-        return Self(Self, MQTL.getInnerLoc());
-      llvm_unreachable("Unhandled TypeLoc");
-    };
-    return Impl(Impl, TL);
-  };
+  // The type may be an AttributedType or some other kind of sugar;
+  // get the actual underlying FunctionProtoType.
+  auto FPTL = NewCallOpTSI->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>();
+  assert(FPTL && "Not a FunctionProtoType?");
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
@@ -13849,7 +13841,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
       E->getCallOperator()->getConstexprKind(),
       E->getCallOperator()->getStorageClass(),
-      ExtractParams(NewCallOpTSI->getTypeLoc()), E->hasExplicitResultType());
+      FPTL.getParams(), E->hasExplicitResultType());
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});
