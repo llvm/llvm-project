@@ -18,7 +18,7 @@
 namespace llvm {
 
 class MCSymbolGOFF : public MCSymbol {
-  mutable StringRef AliasName; // ADA indirect
+  mutable StringRef ExternalName; // Alternate external name.
 
   enum SymbolFlags : uint16_t {
     SF_Alias = 0x02,     // Symbol is alias.
@@ -27,12 +27,14 @@ class MCSymbolGOFF : public MCSymbol {
 
 public:
   MCSymbolGOFF(const StringMapEntry<bool> *Name, bool IsTemporary)
-      : MCSymbol(SymbolKindGOFF, Name, IsTemporary), AliasName() {}
+      : MCSymbol(SymbolKindGOFF, Name, IsTemporary), ExternalName() {}
   static bool classof(const MCSymbol *S) { return S->isGOFF(); }
 
-  bool hasAliasName() const { return !AliasName.empty(); }
-  void setAliasName(StringRef Name) { AliasName = Name; }
-  StringRef getAliasName() const { return AliasName; }
+  bool hasExternalName() const { return !ExternalName.empty(); }
+  void setExternalName(StringRef Name) {
+    ExternalName = Name;
+  }
+  StringRef getExternalName() const { return ExternalName; }
 
   void setIndirect(bool Value = true) {
     modifyFlags(Value ? SF_Indirect : 0, SF_Indirect);
