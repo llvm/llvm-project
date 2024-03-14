@@ -1628,7 +1628,6 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     return;
   }
 
-  bool ResetPolicy = false;
   // The tag definition will take care of these.
   if (!Policy.IncludeTagDefinition)
   {
@@ -1638,15 +1637,10 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
         !Policy.SuppressUnwrittenScope) {
-      ResetPolicy = true;
-      StringRef prefix = T->isClassType()       ? "class "
-                         : T->isStructureType() ? "struct "
-                         : T->isUnionType()     ? "union "
-                                                : "";
-      OS << prefix;
       Policy.SuppressTagKeyword = true;
       Policy.SuppressScope = false;
-      return printBefore(T->getNamedType(), OS);
+      printBefore(T->getNamedType(), OS);
+      return;
     }
     if (Qualifier)
       Qualifier->print(OS, Policy);
@@ -1654,10 +1648,6 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
 
   ElaboratedTypePolicyRAII PolicyRAII(Policy);
   printBefore(T->getNamedType(), OS);
-  if (ResetPolicy) {
-    Policy.SuppressTagKeyword = false;
-    Policy.SuppressScope = true;
-  }
 }
 
 void TypePrinter::printElaboratedAfter(const ElaboratedType *T,

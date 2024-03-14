@@ -679,6 +679,19 @@ static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
   Out << Proto;
 }
 
+static void AddPrefix(PrintingPolicy &Policy, QualType T,
+                      llvm::raw_ostream &Out) {
+  if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+      !Policy.SuppressUnwrittenScope) {
+    StringRef prefix;
+    prefix = T->isClassType()       ? "class "
+             : T->isStructureType() ? "struct "
+             : T->isUnionType()     ? "union "
+                                    : "";
+    Out << prefix;
+  }
+}
+
 void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (!D->getDescribedFunctionTemplate() &&
       !D->isFunctionTemplateSpecialization())
@@ -855,7 +868,17 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         Out << Proto << " -> ";
         Proto.clear();
       }
-      AFT->getReturnType().print(Out, Policy, Proto);
+      if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+          !Policy.SuppressUnwrittenScope) {
+        AddPrefix(Policy, AFT->getReturnType(), Out);
+        bool OldTagKeyword = Policy.SuppressTagKeyword;
+        bool OldSupressScope = Policy.SuppressScope;
+        AFT->getReturnType().print(Out, Policy, Proto);
+        Policy.SuppressTagKeyword = OldTagKeyword;
+        Policy.SuppressScope = OldSupressScope;
+      } else {
+        AFT->getReturnType().print(Out, Policy, Proto);
+      }
       Proto.clear();
     }
     Out << Proto;
@@ -1022,7 +1045,17 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
              ? D->getIdentifier()->deuglifiedName()
              : D->getName();
 
-  printDeclType(T, Name);
+  if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+      !Policy.SuppressUnwrittenScope) {
+    AddPrefix(Policy, T, Out);
+    bool OldTagKeyword = Policy.SuppressTagKeyword;
+    bool OldSupressScope = Policy.SuppressScope;
+    printDeclType(T, Name);
+    Policy.SuppressTagKeyword = OldTagKeyword;
+    Policy.SuppressScope = OldSupressScope;
+  } else {
+    printDeclType(T, Name);
+  }
 
   // Print the attributes that should be placed right before the end of the
   // decl.
