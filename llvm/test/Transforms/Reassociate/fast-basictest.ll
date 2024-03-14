@@ -578,3 +578,61 @@ define float @test18(float %A, float %B) {
   %Z = fadd fast float %Y, 1.200000e+01
   ret float %Z
 }
+
+; Do not fneg fast float unless it has nnan
+
+define float @scalar(float %a) {
+; CHECK-LABEL: @scalar(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = fmul fast float [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[NEG]], [[A]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+entry:
+  %b = fmul fast float %a, -2.0
+  %neg = fneg fast float %a
+  %mul = fmul fast float %neg, %b
+  ret float %mul
+}
+
+define float @scalar_nnan(float %a) {
+; CHECK-LABEL: @scalar_nnan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = fmul fast float [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[NEG]], [[A]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+entry:
+  %b = fmul fast nnan float %a, -2.0
+  %neg = fneg fast nnan float %a
+  %mul = fmul fast nnan float %neg, %b
+  ret float %mul
+}
+
+define <4 x float> @vector(<4 x float> %a) {
+; CHECK-LABEL: @vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = fmul fast <4 x float> [[A:%.*]], <float -1.000000e+00, float -2.000000e+00, float 3.000000e+00, float -4.000000e+00>
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <4 x float> [[NEG]], [[A]]
+; CHECK-NEXT:    ret <4 x float> [[MUL]]
+;
+entry:
+  %b = fmul fast <4 x float> %a, <float 1.0, float 2.0, float -3.0, float 4.0>
+  %neg = fneg fast <4 x float> %a
+  %mul = fmul fast <4 x float> %neg, %b
+  ret <4 x float> %mul
+}
+
+define <4 x float> @vector_nnan(<4 x float> %a) {
+; CHECK-LABEL: @vector_nnan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = fmul fast <4 x float> [[A:%.*]], <float -1.000000e+00, float -2.000000e+00, float 3.000000e+00, float -4.000000e+00>
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <4 x float> [[NEG]], [[A]]
+; CHECK-NEXT:    ret <4 x float> [[MUL]]
+;
+entry:
+  %b = fmul fast nnan <4 x float> %a, <float 1.0, float 2.0, float -3.0, float 4.0>
+  %neg = fneg fast nnan <4 x float> %a
+  %mul = fmul fast <4 x float> %neg, %b
+  ret <4 x float> %mul
+}
