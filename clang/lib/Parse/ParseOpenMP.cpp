@@ -2984,8 +2984,29 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     OMPDirectiveScope.Exit();
     break;
   }
+  case OMPD_declare_target: {
+    SourceLocation DTLoc = ConsumeAnyToken();
+    bool HasClauses = Tok.isNot(tok::annot_pragma_openmp_end);
+    Sema::DeclareTargetContextInfo DTCI(DKind, DTLoc);
+    if (HasClauses)
+      ParseOMPDeclareTargetClauses(DTCI);
+    bool HasImplicitMappings =
+        !HasClauses || (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect);
+
+    if (HasImplicitMappings) {
+      Diag(Tok, diag::err_omp_unexpected_directive)
+          << 1 << getOpenMPDirectiveName(DKind);
+      SkipUntil(tok::annot_pragma_openmp_end);
+      break;
+    }
+
+    // Skip the last annot_pragma_openmp_end.
+    ConsumeAnyToken();
+
+    Actions.ActOnFinishedOpenMPDeclareTargetContext(DTCI);
+    break;
+  }
   case OMPD_declare_simd:
-  case OMPD_declare_target:
   case OMPD_begin_declare_target:
   case OMPD_end_declare_target:
   case OMPD_requires:

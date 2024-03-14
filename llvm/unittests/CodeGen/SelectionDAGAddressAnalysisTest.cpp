@@ -110,12 +110,12 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
   SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
   SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
                                 PtrInfo.getWithOffset(Offset));
-  std::optional<int64_t> NumBytes = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes = cast<StoreSDNode>(Store)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store.getNode(), NumBytes, Store.getNode(), NumBytes, *DAG, IsAlias);
+      Store.getNode(), LocationSize::precise(NumBytes), Store.getNode(),
+      LocationSize::precise(NumBytes), *DAG, IsAlias);
 
   EXPECT_TRUE(IsValid);
   EXPECT_TRUE(IsAlias);
@@ -134,14 +134,10 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObjectUnknownSize) {
   SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
                                 PtrInfo.getWithOffset(Offset));
 
-  // Maybe unlikely that BaseIndexOffset::computeAliasing is used with the
-  // optional NumBytes being unset like in this test, but it would be confusing
-  // if that function determined IsAlias=false here.
-  std::optional<int64_t> NumBytes;
-
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store.getNode(), NumBytes, Store.getNode(), NumBytes, *DAG, IsAlias);
+      Store.getNode(), LocationSize::beforeOrAfterPointer(), Store.getNode(),
+      LocationSize::beforeOrAfterPointer(), *DAG, IsAlias);
 
   EXPECT_FALSE(IsValid);
 }
@@ -165,14 +161,13 @@ TEST_F(SelectionDAGAddressAnalysisTest, noAliasingFrameObjects) {
                                  PtrInfo.getWithOffset(Offset0));
   SDValue Store1 = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index1,
                                  PtrInfo.getWithOffset(Offset1));
-  std::optional<int64_t> NumBytes0 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize());
-  std::optional<int64_t> NumBytes1 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes0 = cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize();
+  TypeSize NumBytes1 = cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store0.getNode(), NumBytes0, Store1.getNode(), NumBytes1, *DAG, IsAlias);
+      Store0.getNode(), LocationSize::precise(NumBytes0), Store1.getNode(),
+      LocationSize::precise(NumBytes1), *DAG, IsAlias);
 
   EXPECT_TRUE(IsValid);
   EXPECT_FALSE(IsAlias);
@@ -195,14 +190,13 @@ TEST_F(SelectionDAGAddressAnalysisTest, unknownSizeFrameObjects) {
       DAG->getStore(DAG->getEntryNode(), Loc, Value, FIPtr, PtrInfo);
   SDValue Store1 = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index1,
                                  MachinePointerInfo(PtrInfo.getAddrSpace()));
-  std::optional<int64_t> NumBytes0 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize());
-  std::optional<int64_t> NumBytes1 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes0 = cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize();
+  TypeSize NumBytes1 = cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store0.getNode(), NumBytes0, Store1.getNode(), NumBytes1, *DAG, IsAlias);
+      Store0.getNode(), LocationSize::precise(NumBytes0), Store1.getNode(),
+      LocationSize::precise(NumBytes1), *DAG, IsAlias);
 
   EXPECT_FALSE(IsValid);
 }
@@ -220,20 +214,19 @@ TEST_F(SelectionDAGAddressAnalysisTest, globalWithFrameObject) {
   SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
   SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
                                 PtrInfo.getWithOffset(Offset));
-  std::optional<int64_t> NumBytes = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes = cast<StoreSDNode>(Store)->getMemoryVT().getStoreSize();
   EVT GTy = DAG->getTargetLoweringInfo().getValueType(DAG->getDataLayout(),
                                                       G->getType());
   SDValue GValue = DAG->getConstant(0, Loc, GTy);
   SDValue GAddr = DAG->getGlobalAddress(G, Loc, GTy);
   SDValue GStore = DAG->getStore(DAG->getEntryNode(), Loc, GValue, GAddr,
                                  MachinePointerInfo(G, 0));
-  std::optional<int64_t> GNumBytes = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(GStore)->getMemoryVT().getStoreSize());
+  TypeSize GNumBytes = cast<StoreSDNode>(GStore)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store.getNode(), NumBytes, GStore.getNode(), GNumBytes, *DAG, IsAlias);
+      Store.getNode(), LocationSize::precise(NumBytes), GStore.getNode(),
+      LocationSize::precise(GNumBytes), *DAG, IsAlias);
 
   EXPECT_TRUE(IsValid);
   EXPECT_FALSE(IsAlias);
@@ -248,8 +241,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, globalWithAliasedGlobal) {
   SDValue GAddr = DAG->getGlobalAddress(G, Loc, GTy);
   SDValue GStore = DAG->getStore(DAG->getEntryNode(), Loc, GValue, GAddr,
                                  MachinePointerInfo(G, 0));
-  std::optional<int64_t> GNumBytes = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(GStore)->getMemoryVT().getStoreSize());
+  TypeSize GNumBytes = cast<StoreSDNode>(GStore)->getMemoryVT().getStoreSize();
 
   SDValue AliasedGValue = DAG->getConstant(1, Loc, GTy);
   SDValue AliasedGAddr = DAG->getGlobalAddress(AliasedG, Loc, GTy);
@@ -258,9 +250,9 @@ TEST_F(SelectionDAGAddressAnalysisTest, globalWithAliasedGlobal) {
                     MachinePointerInfo(AliasedG, 0));
 
   bool IsAlias;
-  bool IsValid = BaseIndexOffset::computeAliasing(GStore.getNode(), GNumBytes,
-                                                  AliasedGStore.getNode(),
-                                                  GNumBytes, *DAG, IsAlias);
+  bool IsValid = BaseIndexOffset::computeAliasing(
+      GStore.getNode(), LocationSize::precise(GNumBytes),
+      AliasedGStore.getNode(), LocationSize::precise(GNumBytes), *DAG, IsAlias);
 
   // With some deeper analysis we could detect if G and AliasedG is aliasing or
   // not. But computeAliasing is currently defensive and assumes that a
@@ -290,19 +282,19 @@ TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsWithinDiff) {
                                  PtrInfo.getWithOffset(Offset0));
   SDValue Store1 = DAG->getStore(DAG->getEntryNode(), Loc, Value1, Index1,
                                  PtrInfo.getWithOffset(Offset1));
-  std::optional<int64_t> NumBytes0 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize());
-  std::optional<int64_t> NumBytes1 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes0 = cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize();
+  TypeSize NumBytes1 = cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store0.getNode(), NumBytes0, Store1.getNode(), NumBytes1, *DAG, IsAlias);
+      Store0.getNode(), LocationSize::precise(NumBytes0), Store1.getNode(),
+      LocationSize::precise(NumBytes1), *DAG, IsAlias);
   EXPECT_TRUE(IsValid);
   EXPECT_FALSE(IsAlias);
 
   IsValid = BaseIndexOffset::computeAliasing(
-      Store1.getNode(), NumBytes1, Store0.getNode(), NumBytes0, *DAG, IsAlias);
+      Store1.getNode(), LocationSize::precise(NumBytes1), Store0.getNode(),
+      LocationSize::precise(NumBytes0), *DAG, IsAlias);
   EXPECT_TRUE(IsValid);
   EXPECT_FALSE(IsAlias);
 }
@@ -331,14 +323,13 @@ TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsOutOfDiff) {
                                  PtrInfo.getWithOffset(Offset0));
   SDValue Store1 = DAG->getStore(DAG->getEntryNode(), Loc, Value1, Index1,
                                  PtrInfo.getWithOffset(Offset1));
-  std::optional<int64_t> NumBytes0 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize());
-  std::optional<int64_t> NumBytes1 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes0 = cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize();
+  TypeSize NumBytes1 = cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store0.getNode(), NumBytes0, Store1.getNode(), NumBytes1, *DAG, IsAlias);
+      Store0.getNode(), LocationSize::precise(NumBytes0), Store1.getNode(),
+      LocationSize::precise(NumBytes1), *DAG, IsAlias);
   EXPECT_TRUE(IsValid);
   EXPECT_TRUE(IsAlias);
 }
@@ -365,14 +356,13 @@ TEST_F(SelectionDAGAddressAnalysisTest, twoFixedStackObjects) {
                                  PtrInfo0.getWithOffset(Offset0));
   SDValue Store1 = DAG->getStore(DAG->getEntryNode(), Loc, Value1, Index1,
                                  PtrInfo1.getWithOffset(Offset0));
-  std::optional<int64_t> NumBytes0 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize());
-  std::optional<int64_t> NumBytes1 = MemoryLocation::getSizeOrUnknown(
-      cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize());
+  TypeSize NumBytes0 = cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize();
+  TypeSize NumBytes1 = cast<StoreSDNode>(Store1)->getMemoryVT().getStoreSize();
 
   bool IsAlias;
   bool IsValid = BaseIndexOffset::computeAliasing(
-      Store0.getNode(), NumBytes0, Store1.getNode(), NumBytes1, *DAG, IsAlias);
+      Store0.getNode(), LocationSize::precise(NumBytes0), Store1.getNode(),
+      LocationSize::precise(NumBytes1), *DAG, IsAlias);
   EXPECT_TRUE(IsValid);
   EXPECT_FALSE(IsAlias);
 }

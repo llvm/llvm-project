@@ -1480,8 +1480,8 @@ let hasSideEffects = 0 in {
 let isReMaterializable = 1 in {
 def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                        "#ADDIStocHA8", []>, isPPC64;
-def ADDItocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
-                     "#ADDItocL", []>, isPPC64;
+def ADDItocL8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
+                     "#ADDItocL8", []>, isPPC64;
 }
 
 // Local Data Transform
@@ -1557,12 +1557,19 @@ def GETtlsldADDRPCREL : GETtlsldADDRPseudo <"#GETtlsldADDRPCREL">;
 // so we don't need to mark it with a size of 8 bytes. Finally, the assembly
 // manual mentions this exact set of registers as the clobbered set, others
 // are guaranteed not to be clobbered.
-let Defs = [X0,X4,X5,X11,LR8,CR0] in
+let Defs = [X0,X4,X5,X11,LR8,CR0] in {
 def GETtlsADDR64AIX :
   PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$offset, g8rc:$handle),
                     "GETtlsADDR64AIX",
                     [(set i64:$rD,
                       (PPCgetTlsAddr i64:$offset, i64:$handle))]>, isPPC64;
+// On AIX, the call to .__tls_get_mod needs one input in X3 for the module handle.
+def GETtlsMOD64AIX :
+  PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$handle),
+                    "GETtlsMOD64AIX",
+                    [(set i64:$rD,
+                      (PPCgetTlsMod i64:$handle))]>, isPPC64;
+}
 }
 
 // Combined op for ADDItlsgdL and GETtlsADDR, late expanded.  X3 and LR8
@@ -1595,6 +1602,9 @@ def TLSGDAIX8 :
                      "#TLSGDAIX8",
                      [(set i64:$rD,
                        (PPCTlsgdAIX i64:$offset, i64:$handle))]>;
+// This pseudo is expanded to the call to GETtlsMOD64AIX.
+def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$handle),
+                     "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX i64:$handle))]>;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines, while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,

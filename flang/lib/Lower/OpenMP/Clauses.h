@@ -64,18 +64,18 @@ Object makeObject(const parser::Designator &dsg,
 Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx);
 
-inline auto makeObjectF(semantics::SemanticsContext &semaCtx) {
+inline auto makeObjectFn(semantics::SemanticsContext &semaCtx) {
   return [&](auto &&s) { return makeObject(s, semaCtx); };
 }
 
 template <typename T>
-SomeExpr makeExpr(T &&inp, semantics::SemanticsContext &semaCtx) {
-  auto maybeExpr = evaluate::ExpressionAnalyzer(semaCtx).Analyze(inp);
+SomeExpr makeExpr(T &&pftExpr, semantics::SemanticsContext &semaCtx) {
+  auto maybeExpr = evaluate::ExpressionAnalyzer(semaCtx).Analyze(pftExpr);
   assert(maybeExpr);
   return std::move(*maybeExpr);
 }
 
-inline auto makeExprF(semantics::SemanticsContext &semaCtx) {
+inline auto makeExprFn(semantics::SemanticsContext &semaCtx) {
   return [&](auto &&s) { return makeExpr(s, semaCtx); };
 }
 
@@ -91,11 +91,13 @@ List<ResultTy> makeList(ContainerTy &&container, FunctionTy &&func) {
 
 inline ObjectList makeList(const parser::OmpObjectList &objects,
                            semantics::SemanticsContext &semaCtx) {
-  return makeList(objects.v, makeObjectF(semaCtx));
+  return makeList(objects.v, makeObjectFn(semaCtx));
 }
 
-template <typename F, typename T, typename U = std::invoke_result_t<F, T>>
-std::optional<U> maybeApply(F &&func, const std::optional<T> &inp) {
+template <typename FuncTy, typename ElemTy,
+          typename ResultTy = std::invoke_result_t<FuncTy, ElemTy>>
+std::optional<ResultTy> maybeApply(FuncTy &&func,
+                                   const std::optional<ElemTy> &inp) {
   if (!inp)
     return std::nullopt;
   return std::move(func(*inp));
@@ -106,12 +108,6 @@ getBaseObject(const Object &object,
               Fortran::semantics::SemanticsContext &semaCtx);
 
 namespace clause {
-using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
-using ProcedureDesignator =
-    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
-using ReductionOperator =
-    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
-
 #ifdef EMPTY_CLASS
 #undef EMPTY_CLASS
 #endif
@@ -127,6 +123,17 @@ using ReductionOperator =
 #include "llvm/Frontend/OpenMP/OMP.inc"
 #undef EMPTY_CLASS
 #undef WRAPPER_CLASS
+
+using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
+using ProcedureDesignator =
+    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
+using ReductionOperator =
+    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
+
+// "Requires" clauses are handled early on, and the aggregated information
+// is stored in the Symbol details of modules, programs, and subprograms.
+// These clauses are still handled here to cover all alternatives in the
+// main clause variant.
 
 using Aligned = tomp::clause::AlignedT<SymIdent, SymReference>;
 using Allocate = tomp::clause::AllocateT<SymIdent, SymReference>;
@@ -192,7 +199,7 @@ struct Clause : public tomp::ClauseT<SymIdent, SymReference> {
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
                   parser::CharBlock source = {}) {
-  return Clause{id, specific, source};
+  return Clause{{id, specific}, source};
 }
 
 Clause makeClause(const Fortran::parser::OmpClause &cls,
