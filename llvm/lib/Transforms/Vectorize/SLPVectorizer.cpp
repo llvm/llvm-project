@@ -14050,30 +14050,30 @@ bool BoUpSLP::collectValuesToDemote(
     }
     return true;
   };
-  auto AttemptCheckBitwidth = [&](function_ref<bool(unsigned, unsigned)> Checker,
-                                  bool &NeedToExit) {
-    // Try all bitwidth < OrigBitWidth.
-    NeedToExit = false;
-    uint32_t OrigBitWidth = DL->getTypeSizeInBits(I->getType());
-    unsigned BestFailBitwidth = 0;
-    for (; BitWidth < OrigBitWidth; BitWidth *= 2) {
-      if (Checker(BitWidth, OrigBitWidth))
-        return true;
-      if (BestFailBitwidth == 0 && FinalAnalysis())
-        BestFailBitwidth = BitWidth;
-    }
-    if (BitWidth >= OrigBitWidth) {
-      if (BestFailBitwidth == 0) {
-        BitWidth = OrigBitWidth;
+  auto AttemptCheckBitwidth =
+      [&](function_ref<bool(unsigned, unsigned)> Checker, bool &NeedToExit) {
+        // Try all bitwidth < OrigBitWidth.
+        NeedToExit = false;
+        uint32_t OrigBitWidth = DL->getTypeSizeInBits(I->getType());
+        unsigned BestFailBitwidth = 0;
+        for (; BitWidth < OrigBitWidth; BitWidth *= 2) {
+          if (Checker(BitWidth, OrigBitWidth))
+            return true;
+          if (BestFailBitwidth == 0 && FinalAnalysis())
+            BestFailBitwidth = BitWidth;
+        }
+        if (BitWidth >= OrigBitWidth) {
+          if (BestFailBitwidth == 0) {
+            BitWidth = OrigBitWidth;
+            return false;
+          }
+          MaxDepthLevel = 1;
+          BitWidth = BestFailBitwidth;
+          NeedToExit = true;
+          return true;
+        }
         return false;
-      }
-      MaxDepthLevel = 1;
-      BitWidth = BestFailBitwidth;
-      NeedToExit = true;
-      return true;
-    }
-    return false;
-  };
+      };
   bool NeedToExit = false;
   switch (I->getOpcode()) {
 
