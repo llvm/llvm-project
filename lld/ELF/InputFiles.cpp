@@ -746,24 +746,8 @@ static bool isKnownSpecificSectionType(uint32_t t, uint32_t flags) {
     return true;
   if (SHT_LOOS <= t && t <= SHT_HIOS && !(flags & SHF_OS_NONCONFORMING))
     return true;
-  switch (config->emachine) {
-  case EM_ARM:
-    return t == SHT_ARM_EXIDX || t == SHT_ARM_ATTRIBUTES;
-  case EM_AARCH64:
-    return t == SHT_AARCH64_MEMTAG_GLOBALS_STATIC;
-  case EM_MIPS:
-    return is_contained(
-        {SHT_MIPS_REGINFO, SHT_MIPS_OPTIONS, SHT_MIPS_DWARF, SHT_MIPS_ABIFLAGS},
-        t);
-  case EM_MSP430:
-    return t == SHT_MSP430_ATTRIBUTES;
-  case EM_RISCV:
-    return t == SHT_RISCV_ATTRIBUTES;
-  case EM_X86_64:
-    return t == SHT_X86_64_UNWIND;
-  default:
-    return false;
-  }
+  // Allow all processor-specific types. This is different from GNU ld.
+  return SHT_LOPROC <= t && t <= SHT_HIPROC;
 }
 
 template <class ELFT>

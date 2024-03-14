@@ -6,8 +6,6 @@
 # CHECK-NEXT: error: a.o:(regular): unknown section type 0x15
 # CHECK-NEXT: error: a.o:(loos_nonconforming): unknown section type 0x60000000
 # CHECK-NEXT: error: a.o:(hios_nonconforming): unknown section type 0x6fffffff
-# CHECK-NEXT: error: a.o:(loproc): unknown section type 0x70000000
-# CHECK-NEXT: error: a.o:(hiproc): unknown section type 0x7fffffff
 # CHECK-NEXT: error: a.o:(louser_alloc): unknown section type 0x80000000
 # CHECK-NEXT: error: a.o:(hiuser_alloc): unknown section type 0xffffffff
 
