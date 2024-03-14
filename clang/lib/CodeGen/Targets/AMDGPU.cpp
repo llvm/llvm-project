@@ -379,6 +379,24 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
+
+  if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
+    uint32_t X =
+        Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    uint32_t Y =
+        Attr->getY()
+            ? Attr->getY()->EvaluateKnownConstInt(M.getContext()).getExtValue()
+            : 1;
+    uint32_t Z =
+        Attr->getZ()
+            ? Attr->getZ()->EvaluateKnownConstInt(M.getContext()).getExtValue()
+            : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+    F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
+  }
 }
 
 /// Emits control constants used to change per-architecture behaviour in the
