@@ -1715,9 +1715,17 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
   return success();
 }
 
-static LogicalResult vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv) {
+static LogicalResult
+vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
+                                   bool flatten1DDepthwiseConv) {
+  if (flatten1DDepthwiseConv) {
+    LDBG("Vectorization of flattened convs with dynamic shapes is not "
+         "supported\n");
+    return failure();
+  }
+
   if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
-    LDBG("Not a depth-wise 1D conv, dynamic shapes are not supported\n");
+    LDBG("Not a 1D depth-wise WC conv, dynamic shapes are not supported\n");
     return failure();
   }
 
@@ -1735,9 +1743,11 @@ static LogicalResult vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv) {
   return success();
 }
 
-static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
+static LogicalResult
+vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
+                                     bool flatten1DDepthwiseConv) {
   if (isa<ConvolutionOpInterface>(op.getOperation()))
-    return vectorizeDynamicConvOpPrecondition(op);
+    return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
   // linalg.copy ops and ops that implement ContractionOpInterface for now.
@@ -1804,10 +1814,9 @@ vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
   return success();
 }
 
-static LogicalResult
-vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
-                              ArrayRef<int64_t> inputVectorSizes,
-                              bool vectorizeNDExtract) {
+static LogicalResult vectorizeLinalgOpPrecondition(
+    LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
+    bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
   // tensor with dimension of 0 cannot be vectorized.
   if (llvm::is_contained(linalgOp.getStaticShape(), 0))
     return failure();
@@ -1817,8 +1826,8 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                                       inputVectorSizes)))
     return failure();
 
-  if (linalgOp.hasDynamicShape() &&
-      failed(vectorizeDynamicLinalgOpPrecondition(linalgOp))) {
+  if (linalgOp.hasDynamicShape() && failed(vectorizeDynamicLinalgOpPrecondition(
+                                        linalgOp, flatten1DDepthwiseConv))) {
     LDBG("Dynamically-shaped op failed vectorization pre-conditions\n");
     return failure();
   }
@@ -1946,7 +1955,8 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
     Operation *op, ArrayRef<int64_t> inputVectorSizes,
-    ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract) {
+    ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
+    bool flatten1DDepthwiseConv) {
   if (failed(vectorizeScalableVectorPrecondition(op, inputVectorSizes,
                                                  inputScalableVecDims)))
     return failure();
@@ -1954,7 +1964,8 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
   return TypeSwitch<Operation *, LogicalResult>(op)
       .Case<linalg::LinalgOp>([&](auto linalgOp) {
         return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                             vectorizeNDExtract);
+                                             vectorizeNDExtract,
+                                             flatten1DDepthwiseConv);
       })
       .Case<tensor::PadOp>([&](auto padOp) {
         return vectorizePadOpPrecondition(padOp, inputVectorSizes);
@@ -2003,7 +2014,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
   if (failed(vectorizeOpPrecondition(op, inputVectorSizes, inputScalableVecDims,
-                                     vectorizeNDExtract))) {
+                                     vectorizeNDExtract,
+                                     flatten1DDepthwiseConv))) {
     LDBG("Vectorization pre-conditions failed\n");
     return failure();
   }
@@ -3180,6 +3192,10 @@ struct Conv1DGenerator
       scalableChDim = channelDimScalableFlag;
       useMasking = true;
     }
+
+    assert(!(useMasking && flatten) &&
+           "Unsupported flattened conv with dynamic shapes");
+
     // out{n, w, c}
     bindShapeDims(resShapedType, nSize, wSize);
 
@@ -3282,10 +3298,15 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
+    // Note - the scalable flags are ignored as flattening combined with
+    // scalable vectorization is not supported.
     auto inOutFlattenSliceSizes =
         SmallVector<int64_t>{nSize, wSizeStep * cSize};
-    auto lhsCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
-    auto resCastType = VectorType::get(inOutFlattenSliceSizes, resEltType);
+    auto lhsTypeAfterFlattening =
+        VectorType::get(inOutFlattenSliceSizes, lhsEltType);
+    auto resTypeAfterFlattening =
+        VectorType::get(inOutFlattenSliceSizes, resEltType);
+
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
@@ -3295,9 +3316,9 @@ struct Conv1DGenerator
           // Flatten the input and output vectors (collapse the channel
           // dimension)
           lhsVal = rewriter.create<vector::ShapeCastOp>(
-              loc, lhsCastType, lhsVals[linearIndex(kw, w)]);
-          resVal = rewriter.create<vector::ShapeCastOp>(loc, resCastType,
-                                                        resVals[w]);
+              loc, lhsTypeAfterFlattening, lhsVals[linearIndex(kw, w)]);
+          resVal = rewriter.create<vector::ShapeCastOp>(
+              loc, resTypeAfterFlattening, resVals[w]);
         }
         resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
                                                   rhsVals[kw], resVal, flatten);
@@ -3353,6 +3374,10 @@ struct Conv1DGenerator
     lhs = promote(rewriter, loc, lhs, resTy);
 
     if (flatten) {
+      // NOTE: This following logic won't work for scalable vectors. For this
+      // reason, "flattening" is not supported when shapes are dynamic (this
+      // should be captured by one of the pre-conditions).
+
       // There are two options for handling the filter:
       //  * shape_cast(broadcast(filter))
       //  * broadcast(shuffle(filter))

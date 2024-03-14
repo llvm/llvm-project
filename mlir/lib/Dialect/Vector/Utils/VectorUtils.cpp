@@ -306,14 +306,14 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
                                                     RewriterBase &rewriter) {
   auto loc = xfer->getLoc();
 
-  Value blah = TypeSwitch<Operation *, Value>(xfer)
+  Value base = TypeSwitch<Operation *, Value>(xfer)
                    .Case<vector::TransferReadOp>(
                        [&](auto readOp) { return readOp.getSource(); })
                    .Case<vector::TransferWriteOp>(
                        [&](auto writeOp) { return writeOp.getOperand(1); });
 
   SmallVector<OpFoldResult> mixedSourceDims =
-      hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, blah)
-                         : memref::getMixedSizes(rewriter, loc, blah);
+      hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, base)
+                         : memref::getMixedSizes(rewriter, loc, base);
   return mixedSourceDims;
 }

@@ -120,8 +120,6 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           %[[OUT:.*]] = vector.mask %[[MASK_OUT]] { vector.transfer_write %[[OUT_INS]], %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] : vector<1x8x[4]xi8>, tensor<1x8x?xi8> } : vector<1x8x[4]xi1> -> tensor<1x8x?xi8>
 // CHECK:           return %[[OUT]] : tensor<1x8x?xi8>
 
-
-
 // -----
 
 func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dilation_2(

@@ -19,12 +19,14 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @depthwise_conv1d_ncw_cw(%input: memref<3x5x4xf32>, %filter: memref<5x1xf32>, %output: memref<3x5x4xf32>) {
+// Masked vectorisation of 1D depthwise CW convs is not yet supported
+
+func.func @depthwise_conv1d_ncw_cw(%input: memref<3x?x4xf32>, %filter: memref<?x1xf32>, %output: memref<3x?x4xf32>) {
   // expected-error @+1 {{Attempted to vectorize, but failed}}
   linalg.depthwise_conv_1d_ncw_cw
     {dilations = dense<2> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
-    ins(%input, %filter : memref<3x5x4xf32>, memref<5x1xf32>)
-    outs(%output : memref<3x5x4xf32>)
+    ins(%input, %filter : memref<3x?x4xf32>, memref<?x1xf32>)
+    outs(%output : memref<3x?x4xf32>)
   return
 }
 
