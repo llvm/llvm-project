@@ -184,7 +184,7 @@ class GOFFState {
 
   GOFFState(raw_ostream &OS, GOFFYAML::Object &Doc,
             yaml::ErrorHandler ErrHandler)
-      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), SymbolID(0), HasError(false) {
+      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), HasError(false) {
   }
 
   ~GOFFState() { GW.finalize(); }
@@ -199,7 +199,6 @@ private:
   GOFFOstream GW;
   GOFFYAML::Object &Doc;
   yaml::ErrorHandler ErrHandler;
-  uint16_t SymbolID;
   bool HasError;
 };
 
@@ -249,12 +248,6 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
 }
 
 void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
-  if (Sym.ID != SymbolID + 1)
-    reportError("symbol IDs not monotonic " + Sym.Name);
-  else
-    ++SymbolID;
-  if (Sym.OwnerID >= SymbolID)
-    reportError("owner ID not defined " + Sym.Name);
   SmallString<80> SymName;
   if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Sym.Name, SymName))
     reportError("conversion error on " + Sym.Name);
