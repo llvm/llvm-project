@@ -78,7 +78,7 @@ public:
     /// List of LC_RPATHs.
     std::vector<std::string> RPaths;
     /// List of LC_BUILD_VERSIONs.
-    std::vector<BuildVersionOpts> BuildVersion;
+    std::vector<BuildVersionOpts> BuildVersions;
 
     HeaderOptions() = default;
     HeaderOptions(Dylib D) : IDDylib(std::move(D)) {}
