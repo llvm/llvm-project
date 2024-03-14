@@ -1347,6 +1347,14 @@ def HIPManaged : InheritableAttr {
   let Documentation = [HIPManagedAttrDocs];
 }
 
+def CUDAClusterDims : InheritableAttr {
+  let Spellings = [GNU<"cluster_dims">, Declspec<"__cluster_dims__">];
+  let Args = [ExprArgument<"X">, ExprArgument<"Y", 1>, ExprArgument<"Z", 1>];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+  let LangOpts = [CUDA];
+  let Documentation = [Undocumented];
+}
+
 def CUDAInvalidTarget : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;

@@ -5773,6 +5773,111 @@ static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                         AL.getNumArgs() > 2 ? AL.getArgAsExpr(2) : nullptr);
 }
 
+static std::pair<Expr *, int>
+makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
+                       const unsigned Idx) {
+  if (S.DiagnoseUnexpandedParameterPack(E))
+    return {nullptr, 0};
+
+  // Accept template arguments for now as they depend on something else.
+  // We'll get to check them when they eventually get instantiated.
+  if (E->isValueDependent())
+    return {E, 1};
+
+  std::optional<llvm::APSInt> I = llvm::APSInt(64);
+  if (!(I = E->getIntegerConstantExpr(S.Context))) {
+    S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
+        << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
+    return {nullptr, 0};
+  }
+  // Make sure we can fit it in 4 bits.
+  if (!I->isIntN(4)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 4 << /* Unsigned */ 1;
+    return {nullptr, 0};
+  }
+  if (*I < 0)
+    S.Diag(E->getExprLoc(), diag::warn_attribute_argument_n_negative)
+        << &AL << Idx << E->getSourceRange();
+
+  // We may need to perform implicit conversion of the argument.
+  InitializedEntity Entity = InitializedEntity::InitializeParameter(
+      S.Context, S.Context.getConstType(S.Context.IntTy), /*consume*/ false);
+  ExprResult ValArg = S.PerformCopyInitialization(Entity, SourceLocation(), E);
+  assert(!ValArg.isInvalid() &&
+         "Unexpected PerformCopyInitialization() failure.");
+
+  return {ValArg.getAs<Expr>(), I->getZExtValue()};
+}
+
+CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
+                                                 Expr *X, Expr *Y, Expr *Z) {
+  CUDAClusterDimsAttr TmpAttr(Context, CI, X, Y, Z);
+
+  int ValX = 1;
+  int ValY = 1;
+  int ValZ = 1;
+
+  std::tie(X, ValX) = makeClusterDimsArgExpr(*this, X, TmpAttr, /*Idx=*/0);
+  if (!X)
+    return nullptr;
+
+  if (Y) {
+    std::tie(Y, ValY) = makeClusterDimsArgExpr(*this, Y, TmpAttr, /*Idx=*/1);
+    if (!Y)
+      return nullptr;
+  }
+
+  if (Z) {
+    std::tie(Z, ValZ) = makeClusterDimsArgExpr(*this, Z, TmpAttr, /*Idx=*/2);
+    if (!Z)
+      return nullptr;
+  }
+
+  int FlatDim = ValX * ValY * ValZ;
+  auto TT = Context.getTargetInfo().getTriple();
+  int MaxDim = 1;
+  if (TT.isNVPTX())
+    MaxDim = 8;
+  else if (TT.isAMDGPU())
+    MaxDim = 16;
+  else
+    llvm_unreachable("unknown target that supports __cluster_dims__");
+
+  // A maximum of 8 thread blocks in a cluster is supported as a portable
+  // cluster size in CUDA. The number is 16 for AMDGPU.
+  if (FlatDim > MaxDim) {
+    Diag(CI.getLoc(), diag::err_cuda_cluster_dims_too_large) << MaxDim;
+    return nullptr;
+  }
+
+  return ::new (Context) CUDAClusterDimsAttr(Context, CI, X, Y, Z);
+}
+
+void Sema::addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
+                              Expr *Y, Expr *Z) {
+  if (auto *Attr = createClusterDimsAttr(CI, X, Y, Z))
+    D->addAttr(Attr);
+}
+
+static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto &TTI = S.Context.getTargetInfo();
+  auto Arch = StringToCudaArch(TTI.getTargetOpts().CPU);
+  if ((TTI.getTriple().isNVPTX() && Arch < clang::CudaArch::SM_90) ||
+      (TTI.getTriple().isAMDGPU() && Arch < clang::CudaArch::GFX1210)) {
+    S.Diag(AL.getLoc(), diag::err_cuda_cluster_dims_not_supported);
+    return;
+  }
+
+  if (!AL.checkAtLeastNumArgs(S, /*Num=*/1) ||
+      !AL.checkAtMostNumArgs(S, /*Num=*/3))
+    return;
+
+  S.addClusterDimsAttr(D, AL, AL.getArgAsExpr(0),
+                       AL.getNumArgs() > 1 ? AL.getArgAsExpr(1) : nullptr,
+                       AL.getNumArgs() > 2 ? AL.getArgAsExpr(2) : nullptr);
+}
+
 static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
                                           const ParsedAttr &AL) {
   if (!AL.isArgIdent(0)) {
@@ -9428,6 +9533,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_CUDALaunchBounds:
     handleLaunchBoundsAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CUDAClusterDims:
+    handleClusterDimsAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Restrict:
     handleRestrictAttr(S, D, AL);
