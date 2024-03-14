@@ -331,11 +331,13 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
             RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
   };
   while (I != NumRegs) {
-    auto [LMul, RegClass, Opc, VVOpc, VIOpc] = GetCopyInfo(SrcReg, DstReg);
-    unsigned NumCopied = 1 << LMul;
+    auto [LMulCopied, RegClass, Opc, VVOpc, VIOpc] =
+        GetCopyInfo(SrcReg, DstReg);
+    unsigned NumCopied = 1 << LMulCopied;
 
     MachineBasicBlock::const_iterator DefMBBI;
-    if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
+    if (LMul == LMulCopied &&
+        isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
       Opc = VVOpc;
       if (DefMBBI->getOpcode() == VIOpc)
         Opc = VIOpc;
