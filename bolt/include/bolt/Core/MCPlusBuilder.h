@@ -1558,6 +1558,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Create a version of unconditional jump that has the largest span for a
+  /// single instruction with direct target.
+  virtual void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                                      MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Creates a new call instruction in Inst and sets its operand to
   /// Target.
   virtual void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -1673,6 +1680,12 @@ public:
   /// Returns true if instruction is a call frame pseudo instruction.
   virtual bool isCFI(const MCInst &Inst) const {
     return Inst.getOpcode() == TargetOpcode::CFI_INSTRUCTION;
+  }
+
+  /// Create a conditional branch with a target-specific conditional code \p CC.
+  virtual void createCondBranch(MCInst &Inst, const MCSymbol *Target,
+                                unsigned CC, MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
   }
 
   /// Reverses the branch condition in Inst and update its taken target to TBB.
