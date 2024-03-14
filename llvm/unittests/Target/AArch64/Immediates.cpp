@@ -25,8 +25,6 @@ const std::initializer_list<TestCase> Tests = {
     // addvl increments by whole registers, range [-32,31]
     // +(16 * vscale), one register's worth
     {16, true},
-    // +(8 * vscale), half a register's worth
-    {8, false},
     // -(32 * 16 * vscale)
     {-512, true},
     // -(33 * 16 * vscale)
@@ -35,6 +33,52 @@ const std::initializer_list<TestCase> Tests = {
     {496, true},
     // +(32 * 16 * vscale)
     {512, false},
+
+    // inc[h|w|d] increments by the number of 16/32/64bit elements in a
+    // register. mult_imm is in the range [1,16]
+    // +(mult_imm * num_elts * vscale)
+    // +(1 * 8 * vscale), 16 bit
+    {8, true},
+    // +(15 * 8 * vscale), 16 bit
+    {120, true},
+    // +(1 * 4 * vscale), 32 bit
+    {4, true},
+    // +(7 * 4 * vscale), 32 bit
+    {28, true},
+    // +(1 * 2 * vscale), 64 bit
+    {2, true},
+    // +(13 * 2 * vscale), 64 bit
+    {26, true},
+    // +(17 * 8 * vscale), 16 bit, out of range.
+    {136, false},
+    // +(19 * 2 * vscale), 64 bit, out of range.
+    {38, false},
+    // +(21 * 4 * vscale), 32 bit, out of range.
+    {84, false},
+
+    // dec[h|w|d] -- Same as above, but negative.
+    // -(mult_imm * num_elts * vscale)
+    // -(1 * 8 * vscale), 16 bit
+    {-8, true},
+    // -(15 * 8 * vscale), 16 bit
+    {-120, true},
+    // -(1 * 4 * vscale), 32 bit
+    {-4, true},
+    // -(7 * 4 * vscale), 32 bit
+    {-28, true},
+    // -(1 * 2 * vscale), 64 bit
+    {-2, true},
+    // -(13 * 2 * vscale), 64 bit
+    {-26, true},
+    // -(17 * 8 * vscale), 16 bit, out of range.
+    {-136, false},
+    // -(19 * 2 * vscale), 64 bit, out of range.
+    {-38, false},
+    // -(21 * 4 * vscale), 32 bit, out of range.
+    {-84, false},
+
+    // Invalid; not divisible by the above powers of 2.
+    {5, false},
 };
 } // namespace
 
@@ -48,7 +92,7 @@ TEST(Immediates, Immediates) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
 
   std::unique_ptr<TargetMachine> TM(T->createTargetMachine(
-      TT, "generic", "+sve", TargetOptions(), std::nullopt, std::nullopt,
+      TT, "generic", "+sve2", TargetOptions(), std::nullopt, std::nullopt,
       CodeGenOptLevel::Default));
   AArch64Subtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
                       TM->getTargetCPU(), TM->getTargetFeatureString(), *TM,

@@ -696,10 +696,10 @@ public:
   /// immediate without having to materialize the immediate into a register.
   bool isLegalAddImmediate(int64_t Imm) const;
 
-  /// Return true if the specified immediate is legal add of a scalable
-  /// immediate, that is the target has add instructions which can add a
-  /// register with the immediate (multiplied by vscale) without having to
-  /// materialize the immediate into a register.
+  /// Return true if adding the specified scalable immediate is legal, that is
+  /// the target has add instructions which can add a register with the
+  /// immediate (multiplied by vscale) without having to materialize the
+  /// immediate into a register.
   bool isLegalAddScalableImmediate(int64_t Imm) const;
 
   /// Return true if the specified immediate is legal icmp immediate,
