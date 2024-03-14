@@ -5250,8 +5250,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     if (IsDestTypeVector) {
       auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
       auto DestVecLen = cast<VectorType>(DestTy)->getElementCount();
-      Check(SrcVecLen == DestVecLen,
-        "return type and first arg type must have the same number of elements", Call);
+      Check(SrcVecLen == DestVecLen, "return type and first arg type must have the same number of elements", Call);
     }
     break;
   }
