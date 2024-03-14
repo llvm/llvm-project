@@ -1427,7 +1427,7 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, 
   noexcept(noexcept(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...)))
 #if _LIBCPP_STD_VER >= 20
   requires is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>
-#endif
+#endif // _LIBCPP_STD_VER >= 20
 {
   static_assert(is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>, 
                 "Cannot constructible target type from the fields of the argument tuple.");
