@@ -31,6 +31,8 @@ struct TestDoesNotHaveFetchXor {
 template <typename T>
 struct TestFetchXor {
   void operator()() const {
+    static_assert(std::is_integral_v<T>);
+
     T x(T(1));
     std::atomic_ref<T> const a(x);
 
