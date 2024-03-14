@@ -4235,7 +4235,7 @@ private:
 
 public:
   using Differences =
-      SmallVector<std::pair<const FunctionEffect *, bool /*added*/>>;
+      SmallVector<std::pair<const FunctionEffect *, /*added=*/bool>>;
 
   FunctionEffectSet() : Impl(nullptr) {}
 
