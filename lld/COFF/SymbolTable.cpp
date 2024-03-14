@@ -677,15 +677,15 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
   f->addMember(sym);
 }
 
-void SymbolTable::addLazyObject(InputFile *f, StringRef name) {
+void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
   assert(f->lazy);
-  auto [s, wasInserted] = insert(name, f);
+  auto [s, wasInserted] = insert(n, f);
   if (wasInserted) {
-    replaceSymbol<LazyObject>(s, f, name);
+    replaceSymbol<LazyObject>(s, f, n);
     return;
   }
-  if (auto *n = lazyNode(s)) {
-    chainLazy<LazyObject>(n, f, name);
+  if (auto *node = lazyNode(s)) {
+    chainLazy<LazyObject>(node, f, n);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
