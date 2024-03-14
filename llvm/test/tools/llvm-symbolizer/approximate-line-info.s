@@ -9,16 +9,16 @@
 # RUN: llvm-symbolizer --obj=%t.o --approximate-line-info=before --output-style=JSON 0xa | FileCheck --check-prefix=APPROX-JSON %s
 
 # APPROX-NONE: main
-# APPROX-NONE-NEXT: /tmp/test/main.c:0:6
+# APPROX-NONE-NEXT: {{[/\]+}}tmp{{[/\]+}}test{{[/\]+}}main.c:0:6
 # APPROX-BEFORE: main
-# APPROX-BEFORE-NEXT: /tmp/test/main.c:4:6 (approximate)
+# APPROX-BEFORE-NEXT: {{[/\]+}}tmp{{[/\]+}}test{{[/\]+}}main.c:4:6 (approximate)
 # APPROX-AFTER: main
-# APPROX-AFTER-NEXT: /tmp/test/main.c:8:2 (approximate)
+# APPROX-AFTER-NEXT: {{[/\]+}}tmp{{[/\]+}}test{{[/\]+}}main.c:8:2 (approximate)
 # NO-APPROX: main
-# NO-APPROX-NEXT: /tmp/test/main.c:8:2
+# NO-APPROX-NEXT: {{[/\]+}}tmp{{[/\]+}}test{{[/\]+}}main.c:8:2
 
 #APPROX-VERBOSE: main
-#APPROX-VERBOSE-NEXT: Filename: /tmp/test/main.c
+#APPROX-VERBOSE-NEXT: Filename: {{[/\]+}}tmp{{[/\]+}}test{{[/\]+}}main.c
 #APPROX-VERBOSE-NEXT: Function start address: 0x0
 #APPROX-VERBOSE-NEXT: Line: 4
 #APPROX-VERBOSE-NEXT: Column: 6
