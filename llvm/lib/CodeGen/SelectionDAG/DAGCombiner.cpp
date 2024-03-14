@@ -6764,34 +6764,34 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
+  SDLoc DL(N);
 
   // x & x --> x
   if (N0 == N1)
     return N0;
 
   // fold (and c1, c2) -> c1&c2
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::AND, SDLoc(N), VT, {N0, N1}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::AND, DL, VT, {N0, N1}))
     return C;
 
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
-    return DAG.getNode(ISD::AND, SDLoc(N), VT, N1, N0);
+    return DAG.getNode(ISD::AND, DL, VT, N1, N0);
 
   if (areBitwiseNotOfEachother(N0, N1))
-    return DAG.getConstant(APInt::getZero(VT.getScalarSizeInBits()), SDLoc(N),
-                           VT);
+    return DAG.getConstant(APInt::getZero(VT.getScalarSizeInBits()), DL, VT);
 
   // fold vector ops
   if (VT.isVector()) {
-    if (SDValue FoldedVOp = SimplifyVBinOp(N, SDLoc(N)))
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
       return FoldedVOp;
 
     // fold (and x, 0) -> 0, vector edition
     if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       // do not return N1, because undef node may exist in N1
-      return DAG.getConstant(APInt::getZero(N1.getScalarValueSizeInBits()),
-                             SDLoc(N), N1.getValueType());
+      return DAG.getConstant(APInt::getZero(N1.getScalarValueSizeInBits()), DL,
+                             N1.getValueType());
 
     // fold (and x, -1) -> x, vector edition
     if (ISD::isConstantSplatVectorAllOnes(N1.getNode()))
@@ -6811,8 +6811,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         uint64_t ElementSize =
             LoadVT.getVectorElementType().getScalarSizeInBits();
         if (Splat->getAPIntValue().isMask(ElementSize)) {
-          auto NewLoad = DAG.getMaskedLoad(
-              ExtVT, SDLoc(N), MLoad->getChain(), MLoad->getBasePtr(),
+          SDValue NewLoad = DAG.getMaskedLoad(
+              ExtVT, DL, MLoad->getChain(), MLoad->getBasePtr(),
               MLoad->getOffset(), MLoad->getMask(), MLoad->getPassThru(),
               LoadVT, MLoad->getMemOperand(), MLoad->getAddressingMode(),
               ISD::ZEXTLOAD, MLoad->isExpandingLoad());
@@ -6834,7 +6834,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   unsigned BitWidth = VT.getScalarSizeInBits();
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
 
   if (SDValue R = foldAndOrOfSETCC(N, DAG))
     return R;
@@ -6843,12 +6843,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return NewSel;
 
   // reassociate and
-  if (SDValue RAND = reassociateOps(ISD::AND, SDLoc(N), N0, N1, N->getFlags()))
+  if (SDValue RAND = reassociateOps(ISD::AND, DL, N0, N1, N->getFlags()))
     return RAND;
 
   // Fold and(vecreduce(x), vecreduce(y)) -> vecreduce(and(x, y))
-  if (SDValue SD = reassociateReduction(ISD::VECREDUCE_AND, ISD::AND, SDLoc(N),
-                                        VT, N0, N1))
+  if (SDValue SD =
+          reassociateReduction(ISD::VECREDUCE_AND, ISD::AND, DL, VT, N0, N1))
     return SD;
 
   // fold (and (or x, C), D) -> D if (C & D) == D
@@ -6868,18 +6868,16 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
     // fold (and (any_ext V), c) -> (zero_ext V) if 'and' only clears top bits.
     if (DAG.MaskedValueIsZero(N0Op0, Mask))
-      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, N0Op0);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0Op0);
 
     // fold (and (any_ext V), c) -> (zero_ext (and (trunc V), c)) if profitable.
     if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
         TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
-        TLI.isNarrowingProfitable(VT, SrcVT)) {
-      SDLoc DL(N);
+        TLI.isNarrowingProfitable(VT, SrcVT))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                          DAG.getNode(ISD::AND, DL, SrcVT, N0Op0,
                                      DAG.getZExtOrTrunc(N1, DL, SrcVT)));
-    }
   }
 
   // fold (and (ext (and V, c1)), c2) -> (and (ext V), (and c1, (ext c2)))
@@ -6891,7 +6889,6 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         DAG.isConstantIntBuildVectorOrConstantInt(N1) &&
         DAG.isConstantIntBuildVectorOrConstantInt(N0Op0.getOperand(1)) &&
         N0->hasOneUse() && N0Op0->hasOneUse()) {
-      SDLoc DL(N);
       SDValue NewMask =
           DAG.getNode(ISD::AND, DL, VT, N1,
                       DAG.getNode(ExtOpc, DL, VT, N0Op0.getOperand(1)));
@@ -6912,8 +6909,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
        N0.getOperand(0).getOpcode() == ISD::LOAD &&
        N0.getOperand(0).getResNo() == 0) ||
       (N0.getOpcode() == ISD::LOAD && N0.getResNo() == 0)) {
-    LoadSDNode *Load = cast<LoadSDNode>( (N0.getOpcode() == ISD::LOAD) ?
-                                         N0 : N0.getOperand(0) );
+    auto *Load =
+        cast<LoadSDNode>((N0.getOpcode() == ISD::LOAD) ? N0 : N0.getOperand(0));
 
     // Get the constant (if applicable) the zero'th operand is being ANDed with.
     // This can be a pure constant or a vector splat, in which case we treat the
@@ -7023,9 +7020,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       //    (and (extract_subvector (zext|anyext|sext v) _) iN_mask)
       // => (extract_subvector (iN_zeroext v))
       SDValue ZeroExtExtendee =
-          DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), ExtVT, Extendee);
+          DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Extendee);
 
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT, ZeroExtExtendee,
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, ZeroExtExtendee,
                          N0.getOperand(1));
     }
   }
@@ -7042,8 +7039,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
                        GN0->getBasePtr(), GN0->getIndex(),    GN0->getScale()};
 
       SDValue ZExtLoad = DAG.getMaskedGather(
-          DAG.getVTList(VT, MVT::Other), MemVT, SDLoc(N), Ops,
-          GN0->getMemOperand(), GN0->getIndexType(), ISD::ZEXTLOAD);
+          DAG.getVTList(VT, MVT::Other), MemVT, DL, Ops, GN0->getMemOperand(),
+          GN0->getIndexType(), ISD::ZEXTLOAD);
 
       CombineTo(N, ZExtLoad);
       AddToWorklist(ZExtLoad.getNode());
@@ -7095,7 +7092,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         return SubRHS;
       if (SubRHS.getOpcode() == ISD::SIGN_EXTEND &&
           SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, SubRHS.getOperand(0));
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, SubRHS.getOperand(0));
     }
   }
 
@@ -7109,7 +7106,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (ISD::isUNINDEXEDLoad(N0.getNode()) &&
       (ISD::isEXTLoad(N0.getNode()) ||
        (ISD::isSEXTLoad(N0.getNode()) && N0.hasOneUse()))) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+    auto *LN0 = cast<LoadSDNode>(N0);
     EVT MemVT = LN0->getMemoryVT();
     // If we zero all the possible extended bits, then we can turn this into
     // a zextload if we are running before legalize or the operation is legal.
@@ -7164,7 +7161,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
   // Replace (and (sign_extend ...) #bitmask) with (zero_extend ...).
   if (IsAndZeroExtMask(N0, N1))
-    return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, N0.getOperand(0));
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
 
   if (hasOperation(ISD::USUBSAT, VT))
     if (SDValue V = foldAndToUsubsat(N, DAG))
