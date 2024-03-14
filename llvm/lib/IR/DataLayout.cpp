@@ -216,7 +216,7 @@ void DataLayout::reset(StringRef Desc) {
   if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
     return report_fatal_error(std::move(Err));
 
-  setNullPointerValue(INT_MAX, 0);
+  setDefaultNullPointerValue(INT_MAX, 0);
 
   if (Error Err = parseSpecifier(Desc))
     return report_fatal_error(std::move(Err));
@@ -262,11 +262,11 @@ static Error getIntForAddrSpace(StringRef R, IntTy &Result) {
     if (error || Result <= 0)
       return reportError("not a number, or does not fit in an unsigned int");
     Result *= -1;
-    return Error::success();
   } else if (R.contains("neg"))
     return reportError("not a valid value for address space");
   else
     return getInt<IntTy>(R, Result);
+  return Error::success();
 }
 
 /// Get an unsigned integer representing the number of bits and convert it into
@@ -527,7 +527,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       if (Tok.empty()) {
         if (Error Err = getIntForAddrSpace(Rest, Value))
           return Err;
-        setNullPointerValue(INT_MAX, Value);
+        setDefaultNullPointerValue(INT_MAX, Value);
         break;
       } else {
         if (Error Err = getInt(Tok, AddrSpace))
@@ -543,7 +543,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return Err;
       if (Error Err = getIntForAddrSpace(Tok, Value))
         return Err;
-      setNullPointerValue(AddrSpace, Value);
+      setDefaultNullPointerValue(AddrSpace, Value);
       break;
     }
     case 'G': { // Default address space for global variables.

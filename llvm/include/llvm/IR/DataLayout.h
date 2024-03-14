@@ -302,14 +302,14 @@ public:
     return ManglingMode == MM_WinCOFFX86;
   }
 
-  int64_t getNullPointerValue(unsigned AddrSpace) {
+  int64_t getDefaultNullPointerValue(unsigned AddrSpace) {
     auto It = AddrSpaceToNonZeroValueMap.find(AddrSpace);
     if (It == AddrSpaceToNonZeroValueMap.end())
       return 0;
     return It->second;
   }
 
-  void setNullPointerValue(unsigned AddrSpace, int64_t Value) {
+  void setDefaultNullPointerValue(unsigned AddrSpace, int64_t Value) {
     AddrSpaceToNonZeroValueMap[AddrSpace] = Value;
   }
 
