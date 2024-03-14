@@ -2734,6 +2734,14 @@ public:
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
   }
 
+  void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                              MCContext *Ctx) const override {
+    Inst.setOpcode(X86::JMP_4);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+  }
+
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
     Inst.setOpcode(X86::CALL64pcrel32);
@@ -2757,6 +2765,15 @@ public:
   void createTrap(MCInst &Inst) const override {
     Inst.clear();
     Inst.setOpcode(X86::TRAP);
+  }
+
+  void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
+                        MCContext *Ctx) const override {
+    Inst.setOpcode(X86::JCC_1);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(MCOperand::createImm(CC));
   }
 
   bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
