@@ -99,6 +99,9 @@ createFunctionAttrPass(FunctionAttrTypes &functionAttr, bool noInfsFPMath,
                        bool noNaNsFPMath, bool approxFuncFPMath,
                        bool noSignedZerosFPMath, bool unsafeFPMath);
 
+void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
+                                   bool forceLoopToExecuteOnce = false);
+
 // declarative passes
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/Transforms/Passes.h.inc"

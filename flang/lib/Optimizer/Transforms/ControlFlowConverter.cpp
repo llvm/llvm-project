@@ -315,8 +315,7 @@ public:
   void runOnOperation() override {
     auto *context = &this->getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
-        context, this->forceLoopToExecuteOnce);
+    fir::populateCfgConversionRewrites(patterns, this->forceLoopToExecuteOnce);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::affine::AffineDialect,
                            mlir::cf::ControlFlowDialect, FIROpsDialect,
@@ -343,6 +342,13 @@ class CfgConversionOnReduction
                                    ::fir::impl::CFGConversionOnReductionBase> {
 };
 } // namespace
+
+/// Expose conversion rewriters to other passes
+void fir::populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
+                                        bool forceLoopToExecuteOnce) {
+  patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
+      patterns.getContext(), forceLoopToExecuteOnce);
+}
 
 /// Convert FIR's structured control flow ops to CFG ops.  This
 /// conversion enables the `createLowerToCFGPass` to transform these to CFG
