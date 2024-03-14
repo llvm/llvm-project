@@ -300,8 +300,8 @@ void RISCVInstrInfo::copyPhysRegVector(
     const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
     const TargetRegisterClass &RegClass) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-  RISCVII::VLMUL LMul = getLMul(RegClass.TSFlags);
-  unsigned NF = getNF(RegClass.TSFlags);
+  RISCVII::VLMUL LMul = RISCVRI::getLMul(RegClass.TSFlags);
+  unsigned NF = RISCVRI::getNF(RegClass.TSFlags);
 
   unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned DstEncoding = TRI->getEncodingValue(DstReg);
@@ -312,73 +312,67 @@ void RISCVInstrInfo::copyPhysRegVector(
       forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NumRegs);
 
   unsigned I = 0;
+  auto GetCopyInfo = [&](MCRegister SrcReg, MCRegister DstReg)
+      -> std::tuple<RISCVII::VLMUL, const TargetRegisterClass &, unsigned,
+                    unsigned, unsigned> {
+    unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
+    unsigned DstEncoding = TRI->getEncodingValue(DstReg);
+    if (!(SrcEncoding & 0b111) && !(DstEncoding & 0b111) && I + 8 <= NumRegs)
+      return {RISCVII::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
+              RISCV::PseudoVMV_V_V_M8, RISCV::PseudoVMV_V_I_M8};
+    if (!(SrcEncoding & 0b11) && !(DstEncoding & 0b11) && I + 4 <= NumRegs)
+      return {RISCVII::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
+              RISCV::PseudoVMV_V_V_M4, RISCV::PseudoVMV_V_I_M4};
+    if (!(SrcEncoding & 0b1) && !(DstEncoding & 0b1) && I + 2 <= NumRegs)
+      return {RISCVII::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
+              RISCV::PseudoVMV_V_V_M2, RISCV::PseudoVMV_V_I_M2};
+    return {RISCVII::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
+            RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
+  };
   while (I != NumRegs) {
-    auto GetCopyInfo =
-        [&](unsigned SrcReg,
-            unsigned DstReg) -> std::tuple<int, const TargetRegisterClass &,
-                                           unsigned, unsigned, unsigned> {
-      unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
-      unsigned DstEncoding = TRI->getEncodingValue(DstReg);
-      if (!(SrcEncoding & 0b111) && !(DstEncoding & 0b111) && I + 8 <= NumRegs)
-        return {8, RISCV::VRM8RegClass, RISCV::VMV8R_V, RISCV::PseudoVMV_V_V_M8,
-                RISCV::PseudoVMV_V_I_M8};
-      if (!(SrcEncoding & 0b11) && !(DstEncoding & 0b11) && I + 4 <= NumRegs)
-        return {4, RISCV::VRM4RegClass, RISCV::VMV4R_V, RISCV::PseudoVMV_V_V_M4,
-                RISCV::PseudoVMV_V_I_M4};
-      if (!(SrcEncoding & 0b1) && !(DstEncoding & 0b1) && I + 2 <= NumRegs)
-        return {2, RISCV::VRM2RegClass, RISCV::VMV2R_V, RISCV::PseudoVMV_V_V_M2,
-                RISCV::PseudoVMV_V_I_M2};
-      return {1, RISCV::VRRegClass, RISCV::VMV1R_V, RISCV::PseudoVMV_V_V_M1,
-              RISCV::PseudoVMV_V_I_M1};
-    };
-
-    auto [NumCopied, RegClass, Opc, VVOpc, VIOpc] = GetCopyInfo(SrcReg, DstReg);
+    auto [LMulCopied, RegClass, Opc, VVOpc, VIOpc] =
+        GetCopyInfo(SrcReg, DstReg);
+    unsigned NumCopied = 1 << LMulCopied;
 
     MachineBasicBlock::const_iterator DefMBBI;
-    if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
+    if (LMul == LMulCopied &&
+        isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
       Opc = VVOpc;
-
-      if (DefMBBI->getOpcode() == VIOpc) {
+      if (DefMBBI->getOpcode() == VIOpc)
         Opc = VIOpc;
-      }
     }
 
-    for (MCPhysReg Reg : RegClass.getRegisters()) {
-      if (TRI->getEncodingValue(Reg) == TRI->getEncodingValue(SrcReg)) {
-        SrcReg = Reg;
-        break;
-      }
+    ArrayRef<MCPhysReg> Regs = RegClass.getRegisters();
+    const auto *FoundSrcReg = llvm::find_if(Regs, [&](MCPhysReg Reg) {
+      return TRI->getEncodingValue(Reg) == TRI->getEncodingValue(SrcReg);
+    });
+    assert(FoundSrcReg != Regs.end());
+    SrcReg = *FoundSrcReg;
+
+    const auto *FoundDstReg = llvm::find_if(Regs, [&](MCPhysReg Reg) {
+      return TRI->getEncodingValue(Reg) == TRI->getEncodingValue(DstReg);
+    });
+    assert(FoundDstReg != Regs.end());
+    DstReg = *FoundDstReg;
+
+    auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
+    bool UseVMV_V_I = RISCV::getRVVMCOpcode(Opc) == RISCV::VMV_V_I;
+    bool UseVMV = UseVMV_V_I || RISCV::getRVVMCOpcode(Opc) == RISCV::VMV_V_V;
+    if (UseVMV)
+      MIB.addReg(DstReg, RegState::Undef);
+    if (UseVMV_V_I)
+      MIB = MIB.add(DefMBBI->getOperand(2));
+    else
+      MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
+    if (UseVMV) {
+      const MCInstrDesc &Desc = DefMBBI->getDesc();
+      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
+      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      MIB.addImm(0);                                            // tu, mu
+      MIB.addReg(RISCV::VL, RegState::Implicit);
+      MIB.addReg(RISCV::VTYPE, RegState::Implicit);
     }
 
-    for (MCPhysReg Reg : RegClass.getRegisters()) {
-      if (TRI->getEncodingValue(Reg) == TRI->getEncodingValue(DstReg)) {
-        DstReg = Reg;
-        break;
-      }
-    }
-
-    auto EmitCopy = [&](MCRegister SrcReg, MCRegister DstReg, unsigned Opcode) {
-      auto MIB = BuildMI(MBB, MBBI, DL, get(Opcode), DstReg);
-      bool UseVMV_V_I = RISCV::getRVVMCOpcode(Opcode) == RISCV::VMV_V_I;
-      bool UseVMV =
-          UseVMV_V_I || RISCV::getRVVMCOpcode(Opcode) == RISCV::VMV_V_V;
-      if (UseVMV)
-        MIB.addReg(DstReg, RegState::Undef);
-      if (UseVMV_V_I)
-        MIB = MIB.add(DefMBBI->getOperand(2));
-      else
-        MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
-      if (UseVMV) {
-        const MCInstrDesc &Desc = DefMBBI->getDesc();
-        MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-        MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-        MIB.addImm(0);                                            // tu, mu
-        MIB.addReg(RISCV::VL, RegState::Implicit);
-        MIB.addReg(RISCV::VTYPE, RegState::Implicit);
-      }
-    };
-
-    EmitCopy(SrcReg, DstReg, Opc);
     SrcReg = SrcReg.id() + (ReversedCopy ? -NumCopied : NumCopied);
     DstReg = DstReg.id() + (ReversedCopy ? -NumCopied : NumCopied);
     I += NumCopied;

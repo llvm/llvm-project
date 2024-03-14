@@ -21,15 +21,26 @@
 
 namespace llvm {
 
+namespace RISCVRI {
 enum {
-  // The VLMul value of this RegisterClass.
-  VLMulShift = 0,
+  // The IsVRegClass value of this RegisterClass.
+  IsVRegClassShift = 0,
+  IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
+  // The VLMul value of this RegisterClass. This value is valid iff IsVRegClass
+  // is true.
+  VLMulShift = IsVRegClassShift + 1,
   VLMulShiftMask = 0b111 << VLMulShift,
 
-  // The NF value of this RegisterClass.
+  // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
+  // true.
   NFShift = VLMulShift + 3,
   NFShiftMask = 0b111 << NFShift,
 };
+
+/// \returns the IsVRegClass for the register class.
+static inline bool isVRegClass(uint64_t TSFlags) {
+  return TSFlags & IsVRegClassShiftMask >> IsVRegClassShift;
+}
 
 /// \returns the LMUL for the register class.
 static inline RISCVII::VLMUL getLMul(uint64_t TSFlags) {
@@ -40,6 +51,7 @@ static inline RISCVII::VLMUL getLMul(uint64_t TSFlags) {
 static inline unsigned getNF(uint64_t TSFlags) {
   return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
 }
+} // namespace RISCVRI
 
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
@@ -137,28 +149,16 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   }
 
   static bool isVRRegClass(const TargetRegisterClass *RC) {
-    return RISCV::VRRegClass.hasSubClassEq(RC) ||
-           RISCV::VRM2RegClass.hasSubClassEq(RC) ||
-           RISCV::VRM4RegClass.hasSubClassEq(RC) ||
-           RISCV::VRM8RegClass.hasSubClassEq(RC);
+    return RISCVRI::isVRegClass(RC->TSFlags) &&
+           RISCVRI::getNF(RC->TSFlags) == 1;
   }
 
   static bool isVRNRegClass(const TargetRegisterClass *RC) {
-    return RISCV::VRN2M1RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN2M2RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN2M4RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN3M1RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN3M2RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN4M1RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN4M2RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN5M1RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN6M1RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN7M1RegClass.hasSubClassEq(RC) ||
-           RISCV::VRN8M1RegClass.hasSubClassEq(RC);
+    return RISCVRI::isVRegClass(RC->TSFlags) && RISCVRI::getNF(RC->TSFlags) > 1;
   }
 
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
-    return isVRRegClass(RC) || isVRNRegClass(RC);
+    return RISCVRI::isVRegClass(RC->TSFlags);
   }
 };
 } // namespace llvm
