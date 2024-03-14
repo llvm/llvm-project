@@ -8949,104 +8949,11 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondCached(
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
     bool ControlsOnlyExit, bool AllowPredicates) {
-  if (!AssumeLoopExits) {
-    // Handle BinOp conditions (And, Or).
-    if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
-            Cache, L, ExitCond, ExitIfTrue, ControlsOnlyExit, AllowPredicates))
-      return *LimitFromBinOp;
-  } else {
-    // Check if the controlling expression for this loop is an And or Or.
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(ExitCond)) {
-      if (BO->getOpcode() == Instruction::And) {
-        // Recurse on the operands of the and.
-        bool EitherMayExit = !ExitIfTrue;
-        ExitLimit EL0 = computeExitLimitFromCondCached(
-            Cache, L, BO->getOperand(0), ExitIfTrue,
-            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
-        ExitLimit EL1 = computeExitLimitFromCondCached(
-            Cache, L, BO->getOperand(1), ExitIfTrue,
-            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
-        const SCEV *BECount = getCouldNotCompute();
-        const SCEV *MaxBECount = getCouldNotCompute();
-        if (EitherMayExit) {
-          // Both conditions must be true for the loop to continue executing.
-          // Choose the less conservative count.
-          if (EL0.ExactNotTaken == getCouldNotCompute() ||
-              EL1.ExactNotTaken == getCouldNotCompute())
-            BECount = getCouldNotCompute();
-          else
-            BECount = getUMinFromMismatchedTypes(EL0.ExactNotTaken,
-                                                 EL1.ExactNotTaken);
 
-          if (EL0.ConstantMaxNotTaken == getCouldNotCompute())
-            MaxBECount = EL1.ConstantMaxNotTaken;
-          else if (EL1.ConstantMaxNotTaken == getCouldNotCompute())
-            MaxBECount = EL0.ConstantMaxNotTaken;
-          else
-            MaxBECount = getUMinFromMismatchedTypes(EL0.ConstantMaxNotTaken,
-                                                    EL1.ConstantMaxNotTaken);
-        } else {
-          // Both conditions must be true at the same time for the loop to exit.
-          // For now, be conservative.
-          if (EL0.ConstantMaxNotTaken == EL1.ConstantMaxNotTaken)
-            MaxBECount = EL0.ConstantMaxNotTaken;
-          if (EL0.ExactNotTaken == EL1.ExactNotTaken)
-            BECount = EL0.ExactNotTaken;
-        }
-
-        // There are cases (e.g. PR26207) where computeExitLimitFromCond is able
-        // to be more aggressive when computing BECount than when computing
-        // MaxBECount.  In these cases it is possible for EL0.ExactNotTaken and
-        // EL1.ExactNotTaken to match, but for EL0.ConstantMaxNotTaken and
-        // EL1.ConstantMaxNotTaken to not.
-        if (isa<SCEVCouldNotCompute>(MaxBECount) &&
-            !isa<SCEVCouldNotCompute>(BECount))
-          MaxBECount = getConstant(getUnsignedRangeMax(BECount));
-
-        return ExitLimit(BECount, MaxBECount, MaxBECount, false,
-                         {&EL0.Predicates, &EL1.Predicates});
-      }
-      if (BO->getOpcode() == Instruction::Or) {
-        // Recurse on the operands of the or.
-        bool EitherMayExit = ExitIfTrue;
-        ExitLimit EL0 = computeExitLimitFromCondCached(
-            Cache, L, BO->getOperand(0), ExitIfTrue,
-            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
-        ExitLimit EL1 = computeExitLimitFromCondCached(
-            Cache, L, BO->getOperand(1), ExitIfTrue,
-            ControlsOnlyExit && !EitherMayExit, AllowPredicates);
-        const SCEV *BECount = getCouldNotCompute();
-        const SCEV *MaxBECount = getCouldNotCompute();
-        if (EitherMayExit) {
-          // Both conditions must be false for the loop to continue executing.
-          // Choose the less conservative count.
-          if (EL0.ExactNotTaken == getCouldNotCompute() ||
-              EL1.ExactNotTaken == getCouldNotCompute())
-            BECount = getCouldNotCompute();
-          else
-            BECount = getUMinFromMismatchedTypes(EL0.ExactNotTaken,
-                                                 EL1.ExactNotTaken);
-
-          if (EL0.ConstantMaxNotTaken == getCouldNotCompute())
-            MaxBECount = EL1.ConstantMaxNotTaken;
-          else if (EL1.ConstantMaxNotTaken == getCouldNotCompute())
-            MaxBECount = EL0.ConstantMaxNotTaken;
-          else
-            MaxBECount = getUMinFromMismatchedTypes(EL0.ConstantMaxNotTaken,
-                                                    EL1.ConstantMaxNotTaken);
-        } else {
-          // Both conditions must be false at the same time for the loop to
-          // exit. For now, be conservative.
-          if (EL0.ConstantMaxNotTaken == EL1.ConstantMaxNotTaken)
-            MaxBECount = EL0.ConstantMaxNotTaken;
-          if (EL0.ExactNotTaken == EL1.ExactNotTaken)
-            BECount = EL0.ExactNotTaken;
-        }
-        return ExitLimit(BECount, MaxBECount, MaxBECount, false,
-                         {&EL0.Predicates, &EL1.Predicates});
-      }
-    }
-  }
+  // Handle BinOp conditions (And, Or).
+  if (auto LimitFromBinOp = computeExitLimitFromCondFromBinOp(
+          Cache, L, ExitCond, ExitIfTrue, ControlsOnlyExit, AllowPredicates))
+    return *LimitFromBinOp;
 
   // With an icmp, it may be feasible to compute an exact backedge-taken count.
   // Proceed to the next level to examine the icmp.
@@ -9139,6 +9046,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
   const SCEV *SymbolicMaxBECount = getCouldNotCompute();
   if (EitherMayExit) {
     bool UseSequentialUMin = !isa<BinaryOperator>(ExitCond);
+
     // Both conditions must be same for the loop to continue executing.
     // Choose the less conservative count.
     if (EL0.ExactNotTaken != getCouldNotCompute() &&
@@ -9146,6 +9054,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
       BECount = getUMinFromMismatchedTypes(EL0.ExactNotTaken, EL1.ExactNotTaken,
                                            UseSequentialUMin);
     }
+
     if (EL0.ConstantMaxNotTaken == getCouldNotCompute())
       ConstantMaxBECount = EL1.ConstantMaxNotTaken;
     else if (EL1.ConstantMaxNotTaken == getCouldNotCompute())
@@ -9165,6 +9074,12 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     // For now, be conservative.
     if (EL0.ExactNotTaken == EL1.ExactNotTaken)
       BECount = EL0.ExactNotTaken;
+    // This was executed in Enzyme's must exit code under the
+    // logic for when the binary op was OR
+    if (AssumeLoopExits && !IsAnd) {
+      if (EL0.ExactNotTaken == EL1.ExactNotTaken)
+        ConstantMaxBECount = EL0.ExactNotTaken;
+    }
   }
 
   // There are cases (e.g. PR26207) where computeExitLimitFromCond is able
@@ -9173,12 +9088,14 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
   // and
   // EL1.ExactNotTaken to match, but for EL0.ConstantMaxNotTaken and
   // EL1.ConstantMaxNotTaken to not.
-  if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&
-      !isa<SCEVCouldNotCompute>(BECount))
-    ConstantMaxBECount = getConstant(getUnsignedRangeMax(BECount));
-  if (isa<SCEVCouldNotCompute>(SymbolicMaxBECount))
-    SymbolicMaxBECount =
-        isa<SCEVCouldNotCompute>(BECount) ? ConstantMaxBECount : BECount;
+  if (!AssumeLoopExits || !IsAnd) { // should skip if assume exits and OR
+    if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&
+        !isa<SCEVCouldNotCompute>(BECount))
+      ConstantMaxBECount = getConstant(getUnsignedRangeMax(BECount));
+    if (isa<SCEVCouldNotCompute>(SymbolicMaxBECount))
+      SymbolicMaxBECount =
+          isa<SCEVCouldNotCompute>(BECount) ? ConstantMaxBECount : BECount;
+  }
   return ExitLimit(BECount, ConstantMaxBECount, SymbolicMaxBECount, false,
                    { &EL0.Predicates, &EL1.Predicates });
 }
