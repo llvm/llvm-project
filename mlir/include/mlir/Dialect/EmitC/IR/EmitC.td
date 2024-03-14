@@ -1169,11 +1169,11 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript",
     ```mlir
     %i = index.constant 1
     %j = index.constant 7
-    %0 = emitc.subscript %arg0[%i][%j] : (!emitc.array<4x8xf32>) -> f32
+    %0 = emitc.subscript %arg0[%i, %j] : <4x8xf32>, index, index
     ```
   }];
   let arguments = (ins Arg<EmitC_ArrayType, "the reference to load from">:$array,
-                       Variadic<Index>:$indices);
+                       Variadic<IntegerIndexOrOpaqueType>:$indices);
   let results = (outs AnyType:$result);
 
   let builders = [
@@ -1183,7 +1183,7 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript",
   ];
 
   let hasVerifier = 1;
-  let assemblyFormat = "$array `[` $indices `]` attr-dict `:` type($array)";
+  let assemblyFormat = "$array `[` $indices `]` attr-dict `:` type($array) `,` type($indices)";
 }
 
 
