@@ -26,13 +26,40 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "test_iterators.h"
 
 namespace fs = std::filesystem;
 
-struct fake_path {};
+template <class CharT>
+constexpr bool test_non_convert_to_path() {
 
-static_assert(std::is_constructible_v<std::ifstream, fs::path>);
-static_assert(!std::is_constructible_v<std::ifstream, fake_path>);
+  // String types
+  static_assert(!std::is_constructible_v<std::ifstream, std::basic_string_view<CharT>>);
+  static_assert(!std::is_constructible_v<std::ifstream, const std::basic_string_view<CharT>>);
+
+  // Char* pointers
+  if constexpr (!std::is_same_v<CharT, char>)
+    static_assert(!std::is_constructible_v<std::ifstream, const CharT *>);
+
+  // Iterators
+  static_assert(!std::is_convertible_v<std::ifstream, cpp17_input_iterator<const CharT *>>);
+
+  return true;
+}
+
+static_assert(test_non_convert_to_path<char>());
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(test_non_convert_to_path<wchar_t>());
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
+
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+static_assert(test_non_convert_to_path<char8_t>());
+#endif //  TEST_STD_VER > 17 && defined(__cpp_char8_t)
+
+static_assert(test_non_convert_to_path<char16_t>());
+static_assert(test_non_convert_to_path<char32_t>());
+
 
 int main(int, char**) {
   {
