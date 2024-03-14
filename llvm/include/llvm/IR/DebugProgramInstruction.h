@@ -511,19 +511,19 @@ public:
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
 
-  /// Filter the DbgRecord range to DPValue types only and downcast.
-  static inline auto
-  filter(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
-    return map_range(
-        make_filter_range(R, [](DbgRecord &E) { return isa<DPValue>(E); }),
-        [](DbgRecord &E) { return std::ref(cast<DPValue>(E)); });
-  }
-
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {
     return E->getRecordKind() == ValueKind;
   }
 };
+
+/// Filter the DbgRecord range to DPValue types only and downcast.
+static inline auto
+filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
+  return map_range(
+      make_filter_range(R, [](DbgRecord &E) { return isa<DPValue>(E); }),
+      [](DbgRecord &E) { return std::ref(cast<DPValue>(E)); });
+}
 
 /// Per-instruction record of debug-info. If an Instruction is the position of
 /// some debugging information, it points at a DPMarker storing that info. Each
