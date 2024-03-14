@@ -32,7 +32,13 @@
 struct MappingDesc {
   uptr start;
   uptr end;
-  enum Type { INVALID, ALLOCATOR, APP, SHADOW, ORIGIN } type;
+  enum Type {
+    INVALID = 1,
+    ALLOCATOR = 2,
+    APP = 4,
+    SHADOW = 8,
+    ORIGIN = 16,
+  } type;
   const char *name;
 };
 
@@ -228,22 +234,22 @@ const uptr kMemoryLayoutSize = sizeof(kMemoryLayout) / sizeof(kMemoryLayout[0]);
 #ifndef __clang__
 __attribute__((optimize("unroll-loops")))
 #endif
-inline bool addr_is_type(uptr addr, MappingDesc::Type mapping_type) {
+inline bool
+addr_is_type(uptr addr, int mapping_types) {
 // It is critical for performance that this loop is unrolled (because then it is
 // simplified into just a few constant comparisons).
 #ifdef __clang__
 #pragma unroll
 #endif
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
-    if (kMemoryLayout[i].type == mapping_type &&
+    if ((kMemoryLayout[i].type & mapping_types) &&
         addr >= kMemoryLayout[i].start && addr < kMemoryLayout[i].end)
       return true;
   return false;
 }
 
-#define MEM_IS_APP(mem)                           \
-  (addr_is_type((uptr)(mem), MappingDesc::APP) || \
-   addr_is_type((uptr)(mem), MappingDesc::ALLOCATOR))
+#define MEM_IS_APP(mem) \
+  (addr_is_type((uptr)(mem), MappingDesc::APP | MappingDesc::ALLOCATOR))
 #define MEM_IS_SHADOW(mem) addr_is_type((uptr)(mem), MappingDesc::SHADOW)
 #define MEM_IS_ORIGIN(mem) addr_is_type((uptr)(mem), MappingDesc::ORIGIN)
 
