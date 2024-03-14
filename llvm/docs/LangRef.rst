@@ -14580,7 +14580,7 @@ Overview:
 """""""""
 
 Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
-``1`` if ``%a`` is greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
 
 Arguments:
 """"""""""
