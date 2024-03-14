@@ -7,8 +7,11 @@ package(default_visibility = ["//visibility:public"],
 
 licenses(["notice"])
 
+# TODO: Pick up other files for more complete functionality, to match
+# clangd/CMakeLists.txt. This might look something like
+# glob(["*.cpp", "dir/**/*.cpp", ...]).
 cc_library(
-    name = "clangDaemon",
+    name = "ClangDaemon",
     srcs = [
         "JSONTransport.cpp",
         "Protocol.cpp",
