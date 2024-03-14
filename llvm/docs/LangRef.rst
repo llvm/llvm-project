@@ -1623,14 +1623,14 @@ Currently, only the following parameter attributes are defined:
 
 ``initialized((Lo1,Hi1),...)``
     This attribute indicates that the function initializes the ranges of the
-    pointer parameter's memory, [%p+LoN, %p+HiN): there are no reads, and no
-    special accesses (such as volatile access or untrackable capture) before
-    the initialization write in the function.
+    pointer parameter's memory, ``[%p+LoN, %p+HiN)``. Initialization of memory
+    means the first memory access is a non-volatile, non-atomic write. The
+    write must happen before the function returns. If the function unwinds,
+    the write may not happen.
 
-    This attribute implies that the function initializes and does not read
-    before initialization through this pointer argument, even though it may
-    read the memory before initialization that the pointer points to, such
-    as through other arguments.
+    This attribute only holds for the memory accessed via this pointer
+    parameter. Other arbitrary accesses to the same memory via other pointers
+    are allowed.
 
     Note that this attribute does not apply to the unwind edge: the
     initializing function does not read the pointer before writing to it
@@ -1638,11 +1638,11 @@ Currently, only the following parameter attributes are defined:
     written to when unwinding happens.
 
     The ``writable`` or ``dereferenceable`` attribute does not imply the
-    ``initialized`` attribute, and ``initialized`` does not imply ``writeonly``
+    ``initialized`` attribute. The ``initialized`` does not imply ``writeonly``
     since ``initialized`` allows reading from the pointer after writing.
 
-    This attribute is a list of const ranges in ascending order with no
-    overlapping or adjoining list elements. LoN/HiN are 64-bit ints, and
+    This attribute is a list of constant ranges in ascending order with no
+    overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit ints, and
     negative values are allowed in case the argument points partway into
     an allocation.
 
