@@ -46,9 +46,9 @@ constexpr bool test_non_convert_to_path() {
 
 static_assert(test_non_convert_to_path<char>());
 
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#if !defined(TEST_HAS_NO_WIDE_CHARACTERS) && defined(_LIBCPP_HAS_OPEN_WITH_WCHAR)
 static_assert(test_non_convert_to_path<wchar_t>());
-#endif // TEST_HAS_NO_WIDE_CHARACTERS
+#endif // !TEST_HAS_NO_WIDE_CHARACTERS && _LIBCPP_HAS_OPEN_WITH_WCHAR
 
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
 static_assert(test_non_convert_to_path<char8_t>());
