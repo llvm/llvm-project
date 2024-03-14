@@ -27,7 +27,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1700 && !defined(__ALTIVEC__)
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && !defined(__ALTIVEC__)
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
