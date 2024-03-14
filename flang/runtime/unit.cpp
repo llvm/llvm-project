@@ -52,7 +52,7 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
-    Direction dir, std::optional<bool> isUnformatted,
+    Direction dir, Fortran::common::optional<bool> isUnformatted,
     const Terminator &terminator) {
   // Make sure that the returned anonymous unit has been opened
   // not just created in the unitMap.
@@ -95,9 +95,10 @@ ExternalFileUnit &ExternalFileUnit::NewUnit(
   return unit;
 }
 
-bool ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
-    std::optional<Action> action, Position position, OwningPtr<char> &&newPath,
-    std::size_t newPathLength, Convert convert, IoErrorHandler &handler) {
+bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
+    Fortran::common::optional<Action> action, Position position,
+    OwningPtr<char> &&newPath, std::size_t newPathLength, Convert convert,
+    IoErrorHandler &handler) {
   if (convert == Convert::Unknown) {
     convert = executionEnvironment.conversion;
   }
@@ -176,9 +177,10 @@ bool ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
   return impliedClose;
 }
 
-void ExternalFileUnit::OpenAnonymousUnit(std::optional<OpenStatus> status,
-    std::optional<Action> action, Position position, Convert convert,
-    IoErrorHandler &handler) {
+void ExternalFileUnit::OpenAnonymousUnit(
+    Fortran::common::optional<OpenStatus> status,
+    Fortran::common::optional<Action> action, Position position,
+    Convert convert, IoErrorHandler &handler) {
   // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
   std::size_t pathMaxLen{32};
   auto path{SizedNew<char>{handler}(pathMaxLen)};
