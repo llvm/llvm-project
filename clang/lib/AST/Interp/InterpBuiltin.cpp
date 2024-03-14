@@ -1329,7 +1329,7 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
 bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
   assert(Src.isLive() && Dest.isLive());
 
-  const Descriptor *SrcDesc = Src.getFieldDesc();
+  [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
   const Descriptor *DestDesc = Dest.getFieldDesc();
 
   assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
