@@ -14797,6 +14797,13 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           }
         }
 
+        // Check for nonnull = nullable.
+        // This won't be caught in the arg's initialization: the parameter to
+        // the assignment operator is not marked nonnull.
+        if (Op == OO_Equal)
+          diagnoseNullableToNonnullConversion(Args[0]->getType(),
+                                              Args[1]->getType(), OpLoc);
+
         // Convert the arguments.
         if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {
           // Best->Access is only meaningful for class members.
