@@ -1236,8 +1236,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
-  case PPC::ADDItocL: {
-    // Transform %xd = ADDItocL %xs, @sym
+  case PPC::ADDItocL8: {
+    // Transform %xd = ADDItocL8 %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to ADDI8. If the global address is external, then
@@ -1246,7 +1246,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::ADDI8);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL.");
+    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL8.");
 
     LLVM_DEBUG(assert(
         !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
