@@ -1,6 +1,6 @@
 ; Tests that sinked lifetime markers wouldn't provent optimization
 ; to convert a resuming call to a musttail call.
-; The difference between this and coro-split-musttail5.ll and coro-split-musttail5.ll
+; The difference between this and coro-split-musttail5.ll and coro-split-musttail6.ll
 ; is that this contains dead instruction generated during the transformation,
 ; which makes the optimization harder.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
@@ -27,6 +27,11 @@ await.suspend:
   %save2 = call token @llvm.coro.save(ptr null)
   call fastcc void @fakeresume1(ptr align 8 null)
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
+
+  ; These (non-trivially) dead instructions are in the way.
+  %gep = getelementptr inbounds i64, ptr %alloc.var, i32 0
+  %foo = ptrtoint ptr %gep to i64
+
   switch i8 %suspend2, label %exit [
     i8 0, label %await.ready
     i8 1, label %exit

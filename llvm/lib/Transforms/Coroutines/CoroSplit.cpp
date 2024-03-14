@@ -1203,10 +1203,6 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
       if (isa<BitCastInst>(I) || I->isDebugOrPseudoInst() ||
           I->isLifetimeStartOrEnd())
         I = I->getNextNode();
-      else if (isInstructionTriviallyDead(I))
-        // Duing we are in the middle of the transformation, we need to erase
-        // the dead instruction manually.
-        I = &*I->eraseFromParent();
       else
         break;
     }
@@ -1245,6 +1241,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
       }
 
       BasicBlock *Succ = BR->getSuccessor(SuccIndex);
+      SimplifyInstructionsInBlock(Succ);
       scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
       I = GetFirstValidInstruction(Succ->getFirstNonPHIOrDbgOrLifetime());
 
@@ -1288,6 +1285,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
         return false;
 
       BasicBlock *BB = SI->findCaseValue(Cond)->getCaseSuccessor();
+      SimplifyInstructionsInBlock(BB);
       scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
       I = GetFirstValidInstruction(BB->getFirstNonPHIOrDbgOrLifetime());
       continue;
