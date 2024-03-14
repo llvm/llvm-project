@@ -17,8 +17,8 @@ public:
   using FPBits128 = LIBC_NAMESPACE::fputil::FPBits<float128>;
   using StorageType = FPBits128::StorageType;
 
-  const UInt128 QUIET_NAN = FPBits128::quiet_nan(
-      LIBC_NAMESPACE::fputil::Sign::POS, 0).uintval();
+  const UInt128 QUIET_NAN =
+      FPBits128::quiet_nan(LIBC_NAMESPACE::fputil::Sign::POS, 0).uintval();
 
   const UInt128 ONE = UInt128(1);
   const UInt128 ZERO = UInt128(0);
