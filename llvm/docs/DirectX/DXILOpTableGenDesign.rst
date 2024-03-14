@@ -202,6 +202,6 @@ and maintainable. The current implementation employs Option 3a. It is in place,
 primarily, to facilitate lowering of new LLVM intrinsics for HLSL functions
 being added in the front end. It serves to expose any additional considerations
 necessary for an improved design of ``DXIL.td``. The current plan is to design
-and implement **Opton 4** to improve readability and maintainablity while
+and implement **Option 4** to improve readability and maintainablity while
 leveraging constructs in LLVM TableGen infrastructure for a potentially rich
 specification.
