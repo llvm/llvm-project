@@ -878,6 +878,13 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      // On AIX, TLS-LD heuristic may have turned LD access into IE access.
+      PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+      if (Model == TLSModel::LocalDynamic && FuncInfo->isAIXFuncUseTLSIE()) {
+        LLVM_DEBUG(
+            dbgs() << "Current function use IE access for default LD vars.\n");
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      }
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for

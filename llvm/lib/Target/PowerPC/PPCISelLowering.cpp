@@ -3374,6 +3374,46 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+  // Initialize heuristic setting lazily:
+  // (1) Use initial-exec for single TLS var reference within current function.
+  // (2) Use local-dynamic for multiple TLS var references within current func.
+  PPCFunctionInfo *FuncInfo =
+      DAG.getMachineFunction().getInfo<PPCFunctionInfo>();
+  if (Subtarget.hasAIXUseTLSIEForLDInSharedLibrary() &&
+      !FuncInfo->isAIXFuncUseInitDone()) {
+    std::set<const GlobalValue *> TLSGV;
+    for (SDNode &Node : DAG.allnodes()) {
+      SDNode *N = &Node;
+      if (N->getOpcode() == ISD::GlobalTLSAddress) {
+        if (GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(N)) {
+          const GlobalValue *GV = GA->getGlobal();
+          TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+          if (Model == TLSModel::InitialExec ||
+              Model == TLSModel::LocalDynamic) {
+            TLSGV.insert(GV);
+          }
+        }
+      }
+    }
+    LLVM_DEBUG(dbgs() << format("TLSGV count:%d\n", TLSGV.size()));
+    if (TLSGV.size() == 1) {
+      FuncInfo->setAIXFuncUseTLSIE();
+    } else if (TLSGV.size() > 1) {
+      FuncInfo->setAIXFuncUseTLSLD();
+    }
+    FuncInfo->setAIXFuncUseInitDone();
+  }
+
+  if (FuncInfo->isAIXFuncUseTLSLD()) {
+    LLVM_DEBUG(dbgs() << DAG.getMachineFunction().getName()
+                      << " function use TLS-LD model for TLS IE/LD vars.\n");
+    Model = TLSModel::LocalDynamic;
+  } else if (FuncInfo->isAIXFuncUseTLSIE()) {
+    LLVM_DEBUG(dbgs() << DAG.getMachineFunction().getName()
+                      << " function use TLS-IE model for TLS IE/LD vars.\n");
+    Model = TLSModel::InitialExec;
+  }
+
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
