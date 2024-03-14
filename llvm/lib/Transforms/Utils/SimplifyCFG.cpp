@@ -122,6 +122,11 @@ static cl::opt<unsigned>
                          cl::desc("Allow reordering across at most this many "
                                   "instructions when hoisting"));
 
+static cl::opt<unsigned> BBSizeHoistLimit(
+    "simplifycfg-bb-size-hoist-limit", cl::Hidden, cl::init(40),
+    cl::desc("Allow hoisting instructions only if the smallest "
+             "basicblock has fewer instructions than this limit"));
+
 static cl::opt<bool>
     SinkCommon("simplifycfg-sink-common", cl::Hidden, cl::init(true),
                cl::desc("Sink common instructions down to the end block"));
@@ -1587,10 +1592,9 @@ hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
 // 2- Instruction type
 // 3- Instruction operands
 llvm::hash_code getHash(Instruction *Instr) {
-  std::vector<Value *> operands(Instr->op_begin(), Instr->op_end());
   return llvm::hash_combine(
       Instr->getOpcode(), Instr->getType(),
-      hash_combine_range(operands.begin(), operands.end()));
+      hash_combine_range(Instr->value_op_begin(), Instr->value_op_end()));
 }
 
 /// Hoist any common code in the successor blocks up into the block. This
@@ -1620,23 +1624,26 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
 
   SmallVector<BasicBlock *, 8> SuccessorBBs;
   for (auto *Succ : successors(BB)) {
-    BasicBlock::iterator SuccItr = Succ->begin();
     // If we find an unreachable instruction at the beginning of a basic block,
     // we can still hoist instructions from the rest of the basic blocks.
-    if (isa<UnreachableInst>(*SuccItr))
+    if (isa<UnreachableInst>(Succ->getFirstNonPHIOrDbg()))
       continue;
     SuccessorBBs.push_back(Succ);
   }
 
   // Find the smallest BB because we always want to iterate over instructions
   // of the smallest Successor.
-  auto *SmallestBB = *std::min_element(SuccessorBBs.begin(), SuccessorBBs.end(),
-                                       [](BasicBlock *BB1, BasicBlock *BB2) {
-                                         return BB1->size() < BB2->size();
-                                       });
-  std::iter_swap(
-      SuccessorBBs.begin(),
-      std::find(SuccessorBBs.begin(), SuccessorBBs.end(), SmallestBB));
+  auto *SmallestBBPos =
+      std::min_element(SuccessorBBs.begin(), SuccessorBBs.end(),
+                       [](BasicBlock *BB1, BasicBlock *BB2) {
+                         return BB1->size() < BB2->size();
+                       });
+
+  std::iter_swap(SuccessorBBs.begin(), SmallestBBPos);
+  BasicBlock *SmallestBB = *SmallestBBPos;
+
+  if (SmallestBB->size() > BBSizeHoistLimit)
+    return false;
 
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
@@ -1689,8 +1696,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     // in the hashmap execept for the ones that have the same hash as some
     // previous instruction in that BB.
     if (OtherSuccessorsHash.find(HashValue) == OtherSuccessorsHash.end()) {
-      SmallVector<Instruction *, 2> vec{I};
-      OtherSuccessorsHash[HashValue] = vec;
+      OtherSuccessorsHash[HashValue] = {I};
       InstToSkipFlag[I] = skipFlag;
     }
     BBItrPair.first++;
@@ -1705,12 +1711,13 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       I = &*BBItrPair.first;
       auto HashValue = getHash(I);
       skipFlag |= skippedInstrFlags(I);
+      auto &InstVec = OtherSuccessorsHash[HashValue];
       // For other successors put the instrcution in the map only if there are
       // instructions with the same hash from other successors and this is the
       // first instruction with this hash value from current successor.
       if (OtherSuccessorsHash.find(HashValue) != OtherSuccessorsHash.end() &&
-          OtherSuccessorsHash[HashValue].size() == Index) {
-        OtherSuccessorsHash[HashValue].push_back(I);
+          InstVec.size() == Index) {
+        InstVec.push_back(I);
         InstToSkipFlag[I] = skipFlag;
       }
       BBItrPair.first++;
@@ -1789,9 +1796,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     }
 
     bool SafeToHoist = isSafeToHoistInstr(I1, SkipFlagsBB1);
-    unsigned index = 0;
-    for (auto &SuccIterPair : OtherSuccIterPairRange) {
-      Instruction *I2 = OtherInsts[index];
+    for (auto [SuccIterPair, I2] : zip(OtherSuccIterPairRange, OtherInsts)) {
       // If instructions of all successors are at the same level, use the
       // skipFlag of its BB, i.e., SameLevelHoist. Otherwise, use the skipFlag
       // that was calculated initially for this instruction in the hashmap
@@ -1805,7 +1810,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
                       shouldHoistCommonInstructions(I1, I2, TTI);
         SameLevelHoist = false;
       }
-      index++;
     }
 
     if (SafeToHoist) {
@@ -1935,6 +1939,7 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
         Value *BB2V = PN.getIncomingValueForBlock(OtherSuccTI->getParent());
         if (BB1V == BB2V)
           continue;
+
         // In the case of an if statement, check for
         // passingValueIsAlwaysUndefined here because we would rather eliminate
         // undefined control flow then converting it to a select.
