@@ -131,7 +131,6 @@ coroutine compare
 coroutine cstddef
 coroutine cstdint
 coroutine cstring
-coroutine limits
 coroutine version
 cstddef version
 ctgmath ccomplex
@@ -166,7 +165,6 @@ experimental/iterator iterator
 experimental/memory cstddef
 experimental/memory cstdint
 experimental/memory cstring
-experimental/memory limits
 experimental/propagate_const cstddef
 experimental/simd cstddef
 experimental/simd cstdint
@@ -396,7 +394,6 @@ optional cstddef
 optional cstdint
 optional cstring
 optional initializer_list
-optional limits
 optional new
 optional version
 ostream bitset

@@ -42,7 +42,7 @@ static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
                     clause.u);
 }
 
-namespace omp {
+namespace Fortran::lower::omp {
 using SymbolWithDesignator = std::tuple<semantics::Symbol *, MaybeExpr>;
 
 struct SymbolAndDesignatorExtractor {
@@ -101,7 +101,9 @@ struct SymbolAndDesignatorExtractor {
     } else {
       // This could still be a Substring or ComplexPart, but at least Substring
       // is not allowed in OpenMP.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       maybeDsg->dump();
+#endif
       llvm_unreachable("Expecting DataRef designator");
     }
   }
@@ -723,10 +725,10 @@ Clause makeClause(const Fortran::parser::OmpClause &cls,
       cls.u);
 }
 
-omp::List<Clause> makeList(const parser::OmpClauseList &clauses,
-                           semantics::SemanticsContext &semaCtx) {
+List<Clause> makeList(const parser::OmpClauseList &clauses,
+                      semantics::SemanticsContext &semaCtx) {
   return makeList(clauses.v, [&](const parser::OmpClause &s) {
     return makeClause(s, semaCtx);
   });
 }
-} // namespace omp
+} // namespace Fortran::lower::omp
