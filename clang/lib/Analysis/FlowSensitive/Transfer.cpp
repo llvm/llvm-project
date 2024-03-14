@@ -450,6 +450,12 @@ public:
     Env.setStorageLocation(*S, *MemberLoc);
   }
 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *S) {
+    const Expr *ArgExpr = S->getExpr();
+    assert(ArgExpr != nullptr);
+    propagateValueOrStorageLocation(*ArgExpr, *S, Env);
+  }
+
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
