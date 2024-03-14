@@ -6711,7 +6711,7 @@ static void DbgGatherSalvagableDVI(
         SalvageableDVISCEVs.push_back(std::move(NewRec));
         return true;
       };
-      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
         if (DPV.isDbgValue() || DPV.isDbgAssign())
           ProcessDbgValue(&DPV);
       }

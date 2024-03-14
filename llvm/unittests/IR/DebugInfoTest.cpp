@@ -968,8 +968,7 @@ TEST(MetadataTest, ConvertDbgToDPValue) {
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
-  for (DPValue &Item :
-       DPValue::filter(RetInst->DbgMarker->getDbgRecordRange())) {
+  for (DPValue &Item : filterDbgVars(RetInst->DbgMarker->getDbgRecordRange())) {
     EXPECT_TRUE((Item.getRawLocation() == DPV2->getRawLocation() && ItCount == 0) ||
                 (Item.getRawLocation() == DPV1->getRawLocation() && ItCount == 1));
 

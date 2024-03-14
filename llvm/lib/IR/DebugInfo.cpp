@@ -1828,7 +1828,7 @@ void at::deleteAll(Function *F) {
   SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange()))
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
         if (DPV.isDbgAssign())
           DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
@@ -2257,7 +2257,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }

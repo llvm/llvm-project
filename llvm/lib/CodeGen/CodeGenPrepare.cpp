@@ -8506,7 +8506,7 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
 
 bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
   bool AnyChange = false;
-  for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange()))
+  for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
     AnyChange |= fixupDPValue(DPV);
   return AnyChange;
 }
@@ -8620,7 +8620,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
       // If this isn't a dbg.value, process any attached DPValue records
       // attached to this instruction.
       for (DPValue &DPV : llvm::make_early_inc_range(
-               DPValue::filter(Insn.getDbgRecordRange()))) {
+               filterDbgVars(Insn.getDbgRecordRange()))) {
         if (DPV.Type != DPValue::LocationType::Value)
           continue;
         DbgProcessor(&DPV, &Insn);
