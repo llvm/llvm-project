@@ -1370,7 +1370,7 @@ public:
   }
   bool isDReg() const {
     return isReg() &&
-           ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg.RegNum);
+           ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg.RegNum);
   }
   bool isQReg() const {
     return isReg() &&
@@ -4125,7 +4125,7 @@ static unsigned getMnemonicOpsEndInd(const OperandVector &Operands) {
       ++MnemonicOpsEndInd;
   }
 
-  // In some circumstances the code code moves to the right
+  // In some circumstances the condition code moves to the right
   bool RHSCondCode = false;
   while (MnemonicOpsEndInd < Operands.size()) {
     auto Op = static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]);
@@ -4133,18 +4133,16 @@ static unsigned getMnemonicOpsEndInd(const OperandVector &Operands) {
     if (Op.isITMask()) {
       RHSCondCode = true;
       MnemonicOpsEndInd++;
-    }
-    // Special case for it instructions which have a condition code on the RHS
-    else if (Op.isToken() &&
-             (
-                 // There are several special cases not covered by
-                 // isDataTypeToken
-                 Op.getToken() == ".w" || Op.getToken() == ".bf16" ||
-                 Op.getToken() == ".p64" || Op.getToken() == ".f16" ||
-                 isDataTypeToken(Op.getToken()))) {
+    } else if (Op.isToken() &&
+               (
+                   // There are several special cases not covered by
+                   // isDataTypeToken
+                   Op.getToken() == ".w" || Op.getToken() == ".bf16" ||
+                   Op.getToken() == ".p64" || Op.getToken() == ".f16" ||
+                   isDataTypeToken(Op.getToken()))) {
       // In the mnemonic operators the cond code must always precede the data
       // type. So we can now safely assume any subsequent cond code is on the
-      // RHS. As is the cdase for VCMP and VPT.
+      // RHS. As is the case for VCMP and VPT.
       RHSCondCode = true;
       MnemonicOpsEndInd++;
     }
@@ -6908,7 +6906,7 @@ bool ARMAsmParser::CDEConvertDualRegOperand(StringRef Mnemonic,
                                             unsigned MnemonicOpsEndInd) {
   assert(MS.isCDEDualRegInstr(Mnemonic));
 
-  if (Operands.size() < 2 + MnemonicOpsEndInd)
+  if (Operands.size() < 3 + MnemonicOpsEndInd)
     return false;
 
   StringRef Op2Diag(
@@ -7991,20 +7989,20 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
          static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1])
                  .getToken() == "!");
 
-    unsigned RegStart =
-        HasWritebackToken ? MnemonicOpsEndInd + 2 : MnemonicOpsEndInd + 1;
     bool ListContainsBase;
     if (checkLowRegisterList(Inst, 3, Rn, 0, ListContainsBase) && !isThumbTwo())
-      return Error(Operands[RegStart]->getStartLoc(),
-                   "registers must be in range r0-r7");
+      return Error(
+          Operands[getRegListInd(Operands, MnemonicOpsEndInd)]->getStartLoc(),
+          "registers must be in range r0-r7");
     // If we should have writeback, then there should be a '!' token.
     if (!ListContainsBase && !HasWritebackToken && !isThumbTwo())
-      return Error(Operands[RegStart]->getStartLoc(),
-                   "writeback operator '!' expected");
+      return Error(
+          Operands[getRegListInd(Operands, MnemonicOpsEndInd)]->getStartLoc(),
+          "writeback operator '!' expected");
     // If we should not have writeback, there must not be a '!'. This is
     // true even for the 32-bit wide encodings.
     if (ListContainsBase && HasWritebackToken)
-      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+      return Error(Operands[MnemonicOpsEndInd + 1]->getStartLoc(),
                    "writeback operator '!' not allowed when base register "
                    "in register list");
 
