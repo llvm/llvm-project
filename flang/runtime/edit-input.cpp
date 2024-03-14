@@ -9,6 +9,7 @@
 #include "edit-input.h"
 #include "namelist.h"
 #include "utf.h"
+#include "flang/Common/optional.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
@@ -54,9 +55,9 @@ template <int LOG2_BASE>
 static bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   // Skip leading white space & zeroes
-  std::optional<int> remaining{io.CueUpInput(edit)};
+  Fortran::common::optional<int> remaining{io.CueUpInput(edit)};
   auto start{io.GetConnectionState().positionInRecord};
-  std::optional<char32_t> next{io.NextInField(remaining, edit)};
+  Fortran::common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next.value_or('?') == '0') {
     do {
       start = io.GetConnectionState().positionInRecord;
@@ -156,7 +157,8 @@ static inline char32_t GetRadixPointChar(const DataEdit &edit) {
 
 // Prepares input from a field, and returns the sign, if any, else '\0'.
 static char ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
-    std::optional<char32_t> &next, std::optional<int> &remaining) {
+    Fortran::common::optional<char32_t> &next,
+    Fortran::common::optional<int> &remaining) {
   remaining = io.CueUpInput(edit);
   next = io.NextInField(remaining, edit);
   char sign{'\0'};
@@ -198,8 +200,8 @@ bool EditIntegerInput(
         edit.descriptor);
     return false;
   }
-  std::optional<int> remaining;
-  std::optional<char32_t> next;
+  Fortran::common::optional<int> remaining;
+  Fortran::common::optional<char32_t> next;
   char sign{ScanNumericPrefix(io, edit, next, remaining)};
   common::UnsignedInt128 value{0};
   bool any{!!sign};
@@ -279,10 +281,10 @@ struct ScannedRealInput {
 };
 static ScannedRealInput ScanRealInput(
     char *buffer, int bufferSize, IoStatementState &io, const DataEdit &edit) {
-  std::optional<int> remaining;
-  std::optional<char32_t> next;
+  Fortran::common::optional<int> remaining;
+  Fortran::common::optional<char32_t> next;
   int got{0};
-  std::optional<int> radixPointOffset;
+  Fortran::common::optional<int> radixPointOffset;
   auto Put{[&](char ch) -> void {
     if (got < bufferSize) {
       buffer[got] = ch;
@@ -833,8 +835,8 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
         edit.descriptor);
     return false;
   }
-  std::optional<int> remaining{io.CueUpInput(edit)};
-  std::optional<char32_t> next{io.NextInField(remaining, edit)};
+  Fortran::common::optional<int> remaining{io.CueUpInput(edit)};
+  Fortran::common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next && *next == '.') { // skip optional period
     next = io.NextInField(remaining, edit);
   }
@@ -916,8 +918,9 @@ static bool EditListDirectedCharacterInput(
   // or the end of the current record.  Subtlety: the "remaining" count
   // here is a dummy that's used to avoid the interpretation of separators
   // in NextInField.
-  std::optional<int> remaining{length > 0 ? maxUTF8Bytes : 0};
-  while (std::optional<char32_t> next{io.NextInField(remaining, edit)}) {
+  Fortran::common::optional<int> remaining{length > 0 ? maxUTF8Bytes : 0};
+  while (Fortran::common::optional<char32_t> next{
+      io.NextInField(remaining, edit)}) {
     bool isSep{false};
     switch (*next) {
     case ' ':

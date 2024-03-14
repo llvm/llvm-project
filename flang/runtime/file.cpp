@@ -60,7 +60,7 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   return fd;
 }
 
-void OpenFile::Open(OpenStatus status, std::optional<Action> action,
+void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
     Position position, IoErrorHandler &handler) {
   if (fd_ >= 0 &&
       (status == OpenStatus::Old || status == OpenStatus::Unknown)) {
@@ -322,7 +322,7 @@ int OpenFile::WriteAsynchronously(FileOffset at, const char *buffer,
 }
 
 void OpenFile::Wait(int id, IoErrorHandler &handler) {
-  std::optional<int> ioStat;
+  Fortran::common::optional<int> ioStat;
   Pending *prev{nullptr};
   for (Pending *p{pending_.get()}; p; p = (prev = p)->next.get()) {
     if (p->id == id) {
