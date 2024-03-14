@@ -197,7 +197,7 @@ bool InitShadowWithReExec(bool init_origins) {
 
   // The earlier dry run didn't actually map or protect anything. Run again in
   // non-dry run mode.
-  success = InitShadow(__msan_get_track_origins(), false);
+  success = success && InitShadow(__msan_get_track_origins(), false);
 
   return success;
 }
