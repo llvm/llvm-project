@@ -9196,12 +9196,25 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 
   const SCEV *LHS = getSCEV(ExitCond->getOperand(0));
   const SCEV *RHS = getSCEV(ExitCond->getOperand(1));
-  if (!AssumeLoopExits) {
+
     ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
                                             AllowPredicates);
     if (EL.hasAnyInfo())
       return EL;
-  } else {
+
+    auto *ExhaustiveCount =
+        computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
+
+    if (!isa<SCEVCouldNotCompute>(ExhaustiveCount))
+      return ExhaustiveCount;
+
+    return computeShiftCompareExitLimit(
+        ExitCond->getOperand(0), ExitCond->getOperand(1), L, OriginalPred);
+}
+ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
+    const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
+    bool ControlsOnlyExit, bool AllowPredicates) {
+  if (AssumeLoopExits) {
 #define PROP_PHI(LHS)                                                          \
   if (auto un = dyn_cast<SCEVUnknown>(LHS)) {                                  \
     if (auto pn = dyn_cast_or_null<PHINode>(un->getValue())) {                 \
@@ -9225,118 +9238,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   }
     PROP_PHI(LHS)
     PROP_PHI(RHS)
-
-    // Try to evaluate any dependencies out of the loop.
-    LHS = getSCEVAtScope(LHS, L);
-    RHS = getSCEVAtScope(RHS, L);
-
-    // At this point, we would like to compute how many iterations of the
-    // loop the predicate will return true for these inputs.
-    if (isLoopInvariant(LHS, L) && !isLoopInvariant(RHS, L)) {
-      // If there is a loop-invariant, force it into the RHS.
-      std::swap(LHS, RHS);
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-    }
-
-    // Simplify the operands before analyzing them.
-    (void)SimplifyICmpOperands(Pred, LHS, RHS);
-
-    // If we have a comparison of a chrec against a constant, try to use value
-    // ranges to answer this query.
-    if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS))
-      if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(LHS))
-        if (AddRec->getLoop() == L) {
-          // Form the constant range.
-          ConstantRange CompRange =
-              ConstantRange::makeExactICmpRegion(Pred, RHSC->getAPInt());
-
-          const SCEV *Ret = AddRec->getNumIterationsInRange(CompRange, *this);
-          if (!isa<SCEVCouldNotCompute>(Ret))
-            return Ret;
-        }
-
-    switch (Pred) {
-    case ICmpInst::ICMP_NE: { // while (X != Y)
-      // Convert to: while (X-Y != 0)
-      ExitLimit EL = howFarToZero(getMinusSCEV(LHS, RHS), L, ControlsOnlyExit,
-                                  AllowPredicates);
-      if (EL.hasAnyInfo())
-        return EL;
-      break;
-    }
-    case ICmpInst::ICMP_EQ: { // while (X == Y)
-      // Convert to: while (X-Y == 0)
-      ExitLimit EL = howFarToNonZero(getMinusSCEV(LHS, RHS), L);
-      if (EL.hasAnyInfo())
-        return EL;
-      break;
-    }
-    case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_ULT:
-    case ICmpInst::ICMP_SLE:
-    case ICmpInst::ICMP_ULE: { // while (X < Y)
-      bool IsSigned = Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE;
-
-      if (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE) {
-        if (!isa<IntegerType>(RHS->getType()))
-          break;
-        SmallVector<const SCEV *, 2> sv = {
-            RHS, getConstant(
-                     ConstantInt::get(cast<IntegerType>(RHS->getType()), 1))};
-        // Since this is not an infinite loop by induction, RHS cannot be
-        // int_max/uint_max Therefore adding 1 does not wrap.
-        if (IsSigned)
-          RHS = getAddExpr(sv, SCEV::FlagNSW);
-        else
-          RHS = getAddExpr(sv, SCEV::FlagNUW);
-      }
-      ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
-                                      AllowPredicates);
-      if (EL.hasAnyInfo())
-        return EL;
-      break;
-    }
-    case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_SGE:
-    case ICmpInst::ICMP_UGE: { // while (X > Y)
-      bool IsSigned = Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE;
-      if (Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_UGE) {
-        if (!isa<IntegerType>(RHS->getType()))
-          break;
-        SmallVector<const SCEV *, 2> sv = {
-            RHS, getConstant(
-                     ConstantInt::get(cast<IntegerType>(RHS->getType()), -1))};
-        // Since this is not an infinite loop by induction, RHS cannot be
-        // int_min/uint_min Therefore subtracting 1 does not wrap.
-        if (IsSigned)
-          RHS = getAddExpr(sv, SCEV::FlagNSW);
-        else
-          RHS = getAddExpr(sv, SCEV::FlagNUW);
-      }
-      ExitLimit EL = howManyGreaterThans(LHS, RHS, L, IsSigned,
-                                         ControlsOnlyExit, AllowPredicates);
-      if (EL.hasAnyInfo())
-        return EL;
-      break;
-    }
-    default:
-      break;
-    }
   }
-  auto *ExhaustiveCount =
-      computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
-
-  if (!isa<SCEVCouldNotCompute>(ExhaustiveCount))
-    return ExhaustiveCount;
-
-  return computeShiftCompareExitLimit(ExitCond->getOperand(0),
-                                      ExitCond->getOperand(1), L, OriginalPred);
-}
-ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
-    const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
-    bool ControlsOnlyExit, bool AllowPredicates) {
-
   // Try to evaluate any dependencies out of the loop.
   LHS = getSCEVAtScope(LHS, L);
   RHS = getSCEVAtScope(RHS, L);
@@ -9349,6 +9251,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
+  // was not present in Enzyme code, the last condition is true if
+  // AssumeLoopExits is true
+  // will the first two checks cause enzyme to fail?
   bool ControllingFiniteLoop = ControlsOnlyExit && loopHasNoAbnormalExits(L) &&
                                loopIsFiniteByAssumption(L);
   // Simplify the operands before analyzing them.
@@ -9426,18 +9331,37 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     if (EL.hasAnyInfo()) return EL;
     break;
   }
+
   case ICmpInst::ICMP_SLE:
   case ICmpInst::ICMP_ULE:
-    // Since the loop is finite, an invariant RHS cannot include the boundary
-    // value, otherwise it would loop forever.
-    if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
-        !isLoopInvariant(RHS, L))
-      break;
-    RHS = getAddExpr(getOne(RHS->getType()), RHS);
+    if (!AssumeLoopExits) {
+      // Since the loop is finite, an invariant RHS cannot include the boundary
+      // value, otherwise it would loop forever.
+      if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
+          !isLoopInvariant(RHS, L))
+        break;
+      RHS = getAddExpr(getOne(RHS->getType()), RHS);
+    }
     [[fallthrough]];
+
   case ICmpInst::ICMP_SLT:
   case ICmpInst::ICMP_ULT: { // while (X < Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
+    if (AssumeLoopExits) {
+      if (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE) {
+        if (!isa<IntegerType>(RHS->getType()))
+          break;
+        SmallVector<const SCEV *, 2> sv = {
+            RHS, getConstant(
+                     ConstantInt::get(cast<IntegerType>(RHS->getType()), 1))};
+        // Since this is not an infinite loop by induction, RHS cannot be
+        // int_max/uint_max Therefore adding 1 does not wrap.
+        if (IsSigned)
+          RHS = getAddExpr(sv, SCEV::FlagNSW);
+        else
+          RHS = getAddExpr(sv, SCEV::FlagNUW);
+      }
+    }
     ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
                                     AllowPredicates);
     if (EL.hasAnyInfo())
@@ -9446,16 +9370,33 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   }
   case ICmpInst::ICMP_SGE:
   case ICmpInst::ICMP_UGE:
-    // Since the loop is finite, an invariant RHS cannot include the boundary
-    // value, otherwise it would loop forever.
-    if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
-        !isLoopInvariant(RHS, L))
-      break;
-    RHS = getAddExpr(getMinusOne(RHS->getType()), RHS);
+    if (!AssumeLoopExits) {
+      // Since the loop is finite, an invariant RHS cannot include the boundary
+      // value, otherwise it would loop forever.
+      if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
+          !isLoopInvariant(RHS, L))
+        break;
+      RHS = getAddExpr(getMinusOne(RHS->getType()), RHS);
+    }
     [[fallthrough]];
   case ICmpInst::ICMP_SGT:
   case ICmpInst::ICMP_UGT: { // while (X > Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
+    if (AssumeLoopExits) {
+      if (Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_UGE) {
+        if (!isa<IntegerType>(RHS->getType()))
+          break;
+        SmallVector<const SCEV *, 2> sv = {
+            RHS, getConstant(
+                     ConstantInt::get(cast<IntegerType>(RHS->getType()), -1))};
+        // Since this is not an infinite loop by induction, RHS cannot be
+        // int_min/uint_min Therefore subtracting 1 does not wrap.
+        if (IsSigned)
+          RHS = getAddExpr(sv, SCEV::FlagNSW);
+        else
+          RHS = getAddExpr(sv, SCEV::FlagNUW);
+      }
+    }
     ExitLimit EL = howManyGreaterThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
                                        AllowPredicates);
     if (EL.hasAnyInfo())
