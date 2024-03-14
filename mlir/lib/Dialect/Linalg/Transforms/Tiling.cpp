@@ -305,38 +305,35 @@ static void calculateTileOffsetsAndSizes(
 }
 
 /// Returns a vector of bools representing if, for the given axis, `op` can be
-/// tiled by `numThreads` without incurring in a race condition and thus it is
-/// thread-safe to do the tiling. This is checked by iterating over the affine
-/// maps of the outputs in `op` and ensuring that all the results in the map are
-/// present in the affine map represented by the tiling sizes, which is derived
-/// from `numThreads` or `nominalTileSizes`.
+/// tiled by without incurring in a race condition and thus it is thread-safe to
+/// do the tiling. This is checked by iterating over the affine maps of the
+/// outputs in `op` and ensuring that all the results in the map are present in
+/// the affine map represented by the tiling sizes, which is derived from
+/// `numThreads` or `nominalTileSizes`.
 SmallVector<bool>
-safeToTileToForall(mlir::MLIRContext *ctx, TilingInterface op,
+safeToTileToForall(mlir::MLIRContext *ctx, LinalgOp linalgOp,
                    ArrayRef<OpFoldResult> numThreads,
                    std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
                    int numDims) {
   ArrayRef<OpFoldResult> tilingValues =
       nominalTileSizes.has_value() ? *nominalTileSizes : numThreads;
+  int minTile = nominalTileSizes.has_value() ? 0 : 1;
 
   SmallVector<bool> safeToTile(tilingValues.size(), true);
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op.getOperation());
-  if (!linalgOp)
-    return safeToTile;
-
   SmallVector<AffineExpr> dimExprs;
   dimExprs.reserve(numDims);
-  for (unsigned i = 0; i < tilingValues.size(); i++) {
+  for (unsigned i = 0, e = tilingValues.size(); i != e; i++) {
     if (auto attr = llvm::dyn_cast_if_present<Attribute>(tilingValues[i])) {
-      if (cast<IntegerAttr>(attr).getValue().getSExtValue() > 1)
+      if (cast<IntegerAttr>(attr).getValue().getSExtValue() > minTile)
         dimExprs.push_back(mlir::getAffineDimExpr(i, ctx));
     } else {
       dimExprs.push_back(mlir::getAffineDimExpr(i, ctx));
     }
   }
 
-  for (uint32_t resNum = 0; resNum < op->getNumResults(); resNum++) {
+  for (unsigned resNum = 0; resNum < linalgOp->getNumResults(); resNum++) {
     AffineMap map =
-        linalgOp.getIndexingMapMatchingResult(op->getResult(resNum));
+        linalgOp.getIndexingMapMatchingResult(linalgOp->getResult(resNum));
 
     for (AffineExpr r : dimExprs) {
       unsigned int axis = cast<AffineDimExpr>(r).getPosition();
@@ -390,12 +387,15 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
         return getValueOrCreateConstantIndexOp(b, loc, ofr);
       }));
 
-  // Check if tiling is thread safe and print a warning if not.
-  SmallVector<bool> tilingSafety = safeToTileToForall(
-      b.getContext(), op, numThreads, nominalTileSizes, loopRanges.size());
-  for (size_t i = 0; i < tilingSafety.size(); i++)
-    if (!tilingSafety[i])
-      op.emitWarning() << "tiling is not thread safe at axis #" << i;
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op.getOperation());
+  if (linalgOp) {
+    // Check if tiling is thread safe and print a warning if not.
+    SmallVector<bool> tilingSafety = safeToTileToForall(
+      b.getContext(), linalgOp, numThreads, nominalTileSizes, loopRanges.size());
+    for (size_t i = 0; i < tilingSafety.size(); i++)
+      if (!tilingSafety[i])
+        op.emitWarning() << "tiling is not thread safe at axis #" << i;
+  }
 
   // 1. Create the ForallOp. We don't use the lambda body-builder
   // version because we require the use of RewriterBase in the body, so we
