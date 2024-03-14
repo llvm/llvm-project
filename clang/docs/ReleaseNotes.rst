@@ -492,6 +492,10 @@ libclang
 Static Analyzer
 ---------------
 
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
+
 New features
 ^^^^^^^^^^^^
 
