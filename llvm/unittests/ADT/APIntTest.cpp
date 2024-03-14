@@ -3068,21 +3068,69 @@ TEST(APIntTest, sfloordiv_ov) {
     EXPECT_FALSE(Overflow);
     EXPECT_EQ(1, quotient.getSExtValue());
   }
-  // test overflow
+  // int8 test overflow
   {
-    auto check_overflow_one = [](auto arg) {
-      using IntTy = decltype(arg);
-      APInt divisor(8 * sizeof(arg), std::numeric_limits<IntTy>::lowest(),
-                    true);
-      APInt dividend(8 * sizeof(arg), IntTy(-1), true);
-      bool Overflow = false;
-      [[maybe_unused]] auto quotient = divisor.sfloordiv_ov(dividend, Overflow);
-      EXPECT_TRUE(Overflow);
-    };
-    auto check_overflow_all = [&](auto... args) {
-      (void)std::initializer_list<int>{(check_overflow_one(args), 0)...};
-    };
-    std::apply(check_overflow_all, std::tuple<char, short, int, int64_t>());
+    using IntTy = int8_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int16 test overflow
+  {
+    using IntTy = int16_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int32 test overflow
+  {
+    using IntTy = int32_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int64 test overflow
+  {
+    using IntTy = int64_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // test all of int8
+  {
+    bool Overflow = true;
+    for (int i = -128; i < 128; ++i) {
+      for (int j = -128; j < 128; ++j) {
+        if (j == 0 || (i == -128 && j == -1))
+          continue;
+        int8_t a = static_cast<int8_t>(i);
+        int8_t b = static_cast<int8_t>(j);
+
+        APInt divisor(8, a, true);
+        APInt dividend(8, b, true);
+        if (((i >= 0 && j > 0) || (i <= 0 && j < 0)) ||
+            (i % j == 0)) // if quotient >= 0 and remain == 0 floordiv
+                          // equivalent to div
+          EXPECT_EQ(divisor.sfloordiv_ov(dividend, Overflow).getSExtValue(),
+                    a / b);
+        else
+          EXPECT_EQ(divisor.sfloordiv_ov(dividend, Overflow).getSExtValue(),
+                    a / b - 1);
+        EXPECT_FALSE(Overflow);
+      }
+    }
   }
 }
 

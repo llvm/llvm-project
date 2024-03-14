@@ -996,6 +996,11 @@ public:
   APInt sshl_ov(unsigned Amt, bool &Overflow) const;
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
   APInt ushl_ov(unsigned Amt, bool &Overflow) const;
+
+  /// Signed integer floor division operation.
+  ///
+  /// Rounds towards negative infinity, i.e. 5 / -2 = -3. Iff minimum value
+  /// divided by -1 set Overflow to true.
   APInt sfloordiv_ov(const APInt &RHS, bool &Overflow) const;
 
   // Operations that saturate
