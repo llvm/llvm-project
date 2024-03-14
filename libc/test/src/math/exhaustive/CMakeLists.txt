@@ -273,6 +273,7 @@ add_fp_unittest(
     fmod_generic_impl_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.FPUtil.generic.fmod
 )
 
