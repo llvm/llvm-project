@@ -1165,6 +1165,9 @@ inline std::unique_ptr<Summary> allocSummary(uint32_t TotalSize) {
                                       Summary(TotalSize));
 }
 
+// Version 1: First version
+constexpr uint64_t MemProfVersion = 1;
+
 } // end namespace IndexedInstrProf
 
 namespace RawInstrProf {

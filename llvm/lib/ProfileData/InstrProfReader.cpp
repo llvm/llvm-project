@@ -1230,6 +1230,15 @@ Error IndexedInstrProfReader::readHeader() {
             Header->MemProfOffset);
 
     const unsigned char *Ptr = Start + MemProfOffset;
+
+    const uint64_t MemProfVersion =
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
+    if (MemProfVersion != IndexedInstrProf::MemProfVersion) {
+      return make_error<InstrProfError>(instrprof_error::unsupported_version,
+                                        "unsupported MemProf version");
+    }
+
     // The value returned from RecordTableGenerator.Emit.
     const uint64_t RecordTableOffset =
         support::endian::readNext<uint64_t, llvm::endianness::little,

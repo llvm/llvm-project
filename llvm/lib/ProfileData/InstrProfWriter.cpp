@@ -529,6 +529,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
+
+    OS.write(IndexedInstrProf::MemProfVersion);
+
     OS.write(0ULL); // Reserve space for the memprof record table offset.
     OS.write(0ULL); // Reserve space for the memprof frame payload offset.
     OS.write(0ULL); // Reserve space for the memprof frame table offset.
@@ -571,9 +574,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
 
     PatchItem PatchItems[] = {
-        {MemProfSectionStart, &RecordTableOffset, 1},
-        {MemProfSectionStart + sizeof(uint64_t), &FramePayloadOffset, 1},
-        {MemProfSectionStart + 2 * sizeof(uint64_t), &FrameTableOffset, 1},
+        {MemProfSectionStart + sizeof(uint64_t), &RecordTableOffset, 1},
+        {MemProfSectionStart + 2 * sizeof(uint64_t), &FramePayloadOffset, 1},
+        {MemProfSectionStart + 3 * sizeof(uint64_t), &FrameTableOffset, 1},
     };
     OS.patch(PatchItems);
   }
