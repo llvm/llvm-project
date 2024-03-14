@@ -7208,8 +7208,8 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::TransformAttributedType(
-    TypeLocBuilder &TLB, AttributedTypeLoc TL) {
+QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
+                                                         AttributedTypeLoc TL) {
   const AttributedType *oldType = TL.getTypePtr();
   QualType modifiedType = getDerived().TransformType(TLB, TL.getModifiedLoc());
   if (modifiedType.isNull())
@@ -7227,12 +7227,6 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
     // Do not transform the equivalent type if it is equal to the modified type.
-    //
-    // This is because, 1. it’s the same type, instantiating it again will yield
-    // the same result anyway, and if it doesn't, then that could be a bug in
-    // and of itself, and 2. instantiating the same TypeLoc twice is a really
-    // bad idea if it's a FunctionProtoType, because instantiating the same
-    // ParmVarDecls twice will cause assertion failures.
     QualType equivalentType = modifiedType;
     if (TL.getModifiedLoc().getType() != TL.getEquivalentTypeLoc().getType()) {
       TypeLocBuilder AuxiliaryTLB;

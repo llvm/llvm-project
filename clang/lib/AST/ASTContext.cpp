@@ -3157,7 +3157,8 @@ QualType ASTContext::adjustFunctionResultType(QualType FunctionType,
         adjustFunctionResultType(AT->getEquivalentType(), ResultType));
   }
 
-  // Anything else must be a function type. Rebuild it with the new return value.
+  // Anything else must be a function type. Rebuild it with the new return
+  // value.
   const auto *FPT = FunctionType->castAs<FunctionProtoType>();
   return getFunctionType(ResultType, FPT->getParamTypes(),
                          FPT->getExtProtoInfo());
