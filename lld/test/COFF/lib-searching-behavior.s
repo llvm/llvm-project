@@ -53,12 +53,16 @@
 # LIB: 140001008: e8 03 00 00 00                   callq   0x140001010 <.text+0x10>
 # LIB: 140001010: 31 c0                            xorl    %eax, %eax
 
-# In this last test, we should pick up the import symbol from %t.lib.dll.a since it isn't defined anywhere else.
+# Here, we should pick up the import symbol from %t.lib.dll.a since it isn't defined anywhere else.
 # RUN: lld-link -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a %t.helper1.a
 # RUN: llvm-objdump --no-print-imm-hex -d %t.main.exe | FileCheck --check-prefix=LIB-IMP %s
 
 # LIB-IMP: 140001000 <.text>:
 # LIB-IMP: 140001010: ff 25 22 10 00 00            jmpq    *4130(%rip)
+
+# Test cmd-line archives
+# RUN: lld-link -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a -start-lib %t.helper1.o %t.helper2.o -end-lib
+# RUN: llvm-objdump --no-print-imm-hex -d %t.main.exe | FileCheck --check-prefix=LIB %s
 
     .globl main
     .text
