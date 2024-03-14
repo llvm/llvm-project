@@ -187,27 +187,6 @@ struct DisassembleOpInterface
   }
 };
 
-struct InsertOpInterface : public SparseBufferizableOpInterfaceExternalModel<
-                               InsertOpInterface, sparse_tensor::InsertOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    // InsertOp writes to memory.
-    return true;
-  }
-
-  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
-                                      const AnalysisState &state) const {
-    // InsertOp returns an alias of its operand.
-    assert(op->getNumResults() == 1);
-    return {{op->getOpResult(0), BufferRelation::Equivalent}};
-  }
-};
-
 struct NumberOfEntriesOpInterface
     : public SparseBufferizableOpInterfaceExternalModel<
           NumberOfEntriesOpInterface, sparse_tensor::NumberOfEntriesOp> {
@@ -324,7 +303,6 @@ void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
     sparse_tensor::ConvertOp::attachInterface<ConvertOpInterface>(*ctx);
     sparse_tensor::LoadOp::attachInterface<LoadOpInterface>(*ctx);
     sparse_tensor::NewOp::attachInterface<NewOpInterface>(*ctx);
-    sparse_tensor::InsertOp::attachInterface<InsertOpInterface>(*ctx);
     sparse_tensor::NumberOfEntriesOp::attachInterface<
         NumberOfEntriesOpInterface>(*ctx);
     sparse_tensor::AssembleOp::attachInterface<AssembleOpInterface>(*ctx);

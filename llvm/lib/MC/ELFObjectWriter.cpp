@@ -875,11 +875,10 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
                                  const MCAsmLayout &Layout) {
   MCSectionELF &Section = static_cast<MCSectionELF &>(Sec);
   StringRef SectionName = Section.getName();
-
-  auto &MC = Asm.getContext();
-  const auto &MAI = MC.getAsmInfo();
-
-  const DebugCompressionType CompressionType = MAI->compressDebugSections();
+  auto &Ctx = Asm.getContext();
+  const DebugCompressionType CompressionType =
+      Ctx.getTargetOptions() ? Ctx.getTargetOptions()->CompressDebugSections
+                             : DebugCompressionType::None;
   if (CompressionType == DebugCompressionType::None ||
       !SectionName.starts_with(".debug_")) {
     Asm.writeSectionData(W.OS, &Section, Layout);

@@ -1191,12 +1191,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
         continue;
 
-      // For SVR4, don't emit a move for the CR spill slot if we haven't
-      // spilled CRs.
-      if (isSVR4ABI && (PPC::CR2 <= Reg && Reg <= PPC::CR4)
-          && !MustSaveCR)
-        continue;
-
       // For 64-bit SVR4 when we have spilled CRs, the spill location
       // is SP+8, not a frame-relative slot.
       if (isSVR4ABI && isPPC64 && (PPC::CR2 <= Reg && Reg <= PPC::CR4)) {

@@ -4528,6 +4528,61 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
+/// Parse the argument to C++23's [[assume()]] attribute.
+bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
+                                        IdentifierInfo *AttrName,
+                                        SourceLocation AttrNameLoc,
+                                        SourceLocation *EndLoc) {
+  assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  T.consumeOpen();
+
+  // [dcl.attr.assume]: The expression is potentially evaluated.
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
+  TentativeParsingAction TPA(*this);
+  ExprResult Res(
+      Actions.CorrectDelayedTyposInExpr(ParseConditionalExpression()));
+  if (Res.isInvalid()) {
+    TPA.Commit();
+    SkipUntil(tok::r_paren, tok::r_square, StopAtSemi | StopBeforeMatch);
+    if (Tok.is(tok::r_paren))
+      T.consumeClose();
+    return true;
+  }
+
+  if (!Tok.isOneOf(tok::r_paren, tok::r_square)) {
+    // Emit a better diagnostic if this is an otherwise valid expression that
+    // is not allowed here.
+    TPA.Revert();
+    Res = ParseExpression();
+    if (!Res.isInvalid()) {
+      auto *E = Res.get();
+      Diag(E->getExprLoc(), diag::err_assume_attr_expects_cond_expr)
+          << AttrName << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
+          << FixItHint::CreateInsertion(PP.getLocForEndOfToken(E->getEndLoc()),
+                                        ")")
+          << E->getSourceRange();
+    }
+
+    T.consumeClose();
+    return true;
+  }
+
+  TPA.Commit();
+  ArgsUnion Assumption = Res.get();
+  auto RParen = Tok.getLocation();
+  T.consumeClose();
+  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), nullptr,
+               SourceLocation(), &Assumption, 1, ParsedAttr::Form::CXX11());
+
+  if (EndLoc)
+    *EndLoc = RParen;
+
+  return false;
+}
+
 /// ParseCXX11AttributeArgs -- Parse a C++11 attribute-argument-clause.
 ///
 /// [C++11] attribute-argument-clause:
@@ -4579,7 +4634,9 @@ bool Parser::ParseCXX11AttributeArgs(
     return true;
   }
 
-  if (ScopeName && ScopeName->isStr("omp")) {
+  // [[omp::directive]] and [[omp::sequence]] need special handling.
+  if (ScopeName && ScopeName->isStr("omp") &&
+      (AttrName->isStr("directive") || AttrName->isStr("sequence"))) {
     Diag(AttrNameLoc, getLangOpts().OpenMP >= 51
                           ? diag::warn_omp51_compat_attributes
                           : diag::ext_omp_attributes);
@@ -4596,7 +4653,12 @@ bool Parser::ParseCXX11AttributeArgs(
   if (ScopeName && (ScopeName->isStr("clang") || ScopeName->isStr("_Clang")))
     NumArgs = ParseClangAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc,
                                       ScopeName, ScopeLoc, Form);
-  else
+  // So does C++23's assume() attribute.
+  else if (!ScopeName && AttrName->isStr("assume")) {
+    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc))
+      return true;
+    NumArgs = 1;
+  } else
     NumArgs = ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc,
                                        ScopeName, ScopeLoc, Form);
 

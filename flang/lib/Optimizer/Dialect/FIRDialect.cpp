@@ -18,6 +18,8 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
+#include "flang/Optimizer/Dialect/FIRDialect.cpp.inc"
+
 using namespace fir;
 
 namespace {
@@ -58,9 +60,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
 };
 } // namespace
 
-fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect("fir", ctx, mlir::TypeID::get<FIROpsDialect>()) {
-  getContext()->loadDialect<mlir::LLVM::LLVMDialect>();
+void fir::FIROpsDialect::initialize() {
   registerTypes();
   registerAttributes();
   addOperations<
@@ -92,11 +92,6 @@ void fir::addFIRToLLVMIRExtension(mlir::DialectRegistry &registry) {
       +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
         dialect->addInterface<mlir::LLVMTranslationDialectInterface>();
       });
-}
-
-// anchor the class vtable to this compilation unit
-fir::FIROpsDialect::~FIROpsDialect() {
-  // do nothing
 }
 
 mlir::Type fir::FIROpsDialect::parseType(mlir::DialectAsmParser &parser) const {

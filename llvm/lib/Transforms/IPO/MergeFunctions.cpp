@@ -643,7 +643,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
        BI != BIE; ++BI) {
     // Examine DPValues as they happen "before" the instruction. Are they
     // connected to parameters?
-    for (DPValue &DPV : DPValue::filter(BI->getDbgValueRange())) {
+    for (DPValue &DPV : filterDbgVars(BI->getDbgRecordRange())) {
       if (DPV.isDbgValue() || DPV.isDbgAssign()) {
         ExamineDbgValue(&DPV, PDPVRelated);
       } else {
@@ -686,7 +686,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 
   // Collect the set of unrelated instructions and debug records.
   for (Instruction &I : *GEntryBlock) {
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange()))
       IsPDIRelated(&DPV, PDPVRelated, PDPVUnrelatedWL);
     IsPDIRelated(&I, PDIRelated, PDIUnrelatedWL);
   }

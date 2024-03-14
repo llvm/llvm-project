@@ -86,16 +86,22 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
   const auto MethodDecl =
       cxxMethodDecl(returns(hasCanonicalType(matchers::isReferenceToConst())))
           .bind(MethodDeclId);
-  const auto ReceiverExpr = declRefExpr(to(varDecl().bind(ObjectArgId)));
+  const auto ReceiverExpr =
+      ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ObjectArgId))));
+  const auto OnExpr = anyOf(
+      // Direct reference to `*this`: `a.f()` or `a->f()`.
+      ReceiverExpr,
+      // Access through dereference, typically used for `operator[]`: `(*a)[3]`.
+      unaryOperator(hasOperatorName("*"), hasUnaryOperand(ReceiverExpr)));
   const auto ReceiverType =
       hasCanonicalType(recordType(hasDeclaration(namedDecl(
           unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
 
-  return expr(anyOf(
-      cxxMemberCallExpr(callee(MethodDecl), on(ReceiverExpr),
-                        thisPointerType(ReceiverType)),
-      cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, ReceiverExpr),
-                          hasArgument(0, hasType(ReceiverType)))));
+  return expr(
+      anyOf(cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
+                              thisPointerType(ReceiverType)),
+            cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, OnExpr),
+                                hasArgument(0, hasType(ReceiverType)))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
@@ -136,10 +142,11 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
 static bool isInitializingVariableImmutable(
     const VarDecl &InitializingVar, const Stmt &BlockStmt, ASTContext &Context,
     const std::vector<StringRef> &ExcludedContainerTypes) {
-  if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context))
+  QualType T = InitializingVar.getType().getCanonicalType();
+  if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context,
+                         T->isPointerType() ? 1 : 0))
     return false;
 
-  QualType T = InitializingVar.getType().getCanonicalType();
   // The variable is a value type and we know it is only used as const. Safe
   // to reference it and avoid the copy.
   if (!isa<ReferenceType, PointerType>(T))
@@ -273,7 +280,9 @@ void UnnecessaryCopyInitialization::check(
       VarDeclStmt.isSingleDecl() && !NewVar.getLocation().isMacroID();
   const bool IsVarUnused = isVariableUnused(NewVar, BlockStmt, *Result.Context);
   const bool IsVarOnlyUsedAsConst =
-      isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context);
+      isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context,
+                        // `NewVar` is always of non-pointer type.
+                        0);
   const CheckContext Context{
       NewVar,   BlockStmt,   VarDeclStmt,         *Result.Context,
       IssueFix, IsVarUnused, IsVarOnlyUsedAsConst};

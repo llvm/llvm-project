@@ -51,7 +51,7 @@ define <4 x i32> @vec_add_of_not_decrement(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_add_of_not_decrement:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %t0 = sub <4 x i32> %x, %y
   %r = sub <4 x i32> %t0, <i32 1, i32 1, i32 1, i32 1>
