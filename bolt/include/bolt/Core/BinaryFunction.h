@@ -2056,6 +2056,14 @@ public:
   /// Returns false if disassembly failed.
   Error disassemble();
 
+  /// An external interface to register a branch while the function is in
+  /// disassembled state. Allows to make custom modifications to the
+  /// disassembler. E.g., a pre-CFG pass can add an instruction and register
+  /// a branch that will later be used during the CFG construction.
+  ///
+  /// Return a label at the branch destination.
+  MCSymbol *registerBranch(uint64_t Src, uint64_t Dst);
+
   Error handlePCRelOperand(MCInst &Instruction, uint64_t Address,
                            uint64_t Size);
 

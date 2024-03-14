@@ -2110,7 +2110,7 @@ Function *getFreshReductionFunc(Module &M) {
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
-    ArrayRef<ReductionInfo> ReductionInfos, bool IsNoWait) {
+    ArrayRef<ReductionInfo> ReductionInfos, bool IsNoWait, bool IsByRef) {
   for (const ReductionInfo &RI : ReductionInfos) {
     (void)RI;
     assert(RI.Variable && "expected non-null variable");
@@ -2197,17 +2197,29 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Type *ValueType = RI.ElementType;
-    Value *RedValue = Builder.CreateLoad(ValueType, RI.Variable,
-                                         "red.value." + Twine(En.index()));
+    // We have one less load for by-ref case because that load is now inside of
+    // the reduction region
+    Value *RedValue = nullptr;
+    if (!IsByRef) {
+      RedValue = Builder.CreateLoad(ValueType, RI.Variable,
+                                    "red.value." + Twine(En.index()));
+    }
     Value *PrivateRedValue =
         Builder.CreateLoad(ValueType, RI.PrivateVariable,
                            "red.private.value." + Twine(En.index()));
     Value *Reduced;
-    Builder.restoreIP(
-        RI.ReductionGen(Builder.saveIP(), RedValue, PrivateRedValue, Reduced));
+    if (IsByRef) {
+      Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RI.Variable,
+                                        PrivateRedValue, Reduced));
+    } else {
+      Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RedValue,
+                                        PrivateRedValue, Reduced));
+    }
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
-    Builder.CreateStore(Reduced, RI.Variable);
+    // for by-ref case, the load is inside of the reduction region
+    if (!IsByRef)
+      Builder.CreateStore(Reduced, RI.Variable);
   }
   Function *EndReduceFunc = getOrCreateRuntimeFunctionPtr(
       IsNoWait ? RuntimeFunction::OMPRTL___kmpc_end_reduce_nowait
@@ -2219,7 +2231,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   // function. There are no loads/stores here because they will be happening
   // inside the atomic elementwise reduction.
   Builder.SetInsertPoint(AtomicRedBlock);
-  if (CanGenerateAtomic) {
+  if (CanGenerateAtomic && !IsByRef) {
     for (const ReductionInfo &RI : ReductionInfos) {
       Builder.restoreIP(RI.AtomicReductionGen(Builder.saveIP(), RI.ElementType,
                                               RI.Variable, RI.PrivateVariable));
@@ -2257,7 +2269,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced));
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
-    Builder.CreateStore(Reduced, LHSPtr);
+    // store is inside of the reduction region when using by-ref
+    if (!IsByRef)
+      Builder.CreateStore(Reduced, LHSPtr);
   }
   Builder.CreateRetVoid();
 
@@ -4047,13 +4061,17 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-    FinalizeCallbackTy FiniCB, bool IsNowait, llvm::Value *DidIt) {
+    FinalizeCallbackTy FiniCB, bool IsNowait, ArrayRef<llvm::Value *> CPVars,
+    ArrayRef<llvm::Function *> CPFuncs) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  // If needed (i.e. not null), initialize `DidIt` with 0
-  if (DidIt) {
+  // If needed allocate and initialize `DidIt` with 0.
+  // DidIt: flag variable: 1=single thread; 0=not single thread.
+  llvm::Value *DidIt = nullptr;
+  if (!CPVars.empty()) {
+    DidIt = Builder.CreateAlloca(llvm::Type::getInt32Ty(Builder.getContext()));
     Builder.CreateStore(Builder.getInt32(0), DidIt);
   }
 
@@ -4070,17 +4088,36 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
   Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_single);
   Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
 
+  auto FiniCBWrapper = [&](InsertPointTy IP) {
+    FiniCB(IP);
+
+    // The thread that executes the single region must set `DidIt` to 1.
+    // This is used by __kmpc_copyprivate, to know if the caller is the
+    // single thread or not.
+    if (DidIt)
+      Builder.CreateStore(Builder.getInt32(1), DidIt);
+  };
+
   // generates the following:
   // if (__kmpc_single()) {
   //		.... single region ...
   // 		__kmpc_end_single
   // }
+  // __kmpc_copyprivate
   // __kmpc_barrier
 
-  EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
+  EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCBWrapper,
                        /*Conditional*/ true,
                        /*hasFinalize*/ true);
-  if (!IsNowait)
+
+  if (DidIt) {
+    for (size_t I = 0, E = CPVars.size(); I < E; ++I)
+      // NOTE BufSize is currently unused, so just pass 0.
+      createCopyPrivate(LocationDescription(Builder.saveIP(), Loc.DL),
+                        /*BufSize=*/ConstantInt::get(Int64, 0), CPVars[I],
+                        CPFuncs[I], DidIt);
+    // NOTE __kmpc_copyprivate already inserts a barrier
+  } else if (!IsNowait)
     createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
                   omp::Directive::OMPD_unknown, /* ForceSimpleCall */ false,
                   /* CheckCancelFlag */ false);

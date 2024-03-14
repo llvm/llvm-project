@@ -481,6 +481,10 @@ struct ControlDropUnitDims {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
     }
+    if (auto padOp = dyn_cast_or_null<tensor::PadOp>(op)) {
+      return llvm::to_vector(
+          llvm::seq<unsigned>(0, padOp.getSourceType().getRank()));
+    }
     return SmallVector<unsigned>{};
   };
 };
@@ -1074,6 +1078,11 @@ bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
                               ArrayRef<ReassociationIndices> dimSequences);
 
+struct CollapseResult {
+  SmallVector<Value> results;
+  LinalgOp collapsedOp;
+};
+
 /// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition
 /// to calling this method is that for each list in `foldedIterationDim`, the
 /// sequence of dimensions is contiguous in domains of all `indexing_maps` of
@@ -1081,9 +1090,8 @@ bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
 /// When valid, the method also collapses the operands of the op. Returns
 /// replacement values of the results of the original `linalgOp` by inserting
 /// reshapes to get back values of compatible types.
-template <typename LinalgType>
-FailureOr<SmallVector<Value>>
-collapseOpIterationDims(LinalgType op,
+FailureOr<CollapseResult>
+collapseOpIterationDims(LinalgOp op,
                         ArrayRef<ReassociationIndices> foldedIterationDims,
                         RewriterBase &rewriter);
 

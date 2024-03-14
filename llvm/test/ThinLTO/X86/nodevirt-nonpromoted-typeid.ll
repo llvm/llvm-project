@@ -55,7 +55,7 @@ entry:
   %this.addr = alloca ptr, align 8
   store ptr %this, ptr %this.addr, align 8
   %this1 = load ptr, ptr %this.addr
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1D, i64 0, inrange i32 0, i64 2), ptr %this1, align 8
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1D, i64 0, i32 0, i64 2), ptr %this1, align 8
   ret void
 }
 

@@ -21,9 +21,11 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
@@ -598,6 +600,143 @@ public:
   }
 };
 
+/// Sparse rewriting rule for the print operator. This operation is mainly used
+/// for debugging and testing. As such, it lowers to the vector.print operation
+/// which only require very light-weight runtime support.
+struct PrintRewriter : public OpRewritePattern<PrintOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(PrintOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto tensor = op.getTensor();
+    auto stt = getSparseTensorType(tensor);
+    // Header with NSE.
+    auto nse = rewriter.create<NumberOfEntriesOp>(loc, tensor);
+    rewriter.create<vector::PrintOp>(
+        loc, rewriter.getStringAttr("---- Sparse Tensor ----\nnse = "));
+    rewriter.create<vector::PrintOp>(loc, nse);
+    // Print run-time contents for dim/lvl sizes.
+    rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("dim = "));
+    printSizes(rewriter, loc, tensor, stt.getDimRank(), /*isDim=*/true);
+    rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("lvl = "));
+    printSizes(rewriter, loc, tensor, stt.getLvlRank(), /*isDim=*/false);
+    // Use the "codegen" foreach loop construct to iterate over
+    // all typical sparse tensor components for printing.
+    foreachFieldAndTypeInSparseTensor(stt, [&rewriter, &loc, &tensor,
+                                            &stt](Type, FieldIndex,
+                                                  SparseTensorFieldKind kind,
+                                                  Level l, LevelType) {
+      switch (kind) {
+      case SparseTensorFieldKind::StorageSpec: {
+        break;
+      }
+      case SparseTensorFieldKind::PosMemRef: {
+        auto lvl = constantIndex(rewriter, loc, l);
+        rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("pos["));
+        rewriter.create<vector::PrintOp>(
+            loc, lvl, vector::PrintPunctuation::NoPunctuation);
+        rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
+        auto pos = rewriter.create<ToPositionsOp>(loc, tensor, l);
+        printContents(rewriter, loc, pos);
+        break;
+      }
+      case SparseTensorFieldKind::CrdMemRef: {
+        auto lvl = constantIndex(rewriter, loc, l);
+        rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("crd["));
+        rewriter.create<vector::PrintOp>(
+            loc, lvl, vector::PrintPunctuation::NoPunctuation);
+        rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
+        Value crd = nullptr;
+        // TODO: eliminates ToCoordinateBufferOp!
+        if (stt.getAoSCOOStart() == l)
+          crd = rewriter.create<ToCoordinatesBufferOp>(loc, tensor);
+        else
+          crd = rewriter.create<ToCoordinatesOp>(loc, tensor, l);
+        printContents(rewriter, loc, crd);
+        break;
+      }
+      case SparseTensorFieldKind::ValMemRef: {
+        rewriter.create<vector::PrintOp>(loc,
+                                         rewriter.getStringAttr("values : "));
+        auto val = rewriter.create<ToValuesOp>(loc, tensor);
+        printContents(rewriter, loc, val);
+        break;
+      }
+      }
+      return true;
+    });
+    rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("----\n"));
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+private:
+  // Helper to print contents of a single memref. Note that for the "push_back"
+  // vectors, this prints the full capacity, not just the size. This is done
+  // on purpose, so that clients see how much storage has been allocated in
+  // total. Contents of the extra capacity in the buffer may be uninitialized
+  // (unless the flag enable-buffer-initialization is set to true).
+  //
+  // Generates code to print:
+  //    ( a0, a1, ... )
+  static void printContents(PatternRewriter &rewriter, Location loc,
+                            Value vec) {
+    // Open bracket.
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+    // For loop over elements.
+    auto zero = constantIndex(rewriter, loc, 0);
+    auto size = rewriter.create<memref::DimOp>(loc, vec, zero);
+    auto step = constantIndex(rewriter, loc, 1);
+    auto forOp = rewriter.create<scf::ForOp>(loc, zero, size, step);
+    rewriter.setInsertionPointToStart(forOp.getBody());
+    auto idx = forOp.getInductionVar();
+    auto val = rewriter.create<memref::LoadOp>(loc, vec, idx);
+    if (llvm::isa<ComplexType>(val.getType())) {
+      // Since the vector dialect does not support complex types in any op,
+      // we split those into (real, imag) pairs here.
+      Value real = rewriter.create<complex::ReOp>(loc, val);
+      Value imag = rewriter.create<complex::ImOp>(loc, val);
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+      rewriter.create<vector::PrintOp>(loc, real,
+                                       vector::PrintPunctuation::Comma);
+      rewriter.create<vector::PrintOp>(loc, imag,
+                                       vector::PrintPunctuation::Close);
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
+    } else {
+      rewriter.create<vector::PrintOp>(loc, val,
+                                       vector::PrintPunctuation::Comma);
+    }
+    rewriter.setInsertionPointAfter(forOp);
+    // Close bracket and end of line.
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Close);
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::NewLine);
+  }
+
+  // Helper method to print run-time lvl/dim sizes.
+  static void printSizes(PatternRewriter &rewriter, Location loc, Value tensor,
+                         unsigned size, bool isDim) {
+    // Open bracket.
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+    // Print unrolled contents (dimop requires constant value).
+    for (unsigned i = 0; i < size; i++) {
+      auto idx = constantIndex(rewriter, loc, i);
+      Value val;
+      if (isDim)
+        val = rewriter.create<tensor::DimOp>(loc, tensor, idx);
+      else
+        val = rewriter.create<LvlOp>(loc, tensor, idx);
+      rewriter.create<vector::PrintOp>(
+          loc, val,
+          i != size - 1 ? vector::PrintPunctuation::Comma
+                        : vector::PrintPunctuation::NoPunctuation);
+    }
+    // Close bracket and end of line.
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Close);
+    rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::NewLine);
+  }
+};
+
 /// Sparse rewriting rule for sparse-to-sparse reshape operator.
 struct TensorReshapeRewriter : public OpRewritePattern<tensor::ReshapeOp> {
 public:
@@ -678,7 +817,8 @@ public:
           reshapeCvs(builder, loc, expandReass, collapsedSizes, collapsedDcvs,
                      dstSizes, dstDcvs);
 
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
+          auto t =
+              builder.create<tensor::InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 
@@ -762,7 +902,8 @@ public:
           SmallVector<Value> dstDcvs;
           reshapeCvs(builder, loc, op.getReassociationIndices(), srcSizes,
                      srcDcvs, dstSizes, dstDcvs);
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
+          auto t =
+              builder.create<tensor::InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
 
@@ -1124,7 +1265,7 @@ public:
     }
 
     Value vals = loopEmitter.getValBuffer()[0];
-    Value pos = loopEmitter.getValPosits(0);
+    SmallVector<Value> pos = loopEmitter.getValPosits(0);
     // Loads the value from sparse tensor using position-index;
     // loads the value from dense tensor using coords.
     Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pos)
@@ -1284,7 +1425,8 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 
 void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd, FuseTensorCast,
-               GenSemiRingReduction, GenSemiRingSelect>(patterns.getContext());
+               GenSemiRingReduction, GenSemiRingSelect, PrintRewriter>(
+      patterns.getContext());
 }
 
 void mlir::populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,

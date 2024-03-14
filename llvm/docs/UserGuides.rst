@@ -57,7 +57,6 @@ intermediate LLVM representation.
    JITLink
    NewPassManager
    NVPTXUsage
-   Phabricator
    Passes
    ReportingGuide
    ResponseGuide
@@ -182,7 +181,7 @@ Optimizations
 
 :doc:`RemoveDIsDebugInfo`
    This is a migration guide describing how to move from debug info using
-   intrinsics such as dbg.value to using the non-instruction DPValue object.
+   intrinsics such as dbg.value to using the non-instruction DbgRecord object.
 
 :doc:`InstrProfileFormat`
    This document explains two binary formats of instrumentation-based profiles.

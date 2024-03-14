@@ -1277,7 +1277,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
                                   FrameDIVar, DBuilder.createExpression(),
                                   DILoc, DPValue::LocationType::Declare);
     BasicBlock::iterator It = Shape.getInsertPtAfterFramePtr();
-    It->getParent()->insertDPValueBefore(NewDPV, It);
+    It->getParent()->insertDbgRecordBefore(NewDPV, It);
   } else {
     DBuilder.insertDeclare(Shape.FramePtr, FrameDIVar,
                            DBuilder.createExpression(), DILoc,
@@ -1891,7 +1891,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
                 new DPValue(ValueAsMetadata::get(CurrentReload),
                             DDI->getVariable(), DDI->getExpression(),
                             DDI->getDebugLoc(), DPValue::LocationType::Declare);
-            Builder.GetInsertPoint()->getParent()->insertDPValueBefore(
+            Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
                 NewDPV, Builder.GetInsertPoint());
           } else {
             DIBuilder(*CurrentBlock->getParent()->getParent(), AllowUnresolved)
@@ -1925,7 +1925,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       U->replaceUsesOfWith(Def, CurrentReload);
       // Instructions are added to Def's user list if the attached
       // debug records use Def. Update those now.
-      for (DPValue &DPV : DPValue::filter(U->getDbgValueRange()))
+      for (DPValue &DPV : filterDbgVars(U->getDbgRecordRange()))
         DPV.replaceVariableLocationOp(Def, CurrentReload, true);
     }
   }
@@ -2996,7 +2996,7 @@ void coro::salvageDebugInfo(
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
       DPV.removeFromParent();
-      (*InsertPt)->getParent()->insertDPValueBefore(&DPV, *InsertPt);
+      (*InsertPt)->getParent()->insertDbgRecordBefore(&DPV, *InsertPt);
     }
   }
 }

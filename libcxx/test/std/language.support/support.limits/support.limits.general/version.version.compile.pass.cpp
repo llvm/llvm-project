@@ -157,6 +157,7 @@
     __cpp_lib_ranges_as_rvalue                       202207L [C++23]
     __cpp_lib_ranges_chunk                           202202L [C++23]
     __cpp_lib_ranges_chunk_by                        202202L [C++23]
+    __cpp_lib_ranges_contains                        202207L [C++23]
     __cpp_lib_ranges_iota                            202202L [C++23]
     __cpp_lib_ranges_join_with                       202202L [C++23]
     __cpp_lib_ranges_repeat                          202207L [C++23]
@@ -769,6 +770,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_contains
+#   error "__cpp_lib_ranges_contains should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -1601,6 +1606,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_contains
+#   error "__cpp_lib_ranges_contains should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -2604,6 +2613,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_contains
+#   error "__cpp_lib_ranges_contains should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -3886,6 +3899,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_contains
+#   error "__cpp_lib_ranges_contains should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -5350,6 +5367,13 @@
 #   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
 # endif
 
+# ifndef __cpp_lib_ranges_contains
+#   error "__cpp_lib_ranges_contains should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_contains != 202207L
+#   error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_iota
 #     error "__cpp_lib_ranges_iota should be defined in c++23"
@@ -5396,17 +5420,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_starts_ends_with
-#     error "__cpp_lib_ranges_starts_ends_with should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_starts_ends_with != 202106L
-#     error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_starts_ends_with
-#     error "__cpp_lib_ranges_starts_ends_with should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_starts_ends_with
+#   error "__cpp_lib_ranges_starts_ends_with should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_starts_ends_with != 202106L
+#   error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges_to_container
@@ -7061,6 +7079,13 @@
 #   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 # endif
 
+# ifndef __cpp_lib_ranges_contains
+#   error "__cpp_lib_ranges_contains should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_contains != 202207L
+#   error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_iota
 #     error "__cpp_lib_ranges_iota should be defined in c++26"
@@ -7107,17 +7132,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_starts_ends_with
-#     error "__cpp_lib_ranges_starts_ends_with should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_starts_ends_with != 202106L
-#     error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_starts_ends_with
-#     error "__cpp_lib_ranges_starts_ends_with should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_starts_ends_with
+#   error "__cpp_lib_ranges_starts_ends_with should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_starts_ends_with != 202106L
+#   error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++26"
 # endif
 
 # ifndef __cpp_lib_ranges_to_container
@@ -7362,17 +7381,11 @@
 #   error "__cpp_lib_ssize should have the value 201902L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_sstream_from_string_view
-#     error "__cpp_lib_sstream_from_string_view should be defined in c++26"
-#   endif
-#   if __cpp_lib_sstream_from_string_view != 202306L
-#     error "__cpp_lib_sstream_from_string_view should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_sstream_from_string_view
-#     error "__cpp_lib_sstream_from_string_view should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_sstream_from_string_view
+#   error "__cpp_lib_sstream_from_string_view should be defined in c++26"
+# endif
+# if __cpp_lib_sstream_from_string_view != 202306L
+#   error "__cpp_lib_sstream_from_string_view should have the value 202306L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

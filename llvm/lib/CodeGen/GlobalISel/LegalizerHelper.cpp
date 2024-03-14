@@ -2495,6 +2495,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_SHUFFLE_VECTOR:
     // Perform operation at larger width (any extension is fines here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
@@ -4003,7 +4004,14 @@ Register LegalizerHelper::getVectorElementPointer(Register VecPtr, LLT VecTy,
 
   Index = clampVectorIndex(MIRBuilder, Index, VecTy);
 
-  LLT IdxTy = MRI.getType(Index);
+  // Convert index to the correct size for the address space.
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AS = MRI.getType(VecPtr).getAddressSpace();
+  unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
+  LLT IdxTy = MRI.getType(Index).changeElementSize(IndexSizeInBits);
+  if (IdxTy != MRI.getType(Index))
+    Index = MIRBuilder.buildSExtOrTrunc(IdxTy, Index).getReg(0);
+
   auto Mul = MIRBuilder.buildMul(IdxTy, Index,
                                  MIRBuilder.buildConstant(IdxTy, EltSize));
 
@@ -8390,7 +8398,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 
   // For vector types create a G_BUILD_VECTOR.
   if (Ty.isVector())
-    Val = MIB.buildSplatVector(Ty, Val).getReg(0);
+    Val = MIB.buildSplatBuildVector(Ty, Val).getReg(0);
 
   return Val;
 }

@@ -468,6 +468,7 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
 bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
   int LatchIdx = PN->getBasicBlockIndex(LatchBlock);
+  assert(LatchIdx != -1 && "LatchBlock is not a case in this PHINode");
   Value *IncV = PN->getIncomingValue(LatchIdx);
 
   for (User *U : PN->users())
@@ -633,7 +634,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
         // RemoveDIs: do the same as below for DPValues.
         if (Block->IsNewDbgInfoFormat) {
           for (DPValue &DPV : llvm::make_early_inc_range(
-                   DPValue::filter(I.getDbgValueRange()))) {
+                   filterDbgVars(I.getDbgRecordRange()))) {
             DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                               DPV.getDebugLoc().get());
             if (!DeadDebugSet.insert(Key).second)
@@ -676,7 +677,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // repeatedly inserted before the first instruction. To replicate this
     // behaviour, do it backwards.
     for (DPValue *DPV : llvm::reverse(DeadDPValues))
-      ExitBlock->insertDPValueBefore(DPV, InsertDbgValueBefore);
+      ExitBlock->insertDbgRecordBefore(DPV, InsertDbgValueBefore);
   }
 
   // Remove the block from the reference counting scheme, so that we can
@@ -1033,15 +1034,6 @@ CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
   }
 }
 
-Value *llvm::createAnyOfOp(IRBuilderBase &Builder, Value *StartVal,
-                           RecurKind RK, Value *Left, Value *Right) {
-  if (auto VTy = dyn_cast<VectorType>(Left->getType()))
-    StartVal = Builder.CreateVectorSplat(VTy->getElementCount(), StartVal);
-  Value *Cmp =
-      Builder.CreateCmp(CmpInst::ICMP_NE, Left, StartVal, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, Left, Right, "rdx.select");
-}
-
 Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
@@ -1150,16 +1142,13 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
     NewVal = SI->getTrueValue();
   }
 
-  // Create a splat vector with the new value and compare this to the vector
-  // we want to reduce.
-  ElementCount EC = cast<VectorType>(Src->getType())->getElementCount();
-  Value *Right = Builder.CreateVectorSplat(EC, InitVal);
-  Value *Cmp =
-      Builder.CreateCmp(CmpInst::ICMP_NE, Src, Right, "rdx.select.cmp");
-
   // If any predicate is true it means that we want to select the new value.
-  Cmp = Builder.CreateOrReduce(Cmp);
-  return Builder.CreateSelect(Cmp, NewVal, InitVal, "rdx.select");
+  Value *AnyOf =
+      Src->getType()->isVectorTy() ? Builder.CreateOrReduce(Src) : Src;
+  // The compares in the loop may yield poison, which propagates through the
+  // bitwise ORs. Freeze it here before the condition is used.
+  AnyOf = Builder.CreateFreeze(AnyOf);
+  return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
