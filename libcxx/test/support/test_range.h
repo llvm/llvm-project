@@ -97,11 +97,12 @@ concept CanBePiped = requires(View&& view, T&& t) {
 };
 
 template <class T, class U>
-concept weakly_equality_comparable_with = requires(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u) {
-  { t == u } -> std::same_as<bool>;
-  { t != u } -> std::same_as<bool>;
-  { u == t } -> std::same_as<bool>;
-  { u != t } -> std::same_as<bool>;
-};
+concept weakly_equality_comparable_with =
+    requires(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u) {
+      { t == u } -> std::same_as<bool>;
+      { t != u } -> std::same_as<bool>;
+      { u == t } -> std::same_as<bool>;
+      { u != t } -> std::same_as<bool>;
+    };
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H
