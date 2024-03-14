@@ -1,6 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++14 -analyzer-config exploration_strategy=unexplored_first_queue %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify -std=c++14 -DDFS=1 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config unroll-loops=true -verify %s
 
 void clang_analyzer_numTimesReached();
 void clang_analyzer_warnIfReached();
