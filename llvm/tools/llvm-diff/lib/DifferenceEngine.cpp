@@ -131,6 +131,9 @@ class FunctionDifferenceEngine {
   // committed to the Values map.
   DenseSet<std::pair<const Value *, const Value *>> TentativeValues;
 
+  // The current mapping of whether a type pair is the same
+  DenseMap<std::pair<const Type *, const Type *>, bool> IsSameTypes;
+
   // Equivalence Assumptions
   //
   // For basic blocks in loops, some values in phi nodes may depend on
@@ -217,6 +220,42 @@ class FunctionDifferenceEngine {
     return llvm::count_if(predecessors(Block), [&](const BasicBlock *Pred) {
       return !Blocks.contains(Pred);
     });
+  }
+
+  bool isSameType(const Type *LT, const Type *RT) {
+    if (LT == RT)
+      return true;
+    if (LT->getTypeID() != RT->getTypeID())
+      return false;
+
+    auto Key = std::make_pair(LT, RT);
+    if (auto It = IsSameTypes.find(Key); It != IsSameTypes.end())
+      return It->second;
+
+    bool IsSame;
+    if (isa<StructType>(LT)) {
+      auto *LST = dyn_cast<StructType>(LT);
+      auto *RST = dyn_cast<StructType>(RT);
+      IsSame = std::equal(
+          LST->element_begin(), LST->element_end(), RST->element_begin(),
+          RST->element_end(),
+          [this](const Type *L, const Type *R) { return isSameType(L, R); });
+    } else if (isa<VectorType>(LT)) {
+      auto *LVT = dyn_cast<VectorType>(LT);
+      auto *RVT = dyn_cast<VectorType>(RT);
+      IsSame = LVT->getElementCount() == RVT->getElementCount() &&
+               isSameType(LVT->getElementType(), RVT->getElementType());
+    } else if (isa<ArrayType>(LT)) {
+      auto *LAT = dyn_cast<ArrayType>(LT);
+      auto *RAT = dyn_cast<ArrayType>(RT);
+      IsSame = LAT->getNumElements() == RAT->getNumElements() &&
+               isSameType(LAT->getElementType(), RAT->getElementType());
+    } else {
+      return false;
+    }
+
+    IsSameTypes[Key] = IsSame;
+    return IsSame;
   }
 
   typedef std::pair<const BasicBlock *, const BasicBlock *> BlockPair;
@@ -377,12 +416,6 @@ class FunctionDifferenceEngine {
       return true;
     }
 
-    if (!L->hasSameSpecialState(R)) {
-      if (Complain)
-        Engine.log("special states differ");
-      return true;
-    }
-
     if (isa<CmpInst>(L)) {
       if (cast<CmpInst>(L)->getPredicate()
             != cast<CmpInst>(R)->getPredicate()) {
@@ -390,9 +423,37 @@ class FunctionDifferenceEngine {
         return true;
       }
     } else if (isa<LoadInst>(L)) {
-      if (cast<LoadInst>(L)->getType() != cast<LoadInst>(R)->getType()) {
+      if (!isSameType(cast<LoadInst>(L)->getType(),
+                      cast<LoadInst>(R)->getType())) {
         if (Complain)
           Engine.log("load types differ");
+        return true;
+      }
+
+      if (!L->hasSameSpecialState(R)) {
+        if (Complain)
+          Engine.log("special states differ");
+        return true;
+      }
+    } else if (isa<AllocaInst>(L)) {
+      const AllocaInst *LI = cast<AllocaInst>(L);
+      const AllocaInst *RI = cast<AllocaInst>(R);
+
+      if (!isSameType(LI->getAllocatedType(), RI->getAllocatedType())) {
+        if (Complain)
+          Engine.log("alloca allocated type differ");
+        return true;
+      }
+      if (LI->getAlign() != RI->getAlign()) {
+        if (Complain)
+          Engine.log("alloca alignment differ");
+        return true;
+      }
+    } else if (isa<GetElementPtrInst>(L)) {
+      if (!isSameType(cast<GetElementPtrInst>(L)->getSourceElementType(),
+                      cast<GetElementPtrInst>(R)->getSourceElementType())) {
+        if (Complain)
+          Engine.log("getelementptr source element type differ");
         return true;
       }
     } else if (isa<CallInst>(L)) {
@@ -541,6 +602,12 @@ class FunctionDifferenceEngine {
       return Difference;
     } else if (isa<UnreachableInst>(L)) {
       return false;
+    } else {
+      if (!L->hasSameSpecialState(R)) {
+        if (Complain)
+          Engine.log("special states differ");
+        return true;
+      }
     }
 
     if (L->getNumOperands() != R->getNumOperands()) {
