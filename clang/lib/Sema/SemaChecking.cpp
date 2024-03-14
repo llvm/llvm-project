@@ -5295,13 +5295,14 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_isinf:
+  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     if (checkArgCount(*this, TheCall, 1))
       return true;
     if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
       return true;
     SetElementTypeAsReturnType(this, TheCall, this->Context.BoolTy);
     break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_rcp:
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
