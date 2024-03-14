@@ -33,21 +33,7 @@ class TestSwiftOtherArchDylib(TestBase):
         self.expect("expression 1", substrs=['1'])
 
         # Check the types log.
-        import re
-        import io
-        types_logfile = io.open(types_log, "r", encoding='utf-8')
-        re0 = re.compile(r'SwiftASTContextForExpressions::LogConfiguration().*arm64-apple-macosx')
-        re1 = re.compile(r'Enabling per-module Swift scratch context')
-        re2 = re.compile(r'wiftASTContextForExpressions..OtherArch..::LogConfiguration().*arm64e-apple-macosx')
-        found = 0
-        for line in types_logfile:
-            if self.TraceOn():
-                print(line[:-1])
-            if found == 0 and re0.search(line):
-                found = 1
-            elif found == 1 and re1.search(line):
-                found = 2
-            elif found == 2 and re2.search(line):
-                found = 3
-                break
-        self.assertEquals(found, 3)
+        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        # CHECK: SwiftASTContextForExpressions::LogConfiguration() arm64-apple-macosx
+        # CHECK: Enabling per-module Swift scratch context
+        # CHECK: {{SwiftASTContextForExpressions..OtherArch..}}::LogConfiguration() arm64e-apple-macosx
