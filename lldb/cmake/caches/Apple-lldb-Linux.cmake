@@ -5,5 +5,6 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   liblldb
   lldb-argdumper
   lldb-server
+  lldb-python-scripts
   repl_swift
   CACHE STRING "")
