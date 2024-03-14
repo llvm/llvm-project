@@ -1255,12 +1255,12 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   Value *PC = memtag::getPC(TargetTriple, IRB);
   Value *FP = getCachedFP(IRB);
 
-  // Mix SP and PC.
+  // Mix FP and PC.
   // Assumptions:
   // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
-  // SP is 0xsssssssssssSSSS0  (4 lower bits are zero)
-  // We only really need ~20 lower non-zero bits (SSSS), so we mix like this:
-  //       0xSSSSPPPPPPPPPPPP
+  // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
+  // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
+  //       0xFFFFPPPPPPPPPPPP
   FP = IRB.CreateShl(FP, 44);
   return IRB.CreateOr(PC, FP);
 }
