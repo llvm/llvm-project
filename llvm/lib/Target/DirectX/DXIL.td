@@ -274,8 +274,18 @@ def Round : DXILOpMapping<26, unary, int_round,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def FMax : DXILOpMapping<35, binary, int_maxnum,
+                         "Float maximum. FMax(a,b) = a > b ? a : b">;
+def FMin : DXILOpMapping<36, binary, int_minnum,
+                         "Float minimum. FMin(a,b) = a < b ? a : b">;
+def SMax : DXILOpMapping<37, binary, int_smax,
+                         "Signed integer maximum. SMax(a,b) = a > b ? a : b">;
+def SMin : DXILOpMapping<38, binary, int_smin,
+                         "Signed integer minimum. SMin(a,b) = a < b ? a : b">;
 def UMax : DXILOpMapping<39, binary, int_umax,
                          "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
+def UMin : DXILOpMapping<40, binary, int_umin,
+                         "Unsigned integer minimum. UMin(a,b) = a < b ? a : b">;
 def FMad : DXILOpMapping<46, tertiary, int_fmuladd,
                          "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m * a + b.">;
 def IMad : DXILOpMapping<48, tertiary, int_dx_imad,

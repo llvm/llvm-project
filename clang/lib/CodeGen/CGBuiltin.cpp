@@ -17981,6 +17981,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
         Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_clamp: {
+    Value *OpX = EmitScalarExpr(E->getArg(0));
+    Value *OpMin = EmitScalarExpr(E->getArg(1));
+    Value *OpMax = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/OpX->getType(), Intrinsic::dx_clamp,
+        ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));

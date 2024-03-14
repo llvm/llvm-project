@@ -35,6 +35,7 @@ static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::exp:
   case Intrinsic::dx_any:
+  case Intrinsic::dx_clamp:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_rcp:
     return true;
@@ -132,12 +133,59 @@ static bool expandRcpIntrinsic(CallInst *Orig) {
   return true;
 }
 
+static Intrinsic::IndependentIntrinsics
+getCorrectMaxIntrinsic(Type *elemTy) {
+  if(elemTy->isVectorTy())
+    elemTy = elemTy->getScalarType();
+  if (elemTy->isIntegerTy()) {
+      const llvm::IntegerType* intType = llvm::cast<llvm::IntegerType>(elemTy);
+      if (intType->getSignBit())
+        return Intrinsic::smax;
+    return Intrinsic::umax;
+  }
+  assert(elemTy->isFloatingPointTy());
+  return Intrinsic::maxnum;
+}
+
+static Intrinsic::IndependentIntrinsics
+getCorrectMinIntrinsic(Type *elemTy) {
+  if(elemTy->isVectorTy())
+    elemTy = elemTy->getScalarType();
+  if (elemTy->isIntegerTy()) {
+      const llvm::IntegerType* intType = llvm::cast<llvm::IntegerType>(elemTy);
+      if (intType->getSignBit())
+        return Intrinsic::smin;
+    return Intrinsic::umin;
+  }
+  assert(elemTy->isFloatingPointTy());
+  return Intrinsic::minnum;
+}
+
+static bool expandClampIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Value *Min = Orig->getOperand(1);
+  Value *Max = Orig->getOperand(2);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  auto *MaxCall =
+      Builder.CreateIntrinsic(Ty, getCorrectMaxIntrinsic(Ty), {X, Min}, nullptr, "dx.max");
+  auto *MinCall =
+      Builder.CreateIntrinsic(Ty, getCorrectMinIntrinsic(Ty), {MaxCall, Max}, nullptr, "dx.min");
+  
+  Orig->replaceAllUsesWith(MinCall);
+  Orig->eraseFromParent();
+  return true;
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::exp:
     return expandExpIntrinsic(Orig);
   case Intrinsic::dx_any:
     return expandAnyIntrinsic(Orig);
+  case Intrinsic::dx_clamp:
+    return expandClampIntrinsic(Orig);
   case Intrinsic::dx_lerp:
     return expandLerpIntrinsic(Orig);
   case Intrinsic::dx_rcp:

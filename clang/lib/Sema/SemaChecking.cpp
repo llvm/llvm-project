@@ -5303,6 +5303,17 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_clamp: {
+    if (checkArgCount(*this, TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(this, TheCall))
+      return true;
+    if (SemaBuiltinElementwiseTernaryMath(
+            TheCall, /*CheckForFloatArgs*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     if (checkArgCount(*this, TheCall, 2))
       return true;
@@ -5351,7 +5362,9 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckVectorElementCallArgs(this, TheCall))
       return true;
-    if (SemaBuiltinElementwiseTernaryMath(TheCall, /*CheckForFloatArgs*/ false))
+    if (SemaBuiltinElementwiseTernaryMath(
+            TheCall, /*CheckForFloatArgs*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
       return true;
   }
   }
