@@ -53,12 +53,7 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Macros = [
-    SimpleMacroDef<"EOF", "-1">,
-  ];
-  let Types = [
-    "size_t"
-  ];
+  let Types = ["size_t"];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
