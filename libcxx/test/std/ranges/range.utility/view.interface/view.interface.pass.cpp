@@ -42,7 +42,7 @@ struct InputRange : std::ranges::view_interface<InputRange> {
 struct SizedInputRange : std::ranges::view_interface<SizedInputRange> {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
   constexpr InputIter begin() const { return InputIter(buff); }
-  constexpr sized_sentinel<InputIter> end() const { return sized_sentinel(InputIter(buff + 8)); }
+  constexpr sentinel_wrapper<InputIter> end() const { return sentinel_wrapper(InputIter(buff + 8)); }
   constexpr std::size_t size() const { return 8; }
 };
 static_assert(std::ranges::sized_range<SizedInputRange>);
@@ -170,6 +170,16 @@ constexpr bool testEmpty() {
   static_assert(!BoolOpInvocable<InputRange>);
   static_assert(BoolOpInvocable<SizedInputRange>);
   static_assert( BoolOpInvocable<ForwardRange>);
+
+  SizedInputRange sizedInputRange;
+  assert(!sizedInputRange.empty());
+  assert(!static_cast<SizedInputRange const&>(sizedInputRange).empty());
+
+  assert(sizedInputRange);
+  assert(static_cast<SizedInputRange const&>(sizedInputRange));
+
+  assert(!std::ranges::empty(sizedInputRange));
+  assert(!std::ranges::empty(static_cast<SizedInputRange const&>(sizedInputRange)));
 
   ForwardRange forwardRange;
   assert(!forwardRange.empty());
