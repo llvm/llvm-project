@@ -179,11 +179,11 @@ define void @addsub0(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i32> [[TMP3]], <i32 -2, i32 -3>
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <2 x i32> [[TMP3]], <i32 -2, i32 -3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[INCDEC_PTR3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <2 x i32> [[TMP2]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[INCDEC_PTR3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -212,11 +212,11 @@ define void @addsub1(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 2
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> [[TMP0]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
@@ -531,11 +531,11 @@ define void @addsub0f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 2
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP3]], <float -2.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP3]], <float -2.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[INCDEC_PTR3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP2]], <float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x float> [[TMP2]], <float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[INCDEC_PTR3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -564,11 +564,11 @@ define void @addsub1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 2
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[TMP1]], <float -1.000000e+00, float -1.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x float> [[TMP1]], <float -1.000000e+00, float -1.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP4]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP0]], <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x float> [[TMP0]], <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 3
