@@ -227,7 +227,7 @@ public:
         detail::getAnalysisResult<PassInstrumentationAnalysis>(
             AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
 
-    // RemoveDIs: if requested, convert debug-info to DPValue representation
+    // RemoveDIs: if requested, convert debug-info to DbgRecord representation
     // for duration of these passes.
     bool ShouldConvertDbgInfo = shouldConvertDbgInfo(IR);
     if (ShouldConvertDbgInfo)
