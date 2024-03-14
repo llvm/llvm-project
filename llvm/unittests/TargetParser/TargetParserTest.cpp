@@ -2314,13 +2314,6 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"aes", "sha2", "sha3", "sm4"}},
 
-        // +sve implies +f32mm if the base architecture is v8.6A+ or v9.1A+, but
-        // not earlier architectures.
-        {AArch64::ARMV8_5A, {"sve"}, {"sve"}, {"f32mm"}},
-        {AArch64::ARMV9A, {"sve"}, {"sve"}, {"f32mm"}},
-        {AArch64::ARMV8_6A, {"sve"}, {"sve", "f32mm"}, {}},
-        {AArch64::ARMV9_1A, {"sve"}, {"sve", "f32mm"}, {}},
-
         // +fp16 implies +fp16fml for v8.4A+, but not v9.0-A+
         {AArch64::ARMV8_3A, {"fp16"}, {"fullfp16"}, {"fp16fml"}},
         {AArch64::ARMV9A, {"fp16"}, {"fullfp16"}, {"fp16fml"}},
@@ -2487,10 +2480,10 @@ AArch64ExtensionDependenciesBaseCPUTestParams
          {}},
         {"cortex-a520",
          {},
-         {"v9.2a",    "bf16",     "crc",     "dotprod", "f32mm",        "flagm",
-          "fp-armv8", "fullfp16", "fp16fml", "i8mm",    "lse",          "mte",
-          "pauth",    "perfmon",  "predres", "ras",     "rcpc",         "rdm",
-          "sb",       "neon",     "ssbs",    "sve",     "sve2-bitperm", "sve2"},
+         {"v9.2a",    "bf16",    "crc",  "dotprod",      "flagm", "fp-armv8",
+          "fullfp16", "fp16fml", "i8mm", "lse",          "mte",   "pauth",
+          "perfmon",  "predres", "ras",  "rcpc",         "rdm",   "sb",
+          "neon",     "ssbs",    "sve",  "sve2-bitperm", "sve2"},
          {}},
 
         // Negative modifiers
