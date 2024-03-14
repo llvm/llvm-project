@@ -18,6 +18,28 @@ using namespace llvm;
 
 namespace {
 
+TEST(LowLevelTypeTest, Token) {
+  LLVMContext C;
+  DataLayout DL("");
+
+  const LLT TTy = LLT::token();
+
+  // Test kind.
+  ASSERT_TRUE(TTy.isValid());
+  ASSERT_TRUE(TTy.isScalar());
+  ASSERT_TRUE(TTy.isToken());
+
+  ASSERT_FALSE(TTy.isPointer());
+  ASSERT_FALSE(TTy.isVector());
+
+  const LLT STy = LLT::scalar(0);
+  ASSERT_TRUE(STy == TTy);
+
+  // Test equality operators.
+  EXPECT_TRUE(TTy == TTy);
+  EXPECT_FALSE(TTy != TTy);
+}
+
 TEST(LowLevelTypeTest, Scalar) {
   LLVMContext C;
   DataLayout DL("");
@@ -31,6 +53,8 @@ TEST(LowLevelTypeTest, Scalar) {
 
     ASSERT_FALSE(Ty.isPointer());
     ASSERT_FALSE(Ty.isVector());
+
+    EXPECT_TRUE(S != 0 || Ty.isToken());
 
     // Test sizes.
     EXPECT_EQ(S, Ty.getSizeInBits());
@@ -77,6 +101,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       ASSERT_FALSE(VTy.isScalar());
       ASSERT_FALSE(VTy.isPointer());
+      ASSERT_FALSE(VTy.isToken());
 
       // Test sizes.
       EXPECT_EQ(S, VTy.getScalarSizeInBits());
@@ -300,6 +325,7 @@ TEST(LowLevelTypeTest, Invalid) {
   ASSERT_FALSE(Ty.isScalar());
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
+  ASSERT_FALSE(Ty.isToken());
 }
 
 TEST(LowLevelTypeTest, Divide) {
