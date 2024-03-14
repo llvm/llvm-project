@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClauseProcessor.h"
+#include "Clauses.h"
 
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
@@ -30,64 +31,55 @@ static void checkMapType(mlir::Location location, mlir::Type type) {
 }
 
 static mlir::omp::ScheduleModifier
-translateScheduleModifier(const Fortran::parser::OmpScheduleModifierType &m) {
-  switch (m.v) {
-  case Fortran::parser::OmpScheduleModifierType::ModType::Monotonic:
+translateScheduleModifier(const omp::clause::Schedule::ModType &m) {
+  switch (m) {
+  case omp::clause::Schedule::ModType::Monotonic:
     return mlir::omp::ScheduleModifier::monotonic;
-  case Fortran::parser::OmpScheduleModifierType::ModType::Nonmonotonic:
+  case omp::clause::Schedule::ModType::Nonmonotonic:
     return mlir::omp::ScheduleModifier::nonmonotonic;
-  case Fortran::parser::OmpScheduleModifierType::ModType::Simd:
+  case omp::clause::Schedule::ModType::Simd:
     return mlir::omp::ScheduleModifier::simd;
   }
   return mlir::omp::ScheduleModifier::none;
 }
 
 static mlir::omp::ScheduleModifier
-getScheduleModifier(const Fortran::parser::OmpScheduleClause &x) {
-  const auto &modifier =
-      std::get<std::optional<Fortran::parser::OmpScheduleModifier>>(x.t);
+getScheduleModifier(const omp::clause::Schedule &clause) {
+  using ScheduleModifier = omp::clause::Schedule::ScheduleModifier;
+  const auto &modifier = std::get<std::optional<ScheduleModifier>>(clause.t);
   // The input may have the modifier any order, so we look for one that isn't
   // SIMD. If modifier is not set at all, fall down to the bottom and return
   // "none".
   if (modifier) {
-    const auto &modType1 =
-        std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
-    if (modType1.v.v ==
-        Fortran::parser::OmpScheduleModifierType::ModType::Simd) {
-      const auto &modType2 = std::get<
-          std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
-          modifier->t);
-      if (modType2 &&
-          modType2->v.v !=
-              Fortran::parser::OmpScheduleModifierType::ModType::Simd)
-        return translateScheduleModifier(modType2->v);
-
+    using ModType = omp::clause::Schedule::ModType;
+    const auto &modType1 = std::get<ModType>(modifier->t);
+    if (modType1 == ModType::Simd) {
+      const auto &modType2 = std::get<std::optional<ModType>>(modifier->t);
+      if (modType2 && *modType2 != ModType::Simd)
+        return translateScheduleModifier(*modType2);
       return mlir::omp::ScheduleModifier::none;
     }
 
-    return translateScheduleModifier(modType1.v);
+    return translateScheduleModifier(modType1);
   }
   return mlir::omp::ScheduleModifier::none;
 }
 
 static mlir::omp::ScheduleModifier
-getSimdModifier(const Fortran::parser::OmpScheduleClause &x) {
-  const auto &modifier =
-      std::get<std::optional<Fortran::parser::OmpScheduleModifier>>(x.t);
+getSimdModifier(const omp::clause::Schedule &clause) {
+  using ScheduleModifier = omp::clause::Schedule::ScheduleModifier;
+  const auto &modifier = std::get<std::optional<ScheduleModifier>>(clause.t);
   // Either of the two possible modifiers in the input can be the SIMD modifier,
   // so look in either one, and return simd if we find one. Not found = return
   // "none".
   if (modifier) {
-    const auto &modType1 =
-        std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
-    if (modType1.v.v == Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+    using ModType = omp::clause::Schedule::ModType;
+    const auto &modType1 = std::get<ModType>(modifier->t);
+    if (modType1 == ModType::Simd)
       return mlir::omp::ScheduleModifier::simd;
 
-    const auto &modType2 = std::get<
-        std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
-        modifier->t);
-    if (modType2 && modType2->v.v ==
-                        Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+    const auto &modType2 = std::get<std::optional<ModType>>(modifier->t);
+    if (modType2 && *modType2 == ModType::Simd)
       return mlir::omp::ScheduleModifier::simd;
   }
   return mlir::omp::ScheduleModifier::none;
@@ -141,21 +133,21 @@ genAllocateClause(Fortran::lower::AbstractConverter &converter,
   genObjectList(ompObjectList, converter, allocateOperands);
 }
 
-static mlir::omp::ClauseProcBindKindAttr genProcBindKindAttr(
-    fir::FirOpBuilder &firOpBuilder,
-    const Fortran::parser::OmpClause::ProcBind *procBindClause) {
+static mlir::omp::ClauseProcBindKindAttr
+genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
+                    const omp::clause::ProcBind &clause) {
   mlir::omp::ClauseProcBindKind procBindKind;
-  switch (procBindClause->v.v) {
-  case Fortran::parser::OmpProcBindClause::Type::Master:
+  switch (clause.v) {
+  case omp::clause::ProcBind::Type::Master:
     procBindKind = mlir::omp::ClauseProcBindKind::Master;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Close:
+  case omp::clause::ProcBind::Type::Close:
     procBindKind = mlir::omp::ClauseProcBindKind::Close;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Spread:
+  case omp::clause::ProcBind::Type::Spread:
     procBindKind = mlir::omp::ClauseProcBindKind::Spread;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Primary:
+  case omp::clause::ProcBind::Type::Primary:
     procBindKind = mlir::omp::ClauseProcBindKind::Primary;
     break;
   }
@@ -253,9 +245,8 @@ bool ClauseProcessor::processCollapse(
   }
 
   std::int64_t collapseValue = 1l;
-  if (auto *collapseClause = findUniqueClause<ClauseTy::Collapse>()) {
-    const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
-    collapseValue = Fortran::evaluate::ToInt64(*expr).value();
+  if (auto *clause = findUniqueClause<omp::clause::Collapse>()) {
+    collapseValue = Fortran::evaluate::ToInt64(clause->v).value();
     found = true;
   }
 
@@ -294,19 +285,19 @@ bool ClauseProcessor::processCollapse(
 }
 
 bool ClauseProcessor::processDefault() const {
-  if (auto *defaultClause = findUniqueClause<ClauseTy::Default>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Default>()) {
     // Private, Firstprivate, Shared, None
-    switch (defaultClause->v.v) {
-    case Fortran::parser::OmpDefaultClause::Type::Shared:
-    case Fortran::parser::OmpDefaultClause::Type::None:
+    switch (clause->v) {
+    case omp::clause::Default::Type::Shared:
+    case omp::clause::Default::Type::None:
       // Default clause with shared or none do not require any handling since
       // Shared is the default behavior in the IR and None is only required
       // for semantic checks.
       break;
-    case Fortran::parser::OmpDefaultClause::Type::Private:
+    case omp::clause::Default::Type::Private:
       // TODO Support default(private)
       break;
-    case Fortran::parser::OmpDefaultClause::Type::Firstprivate:
+    case omp::clause::Default::Type::Firstprivate:
       // TODO Support default(firstprivate)
       break;
     }
@@ -318,20 +309,17 @@ bool ClauseProcessor::processDefault() const {
 bool ClauseProcessor::processDevice(Fortran::lower::StatementContext &stmtCtx,
                                     mlir::Value &result) const {
   const Fortran::parser::CharBlock *source = nullptr;
-  if (auto *deviceClause = findUniqueClause<ClauseTy::Device>(&source)) {
+  if (auto *clause = findUniqueClause<omp::clause::Device>(&source)) {
     mlir::Location clauseLocation = converter.genLocation(*source);
-    if (auto deviceModifier = std::get<
-            std::optional<Fortran::parser::OmpDeviceClause::DeviceModifier>>(
-            deviceClause->v.t)) {
-      if (deviceModifier ==
-          Fortran::parser::OmpDeviceClause::DeviceModifier::Ancestor) {
+    if (auto deviceModifier =
+            std::get<std::optional<omp::clause::Device::DeviceModifier>>(
+                clause->t)) {
+      if (deviceModifier == omp::clause::Device::DeviceModifier::Ancestor) {
         TODO(clauseLocation, "OMPD_target Device Modifier Ancestor");
       }
     }
-    if (const auto *deviceExpr = Fortran::semantics::GetExpr(
-            std::get<Fortran::parser::ScalarIntExpr>(deviceClause->v.t))) {
-      result = fir::getBase(converter.genExprValue(*deviceExpr, stmtCtx));
-    }
+    const auto &deviceExpr = std::get<omp::SomeExpr>(clause->t);
+    result = fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
     return true;
   }
   return false;
@@ -339,16 +327,16 @@ bool ClauseProcessor::processDevice(Fortran::lower::StatementContext &stmtCtx,
 
 bool ClauseProcessor::processDeviceType(
     mlir::omp::DeclareTargetDeviceType &result) const {
-  if (auto *deviceTypeClause = findUniqueClause<ClauseTy::DeviceType>()) {
+  if (auto *clause = findUniqueClause<omp::clause::DeviceType>()) {
     // Case: declare target ... device_type(any | host | nohost)
-    switch (deviceTypeClause->v.v) {
-    case Fortran::parser::OmpDeviceTypeClause::Type::Nohost:
+    switch (clause->v) {
+    case omp::clause::DeviceType::Type::Nohost:
       result = mlir::omp::DeclareTargetDeviceType::nohost;
       break;
-    case Fortran::parser::OmpDeviceTypeClause::Type::Host:
+    case omp::clause::DeviceType::Type::Host:
       result = mlir::omp::DeclareTargetDeviceType::host;
       break;
-    case Fortran::parser::OmpDeviceTypeClause::Type::Any:
+    case omp::clause::DeviceType::Type::Any:
       result = mlir::omp::DeclareTargetDeviceType::any;
       break;
     }
@@ -360,12 +348,12 @@ bool ClauseProcessor::processDeviceType(
 bool ClauseProcessor::processFinal(Fortran::lower::StatementContext &stmtCtx,
                                    mlir::Value &result) const {
   const Fortran::parser::CharBlock *source = nullptr;
-  if (auto *finalClause = findUniqueClause<ClauseTy::Final>(&source)) {
+  if (auto *clause = findUniqueClause<omp::clause::Final>(&source)) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::Location clauseLocation = converter.genLocation(*source);
 
-    mlir::Value finalVal = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(finalClause->v), stmtCtx));
+    mlir::Value finalVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     result = firOpBuilder.createConvert(clauseLocation,
                                         firOpBuilder.getI1Type(), finalVal);
     return true;
@@ -374,10 +362,9 @@ bool ClauseProcessor::processFinal(Fortran::lower::StatementContext &stmtCtx,
 }
 
 bool ClauseProcessor::processHint(mlir::IntegerAttr &result) const {
-  if (auto *hintClause = findUniqueClause<ClauseTy::Hint>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Hint>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
-    int64_t hintValue = *Fortran::evaluate::ToInt64(*expr);
+    int64_t hintValue = *Fortran::evaluate::ToInt64(clause->v);
     result = firOpBuilder.getI64IntegerAttr(hintValue);
     return true;
   }
@@ -385,20 +372,19 @@ bool ClauseProcessor::processHint(mlir::IntegerAttr &result) const {
 }
 
 bool ClauseProcessor::processMergeable(mlir::UnitAttr &result) const {
-  return markClauseOccurrence<ClauseTy::Mergeable>(result);
+  return markClauseOccurrence<omp::clause::Mergeable>(result);
 }
 
 bool ClauseProcessor::processNowait(mlir::UnitAttr &result) const {
-  return markClauseOccurrence<ClauseTy::Nowait>(result);
+  return markClauseOccurrence<omp::clause::Nowait>(result);
 }
 
 bool ClauseProcessor::processNumTeams(Fortran::lower::StatementContext &stmtCtx,
                                       mlir::Value &result) const {
   // TODO Get lower and upper bounds for num_teams when parser is updated to
   // accept both.
-  if (auto *numTeamsClause = findUniqueClause<ClauseTy::NumTeams>()) {
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(numTeamsClause->v), stmtCtx));
+  if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
+    result = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
@@ -406,23 +392,20 @@ bool ClauseProcessor::processNumTeams(Fortran::lower::StatementContext &stmtCtx,
 
 bool ClauseProcessor::processNumThreads(
     Fortran::lower::StatementContext &stmtCtx, mlir::Value &result) const {
-  if (auto *numThreadsClause = findUniqueClause<ClauseTy::NumThreads>()) {
+  if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
     // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
+    result = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processOrdered(mlir::IntegerAttr &result) const {
-  if (auto *orderedClause = findUniqueClause<ClauseTy::Ordered>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Ordered>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     int64_t orderedClauseValue = 0l;
-    if (orderedClause->v.has_value()) {
-      const auto *expr = Fortran::semantics::GetExpr(orderedClause->v);
-      orderedClauseValue = *Fortran::evaluate::ToInt64(*expr);
-    }
+    if (clause->v.has_value())
+      orderedClauseValue = *Fortran::evaluate::ToInt64(*clause->v);
     result = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
     return true;
   }
@@ -431,9 +414,8 @@ bool ClauseProcessor::processOrdered(mlir::IntegerAttr &result) const {
 
 bool ClauseProcessor::processPriority(Fortran::lower::StatementContext &stmtCtx,
                                       mlir::Value &result) const {
-  if (auto *priorityClause = findUniqueClause<ClauseTy::Priority>()) {
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(priorityClause->v), stmtCtx));
+  if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
+    result = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
@@ -441,20 +423,19 @@ bool ClauseProcessor::processPriority(Fortran::lower::StatementContext &stmtCtx,
 
 bool ClauseProcessor::processProcBind(
     mlir::omp::ClauseProcBindKindAttr &result) const {
-  if (auto *procBindClause = findUniqueClause<ClauseTy::ProcBind>()) {
+  if (auto *clause = findUniqueClause<omp::clause::ProcBind>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    result = genProcBindKindAttr(firOpBuilder, procBindClause);
+    result = genProcBindKindAttr(firOpBuilder, *clause);
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processSafelen(mlir::IntegerAttr &result) const {
-  if (auto *safelenClause = findUniqueClause<ClauseTy::Safelen>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Safelen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    const auto *expr = Fortran::semantics::GetExpr(safelenClause->v);
     const std::optional<std::int64_t> safelenVal =
-        Fortran::evaluate::ToInt64(*expr);
+        Fortran::evaluate::ToInt64(clause->v);
     result = firOpBuilder.getI64IntegerAttr(*safelenVal);
     return true;
   }
@@ -465,41 +446,38 @@ bool ClauseProcessor::processSchedule(
     mlir::omp::ClauseScheduleKindAttr &valAttr,
     mlir::omp::ScheduleModifierAttr &modifierAttr,
     mlir::UnitAttr &simdModifierAttr) const {
-  if (auto *scheduleClause = findUniqueClause<ClauseTy::Schedule>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Schedule>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::MLIRContext *context = firOpBuilder.getContext();
-    const Fortran::parser::OmpScheduleClause &scheduleType = scheduleClause->v;
-    const auto &scheduleClauseKind =
-        std::get<Fortran::parser::OmpScheduleClause::ScheduleType>(
-            scheduleType.t);
+    const auto &scheduleType =
+        std::get<omp::clause::Schedule::ScheduleType>(clause->t);
 
     mlir::omp::ClauseScheduleKind scheduleKind;
-    switch (scheduleClauseKind) {
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Static:
+    switch (scheduleType) {
+    case omp::clause::Schedule::ScheduleType::Static:
       scheduleKind = mlir::omp::ClauseScheduleKind::Static;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Dynamic:
+    case omp::clause::Schedule::ScheduleType::Dynamic:
       scheduleKind = mlir::omp::ClauseScheduleKind::Dynamic;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Guided:
+    case omp::clause::Schedule::ScheduleType::Guided:
       scheduleKind = mlir::omp::ClauseScheduleKind::Guided;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Auto:
+    case omp::clause::Schedule::ScheduleType::Auto:
       scheduleKind = mlir::omp::ClauseScheduleKind::Auto;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Runtime:
+    case omp::clause::Schedule::ScheduleType::Runtime:
       scheduleKind = mlir::omp::ClauseScheduleKind::Runtime;
       break;
     }
 
-    mlir::omp::ScheduleModifier scheduleModifier =
-        getScheduleModifier(scheduleClause->v);
+    mlir::omp::ScheduleModifier scheduleModifier = getScheduleModifier(*clause);
 
     if (scheduleModifier != mlir::omp::ScheduleModifier::none)
       modifierAttr =
           mlir::omp::ScheduleModifierAttr::get(context, scheduleModifier);
 
-    if (getSimdModifier(scheduleClause->v) != mlir::omp::ScheduleModifier::none)
+    if (getSimdModifier(*clause) != mlir::omp::ScheduleModifier::none)
       simdModifierAttr = firOpBuilder.getUnitAttr();
 
     valAttr = mlir::omp::ClauseScheduleKindAttr::get(context, scheduleKind);
@@ -510,25 +488,19 @@ bool ClauseProcessor::processSchedule(
 
 bool ClauseProcessor::processScheduleChunk(
     Fortran::lower::StatementContext &stmtCtx, mlir::Value &result) const {
-  if (auto *scheduleClause = findUniqueClause<ClauseTy::Schedule>()) {
-    if (const auto &chunkExpr =
-            std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-                scheduleClause->v.t)) {
-      if (const auto *expr = Fortran::semantics::GetExpr(*chunkExpr)) {
-        result = fir::getBase(converter.genExprValue(*expr, stmtCtx));
-      }
-    }
+  if (auto *clause = findUniqueClause<omp::clause::Schedule>()) {
+    if (const auto &chunkExpr = std::get<omp::MaybeExpr>(clause->t))
+      result = fir::getBase(converter.genExprValue(*chunkExpr, stmtCtx));
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processSimdlen(mlir::IntegerAttr &result) const {
-  if (auto *simdlenClause = findUniqueClause<ClauseTy::Simdlen>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Simdlen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    const auto *expr = Fortran::semantics::GetExpr(simdlenClause->v);
     const std::optional<std::int64_t> simdlenVal =
-        Fortran::evaluate::ToInt64(*expr);
+        Fortran::evaluate::ToInt64(clause->v);
     result = firOpBuilder.getI64IntegerAttr(*simdlenVal);
     return true;
   }
@@ -537,16 +509,15 @@ bool ClauseProcessor::processSimdlen(mlir::IntegerAttr &result) const {
 
 bool ClauseProcessor::processThreadLimit(
     Fortran::lower::StatementContext &stmtCtx, mlir::Value &result) const {
-  if (auto *threadLmtClause = findUniqueClause<ClauseTy::ThreadLimit>()) {
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(threadLmtClause->v), stmtCtx));
+  if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
+    result = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processUntied(mlir::UnitAttr &result) const {
-  return markClauseOccurrence<ClauseTy::Untied>(result);
+  return markClauseOccurrence<omp::clause::Untied>(result);
 }
 
 //===----------------------------------------------------------------------===//

@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace omp {
+namespace Fortran::lower::omp {
 using namespace Fortran;
 using SomeType = evaluate::SomeType;
 using SomeExpr = semantics::SomeExpr;
@@ -33,13 +33,14 @@ using SymReference = SomeExpr;
 
 template <typename T>
 using List = tomp::ListT<T>;
-} // namespace omp
+} // namespace Fortran::lower::omp
 
 namespace tomp {
 template <>
-struct ObjectT<omp::SymIdent, omp::SymReference> {
-  using IdType = omp::SymIdent;
-  using ExprType = omp::SymReference;
+struct ObjectT<Fortran::lower::omp::SymIdent,
+               Fortran::lower::omp::SymReference> {
+  using IdType = Fortran::lower::omp::SymIdent;
+  using ExprType = Fortran::lower::omp::SymReference;
 
   const IdType &id() const { return symbol; }
   const std::optional<ExprType> &ref() const { return designator; }
@@ -49,7 +50,7 @@ struct ObjectT<omp::SymIdent, omp::SymReference> {
 };
 } // namespace tomp
 
-namespace omp {
+namespace Fortran::lower::omp {
 
 using Object = tomp::ObjectT<SymIdent, SymReference>;
 using ObjectList = tomp::ObjectListT<SymIdent, SymReference>;
@@ -200,6 +201,6 @@ Clause makeClause(const Fortran::parser::OmpClause &cls,
 
 List<Clause> makeList(const parser::OmpClauseList &clauses,
                       semantics::SemanticsContext &semaCtx);
-} // namespace omp
+} // namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_OPENMP_CLAUSES_H
