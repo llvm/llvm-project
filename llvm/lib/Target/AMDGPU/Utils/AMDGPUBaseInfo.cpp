@@ -3063,6 +3063,11 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   return hasAny64BitVGPROperands(OpDesc);
 }
 
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+  // Currently this is 128 for all subtargets
+  return 128;
+}
+
 } // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
