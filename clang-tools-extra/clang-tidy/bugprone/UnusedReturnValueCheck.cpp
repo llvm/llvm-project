@@ -38,7 +38,7 @@ constexpr std::initializer_list<OverloadedOperatorKind>
         OO_PipeEqual,  OO_LessLessEqual, OO_GreaterGreaterEqual, OO_PlusPlus,
         OO_MinusMinus};
 
-AST_MATCHER(FunctionDecl, isAssignmentOverloadedOperatorMethod) {
+AST_MATCHER(FunctionDecl, isAssignmentOverloadedOperator) {
   return llvm::is_contained(AssignmentOverloadedOperatorKinds,
                             Node.getOverloadedOperator());
 }
@@ -171,19 +171,18 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
-  auto MatchedDirectCallExpr = expr(
-      callExpr(
-          callee(functionDecl(
-              // Don't match void overloads of checked functions.
-              unless(returns(voidType())),
-              anyOf(
-                  isInstantiatedFrom(
-                      matchers::matchesAnyListedName(CheckedFunctions)),
-                  returns(hasCanonicalType(hasDeclaration(namedDecl(
-                      matchers::matchesAnyListedName(CheckedReturnTypes)))))))),
-          // Don't match copy or move assignment operator.
-          unless(callee(functionDecl(isAssignmentOverloadedOperatorMethod()))))
-          .bind("match"));
+  auto MatchedDirectCallExpr =
+      expr(callExpr(callee(functionDecl(
+                        // Don't match copy or move assignment operator.
+                        unless(isAssignmentOverloadedOperator()),
+                        // Don't match void overloads of checked functions.
+                        unless(returns(voidType())),
+                        anyOf(isInstantiatedFrom(matchers::matchesAnyListedName(
+                                  CheckedFunctions)),
+                              returns(hasCanonicalType(hasDeclaration(
+                                  namedDecl(matchers::matchesAnyListedName(
+                                      CheckedReturnTypes)))))))))
+               .bind("match"));
 
   auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();
