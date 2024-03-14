@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols -o - %s 2>&1 | FileCheck %s
-! Check intrinsic reduction symbols (in this case "max" are marked as INTTRINSIC
+! Check intrinsic reduction symbols (in this case "max" are marked as INTRINSIC
 
 ! CHECK: MainProgram scope: omp_reduction
 program omp_reduction
