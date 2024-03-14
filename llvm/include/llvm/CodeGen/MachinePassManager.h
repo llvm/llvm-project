@@ -73,7 +73,6 @@ template <typename PassT> struct MachinePassModel : MachinePassConcept {
   }
 
   MachinePassModel &operator=(const MachinePassModel &) = delete;
-
   PreservedAnalyses run(MachineFunction &IR,
                         MachineFunctionAnalysisManager &AM) override {
     return Pass.run(IR, AM);
