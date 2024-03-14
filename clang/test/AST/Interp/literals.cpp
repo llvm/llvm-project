@@ -1190,6 +1190,11 @@ namespace incdecbool {
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{indexing of array without known bound}}
+                  // expected-note {{array-to-pointer decay of array member without known bound is not supported}}
 }
 #endif
+
+namespace Extern {
+  constexpr extern char Oops = 1;
+  static_assert(Oops == 1, "");
+}
