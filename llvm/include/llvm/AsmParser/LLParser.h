@@ -275,6 +275,7 @@ namespace llvm {
       Loc = Lex.getLoc();
       return parseUInt64(Val);
     }
+    bool parseInt64(int64_t &Val);
     bool parseFlag(unsigned &Val);
 
     bool parseStringAttribute(AttrBuilder &B);
@@ -307,6 +308,10 @@ namespace llvm {
                                 bool AllowParens = false);
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
+    bool parseConstRange(std::pair<int64_t, int64_t> &Range);
+    bool parseInitializedRanges(
+        lltok::Kind AttrKind,
+        SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();

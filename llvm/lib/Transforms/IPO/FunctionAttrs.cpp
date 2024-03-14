@@ -580,141 +580,6 @@ struct ArgumentUsesTracker : public CaptureTracker {
   const SCCNodeSet &SCCNodes;
 };
 
-/// Get all uses of an argument in the function and store them to different
-/// lists: Reads, Writes, and SpecialUses.
-std::tuple<SmallVector<Instruction *, 16>, SmallVector<Instruction *, 16>,
-           SmallVector<Instruction *, 16>>
-getArgumentUses(Argument *A, const SmallPtrSet<Argument *, 8> &SCCNodes) {
-  SmallVector<Use *, 32> Worklist;
-  SmallPtrSet<Use *, 32> Visited;
-  SmallVector<Instruction *, 16> Reads, Writes, SpecialUses;
-
-  for (Use &U : A->uses()) {
-    Visited.insert(&U);
-    Worklist.push_back(&U);
-  }
-
-  while (!Worklist.empty()) {
-    Use *U = Worklist.pop_back_val();
-    Instruction *I = cast<Instruction>(U->getUser());
-
-    switch (I->getOpcode()) {
-    case Instruction::BitCast:
-    case Instruction::GetElementPtr:
-    case Instruction::PHI:
-    case Instruction::Select:
-    case Instruction::AddrSpaceCast:
-      // The original value is not read/written via this if the new value isn't.
-      for (Use &UU : I->uses())
-        if (Visited.insert(&UU).second)
-          Worklist.push_back(&UU);
-      break;
-
-    case Instruction::Call:
-    case Instruction::Invoke: {
-      CallBase &CB = cast<CallBase>(*I);
-      if (CB.isCallee(U)) {
-        Reads.push_back(I);
-        // Note that indirect calls do not capture, see comment in
-        // CaptureTracking for context
-        continue;
-      }
-
-      // Given we've explictily handled the callee operand above, what's left
-      // must be a data operand (e.g. argument or operand bundle)
-      const unsigned UseIndex = CB.getDataOperandNo(U);
-
-      // Some intrinsics (for instance ptrmask) do not capture their results,
-      // but return results thas alias their pointer argument, and thus should
-      // be handled like GEP or addrspacecast above.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              &CB, /*MustPreserveNullness=*/false)) {
-        for (Use &UU : CB.uses())
-          if (Visited.insert(&UU).second)
-            Worklist.push_back(&UU);
-      } else if (!CB.doesNotCapture(UseIndex)) {
-        if (!CB.onlyReadsMemory()) {
-          // If the callee can save a copy into other memory, then simply
-          // scanning uses of the call is insufficient.  We have no way
-          // of tracking copies of the pointer through memory to see
-          // if a reloaded copy is written to, thus we treat it as special
-          // uses.
-          SpecialUses.push_back(I);
-          continue;
-        }
-        // Push users for processing once we finish this one
-        if (!I->getType()->isVoidTy())
-          for (Use &UU : I->uses())
-            if (Visited.insert(&UU).second)
-              Worklist.push_back(&UU);
-      }
-
-      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
-      if (isNoModRef(ArgMR))
-        continue;
-
-      if (Function *F = CB.getCalledFunction())
-        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
-            SCCNodes.count(F->getArg(UseIndex)))
-          // This is an argument which is part of the speculative SCC.  Note
-          // that only operands corresponding to formal arguments of the callee
-          // can participate in the speculation.
-          break;
-
-      // The accessors used on call site here do the right thing for calls and
-      // invokes with operand bundles.
-      if (CB.doesNotAccessMemory(UseIndex)) {
-        /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
-        Reads.push_back(I);
-      } else if (!isRefSet(ArgMR) ||
-                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
-        Writes.push_back(I);
-      } else {
-        SpecialUses.push_back(I);
-      }
-      break;
-    }
-
-    case Instruction::Load:
-      // A volatile load has side effects beyond what readonly can be relied
-      // upon.
-      if (cast<LoadInst>(I)->isVolatile()) {
-        SpecialUses.push_back(I);
-        continue;
-      }
-
-      Reads.push_back(I);
-      break;
-
-    case Instruction::Store:
-      if (cast<StoreInst>(I)->getValueOperand() == *U) {
-        // untrackable capture
-        SpecialUses.push_back(I);
-        continue;
-      }
-
-      // A volatile store has side effects beyond what writeonly can be relied
-      // upon.
-      if (cast<StoreInst>(I)->isVolatile()) {
-        SpecialUses.push_back(I);
-        continue;
-      }
-
-      Writes.push_back(I);
-      break;
-
-    case Instruction::ICmp:
-    case Instruction::Ret:
-      break;
-
-    default:
-      SpecialUses.push_back(I);
-    }
-  }
-  return {Reads, Writes, SpecialUses};
-}
-
 } // end anonymous namespace
 
 namespace llvm {
@@ -743,21 +608,142 @@ struct GraphTraits<ArgumentGraph *> : public GraphTraits<ArgumentGraphNode *> {
 
 /// Returns Attribute::None, Attribute::ReadOnly or Attribute::ReadNone.
 static Attribute::AttrKind
-determinePointerAccessAttrs(Argument *A, SmallVector<Instruction *, 16> &Reads,
-                            SmallVector<Instruction *, 16> &Writes,
-                            SmallVector<Instruction *, 16> &SpecialUses) {
+determinePointerAccessAttrs(Argument *A,
+                            const SmallPtrSet<Argument *, 8> &SCCNodes) {
+  SmallVector<Use *, 32> Worklist;
+  SmallPtrSet<Use *, 32> Visited;
+
   // inalloca arguments are always clobbered by the call.
   if (A->hasInAllocaAttr() || A->hasPreallocatedAttr())
     return Attribute::None;
 
-  if (!SpecialUses.empty())
-    return Attribute::None;
+  bool IsRead = false;
+  bool IsWrite = false;
 
-  if (!Writes.empty() && !Reads.empty())
+  for (Use &U : A->uses()) {
+    Visited.insert(&U);
+    Worklist.push_back(&U);
+  }
+
+  while (!Worklist.empty()) {
+    if (IsWrite && IsRead)
+      // No point in searching further..
+      return Attribute::None;
+
+    Use *U = Worklist.pop_back_val();
+    Instruction *I = cast<Instruction>(U->getUser());
+
+    switch (I->getOpcode()) {
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+    case Instruction::PHI:
+    case Instruction::Select:
+    case Instruction::AddrSpaceCast:
+      // The original value is not read/written via this if the new value isn't.
+      for (Use &UU : I->uses())
+        if (Visited.insert(&UU).second)
+          Worklist.push_back(&UU);
+      break;
+
+    case Instruction::Call:
+    case Instruction::Invoke: {
+      CallBase &CB = cast<CallBase>(*I);
+      if (CB.isCallee(U)) {
+        IsRead = true;
+        // Note that indirect calls do not capture, see comment in
+        // CaptureTracking for context
+        continue;
+      }
+
+      // Given we've explictily handled the callee operand above, what's left
+      // must be a data operand (e.g. argument or operand bundle)
+      const unsigned UseIndex = CB.getDataOperandNo(U);
+
+      // Some intrinsics (for instance ptrmask) do not capture their results,
+      // but return results thas alias their pointer argument, and thus should
+      // be handled like GEP or addrspacecast above.
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+              &CB, /*MustPreserveNullness=*/false)) {
+        for (Use &UU : CB.uses())
+          if (Visited.insert(&UU).second)
+            Worklist.push_back(&UU);
+      } else if (!CB.doesNotCapture(UseIndex)) {
+        if (!CB.onlyReadsMemory())
+          // If the callee can save a copy into other memory, then simply
+          // scanning uses of the call is insufficient.  We have no way
+          // of tracking copies of the pointer through memory to see
+          // if a reloaded copy is written to, thus we must give up.
+          return Attribute::None;
+        // Push users for processing once we finish this one
+        if (!I->getType()->isVoidTy())
+          for (Use &UU : I->uses())
+            if (Visited.insert(&UU).second)
+              Worklist.push_back(&UU);
+      }
+
+      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
+      if (isNoModRef(ArgMR))
+        continue;
+
+      if (Function *F = CB.getCalledFunction())
+        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+            SCCNodes.count(F->getArg(UseIndex)))
+          // This is an argument which is part of the speculative SCC.  Note
+          // that only operands corresponding to formal arguments of the callee
+          // can participate in the speculation.
+          break;
+
+      // The accessors used on call site here do the right thing for calls and
+      // invokes with operand bundles.
+      if (CB.doesNotAccessMemory(UseIndex)) {
+        /* nop */
+      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
+        IsRead = true;
+      } else if (!isRefSet(ArgMR) ||
+                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
+        IsWrite = true;
+      } else {
+        return Attribute::None;
+      }
+      break;
+    }
+
+    case Instruction::Load:
+      // A volatile load has side effects beyond what readonly can be relied
+      // upon.
+      if (cast<LoadInst>(I)->isVolatile())
+        return Attribute::None;
+
+      IsRead = true;
+      break;
+
+    case Instruction::Store:
+      if (cast<StoreInst>(I)->getValueOperand() == *U)
+        // untrackable capture
+        return Attribute::None;
+
+      // A volatile store has side effects beyond what writeonly can be relied
+      // upon.
+      if (cast<StoreInst>(I)->isVolatile())
+        return Attribute::None;
+
+      IsWrite = true;
+      break;
+
+    case Instruction::ICmp:
+    case Instruction::Ret:
+      break;
+
+    default:
+      return Attribute::None;
+    }
+  }
+
+  if (IsWrite && IsRead)
     return Attribute::None;
-  else if (!Reads.empty())
+  else if (IsRead)
     return Attribute::ReadOnly;
-  else if (!Writes.empty())
+  else if (IsWrite)
     return Attribute::WriteOnly;
   else
     return Attribute::ReadNone;
@@ -945,9 +931,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         // functions in the SCC.
         SmallPtrSet<Argument *, 8> Self;
         Self.insert(&A);
-        auto [Reads, Writes, SpecialUses] = getArgumentUses(&A, Self);
-        Attribute::AttrKind R =
-            determinePointerAccessAttrs(&A, Reads, Writes, SpecialUses);
+        Attribute::AttrKind R = determinePointerAccessAttrs(&A, Self);
         if (R != Attribute::None)
           if (addAccessAttr(&A, R))
             Changed.insert(F);
@@ -979,9 +963,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         // Infer the access attributes given the new nocapture one
         SmallPtrSet<Argument *, 8> Self;
         Self.insert(&*A);
-        auto [Reads, Writes, SpecialUses] = getArgumentUses(&*A, Self);
-        Attribute::AttrKind R =
-            determinePointerAccessAttrs(&*A, Reads, Writes, SpecialUses);
+        Attribute::AttrKind R = determinePointerAccessAttrs(&*A, Self);
         if (R != Attribute::None)
           addAccessAttr(A, R);
       }
@@ -1050,9 +1032,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     Attribute::AttrKind AccessAttr = Attribute::ReadNone;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
-      auto [Reads, Writes, SpecialUses] = getArgumentUses(A, ArgumentSCCNodes);
-      Attribute::AttrKind K =
-          determinePointerAccessAttrs(A, Reads, Writes, SpecialUses);
+      Attribute::AttrKind K = determinePointerAccessAttrs(A, ArgumentSCCNodes);
       AccessAttr = meetAccessAttr(AccessAttr, K);
       if (AccessAttr == Attribute::None)
         break;

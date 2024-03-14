@@ -1993,6 +1993,14 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           Attrs.hasAttribute(Attribute::ReadOnly)),
         "Attributes writable and readonly are incompatible!", V);
 
+  Check(!(Attrs.hasAttribute(Attribute::Initialized) &&
+          Attrs.hasAttribute(Attribute::ReadNone)),
+        "Attributes initialized and readnone are incompatible!", V);
+
+  Check(!(Attrs.hasAttribute(Attribute::Initialized) &&
+          Attrs.hasAttribute(Attribute::ReadOnly)),
+        "Attributes initialized and readonly are incompatible!", V);
+
   AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   for (Attribute Attr : Attrs) {
     if (!Attr.isStringAttribute() &&
@@ -2043,6 +2051,19 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     auto CR = Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
     Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
           "Range bit width must match type bit width!", V);
+  }
+  if (Attrs.hasAttribute(Attribute::Initialized)) {
+    auto Inits = Attrs.getAttribute(Attribute::Initialized).getValueAsRanges();
+    Check(!Inits.empty(), "Attribute 'initialized' does not support empty list",
+          V);
+
+    for (size_t i = 1; i < Inits.size(); i++) {
+      Check(Inits[i].first > Inits[i - 1].first,
+            "Attribute 'initialized' requires intervals in ascending order!",
+            V);
+      Check(Inits[i].first > Inits[i - 1].second,
+            "Attribute 'initialized' requires intervals merged!", V);
+    }
   }
 }
 

@@ -846,6 +846,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
   case Attribute::Range:
     return bitc::ATTR_KIND_RANGE;
+  case Attribute::Initialized:
+    return bitc::ATTR_KIND_INITIALIZED;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -930,11 +932,24 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         if (Ty)
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
-      } else {
+      } else if (Attr.isConstantRangeAttribute()) {
         assert(Attr.isConstantRangeAttribute());
         Record.push_back(7);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         emitConstantRange(Record, Attr.getValueAsConstantRange());
+      } else {
+        assert(Attr.isConstRangeListAttribute());
+        const auto &Ranges = Attr.getValueAsRanges();
+
+        Record.push_back(Ranges.empty() ? 8 : 9);
+        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
+        Record.push_back(Ranges.size());
+        if (!Ranges.empty()) {
+          for (const auto &Range : Ranges) {
+            Record.push_back(Range.first);
+            Record.push_back(Range.second);
+          }
+        }
       }
     }
 

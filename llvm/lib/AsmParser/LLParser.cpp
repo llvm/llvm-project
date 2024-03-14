@@ -1566,6 +1566,13 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addDereferenceableOrNullAttr(Bytes);
     return false;
   }
+  case Attribute::Initialized: {
+    SmallVector<std::pair<int64_t, int64_t>, 16> Ranges;
+    if (parseInitializedRanges(lltok::kw_initialized, Ranges))
+      return true;
+    B.addConstRangeListAttr(Attribute::Initialized, Ranges);
+    return false;
+  }
   case Attribute::UWTable: {
     UWTableKind Kind;
     if (parseOptionalUWTableKind(Kind))
@@ -1846,6 +1853,16 @@ bool LLParser::parseUInt64(uint64_t &Val) {
   if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
     return tokError("expected integer");
   Val = Lex.getAPSIntVal().getLimitedValue();
+  Lex.Lex();
+  return false;
+}
+
+/// parseInt64
+///   ::= int64_t
+bool LLParser::parseInt64(int64_t &Val) {
+  if (Lex.getKind() != lltok::APSInt)
+    return tokError("expected signed integer");
+  Val = Lex.getAPSIntVal().extend(64).getSExtValue();
   Lex.Lex();
   return false;
 }
@@ -2361,6 +2378,54 @@ bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
     return error(ParenLoc, "expected ')'");
   if (!Bytes)
     return error(DerefLoc, "dereferenceable bytes must be non-zero");
+  return false;
+}
+
+bool LLParser::parseConstRange(std::pair<int64_t, int64_t> &Range) {
+  LocTy LparenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(LparenLoc, "expected'('");
+
+  if (parseInt64(Range.first))
+    return true;
+
+  if (EatIfPresent(lltok::comma)) {
+    if (parseInt64(Range.second)) {
+      return true;
+    }
+  }
+
+  LocTy RparenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return error(RparenLoc, "expected ')'");
+
+  return false;
+}
+
+bool LLParser::parseInitializedRanges(
+    lltok::Kind AttrKind,
+    SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges) {
+  assert(AttrKind == lltok::kw_initialized);
+  Ranges.clear();
+
+  if (!EatIfPresent(AttrKind))
+    return false;
+
+  LocTy LparenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(LparenLoc, "expected '('");
+
+  // Parse each range.
+  do {
+    std::pair<int64_t, int64_t> Range;
+    if (parseConstRange(Range))
+      return true;
+    Ranges.push_back(Range);
+  } while (EatIfPresent(lltok::comma));
+
+  LocTy RparenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return error(RparenLoc, "expected ')'");
   return false;
 }
 
