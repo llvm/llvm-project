@@ -46,7 +46,7 @@ let Predicates = [HasCMOV, HasCF, HasNDD, In64BitMode] in
                   (ins t.RegClass:$src1, t.RegClass:$src2, ccode:$cond),
                   "cfcmov${cond}", binop_ndd_args, []>, UseEFLAGS, NDD<1>, NF;
 }
-let SchedRW = [WriteCMOV, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault] in {
+let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in {
   let Predicates = [HasCMOV, HasCF, In64BitMode], mayLoad = 1 in
     def rm : ITy<0x40, MRMSrcMemCC, t, (outs t.RegClass:$dst),
                  (ins t.MemOperand:$src1, ccode:$cond),
@@ -56,7 +56,7 @@ let SchedRW = [WriteCMOV, ReadDefault, ReadDefault, ReadDefault, ReadDefault, Re
                     (ins t.RegClass:$src1, t.MemOperand:$src2, ccode:$cond),
                     "cfcmov${cond}", binop_ndd_args, []>, UseEFLAGS, NDD<1>, NF;
 }
-let SchedRW = [ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault, WriteCMOV],
+let SchedRW = [WriteCMOV, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault],
     Predicates = [HasCMOV, HasCF, In64BitMode], mayStore = 1 in
   def mr : ITy<0x40, MRMDestMemCC, t, (outs t.MemOperand:$dst),
                 (ins t.RegClass:$src1, ccode:$cond),

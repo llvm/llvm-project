@@ -138,11 +138,23 @@
 # CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x01,0xc1]
          {nf}	addq	%r16, %r17
 
+## MRMDestRegCC
+
+# CHECK: cfcmovbw	%r17w, %r21w
+# CHECK: encoding: [0x62,0xec,0x7d,0x0c,0x42,0xcd]
+         cfcmovbw	%r17w, %r21w
+
 ## MRMSrcReg
 
 # CHECK: mulxq	%r16, %r17, %r18
 # CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
          mulxq	%r16, %r17, %r18
+
+## MRMSrcRegCC
+
+# CHECK: cfcmovbw	%r17w, %r21w, %r25w
+# CHECK: encoding: [0x62,0xec,0x35,0x14,0x42,0xe9]
+         cfcmovbw	%r17w, %r21w, %r25w
 
 ## MRMSrcReg4VOp3
 

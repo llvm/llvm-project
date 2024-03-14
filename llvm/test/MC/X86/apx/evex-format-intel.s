@@ -138,11 +138,23 @@
 # CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x01,0xc1]
          {nf}	add	r17, r16
 
+## MRMDestRegCC
+
+# CHECK: cfcmovb	r21w, r17w
+# CHECK: encoding: [0x62,0xec,0x7d,0x0c,0x42,0xcd]
+         cfcmovb	r21w, r17w
+
 ## MRMSrcReg
 
 # CHECK: mulx	r18, r17, r16
 # CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
          mulx	r18, r17, r16
+
+## MRMSrcRegCC
+
+# CHECK: cfcmovb	r25w, r21w, r17w
+# CHECK: encoding: [0x62,0xec,0x35,0x14,0x42,0xe9]
+         cfcmovb	r25w, r21w, r17w
 
 ## MRMSrcReg4VOp3
 
