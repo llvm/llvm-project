@@ -1,0 +1,18 @@
+import("//llvm/utils/gn/build/driver_executable.gni")
+
+driver_executable("clang-installapi") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Driver",
+    "//clang/lib/Frontend",
+    "//clang/lib/InstallAPI",
+    "//clang/lib/Tooling",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+    "//llvm/lib/TextAPI",
+  ]
+  sources = [
+    "ClangInstallAPI.cpp",
+    "Options.cpp",
+  ]
+}

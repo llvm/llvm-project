@@ -205,7 +205,6 @@ template <class... Types>
 
 // clang-format on
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__compare/common_comparison_category.h>
 #include <__compare/synth_three_way.h>
 #include <__config>
@@ -214,6 +213,7 @@ template <class... Types>
 #include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
+#include <__tuple/find_index.h>
 #include <__tuple/make_tuple_types.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__tuple/tuple_element.h>
@@ -337,10 +337,10 @@ public:
   }
 
   template <class _Tp,
-            class = __enable_if_t<
-                _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t)
-      _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
+            __enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value,
+                           int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
       : __value_(std::forward<_Tp>(__t)) {
     static_assert(__can_bind_reference<_Tp&&>(),
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
@@ -405,10 +405,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a) : _Hp(__a) {}
 
   template <class _Tp,
-            class = __enable_if_t<
-                _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t)
-      _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
+            __enable_if_t< _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value,
+                           int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
       : _Hp(std::forward<_Tp>(__t)) {}
 
   template <class _Tp, class _Alloc>
@@ -483,7 +483,7 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
       : __tuple_leaf<_Uf, _Tf>(__uses_alloc_ctor<_Tf, _Alloc, _Up>(), __a, std::forward<_Up>(__u))...,
         __tuple_leaf<_Ul, _Tl>(__uses_alloc_ctor<_Tl, _Alloc>(), __a)... {}
 
-  template <class _Tuple, class = __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value> >
+  template <class _Tuple, __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_impl(_Tuple&& __t) _NOEXCEPT_(
       (__all<is_nothrow_constructible<
            _Tp,
@@ -492,7 +492,7 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
             std::forward<typename tuple_element<_Indx, typename __make_tuple_types<_Tuple>::type>::type>(
                 std::get<_Indx>(__t)))... {}
 
-  template <class _Alloc, class _Tuple, class = __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value> >
+  template <class _Alloc, class _Tuple, __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_impl(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
       : __tuple_leaf<_Indx, _Tp>(
             __uses_alloc_ctor<_Tp,
@@ -548,10 +548,6 @@ class _LIBCPP_TEMPLATE_VIS tuple {
 
 public:
   // [tuple.cnstr]
-
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")
 
   // tuple() constructors (including allocator_arg_t variants)
   template <template <class...> class _IsImpDefault                = __is_implicitly_default_constructible,
@@ -834,8 +830,6 @@ public:
       : __base_(allocator_arg_t(), __alloc, std::move(__p)) {}
 #  endif // _LIBCPP_STD_VER >= 23
 
-  _LIBCPP_DIAGNOSTIC_POP
-
   // [tuple.assign]
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple)
@@ -966,7 +960,7 @@ public:
   template <
       class _Up,
       size_t _Np,
-      class = __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value > >
+      __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(array<_Up, _Np> const& __array)
       _NOEXCEPT_(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
     std::__memberwise_copy_assign(*this, __array, typename __make_tuple_indices<sizeof...(_Tp)>::type());
@@ -977,7 +971,7 @@ public:
   template <class _Up,
             size_t _Np,
             class = void,
-            class = __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up>... >::value > >
+            __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(array<_Up, _Np>&& __array)
       _NOEXCEPT_(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
@@ -1093,40 +1087,6 @@ get(const tuple<_Tp...>&& __t) _NOEXCEPT {
 }
 
 #  if _LIBCPP_STD_VER >= 14
-
-namespace __find_detail {
-
-static constexpr size_t __not_found = static_cast<size_t>(-1);
-static constexpr size_t __ambiguous = __not_found - 1;
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx_return(size_t __curr_i, size_t __res, bool __matches) {
-  return !__matches ? __res : (__res == __not_found ? __curr_i : __ambiguous);
-}
-
-template <size_t _Nx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx(size_t __i, const bool (&__matches)[_Nx]) {
-  return __i == _Nx
-           ? __not_found
-           : __find_detail::__find_idx_return(__i, __find_detail::__find_idx(__i + 1, __matches), __matches[__i]);
-}
-
-template <class _T1, class... _Args>
-struct __find_exactly_one_checked {
-  static constexpr bool __matches[sizeof...(_Args)] = {is_same<_T1, _Args>::value...};
-  static constexpr size_t value                     = __find_detail::__find_idx(0, __matches);
-  static_assert(value != __not_found, "type not found in type list");
-  static_assert(value != __ambiguous, "type occurs more than once in type list");
-};
-
-template <class _T1>
-struct __find_exactly_one_checked<_T1> {
-  static_assert(!is_same<_T1, _T1>::value, "type not in empty type list");
-};
-
-} // namespace __find_detail
-
-template <typename _T1, typename... _Args>
-struct __find_exactly_one_t : public __find_detail::__find_exactly_one_checked<_T1, _Args...> {};
 
 template <class _T1, class... _Args>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(tuple<_Args...>& __tup) noexcept {

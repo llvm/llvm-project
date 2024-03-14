@@ -240,8 +240,11 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
-  if (Triple.isRISCV())
+  if (Triple.isRISCV()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -268,7 +271,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+                            options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);

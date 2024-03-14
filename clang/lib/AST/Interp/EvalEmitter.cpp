@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvalEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
@@ -18,7 +17,7 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk, APValue &Result)
+                         InterpStack &Stk)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
   // Create a dummy frame for the interpreter which does not have locals.
   S.Current =
@@ -38,13 +37,21 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E) && EvalResult.empty())
+  if (!this->visitExpr(E)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
+  }
 
   return std::move(this->EvalResult);
 }
 
-EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD) {
+EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
+                                            bool CheckFullyInitialized) {
+  this->CheckFullyInitialized = CheckFullyInitialized;
+  this->ConvertResultToRValue =
+      VD->getAnyInitializer() &&
+      (VD->getAnyInitializer()->getType()->isAnyComplexType());
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())
@@ -131,7 +138,17 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
-    EvalResult.setPointer(Ptr);
+    if (CheckFullyInitialized) {
+      if (!EvalResult.checkFullyInitialized(S, Ptr))
+        return false;
+
+      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
+      if (!RValueResult)
+        return false;
+      EvalResult.setValue(*RValueResult);
+    } else {
+      EvalResult.setValue(Ptr.toAPValue());
+    }
   }
 
   return true;
@@ -140,7 +157,6 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
   // Function pointers cannot be converted to rvalues.
-  assert(!ConvertResultToRValue);
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }

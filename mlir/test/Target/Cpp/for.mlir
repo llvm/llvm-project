@@ -33,12 +33,12 @@ func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CPP-DECLTOP-NEXT: return;
 
 func.func @test_for_yield() {
-  %start = arith.constant 0 : index
-  %stop = arith.constant 10 : index
-  %step = arith.constant 1 : index
+  %start = "emitc.constant"() <{value = 0 : index}> : () -> index
+  %stop = "emitc.constant"() <{value = 10 : index}> : () -> index
+  %step = "emitc.constant"() <{value = 1 : index}> : () -> index
 
-  %s0 = arith.constant 0 : i32
-  %p0 = arith.constant 1.0 : f32
+  %s0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
+  %p0 = "emitc.constant"() <{value = 1.0 : f32}> : () -> f32
 
   %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
   %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32

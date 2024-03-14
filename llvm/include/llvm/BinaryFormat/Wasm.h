@@ -216,6 +216,7 @@ enum WasmSymbolType : unsigned {
 enum WasmSegmentFlag : unsigned {
   WASM_SEG_FLAG_STRINGS = 0x1,
   WASM_SEG_FLAG_TLS = 0x2,
+  WASM_SEG_FLAG_RETAIN = 0x4,
 };
 
 // Kinds of tag attributes.

@@ -2509,6 +2509,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       GetterMethod->addAttr(SectionAttr::CreateImplicit(
           Context, SA->getName(), Loc, SectionAttr::GNU_section));
 
+    ProcessAPINotes(GetterMethod);
+
     if (getLangOpts().ObjCAutoRefCount)
       CheckARCMethodDecl(GetterMethod);
   } else
@@ -2578,6 +2580,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       if (const SectionAttr *SA = property->getAttr<SectionAttr>())
         SetterMethod->addAttr(SectionAttr::CreateImplicit(
             Context, SA->getName(), Loc, SectionAttr::GNU_section));
+
+      ProcessAPINotes(SetterMethod);
+
       // It's possible for the user to have set a very odd custom
       // setter selector that causes it to have a method family.
       if (getLangOpts().ObjCAutoRefCount)

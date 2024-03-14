@@ -24,8 +24,8 @@ LOWERINGOPT(Name, Bits, Default)
 /// If true, lower transpose without a runtime call.
 ENUM_LOWERINGOPT(OptimizeTranspose, unsigned, 1, 1)
 
-/// If true, enable polymorphic type lowering feature. Off by default.
-ENUM_LOWERINGOPT(PolymorphicTypeImpl, unsigned, 1, 0)
+/// If true, enable polymorphic type lowering feature. On by default.
+ENUM_LOWERINGOPT(PolymorphicTypeImpl, unsigned, 1, 1)
 
 /// If true, lower to High level FIR before lowering to FIR. On by default.
 ENUM_LOWERINGOPT(LowerToHighLevelFIR, unsigned, 1, 1)

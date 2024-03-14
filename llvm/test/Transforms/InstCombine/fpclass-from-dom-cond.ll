@@ -185,10 +185,9 @@ define i1 @test8(float %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq float [[ABS]], 0x7FF0000000000000
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 575)
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 575)
+; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 59)
 ; CHECK-NEXT:    ret i1 [[RET2]]
 ;
   %abs = call float @llvm.fabs.f32(float %x)

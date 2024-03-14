@@ -365,8 +365,7 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
   if (firstRelI != (unsigned)-1)
-    personality =
-        &cie.sec->template getFile<ELFT>()->getRelocTargetSym(rels[firstRelI]);
+    personality = &cie.sec->file->getRelocTargetSym(rels[firstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *&rec = cieMap[{cie.data(), personality}];
@@ -396,7 +395,7 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
     return nullptr;
 
   const RelTy &rel = rels[firstRelI];
-  Symbol &b = sec->template getFile<ELFT>()->getRelocTargetSym(rel);
+  Symbol &b = sec->file->getRelocTargetSym(rel);
 
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.
@@ -537,9 +536,11 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
     for (EhSectionPiece *fde : rec->fdes) {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va))
-        fatal(toString(fde->sec) + ": PC offset is too large: 0x" +
-              Twine::utohexstr(pc - va));
+      if (!isInt<32>(pc - va)) {
+        errorOrWarn(toString(fde->sec) + ": PC offset is too large: 0x" +
+                    Twine::utohexstr(pc - va));
+        continue;
+      }
       ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
     }
   }
@@ -2803,21 +2804,16 @@ createSymbols(
     cuIdx += chunks[i].compilationUnits.size();
   }
 
-  // The number of symbols we will handle in this function is of the order
-  // of millions for very large executables, so we use multi-threading to
-  // speed it up.
+  // Collect the compilation unitss for each unique name. Speed it up using
+  // multi-threading as the number of symbols can be in the order of millions.
+  // Shard GdbSymbols by hash's high bits.
   constexpr size_t numShards = 32;
   const size_t concurrency =
       llvm::bit_floor(std::min<size_t>(config->threadCount, numShards));
-
-  // A sharded map to uniquify symbols by name.
+  const size_t shift = 32 - llvm::countr_zero(numShards);
   auto map =
       std::make_unique<DenseMap<CachedHashStringRef, size_t>[]>(numShards);
-  size_t shift = 32 - llvm::countr_zero(numShards);
-
-  // Instantiate GdbSymbols while uniqufying them by name.
   auto symbols = std::make_unique<SmallVector<GdbSymbol, 0>[]>(numShards);
-
   parallelFor(0, concurrency, [&](size_t threadId) {
     uint32_t i = 0;
     for (ArrayRef<NameAttrEntry> entries : nameAttrs) {
@@ -2827,14 +2823,12 @@ createSymbols(
           continue;
 
         uint32_t v = ent.cuIndexAndAttrs + cuIdxs[i];
-        size_t &idx = map[shardId][ent.name];
-        if (idx) {
-          symbols[shardId][idx - 1].cuVector.push_back(v);
-          continue;
-        }
-
-        idx = symbols[shardId].size() + 1;
-        symbols[shardId].push_back({ent.name, {v}, 0, 0});
+        auto [it, inserted] =
+            map[shardId].try_emplace(ent.name, symbols[shardId].size());
+        if (inserted)
+          symbols[shardId].push_back({ent.name, {v}, 0, 0});
+        else
+          symbols[shardId][it->second].cuVector.push_back(v);
       }
       ++i;
     }

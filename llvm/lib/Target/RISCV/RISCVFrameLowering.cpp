@@ -399,9 +399,9 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
 
   // Optimize compile time offset case
   StackOffset Offset = StackOffset::getScalable(Amount);
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+  if (auto VLEN = STI.getRealVLen()) {
     // 1. Multiply the number of v-slots by the (constant) length of register
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    const int64_t VLENB = *VLEN / 8;
     assert(Amount % 8 == 0 &&
            "Reserve the stack by the multiple of one vector size.");
     const int64_t NumOfVReg = Amount / 8;

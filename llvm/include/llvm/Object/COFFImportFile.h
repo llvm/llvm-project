@@ -26,6 +26,12 @@
 namespace llvm {
 namespace object {
 
+constexpr std::string_view ImportDescriptorPrefix = "__IMPORT_DESCRIPTOR_";
+constexpr std::string_view NullImportDescriptorSymbolName =
+    "__NULL_IMPORT_DESCRIPTOR";
+constexpr std::string_view NullThunkDataPrefix = "\x7f";
+constexpr std::string_view NullThunkDataSuffix = "_NULL_THUNK_DATA";
+
 class COFFImportFile : public SymbolicFile {
 private:
   enum SymbolIndex { ImpSymbol, ThunkSymbol, ECAuxSymbol, ECThunkSymbol };

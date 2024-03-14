@@ -264,7 +264,7 @@ def combine_extracted_vector_load : GICombineRule<
   (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
         [{ return Helper.matchCombineExtractedVectorLoad(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
-  
+
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD, G_STORE):$root,
@@ -491,6 +491,13 @@ def right_identity_one_fp: GICombineRule<
   (match (G_FMUL $dst, $x, $y):$root,
     [{ return Helper.matchConstantFPOp(${y}, 1.0); }]),
   (apply (GIReplaceReg $dst, $x))
+>;
+
+def right_identity_neg_one_fp: GICombineRule<
+  (defs root:$dst),
+  (match (G_FMUL $dst, $x, $y):$root,
+    [{ return Helper.matchConstantFPOp(${y}, -1.0); }]),
+  (apply (G_FNEG $dst, $x))
 >;
 
 def right_identity_one : GICombineGroup<[right_identity_one_int, right_identity_one_fp]>;
@@ -945,6 +952,37 @@ def redundant_binop_in_equality : GICombineRule<
          [{ return Helper.matchRedundantBinOpInEquality(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Transform: (X == 0 & Y == 0) -> (X | Y) == 0
+def double_icmp_zero_and_combine: GICombineRule<
+  (defs root:$root),
+  (match (G_ICMP $d1, $p, $s1, 0),
+         (G_ICMP $d2, $p, $s2, 0),
+         (G_AND $root, $d1, $d2),
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_EQ &&
+                       !MRI.getType(${s1}.getReg()).getScalarType().isPointer() &&
+                       (MRI.getType(${s1}.getReg()) ==
+                           MRI.getType(${s2}.getReg())); }]),
+  (apply (G_OR $ordst, $s1, $s2),
+         (G_ICMP $root, $p, $ordst, 0))
+>;
+
+// Transform: (X != 0 | Y != 0) -> (X | Y) != 0
+def double_icmp_zero_or_combine: GICombineRule<
+  (defs root:$root),
+  (match (G_ICMP $d1, $p, $s1, 0),
+         (G_ICMP $d2, $p, $s2, 0),
+         (G_OR $root, $d1, $d2),
+         [{ return ${p}.getPredicate() == CmpInst::ICMP_NE &&
+                       !MRI.getType(${s1}.getReg()).getScalarType().isPointer() &&
+                       (MRI.getType(${s1}.getReg()) ==
+                           MRI.getType(${s2}.getReg())); }]),
+  (apply (G_OR $ordst, $s1, $s2),
+         (G_ICMP $root, $p, $ordst, 0))
+>;
+
+def double_icmp_zero_and_or_combine : GICombineGroup<[double_icmp_zero_and_combine,
+                                                      double_icmp_zero_or_combine]>;
+
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -1283,7 +1321,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold,
-                                        right_identity_neg_zero_fp]>;
+                                        right_identity_neg_zero_fp,
+                                        right_identity_neg_one_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
@@ -1317,7 +1356,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload, combine_extracted_vector_load,
-    undef_combines, identity_combines, phi_combines, 
+    undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
@@ -1334,8 +1373,8 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
-    fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors, 
-    combine_concat_vector]>;
+    fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
+    combine_concat_vector, double_icmp_zero_and_or_combine]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
