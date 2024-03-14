@@ -68,7 +68,7 @@ libc_support_library(
     name = "internal_includes",
     hdrs = glob([
         "include/llvm-libc-macros/*.h",
-        "include/llvm-libc/types/*",
+        "include/llvm-libc-types/*",
     ]),
 )
 
