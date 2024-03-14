@@ -192,7 +192,7 @@ struct Clause : public tomp::ClauseT<SymIdent, SymReference> {
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
                   parser::CharBlock source = {}) {
-  return Clause{id, specific, source};
+  return Clause{{id, specific}, source};
 }
 
 Clause makeClause(const Fortran::parser::OmpClause &cls,
