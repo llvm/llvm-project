@@ -13820,18 +13820,14 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
 
-  TypeSourceInfo *NewCallOpTSI = nullptr;
-  auto OldCallOpTypeLoc =
-      E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
-
-  QualType NewCallOpType;
   TypeLocBuilder NewCallOpTLBuilder;
-
-  NewCallOpType =
+  TypeLoc OldCallOpTypeLoc =
+      E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+  QualType NewCallOpType =
       getDerived().TransformType(NewCallOpTLBuilder, OldCallOpTypeLoc);
   if (NewCallOpType.isNull())
     return ExprError();
-  NewCallOpTSI =
+  TypeSourceInfo *NewCallOpTSI =
       NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
 
   auto ExtractParams = [](TypeLoc TL) {
