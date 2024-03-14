@@ -13,9 +13,10 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+
+#include <math.h>
 
 namespace LIBC_NAMESPACE {
 namespace fputil {

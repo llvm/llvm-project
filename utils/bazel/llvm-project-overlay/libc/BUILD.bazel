@@ -62,17 +62,7 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
-################################# Include Files ################################
-
-libc_support_library(
-    name = "internal_includes",
-    hdrs = glob([
-        "include/llvm-libc-macros/*.h",
-        "include/llvm-libc/types/*",
-    ]),
-)
-
-############################### Support libraries ##############################
+############################## Support libraries #############################
 
 libc_support_library(
     name = "__support_macros_properties_architectures",
@@ -680,7 +670,6 @@ libc_support_library(
         ":__support_macros_properties_architectures",
         ":__support_macros_sanitizer",
         ":errno",
-        ":internal_includes",
     ],
 )
 
@@ -750,7 +739,6 @@ libc_support_library(
         ":__support_fputil_normal_float",
         ":__support_macros_optimization",
         ":__support_uint128",
-        ":internal_includes",
     ],
 )
 
@@ -764,7 +752,6 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
-        ":internal_includes",
     ],
 )
 
@@ -1186,7 +1173,6 @@ libc_support_library(
         "__support_cpp_type_traits",
         ":__support_common",
         ":errno",
-        ":internal_includes",
     ],
 )
 
