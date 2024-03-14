@@ -263,6 +263,17 @@ namespace {
   }
 }
 
+QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
+  if (isa<EnumType>(getType()))
+    return getType();
+  if (const auto *ECD = getEnumConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    if (ED->isCompleteDefinition())
+      return Ctx.getTypeDeclType(ED);
+  }
+  return getType();
+}
+
 SourceLocation Expr::getExprLoc() const {
   switch (getStmtClass()) {
   case Stmt::NoStmtClass: llvm_unreachable("statement without class");
@@ -1897,6 +1908,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -4094,6 +4106,13 @@ FieldDecl *Expr::getSourceBitField() {
     if (UnOp->isPrefix() && UnOp->isIncrementDecrementOp())
       return UnOp->getSubExpr()->getSourceBitField();
 
+  return nullptr;
+}
+
+EnumConstantDecl *Expr::getEnumConstantDecl() {
+  Expr *E = this->IgnoreParenImpCasts();
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<EnumConstantDecl>(DRE->getDecl());
   return nullptr;
 }
 

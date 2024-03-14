@@ -16,7 +16,7 @@
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "mlir/IR/EnumAttr.td"
 
-class fir_Attr<string name> : AttrDef<fir_Dialect, name>;
+class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
 
 def FIRnoAttributes  : I32BitEnumAttrCaseNone<"None">;
 def FIRallocatable  : I32BitEnumAttrCaseBit<"allocatable", 0>;
@@ -91,7 +91,7 @@ def fir_CUDADataAttribute : I32EnumAttr<
 }
 
 def fir_CUDADataAttributeAttr :
-    EnumAttr<fir_Dialect, fir_CUDADataAttribute, "cuda"> {
+    EnumAttr<FIROpsDialect, fir_CUDADataAttribute, "cuda"> {
   let assemblyFormat = [{ ```<` $value `>` }];
 }
 
@@ -109,8 +109,32 @@ def fir_CUDAProcAttribute : I32EnumAttr<
 }
 
 def fir_CUDAProcAttributeAttr :
-    EnumAttr<fir_Dialect, fir_CUDAProcAttribute, "cuda_proc"> {
+    EnumAttr<FIROpsDialect, fir_CUDAProcAttribute, "cuda_proc"> {
   let assemblyFormat = [{ ```<` $value `>` }];
+}
+
+def fir_CUDALaunchBoundsAttr : fir_Attr<"CUDALaunchBounds"> {
+  let mnemonic = "launch_bounds";
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$maxTPB,
+    "mlir::IntegerAttr":$minBPM,
+    OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def fir_CUDAClusterDimsAttr : fir_Attr<"CUDAClusterDims"> {
+  let mnemonic = "cluster_dims";
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$x,
+    "mlir::IntegerAttr":$y,
+    "mlir::IntegerAttr":$z
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 #endif // FIR_DIALECT_FIR_ATTRS

@@ -9,6 +9,7 @@
 include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
 include "AMDGPUFeatures.td"
+include "AMDGPUPredicateControl.td"
 
 def p0 : PtrValueType<i64, 0>;
 def p1 : PtrValueType<i64, 1>;
@@ -226,6 +227,21 @@ def FeatureLdsBranchVmemWARHazard : SubtargetFeature<"lds-branch-vmem-war-hazard
   "true",
   "Switching between LDS and VMEM-tex not waiting VM_VSRC=0"
 >;
+
+class FeatureMaxHardClauseLength<int size> : SubtargetFeature<
+  "max-hard-clause-length-"#size,
+  "MaxHardClauseLength",
+  !cast<string>(size),
+  "Maximum number of instructions in an explicit S_CLAUSE is "#size
+>;
+
+/// Work around a hardware bug on some chips that can be triggered
+/// under certain circumstances when clauses are longer than 32 operations.
+def FeatureMaxHardClauseLength32 : FeatureMaxHardClauseLength<32>;
+/// While the S_CLAUSE instruction permits encoding clause lengths up to 64,
+/// hardware documentation for gfx10+ indicates that 63 is the maximum
+/// permitted clause length.
+def FeatureMaxHardClauseLength63 : FeatureMaxHardClauseLength<63>;
 
 def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "HasNSAtoVMEMBug",
@@ -632,6 +648,12 @@ def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
   "HasDot10Insts",
   "true",
   "Has v_dot2_f32_f16 instruction"
+>;
+
+def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
+  "HasDot11Insts",
+  "true",
+  "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
 >;
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
@@ -1092,7 +1114,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength63
   ]
 >;
 
@@ -1112,7 +1135,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureDefaultComponentZero
+   FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength32
   ]
 >;
 
@@ -1132,7 +1156,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureMaxHardClauseLength32
   ]
 >;
 
@@ -1502,6 +1527,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -1855,6 +1881,12 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
@@ -1871,16 +1903,16 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
 // instructions have the same encoding as real ones but syntactically
 // only allow 32-bit registers in operands and use low halves thereof.
-def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
+def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
-def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
-                                   "!Subtarget->useRealTrue16Insts()">;
+def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
+                                              "!Subtarget->useRealTrue16Insts()">;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
@@ -2003,6 +2035,9 @@ def HasDot9Insts : Predicate<"Subtarget->hasDot9Insts()">,
 
 def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
   AssemblerPredicate<(all_of FeatureDot10Insts)>;
+
+def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
+  AssemblerPredicate<(all_of FeatureDot11Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;

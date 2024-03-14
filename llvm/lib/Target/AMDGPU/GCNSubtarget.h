@@ -153,6 +153,7 @@ protected:
   bool HasDot8Insts = false;
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
+  bool HasDot11Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
@@ -168,6 +169,10 @@ protected:
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
+  /// The maximum number of instructions that may be placed within an S_CLAUSE,
+  /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
+  /// indicates a lack of S_CLAUSE support.
+  unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
@@ -643,6 +648,14 @@ public:
   // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
   bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
 
+  bool hasExportInsts() const {
+    return !hasGFX940Insts();
+  }
+
+  bool hasVINTERPEncoding() const {
+    return GFX11Insts;
+  }
+
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
 
@@ -779,6 +792,10 @@ public:
 
   bool hasDot10Insts() const {
     return HasDot10Insts;
+  }
+
+  bool hasDot11Insts() const {
+    return HasDot11Insts;
   }
 
   bool hasMAIInsts() const {
@@ -1145,7 +1162,7 @@ public:
 
   bool hasNSAClauseBug() const { return HasNSAClauseBug; }
 
-  bool hasHardClauses() const { return getGeneration() >= GFX10; }
+  bool hasHardClauses() const { return MaxHardClauseLength > 0; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
@@ -1212,6 +1229,11 @@ public:
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
 
+  /// \returns The maximum number of instructions that can be enclosed in an
+  /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
+  /// instruction.
+  unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
@@ -1257,12 +1279,6 @@ public:
 
   // \returns true if preloading kernel arguments is supported.
   bool hasKernargPreload() const { return KernargPreload; }
-
-  // \returns true if we need to generate backwards compatible code when
-  // preloading kernel arguments.
-  bool needsKernargPreloadBackwardsCompatibility() const {
-    return hasKernargPreload() && !hasGFX940Insts();
-  }
 
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
@@ -1377,6 +1393,12 @@ public:
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
     return AMDGPU::IsaInfo::getTotalNumVGPRs(this);
+  }
+
+  /// \returns Addressable number of architectural VGPRs supported by the
+  /// subtarget.
+  unsigned getAddressableNumArchVGPRs() const {
+    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.

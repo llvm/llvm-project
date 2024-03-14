@@ -103,8 +103,8 @@ Error LoopInversionPass::runOnFunctions(BinaryContext &BC) {
       BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, SkipFunc,
       "LoopInversionPass");
 
-  outs() << "BOLT-INFO: " << ModifiedFuncCount
-         << " Functions were reordered by LoopInversionPass\n";
+  BC.outs() << "BOLT-INFO: " << ModifiedFuncCount
+            << " Functions were reordered by LoopInversionPass\n";
   return Error::success();
 }
 

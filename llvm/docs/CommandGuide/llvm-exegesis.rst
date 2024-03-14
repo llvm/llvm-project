@@ -89,6 +89,14 @@ properly.
   annotation requires the subprocess execution mode. This is useful in
   cases where the memory accessed by the snippet depends on the location
   of the snippet, like RIP-relative addressing.
+* `LLVM-EXEGESIS-LOOP-REGISTER <register name>` - This annotation specifies
+  the loop register to use for keeping track of the current iteration when
+  using the loop repetition mode. :program:`llvm-exegesis` needs to keep track
+  of the current loop iteration within the loop repetition mode in a performant
+  manner (i.e., no memory accesses), and uses a register to do this. This register
+  has an architecture specific default (e.g., `R8` on X86), but this might conflict
+  with some snippets. This annotation allows changing the register to prevent
+  interference between the loop index register and the snippet.
 
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
@@ -442,6 +450,17 @@ OPTIONS
   This option enables specifying the number of times to repeat the measurement
   when performing latency measurements. By default, llvm-exegesis will repeat
   a latency measurement enough times to balance run-time and noise reduction.
+
+.. option:: --validation-counter=[instructions-retired,l1d-cache-load-misses,
+   l1d-cache-store-misses,l1i-cache-load-misses,data-tlb-load-misses,
+   data-tld-store-misses,instruction-tlb-load-misses]
+
+   This option enables the use of validation counters, which measure additional
+   microarchitectural events like cache misses to validate snippet execution
+   conditions. These events are measured using the perf subsystem in a group
+   with the performance counter used to measure the value of interest. This
+   flag can be specified multiple times to measure multiple events. The maximum
+   number of validation counters is platform dependent.
 
 EXIT STATUS
 -----------

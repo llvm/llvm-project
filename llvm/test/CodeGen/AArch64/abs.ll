@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:         warning: Instruction selection used fallback path for abs_v4i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v2i16
-
 ; ===== Legal Scalars =====
 
 define i8 @abs_i8(i8 %a){
@@ -250,12 +247,11 @@ define <1 x i32> @abs_v1i32(<1 x i32> %a){
 ;
 ; CHECK-GI-LABEL: abs_v1i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    asr w9, w8, #31
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    eor w8, w8, w9
 ; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -311,11 +307,6 @@ define <3 x i8> @abs_v3i8(<3 x i8> %a){
 ; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
 ; CHECK-GI-NEXT:    fmov s1, w2
 ; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[3], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[4], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[5], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[6], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[7], v0.b[0]
 ; CHECK-GI-NEXT:    abs v0.8b, v0.8b
 ; CHECK-GI-NEXT:    umov w0, v0.b[0]
 ; CHECK-GI-NEXT:    umov w1, v0.b[1]

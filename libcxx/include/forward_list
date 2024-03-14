@@ -199,7 +199,6 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__iterator/distance.h>
@@ -689,22 +688,16 @@ public:
 #endif
   _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v);
 
-  template <class = __enable_if_t<__is_allocator<_Alloc>::value> >
+  template <__enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v, const allocator_type& __a) : base(__a) {
     insert_after(cbefore_begin(), __n, __v);
   }
 
-  template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI
-  forward_list(_InputIterator __f,
-               _InputIterator __l,
-               __enable_if_t<__has_input_iterator_category<_InputIterator>::value>* = nullptr);
-  template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI
-  forward_list(_InputIterator __f,
-               _InputIterator __l,
-               const allocator_type& __a,
-               __enable_if_t<__has_input_iterator_category<_InputIterator>::value>* = nullptr);
+  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI forward_list(_InputIterator __f, _InputIterator __l);
+
+  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI forward_list(_InputIterator __f, _InputIterator __l, const allocator_type& __a);
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
@@ -938,20 +931,14 @@ forward_list<_Tp, _Alloc>::forward_list(size_type __n, const value_type& __v) {
 }
 
 template <class _Tp, class _Alloc>
-template <class _InputIterator>
-forward_list<_Tp, _Alloc>::forward_list(
-    _InputIterator __f, _InputIterator __l, __enable_if_t<__has_input_iterator_category<_InputIterator>::value>*) {
+template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> >
+forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l) {
   insert_after(cbefore_begin(), __f, __l);
 }
 
 template <class _Tp, class _Alloc>
-template <class _InputIterator>
-forward_list<_Tp, _Alloc>::forward_list(
-    _InputIterator __f,
-    _InputIterator __l,
-    const allocator_type& __a,
-    __enable_if_t<__has_input_iterator_category<_InputIterator>::value>*)
-    : base(__a) {
+template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> >
+forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l, const allocator_type& __a) : base(__a) {
   insert_after(cbefore_begin(), __f, __l);
 }
 

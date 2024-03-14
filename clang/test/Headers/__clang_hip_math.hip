@@ -1685,7 +1685,7 @@ extern "C" __device__ double test_j1(double x) {
 // DEFAULT-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to float
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to float
 // DEFAULT-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]]
 // DEFAULT-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
@@ -1718,7 +1718,7 @@ extern "C" __device__ double test_j1(double x) {
 // FINITEONLY-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to float
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to float
 // FINITEONLY-NEXT:    [[DIV_I:%.*]] = fdiv nnan ninf contract float [[CONV_I]], [[Y]]
 // FINITEONLY-NEXT:    [[MUL8_I:%.*]] = fmul nnan ninf contract float [[__X1_0_I3]], [[DIV_I]]
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract float [[MUL8_I]], [[__X0_0_I2]]
@@ -1751,7 +1751,7 @@ extern "C" __device__ double test_j1(double x) {
 // APPROX-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// APPROX-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to float
+// APPROX-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to float
 // APPROX-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]]
 // APPROX-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
 // APPROX-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
@@ -1788,7 +1788,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // DEFAULT-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to double
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to double
 // DEFAULT-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
 // DEFAULT-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
@@ -1821,7 +1821,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // FINITEONLY-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to double
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to double
 // FINITEONLY-NEXT:    [[DIV_I:%.*]] = fdiv nnan ninf contract double [[CONV_I]], [[Y]]
 // FINITEONLY-NEXT:    [[MUL8_I:%.*]] = fmul nnan ninf contract double [[__X1_0_I3]], [[DIV_I]]
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract double [[MUL8_I]], [[__X0_0_I2]]
@@ -1854,7 +1854,7 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // APPROX-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// APPROX-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to double
+// APPROX-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to double
 // APPROX-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
 // APPROX-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
 // APPROX-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
@@ -2557,33 +2557,65 @@ extern "C" __device__ double test_nan(const char *tag) {
   return nan(tag);
 }
 
-// CHECK-LABEL: @test_nanf_emptystr(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret float 0x7FF8000000000000
+// DEFAULT-LABEL: @test_nanf_emptystr(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    ret float 0x7FF8000000000000
+//
+// FINITEONLY-LABEL: @test_nanf_emptystr(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    ret float poison
+//
+// APPROX-LABEL: @test_nanf_emptystr(
+// APPROX-NEXT:  entry:
+// APPROX-NEXT:    ret float 0x7FF8000000000000
 //
 extern "C" __device__ float test_nanf_emptystr() {
   return nanf("");
 }
 
-// CHECK-LABEL: @test_nan_emptystr(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret double 0x7FF8000000000000
+// DEFAULT-LABEL: @test_nan_emptystr(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    ret double 0x7FF8000000000000
+//
+// FINITEONLY-LABEL: @test_nan_emptystr(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    ret double poison
+//
+// APPROX-LABEL: @test_nan_emptystr(
+// APPROX-NEXT:  entry:
+// APPROX-NEXT:    ret double 0x7FF8000000000000
 //
 extern "C" __device__ double test_nan_emptystr() {
   return nan("");
 }
 
-// CHECK-LABEL: @test_nanf_fill(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret float 0x7FF8000000000000
+// DEFAULT-LABEL: @test_nanf_fill(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    ret float 0x7FF8000000000000
+//
+// FINITEONLY-LABEL: @test_nanf_fill(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    ret float poison
+//
+// APPROX-LABEL: @test_nanf_fill(
+// APPROX-NEXT:  entry:
+// APPROX-NEXT:    ret float 0x7FF8000000000000
 //
 extern "C" __device__ float test_nanf_fill() {
   return nanf("0x456");
 }
 
-// CHECK-LABEL: @test_nan_fill(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret double 0x7FF8000000000000
+// DEFAULT-LABEL: @test_nan_fill(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    ret double 0x7FF8000000000000
+//
+// FINITEONLY-LABEL: @test_nan_fill(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    ret double poison
+//
+// APPROX-LABEL: @test_nan_fill(
+// APPROX-NEXT:  entry:
+// APPROX-NEXT:    ret double 0x7FF8000000000000
 //
 extern "C" __device__ double test_nan_fill() {
   return nan("0x123");
@@ -4190,7 +4222,7 @@ extern "C" __device__ double test_y1(double x) {
 // DEFAULT-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to float
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to float
 // DEFAULT-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]]
 // DEFAULT-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
@@ -4223,7 +4255,7 @@ extern "C" __device__ double test_y1(double x) {
 // FINITEONLY-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to float
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to float
 // FINITEONLY-NEXT:    [[DIV_I:%.*]] = fdiv nnan ninf contract float [[CONV_I]], [[Y]]
 // FINITEONLY-NEXT:    [[MUL8_I:%.*]] = fmul nnan ninf contract float [[__X1_0_I3]], [[DIV_I]]
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract float [[MUL8_I]], [[__X0_0_I2]]
@@ -4256,7 +4288,7 @@ extern "C" __device__ double test_y1(double x) {
 // APPROX-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// APPROX-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to float
+// APPROX-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to float
 // APPROX-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]]
 // APPROX-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
 // APPROX-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
@@ -4293,7 +4325,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // DEFAULT-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to double
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to double
 // DEFAULT-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
 // DEFAULT-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
 // DEFAULT-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
@@ -4326,7 +4358,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // FINITEONLY-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to double
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to double
 // FINITEONLY-NEXT:    [[DIV_I:%.*]] = fdiv nnan ninf contract double [[CONV_I]], [[Y]]
 // FINITEONLY-NEXT:    [[MUL8_I:%.*]] = fmul nnan ninf contract double [[__X1_0_I3]], [[DIV_I]]
 // FINITEONLY-NEXT:    [[SUB_I]] = fsub nnan ninf contract double [[MUL8_I]], [[__X0_0_I2]]
@@ -4359,7 +4391,7 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // APPROX-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
 // APPROX-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
-// APPROX-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[MUL_I]] to double
+// APPROX-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[MUL_I]] to double
 // APPROX-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
 // APPROX-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
 // APPROX-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]

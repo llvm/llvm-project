@@ -399,6 +399,8 @@ def NoSchedPred : MCSchedPredicate<TruePred>;
 class SchedVar<SchedPredicateBase pred, list<SchedReadWrite> selected> {
   SchedPredicateBase Predicate = pred;
   list<SchedReadWrite> Selected = selected;
+  // SchedModel silences warnings but is ignored.
+  SchedMachineModel SchedModel = ?;
 }
 
 // SchedModel silences warnings but is ignored.
@@ -615,7 +617,7 @@ class SecondFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
   : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
 // The pred will be applied on both firstMI and secondMI.
 class BothFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
-  : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
+  : FusionPredicateWithMCInstPredicate<both_fusion_target, pred>;
 
 // Tie firstOpIdx and secondOpIdx. The operand of `FirstMI` at position
 // `firstOpIdx` should be the same as the operand of `SecondMI` at position

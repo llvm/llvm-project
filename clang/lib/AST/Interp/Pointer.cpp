@@ -232,11 +232,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
 
     // Primitive values.
     if (std::optional<PrimType> T = Ctx.classify(Ty)) {
-      if (T == PT_Ptr || T == PT_FnPtr) {
-        R = Ptr.toAPValue();
-      } else {
-        TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
-      }
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
       return true;
     }
 
@@ -324,10 +320,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElemTy = CT->getElementType();
-      std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
-      assert(ElemT);
 
       if (ElemTy->isIntegerType()) {
+        std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+        assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
           auto V1 = Ptr.atIndex(0).deref<T>();
           auto V2 = Ptr.atIndex(1).deref<T>();

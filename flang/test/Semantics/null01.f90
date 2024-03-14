@@ -65,12 +65,22 @@ subroutine test
   real(kind=eight) :: r8check
   logical, pointer :: lp
   ip0 => null() ! ok
+  ip0 => null(null()) ! ok
+  ip0 => null(null(null())) ! ok
   ip1 => null() ! ok
+  ip1 => null(null()) ! ok
+  ip1 => null(null(null())) ! ok
   ip2 => null() ! ok
+  ip2 => null(null()) ! ok
+  ip2 => null(null(null())) ! ok
   !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
   ip0 => null(mold=1)
   !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
+  ip0 => null(null(mold=1))
+  !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
   ip0 => null(mold=j)
+  !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
+  ip0 => null(mold=null(mold=j))
   dt0x = dt0(null())
   dt0x = dt0(ip0=null())
   dt0x = dt0(ip0=null(ip0))

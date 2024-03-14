@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_MESH_IR_MESHOPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -38,17 +39,15 @@ using MeshAxesAttr = DenseI16ArrayAttr;
 namespace mlir {
 namespace mesh {
 
-bool isReductionLoop(IteratorType iType);
-
-bool areReductionAndPartialMatch(IteratorType iType, Partial partial);
+inline bool isReductionLoop(utils::IteratorType iType) {
+  return iType == utils::IteratorType::reduction;
+}
 
 template <typename T>
 void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
   while (!array.empty() && array.back().empty())
     array.pop_back();
 }
-
-Partial getPartialTypeFromReduction(IteratorType iType);
 
 // Is the same tensor replicated on all processes.
 inline bool isFullReplication(MeshShardingAttr attr) {
@@ -90,6 +89,12 @@ int64_t collectiveProcessGroupSize(MeshAxesRange &&meshAxes,
   }
 
   return res;
+}
+
+template <typename MeshAxesRange>
+int64_t collectiveProcessGroupSize(MeshAxesRange &&meshAxes, MeshOp mesh) {
+  return collectiveProcessGroupSize(std::forward<MeshAxesRange>(meshAxes),
+                                    mesh.getShape());
 }
 
 // Get the size of a sharded dimension.

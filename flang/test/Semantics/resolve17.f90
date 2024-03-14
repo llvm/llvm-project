@@ -180,7 +180,7 @@ contains
   end
 end module
 subroutine s9
-  !ERROR: USE-associated generic 'g' may not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
+  !PORTABILITY: USE-associated generic 'g' should not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
   use m9a
   use m9b
 end

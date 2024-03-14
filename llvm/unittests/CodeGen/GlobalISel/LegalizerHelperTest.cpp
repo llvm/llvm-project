@@ -147,9 +147,9 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
   LLT S32 = LLT::scalar(32);
   LLT V4S32 = LLT::fixed_vector(4, S32);
   auto SrcTrunc = B.buildTrunc(S32, Copies[0]);
-  auto Src = B.buildSplatVector(V4S32, SrcTrunc);
+  auto Src = B.buildSplatBuildVector(V4S32, SrcTrunc);
   auto AmtTrunc = B.buildTrunc(S32, Copies[1]);
-  auto Amt = B.buildSplatVector(V4S32, AmtTrunc);
+  auto Amt = B.buildSplatBuildVector(V4S32, AmtTrunc);
   auto ROTR = B.buildInstr(TargetOpcode::G_ROTR, {V4S32}, {Src, Amt});
 
   AInfo Info(MF->getSubtarget());

@@ -581,6 +581,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                 // pre-processed inputs.
                 .Case("f95", Language::Fortran)
                 .Case("f95-cpp-input", Language::Fortran)
+                // CUDA Fortran
+                .Case("cuda", Language::Fortran)
                 .Default(Language::Unknown);
 
     // Flang's intermediate representations.
@@ -876,6 +878,13 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
   if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
     res.getDefaultKinds().set_sizeIntegerKind(8);
+
+  // -x cuda
+  auto language = args.getLastArgValue(clang::driver::options::OPT_x);
+  if (language.equals("cuda")) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::CUDA);
+  }
 
   // -fopenmp and -fopenacc
   if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
@@ -1326,10 +1335,23 @@ void CompilerInvocation::setDefaultPredefinitions() {
     Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
                                     fortranOptions.predefinitions);
   }
+
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+  switch (targetTriple.getArch()) {
+  default:
+    break;
+  case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    break;
   }
 }
 

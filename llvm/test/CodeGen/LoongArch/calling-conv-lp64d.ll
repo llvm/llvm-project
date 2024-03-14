@@ -11,10 +11,10 @@ define i64 @callee_float_in_fpr(i64 %a, float %b, double %c) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ftintrz.l.s $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.d $a1, $fa0
-; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ftintrz.l.d $fa0, $fa1
-; CHECK-NEXT:    movfr2gr.d $a1, $fa0
+; CHECK-NEXT:    movfr2gr.d $a2, $fa0
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
+; CHECK-NEXT:    add.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %b_fptosi = fptosi float %b to i64
   %c_fptosi = fptosi double %c to i64
@@ -45,12 +45,12 @@ define i64 @caller_float_in_fpr() nounwind {
 define i64 @callee_double_in_gpr_exhausted_fprs(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i) nounwind {
 ; CHECK-LABEL: callee_double_in_gpr_exhausted_fprs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ftintrz.l.d $fa0, $fa7
-; CHECK-NEXT:    movfr2gr.d $a1, $fa0
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    ftintrz.l.d $fa1, $fa7
+; CHECK-NEXT:    movfr2gr.d $a0, $fa1
 ; CHECK-NEXT:    ftintrz.l.d $fa0, $fa0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    add.d $a0, $a1, $a0
+; CHECK-NEXT:    movfr2gr.d $a1, $fa0
+; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %h_fptosi = fptosi double %h to i64
   %i_fptosi = fptosi double %i to i64

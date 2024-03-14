@@ -525,16 +525,7 @@ it supports. Such code objects may not perform as well as those for the non-gene
 
 Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
 
-Generic processor code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
-The version of non-generic code objects is always set to 0.
-
-For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
-so it can continue to execute on the previously supported processors as well as on the new one.
-When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
-
-Each supported processor of a generic target is mapped to the version it was introduced in.
-A generic code object can execute on a supported processor if the version of the code object being loaded is
-greater than or equal to the version in which the processor was added to the generic target.
+Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor-versioning` for more information on how versioning works.
 
   .. table:: AMDGPU Generic Processors
      :name: amdgpu-generic-processor-table
@@ -567,7 +558,7 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx10.1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
+     ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
                                          - ``gfx1012``     - cumode                               and ``gfx1012``
                                          - ``gfx1013``
@@ -586,7 +577,7 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                   ``gfx1013``
 
 
-     ``gfx10.3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
+     ``gfx10-3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
                                          - ``gfx1031``     - cumode             scratch
                                          - ``gfx1032``
                                          - ``gfx1033``
@@ -621,6 +612,21 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                 - ``gfx1151``
      ==================== ============== ================= ================== ================= =================================
 
+.. _amdgpu-generic-processor-versioning:
+
+Generic Processor Versioning
+----------------------------
+
+Generic processor (see :ref:`amdgpu-generic-processor-table`) code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
+The version of non-generic code objects is always set to 0.
+
+For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
+so it can continue to execute on the previously supported processors as well as on the new one.
+When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
+
+Each supported processor of a generic target is mapped to the version it was introduced in.
+A generic code object can execute on a supported processor if the version of the code object being loaded is
+greater than or equal to the version in which the processor was added to the generic target.
 
 .. _amdgpu-target-features:
 
@@ -1151,6 +1157,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
+  :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
+                                                   This stores information related to the current rounding mode,
+                                                   denormalization mode, enabled traps, and floating point exceptions.
+                                                   The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
+
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand
@@ -1299,8 +1312,30 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu_metadata:
+
+LLVM IR Metadata
+================
+
+The AMDGPU backend implements the following target custom LLVM IR
+metadata.
+
+.. _amdgpu_last_use:
+
+'``amdgpu.last.use``' Metadata
+------------------------------
+
+Sets TH_LOAD_LU temporal hint on load instructions that support it.
+Takes priority over nontemporal hint (TH_LOAD_NT). This takes no
+arguments.
+
+.. code-block:: llvm
+
+  %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
+
+
 LLVM IR Attributes
-------------------
+==================
 
 The AMDGPU backend supports the following LLVM IR attributes.
 
@@ -1414,10 +1449,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              the frame. This is an internal detail of how LDS variables are lowered,
                                              language front ends should not set this attribute.
 
+     "amdgpu-max-num-workgroups"="x,y,z"     Specify the maximum number of work groups for the kernel dispatch in the
+                                             X, Y, and Z dimensions. Generated by the ``amdgpu_max_num_work_groups``
+                                             CLANG attribute [CLANG-ATTR]_. Clang only emits this attribute when all
+                                             the three numbers are >= 1.
+
      ======================================= ==========================================================
 
 Calling Conventions
--------------------
+===================
 
 The AMDGPU backend supports the following calling conventions:
 
@@ -1512,6 +1552,25 @@ The AMDGPU backend supports the following calling conventions:
 
      =============================== ==========================================================
 
+AMDGPU MCExpr
+-------------
+
+As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+``MCExpr``\s.
+
+  .. table:: AMDGPU MCExpr types:
+     :name: amdgpu-mcexpr-table
+
+     =================== ================= ========================================================
+     MCExpr              Operands          Return value
+     =================== ================= ========================================================
+     ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
+                                           value of all its arguments.
+
+     ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
+                                           result of all its arguments.
+
+     =================== ================= ========================================================
 
 .. _amdgpu-elf-code-object:
 
@@ -1781,7 +1840,7 @@ The AMDGPU backend uses the following ELF header:
                                                              mask. This is a value between 1 and 255,
                                                              stored in the most significant byte
                                                              of EFLAGS.
-                                                             See :ref:`amdgpu-generic-processor-table`
+                                                             See :ref:`amdgpu-generic-processor-versioning`
      ============================================ ========== =========================================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
@@ -1860,8 +1919,8 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x04f      Reserved.
      *reserved*                                 0x050      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10.1-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10.3-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      *reserved*                                 0x055      Reserved.
      ========================================== ========== =============================
@@ -3889,6 +3948,11 @@ same *vendor-name*.
 
                                                                   If omitted, "normal" is
                                                                   assumed.
+     ".max_num_work_groups_{x,y,z}"      integer                  The max number of
+                                                                  launched work-groups
+                                                                  in the X, Y, and Z
+                                                                  dimensions. Each number
+                                                                  must be >=1.
      =================================== ============== ========= ================================
 
 ..
@@ -5515,7 +5579,10 @@ additional 256 bytes to the kernel_code_entry_byte_offset. This addition
 facilitates the incorporation of a prologue to the kernel entry to handle cases
 where code designed for kernarg preloading is executed on hardware equipped with
 incompatible firmware. If hardware has compatible firmware the 256 bytes at the
-start of the kernel entry will be skipped.
+start of the kernel entry will be skipped. Additionally, the compiler backend
+may insert a trap instruction at the start of the kernel prologue to manage
+situations where kernarg preloading is attempted on hardware with incompatible
+firmware.
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
@@ -12288,8 +12355,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12318,8 +12385,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12425,8 +12492,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12456,8 +12523,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12652,8 +12719,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              the
                                                              fence-paired-atomic.
 
-                                                         2. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         2. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before any
                                                              following global/generic
@@ -13366,8 +13433,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         4. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -13441,8 +13508,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         4. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -13669,8 +13736,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              requirements of
                                                              release.
 
-                                                         2. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         2. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following

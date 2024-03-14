@@ -26,6 +26,12 @@
 namespace llvm {
 namespace object {
 
+constexpr std::string_view ImportDescriptorPrefix = "__IMPORT_DESCRIPTOR_";
+constexpr std::string_view NullImportDescriptorSymbolName =
+    "__NULL_IMPORT_DESCRIPTOR";
+constexpr std::string_view NullThunkDataPrefix = "\x7f";
+constexpr std::string_view NullThunkDataSuffix = "_NULL_THUNK_DATA";
+
 class COFFImportFile : public SymbolicFile {
 private:
   enum SymbolIndex { ImpSymbol, ThunkSymbol, ECAuxSymbol, ECThunkSymbol };
@@ -135,9 +141,20 @@ struct COFFShortExport {
   }
 };
 
-Error writeImportLibrary(StringRef ImportName, StringRef Path,
-                         ArrayRef<COFFShortExport> Exports,
-                         COFF::MachineTypes Machine, bool MinGW);
+/// Writes a COFF import library containing entries described by the Exports
+/// array.
+///
+/// For hybrid targets such as ARM64EC, additional native entry points can be
+/// exposed using the NativeExports parameter. When NativeExports is used, the
+/// output import library will expose these native ARM64 imports alongside the
+/// entries described in the Exports array. Such a library can be used for
+/// linking both ARM64EC and pure ARM64 objects, and the linker will pick only
+/// the exports relevant to the target platform. For non-hybrid targets,
+/// the NativeExports parameter should not be used.
+Error writeImportLibrary(
+    StringRef ImportName, StringRef Path, ArrayRef<COFFShortExport> Exports,
+    COFF::MachineTypes Machine, bool MinGW,
+    ArrayRef<COFFShortExport> NativeExports = std::nullopt);
 
 } // namespace object
 } // namespace llvm
