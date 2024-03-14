@@ -4070,9 +4070,10 @@ static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
 }
 
 /// Break an operation into 2 half sized ops and then concatenate the results.
-static SDValue splitVectorOp(SDValue Op, SelectionDAG &DAG, const SDLoc &dl) {
+static SDValue splitVectorOp(SDValue Op, SelectionDAG &DAG) {
   unsigned NumOps = Op.getNumOperands();
   EVT VT = Op.getValueType();
+  SDLoc dl(Op);
 
   // Extract the LHS Lo/Hi vectors
   SmallVector<SDValue> LoOps(NumOps, SDValue());
@@ -4095,8 +4096,7 @@ static SDValue splitVectorOp(SDValue Op, SelectionDAG &DAG, const SDLoc &dl) {
 
 /// Break an unary integer operation into 2 half sized ops and then
 /// concatenate the result back.
-static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG,
-                                   const SDLoc &dl) {
+static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
   // Make sure we only try to split 256/512-bit types to avoid creating
   // narrow vectors.
   EVT VT = Op.getValueType();
@@ -4107,20 +4107,19 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG,
   assert(Op.getOperand(0).getValueType().getVectorNumElements() ==
              VT.getVectorNumElements() &&
          "Unexpected VTs!");
-  return splitVectorOp(Op, DAG, dl);
+  return splitVectorOp(Op, DAG);
 }
 
 /// Break a binary integer operation into 2 half sized ops and then
 /// concatenate the result back.
-static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG,
-                                    const SDLoc &dl) {
+static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG) {
   // Assert that all the types match.
   EVT VT = Op.getValueType();
   (void)VT;
   assert(Op.getOperand(0).getValueType() == VT &&
          Op.getOperand(1).getValueType() == VT && "Unexpected VTs!");
   assert((VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
-  return splitVectorOp(Op, DAG, dl);
+  return splitVectorOp(Op, DAG);
 }
 
 // Helper for splitting operands of an operation to legal target size and
@@ -20055,7 +20054,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
 
   if (VT == MVT::v32i16 && !Subtarget.hasBWI()) {
     assert(InVT == MVT::v32i8 && "Unexpected VT!");
-    return splitVectorIntUnary(Op, DAG, dl);
+    return splitVectorIntUnary(Op, DAG);
   }
 
   if (Subtarget.hasInt256())
@@ -20636,7 +20635,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasAVX512()) {
     if (InVT == MVT::v32i16 && !Subtarget.hasBWI()) {
       assert(VT == MVT::v32i8 && "Unexpected VT!");
-      return splitVectorIntUnary(Op, DAG, DL);
+      return splitVectorIntUnary(Op, DAG);
     }
 
     // word to byte only under BWI. Otherwise we have to promoted to v16i32
@@ -21616,8 +21615,7 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
 
 /// Depending on uarch and/or optimizing for size, we might prefer to use a
 /// vector operation in place of the typical scalar operation.
-static SDValue lowerAddSubToHorizontalOp(SDValue Op, const SDLoc &DL,
-                                         SelectionDAG &DAG,
+static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   // If both operands have other uses, this is probably not profitable.
   SDValue LHS = Op.getOperand(0);
@@ -21673,6 +21671,7 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, const SDLoc &DL,
 
   // Creating a 256-bit horizontal op would be wasteful, and there is no 512-bit
   // equivalent, so extract the 256/512-bit source op to 128-bit if we can.
+  SDLoc DL(Op);
   if (BitWidth == 256 || BitWidth == 512) {
     unsigned LaneIdx = LExtIndex / NumEltsPerLane;
     X = extract128BitVector(X, LaneIdx * NumEltsPerLane, DAG, DL);
@@ -21693,7 +21692,7 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, const SDLoc &DL,
 SDValue X86TargetLowering::lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const {
   assert((Op.getValueType() == MVT::f32 || Op.getValueType() == MVT::f64) &&
          "Only expecting float/double");
-  return lowerAddSubToHorizontalOp(Op, SDLoc(Op), DAG, Subtarget);
+  return lowerAddSubToHorizontalOp(Op, DAG, Subtarget);
 }
 
 /// ISD::FROUND is defined to round to nearest with ties rounding away from 0.
@@ -24450,7 +24449,7 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
 
   if (VT == MVT::v32i16 && !Subtarget.hasBWI()) {
     assert(InVT == MVT::v32i8 && "Unexpected VT!");
-    return splitVectorIntUnary(Op, DAG, dl);
+    return splitVectorIntUnary(Op, DAG);
   }
 
   if (Subtarget.hasInt256())
@@ -27813,7 +27812,7 @@ static SDValue LowerVectorCTLZ_AVX512CDI(SDValue Op, SelectionDAG &DAG,
   // Split vector, it's Lo and Hi parts will be handled in next iteration.
   if (NumElems > 16 ||
       (NumElems == 16 && !Subtarget.canExtendTo512DQ()))
-    return splitVectorIntUnary(Op, DAG, dl);
+    return splitVectorIntUnary(Op, DAG);
 
   MVT NewVT = MVT::getVectorVT(MVT::i32, NumElems);
   assert((NewVT.is256BitVector() || NewVT.is512BitVector()) &&
@@ -27923,11 +27922,11 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
 
   // Decompose 256-bit ops into smaller 128-bit ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   // Decompose 512-bit ops into smaller 256-bit ops.
   if (VT.is512BitVector() && !Subtarget.hasBWI())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
@@ -28000,18 +27999,16 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
-  SDLoc DL(Op);
-
   if (VT == MVT::i16 || VT == MVT::i32)
-    return lowerAddSubToHorizontalOp(Op, DL, DAG, Subtarget);
+    return lowerAddSubToHorizontalOp(Op, DAG, Subtarget);
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   assert(Op.getSimpleValueType().is256BitVector() &&
          Op.getSimpleValueType().isInteger() &&
          "Only handle AVX 256-bit vector integer operation");
-  return splitVectorIntBinary(Op, DAG, DL);
+  return splitVectorIntBinary(Op, DAG);
 }
 
 static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
@@ -28025,7 +28022,7 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
       (VT.is256BitVector() && !Subtarget.hasInt256())) {
     assert(Op.getSimpleValueType().isInteger() &&
            "Only handle AVX vector integer operation");
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
   }
 
   // Avoid the generic expansion with min/max if we don't have pminu*/pmaxu*.
@@ -28087,11 +28084,10 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
                         SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
-  SDLoc DL(Op);
-
   if (VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) {
     // Since X86 does not have CMOV for 8-bit integer, we don't convert
     // 8-bit integer abs to NEG and CMOV.
+    SDLoc DL(Op);
     SDValue N0 = Op.getOperand(0);
     SDValue Neg = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32),
                               DAG.getConstant(0, DL, VT), N0);
@@ -28102,6 +28098,7 @@ static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
 
   // ABS(vXi64 X) --> VPBLENDVPD(X, 0-X, X).
   if ((VT == MVT::v2i64 || VT == MVT::v4i64) && Subtarget.hasSSE41()) {
+    SDLoc DL(Op);
     SDValue Src = Op.getOperand(0);
     SDValue Sub =
         DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
@@ -28111,11 +28108,11 @@ static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256()) {
     assert(VT.isInteger() &&
            "Only handle AVX 256-bit vector integer operation");
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
   }
 
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   // Default to expand.
   return SDValue();
@@ -28124,14 +28121,13 @@ static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerAVG(SDValue Op, const X86Subtarget &Subtarget,
                         SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
-  SDLoc DL(Op);
 
   // For AVX1 cases, split to use legal ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   // Default to expand.
   return SDValue();
@@ -28140,14 +28136,13 @@ static SDValue LowerAVG(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
-  SDLoc DL(Op);
 
   // For AVX1 cases, split to use legal ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   // Default to expand.
   return SDValue();
@@ -28304,15 +28299,15 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
                         SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
-  SDLoc dl(Op);
 
   // For AVX1 cases, split to use legal ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.useBWIRegs())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
+  SDLoc dl(Op);
   bool IsSigned = Op.getOpcode() == ISD::ABDS;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
@@ -28355,10 +28350,10 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
 
   // Decompose 256-bit ops into 128-bit ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
@@ -28581,10 +28576,10 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   // Decompose 256-bit ops into 128-bit ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   if (VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32) {
     assert((VT == MVT::v4i32 && Subtarget.hasSSE2()) ||
@@ -29762,10 +29757,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 
   // Decompose 256-bit shifts into 128-bit shifts.
   if (VT.is256BitVector())
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
-    return splitVectorIntBinary(Op, DAG, dl);
+    return splitVectorIntBinary(Op, DAG);
 
   return SDValue();
 }
@@ -29842,7 +29837,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
          EltSizeInBits < 32)) {
       // Pre-mask the amount modulo using the wider vector.
       Op = DAG.getNode(Op.getOpcode(), DL, VT, Op0, Op1, AmtMod);
-      return splitVectorOp(Op, DAG, DL);
+      return splitVectorOp(Op, DAG);
     }
 
     // Attempt to fold scalar shift as unpack(y,x) << zext(splat(z))
@@ -30004,7 +29999,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 
   // Split 256-bit integers on XOP/pre-AVX2 targets.
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   // XOP has 128-bit vector variable + immediate rotates.
   // +ve/-ve Amt = rotate left/right - just need to handle ISD::ROTL.
@@ -30040,7 +30035,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 
   // Split 512-bit integers on non 512-bit BWI targets.
   if (VT.is512BitVector() && !Subtarget.useBWIRegs())
-    return splitVectorIntBinary(Op, DAG, DL);
+    return splitVectorIntBinary(Op, DAG);
 
   assert(
       (VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8 ||
@@ -31120,11 +31115,11 @@ static SDValue LowerVectorCTPOP(SDValue Op, const SDLoc &DL,
 
   // Decompose 256-bit ops into smaller 128-bit ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   // Decompose 512-bit ops into smaller 256-bit ops.
   if (VT.is512BitVector() && !Subtarget.hasBWI())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   // For element types greater than i8, do vXi8 pop counts and a bytesum.
   if (VT.getScalarType() != MVT::i8) {
@@ -31248,7 +31243,7 @@ static SDValue LowerBITREVERSE_XOP(SDValue Op, SelectionDAG &DAG) {
 
   // Decompose 256-bit ops into smaller 128-bit ops.
   if (VT.is256BitVector())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   assert(VT.is128BitVector() &&
          "Only 128-bit vector bitreverse lowering supported.");
@@ -31287,11 +31282,11 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
 
   // Split 512-bit ops without BWI so that we can still use the PSHUFB lowering.
   if (VT.is512BitVector() && !Subtarget.hasBWI())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   // Decompose 256-bit ops into smaller 128-bit ops on pre-AVX2.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
-    return splitVectorIntUnary(Op, DAG, DL);
+    return splitVectorIntUnary(Op, DAG);
 
   // Lower vXi16/vXi32/vXi64 as BSWAP + vXi8 BITREVERSE.
   if (VT.getScalarType() != MVT::i8) {
@@ -55938,7 +55933,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     if (isConcatenatedNot(InVecBC.getOperand(0)) ||
         isConcatenatedNot(InVecBC.getOperand(1))) {
       // extract (and v4i64 X, (not (concat Y1, Y2))), n -> andnp v2i64 X(n), Y1
-      SDValue Concat = splitVectorIntBinary(InVecBC, DAG, SDLoc(InVecBC));
+      SDValue Concat = splitVectorIntBinary(InVecBC, DAG);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT,
                          DAG.getBitcast(InVecVT, Concat), N->getOperand(1));
     }
