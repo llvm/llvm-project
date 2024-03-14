@@ -460,7 +460,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_REALTIME = 131,
   ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
-  ID_RTN_GET_SE_AID_ID = 134,
+  ID_RTN_GET_TBA_TO_PC = 134,
+  ID_RTN_GET_SE_AID_ID = 135,
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
