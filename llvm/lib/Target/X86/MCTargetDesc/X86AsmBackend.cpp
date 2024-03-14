@@ -723,9 +723,10 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
                                       const MCSubtargetInfo &STI) const {
   unsigned Opcode = MI.getOpcode();
+  unsigned SkipOperands = X86::isCCMPCC(Opcode) ? 2 : 0;
   return isRelaxableBranch(Opcode) ||
          (X86::getOpcodeForLongImmediateForm(Opcode) != Opcode &&
-          MI.getOperand(MI.getNumOperands() - 1).isExpr());
+          MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
 bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
