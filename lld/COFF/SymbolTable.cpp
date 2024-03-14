@@ -54,8 +54,10 @@ void SymbolTable::addFile(InputFile *file) {
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file))
       f->parseLazy();
-    else
-      cast<ObjFile>(file)->parseLazy();
+    else if (auto *o = dyn_cast<ObjFile>(file))
+      o->parseLazy();
+    else if (auto *a = dyn_cast<ArchiveFile>(file))
+      a->parseLazy();
   } else {
     file->parse();
     if (auto *f = dyn_cast<ObjFile>(file)) {
@@ -102,7 +104,7 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
-    file->ctx.symtab.addFile(file);
+    file->ctx.driver.enqueueLazyFile(file);
     break;
   }
   case Symbol::Kind::LazyDLLSymbolKind: {
@@ -562,6 +564,57 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name, InputFile *file) {
   return result;
 }
 
+static LazyIntrusiveNode *lazyNode(Symbol *s) {
+  if (auto *sym = dyn_cast<LazyArchive>(s))
+    return &sym->node;
+  if (auto *sym = dyn_cast<LazyObject>(s))
+    return &sym->node;
+  return nullptr;
+}
+
+static ArchiveFile *lazyParent(InputFile *f) {
+  if (!f)
+    return nullptr;
+  if (auto *obj = dyn_cast<ObjFile>(f))
+    return obj->parent;
+  if (auto *obj = dyn_cast<BitcodeFile>(f))
+    return obj->parent;
+  return nullptr;
+}
+
+static ArchiveFile *lazyArchive(Symbol *s) {
+  if (auto *sym = dyn_cast<LazyArchive>(s))
+    return sym->file;
+  if (auto *sym = dyn_cast<LazyObject>(s))
+    return lazyParent(sym->file);
+  return nullptr;
+}
+
+// The search behavior for undefined symbols is different when the OBJ
+// was pulled from an archive (LIB). This is documented here:
+// https://learn.microsoft.com/en-us/cpp/build/reference/link-input-files?view=msvc-170
+// "Object files on the command line are processed in the order they
+// appear on the command line. Libraries are searched in command line
+// order as well, with the following caveat: Symbols that are unresolved
+// when bringing in an object file from a library are searched for in
+// that library first, and then the following libraries from the command
+// line and /DEFAULTLIB (Specify default library) directives, and then
+// to any libraries at the beginning of the command line."
+static Symbol *searchArchiveSymbol(Symbol *s, ArchiveFile *pivot) {
+  auto &Alloc = getSpecificAllocSingleton<SymbolUnion>().Allocator;
+  Symbol *curr = s;
+  for (;;) {
+    if (lazyArchive(curr)->CmdLineIndex >= pivot->CmdLineIndex)
+      return curr;
+    uint32_t next = lazyNode(curr)->next;
+    if (!next)
+      break;
+    curr = reinterpret_cast<LazyArchive *>(
+        Alloc.fromAlignedIndex<SymbolUnion>(next));
+  }
+  return s;
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
                                   bool isWeakAlias) {
   auto [s, wasInserted] = insert(name, f);
@@ -569,9 +622,41 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
     replaceSymbol<Undefined>(s, name);
     return s;
   }
-  if (s->isLazy())
+  if (s->isLazy()) {
+    if (ArchiveFile *parent = lazyParent(f)) {
+      Symbol *selected = searchArchiveSymbol(s, parent);
+      forceLazy(selected);
+      // Now that we have selected a symbol, we don't need the linked list of
+      // `LazyArchive`s anymore. Collapse to the selected symbol.
+      memcpy(s, selected, sizeof(SymbolUnion));
+      return s;
+    }
     forceLazy(s);
+  }
   return s;
+}
+
+// This creates a linked list of archives where a specific symbol was seen.
+// We later walk that list if a undefined symbol needs to be resolved from an
+// archive OBJ.
+template <typename T, typename... ArgT>
+static void chainLazy(LazyIntrusiveNode *front, ArgT &&...arg) {
+  // Chain with symbols defined in other archives
+  Symbol *newSym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  newSym->canInline = true;
+  replaceSymbol<T>(newSym, std::forward<ArgT>(arg)...);
+
+  auto &Alloc = getSpecificAllocSingleton<SymbolUnion>().Allocator;
+  uint32_t index = Alloc.identifyKnownAlignedObject<SymbolUnion>(newSym);
+
+  if (!front->next)
+    front->next = index;
+  if (front->last) {
+    Symbol *last = reinterpret_cast<Symbol *>(
+        Alloc.fromAlignedIndex<SymbolUnion>(front->last));
+    lazyNode(last)->next = index;
+  }
+  front->last = index;
 }
 
 void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
@@ -581,6 +666,10 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
     replaceSymbol<LazyArchive>(s, f, sym);
     return;
   }
+  if (auto *n = lazyNode(s)) {
+    chainLazy<LazyArchive>(n, f, sym);
+    return;
+  }
   auto *u = dyn_cast<Undefined>(s);
   if (!u || u->weakAlias || s->pendingArchiveLoad)
     return;
@@ -588,19 +677,22 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
   f->addMember(sym);
 }
 
-void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
+void SymbolTable::addLazyObject(InputFile *f, StringRef name) {
   assert(f->lazy);
-  auto [s, wasInserted] = insert(n, f);
+  auto [s, wasInserted] = insert(name, f);
   if (wasInserted) {
-    replaceSymbol<LazyObject>(s, f, n);
+    replaceSymbol<LazyObject>(s, f, name);
+    return;
+  }
+  if (auto *n = lazyNode(s)) {
+    chainLazy<LazyObject>(n, f, name);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
   if (!u || u->weakAlias || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
-  f->lazy = false;
-  addFile(f);
+  f->ctx.driver.enqueueLazyFile(f);
 }
 
 void SymbolTable::addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym,

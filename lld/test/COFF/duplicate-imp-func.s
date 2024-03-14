@@ -28,8 +28,10 @@
 # Once the import library member from %t.lib.dll.a gets loaded, libfunc
 # and __imp_libfunc already are defined.
 
-# Just check that this fails cleanly (doesn't crash).
-# RUN: not lld-link -lldmingw -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a %t.helper.a
+# This test should now succeed since we're following the MSVC symbol searching behvior described in:
+# https://learn.microsoft.com/en-us/cpp/build/reference/link-input-files?view=msvc-170
+# In this case, the linker will select the libfunc symbol in %t.helper.a
+# RUN: lld-link -lldmingw -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a %t.helper.a
 
 # Test with %t.helper.a on the command line; in this case we won't try to
 # include libfunc from %t.lib.dll.a and everything works fine.
