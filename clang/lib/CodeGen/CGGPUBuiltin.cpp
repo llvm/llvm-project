@@ -214,9 +214,6 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   if (llvm::getConstantStringInfo(Args[0], FmtStr)) {
     if (FmtStr.empty())
       FmtStr = StringRef("", 1);
-  } else {
-    assert(!CGM.getLangOpts().OpenCL &&
-           "OpenCL needs compile time resolvable format string");
   }
 
   auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, FmtStr, isBuffered,
