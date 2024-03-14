@@ -29,7 +29,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
 def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface, 
                         AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface]> {
 
-  let summary = "create nd tensor descriptor operation";
+  let summary = "Create nd-tensor descriptor operation";
   let description = [{
     The "create_nd_tdesc" operation creates a TensorDescType which represents
     a sub-view of a 2D memory region (It can be extended to support n-D memory
