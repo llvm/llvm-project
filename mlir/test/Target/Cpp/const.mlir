@@ -23,10 +23,10 @@ func.func @emitc_constant() {
 // CPP-DEFAULT-NEXT: uint8_t [[V4:[^ ]*]] = 255;
 // CPP-DEFAULT-NEXT: char [[V5:[^ ]*]] = CHAR_MIN;
 // CPP-DEFAULT-NEXT: size_t [[V6:[^ ]*]] = 2;
-// CPP-DEFAULT-NEXT: float [[V7:[^ ]*]] = (float)2.000000000e+00;
+// CPP-DEFAULT-NEXT: float [[V7:[^ ]*]] = 2.000000000e+00f;
 // CPP-DEFAULT-NEXT: Tensor<int32_t> [[V8:[^ ]*]] = {0};
 // CPP-DEFAULT-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]] = {0, 1};
-// CPP-DEFAULT-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]] = {(float)0.0e+00, (float)1.000000000e+00, (float)2.000000000e+00, (float)3.000000000e+00};
+// CPP-DEFAULT-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};
 
 // CPP-DECLTOP: void emitc_constant() {
 // CPP-DECLTOP-NEXT: int32_t [[V0:[^ ]*]];
@@ -47,7 +47,7 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: [[V4]] = 255;
 // CPP-DECLTOP-NEXT: [[V5]] = CHAR_MIN;
 // CPP-DECLTOP-NEXT: [[V6]] = 2;
-// CPP-DECLTOP-NEXT: [[V7]] = (float)2.000000000e+00;
+// CPP-DECLTOP-NEXT: [[V7]] = 2.000000000e+00f;
 // CPP-DECLTOP-NEXT: [[V8]] = {0};
 // CPP-DECLTOP-NEXT: [[V9]] = {0, 1};
-// CPP-DECLTOP-NEXT: [[V10]] = {(float)0.0e+00, (float)1.000000000e+00, (float)2.000000000e+00, (float)3.000000000e+00};
+// CPP-DECLTOP-NEXT: [[V10]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};
