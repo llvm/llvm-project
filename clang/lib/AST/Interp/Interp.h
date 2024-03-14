@@ -122,6 +122,9 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, const APSInt &IntValue);
 
+/// Copy the contents of Src into Dest.
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+
 /// Checks if the shift operation is legal.
 template <typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
@@ -1487,6 +1490,16 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   return true;
 }
 
+inline bool Memcpy(InterpState &S, CodePtr OpPC) {
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  Pointer &Dest = S.Stk.peek<Pointer>();
+
+  if (!CheckLoad(S, OpPC, Src))
+    return false;
+
+  return DoMemcpy(S, OpPC, Src, Dest);
+}
+
 //===----------------------------------------------------------------------===//
 // AddOffset, SubOffset
 //===----------------------------------------------------------------------===//
@@ -1933,8 +1946,15 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Ptr.isDummy())
-    return true;
+  if (!Ptr.isZero()) {
+    if (!CheckArray(S, OpPC, Ptr))
+      return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+  }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
@@ -1947,9 +1967,14 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy()) {
-    S.Stk.push<Pointer>(Ptr);
-    return true;
+  if (!Ptr.isZero()) {
+    if (!CheckArray(S, OpPC, Ptr))
+      return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
