@@ -47,6 +47,8 @@ Non-comprehensive list of changes in this release
   same semantics. The normalizer makes it easier to spot semantic differences
   when diffing two modules which have undergone different passes.
 
+* ...
+
 Update on required toolchains to build LLVM
 -------------------------------------------
 
