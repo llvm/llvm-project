@@ -47,7 +47,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       endif()
     endif()
 
-    # The module contains PPC vector types that needs the PPC target.
+    # The module contains PPC vector types that needs th1e PPC target.
     set(opts "")
       if(${filename} STREQUAL "__ppc_intrinsics" OR
          ${filename} STREQUAL "mma")
@@ -65,11 +65,8 @@ if (NOT CMAKE_CROSSCOMPILING)
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
     )
-    add_custom_command(OUTPUT ${base}.f18.mod
-      DEPENDS ${base}.mod
-      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    list(APPEND MODULE_FILES ${base}.mod)
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
   endforeach()
 endif()
 
