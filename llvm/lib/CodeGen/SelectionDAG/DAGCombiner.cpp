@@ -6656,34 +6656,25 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
 /// For targets that support usubsat, match a bit-hack form of that operation
 /// that ends in 'and' and convert it.
 static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  EVT VT = N1.getValueType();
-
-  // Canonicalize SRA as operand 1.
-  if (N0.getOpcode() == ISD::SRA)
-    std::swap(N0, N1);
-
-  // xor/add with SMIN (signmask) are logically equivalent.
-  if (N0.getOpcode() != ISD::XOR && N0.getOpcode() != ISD::ADD)
-    return SDValue();
-
-  if (N1.getOpcode() != ISD::SRA || !N0.hasOneUse() || !N1.hasOneUse() ||
-      N0.getOperand(0) != N1.getOperand(0))
-    return SDValue();
-
+  EVT VT = N->getValueType(0);
   unsigned BitWidth = VT.getScalarSizeInBits();
-  ConstantSDNode *XorC = isConstOrConstSplat(N0.getOperand(1), true);
-  ConstantSDNode *SraC = isConstOrConstSplat(N1.getOperand(1), true);
-  if (!XorC || !XorC->getAPIntValue().isSignMask() ||
-      !SraC || SraC->getAPIntValue() != BitWidth - 1)
-    return SDValue();
+  APInt SignMask = APInt::getSignMask(BitWidth);
 
   // (i8 X ^ 128) & (i8 X s>> 7) --> usubsat X, 128
   // (i8 X + 128) & (i8 X s>> 7) --> usubsat X, 128
+  // xor/add with SMIN (signmask) are logically equivalent.
+  SDValue X;
+  if (!sd_match(N, m_And(m_OneUse(m_Xor(m_Value(X), m_SpecificInt(SignMask))),
+                         m_OneUse(m_Sra(m_Deferred(X),
+                                        m_SpecificInt(BitWidth - 1))))) &&
+      !sd_match(N, m_And(m_OneUse(m_Add(m_Value(X), m_SpecificInt(SignMask))),
+                         m_OneUse(m_Sra(m_Deferred(X),
+                                        m_SpecificInt(BitWidth - 1))))))
+    return SDValue();
+
   SDLoc DL(N);
-  SDValue SignMask = DAG.getConstant(XorC->getAPIntValue(), DL, VT);
-  return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0), SignMask);
+  return DAG.getNode(ISD::USUBSAT, DL, VT, X,
+                     DAG.getConstant(SignMask, DL, VT));
 }
 
 /// Given a bitwise logic operation N with a matching bitwise logic operand,
