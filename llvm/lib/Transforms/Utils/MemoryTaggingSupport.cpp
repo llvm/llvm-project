@@ -18,7 +18,9 @@
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 namespace llvm {
@@ -239,6 +241,36 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 bool isLifetimeIntrinsic(Value *V) {
   auto *II = dyn_cast<IntrinsicInst>(V);
   return II && II->isLifetimeStartOrEnd();
+}
+
+Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Function *ReadRegister = Intrinsic::getDeclaration(
+      M, Intrinsic::read_register, IRB.getIntPtrTy(M->getDataLayout()));
+  MDNode *MD =
+      MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
+  Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
+  return IRB.CreateCall(ReadRegister, Args);
+}
+
+Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  if (TargetTriple.getArch() == Triple::aarch64)
+    return memtag::readRegister(IRB, "pc");
+  return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(),
+                            IRB.getIntPtrTy(M->getDataLayout()));
+}
+
+Value *getFP(IRBuilder<> &IRB) {
+  Function *F = IRB.GetInsertBlock()->getParent();
+  Module *M = F->getParent();
+  auto *GetStackPointerFn = Intrinsic::getDeclaration(
+      M, Intrinsic::frameaddress,
+      IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
+  return IRB.CreatePtrToInt(
+      IRB.CreateCall(GetStackPointerFn,
+                     {Constant::getNullValue(IRB.getInt32Ty())}),
+      IRB.getIntPtrTy(M->getDataLayout()));
 }
 
 } // namespace memtag
