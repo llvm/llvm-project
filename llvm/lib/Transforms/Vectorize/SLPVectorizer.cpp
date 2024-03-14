@@ -8902,7 +8902,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
       return TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind, Op1Info,
-                                         Op2Info) +
+                                         Op2Info, std::nullopt, nullptr, TLI) +
              CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -14001,6 +14001,33 @@ bool BoUpSLP::collectValuesToDemote(
   };
   unsigned Start = 0;
   unsigned End = I->getNumOperands();
+
+  auto FinalAnalysis = [&](const TreeEntry *ITE = nullptr) {
+    if (!IsProfitableToDemote)
+      return false;
+    return (ITE && ITE->UserTreeIndices.size() > 1) ||
+           IsPotentiallyTruncated(I, BitWidth);
+  };
+  auto ProcessOperands = [&](ArrayRef<Value *> Operands, bool &NeedToExit) {
+    NeedToExit = false;
+    unsigned InitLevel = MaxDepthLevel;
+    for (Value *IncValue : Operands) {
+      unsigned Level = InitLevel;
+      if (!collectValuesToDemote(IncValue, IsProfitableToDemoteRoot, BitWidth,
+                                 ToDemote, DemotedConsts, Visited, Level,
+                                 IsProfitableToDemote, IsTruncRoot)) {
+        if (!IsProfitableToDemote)
+          return false;
+        NeedToExit = true;
+        if (!FinalAnalysis(ITE))
+          return false;
+        continue;
+      }
+      MaxDepthLevel = std::max(MaxDepthLevel, Level);
+    }
+    return true;
+  };
+  bool NeedToExit = false;
   switch (I->getOpcode()) {
 
   // We can always demote truncations and extensions. Since truncations can
@@ -14028,19 +14055,8 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::Xor: {
     if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
       return false;
-    unsigned Level1, Level2;
-    bool Res1 = collectValuesToDemote(
-        I->getOperand(0), IsProfitableToDemoteRoot, BitWidth, ToDemote,
-        DemotedConsts, Visited, Level1, IsProfitableToDemote, IsTruncRoot);
-    bool Res2 = collectValuesToDemote(
-        I->getOperand(1), IsProfitableToDemoteRoot, BitWidth, ToDemote,
-        DemotedConsts, Visited, Level2, IsProfitableToDemote, IsTruncRoot);
-    if (!Res1 || !Res2) {
-      MaxDepthLevel = Res1 ? Level1 : (Res2 ? Level2 : 1);
-      return IsProfitableToDemote && (ITE->UserTreeIndices.size() > 1 ||
-                                      IsPotentiallyTruncated(I, BitWidth));
-    }
-    MaxDepthLevel = std::max(Level1, Level2);
+    if (!ProcessOperands({I->getOperand(0), I->getOperand(1)}, NeedToExit))
+      return false;
     break;
   }
 
@@ -14049,25 +14065,9 @@ bool BoUpSLP::collectValuesToDemote(
     if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
       return false;
     Start = 1;
-    unsigned Level1, Level2;
-    SelectInst *SI = cast<SelectInst>(I);
-    bool Res1 = collectValuesToDemote(
-        SI->getTrueValue(), IsProfitableToDemoteRoot, BitWidth, ToDemote,
-        DemotedConsts, Visited, Level1, IsProfitableToDemote, IsTruncRoot);
-    bool Res2 = collectValuesToDemote(
-        SI->getFalseValue(), IsProfitableToDemoteRoot, BitWidth, ToDemote,
-        DemotedConsts, Visited, Level2, IsProfitableToDemote, IsTruncRoot);
-    if (!Res1 || !Res2) {
-      MaxDepthLevel = Res1 ? Level1 : (Res2 ? Level2 : 1);
-      return IsProfitableToDemote && (ITE->UserTreeIndices.size() > 1 ||
-                                      IsPotentiallyTruncated(I, BitWidth));
-    }
-    if (!Res1 || !Res2) {
-      MaxDepthLevel = Res1 ? Level1 : (Res2 ? Level2 : 1);
-      return IsProfitableToDemote && (ITE->UserTreeIndices.size() > 1 ||
-                                      IsPotentiallyTruncated(I, BitWidth));
-    }
-    MaxDepthLevel = std::max(Level1, Level2);
+    auto *SI = cast<SelectInst>(I);
+    if (!ProcessOperands({SI->getTrueValue(), SI->getFalseValue()}, NeedToExit))
+      return false;
     break;
   }
 
@@ -14078,29 +14078,20 @@ bool BoUpSLP::collectValuesToDemote(
     MaxDepthLevel = 0;
     if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
       return false;
-    bool NeedToExit = false;
-    for (Value *IncValue : PN->incoming_values()) {
-      unsigned Level;
-      if (!collectValuesToDemote(IncValue, IsProfitableToDemoteRoot, BitWidth,
-                                 ToDemote, DemotedConsts, Visited, Level,
-                                 IsProfitableToDemote, IsTruncRoot)) {
-        if (!IsProfitableToDemote || (ITE->UserTreeIndices.size() <= 1 &&
-                                      !IsPotentiallyTruncated(I, BitWidth)))
-          return false;
-        NeedToExit = true;
-      }
-      MaxDepthLevel = std::max(MaxDepthLevel, Level);
-    }
-    if (NeedToExit)
-      return true;
+    SmallVector<Value *> Ops(PN->incoming_values().begin(),
+                             PN->incoming_values().end());
+    if (!ProcessOperands(Ops, NeedToExit))
+      return false;
     break;
   }
 
   // Otherwise, conservatively give up.
   default:
     MaxDepthLevel = 1;
-    return IsProfitableToDemote && IsPotentiallyTruncated(I, BitWidth);
+    return FinalAnalysis();
   }
+  if (NeedToExit)
+    return true;
 
   ++MaxDepthLevel;
   // Gather demoted constant operands.
@@ -14139,6 +14130,7 @@ void BoUpSLP::computeMinimumValueSizes() {
 
   // The first value node for store/insertelement is sext/zext/trunc? Skip it,
   // resize to the final type.
+  bool IsTruncRoot = false;
   bool IsProfitableToDemoteRoot = !IsStoreOrInsertElt;
   if (NodeIdx != 0 &&
       VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
@@ -14146,8 +14138,9 @@ void BoUpSLP::computeMinimumValueSizes() {
        VectorizableTree[NodeIdx]->getOpcode() == Instruction::SExt ||
        VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc)) {
     assert(IsStoreOrInsertElt && "Expected store/insertelement seeded graph.");
-    ++NodeIdx;
+    IsTruncRoot = VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc;
     IsProfitableToDemoteRoot = true;
+    ++NodeIdx;
   }
 
   // Analyzed in reduction already and not profitable - exit.
@@ -14279,7 +14272,6 @@ void BoUpSLP::computeMinimumValueSizes() {
     ReductionBitWidth = bit_ceil(ReductionBitWidth);
   }
   bool IsTopRoot = NodeIdx == 0;
-  bool IsTruncRoot = false;
   while (NodeIdx < VectorizableTree.size() &&
          VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
          VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc) {
