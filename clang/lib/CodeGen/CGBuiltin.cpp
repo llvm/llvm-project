@@ -1244,8 +1244,8 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   // it's set, a closest surrounding subobject is considered the object a
   // pointer points to.
   Value *WholeObj = Builder.getInt1((Type & 1) == 0);
-  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic, WholeObj,
-                                SubobjectSize});
+  return Builder.CreateCall(
+      F, {Ptr, Min, NullIsUnknown, Dynamic, WholeObj, SubobjectSize});
 }
 
 namespace {
