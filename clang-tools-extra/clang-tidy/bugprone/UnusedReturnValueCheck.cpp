@@ -38,11 +38,7 @@ constexpr std::initializer_list<OverloadedOperatorKind>
         OO_PipeEqual,  OO_LessLessEqual, OO_GreaterGreaterEqual, OO_PlusPlus,
         OO_MinusMinus};
 
-AST_MATCHER(CXXOperatorCallExpr, isAssignmentOverloadedOperatorCall) {
-  return llvm::is_contained(AssignmentOverloadedOperatorKinds,
-                            Node.getOperator());
-}
-AST_MATCHER(CXXMethodDecl, isAssignmentOverloadedOperatorMethod) {
+AST_MATCHER(FunctionDecl, isAssignmentOverloadedOperatorMethod) {
   return llvm::is_contained(AssignmentOverloadedOperatorKinds,
                             Node.getOverloadedOperator());
 }
@@ -186,8 +182,7 @@ void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
                   returns(hasCanonicalType(hasDeclaration(namedDecl(
                       matchers::matchesAnyListedName(CheckedReturnTypes)))))))),
           // Don't match copy or move assignment operator.
-          unless(cxxOperatorCallExpr(isAssignmentOverloadedOperatorCall())),
-          unless(callee(cxxMethodDecl(isAssignmentOverloadedOperatorMethod()))))
+          unless(callee(functionDecl(isAssignmentOverloadedOperatorMethod()))))
           .bind("match"));
 
   auto CheckCastToVoid =
