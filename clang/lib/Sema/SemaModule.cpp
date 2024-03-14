@@ -714,7 +714,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   return Import;
 }
 
-void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
+void Sema::ActOnAnnotModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext, true);
   BuildModuleInclude(DirectiveLoc, Mod);
 }
@@ -724,9 +724,9 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   // in that buffer do not qualify as module imports; they're just an
   // implementation detail of us building the module.
   //
-  // FIXME: Should we even get ActOnModuleInclude calls for those?
+  // FIXME: Should we even get ActOnAnnotModuleInclude calls for those?
   bool IsInModuleIncludes =
-      TUKind == TU_Module &&
+      TUKind == TU_ClangModule &&
       getSourceManager().isWrittenInMainFile(DirectiveLoc);
 
   // If we are really importing a module (not just checking layering) due to an
@@ -753,7 +753,7 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   }
 }
 
-void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
+void Sema::ActOnAnnotModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext, true);
 
   ModuleScopes.push_back({});
@@ -777,7 +777,7 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   }
 }
 
-void Sema::ActOnModuleEnd(SourceLocation EomLoc, Module *Mod) {
+void Sema::ActOnAnnotModuleEnd(SourceLocation EomLoc, Module *Mod) {
   if (getLangOpts().ModulesLocalVisibility) {
     VisibleModules = std::move(ModuleScopes.back().OuterVisibleModules);
     // Leaving a module hides namespace names, so our visible namespace cache
