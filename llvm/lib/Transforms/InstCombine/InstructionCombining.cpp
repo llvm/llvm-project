@@ -1481,6 +1481,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
 
   // If we have a constant rhs, see if we can losslessly convert it to an int.
   if (Op1FpC != nullptr) {
+    // Signed + Mul req non-zero
+    if (OpsFromSigned && BO.getOpcode() == Instruction::FMul &&
+        !match(Op1FpC, m_NonZeroFP()))
+      return nullptr;
+
     Constant *Op1IntC = ConstantFoldCastOperand(
         OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, Op1FpC,
         IntTy, DL);
