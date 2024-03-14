@@ -28,6 +28,7 @@ public:
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ShouldStop(Event *event_ptr) override;
+  void DidPush() override;
 
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
@@ -44,6 +45,7 @@ private:
   bool IsEquivalentContext(const SymbolContext &context);
 
   bool m_first_resume;
+  lldb::RunMode m_run_mode;
 
   ThreadPlanStepOverRange(const ThreadPlanStepOverRange &) = delete;
   const ThreadPlanStepOverRange &

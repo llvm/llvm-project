@@ -15,6 +15,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanSingleThreadTimeout.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -36,12 +37,23 @@ ThreadPlanStepOverRange::ThreadPlanStepOverRange(
     : ThreadPlanStepRange(ThreadPlan::eKindStepOverRange,
                           "Step range stepping over", thread, range,
                           addr_context, stop_others),
-      ThreadPlanShouldStopHere(this), m_first_resume(true) {
+      ThreadPlanShouldStopHere(this), m_first_resume(true),
+      m_run_mode(stop_others) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 }
 
 ThreadPlanStepOverRange::~ThreadPlanStepOverRange() = default;
+
+void ThreadPlanStepOverRange::DidPush() {
+  if (m_run_mode == lldb::eOnlyThisThread) {
+    Thread &thread = GetThread();
+    auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
+    ThreadPlanSP thread_plan_sp(timeout_plan);
+    auto status = thread.QueueThreadPlan(thread_plan_sp,
+                                         /*abort_other_plans*/ false);
+  }
+}
 
 void ThreadPlanStepOverRange::GetDescription(Stream *s,
                                              lldb::DescriptionLevel level) {
