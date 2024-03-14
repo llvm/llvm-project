@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -572,6 +573,39 @@ projectToInnerMostNonUnitDimsPos(ArrayRef<int64_t> dimsPos,
   return projectedDimsPos;
 }
 
+static int64_t applyPermutationAndReindexReassoc(
+    SmallVector<ReassociationIndices> &reassociationIndices,
+    ArrayRef<int64_t> dimsPerm) {
+  applyPermutationToVector<ReassociationIndices>(reassociationIndices,
+                                                 dimsPerm);
+  int64_t lastPos = 0;
+  for (ReassociationIndices &indices : reassociationIndices) {
+    for (auto &index : indices) {
+      index = lastPos;
+      lastPos += 1;
+    }
+  }
+  return lastPos;
+}
+
+/// Bubble up pack op through collapse shape op when the packed dims can be
+/// mapped to the source dims before collapsing. This is possible when the inner
+/// tile sizes can divide the mapped source dims.
+///
+/// For example:
+///
+/// %collapsed = tensor.collapse_shape %in [[0, 1], 2] : tensor<?x16x4xf32> into
+/// tensor<?x4xf32> %out = tensor.empty() : tensor<?x4x8x1xf32> %pack =
+/// tensor.pack %collapsed outer_dims_perm = [0, 1] inner_dims_pos = [0, 1]
+/// inner_tiles = [8, 1] into %out : tensor<?x4xf32> -> tensor<?x4x8x1xf32>
+///
+/// Can be transformed into:
+///
+/// %out = tensor.empty() : tensor<?x2x4x8x1xf32>
+/// %pack = tensor.pack %in outer_dims_perm = [1, 2] inner_dims_pos = [1, 2]
+/// inner_tiles = [8, 1] into %out : tensor<?x16x4xf32> -> tensor<?x2x4x8x1xf32>
+/// %collapsed = tensor.collapse_shape %1 [[0, 1], 2, 3, 4] :
+/// tensor<?x2x4x8x1xf32> into tensor<?x4x8x1>
 static LogicalResult
 bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
                                    tensor::PackOp packOp,
@@ -580,27 +614,23 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
 
-  if (llvm::any_of(innerTileSizes,
-                   [](int64_t size) { return ShapedType::isDynamic(size); })) {
-    return failure();
-  }
-
   ArrayRef<int64_t> srcShape = collapseOp.getSrcType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       collapseOp.getReassociationIndices();
-  SmallVector<int64_t> baseDimsPos =
+  SmallVector<int64_t> projectedInnerDimsPos =
       projectToInnerMostNonUnitDimsPos(innerDimsPos, reassocIndices, srcShape);
 
-  // Check if the base dims before reassociation are divisible by the inner tile
+  // Check if the projected dims on the source are divisible by the inner tile
   // sizes.
-  for (auto [basePos, tileSize] :
-       llvm::zip_equal(baseDimsPos, innerTileSizes)) {
-    int64_t dim = srcShape[basePos];
-    if (ShapedType::isDynamic(dim) || (dim % tileSize) != 0) {
+  for (auto [projectedPos, tileSize] :
+       llvm::zip_equal(projectedInnerDimsPos, innerTileSizes)) {
+    int64_t dim = srcShape[projectedPos];
+    if (ShapedType::isDynamic(dim) || (dim % tileSize) != 0)
       return failure();
-    }
   }
-  // Expand the outer dims perm with associated src dims.
+  // Expand the outer dims permutation with the associated source dims for the
+  // new permutation after bubbling. This is because moving a collapsed dim is
+  // equivalent to moving the associated source dims together.
   SmallVector<int64_t> newOuterDimsPerm;
   for (auto outerPos : outerDimsPerm) {
     newOuterDimsPerm.insert(newOuterDimsPerm.end(),
@@ -610,23 +640,19 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
 
   auto emptyOp = tensor::PackOp::createDestinationTensor(
       rewriter, packOp.getLoc(), collapseOp.getSrc(), packOp.getMixedTiles(),
-      baseDimsPos, newOuterDimsPerm);
+      projectedInnerDimsPos, newOuterDimsPerm);
   auto newPackOp = rewriter.create<tensor::PackOp>(
-      packOp.getLoc(), collapseOp.getSrc(), emptyOp, baseDimsPos,
+      packOp.getLoc(), collapseOp.getSrc(), emptyOp, projectedInnerDimsPos,
       packOp.getMixedTiles(), packOp.getPaddingValue(), newOuterDimsPerm);
 
-  SmallVector<ReassociationIndices> newReassocIndices;
-  int64_t currPos = 0;
-  for (auto outerPos : outerDimsPerm) {
-    int64_t start = currPos;
-    int64_t end = start + reassocIndices[outerPos].size();
-    newReassocIndices.push_back(llvm::to_vector(llvm::seq(start, end)));
-    currPos = end;
-  }
-  for (auto unused : innerTileSizes) {
-    (void)unused;
-    newReassocIndices.push_back({currPos});
-    currPos += 1;
+  SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
+  // First build reassociations on the outer dims after the permutation.
+  int64_t lastPos =
+      applyPermutationAndReindexReassoc(newReassocIndices, outerDimsPerm);
+  // Then add direct mapping for the inner tile dims.
+  for (size_t i = 0; i < innerDimsPos.size(); ++i) {
+    newReassocIndices.push_back({lastPos});
+    lastPos += 1;
   }
 
   auto newCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
@@ -644,18 +670,28 @@ public:
 
   LogicalResult matchAndRewrite(tensor::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    if (packOp.getPaddingValue())
+    // User controlled propagation function.
+    if (!controlFn(packOp))
       return failure();
 
     Operation *srcOp = packOp.getSource().getDefiningOp();
+    // Currently only support when the pack op is the only user.
     if (!srcOp || !(srcOp->getNumResults() == 1) ||
-        !srcOp->getResult(0).hasOneUse())
+        !srcOp->getResult(0).hasOneUse()) {
       return failure();
-
-    if (auto collapseOp = dyn_cast<tensor::CollapseShapeOp>(srcOp)) {
-      return bubbleUpPackOpThroughCollapseShape(collapseOp, packOp, rewriter);
     }
-    return failure();
+    // Currently only support static inner tile sizes.
+    if (llvm::any_of(packOp.getStaticTiles(), [](int64_t size) {
+          return ShapedType::isDynamic(size);
+        })) {
+      return failure();
+    }
+
+    return TypeSwitch<Operation *, LogicalResult>(srcOp)
+        .Case([&](tensor::CollapseShapeOp op) {
+          return bubbleUpPackOpThroughCollapseShape(op, packOp, rewriter);
+        })
+        .Default([](Operation *) { return failure(); });
   }
 
 private:
@@ -666,32 +702,29 @@ static LogicalResult
 pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
                                    tensor::ExpandShapeOp expandOp,
                                    PatternRewriter &rewriter) {
-
   SmallVector<int64_t> innerTileSizes = unPackOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
 
-  if (llvm::any_of(innerTileSizes,
-                   [](int64_t size) { return ShapedType::isDynamic(size); })) {
-    return failure();
-  }
-
   ArrayRef<int64_t> dstShape = expandOp.getType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       expandOp.getReassociationIndices();
-  SmallVector<int64_t> baseDimsPos =
+  SmallVector<int64_t> projectedInnerDimsPos =
       projectToInnerMostNonUnitDimsPos(innerDimsPos, reassocIndices, dstShape);
 
-  // Check if the base dims after reassociation are divisible by the inner tile
+  // Check if the projected dims on the dest are divisible by the inner tile
   // sizes.
-  for (auto [basePos, tileSize] :
-       llvm::zip_equal(baseDimsPos, innerTileSizes)) {
-    int64_t dim = dstShape[basePos];
-    if (ShapedType::isDynamic(dim) || dstShape[basePos] % tileSize != 0) {
+  for (auto [projectedPos, tileSize] :
+       llvm::zip_equal(projectedInnerDimsPos, innerTileSizes)) {
+    int64_t dim = dstShape[projectedPos];
+    if (ShapedType::isDynamic(dim) ||
+        (dstShape[projectedPos] % tileSize) != 0) {
       return failure();
     }
   }
-  // Expand the outer dims perm with associated src dims.
+  // Expand the outer dims permutation with the associated expanded dims for the
+  // new permutation after pushing. This is because moving a source dim is
+  // equivalent to moving the associated expanded dims together.
   SmallVector<int64_t> newOuterDimsPerm;
   for (auto outerPos : outerDimsPerm) {
     newOuterDimsPerm.insert(newOuterDimsPerm.end(),
@@ -699,32 +732,29 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
                             reassocIndices[outerPos].end());
   }
 
-  SmallVector<ReassociationIndices> newReassocIndices;
-  int64_t currPos = 0;
-  for (auto outerPos : outerDimsPerm) {
-    int64_t start = currPos;
-    int64_t end = start + reassocIndices[outerPos].size();
-    newReassocIndices.push_back(llvm::to_vector(llvm::seq(start, end)));
-    currPos = end;
-  }
-  for (auto unused : innerTileSizes) {
-    (void)unused;
-    newReassocIndices.push_back({currPos});
-    currPos += 1;
+  SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
+  // First build reassociations on the outer dims after the permutation.
+  int64_t lastPos =
+      applyPermutationAndReindexReassoc(newReassocIndices, outerDimsPerm);
+  // Then add direct mapping for the inner tile dims.
+  for (size_t i = 0; i < innerDimsPos.size(); ++i) {
+    newReassocIndices.push_back({lastPos});
+    lastPos += 1;
   }
 
-  RankedTensorType newExpandType = tensor::PackOp::inferPackedType(
-      expandOp.getType(), innerTileSizes, baseDimsPos, newOuterDimsPerm);
+  RankedTensorType newExpandType =
+      tensor::PackOp::inferPackedType(expandOp.getType(), innerTileSizes,
+                                      projectedInnerDimsPos, newOuterDimsPerm);
   auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
       expandOp.getLoc(), newExpandType, unPackOp.getSource(),
       newReassocIndices);
 
   auto emptyOp = tensor::UnPackOp::createDestinationTensor(
       rewriter, unPackOp.getLoc(), newExpandOp, unPackOp.getMixedTiles(),
-      baseDimsPos, newOuterDimsPerm);
+      projectedInnerDimsPos, newOuterDimsPerm);
   auto newUnPackOp = rewriter.create<tensor::UnPackOp>(
-      unPackOp.getLoc(), newExpandOp.getResult(), emptyOp, baseDimsPos,
-      unPackOp.getMixedTiles(), newOuterDimsPerm);
+      unPackOp.getLoc(), newExpandOp.getResult(), emptyOp,
+      projectedInnerDimsPos, unPackOp.getMixedTiles(), newOuterDimsPerm);
   rewriter.replaceOp(expandOp, newUnPackOp);
 
   return success();
@@ -740,16 +770,28 @@ public:
 
   LogicalResult matchAndRewrite(tensor::UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
+    // User controlled propagation function.
+    if (!controlFn(unPackOp))
+      return failure();
+
     Value result = unPackOp.getResult();
+    // Currently only support unpack op with the single user.
     if (!result.hasOneUse()) {
       return failure();
     }
-    Operation *userOp = *result.user_begin();
-
-    if (auto expandOp = dyn_cast<tensor::ExpandShapeOp>(userOp)) {
-      return pushDownUnPackOpThroughExpandShape(unPackOp, expandOp, rewriter);
+    // Currently only support static inner tile sizes.
+    if (llvm::any_of(unPackOp.getStaticTiles(), [](int64_t size) {
+          return ShapedType::isDynamic(size);
+        })) {
+      return failure();
     }
-    return failure();
+
+    Operation *userOp = *result.user_begin();
+    return TypeSwitch<Operation *, LogicalResult>(userOp)
+        .Case([&](tensor::ExpandShapeOp op) {
+          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter);
+        })
+        .Default([](Operation *) { return failure(); });
   }
 
 private:
