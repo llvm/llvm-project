@@ -7749,7 +7749,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                       CostKind, std::distance(VL.begin(), It),
                                       PoisonValue::get(VecTy), *It);
 
-      SmallVector<int> ShuffleMask(VL.size(), -1);
+      SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
       transform(VL, ShuffleMask.begin(), [](Value *V) {
         return !isa<UndefValue>(V);
       });
