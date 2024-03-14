@@ -1437,21 +1437,21 @@ def : InstRW<[WLat3, WLat3, VecDFX, NormalGr], (instregex "WFTCIXB$")>;
 // Add / subtract
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(A|S)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(A|S)DB$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(A|S)DB$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(A|S)DB(_CCPseudo)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(A|S)SB$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(A|S)SB$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(A|S)SB(_CCPseudo)?$")>;
 def : InstRW<[WLat10, VecDF2, NormalGr], (instregex "WF(A|S)XB$")>;
 
 // Multiply / multiply-and-add/subtract
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFM(DB)?$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFM(D|S)B$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFM(D|S)B(_CCPseudo)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFMSB$")>;
 def : InstRW<[WLat20, VecDF2, NormalGr], (instregex "WFMXB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)DB$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)DB$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)DB(_CCPseudo)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)SB$")>;
-def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)SB$")>;
+def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)SB(_CCPseudo)?$")>;
 def : InstRW<[WLat20, VecDF2, NormalGr], (instregex "WF(N)?M(A|S)XB$")>;
 
 // Divide / square root

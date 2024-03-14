@@ -176,6 +176,15 @@ enum class MachineCombinerPattern {
   FMSUB,
   FNMSUB,
 
+  // SystemZ patterns.  (EXPERIMENTAL)
+  FMA2_P1P0,
+  FMA2_P0P1,
+  FMA2,
+  FMA1_Add_L,
+  FMA1_Add_R,
+  FMA3,     // These are inspired by PPC
+  FMA2_Add, //
+
   // X86 VNNI
   DPWSSD,
 

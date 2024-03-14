@@ -347,6 +347,13 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // Try to expand a boolean SELECT_CCMASK using an IPM sequence.
   SDValue expandSelectBoolean(SDNode *Node);
 
+  // Return true if the flags of N and the subtarget allows for reassociation.
+  bool isReassociable(SDNode *N) const {
+    return N->getFlags().hasAllowReassociation() &&
+           N->getFlags().hasNoSignedZeros() &&
+           Subtarget->hasVector();
+  }
+
 public:
   static char ID;
 

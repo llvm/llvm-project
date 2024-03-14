@@ -30,6 +30,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+EnableMachineCombinerPass("systemz-machine-combiner",
+                          cl::desc("Enable the machine combiner pass"),
+                          cl::init(true), cl::Hidden);
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
@@ -245,11 +250,16 @@ bool SystemZPassConfig::addInstSelector() {
 
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);
+
+  if (EnableMachineCombinerPass)
+    addPass(&MachineCombinerID);
+
   return true;
 }
 
 void SystemZPassConfig::addPreRegAlloc() {
   addPass(createSystemZCopyPhysRegsPass(getSystemZTargetMachine()));
+  addPass(createSystemZFinalizeReassociationPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRewrite() {

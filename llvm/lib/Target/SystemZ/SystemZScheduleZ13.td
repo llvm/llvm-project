@@ -1344,15 +1344,15 @@ def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "(V|W)FTCIDB$")>;
 // Add / subtract
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VF(A|S)$")>;
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VF(A|S)DB$")>;
-def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)DB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WF(A|S)DB(_CCPseudo)?$")>;
 
 // Multiply / multiply-and-add/subtract
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFM$")>;
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFMDB$")>;
-def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFMDB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFMDB(_CCPseudo)?$")>;
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFM(A|S)$")>;
 def : InstRW<[WLat8, VecBF2, NormalGr], (instregex "VFM(A|S)DB$")>;
-def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFM(A|S)DB$")>;
+def : InstRW<[WLat7, VecBF, NormalGr], (instregex "WFM(A|S)DB(_CCPseudo)?$")>;
 
 // Divide / square root
 def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "VFD$")>;

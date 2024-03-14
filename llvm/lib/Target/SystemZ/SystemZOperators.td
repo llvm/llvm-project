@@ -727,6 +727,35 @@ def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
 
+// Floating-point operations which are not marked as reassociable.
+def z_any_fadd_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fadd node:$src1, node:$src2),
+                                   [{ return !isReassociable(N); }]>;
+def z_any_fsub_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fsub node:$src1, node:$src2),
+                                   [{ return !isReassociable(N); }]>;
+def z_any_fmul_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fmul node:$src1, node:$src2),
+                                   [{ return !isReassociable(N); }]>;
+def z_any_fma_noreassoc  : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                                   (any_fma node:$src2, node:$src3, node:$src1),
+                                   [{ return !isReassociable(N); }]>;
+
+// Floating-point operations which are reassociable (strict fp nodes not
+// supported).
+def z_fadd_reassoc : PatFrag<(ops node:$src1, node:$src2),
+                             (fadd node:$src1, node:$src2),
+                             [{ return isReassociable(N); }]>;
+def z_fsub_reassoc : PatFrag<(ops node:$src1, node:$src2),
+                             (fsub node:$src1, node:$src2),
+                             [{ return isReassociable(N); }]>;
+def z_fmul_reassoc : PatFrag<(ops node:$src1, node:$src2),
+                             (fmul node:$src1, node:$src2),
+                             [{ return isReassociable(N); }]>;
+def z_fma_reassoc  : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                             (fma node:$src1, node:$src2, node:$src3),
+                             [{ return isReassociable(N); }]>;
+
 // Strict floating-point fragments.
 def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),
                              [(z_strict_fcmp node:$lhs, node:$rhs),
