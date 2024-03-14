@@ -23,12 +23,12 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     EMIT ir<%p.src> = WIDEN-POINTER-INDUCTION ir<%A>, 1
-; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer ir<%p.src>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
-; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%p.src>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
+; CHECK-NEXT:     EMIT vp<%p.src> = WIDEN-POINTER-INDUCTION ir<%A>, 1
+; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<%p.src>
+; CHECK-NEXT:     WIDEN vp<%l> = load vp<[[VPTR]]>
+; CHECK-NEXT:     WIDEN vp<%add> = add nsw vp<%l>, ir<10>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<%p.src>
+; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, vp<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
@@ -54,12 +54,12 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     EMIT ir<%p.src> = WIDEN-POINTER-INDUCTION ir<%A>, 1
-; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer ir<%p.src>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
-; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%p.src>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
+; CHECK-NEXT:     EMIT vp<%p.src> = WIDEN-POINTER-INDUCTION ir<%A>, 1
+; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<%p.src>
+; CHECK-NEXT:     WIDEN vp<%l> = load vp<[[VPTR]]>
+; CHECK-NEXT:     WIDEN vp<%add> = add nsw vp<%l>, ir<10>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<%p.src>
+; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, vp<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:   No successors

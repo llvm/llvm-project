@@ -2651,9 +2651,7 @@ public:
 
   /// Augment the existing recipes of a VPBasicBlock with an additional
   /// \p Recipe as the last recipe.
-  void appendRecipe(VPRecipeBase *Recipe, const Twine &Name = "") {
-    insert(Recipe, end());
-  }
+  void appendRecipe(VPRecipeBase *Recipe) { insert(Recipe, end()); }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.

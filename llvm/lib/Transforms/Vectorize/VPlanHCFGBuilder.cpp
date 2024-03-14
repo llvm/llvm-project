@@ -309,7 +309,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
       NewVPV = new VPWidenPHIRecipe(Phi);
-      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV), Inst->getName());
+      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV));
       PhisToFix.push_back(Phi);
     } else {
       // Translate LLVM-IR operands into VPValue operands and set them in the

@@ -612,13 +612,13 @@ void VPBasicBlock::insert(VPRecipeBase *Recipe, iterator InsertPt) {
   Recipe->Parent = this;
   Recipes.insert(InsertPt, Recipe);
 
-  if (Recipe->getNumDefinedValues() == 1) {
-    VPValue *VPV = Recipe->getVPSingleValue();
-    Value *UV = VPV->getUnderlyingValue();
-    VPlan *ParentPlan = getPlan();
-    if (UV && ParentPlan && !ParentPlan->hasName(VPV))
-      VPV->setName(UV->getName());
-  }
+  if (Recipe->getNumDefinedValues() != 1)
+    return;
+  VPValue *VPV = Recipe->getVPSingleValue();
+  Value *UV = VPV->getUnderlyingValue();
+  VPlan *ParentPlan = getPlan();
+  if (UV && ParentPlan && !ParentPlan->hasName(VPV))
+    VPV->setName(UV->getName());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

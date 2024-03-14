@@ -8754,11 +8754,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         if (!Member->getType()->isVoidTy()) {
           VPValue *OriginalV = MemberR->getVPSingleValue();
           OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
+          VPIG->getVPValue(J)->takeName(MemberR->getVPSingleValue());
           J++;
         }
         MemberR->eraseFromParent();
-        if (!Member->getType()->isVoidTy())
-          VPIG->getVPValue(J - 1)->setName(Member->getName());
       }
   }
 
@@ -9016,7 +9015,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including
       // CurrentLink), which will be cleaned by a later VPlan transform.
-      LinkVPBB->appendRecipe(RedRecipe, CurrentLinkI->getName());
+      LinkVPBB->appendRecipe(RedRecipe);
       CurrentLink->replaceAllUsesWith(RedRecipe);
       PreviousLink = RedRecipe;
     }
