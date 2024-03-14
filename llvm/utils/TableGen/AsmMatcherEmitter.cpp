@@ -619,14 +619,14 @@ struct MatchableInfo {
 
   /// shouldBeMatchedBefore - Compare two matchables for ordering.
   bool shouldBeMatchedBefore(const MatchableInfo &RHS,
-                             const CodeGenTarget &Target) const {
+                             bool PreferSmallerInstructions) const {
     // The primary comparator is the instruction mnemonic.
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
 
     // (Optionally) Order by the resultant instuctions size.
     // eg. for ARM thumb instructions smaller encodings should be preferred.
-    if (getPreferSmallerInstructions(Target) && ResInstSize != RHS.ResInstSize)
+    if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return ResInstSize < RHS.ResInstSize;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
@@ -668,7 +668,7 @@ struct MatchableInfo {
   /// ambiguously match the same set of operands as \p RHS (without being a
   /// strictly superior match).
   bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS,
-                                 const CodeGenTarget &Target) const {
+                                 bool PreferSmallerInstructions) const {
     // The primary comparator is the instruction mnemonic.
     if (Mnemonic != RHS.Mnemonic)
       return false;
@@ -678,7 +678,7 @@ struct MatchableInfo {
       return false;
 
     // The size of instruction is unambiguous.
-    if (getPreferSmallerInstructions(Target) && ResInstSize != RHS.ResInstSize)
+    if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return false;
 
     // The number of operands is unambiguous.
@@ -3241,21 +3241,23 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   AsmMatcherInfo Info(AsmParser, Target, Records);
   Info.buildInfo();
 
+  bool PreferSmallerInstructions = getPreferSmallerInstructions(Target);
   // Sort the instruction table using the partial order on classes. We use
   // stable_sort to ensure that ambiguous instructions are still
   // deterministically ordered.
-  llvm::stable_sort(Info.Matchables,
-                    [&Target](const std::unique_ptr<MatchableInfo> &a,
-                              const std::unique_ptr<MatchableInfo> &b) {
-                      return a->shouldBeMatchedBefore(*b, Target);
-                    });
+  llvm::stable_sort(
+      Info.Matchables,
+      [PreferSmallerInstructions](const std::unique_ptr<MatchableInfo> &A,
+                                  const std::unique_ptr<MatchableInfo> &B) {
+        return A->shouldBeMatchedBefore(*B, PreferSmallerInstructions);
+      });
 
 #ifdef EXPENSIVE_CHECKS
   // Verify that the table is sorted and operator < works transitively.
   for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
        ++I) {
     for (auto J = I; J != E; ++J) {
-      assert(!(*J)->shouldBeMatchedBefore(**I, Target));
+      assert(!(*J)->shouldBeMatchedBefore(**I, PreferSmallerInstructions));
     }
   }
 #endif
@@ -3274,7 +3276,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
         const MatchableInfo &A = **I;
         const MatchableInfo &B = **J;
 
-        if (A.couldMatchAmbiguouslyWith(B, Target)) {
+        if (A.couldMatchAmbiguouslyWith(B, PreferSmallerInstructions)) {
           errs() << "warning: ambiguous matchables:\n";
           A.dump();
           errs() << "\nis incomparable with:\n";
