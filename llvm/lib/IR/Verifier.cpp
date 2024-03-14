@@ -5242,7 +5242,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     Check(DestTy->getScalarSizeInBits() >= 2, "result type must be at least 2 bits wide", Call);
 
-    bool isDestTypeVector = DestTy->isVectorTy();
+    bool IsDestTypeVector = DestTy->isVectorTy();
     Check(SrcTy->isVectorTy() == isDestTypeVector,
         "[us]cmp source and destination must both be a vector or neither", Call);
     if (isDestTypeVector) {
