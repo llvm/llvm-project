@@ -14579,7 +14579,7 @@ integer bit width or any vector of integer elements.
 Overview:
 """""""""
 
-Return ``-1`` if ``%a`` is less than ``%b``, ``0`` if they are equal, and 
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
 ``1`` if ``%a`` is greater than ``%b``. Vector intrinsics operate on a per-element basis. 
 
 Arguments:
