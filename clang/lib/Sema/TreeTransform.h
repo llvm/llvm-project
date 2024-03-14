@@ -7231,12 +7231,22 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   // FIXME: dependent operand expressions?
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
-    TypeLocBuilder AuxiliaryTLB;
-    AuxiliaryTLB.reserve(TL.getFullDataSize());
-    QualType equivalentType =
-        getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
-    if (equivalentType.isNull())
-      return QualType();
+    // Do not transform the equivalent type if it is equal to the modified type.
+    //
+    // This is because, 1. it’s the same type, instantiating it again will yield
+    // the same result anyway, and if it doesn't, then that could be a bug in
+    // and of itself, and 2. instantiating the same TypeLoc twice is a really
+    // bad idea if it's a FunctionProtoType, because instantiating the same
+    // ParmVarDecls twice will cause assertion failures.
+    QualType equivalentType = modifiedType;
+    if (TL.getModifiedLoc().getType() != TL.getEquivalentTypeLoc().getType()) {
+      TypeLocBuilder AuxiliaryTLB;
+      AuxiliaryTLB.reserve(TL.getFullDataSize());
+      equivalentType =
+          getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
+      if (equivalentType.isNull())
+        return QualType();
+    }
 
     // Check whether we can add nullability; it is only represented as
     // type sugar, and therefore cannot be diagnosed in any other way.
