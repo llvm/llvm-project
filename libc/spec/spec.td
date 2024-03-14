@@ -153,6 +153,8 @@ def EntryType : NamedType<"ENTRY">;
 def EntryTypePtr : PtrType<EntryType>;
 def EntryTypePtrPtr : PtrType<EntryTypePtr>;
 
+def MBStateTType : NamedType<"mbstate_t">;
+
 class Macro<string name> {
   string Name = name;
 }
