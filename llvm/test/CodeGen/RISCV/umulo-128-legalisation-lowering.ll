@@ -89,8 +89,8 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-NEXT:    snez a3, a3
 ; RISCV32-NEXT:    and a3, a3, a7
 ; RISCV32-NEXT:    or a2, a3, a2
-; RISCV32-NEXT:    or a3, t2, t3
-; RISCV32-NEXT:    or a2, a2, a3
+; RISCV32-NEXT:    or a2, a2, t2
+; RISCV32-NEXT:    or a2, a2, t3
 ; RISCV32-NEXT:    mul a3, a5, a4
 ; RISCV32-NEXT:    andi a2, a2, 1
 ; RISCV32-NEXT:    sw a3, 0(a0)
