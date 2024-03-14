@@ -55,44 +55,38 @@ struct CritSectionMarker {
   }
 };
 
-class FirstArgMutexDescriptor {
+class CallDescriptionBasedMatcher {
   CallDescription LockFn;
   CallDescription UnlockFn;
 
 public:
-  FirstArgMutexDescriptor(CallDescription &&LockFn, CallDescription &&UnlockFn)
+  CallDescriptionBasedMatcher(CallDescription &&LockFn,
+                              CallDescription &&UnlockFn)
       : LockFn(std::move(LockFn)), UnlockFn(std::move(UnlockFn)) {}
-  [[nodiscard]] bool matchesLock(const CallEvent &Call) const {
-    return LockFn.matches(Call) && Call.getNumArgs() > 0;
+  [[nodiscard]] bool matches(const CallEvent &Call, bool IsLock) const {
+    if (IsLock) {
+      return LockFn.matches(Call);
+    }
+    return UnlockFn.matches(Call);
   }
-  [[nodiscard]] bool matchesUnlock(const CallEvent &Call) const {
-    return UnlockFn.matches(Call) && Call.getNumArgs() > 0;
-  }
-  [[nodiscard]] const MemRegion *getLockRegion(const CallEvent &Call) const {
-    return Call.getArgSVal(0).getAsRegion();
-  }
-  [[nodiscard]] const MemRegion *getUnlockRegion(const CallEvent &Call) const {
+};
+
+class FirstArgMutexDescriptor : public CallDescriptionBasedMatcher {
+public:
+  FirstArgMutexDescriptor(CallDescription &&LockFn, CallDescription &&UnlockFn)
+      : CallDescriptionBasedMatcher(std::move(LockFn), std::move(UnlockFn)) {}
+
+  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call, bool) const {
     return Call.getArgSVal(0).getAsRegion();
   }
 };
 
-class MemberMutexDescriptor {
-  CallDescription LockFn;
-  CallDescription UnlockFn;
-
+class MemberMutexDescriptor : public CallDescriptionBasedMatcher {
 public:
   MemberMutexDescriptor(CallDescription &&LockFn, CallDescription &&UnlockFn)
-      : LockFn(std::move(LockFn)), UnlockFn(std::move(UnlockFn)) {}
-  [[nodiscard]] bool matchesLock(const CallEvent &Call) const {
-    return LockFn.matches(Call);
-  }
-  bool matchesUnlock(const CallEvent &Call) const {
-    return UnlockFn.matches(Call);
-  }
-  [[nodiscard]] const MemRegion *getLockRegion(const CallEvent &Call) const {
-    return cast<CXXMemberCall>(Call).getCXXThisVal().getAsRegion();
-  }
-  [[nodiscard]] const MemRegion *getUnlockRegion(const CallEvent &Call) const {
+      : CallDescriptionBasedMatcher(std::move(LockFn), std::move(UnlockFn)) {}
+
+  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call, bool) const {
     return cast<CXXMemberCall>(Call).getCXXThisVal().getAsRegion();
   }
 };
@@ -115,34 +109,35 @@ class RAIIMutexDescriptor {
     }
   }
 
+  template <typename T> bool matchesImpl(const CallEvent &Call) const {
+    const T *C = dyn_cast<T>(&Call);
+    if (!C)
+      return false;
+    const IdentifierInfo *II =
+        cast<CXXRecordDecl>(C->getDecl()->getParent())->getIdentifier();
+    return II == Guard;
+  }
+
 public:
   RAIIMutexDescriptor(StringRef GuardName) : GuardName(GuardName) {}
-  [[nodiscard]] bool matchesLock(const CallEvent &Call) const {
+  [[nodiscard]] bool matches(const CallEvent &Call, bool IsLock) const {
     initIdentifierInfo(Call);
-    const auto *Ctor = dyn_cast<CXXConstructorCall>(&Call);
-    if (!Ctor)
-      return false;
-    auto *IdentifierInfo = Ctor->getDecl()->getParent()->getIdentifier();
-    return IdentifierInfo == Guard;
+    if (IsLock) {
+      return matchesImpl<CXXConstructorCall>(Call);
+    }
+    return matchesImpl<CXXDestructorCall>(Call);
   }
-  [[nodiscard]] bool matchesUnlock(const CallEvent &Call) const {
-    initIdentifierInfo(Call);
-    const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call);
-    if (!Dtor)
-      return false;
-    auto *IdentifierInfo =
-        cast<CXXRecordDecl>(Dtor->getDecl()->getParent())->getIdentifier();
-    return IdentifierInfo == Guard;
-  }
-  [[nodiscard]] const MemRegion *getLockRegion(const CallEvent &Call) const {
+  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call,
+                                           bool IsLock) const {
     const MemRegion *LockRegion = nullptr;
-    if (std::optional<SVal> Object = Call.getReturnValueUnderConstruction()) {
-      LockRegion = Object->getAsRegion();
+    if (IsLock) {
+      if (std::optional<SVal> Object = Call.getReturnValueUnderConstruction()) {
+        LockRegion = Object->getAsRegion();
+      }
+    } else {
+      LockRegion = cast<CXXDestructorCall>(Call).getCXXThisVal().getAsRegion();
     }
     return LockRegion;
-  }
-  [[nodiscard]] const MemRegion *getUnlockRegion(const CallEvent &Call) const {
-    return cast<CXXDestructorCall>(Call).getCXXThisVal().getAsRegion();
   }
 };
 
@@ -182,14 +177,17 @@ private:
 
   [[nodiscard]] const NoteTag *createCritSectionNote(CritSectionMarker M,
                                                      CheckerContext &C) const;
+
   [[nodiscard]] std::optional<MutexDescriptor>
-  checkLock(const CallEvent &Call, CheckerContext &C) const;
+  checkDescriptorMatch(const CallEvent &Call, CheckerContext &C,
+                       bool IsLock) const;
+
   void handleLock(const MutexDescriptor &Mutex, const CallEvent &Call,
                   CheckerContext &C) const;
-  [[nodiscard]] std::optional<MutexDescriptor>
-  checkUnlock(const CallEvent &Call, CheckerContext &C) const;
+
   void handleUnlock(const MutexDescriptor &Mutex, const CallEvent &Call,
                     CheckerContext &C) const;
+
   [[nodiscard]] bool isBlockingInCritSection(const CallEvent &Call,
                                              CheckerContext &C) const;
 
@@ -221,56 +219,51 @@ struct iterator_traits<
 } // namespace std
 
 std::optional<MutexDescriptor>
-BlockInCriticalSectionChecker::checkLock(const CallEvent &Call,
-                                         CheckerContext &C) const {
-  const auto *LockDescriptor =
-      llvm::find_if(MutexDescriptors, [&Call](auto &&LockFn) {
+BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
+                                                    CheckerContext &C,
+                                                    bool IsLock) const {
+  const MutexDescriptor *Descriptor =
+      llvm::find_if(MutexDescriptors, [&Call, IsLock](auto &&Descriptor) {
         return std::visit(
-            [&Call](auto &&Descriptor) { return Descriptor.matchesLock(Call); },
-            LockFn);
+            [&Call, IsLock](auto &&DescriptorImpl) {
+              return DescriptorImpl.matches(Call, IsLock);
+            },
+            Descriptor);
       });
-  if (LockDescriptor != MutexDescriptors.end())
-    return *LockDescriptor;
+  if (Descriptor != MutexDescriptors.end())
+    return *Descriptor;
   return std::nullopt;
+}
+
+static const MemRegion *getRegion(const CallEvent &Call,
+                                  const MutexDescriptor &Descriptor,
+                                  bool IsLock) {
+  return std::visit(
+      [&Call, IsLock](auto &&Descriptor) {
+        return Descriptor.getRegion(Call, IsLock);
+      },
+      Descriptor);
 }
 
 void BlockInCriticalSectionChecker::handleLock(
     const MutexDescriptor &LockDescriptor, const CallEvent &Call,
     CheckerContext &C) const {
-  const auto *MutexRegion = std::visit(
-      [&Call](auto &&Descriptor) { return Descriptor.getLockRegion(Call); },
-      LockDescriptor);
+  const MemRegion *MutexRegion =
+      getRegion(Call, LockDescriptor, /*IsLock=*/true);
   if (!MutexRegion)
     return;
 
-  const auto MarkToAdd = CritSectionMarker{Call.getOriginExpr(), MutexRegion};
+  const CritSectionMarker MarkToAdd{Call.getOriginExpr(), MutexRegion};
   ProgramStateRef StateWithLockEvent =
       C.getState()->add<ActiveCritSections>(MarkToAdd);
   C.addTransition(StateWithLockEvent, createCritSectionNote(MarkToAdd, C));
 }
 
-std::optional<MutexDescriptor>
-BlockInCriticalSectionChecker::checkUnlock(const CallEvent &Call,
-                                           CheckerContext &C) const {
-  const auto *UnlockDescriptor =
-      llvm::find_if(MutexDescriptors, [&Call](auto &&UnlockFn) {
-        return std::visit(
-            [&Call](auto &&Descriptor) {
-              return Descriptor.matchesUnlock(Call);
-            },
-            UnlockFn);
-      });
-  if (UnlockDescriptor != MutexDescriptors.end())
-    return *UnlockDescriptor;
-  return std::nullopt;
-}
-
 void BlockInCriticalSectionChecker::handleUnlock(
     const MutexDescriptor &UnlockDescriptor, const CallEvent &Call,
     CheckerContext &C) const {
-  const auto *MutexRegion = std::visit(
-      [&Call](auto &&Descriptor) { return Descriptor.getUnlockRegion(Call); },
-      UnlockDescriptor);
+  const MemRegion *MutexRegion =
+      getRegion(Call, UnlockDescriptor, /*IsLock=*/false);
   if (!MutexRegion)
     return;
 
@@ -307,10 +300,12 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
   if (isBlockingInCritSection(Call, C)) {
     reportBlockInCritSection(Call, C);
-  } else if (auto Lock = checkLock(Call, C)) {
-    handleLock(*Lock, Call, C);
-  } else if (auto Unlock = checkUnlock(Call, C)) {
-    handleUnlock(*Unlock, Call, C);
+  } else if (std::optional<MutexDescriptor> LockDesc =
+                 checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
+    handleLock(*LockDesc, Call, C);
+  } else if (std::optional<MutexDescriptor> UnlockDesc =
+                 checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
+    handleUnlock(*UnlockDesc, Call, C);
   }
 }
 
