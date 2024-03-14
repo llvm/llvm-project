@@ -39,7 +39,7 @@ def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
     // Array emitted as `int32_t[10]`
     !emitc.array<10xi32>
     // Array emitted as `float[10][20]`
-    !emitc.ptr<10x20xf32>
+    !emitc.array<10x20xf32>
     ```
   }];
 
