@@ -25,14 +25,12 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 
-Expected<ELF64LEObjectFile>
+Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
   assert(utils::elf::isELF(Image.getMemoryBuffer().getBuffer()) &&
          "Input is not an ELF file");
 
-  Expected<ELF64LEObjectFile> ElfOrErr =
-      ELF64LEObjectFile::create(Image.getMemoryBuffer());
-  return ElfOrErr;
+  return ELFObjectFileBase::createELFObjectFile(Image.getMemoryBuffer());
 }
 
 Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
@@ -91,13 +89,13 @@ bool GenericGlobalHandlerTy::isSymbolInImage(GenericDeviceTy &Device,
   }
 
   // Search the ELF symbol using the symbol name.
-  auto SymOrErr = utils::elf::getSymbol(*ELFObjOrErr, SymName);
+  auto SymOrErr = utils::elf::getSymbol(**ELFObjOrErr, SymName);
   if (!SymOrErr) {
     consumeError(SymOrErr.takeError());
     return false;
   }
 
-  return *SymOrErr;
+  return SymOrErr->has_value();
 }
 
 Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
@@ -110,17 +108,17 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     return ELFObj.takeError();
 
   // Search the ELF symbol using the symbol name.
-  auto SymOrErr = utils::elf::getSymbol(*ELFObj, ImageGlobal.getName());
+  auto SymOrErr = utils::elf::getSymbol(**ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
     return Plugin::error("Failed ELF lookup of global '%s': %s",
                          ImageGlobal.getName().data(),
                          toString(SymOrErr.takeError()).data());
 
-  if (!*SymOrErr)
+  if (!SymOrErr->has_value())
     return Plugin::error("Failed to find global symbol '%s' in the ELF image",
                          ImageGlobal.getName().data());
 
-  auto AddrOrErr = utils::elf::getSymbolAddress(*ELFObj, **SymOrErr);
+  auto AddrOrErr = utils::elf::getSymbolAddress(**SymOrErr);
   // Get the section to which the symbol belongs.
   if (!AddrOrErr)
     return Plugin::error("Failed to get ELF symbol from global '%s': %s",
@@ -129,7 +127,7 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
 
   // Setup the global symbol's address and size.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
-  ImageGlobal.setSize((*SymOrErr)->st_size);
+  ImageGlobal.setSize((*SymOrErr)->getSize());
 
   return Plugin::success();
 }

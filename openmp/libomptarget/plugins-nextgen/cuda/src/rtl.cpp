@@ -1166,7 +1166,7 @@ private:
 
     // Search for all symbols that contain a constructor or destructor.
     SmallVector<std::pair<StringRef, uint16_t>> Funcs;
-    for (ELFSymbolRef Sym : ELFObjOrErr->symbols()) {
+    for (ELFSymbolRef Sym : (*ELFObjOrErr)->symbols()) {
       auto NameOrErr = Sym.getName();
       if (!NameOrErr)
         return NameOrErr.takeError();
