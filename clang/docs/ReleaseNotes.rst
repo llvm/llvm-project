@@ -379,6 +379,7 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
