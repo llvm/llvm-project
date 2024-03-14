@@ -1819,10 +1819,16 @@ let OtherPredicates = [HasExportInsts] in
 let SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1 in {
   def S_WAIT_ASYNCCNT :
     SOPP_Pseudo<"s_wait_asynccnt", (ins s16imm:$simm16), "$simm16",
-                [(int_amdgcn_s_wait_asynccnt timm:$simm16)]>;
+                [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
+      let mayLoad = 1;
+      let mayStore = 1;
+    }
   def S_WAIT_TENSORCNT :
     SOPP_Pseudo<"s_wait_tensorcnt", (ins s16imm:$simm16), "$simm16",
-                [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]>;
+                [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]> {
+      let mayLoad = 1;
+      let mayStore = 1;
+    }
   def S_WAIT_XCNT :
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1

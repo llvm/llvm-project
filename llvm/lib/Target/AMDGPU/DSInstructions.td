@@ -336,14 +336,14 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   let gdsValue = 1;
 }
 
-class DS_1A_Off8_NORET <string opName>
+class DS_1A_Off16_NORET <string opName>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
-  " $addr$offset0$offset1$gds"> {
+  (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
+  " $addr$offset$gds"> {
 
   let has_vdst = 0;
-  let has_offset = 0;
+  let has_offset = 1;
   let has_data0 = 0;
   let has_data1 = 0;
   let has_m0_read = 0;
@@ -785,8 +785,20 @@ defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
 } // let WaveSizePredicate = isWave32, mayStore = 0
 
 let ASYNC_CNT = 1, LGKM_CNT = 0 in {
-def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off8_NORET<"ds_atomic_async_barrier_arrive_b64">;
+def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
 }
+
+def : GCNPat <
+  (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
+  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPR_32:$ptr, Offset:$offset, (i1 0))
+>;
+
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VReg_64>;
+
+def : GCNPat<
+  (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
+  (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
+>;
 
 } //let SubtargetPredicate = isGFX12_10Plus
 
@@ -1328,6 +1340,7 @@ defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
 
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12<0x075>;
 
 // New aliases added in GFX12 without renaming the instructions.
 def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
