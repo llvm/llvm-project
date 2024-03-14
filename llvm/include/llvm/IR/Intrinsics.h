@@ -105,6 +105,10 @@ namespace Intrinsic {
   /// Map a MS builtin name to an intrinsic ID.
   ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
 
+  /// Returns true if the intrinsic ID is for one of the "Constrained
+  /// Floating-Point Intrinsics".
+  bool isConstrainedFPIntrinsic(ID QID);
+
   /// This is a type descriptor which explains the type requirements of an
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
   struct IITDescriptor {

@@ -485,15 +485,7 @@ static MutableArrayRef<Argument> makeArgArray(Argument *Args, size_t Count) {
 }
 
 bool Function::isConstrainedFPIntrinsic() const {
-  switch (getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-    return true;
-#undef INSTRUCTION
-  default:
-    return false;
-  }
+  return Intrinsic::isConstrainedFPIntrinsic(getIntrinsicID());
 }
 
 void Function::clearArguments() {
@@ -1467,6 +1459,18 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
 #define GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
+
+bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
+  switch (QID) {
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
+  case Intrinsic::INTRINSIC:
+#include "llvm/IR/ConstrainedOps.def"
+    return true;
+#undef INSTRUCTION
+  default:
+    return false;
+  }
+}
 
 using DeferredIntrinsicMatchPair =
     std::pair<Type *, ArrayRef<Intrinsic::IITDescriptor>>;
