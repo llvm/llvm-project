@@ -6,7 +6,7 @@
 // Check that (1) custom input splitter and (2) custom output splitters work.
 // RUN: mlir-opt %s -split-input-file="// CHECK: ""----" \
 // RUN:   -output-split-marker="// ---- next split ----" \
-// RUN: | FileCheck -input-file %s -check-prefix=CHECK-SPLITTERS %s
+// RUN: | FileCheck --check-prefix=CHECK-SPLITTERS %s
 
 func.func @main() {return}
 
