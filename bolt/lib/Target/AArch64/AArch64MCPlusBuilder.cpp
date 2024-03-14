@@ -1387,6 +1387,7 @@ public:
   void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(AArch64::BR);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(MemBaseReg));
   }
 
