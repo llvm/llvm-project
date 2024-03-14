@@ -168,7 +168,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution) {
                                  [](PrintingPolicy &Policy) {
                                    Policy.SuppressTagKeyword = false;
                                    Policy.SuppressScope = true;
-        }));
+                                 }));
 }
 
 TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
