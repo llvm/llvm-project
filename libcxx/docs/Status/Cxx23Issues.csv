@@ -77,7 +77,7 @@
 `3523 <https://wg21.link/LWG3523>`__,"``iota_view::sentinel`` is not always ``iota_view``'s sentinel","June 2021","","","|ranges|"
 `3526 <https://wg21.link/LWG3526>`__,"Return types of ``uses_allocator_construction_args`` unspecified","June 2021","",""
 `3527 <https://wg21.link/LWG3527>`__,"``uses_allocator_construction_args`` handles rvalue pairs of rvalue references incorrectly","June 2021","",""
-`3528 <https://wg21.link/LWG3528>`__,"``make_from_tuple`` can perform (the equivalent of) a C-style cast","June 2021","",""
+`3528 <https://wg21.link/LWG3528>`__,"``make_from_tuple`` can perform (the equivalent of) a C-style cast","June 2021","|Complete|","19.0"
 `3529 <https://wg21.link/LWG3529>`__,"``priority_queue(first, last)`` should construct ``c`` with ``(first, last)``","June 2021","|Complete|","14.0"
 `3530 <https://wg21.link/LWG3530>`__,"``BUILTIN-PTR-MEOW`` should not opt the type out of syntactic checks","June 2021","",""
 `3532 <https://wg21.link/LWG3532>`__,"``split_view<V, P>::inner-iterator<true>::operator++(int)`` should depend on ``Base``","June 2021","","","|ranges|"
