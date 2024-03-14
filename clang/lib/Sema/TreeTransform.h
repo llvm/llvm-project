@@ -13840,8 +13840,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCallOperator()->getInnerLocStart(),
       E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
       E->getCallOperator()->getConstexprKind(),
-      E->getCallOperator()->getStorageClass(),
-      FPTL.getParams(), E->hasExplicitResultType());
+      E->getCallOperator()->getStorageClass(), FPTL.getParams(),
+      E->hasExplicitResultType());
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});
