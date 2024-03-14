@@ -52,10 +52,11 @@ public:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printRlist(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
-  void printStackAdj(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                     raw_ostream &O, bool Negate = false);
-  void printNegStackAdj(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                        raw_ostream &O) {
+  void printStackAdj(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O,
+                     bool Negate = false);
+  void printNegStackAdj(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O) {
     return printStackAdj(MI, OpNo, STI, O, /*Negate*/ true);
   }
   void printRegReg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

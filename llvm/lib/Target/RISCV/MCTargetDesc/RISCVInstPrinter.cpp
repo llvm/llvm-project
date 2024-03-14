@@ -303,7 +303,8 @@ void RISCVInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
   assert(RlistVal != 16 && "Incorrect rlist.");
   auto Base = RISCVZC::getStackAdjBase(RlistVal, IsRV64, IsEABI);
   StackAdj = Imm + Base;
-  assert((StackAdj >= Base && StackAdj <= Base + 48) && "Incorrect stack adjust");
+  assert((StackAdj >= Base && StackAdj <= Base + 48) &&
+         "Incorrect stack adjust");
   if (Negate)
     StackAdj = -StackAdj;
 
