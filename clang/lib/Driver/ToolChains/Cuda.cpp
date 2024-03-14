@@ -745,10 +745,8 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args,
                                const std::string TargetID)
     : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args) {
-  if (CudaInstallation.isValid()) {
-    CudaInstallation.WarnIfUnsupportedVersion();
+  if (CudaInstallation.isValid())
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
-  }
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
@@ -1003,14 +1001,22 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       if (!llvm::is_contained(*DAL, A))
         DAL->append(A);
 
-    StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
-    if (Arch.empty())
-      Arch = getProcessorFromTargetID(this->getTriple(), this->getTargetID());
-
-    if (Arch.empty())
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                        !BoundArch.empty() ? BoundArch
-                                           : CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
+    if (!DAL->hasArg(options::OPT_march_EQ)) {
+      StringRef Arch = BoundArch;
+      if (Arch.empty()) {
+        auto ArchsOrErr = getSystemGPUArchs(Args);
+        if (!ArchsOrErr) {
+          std::string ErrMsg =
+              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
+          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
+          Arch = CudaArchToString(CudaArch::CudaDefault);
+        } else {
+          Arch = Args.MakeArgString(ArchsOrErr->front());
+        }
+      }
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
+    }
 
     return DAL;
   }

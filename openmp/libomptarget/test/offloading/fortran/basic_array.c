@@ -1,4 +1,3 @@
-// XFAIL: amdgcn-amd-amdhsa
 // Basic offloading test for function compiled with flang
 // REQUIRES: flang, amdgcn-amd-amdhsa
 

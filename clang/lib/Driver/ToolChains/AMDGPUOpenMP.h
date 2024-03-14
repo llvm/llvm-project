@@ -72,10 +72,7 @@ public:
                         const ToolChain &HostTC,
                         const llvm::opt::ArgList &Args,
                         const Action::OffloadKind OK);
-  AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple &Triple,
-                        const ToolChain &HostTC, const llvm::opt::ArgList &Args,
-                        const Action::OffloadKind OK,
-                        const std::string TargetID);
+
   const llvm::Triple *getAuxTriple() const override {
     return &HostTC.getTriple();
   }

@@ -79,5 +79,5 @@
 // RUN:    FileCheck %s --check-prefix=VERSION
 // RUN: %clang --target=nvptx64-nvidia-cuda -v -### -nogpulib -march=sm_60 --cuda-path=%S/Inputs/CUDA-new/usr/local/cuda 2>&1 -x c %s | \
 // RUN:    FileCheck %s --check-prefix=VERSION
-// VERSION-NOT: CUDA version is newer than the latest{{.*}} supported version
+// VERSION-NOT: CUDA version is newer than the latest
 

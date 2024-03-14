@@ -2,11 +2,12 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --sysroot=./ \
-// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa --offload-arch=gfx908  \
+// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908  \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --sysroot=./ \
-// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda --offload-arch=sm_70  \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70  \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS
+// CHECK-HEADERS: "-cc1"{{.*}}"-internal-isystem" "{{.*}}include{{.*}}llvm_libc_wrappers"{{.*}}"-isysroot" "./"
 // CHECK-HEADERS: "-cc1"{{.*}}"-internal-isystem" "{{.*}}include{{.*}}llvm_libc_wrappers"{{.*}}"-isysroot" "./"
 
 // RUN:   %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a --sysroot=./ \

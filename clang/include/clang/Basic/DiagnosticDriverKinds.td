@@ -361,7 +361,7 @@ def err_drv_omp_host_ir_file_not_found : Error<
   "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
-def Err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
+def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "'-fopenmp-targets' must be used in conjunction with a '-fopenmp' option "
   "compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5' or '-fopenmp=libbolt'">;
 def err_drv_failed_to_deduce_target_from_arch : Error<
