@@ -36,7 +36,7 @@ struct AtExitUnit {
 //        mutexes simply passthrough. We will need a lock free stack.
 using ExitCallbackList = FixedVector<AtExitUnit, 64>;
 #elif defined(LIBC_COPT_PUBLIC_PACKAGING)
-using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitUnit, 32>;
+using ExitCallbackList = ReverseOrderBlockStore<AtExitUnit, 32>;
 #else
 // BlockStore uses dynamic memory allocation. To avoid dynamic memory
 // allocation in tests, we use a fixed size callback list when built for
