@@ -40,7 +40,7 @@ This will all happen transparently without needing to think about it!
 
 ## What exactly have you replaced debug intrinsics with?
 
-We're using a dedicated C++ class called `DbgRecord` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DbgRecord` object in any LLVM IR program; these `DbgRecord`s are represented in the IR as non-instruction debug records, as described in the [Source Level Debugging](./SourceLevelDebugging.rst#_debug_records) document. This class has a set of subclasses that store exactly the same information as is stored in debugging intrinsics. Each one also has almost entirely the same set of methods, that behave in the same way:
+We're using a dedicated C++ class called `DbgRecord` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DbgRecord` object in any LLVM IR program; these `DbgRecord`s are represented in the IR as non-instruction debug records, as described in the [Source Level Debugging](project:SourceLevelDebugging.rst#Debug Records) document. This class has a set of subclasses that store exactly the same information as is stored in debugging intrinsics. Each one also has almost entirely the same set of methods, that behave in the same way:
 
   https://llvm.org/docs/doxygen/classllvm_1_1DbgRecord.html
   https://llvm.org/docs/doxygen/classllvm_1_1DPValue.html
