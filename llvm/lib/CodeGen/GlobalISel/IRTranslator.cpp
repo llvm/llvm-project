@@ -1773,7 +1773,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
 
 bool IRTranslator::translateVectorInterleave2Intrinsic(
     const CallInst &CI, MachineIRBuilder &MIRBuilder) {
-  // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG)
+  // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG).
   Register Op0 = getOrCreateVReg(*CI.getOperand(0));
   Register Op1 = getOrCreateVReg(*CI.getOperand(1));
   Register Res = getOrCreateVReg(CI);
@@ -1787,8 +1787,8 @@ bool IRTranslator::translateVectorInterleave2Intrinsic(
 
 bool IRTranslator::translateVectorDeinterleave2Intrinsic(
     const CallInst &CI, MachineIRBuilder &MIRBuilder) {
-  // Canonicalize deinterleave2 shuffles that extract sub-vectors (similar to
-  // SelectionDAG)
+  // Canonicalize deinterleave2 to shuffles that extract sub-vectors (similar to
+  // SelectionDAG).
   Register Op = getOrCreateVReg(*CI.getOperand(0));
   auto Undef = MIRBuilder.buildUndef(MRI->getType(Op));
   ArrayRef<Register> Res = getOrCreateVRegs(CI);
