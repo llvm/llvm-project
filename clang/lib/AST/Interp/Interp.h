@@ -1946,8 +1946,15 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Ptr.isDummy())
-    return true;
+  if (!Ptr.isZero()) {
+    if (!CheckArray(S, OpPC, Ptr))
+      return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+  }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
@@ -1960,9 +1967,14 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy()) {
-    S.Stk.push<Pointer>(Ptr);
-    return true;
+  if (!Ptr.isZero()) {
+    if (!CheckArray(S, OpPC, Ptr))
+      return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
