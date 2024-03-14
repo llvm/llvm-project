@@ -21,6 +21,7 @@
 #include "terminator.h"
 #include "type-info.h"
 #include "unit.h"
+#include "flang/Common/optional.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -321,9 +322,9 @@ static bool DefaultComponentwiseUnformattedIO(IoStatementState &io,
   return true;
 }
 
-std::optional<bool> DefinedFormattedIo(IoStatementState &, const Descriptor &,
-    const typeInfo::DerivedType &, const typeInfo::SpecialBinding &,
-    const SubscriptValue[]);
+Fortran::common::optional<bool> DefinedFormattedIo(IoStatementState &,
+    const Descriptor &, const typeInfo::DerivedType &,
+    const typeInfo::SpecialBinding &, const SubscriptValue[]);
 
 template <Direction DIR>
 static bool FormattedDerivedTypeIO(IoStatementState &io,
@@ -334,7 +335,7 @@ static bool FormattedDerivedTypeIO(IoStatementState &io,
   RUNTIME_CHECK(handler, addendum != nullptr);
   const typeInfo::DerivedType *type{addendum->derivedType()};
   RUNTIME_CHECK(handler, type != nullptr);
-  std::optional<typeInfo::SpecialBinding> nonTbpSpecial;
+  Fortran::common::optional<typeInfo::SpecialBinding> nonTbpSpecial;
   const typeInfo::SpecialBinding *special{nullptr};
   if (table) {
     if (const auto *definedIo{table->Find(*type,
@@ -365,7 +366,7 @@ static bool FormattedDerivedTypeIO(IoStatementState &io,
   std::size_t numElements{descriptor.Elements()};
   for (std::size_t j{0}; j < numElements;
        ++j, descriptor.IncrementSubscripts(subscripts)) {
-    std::optional<bool> result;
+    Fortran::common::optional<bool> result;
     if (special) {
       result = DefinedFormattedIo(io, descriptor, *type, *special, subscripts);
     }
@@ -406,7 +407,7 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
                   : typeInfo::SpecialBinding::Which::WriteUnformatted,
               definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
               false};
-          if (std::optional<bool> wasDefined{
+          if (Fortran::common::optional<bool> wasDefined{
                   DefinedUnformattedIo(io, descriptor, *type, special)}) {
             return *wasDefined;
           }

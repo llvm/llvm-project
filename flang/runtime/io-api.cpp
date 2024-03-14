@@ -18,6 +18,7 @@
 #include "terminator.h"
 #include "tools.h"
 #include "unit.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/memory.h"
 #include <cstdlib>
@@ -168,7 +169,7 @@ static Cookie NoopUnit(const Terminator &terminator, int unitNumber,
 }
 
 static ExternalFileUnit *GetOrCreateUnit(int unitNumber, Direction direction,
-    std::optional<bool> isUnformatted, const Terminator &terminator,
+    Fortran::common::optional<bool> isUnformatted, const Terminator &terminator,
     Cookie &errorCookie) {
   if (ExternalFileUnit *
       unit{ExternalFileUnit::LookUpOrCreateAnonymous(
@@ -472,8 +473,8 @@ Cookie IONAME(BeginEndfile)(
   Terminator terminator{sourceFile, sourceLine};
   Cookie errorCookie{nullptr};
   if (ExternalFileUnit *
-      unit{GetOrCreateUnit(unitNumber, Direction::Output, std::nullopt,
-          terminator, errorCookie)}) {
+      unit{GetOrCreateUnit(unitNumber, Direction::Output,
+          Fortran::common::nullopt, terminator, errorCookie)}) {
     if (ChildIo * child{unit->GetChildIo()}) {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
           IostatBadOpOnChildUnit, nullptr /* no unit */, sourceFile,
@@ -492,8 +493,8 @@ Cookie IONAME(BeginRewind)(
   Terminator terminator{sourceFile, sourceLine};
   Cookie errorCookie{nullptr};
   if (ExternalFileUnit *
-      unit{GetOrCreateUnit(unitNumber, Direction::Input, std::nullopt,
-          terminator, errorCookie)}) {
+      unit{GetOrCreateUnit(unitNumber, Direction::Input,
+          Fortran::common::nullopt, terminator, errorCookie)}) {
     if (ChildIo * child{unit->GetChildIo()}) {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
           IostatBadOpOnChildUnit, nullptr /* no unit */, sourceFile,
@@ -801,7 +802,7 @@ bool IONAME(SetAction)(Cookie cookie, const char *keyword, std::size_t length) {
     io.GetIoErrorHandler().Crash(
         "SetAction() called after GetNewUnit() for an OPEN statement");
   }
-  std::optional<Action> action;
+  Fortran::common::optional<Action> action;
   static const char *keywords[]{"READ", "WRITE", "READWRITE", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
