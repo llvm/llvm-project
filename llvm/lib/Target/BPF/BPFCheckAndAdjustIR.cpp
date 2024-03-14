@@ -490,7 +490,7 @@ static void aspaceWrapOperand(DenseMap<Value *, Value *> &Cache, Instruction *I,
 //   (load (ptr addrspace (N) %p) ...)
 //     -> (load (addrspacecast ptr addrspace (N) %p to ptr))
 //
-// - assign section with name .address_space.N for globals defined in
+// - assign section with name .addr_space.N for globals defined in
 //   non-zero address space N
 bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
   bool Changed = false;
@@ -517,13 +517,13 @@ bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
     Changed |= !CastsCache.empty();
   }
   // Merge all globals within same address space into single
-  // .address_space.<addr space no> section
+  // .addr_space.<addr space no> section
   for (GlobalVariable &G : M.globals()) {
     if (G.getAddressSpace() == 0 || G.hasSection())
       continue;
     SmallString<16> SecName;
     raw_svector_ostream OS(SecName);
-    OS << ".address_space." << G.getAddressSpace();
+    OS << ".addr_space." << G.getAddressSpace();
     G.setSection(SecName);
     // Prevent having separate section for constants
     G.setConstant(false);
