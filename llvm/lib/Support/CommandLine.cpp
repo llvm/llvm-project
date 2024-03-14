@@ -39,6 +39,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -2538,7 +2539,15 @@ public:
 #else
     OS << "LLVM (http://llvm.org/):\n  ";
 #endif
-    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION << "\n  ";
+    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
+#ifdef LLVM_REPOSITORY
+    OS << " (" << LLVM_REPOSITORY;
+#ifdef LLVM_REVISION
+    OS << ' ' << LLVM_REVISION;
+#endif
+    OS << ')';
+#endif
+    OS << "\n  ";
 #if LLVM_IS_DEBUG_BUILD
     OS << "DEBUG build";
 #else

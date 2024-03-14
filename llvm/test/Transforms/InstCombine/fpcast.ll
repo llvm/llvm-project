@@ -170,7 +170,7 @@ define half @sint_to_fptrunc(i32 %x) {
 define half @masked_sint_to_fptrunc1(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fptrunc1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 16777215
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %m = and i32 %x, 16777215
@@ -182,7 +182,7 @@ define half @masked_sint_to_fptrunc1(i32 %x) {
 define half @masked_sint_to_fptrunc2(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fptrunc2(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %m = lshr i32 %x, 8
@@ -194,7 +194,7 @@ define half @masked_sint_to_fptrunc2(i32 %x) {
 define half @masked_sint_to_fptrunc3(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fptrunc3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[F:%.*]] = uitofp i32 [[M]] to float
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[F]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
@@ -218,7 +218,7 @@ define double @sint_to_fpext(i32 %x) {
 define double @masked_sint_to_fpext1(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fpext1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 16777215
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %m = and i32 %x, 16777215
@@ -230,7 +230,7 @@ define double @masked_sint_to_fpext1(i32 %x) {
 define double @masked_sint_to_fpext2(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fpext2(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[M]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[M]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %m = lshr i32 %x, 8
@@ -242,7 +242,7 @@ define double @masked_sint_to_fpext2(i32 %x) {
 define double @masked_sint_to_fpext3(i32 %x) {
 ; CHECK-LABEL: @masked_sint_to_fpext3(
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[M]] to float
+; CHECK-NEXT:    [[F:%.*]] = uitofp i32 [[M]] to float
 ; CHECK-NEXT:    [[R:%.*]] = fpext float [[F]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
