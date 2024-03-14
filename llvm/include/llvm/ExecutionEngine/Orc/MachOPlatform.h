@@ -60,9 +60,9 @@ public:
 
     struct BuildVersionOpts {
 
-      // Derive platform from triple.
-      static BuildVersionOpts fromTriple(const Triple &TT, uint32_t MinOS,
-                                         uint32_t SDK);
+      // Derive platform from triple if possible.
+      static std::optional<BuildVersionOpts>
+      fromTriple(const Triple &TT, uint32_t MinOS, uint32_t SDK);
 
       uint32_t Platform; // Platform.
       uint32_t MinOS;    // X.Y.Z is encoded in nibbles xxxx.yy.zz
