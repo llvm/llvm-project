@@ -168,7 +168,8 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
     const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
     S.FFDiag(Op, diag::note_expr_divide_by_zero)
         << Op->getRHS()->getSourceRange();
-    return false;
+    if constexpr (!std::is_same_v<T, Floating>)
+      return false;
   }
 
   if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
