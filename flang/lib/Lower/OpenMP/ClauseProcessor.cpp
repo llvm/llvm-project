@@ -577,7 +577,7 @@ public:
   }
 
   // Returns the shape of array types.
-  const llvm::SmallVector<int64_t> &getShape() const { return shape; }
+  llvm::ArrayRef<int64_t> getShape() const { return shape; }
 
   // Is the type inside a box?
   bool isBox() const { return inBox; }
@@ -788,8 +788,8 @@ bool ClauseProcessor::processLink(
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                mlir::ArrayRef<mlir::Value> bounds,
+                mlir::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
