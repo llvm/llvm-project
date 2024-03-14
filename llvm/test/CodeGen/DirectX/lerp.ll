@@ -2,6 +2,7 @@
 
 ; Make sure dxil operation function calls for lerp are generated for float and half.
 
+; CHECK-LABEL: lerp_half
 ; CHECK: fsub half %{{.*}}, %{{.*}}
 ; CHECK: fmul half %{{.*}}, %{{.*}}
 ; CHECK: fadd half %{{.*}}, %{{.*}}
@@ -16,6 +17,7 @@ entry:
   ret half %dx.lerp
 }
 
+; CHECK-LABEL: lerp_float
 ; CHECK: fsub float %{{.*}}, %{{.*}}
 ; CHECK: fmul float %{{.*}}, %{{.*}}
 ; CHECK: fadd float %{{.*}}, %{{.*}}
@@ -32,6 +34,7 @@ entry:
   ret float %dx.lerp
 }
 
+; CHECK-LABEL: lerp_float4
 ; CHECK: fsub <4 x float> %{{.*}}, %{{.*}}
 ; CHECK: fmul <4 x float> %{{.*}}, %{{.*}}
 ; CHECK: fadd <4 x float> %{{.*}}, %{{.*}}

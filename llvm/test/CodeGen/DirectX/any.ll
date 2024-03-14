@@ -2,6 +2,7 @@
 
 ; Make sure dxil operation function calls for any are generated for float and half.
 
+; CHECK-LABEL: any_bool
 ; CHECK: icmp ne i1 %{{.*}}, false
 define noundef i1 @any_bool(i1 noundef %p0) {
 entry:
@@ -14,6 +15,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_int64_t
 ; CHECK: icmp ne i64 %{{.*}}, 0
 define noundef i1 @any_int64_t(i64 noundef %p0) {
 entry:
@@ -24,6 +26,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_int
 ; CHECK: icmp ne i32 %{{.*}}, 0
 define noundef i1 @any_int(i32 noundef %p0) {
 entry:
@@ -34,6 +37,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_int16_t
 ; CHECK: icmp ne i16 %{{.*}}, 0
 define noundef i1 @any_int16_t(i16 noundef %p0) {
 entry:
@@ -44,6 +48,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_double
 ; CHECK: fcmp une double %{{.*}}, 0.000000e+00
 define noundef i1 @any_double(double noundef %p0) {
 entry:
@@ -54,6 +59,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_float
 ; CHECK: fcmp une float %{{.*}}, 0.000000e+00
 define noundef i1 @any_float(float noundef %p0) {
 entry:
@@ -64,6 +70,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_half
 ; CHECK: fcmp une half %{{.*}}, 0xH0000
 define noundef i1 @any_half(half noundef %p0) {
 entry:
@@ -74,6 +81,7 @@ entry:
   ret i1 %dx.any
 }
 
+; CHECK-LABEL: any_bool4
 ; CHECK: icmp ne <4 x i1> %extractvec, zeroinitialize
 ; CHECK: extractelement <4 x i1> %{{.*}}, i64 0
 ; CHECK: extractelement <4 x i1> %{{.*}}, i64 1

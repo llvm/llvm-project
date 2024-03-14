@@ -2,6 +2,7 @@
 
 ; Make sure dxil operation function calls for rcp are generated for float, double, and half.
 
+; CHECK-LABEL: rcp_float4
 ; CHECK: fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %{{.*}}
 define noundef <4 x float> @rcp_float4(<4 x float> noundef %p0) {
 entry:
@@ -12,6 +13,7 @@ entry:
   ret <4 x float> %dx.rcp
 }
 
+; CHECK-LABEL: rcp_double4
 ; CHECK: fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %{{.*}}
 define noundef <4 x double> @rcp_double4(<4 x double> noundef %p0) {
 entry:
@@ -22,6 +24,7 @@ entry:
   ret <4 x double> %dx.rcp
 }
 
+; CHECK-LABEL: rcp_half4
 ; CHECK: fdiv <4 x half> <half  0xH3C00, half  0xH3C00, half  0xH3C00, half  0xH3C00>, %{{.*}} 
 define noundef <4 x half> @rcp_half4(<4 x half> noundef %p0) {
 entry:
@@ -32,6 +35,7 @@ entry:
   ret <4 x half> %dx.rcp
 }
 
+; CHECK-LABEL: rcp_half
 ; CHECK: fdiv half 0xH3C00, %{{.*}} 
 define noundef half @rcp_half(half noundef %p0) {
 entry:

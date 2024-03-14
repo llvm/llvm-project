@@ -2,6 +2,7 @@
 
 ; Make sure dxil operation function calls for exp are generated for float and half.
 
+; CHECK-LABEL: exp_float
 ; CHECK: fmul float 0x3FF7154760000000, %{{.*}}
 ; CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}})
 define noundef float @exp_float(float noundef %a) {
@@ -13,6 +14,7 @@ entry:
   ret float %elt.exp
 }
 
+; CHECK-LABEL: exp_half
 ; CHECK: fmul half 0xH3DC5, %{{.*}}
 ; CHECK: call half @dx.op.unary.f16(i32 21, half %{{.*}})
 ; Function Attrs: noinline nounwind optnone
