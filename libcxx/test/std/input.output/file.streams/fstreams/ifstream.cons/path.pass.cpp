@@ -32,17 +32,16 @@ namespace fs = std::filesystem;
 
 template <class CharT>
 constexpr bool test_non_convert_to_path() {
-
   // String types
   static_assert(!std::is_constructible_v<std::ifstream, std::basic_string_view<CharT>>);
   static_assert(!std::is_constructible_v<std::ifstream, const std::basic_string_view<CharT>>);
 
   // Char* pointers
   if constexpr (!std::is_same_v<CharT, char>)
-    static_assert(!std::is_constructible_v<std::ifstream, const CharT *>);
+    static_assert(!std::is_constructible_v<std::ifstream, const CharT*>);
 
   // Iterators
-  static_assert(!std::is_convertible_v<std::ifstream, cpp17_input_iterator<const CharT *>>);
+  static_assert(!std::is_convertible_v<std::ifstream, cpp17_input_iterator<const CharT*>>);
 
   return true;
 }
@@ -59,7 +58,6 @@ static_assert(test_non_convert_to_path<char8_t>());
 
 static_assert(test_non_convert_to_path<char16_t>());
 static_assert(test_non_convert_to_path<char32_t>());
-
 
 int main(int, char**) {
   {
