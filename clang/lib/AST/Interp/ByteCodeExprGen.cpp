@@ -685,11 +685,17 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
     if (!this->emitSetLocal(PT_Ptr, ResultOffset, E))
       return false;
   }
+  QualType LHSType = LHS->getType();
+  if (const auto *AT = LHSType->getAs<AtomicType>())
+    LHSType = AT->getValueType();
+  QualType RHSType = RHS->getType();
+  if (const auto *AT = RHSType->getAs<AtomicType>())
+    RHSType = AT->getValueType();
 
   // Evaluate LHS and save value to LHSOffset.
   bool LHSIsComplex;
   unsigned LHSOffset;
-  if (LHS->getType()->isAnyComplexType()) {
+  if (LHSType->isAnyComplexType()) {
     LHSIsComplex = true;
     LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
     if (!this->visit(LHS))
@@ -698,7 +704,7 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       return false;
   } else {
     LHSIsComplex = false;
-    PrimType LHST = classifyPrim(LHS->getType());
+    PrimType LHST = classifyPrim(LHSType);
     LHSOffset = this->allocateLocalPrimitive(LHS, LHST, true, false);
     if (!this->visit(LHS))
       return false;
@@ -709,7 +715,7 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Same with RHS.
   bool RHSIsComplex;
   unsigned RHSOffset;
-  if (RHS->getType()->isAnyComplexType()) {
+  if (RHSType->isAnyComplexType()) {
     RHSIsComplex = true;
     RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
     if (!this->visit(RHS))
@@ -718,7 +724,7 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       return false;
   } else {
     RHSIsComplex = false;
-    PrimType RHST = classifyPrim(RHS->getType());
+    PrimType RHST = classifyPrim(RHSType);
     RHSOffset = this->allocateLocalPrimitive(RHS, RHST, true, false);
     if (!this->visit(RHS))
       return false;
