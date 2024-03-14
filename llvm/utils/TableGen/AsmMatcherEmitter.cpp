@@ -1988,22 +1988,20 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
-  CvtOS << "    unsigned OpIdx;\n";
   if (HasOptionalOperands) {
     // When optional operands are involved, formal and actual operand indices
     // may differ. Map the former to the latter by subtracting the number of
     // absent optional operands.
-    CvtOS << "    OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
+    CvtOS << "    unsigned OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
-    CvtOS << "    OpIdx = *(p + 1);\n";
+    CvtOS << "    unsigned OpIdx = *(p + 1);\n";
   }
   CvtOS << "    switch (*p) {\n";
   CvtOS << "    default: llvm_unreachable(\"invalid conversion entry!\");\n";
-  CvtOS << "    case CVT_Reg:{\n";
+  CvtOS << "    case CVT_Reg:\n";
   CvtOS << "      static_cast<" << TargetOperandClass
         << " &>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
   CvtOS << "      break;\n";
-  CvtOS << "    }\n";
   CvtOS << "    case CVT_Tied: {\n";
   CvtOS << "      assert(*(p + 1) < (size_t)(std::end(TiedAsmOperandTable) -\n";
   CvtOS
