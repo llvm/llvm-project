@@ -1023,11 +1023,44 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Select: {
-    computeKnownBits(I->getOperand(2), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    auto ComputeForArm = [&](Value *Arm, bool Invert) {
+      KnownBits Res(Known.getBitWidth());
+      computeKnownBits(Arm, Res, Depth + 1, Q);
+      // If we have a constant arm, we are done.
+      if (Res.isConstant())
+        return Res;
 
+      // See what condition implies about the bits of the two select arms.
+      KnownBits CondRes(Res.getBitWidth());
+      computeKnownBitsFromCond(Arm, I->getOperand(0), CondRes, Depth + 1, Q,
+                               Invert);
+      // If we don't get any information from the condition, no reason to
+      // proceed.
+      if (CondRes.isUnknown())
+        return Res;
+
+      // We can have conflict if the condition is dead. I.e if we have
+      // (x | 64) < 32 ? (x | 64) : y
+      // we will have conflict at bit 6 from the condition/the `or`.
+      // In that case just return. Its not particularly important
+      // what we do, as this select is going to be simplified soon.
+      CondRes = CondRes.unionWith(Res);
+      if (CondRes.hasConflict())
+        return Res;
+
+      // Finally make sure the information we found is valid. This is relatively
+      // expensive so it's left for the very end.
+      if (!isGuaranteedNotToBeUndef(Arm, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+        return Res;
+
+      // Finally, we know we get information from the condition and its valid,
+      // so return it.
+      return CondRes;
+    };
     // Only known if known in both the LHS and RHS.
-    Known = Known.intersectWith(Known2);
+    Known =
+        ComputeForArm(I->getOperand(1), /*Invert=*/false)
+            .intersectWith(ComputeForArm(I->getOperand(2), /*Invert=*/true));
     break;
   }
   case Instruction::FPTrunc:
@@ -1142,9 +1175,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::LShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
-                 bool ShAmtNonZero) {
-      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero);
+    bool Exact = Q.IIQ.isExact(cast<BinaryOperator>(I));
+    auto KF = [Exact](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                      bool ShAmtNonZero) {
+      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero, Exact);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1155,9 +1189,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::AShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
-                 bool ShAmtNonZero) {
-      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero);
+    bool Exact = Q.IIQ.isExact(cast<BinaryOperator>(I));
+    auto KF = [Exact](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                      bool ShAmtNonZero) {
+      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero, Exact);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -5707,7 +5742,7 @@ llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
       // looking for, then.
       if (*req_idx != *i)
         return FindInsertedValue(I->getAggregateOperand(), idx_range,
-                                 *InsertBefore);
+                                 InsertBefore);
     }
     // If we end up here, the indices of the insertvalue match with those
     // requested (though possibly only partially). Now we recursively look at
@@ -6129,6 +6164,8 @@ void llvm::getUnderlyingObjects(const Value *V,
       if (!LI || !LI->isLoopHeader(PN->getParent()) ||
           isSameUnderlyingObjectInLoop(PN, LI))
         append_range(Worklist, PN->incoming_values());
+      else
+        Objects.push_back(P);
       continue;
     }
 

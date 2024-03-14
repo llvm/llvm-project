@@ -863,6 +863,14 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
+/// \returns Integer value requested using \p F's \p Name attribute.
+///
+/// \returns \p Default if attribute is not present.
+///
+/// \returns \p Default and emits error if requested value cannot be converted
+/// to integer.
+int getIntegerAttribute(const Function &F, StringRef Name, int Default);
+
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
 /// is false).
@@ -876,6 +884,16 @@ std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired = false);
+
+/// \returns Generate a vector of integer values requested using \p F's \p Name
+/// attribute.
+///
+/// \returns true if exactly Size (>2) number of integers are found in the
+/// attribute.
+///
+/// \returns false if any error occurs.
+SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
+                                             unsigned Size);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1494,6 +1512,11 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns lds block size in terms of dwords. \p
+/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
+/// must be defined in terms of bytes.
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
 } // end namespace AMDGPU
 

@@ -143,7 +143,7 @@ It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
 
-.. _strings:
+.. _string_constants:
 
 String constants
 ----------------
@@ -1634,6 +1634,22 @@ Currently, only the following parameter attributes are defined:
     memory, but all loads that are not preceded by a store will return poison.
 
     This attribute cannot be applied to return values.
+
+``range(<ty> <a>, <b>)``
+    This attribute expresses the possible range of the parameter or return value.
+    If the value is not in the specified range, it is converted to poison.
+    The arguments passed to ``range`` have the following properties:
+
+    -  The type must match the scalar type of the parameter or return value.
+    -  The pair ``a,b`` represents the range ``[a,b)``.
+    -  Both ``a`` and ``b`` are constants.
+    -  The range is allowed to wrap.
+    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    
+    This attribute may only be applied to parameters or return values with integer 
+    or vector of integer types.
+    
+    For vector-typed parameters, the range is applied element-wise.
 
 .. _gc:
 
@@ -27537,12 +27553,12 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Apply memory-consuming but fast solution for a task.
 
-  label %slow_path:
+  slow_path:
     ; Cheap in memory but slow solution.
 
 Whether the result of intrinsic's call is `true` or `false`,

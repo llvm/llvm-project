@@ -1273,6 +1273,21 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  nextafterf128_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    nextafterf128_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only
 # correctly rounded for the default rounding mode round-to-nearest tie-to-even.
 add_fp_unittest(
@@ -1721,5 +1736,5 @@ add_subdirectory(smoke)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
-  add_subdirectory(differential_testing)
+  add_subdirectory(performance_testing)
 endif()

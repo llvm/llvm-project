@@ -2152,14 +2152,15 @@ public:
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
 
+  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
+                         const FunctionProtoType *Proto);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
 
-  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
-                         const FunctionProtoType *Proto);
   bool CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation loc,
                            ArrayRef<const Expr *> Args);
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
@@ -3910,6 +3911,16 @@ public:
   /// particular declaration.
   void addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
                                Expr *Min, Expr *Max);
+
+  /// Create an AMDGPUMaxNumWorkGroupsAttr attribute.
+  AMDGPUMaxNumWorkGroupsAttr *
+  CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI, Expr *XExpr,
+                                   Expr *YExpr, Expr *ZExpr);
+
+  /// addAMDGPUMaxNumWorkGroupsAttr - Adds an amdgpu_max_num_work_groups
+  /// attribute to a particular declaration.
+  void addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
+                                     Expr *XExpr, Expr *YExpr, Expr *ZExpr);
 
   DLLImportAttr *mergeDLLImportAttr(Decl *D, const AttributeCommonInfo &CI);
   DLLExportAttr *mergeDLLExportAttr(Decl *D, const AttributeCommonInfo &CI);
@@ -6752,18 +6763,10 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ///
-  /// \param ThisRefersToClosureObject Whether to skip the 'this' check for a
-  /// lambda because 'this' refers to the closure object.
-  ExprResult ActOnCXXThis(SourceLocation loc,
-                          bool ThisRefersToClosureObject = false);
+  ExprResult ActOnCXXThis(SourceLocation loc);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
-  ///
-  /// \param ThisRefersToClosureObject Whether to skip the 'this' check for a
-  /// lambda because 'this' refers to the closure object.
-  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit,
-                         bool ThisRefersToClosureObject = false);
+  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
   void MarkThisReferenced(CXXThisExpr *This);
 
   /// Try to retrieve the type of the 'this' pointer.
@@ -8062,13 +8065,13 @@ public:
 
   /// The parser has processed a module import translated from a
   /// #include or similar preprocessing directive.
-  void ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
   void BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
 
   /// The parsed has entered a submodule.
-  void ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
   /// The parser has left a submodule.
-  void ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
 
   /// Create an implicit import of the given module at the given
   /// source location, for error recovery, if possible.
@@ -9011,6 +9014,12 @@ public:
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
                              SmallVectorImpl<const Attr *> &OutAttrs);
 
+  ExprResult ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                SourceRange Range);
+  ExprResult BuildCXXAssumeExpr(Expr *Assumption,
+                                const IdentifierInfo *AttrName,
+                                SourceRange Range);
+
   ///@}
 
   //
@@ -9206,7 +9215,7 @@ public:
 
   bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
                             DeclarationNameInfo NameInfo,
-                            ConceptDecl *NamedConcept,
+                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
@@ -14716,10 +14725,10 @@ private:
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
   /// The current `omp begin/end assumes` scopes.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeScoped;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeScoped;
 
   /// All `omp assumes` we encountered so far.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeGlobal;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
 
   /// OMPD_loop is mapped to OMPD_for, OMPD_distribute or OMPD_simd depending
   /// on the parameter of the bind clause. In the methods for the

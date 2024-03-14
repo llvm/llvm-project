@@ -11,6 +11,7 @@
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -1296,6 +1297,42 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
   }
 
   return Ints;
+}
+
+SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
+                                             unsigned Size) {
+  assert(Size > 2);
+  SmallVector<unsigned> Default(Size, 0);
+
+  Attribute A = F.getFnAttribute(Name);
+  if (!A.isStringAttribute())
+    return Default;
+
+  SmallVector<unsigned> Vals(Size, 0);
+
+  LLVMContext &Ctx = F.getContext();
+
+  StringRef S = A.getValueAsString();
+  unsigned i = 0;
+  for (; !S.empty() && i < Size; i++) {
+    std::pair<StringRef, StringRef> Strs = S.split(',');
+    unsigned IntVal;
+    if (Strs.first.trim().getAsInteger(0, IntVal)) {
+      Ctx.emitError("can't parse integer attribute " + Strs.first + " in " +
+                    Name);
+      return Default;
+    }
+    Vals[i] = IntVal;
+    S = Strs.second;
+  }
+
+  if (!S.empty() || i < Size) {
+    Ctx.emitError("attribute " + Name +
+                  " has incorrect number of integers; expected " +
+                  llvm::utostr(Size));
+    return Default;
+  }
+  return Vals;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
@@ -3016,6 +3053,11 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   return hasAny64BitVGPROperands(OpDesc);
+}
+
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+  // Currently this is 128 for all subtargets
+  return 128;
 }
 
 } // namespace AMDGPU
