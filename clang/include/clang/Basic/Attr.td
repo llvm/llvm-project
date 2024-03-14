@@ -2178,9 +2178,10 @@ def TypeNonNull : TypeAttr {
   let Documentation = [TypeNonNullDocs];
 }
 
-def TypeNullable : TypeAttr {
+def TypeNullable : DeclOrTypeAttr {
   let Spellings = [CustomKeyword<"_Nullable">];
   let Documentation = [TypeNullableDocs];
+//  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
 }
 
 def TypeNullableResult : TypeAttr {

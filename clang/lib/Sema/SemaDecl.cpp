@@ -18254,8 +18254,10 @@ CreateNewDecl:
   if (PrevDecl)
     mergeDeclAttributes(New, PrevDecl);
 
-  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New))
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New)) {
     inferGslOwnerPointerAttribute(CXXRD);
+    inferNullableClassAttribute(CXXRD);
+  }
 
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.
