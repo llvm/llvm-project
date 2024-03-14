@@ -295,12 +295,214 @@ Address AtomicInfo::CreateTempAlloca() const {
   return TempAlloca;
 }
 
+// If the value comes from a ConstOp + IntAttr, retrieve and skip a series
+// of casts if necessary.
+//
+// FIXME(cir): figure out warning issue and move this to CIRBaseBuilder.h
+static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
+  mlir::Operation *op = v.getDefiningOp();
+  mlir::cir::IntAttr constVal;
+  while (auto c = dyn_cast<mlir::cir::CastOp>(op))
+    op = c.getOperand().getDefiningOp();
+  if (auto c = dyn_cast<mlir::cir::ConstantOp>(op)) {
+    if (c.getType().isa<mlir::cir::IntType>())
+      constVal = c.getValue().cast<mlir::cir::IntAttr>();
+  }
+  return constVal;
+}
+
+static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
+                          Address Ptr, Address Val1, Address Val2,
+                          mlir::Value IsWeak, mlir::Value FailureOrder,
+                          uint64_t Size, llvm::AtomicOrdering Order,
+                          uint8_t Scope) {
+  assert(!UnimplementedFeature::syncScopeID());
+  [[maybe_unused]] bool PostOpMinMax = false;
+
+  switch (E->getOp()) {
+  case AtomicExpr::AO__c11_atomic_init:
+  case AtomicExpr::AO__opencl_atomic_init:
+    llvm_unreachable("Already handled!");
+
+  case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
+    llvm_unreachable("NYI");
+    return;
+  case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
+    llvm_unreachable("NYI");
+    return;
+  case AtomicExpr::AO__atomic_compare_exchange:
+  case AtomicExpr::AO__atomic_compare_exchange_n:
+  case AtomicExpr::AO__scoped_atomic_compare_exchange:
+  case AtomicExpr::AO__scoped_atomic_compare_exchange_n: {
+    llvm_unreachable("NYI");
+    return;
+  }
+  case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
+  case AtomicExpr::AO__atomic_load_n:
+  case AtomicExpr::AO__atomic_load:
+  case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_load: {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  case AtomicExpr::AO__c11_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__hip_atomic_store:
+  case AtomicExpr::AO__atomic_store:
+  case AtomicExpr::AO__atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_store:
+  case AtomicExpr::AO__scoped_atomic_store_n: {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  case AtomicExpr::AO__c11_atomic_exchange:
+  case AtomicExpr::AO__hip_atomic_exchange:
+  case AtomicExpr::AO__opencl_atomic_exchange:
+  case AtomicExpr::AO__atomic_exchange_n:
+  case AtomicExpr::AO__atomic_exchange:
+  case AtomicExpr::AO__scoped_atomic_exchange_n:
+  case AtomicExpr::AO__scoped_atomic_exchange:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_add_fetch:
+  case AtomicExpr::AO__scoped_atomic_add_fetch:
+    llvm_unreachable("NYI");
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__opencl_atomic_fetch_add:
+  case AtomicExpr::AO__atomic_fetch_add:
+  case AtomicExpr::AO__scoped_atomic_fetch_add:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_sub_fetch:
+  case AtomicExpr::AO__scoped_atomic_sub_fetch:
+    llvm_unreachable("NYI");
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_sub:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
+  case AtomicExpr::AO__opencl_atomic_fetch_sub:
+  case AtomicExpr::AO__atomic_fetch_sub:
+  case AtomicExpr::AO__scoped_atomic_fetch_sub:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_min_fetch:
+  case AtomicExpr::AO__scoped_atomic_min_fetch:
+    PostOpMinMax = true;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__atomic_fetch_min:
+  case AtomicExpr::AO__scoped_atomic_fetch_min:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_max_fetch:
+  case AtomicExpr::AO__scoped_atomic_max_fetch:
+    PostOpMinMax = true;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_max:
+  case AtomicExpr::AO__scoped_atomic_fetch_max:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_and_fetch:
+  case AtomicExpr::AO__scoped_atomic_and_fetch:
+    llvm_unreachable("NYI");
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_and:
+  case AtomicExpr::AO__hip_atomic_fetch_and:
+  case AtomicExpr::AO__opencl_atomic_fetch_and:
+  case AtomicExpr::AO__atomic_fetch_and:
+  case AtomicExpr::AO__scoped_atomic_fetch_and:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_or_fetch:
+  case AtomicExpr::AO__scoped_atomic_or_fetch:
+    llvm_unreachable("NYI");
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_or:
+  case AtomicExpr::AO__hip_atomic_fetch_or:
+  case AtomicExpr::AO__opencl_atomic_fetch_or:
+  case AtomicExpr::AO__atomic_fetch_or:
+  case AtomicExpr::AO__scoped_atomic_fetch_or:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_xor_fetch:
+  case AtomicExpr::AO__scoped_atomic_xor_fetch:
+    llvm_unreachable("NYI");
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__hip_atomic_fetch_xor:
+  case AtomicExpr::AO__opencl_atomic_fetch_xor:
+  case AtomicExpr::AO__atomic_fetch_xor:
+  case AtomicExpr::AO__scoped_atomic_fetch_xor:
+    llvm_unreachable("NYI");
+    break;
+
+  case AtomicExpr::AO__atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_nand_fetch:
+    llvm_unreachable("NYI");
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_nand:
+  case AtomicExpr::AO__atomic_fetch_nand:
+  case AtomicExpr::AO__scoped_atomic_fetch_nand:
+    llvm_unreachable("NYI");
+    break;
+  }
+  llvm_unreachable("NYI");
+}
+
+static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
+                          Address Ptr, Address Val1, Address Val2,
+                          mlir::Value IsWeak, mlir::Value FailureOrder,
+                          uint64_t Size, llvm::AtomicOrdering Order,
+                          mlir::Value Scope) {
+  auto ScopeModel = Expr->getScopeModel();
+
+  // LLVM atomic instructions always have synch scope. If clang atomic
+  // expression has no scope operand, use default LLVM synch scope.
+  if (!ScopeModel) {
+    assert(!UnimplementedFeature::syncScopeID());
+    buildAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
+                  Order, /*FIXME(cir): LLVM default scope*/ 1);
+    return;
+  }
+
+  // Handle constant scope.
+  if (getConstOpIntAttr(Scope)) {
+    assert(!UnimplementedFeature::syncScopeID());
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  // Handle non-constant scope.
+  llvm_unreachable("NYI");
+}
+
 RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
   QualType MemTy = AtomicTy;
   if (const AtomicType *AT = AtomicTy->getAs<AtomicType>())
     MemTy = AT->getValueType();
-  //   mlir::Value IsWeak = nullptr, *OrderFail = nullptr;
+  mlir::Value IsWeak = nullptr, OrderFail = nullptr;
 
   Address Val1 = Address::invalid();
   Address Val2 = Address::invalid();
@@ -337,9 +539,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         << (int)TInfo.Width.getQuantity() << (int)MaxInlineWidth.getQuantity();
   }
 
-  [[maybe_unused]] auto Order = buildScalarExpr(E->getOrder());
-  [[maybe_unused]] auto Scope =
-      E->getScopeModel() ? buildScalarExpr(E->getScope()) : nullptr;
+  auto Order = buildScalarExpr(E->getOrder());
+  auto Scope = E->getScopeModel() ? buildScalarExpr(E->getScope()) : nullptr;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -805,5 +1006,50 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
       E->getOp() == AtomicExpr::AO__atomic_load_n ||
       E->getOp() == AtomicExpr::AO__scoped_atomic_load ||
       E->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
+
+  if (auto ordAttr = getConstOpIntAttr(Order)) {
+    // We should not ever get to a case where the ordering isn't a valid CABI
+    // value, but it's hard to enforce that in general.
+    auto ord = ordAttr.getUInt();
+    if (llvm::isValidAtomicOrderingCABI(ord)) {
+      switch ((llvm::AtomicOrderingCABI)ord) {
+      case llvm::AtomicOrderingCABI::relaxed:
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      llvm::AtomicOrdering::Monotonic, Scope);
+        break;
+      case llvm::AtomicOrderingCABI::consume:
+      case llvm::AtomicOrderingCABI::acquire:
+        if (IsStore)
+          break; // Avoid crashing on code with undefined behavior
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      llvm::AtomicOrdering::Acquire, Scope);
+        break;
+      case llvm::AtomicOrderingCABI::release:
+        if (IsLoad)
+          break; // Avoid crashing on code with undefined behavior
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      llvm::AtomicOrdering::Release, Scope);
+        break;
+      case llvm::AtomicOrderingCABI::acq_rel:
+        if (IsLoad || IsStore)
+          break; // Avoid crashing on code with undefined behavior
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      llvm::AtomicOrdering::AcquireRelease, Scope);
+        break;
+      case llvm::AtomicOrderingCABI::seq_cst:
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      llvm::AtomicOrdering::SequentiallyConsistent, Scope);
+        break;
+      }
+    }
+    if (RValTy->isVoidType()) {
+      llvm_unreachable("NYI");
+    }
+
+    return convertTempToRValue(Dest.withElementType(convertTypeForMem(RValTy)),
+                               RValTy, E->getExprLoc());
+  }
+
+  // Long case, when Order isn't obviously constant.
   llvm_unreachable("NYI");
 }

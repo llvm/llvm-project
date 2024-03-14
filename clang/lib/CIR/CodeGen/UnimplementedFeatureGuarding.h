@@ -122,6 +122,7 @@ struct UnimplementedFeature {
   // Type qualifiers.
   static bool atomicTypes() { return false; }
   static bool volatileTypes() { return false; }
+  static bool syncScopeID() { return false; }
 
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
