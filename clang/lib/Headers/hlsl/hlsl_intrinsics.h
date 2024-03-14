@@ -526,6 +526,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
 float4 frac(float4);
 
 //===----------------------------------------------------------------------===//
+// isinf builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T isinf(T x)
+/// \brief Determines if the specified value \a x  is infinite.
+/// \param x The specified input value.
+///
+/// Returns a value of the same size as the input, with a value set
+/// to True if the x parameter is +INF or -INF. Otherwise, False.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool isinf(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool2 isinf(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool3 isinf(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool4 isinf(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool isinf(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool2 isinf(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool3 isinf(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool4 isinf(float4);
+
+//===----------------------------------------------------------------------===//
 // lerp builtins
 //===----------------------------------------------------------------------===//
 

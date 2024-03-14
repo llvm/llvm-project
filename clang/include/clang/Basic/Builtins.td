@@ -4572,6 +4572,12 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isinf"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
   let Attributes = [NoThrow, Const];
