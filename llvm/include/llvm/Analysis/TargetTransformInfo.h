@@ -1247,13 +1247,16 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
+  /// \p TLibInfo is used to search for platform specific vector library
+  /// functions for instructions that might be converted to calls (e.g. frem).
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr) const;
+      const Instruction *CxtI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
   /// lowered to a single instruction on the target. In X86 this is for the
