@@ -302,7 +302,8 @@ public:
     eKindStepInRange,
     eKindRunToAddress,
     eKindStepThrough,
-    eKindStepUntil
+    eKindStepUntil,
+    eKindSingleThreadTimeout
   };
 
   virtual ~ThreadPlan();
