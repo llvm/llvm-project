@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/InstallAPI/Visitor.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Linkage.h"
-#include "clang/InstallAPI/Frontend.h"
+#include "clang/InstallAPI/FrontendRecords.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
@@ -17,6 +19,15 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
+
+namespace {
+enum class CXXLinkage {
+  ExternalLinkage,
+  LinkOnceODRLinkage,
+  WeakODRLinkage,
+  PrivateLinkage,
+};
+}
 
 namespace clang::installapi {
 
@@ -53,7 +64,7 @@ static bool isInlined(const FunctionDecl *D) {
   return true;
 }
 
-static SymbolFlags getFlags(bool WeakDef, bool ThreadLocal) {
+static SymbolFlags getFlags(bool WeakDef, bool ThreadLocal = false) {
   SymbolFlags Result = SymbolFlags::None;
   if (WeakDef)
     Result |= SymbolFlags::WeakDefined;
@@ -277,8 +288,417 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
                                     ? RecordLinkage::Internal
                                     : RecordLinkage::Exported;
   Ctx.Slice->addGlobal(Name, Linkage, GlobalRecord::Kind::Function, Avail, D,
-                       *Access, getFlags(WeakDef, /*ThreadLocal=*/false),
-                       Inlined);
+                       *Access, getFlags(WeakDef), Inlined);
+  return true;
+}
+
+static bool hasVTable(const CXXRecordDecl *D) {
+  // Check if vtable symbols should be emitted, only dynamic classes need
+  // vtables.
+  if (!D->hasDefinition() || !D->isDynamicClass())
+    return false;
+
+  assert(D->isExternallyVisible() && "Should be externally visible");
+  assert(D->isCompleteDefinition() && "Only works on complete definitions");
+
+  const CXXMethodDecl *KeyFunctionD =
+      D->getASTContext().getCurrentKeyFunction(D);
+  // If this class has a key function, then there is a vtable, possibly internal
+  // though.
+  if (KeyFunctionD) {
+    switch (KeyFunctionD->getTemplateSpecializationKind()) {
+    case TSK_Undeclared:
+    case TSK_ExplicitSpecialization:
+    case TSK_ImplicitInstantiation:
+    case TSK_ExplicitInstantiationDefinition:
+      return true;
+    case TSK_ExplicitInstantiationDeclaration:
+      llvm_unreachable(
+          "Unexpected TemplateSpecializationKind for key function");
+    }
+  } else if (D->isAbstract()) {
+    // If the class is abstract and it doesn't have a key function, it is a
+    // 'pure' virtual class. It doesn't need a vtable.
+    return false;
+  }
+
+  switch (D->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ExplicitSpecialization:
+  case TSK_ImplicitInstantiation:
+    return false;
+
+  case TSK_ExplicitInstantiationDeclaration:
+  case TSK_ExplicitInstantiationDefinition:
+    return true;
+  }
+
+  llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+static CXXLinkage getVTableLinkage(const CXXRecordDecl *D) {
+  assert((D->hasDefinition() && D->isDynamicClass()) && "Record has no vtable");
+  assert(D->isExternallyVisible() && "Record should be externally visible");
+  if (D->getVisibility() == HiddenVisibility)
+    return CXXLinkage::PrivateLinkage;
+
+  const CXXMethodDecl *KeyFunctionD =
+      D->getASTContext().getCurrentKeyFunction(D);
+  if (KeyFunctionD) {
+    // If this class has a key function, use that to determine the
+    // linkage of the vtable.
+    switch (KeyFunctionD->getTemplateSpecializationKind()) {
+    case TSK_Undeclared:
+    case TSK_ExplicitSpecialization:
+      if (isInlined(KeyFunctionD))
+        return CXXLinkage::LinkOnceODRLinkage;
+      return CXXLinkage::ExternalLinkage;
+    case TSK_ImplicitInstantiation:
+      llvm_unreachable("No external vtable for implicit instantiations");
+    case TSK_ExplicitInstantiationDefinition:
+      return CXXLinkage::WeakODRLinkage;
+    case TSK_ExplicitInstantiationDeclaration:
+      llvm_unreachable(
+          "Unexpected TemplateSpecializationKind for key function");
+    }
+  }
+
+  switch (D->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ExplicitSpecialization:
+  case TSK_ImplicitInstantiation:
+    return CXXLinkage::LinkOnceODRLinkage;
+  case TSK_ExplicitInstantiationDeclaration:
+  case TSK_ExplicitInstantiationDefinition:
+    return CXXLinkage::WeakODRLinkage;
+  }
+
+  llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+static bool isRTTIWeakDef(const CXXRecordDecl *D) {
+  if (D->hasAttr<WeakAttr>())
+    return true;
+
+  if (D->isAbstract() && D->getASTContext().getCurrentKeyFunction(D) == nullptr)
+    return true;
+
+  if (D->isDynamicClass())
+    return getVTableLinkage(D) != CXXLinkage::ExternalLinkage;
+
+  return false;
+}
+
+static bool hasRTTI(const CXXRecordDecl *D) {
+  if (!D->getASTContext().getLangOpts().RTTI)
+    return false;
+
+  if (!D->hasDefinition())
+    return false;
+
+  if (!D->isDynamicClass())
+    return false;
+
+  // Don't emit weak-def RTTI information. InstallAPI cannot reliably determine
+  // if the final binary will have those weak defined RTTI symbols. This depends
+  // on the optimization level and if the class has been instantiated and used.
+  //
+  // Luckily, the Apple static linker doesn't need those weak defined RTTI
+  // symbols for linking. They are only needed by the runtime linker. That means
+  // they can be safely dropped.
+  if (isRTTIWeakDef(D))
+    return false;
+
+  return true;
+}
+
+std::string
+InstallAPIVisitor::getMangledCXXRTTIName(const CXXRecordDecl *D) const {
+  SmallString<256> Name;
+  raw_svector_ostream NameStream(Name);
+  MC->mangleCXXRTTIName(QualType(D->getTypeForDecl(), 0), NameStream);
+
+  return getBackendMangledName(Name);
+}
+
+std::string InstallAPIVisitor::getMangledCXXRTTI(const CXXRecordDecl *D) const {
+  SmallString<256> Name;
+  raw_svector_ostream NameStream(Name);
+  MC->mangleCXXRTTI(QualType(D->getTypeForDecl(), 0), NameStream);
+
+  return getBackendMangledName(Name);
+}
+
+std::string
+InstallAPIVisitor::getMangledCXXVTableName(const CXXRecordDecl *D) const {
+  SmallString<256> Name;
+  raw_svector_ostream NameStream(Name);
+  MC->mangleCXXVTable(D, NameStream);
+
+  return getBackendMangledName(Name);
+}
+
+std::string
+InstallAPIVisitor::getMangledCXXThunk(const GlobalDecl &D,
+                                      const ThunkInfo &Thunk) const {
+  SmallString<256> Name;
+  raw_svector_ostream NameStream(Name);
+  const auto *Method = cast<CXXMethodDecl>(D.getDecl());
+  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(Method))
+    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk.This, NameStream);
+  else
+    MC->mangleThunk(Method, Thunk, NameStream);
+
+  return getBackendMangledName(Name);
+}
+
+std::string InstallAPIVisitor::getMangledCtorDtor(const CXXMethodDecl *D,
+                                                  int Type) const {
+  SmallString<256> Name;
+  raw_svector_ostream NameStream(Name);
+  GlobalDecl GD;
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+    GD = GlobalDecl(Ctor, CXXCtorType(Type));
+  else {
+    const auto *Dtor = cast<CXXDestructorDecl>(D);
+    GD = GlobalDecl(Dtor, CXXDtorType(Type));
+  }
+  MC->mangleName(GD, NameStream);
+  return getBackendMangledName(Name);
+}
+
+void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
+                                          const AvailabilityInfo &Avail,
+                                          const HeaderType Access,
+                                          bool EmittedVTable) {
+  if (hasVTable(D)) {
+    EmittedVTable = true;
+    const CXXLinkage VTableLinkage = getVTableLinkage(D);
+    if (VTableLinkage == CXXLinkage::ExternalLinkage ||
+        VTableLinkage == CXXLinkage::WeakODRLinkage) {
+      const std::string Name = getMangledCXXVTableName(D);
+      const bool WeakDef = VTableLinkage == CXXLinkage::WeakODRLinkage;
+      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                           GlobalRecord::Kind::Variable, Avail, D, Access,
+                           getFlags(WeakDef));
+      if (!D->getDescribedClassTemplate() && !D->isInvalidDecl()) {
+        VTableContextBase *VTable = D->getASTContext().getVTableContext();
+        auto AddThunk = [&](GlobalDecl GD) {
+          const ItaniumVTableContext::ThunkInfoVectorTy *Thunks =
+              VTable->getThunkInfo(GD);
+          if (!Thunks)
+            return;
+
+          for (const auto &Thunk : *Thunks) {
+            const std::string Name = getMangledCXXThunk(GD, Thunk);
+            Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                 GlobalRecord::Kind::Function, Avail,
+                                 GD.getDecl(), Access);
+          }
+        };
+
+        for (const auto *Method : D->methods()) {
+          if (isa<CXXConstructorDecl>(Method) || !Method->isVirtual())
+            continue;
+
+          if (auto Dtor = dyn_cast<CXXDestructorDecl>(Method)) {
+            // Skip default destructor.
+            if (Dtor->isDefaulted())
+              continue;
+            AddThunk({Dtor, Dtor_Deleting});
+            AddThunk({Dtor, Dtor_Complete});
+          } else
+            AddThunk(Method);
+        }
+      }
+    }
+  }
+
+  if (!EmittedVTable)
+    return;
+
+  if (hasRTTI(D)) {
+    std::string Name = getMangledCXXRTTI(D);
+    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                         GlobalRecord::Kind::Variable, Avail, D, Access);
+
+    Name = getMangledCXXRTTIName(D);
+    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                         GlobalRecord::Kind::Variable, Avail, D, Access);
+  }
+
+  for (const auto &It : D->bases()) {
+    const CXXRecordDecl *Base =
+        cast<CXXRecordDecl>(It.getType()->castAs<RecordType>()->getDecl());
+    const auto BaseAccess = getAccessForDecl(Base);
+    if (!BaseAccess)
+      continue;
+    const AvailabilityInfo BaseAvail = AvailabilityInfo::createFromDecl(Base);
+    emitVTableSymbols(Base, BaseAvail, *BaseAccess, /*EmittedVTable=*/true);
+  }
+}
+
+bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
+  if (!D->isCompleteDefinition())
+    return true;
+
+  // Skip templated classes.
+  if (D->getDescribedClassTemplate() != nullptr)
+    return true;
+
+  // Skip partial templated classes too.
+  if (isa<ClassTemplatePartialSpecializationDecl>(D))
+    return true;
+
+  auto Access = getAccessForDecl(D);
+  if (!Access)
+    return true;
+  const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
+
+  // Check whether to emit the vtable/rtti symbols.
+  if (isExported(D))
+    emitVTableSymbols(D, Avail, *Access);
+
+  TemplateSpecializationKind ClassSK = TSK_Undeclared;
+  bool KeepInlineAsWeak = false;
+  if (auto *Templ = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    ClassSK = Templ->getTemplateSpecializationKind();
+    if (ClassSK == TSK_ExplicitInstantiationDeclaration)
+      KeepInlineAsWeak = true;
+  }
+
+  // Record the class methods.
+  for (const auto *M : D->methods()) {
+    // Inlined methods are usually not emitted, except when it comes from a
+    // specialized template.
+    bool WeakDef = false;
+    if (isInlined(M)) {
+      if (!KeepInlineAsWeak)
+        continue;
+
+      WeakDef = true;
+    }
+
+    if (!isExported(M))
+      continue;
+
+    switch (M->getTemplateSpecializationKind()) {
+    case TSK_Undeclared:
+    case TSK_ExplicitSpecialization:
+      break;
+    case TSK_ImplicitInstantiation:
+      continue;
+    case TSK_ExplicitInstantiationDeclaration:
+      if (ClassSK == TSK_ExplicitInstantiationDeclaration)
+        WeakDef = true;
+      break;
+    case TSK_ExplicitInstantiationDefinition:
+      WeakDef = true;
+      break;
+    }
+
+    if (!M->isUserProvided())
+      continue;
+
+    // Methods that are deleted are not exported.
+    if (M->isDeleted())
+      continue;
+
+    const auto Access = getAccessForDecl(M);
+    if (!Access)
+      return true;
+    const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(M);
+
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(M)) {
+      // Defaulted constructors are not exported.
+      if (Ctor->isDefaulted())
+        continue;
+
+      std::string Name = getMangledCtorDtor(M, Ctor_Base);
+      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                           GlobalRecord::Kind::Function, Avail, D, *Access,
+                           getFlags(WeakDef));
+
+      if (!D->isAbstract()) {
+        std::string Name = getMangledCtorDtor(M, Ctor_Complete);
+        Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                             GlobalRecord::Kind::Function, Avail, D, *Access,
+                             getFlags(WeakDef));
+      }
+
+      continue;
+    }
+
+    if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(M)) {
+      // Defaulted destructors are not exported.
+      if (Dtor->isDefaulted())
+        continue;
+
+      std::string Name = getMangledCtorDtor(M, Dtor_Base);
+      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                           GlobalRecord::Kind::Function, Avail, D, *Access,
+                           getFlags(WeakDef));
+
+      Name = getMangledCtorDtor(M, Dtor_Complete);
+      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                           GlobalRecord::Kind::Function, Avail, D, *Access,
+                           getFlags(WeakDef));
+
+      if (Dtor->isVirtual()) {
+        Name = getMangledCtorDtor(M, Dtor_Deleting);
+        Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                             GlobalRecord::Kind::Function, Avail, D, *Access,
+                             getFlags(WeakDef));
+      }
+
+      continue;
+    }
+
+    // Though abstract methods can map to exports, this is generally unexpected.
+    // Except in the case of destructors. Only ignore pure virtuals after
+    // checking if the member function was a destructor.
+    if (M->isPureVirtual())
+      continue;
+
+    std::string Name = getMangledName(M);
+    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                         GlobalRecord::Kind::Function, Avail, D, *Access,
+                         getFlags(WeakDef));
+  }
+
+  if (auto *Templ = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    if (!Templ->isExplicitInstantiationOrSpecialization())
+      return true;
+  }
+
+  using var_iter = CXXRecordDecl::specific_decl_iterator<VarDecl>;
+  using var_range = iterator_range<var_iter>;
+  for (const auto *Var : var_range(D->decls())) {
+    // Skip const static member variables.
+    // \code
+    // struct S {
+    //   static const int x = 0;
+    // };
+    // \endcode
+    if (Var->isStaticDataMember() && Var->hasInit())
+      continue;
+
+    // Skip unexported var decls.
+    if (!isExported(Var))
+      continue;
+
+    const std::string Name = getMangledName(Var);
+    const auto Access = getAccessForDecl(Var);
+    if (!Access)
+      return true;
+    const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(Var);
+    const bool WeakDef = Var->hasAttr<WeakAttr>() || KeepInlineAsWeak;
+
+    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                         GlobalRecord::Kind::Variable, Avail, D, *Access,
+                         getFlags(WeakDef));
+  }
+
   return true;
 }
 

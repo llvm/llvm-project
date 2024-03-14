@@ -1142,9 +1142,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::LShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
-                 bool ShAmtNonZero) {
-      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero);
+    bool Exact = Q.IIQ.isExact(cast<BinaryOperator>(I));
+    auto KF = [Exact](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                      bool ShAmtNonZero) {
+      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero, Exact);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1155,9 +1156,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::AShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
-                 bool ShAmtNonZero) {
-      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero);
+    bool Exact = Q.IIQ.isExact(cast<BinaryOperator>(I));
+    auto KF = [Exact](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                      bool ShAmtNonZero) {
+      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero, Exact);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -5707,7 +5709,7 @@ llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
       // looking for, then.
       if (*req_idx != *i)
         return FindInsertedValue(I->getAggregateOperand(), idx_range,
-                                 *InsertBefore);
+                                 InsertBefore);
     }
     // If we end up here, the indices of the insertvalue match with those
     // requested (though possibly only partially). Now we recursively look at
@@ -6129,6 +6131,8 @@ void llvm::getUnderlyingObjects(const Value *V,
       if (!LI || !LI->isLoopHeader(PN->getParent()) ||
           isSameUnderlyingObjectInLoop(PN, LI))
         append_range(Worklist, PN->incoming_values());
+      else
+        Objects.push_back(P);
       continue;
     }
 

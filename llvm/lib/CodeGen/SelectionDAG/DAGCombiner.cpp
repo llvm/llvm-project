@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -79,6 +80,7 @@
 #include "MatchContext.h"
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "dagcombine"
 
@@ -2697,52 +2699,45 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
             reassociateReduction(ISD::VECREDUCE_ADD, ISD::ADD, DL, VT, N0, N1))
       return SD;
   }
+
+  SDValue A, B, C;
+
   // fold ((0-A) + B) -> B-A
-  if (N0.getOpcode() == ISD::SUB && isNullOrNullSplat(N0.getOperand(0)))
-    return DAG.getNode(ISD::SUB, DL, VT, N1, N0.getOperand(1));
+  if (sd_match(N0, m_Sub(m_Zero(), m_Value(A))))
+    return DAG.getNode(ISD::SUB, DL, VT, N1, A);
 
   // fold (A + (0-B)) -> A-B
-  if (N1.getOpcode() == ISD::SUB && isNullOrNullSplat(N1.getOperand(0)))
-    return DAG.getNode(ISD::SUB, DL, VT, N0, N1.getOperand(1));
+  if (sd_match(N1, m_Sub(m_Zero(), m_Value(B))))
+    return DAG.getNode(ISD::SUB, DL, VT, N0, B);
 
   // fold (A+(B-A)) -> B
-  if (N1.getOpcode() == ISD::SUB && N0 == N1.getOperand(1))
-    return N1.getOperand(0);
+  if (sd_match(N1, m_Sub(m_Value(B), m_Specific(N0))))
+    return B;
 
   // fold ((B-A)+A) -> B
-  if (N0.getOpcode() == ISD::SUB && N1 == N0.getOperand(1))
-    return N0.getOperand(0);
+  if (sd_match(N0, m_Sub(m_Value(B), m_Specific(N1))))
+    return B;
 
   // fold ((A-B)+(C-A)) -> (C-B)
-  if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB &&
-      N0.getOperand(0) == N1.getOperand(1))
-    return DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(0),
-                       N0.getOperand(1));
+  if (sd_match(N0, m_Sub(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_Sub(m_Value(C), m_Specific(A))))
+    return DAG.getNode(ISD::SUB, DL, VT, C, B);
 
   // fold ((A-B)+(B-C)) -> (A-C)
-  if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB &&
-      N0.getOperand(1) == N1.getOperand(0))
-    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0),
-                       N1.getOperand(1));
+  if (sd_match(N0, m_Sub(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_Sub(m_Specific(B), m_Value(C))))
+    return DAG.getNode(ISD::SUB, DL, VT, A, C);
 
   // fold (A+(B-(A+C))) to (B-C)
-  if (N1.getOpcode() == ISD::SUB && N1.getOperand(1).getOpcode() == ISD::ADD &&
-      N0 == N1.getOperand(1).getOperand(0))
-    return DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(0),
-                       N1.getOperand(1).getOperand(1));
-
   // fold (A+(B-(C+A))) to (B-C)
-  if (N1.getOpcode() == ISD::SUB && N1.getOperand(1).getOpcode() == ISD::ADD &&
-      N0 == N1.getOperand(1).getOperand(1))
-    return DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(0),
-                       N1.getOperand(1).getOperand(0));
+  if (sd_match(N1, m_Sub(m_Value(B), m_Add(m_Specific(N0), m_Value(C)))))
+    return DAG.getNode(ISD::SUB, DL, VT, B, C);
 
   // fold (A+((B-A)+or-C)) to (B+or-C)
-  if ((N1.getOpcode() == ISD::SUB || N1.getOpcode() == ISD::ADD) &&
-      N1.getOperand(0).getOpcode() == ISD::SUB &&
-      N0 == N1.getOperand(0).getOperand(1))
-    return DAG.getNode(N1.getOpcode(), DL, VT, N1.getOperand(0).getOperand(0),
-                       N1.getOperand(1));
+  if (sd_match(N1,
+               m_AnyOf(m_Add(m_Sub(m_Value(B), m_Specific(N0)), m_Value(C)),
+                       m_Sub(m_Sub(m_Value(B), m_Specific(N0)), m_Value(C)))))
+    return DAG.getNode(N1.getOpcode(), DL, VT, B, C);
 
   // fold (A-B)+(C-D) to (A+C)-(B+D) when A or C is constant
   if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB &&
@@ -3794,63 +3789,34 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       return DAG.getNode(ISD::SUB, DL, VT, NewC, N0.getOperand(1));
   }
 
-  // fold ((A+(B+or-C))-B) -> A+or-C
-  if (N0.getOpcode() == ISD::ADD &&
-      (N0.getOperand(1).getOpcode() == ISD::SUB ||
-       N0.getOperand(1).getOpcode() == ISD::ADD) &&
-      N0.getOperand(1).getOperand(0) == N1)
-    return DAG.getNode(N0.getOperand(1).getOpcode(), DL, VT, N0.getOperand(0),
-                       N0.getOperand(1).getOperand(1));
+  SDValue A, B, C;
 
-  // fold ((A+(C+B))-B) -> A+C
-  if (N0.getOpcode() == ISD::ADD && N0.getOperand(1).getOpcode() == ISD::ADD &&
-      N0.getOperand(1).getOperand(1) == N1)
-    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0),
-                       N0.getOperand(1).getOperand(0));
+  // fold ((A+(B+C))-B) -> A+C
+  if (sd_match(N0, m_Add(m_Value(A), m_Add(m_Specific(N1), m_Value(C)))))
+    return DAG.getNode(ISD::ADD, DL, VT, A, C);
+
+  // fold ((A+(B-C))-B) -> A-C
+  if (sd_match(N0, m_Add(m_Value(A), m_Sub(m_Specific(N1), m_Value(C)))))
+    return DAG.getNode(ISD::SUB, DL, VT, A, C);
 
   // fold ((A-(B-C))-C) -> A-B
-  if (N0.getOpcode() == ISD::SUB && N0.getOperand(1).getOpcode() == ISD::SUB &&
-      N0.getOperand(1).getOperand(1) == N1)
-    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0),
-                       N0.getOperand(1).getOperand(0));
+  if (sd_match(N0, m_Sub(m_Value(A), m_Sub(m_Value(B), m_Specific(N1)))))
+    return DAG.getNode(ISD::SUB, DL, VT, A, B);
 
   // fold (A-(B-C)) -> A+(C-B)
-  if (N1.getOpcode() == ISD::SUB && N1.hasOneUse())
+  if (sd_match(N1, m_OneUse(m_Sub(m_Value(B), m_Value(C)))))
     return DAG.getNode(ISD::ADD, DL, VT, N0,
-                       DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(1),
-                                   N1.getOperand(0)));
+                       DAG.getNode(ISD::SUB, DL, VT, C, B));
 
   // A - (A & B)  ->  A & (~B)
-  if (N1.getOpcode() == ISD::AND) {
-    SDValue A = N1.getOperand(0);
-    SDValue B = N1.getOperand(1);
-    if (A != N0)
-      std::swap(A, B);
-    if (A == N0 &&
-        (N1.hasOneUse() || isConstantOrConstantVector(B, /*NoOpaques=*/true))) {
-      SDValue InvB =
-          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::AND, DL, VT, A, InvB);
-    }
-  }
+  if (sd_match(N1, m_And(m_Specific(N0), m_Value(B))) &&
+      (N1.hasOneUse() || isConstantOrConstantVector(B, /*NoOpaques=*/true)))
+    return DAG.getNode(ISD::AND, DL, VT, N0, DAG.getNOT(DL, B, VT));
 
-  // fold (X - (-Y * Z)) -> (X + (Y * Z))
-  if (N1.getOpcode() == ISD::MUL && N1.hasOneUse()) {
-    if (N1.getOperand(0).getOpcode() == ISD::SUB &&
-        isNullOrNullSplat(N1.getOperand(0).getOperand(0))) {
-      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT,
-                                N1.getOperand(0).getOperand(1),
-                                N1.getOperand(1));
-      return DAG.getNode(ISD::ADD, DL, VT, N0, Mul);
-    }
-    if (N1.getOperand(1).getOpcode() == ISD::SUB &&
-        isNullOrNullSplat(N1.getOperand(1).getOperand(0))) {
-      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT,
-                                N1.getOperand(0),
-                                N1.getOperand(1).getOperand(1));
-      return DAG.getNode(ISD::ADD, DL, VT, N0, Mul);
-    }
-  }
+  // fold (A - (-B * C)) -> (A + (B * C))
+  if (sd_match(N1, m_OneUse(m_Mul(m_Sub(m_Zero(), m_Value(B)), m_Value(C)))))
+    return DAG.getNode(ISD::ADD, DL, VT, N0,
+                       DAG.getNode(ISD::MUL, DL, VT, B, C));
 
   // If either operand of a sub is undef, the result is undef
   if (N0.isUndef())
@@ -3870,12 +3836,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldSubToUSubSat(VT, N))
     return V;
 
-  // (x - y) - 1  ->  add (xor y, -1), x
-  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() && isOneOrOneSplat(N1)) {
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1),
-                              DAG.getAllOnesConstant(DL, VT));
-    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
-  }
+  // (A - B) - 1  ->  add (xor B, -1), A
+  if (sd_match(N, m_Sub(m_OneUse(m_Sub(m_Value(A), m_Value(B))), m_One())))
+    return DAG.getNode(ISD::ADD, DL, VT, A, DAG.getNOT(DL, B, VT));
 
   // Look for:
   //   sub y, (xor x, -1)

@@ -1237,8 +1237,6 @@ def ProcessorFeatures {
   // Gracemont
   list<SubtargetFeature> GRTTuning = [TuningMacroFusion,
                                       TuningSlow3OpsLEA,
-                                      TuningSlowDivide32,
-                                      TuningSlowDivide64,
                                       TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,
                                       TuningFast15ByteNOP,

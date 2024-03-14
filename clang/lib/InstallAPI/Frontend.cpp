@@ -8,6 +8,7 @@
 
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/AST/Availability.h"
+#include "clang/InstallAPI/FrontendRecords.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -137,9 +138,9 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
     else
       OS << "#import ";
     if (H.useIncludeName())
-      OS << "<" << H.getIncludeName() << ">";
+      OS << "<" << H.getIncludeName() << ">\n";
     else
-      OS << "\"" << H.getPath() << "\"";
+      OS << "\"" << H.getPath() << "\"\n";
 
     Ctx.addKnownHeader(H);
   }

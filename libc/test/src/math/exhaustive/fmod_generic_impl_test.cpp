@@ -19,10 +19,11 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 template <typename T, bool InverseMultiplication>
 class LlvmLibcFModTest : public LIBC_NAMESPACE::testing::Test {
 
+  using U = typename LIBC_NAMESPACE::fputil::FPBits<T>::StorageType;
   using DivisionHelper = LIBC_NAMESPACE::cpp::conditional_t<
       InverseMultiplication,
-      LIBC_NAMESPACE::fputil::generic::FModDivisionInvMultHelper<T>,
-      LIBC_NAMESPACE::fputil::generic::FModDivisionSimpleHelper<T>>;
+      LIBC_NAMESPACE::fputil::generic::FModDivisionInvMultHelper<U>,
+      LIBC_NAMESPACE::fputil::generic::FModDivisionSimpleHelper<U>>;
 
   static constexpr std::array<T, 11> test_bases = {
       T(0.0),
@@ -39,9 +40,7 @@ class LlvmLibcFModTest : public LIBC_NAMESPACE::testing::Test {
 
 public:
   void testExtensive() {
-    using FMod = LIBC_NAMESPACE::fputil::generic::FMod<
-        T, LIBC_NAMESPACE::fputil::generic::FModFastMathWrapper<T>,
-        DivisionHelper>;
+    using FMod = LIBC_NAMESPACE::fputil::generic::FMod<T, U, DivisionHelper>;
     using nl = std::numeric_limits<T>;
     int min2 = nl::min_exponent - nl::digits - 5;
     int max2 = nl::max_exponent + 3;

@@ -241,7 +241,7 @@ void DebugInfoFinder::processInstruction(const Module &M,
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
 
-  for (const DbgRecord &DPR : I.getDbgValueRange())
+  for (const DbgRecord &DPR : I.getDbgRecordRange())
     processDbgRecord(M, DPR);
 }
 
@@ -579,7 +579,7 @@ bool llvm::stripDebugInfo(Function &F) {
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
       }
-      I.dropDbgValues();
+      I.dropDbgRecords();
     }
   }
   return Changed;
@@ -896,7 +896,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           I.setMetadata("heapallocsite", nullptr);
 
         // Strip any DPValues attached.
-        I.dropDbgValues();
+        I.dropDbgRecords();
       }
     }
   }
@@ -1663,43 +1663,47 @@ LLVMValueRef
 LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
                                  LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
                                  LLVMMetadataRef DL, LLVMValueRef Instr) {
-  return wrap(unwrap(Builder)->insertDeclare(
-                  unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-                  unwrap<Instruction>(Instr)));
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+      unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+      unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
+      unwrap<Instruction>(Instr));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(
-    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  return wrap(unwrap(Builder)->insertDeclare(
-                  unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-                  unwrap(Block)));
+LLVMValueRef
+LLVMDIBuilderInsertDeclareAtEnd(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
+                                LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
+                                LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+      unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
+      unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(LLVMDIBuilderRef Builder,
-                                               LLVMValueRef Val,
-                                               LLVMMetadataRef VarInfo,
-                                               LLVMMetadataRef Expr,
-                                               LLVMMetadataRef DebugLoc,
-                                               LLVMValueRef Instr) {
-  return wrap(unwrap(Builder)->insertDbgValueIntrinsic(
-                  unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                  unwrap<Instruction>(Instr)));
+LLVMValueRef LLVMDIBuilderInsertDbgValueBefore(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
+      unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
+      unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
-                                              LLVMValueRef Val,
-                                              LLVMMetadataRef VarInfo,
-                                              LLVMMetadataRef Expr,
-                                              LLVMMetadataRef DebugLoc,
-                                              LLVMBasicBlockRef Block) {
-  return wrap(unwrap(Builder)->insertDbgValueIntrinsic(
-                  unwrap(Val), unwrap<DILocalVariable>(VarInfo),
-                  unwrap<DIExpression>(Expr), unwrap<DILocation>(DebugLoc),
-                  unwrap(Block)));
+LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(
+    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
+  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
+      unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
+      unwrap<DILocation>(DebugLoc), unwrap(Block));
+  assert(isa<Instruction *>(DbgInst) &&
+         "Inserted a DbgRecord into function using old debug info mode");
+  return wrap(cast<Instruction *>(DbgInst));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
@@ -1824,7 +1828,7 @@ void at::deleteAll(Function *F) {
   SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
+      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange()))
         if (DPV.isDbgAssign())
           DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
@@ -2115,10 +2119,15 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
     return;
   }
-  auto *Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr,
-                                     Dest, AddrExpr, VarRec.DL);
+  auto Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
+                                    AddrExpr, VarRec.DL);
   (void)Assign;
-  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
+  LLVM_DEBUG(if (!Assign.isNull()) {
+    if (Assign.is<DbgRecord *>())
+      errs() << " > INSERT: " << *Assign.get<DbgRecord *>() << "\n";
+    else
+      errs() << " > INSERT: " << *Assign.get<Instruction *>() << "\n";
+  });
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
@@ -2248,7 +2257,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }

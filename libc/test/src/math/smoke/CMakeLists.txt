@@ -1551,6 +1551,21 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  nextafterf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf128_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
 # FIXME: These tests are currently spurious for the GPU.
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_fp_unittest(
@@ -1787,6 +1802,42 @@ add_fp_unittest(
     libc.include.math
     libc.src.errno.errno
     libc.src.math.fmod
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmodl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodl_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.errno.errno
+    libc.src.math.fmodl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmodf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodf128_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.errno.errno
+    libc.src.math.fmodf128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
   # FIXME: Currently fails on the GPU build.
