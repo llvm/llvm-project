@@ -201,6 +201,21 @@ Attribute Changes in Clang
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
 
+- The ``_Nullable`` and ``_Nonnull`` family of type attributes can now apply
+  to certain C++ class types, such as smart pointers:
+  ``void useObject(std::unique_ptr<Object> _Nonnull obj);``.
+
+  This works for standard library types including ``unique_ptr``, ``shared_ptr``
+  and ``function``. See `the attribute reference
+documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
+for the full list.
+
+- The ``_Nullable`` attribute can be applied to C++ class declarations:
+  ``template <class T> class _Nullable MySmartPointer {};``.
+
+  This allows the ``_Nullable`` and ``_Nonnull` family of type attributes to
+  apply to this class.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -376,9 +391,12 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation when trying to access a
   captured ``this`` pointer in a lambda with an explicit object parameter.
   Fixes (#GH80997)
+- Fix an issue where missing set friend declaration in template class instantiation.
+  Fixes (#GH84368).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -488,6 +506,10 @@ libclang
 
 Static Analyzer
 ---------------
+
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
 
 New features
 ^^^^^^^^^^^^

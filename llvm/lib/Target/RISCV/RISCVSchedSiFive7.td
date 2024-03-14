@@ -186,7 +186,7 @@ class SiFive7AnyToGPRBypass<SchedRead read, int cycles = 2>
                                  WriteBEXT, WriteBEXTI,
                                  WriteCLZ, WriteCLZ32, WriteCTZ, WriteCTZ32,
                                  WriteCPOP, WriteCPOP32,
-                                 WriteREV8, WriteORCB, WriteSFB,
+                                 WriteREV8, WriteORCB, WriteIMinMax, WriteSFB,
                                  WriteIMul, WriteIMul32,
                                  WriteIDiv, WriteIDiv32,
                                  WriteIRem, WriteIRem32,
@@ -304,6 +304,9 @@ def : WriteRes<WriteCPOP32, [SiFive7PipeB]>;
 
 // orc.b is in the late-B ALU.
 def : WriteRes<WriteORCB, [SiFive7PipeB]>;
+
+// min/max are in the late-B ALU
+def : WriteRes<WriteIMinMax, [SiFive7PipeB]>;
 
 // rev8 is in the late-A and late-B ALUs.
 def : WriteRes<WriteREV8, [SiFive7PipeAB]>;
@@ -1041,6 +1044,7 @@ def : SiFive7AnyToGPRBypass<ReadCTZ32>;
 def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : SiFive7AnyToGPRBypass<ReadORCB>;
+def : SiFive7AnyToGPRBypass<ReadIMinMax>;
 def : SiFive7AnyToGPRBypass<ReadREV8>;
 def : SiFive7AnyToGPRBypass<ReadSHXADD>;
 def : SiFive7AnyToGPRBypass<ReadSHXADD32>;

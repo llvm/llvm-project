@@ -73,13 +73,12 @@ public:
     /// will be used.
     std::optional<Dylib> IDDylib;
 
-    /// Override for LC_BUILD_VERSION. If this is nullopt then
-    std::optional<BuildVersionOpts> BuildVersion;
-
     /// List of LC_LOAD_DYLIBs.
     std::vector<Dylib> LoadDylibs;
     /// List of LC_RPATHs.
     std::vector<std::string> RPaths;
+    /// List of LC_BUILD_VERSIONs.
+    std::vector<BuildVersionOpts> BuildVersion;
 
     HeaderOptions() = default;
     HeaderOptions(Dylib D) : IDDylib(std::move(D)) {}
