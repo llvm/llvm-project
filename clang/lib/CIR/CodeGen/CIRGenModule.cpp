@@ -2449,11 +2449,7 @@ void CIRGenModule::buildDefaultMethods() {
 }
 
 mlir::IntegerAttr CIRGenModule::getSize(CharUnits size) {
-  // Note that mlir::IntegerType is used instead of mlir::cir::IntType here
-  // because we don't need sign information for this to be useful, so keep
-  // it simple.
-  return mlir::IntegerAttr::get(
-      mlir::IntegerType::get(builder.getContext(), 64), size.getQuantity());
+  return builder.getSizeFromCharUnits(builder.getContext(), size);
 }
 
 mlir::Operation *

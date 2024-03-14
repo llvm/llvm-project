@@ -11,6 +11,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Region.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -69,6 +70,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerStdFindOp(StdFindOp op);
   void lowerIterBeginOp(IterBeginOp op);
   void lowerIterEndOp(IterEndOp op);
+  void lowerArrayDtor(ArrayDtor op);
+  void lowerArrayCtor(ArrayCtor op);
 
   /// Build the function that initializes the specified global
   FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
@@ -301,6 +304,95 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   builder.create<ReturnOp>(f.getLoc());
 }
 
+static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
+                                       mlir::Operation *op, mlir::Type eltTy,
+                                       mlir::Value arrayAddr,
+                                       uint64_t arrayLen) {
+  // Generate loop to call into ctor/dtor for every element.
+  auto loc = op->getLoc();
+
+  // TODO: instead of fixed integer size, create alias for PtrDiffTy and unify
+  // with CIRGen stuff.
+  auto ptrDiffTy =
+      mlir::cir::IntType::get(builder.getContext(), 64, /*signed=*/false);
+  auto numArrayElementsConst = builder.create<mlir::cir::ConstantOp>(
+      loc, ptrDiffTy, mlir::cir::IntAttr::get(ptrDiffTy, arrayLen));
+
+  auto begin = builder.create<mlir::cir::CastOp>(
+      loc, eltTy, mlir::cir::CastKind::array_to_ptrdecay, arrayAddr);
+  mlir::Value end = builder.create<mlir::cir::PtrStrideOp>(
+      loc, eltTy, begin, numArrayElementsConst);
+
+  auto tmpAddr = builder.create<mlir::cir::AllocaOp>(
+      loc, /*addr type*/ builder.getPointerTo(eltTy),
+      /*var type*/ eltTy, "__array_idx",
+      builder.getSizeFromCharUnits(builder.getContext(),
+                                   clang::CharUnits::One()),
+      nullptr);
+
+  auto loop = builder.createDoWhile(
+      loc,
+      /*condBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
+        mlir::Type boolTy = mlir::cir::BoolType::get(b.getContext());
+        auto cmp = builder.create<mlir::cir::CmpOp>(
+            loc, boolTy, mlir::cir::CmpOpKind::eq, currentElement, end);
+        builder.createCondition(cmp);
+      },
+      /*bodyBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
+
+        CallOp ctorCall;
+        op->walk([&](CallOp c) { ctorCall = c; });
+        assert(ctorCall && "expected ctor call");
+
+        auto one = builder.create<mlir::cir::ConstantOp>(
+            loc, ptrDiffTy, mlir::cir::IntAttr::get(ptrDiffTy, 1));
+
+        ctorCall->moveAfter(one);
+        ctorCall->setOperand(0, currentElement);
+
+        // Advance pointer and store them to temporary variable
+        auto nextElement = builder.create<mlir::cir::PtrStrideOp>(
+            loc, eltTy, currentElement, one);
+        b.create<mlir::cir::StoreOp>(loc, nextElement, tmpAddr);
+        builder.createYield(loc);
+      });
+
+  op->replaceAllUsesWith(loop);
+  op->erase();
+}
+
+void LoweringPreparePass::lowerArrayDtor(ArrayDtor op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+
+  auto eltTy = op->getRegion(0).getArgument(0).getType();
+  auto arrayLen = op.getAddr()
+                      .getType()
+                      .cast<mlir::cir::PointerType>()
+                      .getPointee()
+                      .cast<mlir::cir::ArrayType>()
+                      .getSize();
+  lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
+}
+
+void LoweringPreparePass::lowerArrayCtor(ArrayCtor op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+
+  auto eltTy = op->getRegion(0).getArgument(0).getType();
+  auto arrayLen = op.getAddr()
+                      .getType()
+                      .cast<mlir::cir::PointerType>()
+                      .getPointee()
+                      .cast<mlir::cir::ArrayType>()
+                      .getSize();
+  lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
+}
+
 void LoweringPreparePass::lowerStdFindOp(StdFindOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
@@ -343,6 +435,10 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerIterBeginOp(iterBegin);
   } else if (auto iterEnd = dyn_cast<IterEndOp>(op)) {
     lowerIterEndOp(iterEnd);
+  } else if (auto arrayCtor = dyn_cast<ArrayCtor>(op)) {
+    lowerArrayCtor(arrayCtor);
+  } else if (auto arrayDtor = dyn_cast<ArrayDtor>(op)) {
+    lowerArrayDtor(arrayDtor);
   }
 }
 
@@ -355,7 +451,8 @@ void LoweringPreparePass::runOnOperation() {
 
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
-    if (isa<GlobalOp, StdFindOp, IterBeginOp, IterEndOp>(op))
+    if (isa<GlobalOp, StdFindOp, IterBeginOp, IterEndOp, ArrayCtor, ArrayDtor>(
+            op))
       opsToTransform.push_back(op);
   });
 

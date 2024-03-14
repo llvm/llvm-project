@@ -149,11 +149,6 @@ public:
     return mlir::cir::ConstPtrAttr::get(getContext(), t, 0);
   }
 
-  mlir::TypedAttr getConstPtrAttr(mlir::Type t, uint64_t v) {
-    assert(t.isa<mlir::cir::PointerType>() && "expected cir.ptr");
-    return mlir::cir::ConstPtrAttr::get(getContext(), t, v);
-  }
-
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
                             unsigned size = 0) {
     unsigned finalSize = size ? size : str.size();
@@ -414,11 +409,6 @@ public:
   mlir::cir::PointerType getUInt32PtrTy(unsigned AddrSpace = 0) {
     return mlir::cir::PointerType::get(getContext(), typeCache.UInt32Ty);
   }
-  mlir::cir::PointerType getPointerTo(mlir::Type ty,
-                                      unsigned addressSpace = 0) {
-    assert(!UnimplementedFeature::addressSpace() && "NYI");
-    return mlir::cir::PointerType::get(getContext(), ty);
-  }
 
   /// Get a CIR anonymous struct type.
   mlir::cir::StructType
@@ -539,13 +529,7 @@ public:
     return create<mlir::cir::ConstantOp>(loc, uInt64Ty,
                                          mlir::cir::IntAttr::get(uInt64Ty, C));
   }
-  mlir::cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t,
-                                    uint64_t C) {
-    auto intTy = t.dyn_cast<mlir::cir::IntType>();
-    assert(intTy && "expected mlir::cir::IntType");
-    return create<mlir::cir::ConstantOp>(loc, intTy,
-                                         mlir::cir::IntAttr::get(t, C));
-  }
+
   mlir::cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal) {
     bool isSigned = intVal.isSigned();
     auto width = intVal.getBitWidth();
@@ -553,6 +537,15 @@ public:
     return getConstInt(
         loc, t, isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
   }
+
+  mlir::cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t,
+                                    uint64_t C) {
+    auto intTy = t.dyn_cast<mlir::cir::IntType>();
+    assert(intTy && "expected mlir::cir::IntType");
+    return create<mlir::cir::ConstantOp>(loc, intTy,
+                                         mlir::cir::IntAttr::get(t, C));
+  }
+
   mlir::cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
                                          getCIRBoolAttr(state));
@@ -562,11 +555,6 @@ public:
   }
   mlir::cir::ConstantOp getTrue(mlir::Location loc) {
     return getBool(true, loc);
-  }
-
-  // Creates constant nullptr for pointer type ty.
-  mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    return create<mlir::cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
   }
 
   /// Create constant nullptr for pointer-to-data-member type ty.
@@ -593,22 +581,6 @@ public:
   }
 
   //
-  // Block handling helpers
-  // ----------------------
-  //
-  OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
-    auto lastAlloca =
-        std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          return mlir::isa<mlir::cir::AllocaOp>(&op);
-        });
-
-    if (lastAlloca != block->rend())
-      return OpBuilder::InsertPoint(block,
-                                    ++mlir::Block::iterator(&*lastAlloca));
-    return OpBuilder::InsertPoint(block, block->begin());
-  };
-
-  //
   // Operation creation helpers
   // --------------------------
   //
@@ -618,50 +590,14 @@ public:
     return create<mlir::cir::CopyOp>(dst.getLoc(), dst, src);
   }
 
-  /// Create a loop condition.
-  mlir::cir::ConditionOp createCondition(mlir::Value condition) {
-    return create<mlir::cir::ConditionOp>(condition.getLoc(), condition);
-  }
-
   /// Create a break operation.
   mlir::cir::BreakOp createBreak(mlir::Location loc) {
     return create<mlir::cir::BreakOp>(loc);
   }
 
-  /// Create a yield operation.
-  mlir::cir::YieldOp createYield(mlir::Location loc,
-                                 mlir::ValueRange value = {}) {
-    return create<mlir::cir::YieldOp>(loc, value);
-  }
-
   /// Create a continue operation.
   mlir::cir::ContinueOp createContinue(mlir::Location loc) {
     return create<mlir::cir::ContinueOp>(loc);
-  }
-
-  /// Create a do-while operation.
-  mlir::cir::DoWhileOp createDoWhile(
-      mlir::Location loc,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
-    return create<mlir::cir::DoWhileOp>(loc, condBuilder, bodyBuilder);
-  }
-
-  /// Create a while operation.
-  mlir::cir::WhileOp createWhile(
-      mlir::Location loc,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
-    return create<mlir::cir::WhileOp>(loc, condBuilder, bodyBuilder);
-  }
-
-  /// Create a for operation.
-  mlir::cir::ForOp createFor(
-      mlir::Location loc,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
-    return create<mlir::cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
   }
 
   mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
