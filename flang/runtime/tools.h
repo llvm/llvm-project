@@ -12,6 +12,7 @@
 #include "freestanding-tools.h"
 #include "stat.h"
 #include "terminator.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/memory.h"
@@ -95,7 +96,7 @@ static inline RT_API_ATTRS std::int64_t GetInt64(
   }
 }
 
-static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
+static inline RT_API_ATTRS Fortran::common::optional<std::int64_t> GetInt64Safe(
     const char *p, std::size_t bytes, Terminator &terminator) {
   switch (bytes) {
   case 1:
@@ -113,7 +114,7 @@ static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
     if (static_cast<Int128>(result) == n) {
       return result;
     }
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
   default:
     terminator.Crash("GetInt64Safe: no case for %zd bytes", bytes);
@@ -334,7 +335,8 @@ inline RT_API_ATTRS RESULT ApplyLogicalKind(
 }
 
 // Calculate result type of (X op Y) for *, //, DOT_PRODUCT, &c.
-std::optional<std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
+Fortran::common::optional<
+    std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
 GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
   int maxKind{std::max(xKind, yKind)};
   switch (xCat) {
@@ -390,18 +392,18 @@ GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
     if (yCat == TypeCategory::Character) {
       return std::make_pair(TypeCategory::Character, maxKind);
     } else {
-      return std::nullopt;
+      return Fortran::common::nullopt;
     }
   case TypeCategory::Logical:
     if (yCat == TypeCategory::Logical) {
       return std::make_pair(TypeCategory::Logical, maxKind);
     } else {
-      return std::nullopt;
+      return Fortran::common::nullopt;
     }
   default:
     break;
   }
-  return std::nullopt;
+  return Fortran::common::nullopt;
 }
 
 // Accumulate floating-point results in (at least) double precision
