@@ -2485,9 +2485,6 @@ class Mnem_gfx11 <string mnemonic, string real_name> :
 class Mnem_gfx12 <string mnemonic, string real_name> :
   MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
 
-class Mnem_gfx1210 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12_10Plus]>;
-
 multiclass MUBUF_Real_AllAddr_gfx11_Impl2<bits<8> op, string real_name> {
   defm _BOTHEN : MUBUF_Real_gfx11<op, real_name>;
   defm _IDXEN  : MUBUF_Real_gfx11<op, real_name>;
@@ -2585,7 +2582,7 @@ multiclass MUBUF_Real_Atomic_gfx11_gfx12<bits<8> op,
 multiclass MUBUF_Real_Atomic_gfx12_Renamed<bits<8> op, string real_name> :
   MUBUF_Real_Atomic_gfx12_impl<op, 0, real_name>,
   MUBUF_Real_Atomic_gfx12_impl<op, 1, real_name> {
-  def : Mnem_gfx1210<get_BUF_ps<NAME>.Mnemonic, real_name>;
+  def : Mnem_gfx12<get_BUF_ps<NAME>.Mnemonic, real_name>;
 }
 
 defm BUFFER_GL0_INV               : MUBUF_Real_gfx11<0x02B>;
