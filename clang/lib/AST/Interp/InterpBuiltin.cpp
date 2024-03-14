@@ -533,11 +533,12 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call,
                                    bool Right) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+  PrimType AmountT = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType ValueT = *S.getContext().classify(Call->getArg(0)->getType());
 
-  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
-  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+  APSInt Amount = peekToAPSInt(S.Stk, AmountT);
+  APSInt Value = peekToAPSInt(
+      S.Stk, ValueT, align(primSize(AmountT)) + align(primSize(ValueT)));
 
   APSInt Result;
   if (Right)
