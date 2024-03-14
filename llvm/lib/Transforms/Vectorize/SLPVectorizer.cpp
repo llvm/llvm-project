@@ -10225,9 +10225,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       for (const TreeEntry *TE : ForRemoval)
         Set.erase(TE);
     }
+    bool NeedToRemapValues = false;
     for (auto *It = UsedTEs.begin(); It != UsedTEs.end();) {
       if (It->empty()) {
         UsedTEs.erase(It);
+        NeedToRemapValues = true;
         continue;
       }
       std::advance(It, 1);
@@ -10235,6 +10237,19 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (UsedTEs.empty()) {
       Entries.clear();
       return std::nullopt;
+    }
+    // Recalculate the mapping between the values and entries sets.
+    if (NeedToRemapValues) {
+      DenseMap<Value *, int> PrevUsedValuesEntry;
+      PrevUsedValuesEntry.swap(UsedValuesEntry);
+      for (auto [Idx, Set] : enumerate(UsedTEs)) {
+        DenseSet<Value *> Values;
+        for (const TreeEntry *E : Set)
+          Values.insert(E->Scalars.begin(), E->Scalars.end());
+        for (const auto &P : PrevUsedValuesEntry)
+          if (Values.contains(P.first))
+            UsedValuesEntry.try_emplace(P.first, Idx);
+      }
     }
   }
 
