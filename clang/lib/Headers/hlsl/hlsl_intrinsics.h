@@ -1154,6 +1154,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
 double4 rcp(double4);
 
 //===----------------------------------------------------------------------===//
+// rsqrt builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T rsqrt(T x)
+/// \brief RReturns the reciprocal of the square root of the specified value \a
+/// x. \param x The specified input value.
+///
+/// This function uses the following formula: 1 / sqrt(x).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half rsqrt(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half2 rsqrt(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half3 rsqrt(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half4 rsqrt(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float rsqrt(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float2 rsqrt(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float3 rsqrt(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float4 rsqrt(float4);
+
+//===----------------------------------------------------------------------===//
 // round builtins
 //===----------------------------------------------------------------------===//
 
