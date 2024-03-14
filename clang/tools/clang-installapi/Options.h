@@ -49,6 +49,9 @@ struct LinkerOptions {
   /// \brief The current version to use for the dynamic library.
   PackedVersion CurrentVersion;
 
+  /// \brief The compatibility version to use for the dynamic library.
+  PackedVersion CompatVersion;
+
   /// \brief Is application extension safe.
   bool AppExtensionSafe = false;
 
