@@ -905,3 +905,59 @@ func.func @unpack_different_destination_shape(%arg0: tensor<1x1x1080x1920x16xi32
 // CHECK-SAME:      inner_dims_pos = [0] inner_tiles = [16]
 // CHECK-SAME:      into %[[UNPACK_NEW_DEST]]
 // CHECK:         return %[[UNPACK]] : tensor<16x540x960xi32>
+
+func.func @bubble_up_pack_through_collapse(%1: tensor<192x16x64x4xf32>) -> tensor<384x256x8x1xf32> {
+  %collapsed = tensor.collapse_shape %1 [[0, 1], [2, 3]] : tensor<192x16x64x4xf32> into tensor<3072x256xf32>
+  %2 = tensor.empty() : tensor<384x256x8x1xf32>
+  %pack = tensor.pack %collapsed outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %2 : tensor<3072x256xf32> -> tensor<384x256x8x1xf32>
+  func.return %pack : tensor<384x256x8x1xf32>
+}
+
+func.func @bubble_up_permuted_pack_through_collapse(%1: tensor<4x192x16x256xf32>) -> tensor<4x32x3072x8x1xf32> {
+  %collapsed = tensor.collapse_shape %1 [[0], [1, 2], [3]] : tensor<4x192x16x256xf32> into tensor<4x3072x256xf32>
+  %2 = tensor.empty() : tensor<4x32x3072x8x1xf32>
+  %pack = tensor.pack %collapsed outer_dims_perm = [0, 2, 1] inner_dims_pos = [2, 1] inner_tiles = [8, 1] into %2 : tensor<4x3072x256xf32> -> tensor<4x32x3072x8x1xf32>
+  func.return %pack : tensor<4x32x3072x8x1xf32>
+}
+
+func.func @bubble_up_pack_through_unit_collapse(%1: tensor<1x64x1x4xf32>) -> tensor<8x4x8x1xf32> {
+  %collapsed = tensor.collapse_shape %1 [[0, 1, 2], [3]] : tensor<1x64x1x4xf32> into tensor<64x4xf32>
+  %2 = tensor.empty() : tensor<8x4x8x1xf32>
+  %pack = tensor.pack %collapsed outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %2 : tensor<64x4xf32> -> tensor<8x4x8x1xf32>
+  func.return %pack : tensor<8x4x8x1xf32>
+}
+
+func.func @no_bubble_up_pack_through_non_divisible_collapse(%1: tensor<3072x64x4xf32>) -> tensor<384x32x8x8xf32> {
+  %collapsed = tensor.collapse_shape %1 [[0], [1, 2]] : tensor<3072x64x4xf32> into tensor<3072x256xf32>
+  %2 = tensor.empty() : tensor<384x32x8x8xf32>
+  %pack = tensor.pack %collapsed outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %2 : tensor<3072x256xf32> -> tensor<384x32x8x8xf32>
+  func.return %pack : tensor<384x32x8x8xf32>
+}
+
+func.func @push_down_unpack_through_expand(%5: tensor<384x32x8x8xf32>) -> tensor<12x256x256xf32> {
+  %6 = tensor.empty() : tensor<3072x256xf32>
+  %unpack = tensor.unpack %5 outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %6 : tensor<384x32x8x8xf32> -> tensor<3072x256xf32>
+  %expanded = tensor.expand_shape %unpack [[0, 1], [2]] : tensor<3072x256xf32> into tensor<12x256x256xf32>
+  func.return %expanded : tensor<12x256x256xf32>
+}
+
+func.func @push_down_permuted_unpack_through_expand(%5: tensor<4x32x384x8x8xf32>) -> tensor<4x12x256x256xf32> {
+  %6 = tensor.empty() : tensor<4x3072x256xf32>
+  %unpack = tensor.unpack %5 outer_dims_perm = [0, 2, 1] inner_dims_pos = [2, 1] inner_tiles = [8, 8] into %6 : tensor<4x32x384x8x8xf32> -> tensor<4x3072x256xf32>
+  %expanded = tensor.expand_shape %unpack [[0], [1, 2], [3]] : tensor<4x3072x256xf32> into tensor<4x12x256x256xf32>
+  func.return %expanded : tensor<4x12x256x256xf32>
+}
+
+func.func @push_down_unpack_through_unit_expand(%5: tensor<6x32x8x8xf32>) -> tensor<3x16x1x256xf32> {
+  %6 = tensor.empty() : tensor<48x256xf32>
+  %unpack = tensor.unpack %5 outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %6 : tensor<6x32x8x8xf32> -> tensor<48x256xf32>
+  %expanded = tensor.expand_shape %unpack [[0, 1, 2], [3]] : tensor<48x256xf32> into tensor<3x16x1x256xf32>
+  func.return %expanded : tensor<3x16x1x256xf32>
+}
+
+func.func @no_push_down_unpack_through_non_divisible_expand(%5: tensor<384x32x8x8xf32>) -> tensor<256x12x256xf32> {
+  %6 = tensor.empty() : tensor<3072x256xf32>
+  %unpack = tensor.unpack %5 outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %6 : tensor<384x32x8x8xf32> -> tensor<3072x256xf32>
+  %expanded = tensor.expand_shape %unpack [[0, 1], [2]] : tensor<3072x256xf32> into tensor<256x12x256xf32>
+  func.return %expanded : tensor<256x12x256xf32>
+}
