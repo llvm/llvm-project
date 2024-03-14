@@ -1056,10 +1056,9 @@ void Peepholes::addTailcallTraps(BinaryFunction &Function) {
     MCInst *Inst = BB.getLastNonPseudoInstr();
     if (Inst && MIB->isTailCall(*Inst) && MIB->isIndirectBranch(*Inst)) {
       MCInst Trap;
-      if (MIB->createTrap(Trap)) {
-        BB.addInstruction(Trap);
-        ++TailCallTraps;
-      }
+      MIB->createTrap(Trap);
+      BB.addInstruction(Trap);
+      ++TailCallTraps;
     }
   }
 }
