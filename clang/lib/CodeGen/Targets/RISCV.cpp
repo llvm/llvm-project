@@ -529,7 +529,10 @@ public:
   RISCVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen,
                          unsigned FLen, bool EABI)
       : TargetCodeGenInfo(
-            std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {}
+            std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
