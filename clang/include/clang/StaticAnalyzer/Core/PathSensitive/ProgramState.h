@@ -782,20 +782,6 @@ inline SVal ProgramState::getLValue(const ObjCIvarDecl *D, SVal Base) const {
   return getStateManager().StoreMgr->getLValueIvar(D, Base);
 }
 
-inline SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
-  return getStateManager().StoreMgr->getLValueField(D, Base);
-}
-
-inline SVal ProgramState::getLValue(const IndirectFieldDecl *D,
-                                    SVal Base) const {
-  StoreManager &SM = *getStateManager().StoreMgr;
-  for (const auto *I : D->chain()) {
-    Base = SM.getLValueField(cast<FieldDecl>(I), Base);
-  }
-
-  return Base;
-}
-
 inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) const{
   if (std::optional<NonLoc> N = Idx.getAs<NonLoc>())
     return getStateManager().StoreMgr->getLValueElement(ElementType, *N, Base);
