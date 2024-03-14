@@ -8885,6 +8885,11 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"Entry point name">;
+def dxc_hlsl_version : Option<["/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
+                     Group<dxc_Group>,
+                     Visibility<[DXCOption]>,
+                     HelpText<"HLSL Version">,
+                     Values<"2016, 2017, 2018, 2021, 202x">;
 
 def fsuppress_conflicting_types: Flag<["-"], "fsuppress-conflicting-types">, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"IgnoreConflictingTypes">>,
