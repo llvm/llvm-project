@@ -18089,6 +18089,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
         ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("rsqrt operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rsqrt,
+        ArrayRef<Value *>{Op0}, nullptr, "dx.rsqrt");
+  }
   }
   return nullptr;
 }
