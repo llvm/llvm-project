@@ -261,6 +261,9 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
   Undefined(sym.file, sym.getName(), binding, sym.stOther, sym.type,
             /*discardedSecIdx=*/map.lookup(sym.section))
       .overwrite(sym);
+  // Eliminate from the symbol table, otherwise we would leave an undefined
+  // symbol if the symbol is unreferenced in the absence of GC.
+  sym.isUsedInRegularObj = false;
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added to
