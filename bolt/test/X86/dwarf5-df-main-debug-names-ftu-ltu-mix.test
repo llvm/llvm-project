@@ -31,6 +31,7 @@
 ; BOLT-NEXT:       Tag: DW_TAG_variable
 ; BOLT-NEXT:       DW_IDX_compile_unit: 0x02
 ; BOLT-NEXT:       DW_IDX_die_offset: 0x0000001e
+; BOLT-NEXT:       DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   }
 ; BOLT:        Name 6 {
@@ -42,6 +43,7 @@
 ; BOLT-NEXT:       DW_IDX_type_unit: 0x02
 ; BOLT-NEXT:       DW_IDX_compile_unit: 0x00
 ; BOLT-NEXT:       DW_IDX_die_offset: 0x00000021
+; BOLT-NEXT:       DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   }
 ; BOLT:        Name 7 {
@@ -52,5 +54,6 @@
 ; BOLT-NEXT:       Tag: DW_TAG_structure_type
 ; BOLT-NEXT:       DW_IDX_type_unit: 0x00
 ; BOLT-NEXT:       DW_IDX_die_offset: 0x00000023
+; BOLT-NEXT:       DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   }

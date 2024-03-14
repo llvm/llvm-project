@@ -209,7 +209,10 @@ private:
   void updateReferences();
 
   /// Update the Offset and Size of DIE, populate DebugNames table.
-  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
+  uint32_t
+  finalizeDIEs(DWARFUnit &CU, DIE &Die,
+               std::vector<std::optional<BOLTDWARF5AccelTableData *>> &Parents,
+               uint32_t &CurOffset);
 
   void registerUnit(DWARFUnit &DU, bool NeedSort);
 

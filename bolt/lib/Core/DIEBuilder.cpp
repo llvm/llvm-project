@@ -377,20 +377,32 @@ getUnitForOffset(DIEBuilder &Builder, DWARFContext &DWCtx,
   return nullptr;
 }
 
-uint32_t DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
-                                  uint32_t &CurOffset) {
+uint32_t DIEBuilder::finalizeDIEs(
+    DWARFUnit &CU, DIE &Die,
+    std::vector<std::optional<BOLTDWARF5AccelTableData *>> &Parents,
+    uint32_t &CurOffset) {
   getState().DWARFDieAddressesParsed.erase(Die.getOffset());
   uint32_t CurSize = 0;
   Die.setOffset(CurOffset);
-  DebugNamesTable.addAccelTableEntry(
-      CU, Die, SkeletonCU ? SkeletonCU->getDWOId() : std::nullopt);
+  std::optional<BOLTDWARF5AccelTableData *> NameEntry =
+      DebugNamesTable.addAccelTableEntry(
+          CU, Die, SkeletonCU ? SkeletonCU->getDWOId() : std::nullopt,
+          Parents.back());
+  // It is possible that an indexed debugging information entry has a parent
+  // that is not indexed (for example, if its parent does not have a name
+  // attribute). In such a case, a parent attribute may point to a nameless
+  // index entry (that is, one that cannot be reached from any entry in the name
+  // table), or it may point to the nearest ancestor that does have an index
+  // entry.
+  if (NameEntry)
+    Parents.push_back(std::move(NameEntry));
   for (DIEValue &Val : Die.values())
     CurSize += Val.sizeOf(CU.getFormParams());
   CurSize += getULEB128Size(Die.getAbbrevNumber());
   CurOffset += CurSize;
 
   for (DIE &Child : Die.children()) {
-    uint32_t ChildSize = finalizeDIEs(CU, Child, CurOffset);
+    uint32_t ChildSize = finalizeDIEs(CU, Child, Parents, CurOffset);
     CurSize += ChildSize;
   }
   // for children end mark.
@@ -400,6 +412,8 @@ uint32_t DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
   }
 
   Die.setSize(CurSize);
+  if (NameEntry)
+    Parents.pop_back();
 
   return CurSize;
 }
@@ -410,7 +424,9 @@ void DIEBuilder::finish() {
     uint32_t HeaderSize = CU.getHeaderSize();
     uint32_t CurOffset = HeaderSize;
     DebugNamesTable.setCurrentUnit(CU, UnitStartOffset);
-    finalizeDIEs(CU, *UnitDIE, CurOffset);
+    std::vector<std::optional<BOLTDWARF5AccelTableData *>> Parents;
+    Parents.push_back(std::nullopt);
+    finalizeDIEs(CU, *UnitDIE, Parents, CurOffset);
 
     DWARFUnitInfo &CurUnitInfo = getUnitInfoByDwarfUnit(CU);
     CurUnitInfo.UnitOffset = UnitStartOffset;
