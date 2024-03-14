@@ -626,6 +626,52 @@ public:
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
                                                     OptimizationLevel Level);
 
+  static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
+    if (!Name.consume_front(PassName))
+      return false;
+    // normal pass name w/o parameters == default parameters
+    if (Name.empty())
+      return true;
+    return Name.starts_with("<") && Name.ends_with(">");
+  }
+
+  /// This performs customized parsing of pass name with parameters.
+  ///
+  /// We do not need parametrization of passes in textual pipeline very often,
+  /// yet on a rare occasion ability to specify parameters right there can be
+  /// useful.
+  ///
+  /// \p Name - parameterized specification of a pass from a textual pipeline
+  /// is a string in a form of :
+  ///      PassName '<' parameter-list '>'
+  ///
+  /// Parameter list is being parsed by the parser callable argument, \p Parser,
+  /// It takes a string-ref of parameters and returns either StringError or a
+  /// parameter list in a form of a custom parameters type, all wrapped into
+  /// Expected<> template class.
+  ///
+  template <typename ParametersParseCallableT>
+  static auto parsePassParameters(ParametersParseCallableT &&Parser,
+                                  StringRef Name, StringRef PassName)
+      -> decltype(Parser(StringRef{})) {
+    using ParametersT = typename decltype(Parser(StringRef{}))::value_type;
+
+    StringRef Params = Name;
+    if (!Params.consume_front(PassName)) {
+      llvm_unreachable(
+          "unable to strip pass name from parametrized pass specification");
+    }
+    if (!Params.empty() &&
+        (!Params.consume_front("<") || !Params.consume_back(">"))) {
+      llvm_unreachable("invalid format for parametrized pass name");
+    }
+
+    Expected<ParametersT> Result = Parser(Params);
+    assert((Result || Result.template errorIsA<StringError>()) &&
+           "Pass parameter parser can only return StringErrors.");
+    return Result;
+  }
+
 private:
   // O1 pass pipeline
   FunctionPassManager
