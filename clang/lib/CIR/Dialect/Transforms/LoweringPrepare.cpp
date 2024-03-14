@@ -329,6 +329,7 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       builder.getSizeFromCharUnits(builder.getContext(),
                                    clang::CharUnits::One()),
       nullptr);
+  builder.create<mlir::cir::StoreOp>(loc, begin, tmpAddr);
 
   auto loop = builder.createDoWhile(
       loc,
