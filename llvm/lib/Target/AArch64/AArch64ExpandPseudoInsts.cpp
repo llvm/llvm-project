@@ -987,7 +987,7 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // Expand the pseudo into smstart or smstop instruction. The pseudo has the
   // following operands:
   //
-  //   MSRpstatePseudo <za|sm|both>, <0|1>, pstate.sm, condition, <regmask>
+  //   MSRpstatePseudo <za|sm|both>, <0|1>, condition[, pstate.sm], <regmask>
   //
   // The pseudo is expanded into a conditional smstart/smstop, with a
   // check if pstate.sm (register) equals the expected value, and if not,
@@ -997,9 +997,9 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // streaming-compatible function:
   //
   // OrigBB:
-  //   MSRpstatePseudo 3, 0, %0, IfCallerIsStreaming, <regmask>  <- Cond SMSTOP
+  //   MSRpstatePseudo 3, 0, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTOP
   //   bl @normal_callee
-  //   MSRpstatePseudo 3, 1, %0, IfCallerIsStreaming, <regmask>  <- Cond SMSTART
+  //   MSRpstatePseudo 3, 1, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTART
   //
   // ...which will be transformed into:
   //
