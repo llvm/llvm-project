@@ -2198,6 +2198,14 @@ inline const APInt abdu(const APInt &A, const APInt &B) {
   return A.uge(B) ? (A - B) : (B - A);
 }
 
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+/// Returns the high N bits of the multiplication result.
+APInt mulhs(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+/// Returns the high N bits of the multiplication result.
+APInt mulhu(const APInt &C1, const APInt &C2);
+
 /// Compute GCD of two unsigned APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values
