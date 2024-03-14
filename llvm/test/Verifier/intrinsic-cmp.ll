@@ -18,9 +18,9 @@ define void @result_len_is_at_least_2(i32 %arg1, i32 %arg2) {
 define void @both_args_are_vecs_or_neither(<4 x i32> %arg1, i32 %arg2) {
   ; CHECK-LABEL: cmp_sources_and_dest_types_ranks_match
   ; CHECK: [us]cmp source and destination must both be a vector or neither
-  @res3 = call i2 @llvm.scmp.i2.v4i32(<4 x i32> %arg1, i32 %arg2)
+  %res3 = call i2 @llvm.scmp.i2.v4i32(<4 x i32> %arg1, <4 x i32> %arg1)
   ; CHECK: [us]cmp source and destination must both be a vector or neither
-  @res4 = call <4 x i32> @llvm.scmp.v4i32.i32(<4 x i32> %arg2, i32 %arg2)
+  %res4 = call <4 x i32> @llvm.scmp.v4i32.i32(i32 %arg2, i32 %arg2)
   ret void
 }
 
