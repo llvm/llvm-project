@@ -281,11 +281,18 @@ bool clang::CanElideDeclDef(const Decl *D) {
 
     if (FD->isDependentContext())
       return false;
+
+    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
   }
 
   if (auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
-        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD))
+        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD) ||
+        // Constant initialized variable may not affect the ABI, but they
+        // may be used in constant evaluation in the frontend, so we have
+        // to remain them.
+        VD->hasConstantInitialization())
       return false;
 
     if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)

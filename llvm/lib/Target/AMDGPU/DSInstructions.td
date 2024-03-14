@@ -784,7 +784,7 @@ defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
 } // let WaveSizePredicate = isWave32, mayStore = 0
 
-let ASYNC_CNT = 1, LGKM_CNT = 0 in {
+let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
 def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
 }
 

@@ -311,7 +311,8 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsy
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
-  let Uses = !if(IsAsync, [EXEC], [M0, EXEC]);
+  let Uses = !if(IsAsync, [EXEC, ASYNCcnt], [M0, EXEC]);
+  let Defs = !if(IsAsync, [ASYNCcnt], []);
   let SchedRW = [WriteVMEM, WriteLDS];
 }
 
@@ -341,7 +342,8 @@ class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_P
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
-  let Uses = [EXEC];
+  let Uses = [EXEC, ASYNCcnt];
+  let Defs = [ASYNCcnt];
   let SchedRW = [WriteVMEM, WriteLDS];
 }
 
@@ -1015,12 +1017,12 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let SubtargetPredicate = isGFX12_10Plus in {
 
-let Uses = [M0, EXEC] in {
+let Uses = [M0, EXEC, ASYNCcnt] in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B32     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b32",  1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B64     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b64",  1>;
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B128    :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b128", 1>;
-} // End Uses = [M0, EXEC]
+} // End Uses = [M0, EXEC, ASYNCcnt]
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B8       :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8",    1>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B32      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b32",   1>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b64",   1>;
