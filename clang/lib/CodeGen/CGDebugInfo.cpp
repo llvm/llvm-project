@@ -5637,15 +5637,14 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
 }
 
 void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
-                                     llvm::Instruction *Value, QualType Ty,
-                                     SourceLocation Loc) {
+                                     llvm::Instruction *Value, QualType Ty) {
   // Only when -g2 or above is specified, debug info for variables will be
   // generated.
   if (CGM.getCodeGenOpts().getDebugInfo() <=
       llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIFile *Unit = Builder.getCurrentDebugLocation()->getFile();
   llvm::DIType *Type = getOrCreateType(Ty, Unit);
 
   // Check if Value is already a declared variable and has debug info, in this
@@ -5679,6 +5678,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   // Insert a sequence of instructions to materialize Value on the stack.
   auto SaveInsertionPoint = Builder.saveIP();
   Builder.SetInsertPoint(++(Value->getIterator()));
+  Builder.SetCurrentDebugLocation(Value->getDebugLoc());
   llvm::AllocaInst *PseudoVar = Builder.CreateAlloca(Value->getType());
   Address PseudoVarAddr(PseudoVar, Value->getType(),
                         CharUnits::fromQuantity(PseudoVar->getAlign()));
@@ -5688,8 +5688,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   Builder.CreateStore(Value, PseudoVarAddr);
 
   // Emit debug info for materialized Value.
-  unsigned Line = getLineNumber(Loc);
-  unsigned Column = getColumnNumber(Loc);
+  unsigned Line = Builder.getCurrentDebugLocation().getLine();
+  unsigned Column = Builder.getCurrentDebugLocation().getCol();
   llvm::DILocalVariable *D = DBuilder.createAutoVariable(
       LexicalBlockStack.back(), "pseudo_var", Unit, Line, Type);
   llvm::DILocation *DIL =

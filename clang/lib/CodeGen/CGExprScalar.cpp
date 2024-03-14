@@ -1799,7 +1799,7 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
         if (llvm::Instruction *Pointer =
                 dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
           CGF.getDebugInfo()->EmitPseudoVariable(
-              Builder, Pointer, E->getBase()->getType(), E->getExprLoc());
+              Builder, Pointer, E->getBase()->getType());
         }
       }
     }
