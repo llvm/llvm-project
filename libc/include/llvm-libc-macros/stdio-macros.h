@@ -10,7 +10,7 @@
 #define LLVM_LIBC_MACROS_STDIO_MACROS_H
 
 #ifndef EOF
-#define EOF -1
+#define EOF (-1)
 #endif
 
 #define BUFSIZ 1024
