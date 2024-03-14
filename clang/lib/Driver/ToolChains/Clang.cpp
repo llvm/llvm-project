@@ -7182,6 +7182,37 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
 
+  if (Args.hasFlag(options::OPT_fptrauth_intrinsics,
+                   options::OPT_fno_ptrauth_intrinsics, false))
+    CmdArgs.push_back("-fptrauth-intrinsics");
+
+  if (Args.hasFlag(options::OPT_fptrauth_calls, options::OPT_fno_ptrauth_calls,
+                   false))
+    CmdArgs.push_back("-fptrauth-calls");
+
+  if (Args.hasFlag(options::OPT_fptrauth_returns,
+                   options::OPT_fno_ptrauth_returns, false))
+    CmdArgs.push_back("-fptrauth-returns");
+
+  if (Args.hasFlag(options::OPT_fptrauth_auth_traps,
+                   options::OPT_fno_ptrauth_auth_traps, false))
+    CmdArgs.push_back("-fptrauth-auth-traps");
+
+  if (Args.hasFlag(
+          options::OPT_fptrauth_vtable_pointer_address_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_address_discrimination,
+          false))
+    CmdArgs.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+  if (Args.hasFlag(options::OPT_fptrauth_vtable_pointer_type_discrimination,
+                   options::OPT_fno_ptrauth_vtable_pointer_type_discrimination,
+                   false))
+    CmdArgs.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+  if (Args.hasFlag(options::OPT_fptrauth_init_fini,
+                   options::OPT_fno_ptrauth_init_fini, false))
+    CmdArgs.push_back("-fptrauth-init-fini");
+
   // -fsigned-bitfields is default, and clang doesn't yet support
   // -funsigned-bitfields.
   if (!Args.hasFlag(options::OPT_fsigned_bitfields,
