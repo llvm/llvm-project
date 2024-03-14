@@ -176,10 +176,11 @@ define <1 x i32> @test_compress_v1i32_with_sve(<1 x i32> %vec, <1 x i1> %mask) {
 ; CHECK-LABEL: test_compress_v1i32_with_sve:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    sbfx w8, w0, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    mov v1.s[0], w8
+; CHECK-NEXT:    mov v1.s[0], w0
+; CHECK-NEXT:    shl v1.2s, v1.2s, #31
+; CHECK-NEXT:    cmlt v1.2s, v1.2s, #0
 ; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0

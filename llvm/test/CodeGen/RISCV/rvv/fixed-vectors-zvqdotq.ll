@@ -595,7 +595,7 @@ define <1 x i32> @vqdotu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; DOT-NEXT:    vmv.s.x v9, zero
-; DOT-NEXT:    li a0, 128
+; DOT-NEXT:    li a0, -128
 ; DOT-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; DOT-NEXT:    vmv.v.x v10, a0
 ; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
@@ -631,7 +631,7 @@ define <1 x i32> @vqdot_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; DOT-NEXT:    vmv.s.x v9, zero
-; DOT-NEXT:    li a0, 128
+; DOT-NEXT:    li a0, -128
 ; DOT-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; DOT-NEXT:    vmv.v.x v10, a0
 ; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma

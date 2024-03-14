@@ -186,8 +186,8 @@ define <8 x i8> @fold_urem_v8i8(<8 x i8> %x) {
 ; CHECK-NEXT:    movi v1.8b, #205
 ; CHECK-NEXT:    movi v2.8b, #10
 ; CHECK-NEXT:    umull v1.8h, v0.8b, v1.8b
-; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-NEXT:    ushr v1.8b, v1.8b, #3
+; CHECK-NEXT:    ushr v1.8h, v1.8h, #11
+; CHECK-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-NEXT:    mls v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %1 = urem <8 x i8> %x, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>

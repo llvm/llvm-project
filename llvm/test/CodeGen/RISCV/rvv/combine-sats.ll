@@ -197,7 +197,7 @@ define <vscale x 2 x i16> @vselect_add_const_signbit_nxv2i16(<vscale x 2 x i16> 
 define <2 x i16> @vselect_xor_const_signbit_v2i16(<2 x i16> %a0) {
 ; CHECK-LABEL: vselect_xor_const_signbit_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -210,7 +210,7 @@ define <2 x i16> @vselect_xor_const_signbit_v2i16(<2 x i16> %a0) {
 define <vscale x 2 x i16> @vselect_xor_const_signbit_nxv2i16(<vscale x 2 x i16> %a0) {
 ; CHECK-LABEL: vselect_xor_const_signbit_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret

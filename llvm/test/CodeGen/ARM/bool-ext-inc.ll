@@ -14,9 +14,8 @@ define i32 @sext_inc(i1 zeroext %x) {
 define <4 x i32> @sext_inc_vec(<4 x i1> %x) {
 ; CHECK-LABEL: sext_inc_vec:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 d16, #0x1
-; CHECK-NEXT:    vmov d17, r0, r1
-; CHECK-NEXT:    veor d16, d17, d16
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmvn d16, d16
 ; CHECK-NEXT:    vmov.i32 q9, #0x1
 ; CHECK-NEXT:    vmovl.u16 q8, d16
 ; CHECK-NEXT:    vand q8, q8, q9

@@ -15,7 +15,7 @@ define <vscale x 8 x i7> @vsadd_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <
 ; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vmin.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 192
+; CHECK-NEXT:    li a0, -64
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
