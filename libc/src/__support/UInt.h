@@ -993,6 +993,15 @@ struct is_big_int<BigInt<Bits, Signed, T>> : cpp::true_type {};
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_big_int_v = is_big_int<T>::value;
 
+// make_unsigned and make_signed type traits
+template <size_t Bits, bool Signed, typename T>
+struct cpp::make_unsigned<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, false, T>> {};
+
+template <size_t Bits, bool Signed, typename T>
+struct cpp::make_signed<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, true, T>> {};
+
 namespace cpp {
 
 // Specialization of cpp::bit_cast ('bit.h') from T to BigInt.

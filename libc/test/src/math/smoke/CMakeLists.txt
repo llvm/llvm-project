@@ -1507,6 +1507,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nanf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf128_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nanf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   nextafter_test
   SUITE
     libc-math-smoke-tests
