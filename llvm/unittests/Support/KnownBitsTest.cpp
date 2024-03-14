@@ -362,39 +362,14 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return Known1 ^ Known2;
       },
       [](const APInt &N1, const APInt &N2) { return N1 ^ N2; });
-
-  testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::umax(Known1, Known2);
-      },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::umax(N1, N2); });
-  testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::umin(Known1, Known2);
-      },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::umin(N1, N2); });
-  testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::smax(Known1, Known2);
-      },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::smax(N1, N2); });
-  testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::smin(Known1, Known2);
-      },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::smin(N1, N2); });
-  testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::abdu(Known1, Known2);
-      },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::abdu(N1, N2); },
-      checkCorrectnessOnlyBinary);
-  testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::abds(Known1, Known2);
-      },
-      [](const APInt &N1, const APInt &N2) { return APIntOps::abds(N1, N2); },
-      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(KnownBits::umax, APIntOps::umax);
+  testBinaryOpExhaustive(KnownBits::umin, APIntOps::umin);
+  testBinaryOpExhaustive(KnownBits::smax, APIntOps::smax);
+  testBinaryOpExhaustive(KnownBits::smin, APIntOps::smin);
+  testBinaryOpExhaustive(KnownBits::abdu, APIntOps::abdu,
+                         checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(KnownBits::abds, APIntOps::abds,
+                         checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::udiv(Known1, Known2);
@@ -457,33 +432,25 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::sadd_sat(Known1, Known2);
-      },
+      KnownBits::sadd_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.sadd_sat(N2);
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::uadd_sat(Known1, Known2);
-      },
+      KnownBits::uadd_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.uadd_sat(N2);
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::ssub_sat(Known1, Known2);
-      },
+      KnownBits::ssub_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.ssub_sat(N2);
       },
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
-      [](const KnownBits &Known1, const KnownBits &Known2) {
-        return KnownBits::usub_sat(Known1, Known2);
-      },
+      KnownBits::usub_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.usub_sat(N2);
       },
@@ -582,7 +549,6 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return N1.ashr(N2);
       },
       checkOptimalityBinary, /* RefinePoisonToZero */ true);
-
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::mul(Known1, Known2);
