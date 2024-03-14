@@ -22,26 +22,6 @@ $globalArrayAS8 = comdat any
 
 ; Function Attrs: alwaysinline convergent mustprogress nounwind
 define amdgpu_kernel void @infer_AS10(i32 %idx) unnamed_addr align 2 {
-; AMDGPU-LABEL: define amdgpu_kernel void @infer_AS10(
-; AMDGPU-SAME: i32 [[IDX:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
-; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[MUL32_I:%.*]] = shl nuw nsw i32 [[IDX]], 8
-; AMDGPU-NEXT:    [[ADD36_I:%.*]] = add nuw nsw i32 [[MUL32_I]], 1024
-; AMDGPU-NEXT:    [[IDXPROM37_I21:%.*]] = zext i32 [[ADD36_I]] to i64
-; AMDGPU-NEXT:    [[ARRAYIDX38_I22:%.*]] = getelementptr inbounds float, ptr addrspacecast (ptr addrspace(1) @globalArrayAS1 to ptr), i64 [[IDXPROM37_I21]]
-; AMDGPU-NEXT:    [[L1:%.*]] = load float, ptr [[ARRAYIDX38_I22]], align 16
-; AMDGPU-NEXT:    ret void
-;
-; X86-LABEL: define amdgpu_kernel void @infer_AS10(
-; X86-SAME: i32 [[IDX:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
-; X86-NEXT:  entry:
-; X86-NEXT:    [[MUL32_I:%.*]] = shl nuw nsw i32 [[IDX]], 8
-; X86-NEXT:    [[ADD36_I:%.*]] = add nuw nsw i32 [[MUL32_I]], 1024
-; X86-NEXT:    [[IDXPROM37_I21:%.*]] = zext i32 [[ADD36_I]] to i64
-; X86-NEXT:    [[ARRAYIDX38_I22:%.*]] = getelementptr inbounds float, ptr addrspacecast (ptr addrspace(1) @globalArrayAS1 to ptr), i64 [[IDXPROM37_I21]]
-; X86-NEXT:    [[L1:%.*]] = load float, ptr [[ARRAYIDX38_I22]], align 16
-; X86-NEXT:    ret void
-;
 ; CHECK-LABEL: define amdgpu_kernel void @infer_AS10(
 ; CHECK-SAME: i32 [[IDX:%.*]]) unnamed_addr align 2 {
 ; CHECK-NEXT:  entry:
@@ -63,26 +43,6 @@ entry:
 
 ; Function Attrs: alwaysinline convergent mustprogress nounwind
 define amdgpu_kernel void @infer_AS20(i32 %idx) unnamed_addr align 2 {
-; AMDGPU-LABEL: define amdgpu_kernel void @infer_AS20(
-; AMDGPU-SAME: i32 [[IDX:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
-; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[MUL32_I:%.*]] = shl nuw nsw i32 [[IDX]], 8
-; AMDGPU-NEXT:    [[ADD36_I:%.*]] = add nuw nsw i32 [[MUL32_I]], 1024
-; AMDGPU-NEXT:    [[IDXPROM37_I21:%.*]] = zext i32 [[ADD36_I]] to i64
-; AMDGPU-NEXT:    [[ARRAYIDX38_I22:%.*]] = getelementptr inbounds float, ptr addrspacecast (ptr addrspace(2) @globalArrayAS2 to ptr), i64 [[IDXPROM37_I21]]
-; AMDGPU-NEXT:    [[L1:%.*]] = load float, ptr [[ARRAYIDX38_I22]], align 16
-; AMDGPU-NEXT:    ret void
-;
-; X86-LABEL: define amdgpu_kernel void @infer_AS20(
-; X86-SAME: i32 [[IDX:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
-; X86-NEXT:  entry:
-; X86-NEXT:    [[MUL32_I:%.*]] = shl nuw nsw i32 [[IDX]], 8
-; X86-NEXT:    [[ADD36_I:%.*]] = add nuw nsw i32 [[MUL32_I]], 1024
-; X86-NEXT:    [[IDXPROM37_I21:%.*]] = zext i32 [[ADD36_I]] to i64
-; X86-NEXT:    [[ARRAYIDX38_I22:%.*]] = getelementptr inbounds float, ptr addrspacecast (ptr addrspace(2) @globalArrayAS2 to ptr), i64 [[IDXPROM37_I21]]
-; X86-NEXT:    [[L1:%.*]] = load float, ptr [[ARRAYIDX38_I22]], align 16
-; X86-NEXT:    ret void
-;
 ; CHECK-LABEL: define amdgpu_kernel void @infer_AS20(
 ; CHECK-SAME: i32 [[IDX:%.*]]) unnamed_addr align 2 {
 ; CHECK-NEXT:  entry:
