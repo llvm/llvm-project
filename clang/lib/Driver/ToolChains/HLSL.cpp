@@ -226,6 +226,21 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_hlsl_version) {
+      // Translate -HV into -std for llvm
+      // depending on the value given
+      LangStandard::Kind LangStd = LangStandard::getHLSLLangKind(A->getValue());
+      if (LangStd != LangStandard::lang_unspecified) {
+        LangStandard l = LangStandard::getLangStandardForKind(LangStd);
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            l.getName());
+      } else {
+        getDriver().Diag(diag::err_drv_invalid_value) << "HV" << A->getValue();
+      }
+
+      A->claim();
+      continue;
+    }
     DAL->append(A);
   }
 
