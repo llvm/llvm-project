@@ -13,7 +13,7 @@ define void @b() {
 ; CHECK:       c:
 ; CHECK-NEXT:    br i1 undef, label [[IF_G:%.*]], label [[IF_E]]
 ; CHECK:       if.g:
-; CHECK-NEXT:    store i32 undef, ptr @a
+; CHECK-NEXT:    store i32 undef, ptr @a, align 4
 ; CHECK-NEXT:    br label [[WHILE_D]]
 ; CHECK:       if.e:
 ; CHECK-NEXT:    br label [[F]]
