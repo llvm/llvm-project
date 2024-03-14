@@ -145,7 +145,7 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
 
 std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
-  if (auto It = DummyParams.find(VD); It != DummyParams.end())
+  if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
   // Create dummy descriptor.
@@ -158,7 +158,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   G->block()->invokeCtor();
 
   Globals.push_back(G);
-  DummyParams[VD] = I;
+  DummyVariables[VD] = I;
   return I;
 }
 
