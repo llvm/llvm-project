@@ -4559,7 +4559,7 @@ static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
 
   if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
     print_relative_method_list(ml.entsize, ml.count, p, info, indent,
-                               /*pointerBits=*/32);
+                               /*pointerBits=*/64);
     return;
   }
 
