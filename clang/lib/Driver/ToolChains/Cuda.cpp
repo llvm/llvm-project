@@ -750,7 +750,8 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  if ((!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) ||
+  if ((!DAL->hasArg(options::OPT_march_EQ) &&
+       OffloadKind != Action::OFK_None) ||
       (DAL->getLastArgValue(options::OPT_march_EQ) == "generic")) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
