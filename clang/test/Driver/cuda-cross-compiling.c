@@ -32,10 +32,15 @@
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=ARGS %s
+// RUN: %clang -target nvptx64-nvidia-cuda -march=generic -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GENERIC %s
 
 //      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
 // ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
 // ARGS-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_61" {{.*}} "[[CUBIN]].cubin"
+//      GENERIC: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_52" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
+// GENERIC-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_52" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
+// GENERIC-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_52" {{.*}} "[[CUBIN]].cubin"
 
 //
 // Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
@@ -85,6 +90,6 @@
 // MISSING: error: Must pass in an explicit nvptx64 gpu architecture to 'nvlink'
 
 // RUN: %clang -target nvptx64-nvidia-cuda -flto -c %s -### 2>&1 \
-// RUN:   | FileCheck -check-prefix=GENERIC %s
+// RUN:   | FileCheck -check-prefix=COMPILE %s
 
-// GENERIC-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"
+// COMPILE-NOT: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-target-cpu"
