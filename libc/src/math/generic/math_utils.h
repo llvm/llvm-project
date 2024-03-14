@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
-
-#include <math.h>
 
 #include <stdint.h>
 
