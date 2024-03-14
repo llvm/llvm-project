@@ -266,6 +266,10 @@ def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
                          "decimal part of the input.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
+                         "Returns the reciprocal of the square root of the specified value."
+                         "rsqrt(x) = 1 / sqrt(x).",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Round : DXILOpMapping<26, unary, int_round,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
