@@ -280,9 +280,14 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   // All versions of AIX support bindprocessor().
 
   size_t mask_size = __kmp_xproc / CHAR_BIT;
+  // Round up to byte boundary.
   if (__kmp_xproc % CHAR_BIT)
     ++mask_size;
 
+  // Round up to the mask_size_type boundary.
+  if (mask_size % sizeof(__kmp_affin_mask_size))
+    mask_size += sizeof(__kmp_affin_mask_size) -
+                 mask_size % sizeof(__kmp_affin_mask_size);
   KMP_AFFINITY_ENABLE(mask_size);
   KA_TRACE(10,
            ("__kmp_affinity_determine_capable: "
