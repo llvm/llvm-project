@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-pch -o %t %s
-// RUN: %clang_cc1 -x c++ -triple x86_64-pc-linux -include-pch %t -ast-dump-all /dev/null | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-pc-linux -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++23 -triple x86_64-pc-linux -include-pch %t -ast-dump-all /dev/null | FileCheck %s
 // expected-no-diagnostics
 
 // Check that we both don't crash on transforming FunctionProtoType's
@@ -46,6 +46,15 @@ void f() {
 
   // CHECK: CXXMethodDecl {{.*}} operator() 'PRESERVE void (int) __attribute__((preserve_most)) const {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
   (void) [] (T) PRESERVE [[clang::annotate_type("foo")]] { };
+
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const {{\[}}[clang::annotate_type(...)]]':'void (int) const' implicit_instantiation
+  (void) [] (T) [[clang::annotate_type("foo")]] {
+    // CHECK: CXXMethodDecl {{.*}} operator() 'PRESERVE void (int) __attribute__((preserve_most)) const {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' implicit_instantiation
+    auto l = []<typename U = T> (U u = {}) PRESERVE [[clang::annotate_type("foo", u)]] { };
+
+    // CHECK: DeclRefExpr {{.*}} 'PRESERVE void (int) __attribute__((preserve_most)) const {{\[}}[clang::annotate_type(...)]]':'void (int) __attribute__((preserve_most)) const' lvalue CXXMethod
+    l();
+  };
 }
 
 void g() {
