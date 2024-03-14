@@ -134,9 +134,8 @@ TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
 
 TEST_P(MCPlusBuilderTester, Annotation) {
   MCInst Inst;
-  bool Success = BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
-                                         BC->Ctx.get());
-  ASSERT_TRUE(Success);
+  BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
+                          BC->Ctx.get());
   MCSymbol *LPSymbol = BC->Ctx->createNamedTempSymbol("LP");
   uint64_t Value = INT32_MIN;
   // Test encodeAnnotationImm using this indirect way
@@ -151,9 +150,8 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   // Large int64 should trigger an out of range assertion
   Value = 0x1FF'FFFF'FFFF'FFFFULL;
   Inst.clear();
-  Success = BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
-                                    BC->Ctx.get());
-  ASSERT_TRUE(Success);
+  BC->MIB->createTailCall(Inst, BC->Ctx->createNamedTempSymbol(),
+                          BC->Ctx.get());
   ASSERT_DEATH(BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value)),
                "annotation value out of range");
 }
