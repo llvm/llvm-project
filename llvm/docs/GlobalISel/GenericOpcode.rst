@@ -521,16 +521,18 @@ The return value of (FMAXNUM 0.0, -0.0) could be either 0.0 or -0.0.
 G_FMINNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point minimum on two values, following the IEEE-754 2008
-definition. This differs from FMINNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point minimum on two values, following the IEEE-754
+2019 definition. This differs from FMINNUM in the handling of
+signaling NaNs. If one input is a signaling NaN, returns a quiet
+NaN. This treats -0 as ordered less than +0.
 
 G_FMAXNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point maximum on two values, following the IEEE-754 2008
-definition. This differs from FMAXNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point maximum on two values, following the IEEE-754
+2019 definition. This differs from FMAXNUM in the handling of
+signaling NaNs. If one input is a signaling NaN, returns a quiet
+NaN. This treats -0 as ordered less than +0.
 
 G_FMINIMUM
 ^^^^^^^^^^
