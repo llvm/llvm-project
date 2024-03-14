@@ -381,9 +381,12 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation when trying to access a
   captured ``this`` pointer in a lambda with an explicit object parameter.
   Fixes (#GH80997)
+- Fix an issue where missing set friend declaration in template class instantiation.
+  Fixes (#GH84368).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -498,6 +501,10 @@ libclang
 
 Static Analyzer
 ---------------
+
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
 
 New features
 ^^^^^^^^^^^^
