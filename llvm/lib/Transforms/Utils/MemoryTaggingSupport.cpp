@@ -256,9 +256,7 @@ Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
                             IRB.getIntPtrTy(M->getDataLayout()));
 }
 
-Value *getSP(IRBuilder<> &IRB) {
-  // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
-  // first).
+Value *getFP(IRBuilder<> &IRB) {
   Function *F = IRB.GetInsertBlock()->getParent();
   Module *M = F->getParent();
   auto *GetStackPointerFn = Intrinsic::getDeclaration(

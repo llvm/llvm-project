@@ -81,7 +81,7 @@ uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 
 Value *readRegister(IRBuilder<> &IRB, StringRef Name);
-Value *getSP(IRBuilder<> &IRB);
+Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
 
 } // namespace memtag

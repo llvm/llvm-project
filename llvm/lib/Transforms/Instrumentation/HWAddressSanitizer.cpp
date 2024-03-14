@@ -371,7 +371,7 @@ private:
   void instrumentGlobal(GlobalVariable *GV, uint8_t Tag);
   void instrumentGlobals();
 
-  Value *getCachedSP(IRBuilder<> &IRB);
+  Value *getCachedFP(IRBuilder<> &IRB);
   Value *getFrameRecordInfo(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
@@ -446,7 +446,7 @@ private:
 
   Value *ShadowBase = nullptr;
   Value *StackBaseTag = nullptr;
-  Value *CachedSP = nullptr;
+  Value *CachedFP = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
 
@@ -1166,10 +1166,10 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = getCachedSP(IRB);
+  Value *FramePointerLong = getCachedFP(IRB);
   Value *StackTag =
-      applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
-                                      IRB.CreateLShr(StackPointerLong, 20)));
+      applyTagMask(IRB, IRB.CreateXor(FramePointerLong,
+                                      IRB.CreateLShr(FramePointerLong, 20)));
   StackTag->setName("hwasan.stack.base.tag");
   return StackTag;
 }
@@ -1183,9 +1183,9 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
-  Value *StackPointerLong = getCachedSP(IRB);
+  Value *FramePointerLong = getCachedFP(IRB);
   Value *UARTag =
-      applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
+      applyTagMask(IRB, IRB.CreateLShr(FramePointerLong, PointerTagShift));
 
   UARTag->setName("hwasan.uar.tag");
   return UARTag;
@@ -1244,16 +1244,16 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
   return nullptr;
 }
 
-Value *HWAddressSanitizer::getCachedSP(IRBuilder<> &IRB) {
-  if (!CachedSP)
-    CachedSP = memtag::getSP(IRB);
-  return CachedSP;
+Value *HWAddressSanitizer::getCachedFP(IRBuilder<> &IRB) {
+  if (!CachedFP)
+    CachedFP = memtag::getFP(IRB);
+  return CachedFP;
 }
 
 Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
   Value *PC = memtag::getPC(TargetTriple, IRB);
-  Value *SP = getCachedSP(IRB);
+  Value *FP = getCachedFP(IRB);
 
   // Mix SP and PC.
   // Assumptions:
@@ -1261,8 +1261,8 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // SP is 0xsssssssssssSSSS0  (4 lower bits are zero)
   // We only really need ~20 lower non-zero bits (SSSS), so we mix like this:
   //       0xSSSSPPPPPPPPPPPP
-  SP = IRB.CreateShl(SP, 44);
-  return IRB.CreateOr(PC, SP);
+  FP = IRB.CreateShl(FP, 44);
+  return IRB.CreateOr(PC, FP);
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
@@ -1615,7 +1615,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   ShadowBase = nullptr;
   StackBaseTag = nullptr;
-  CachedSP = nullptr;
+  CachedFP = nullptr;
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
