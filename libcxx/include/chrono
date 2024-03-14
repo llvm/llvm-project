@@ -878,6 +878,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #  include <cstring>
 #  include <forward_list>
 #  include <string>
+#  include <tuple>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20

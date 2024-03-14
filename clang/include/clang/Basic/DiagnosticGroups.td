@@ -617,7 +617,9 @@ def GNURedeclaredEnum : DiagGroup<"gnu-redeclared-enum">;
 def RedundantMove : DiagGroup<"redundant-move">;
 def Register : DiagGroup<"register", [DeprecatedRegister]>;
 def ReturnTypeCLinkage : DiagGroup<"return-type-c-linkage">;
-def ReturnType : DiagGroup<"return-type", [ReturnTypeCLinkage]>;
+def ReturnMismatch : DiagGroup<"return-mismatch">;
+def ReturnType : DiagGroup<"return-type", [ReturnTypeCLinkage, ReturnMismatch]>;
+
 def BindToTemporaryCopy : DiagGroup<"bind-to-temporary-copy",
                                     [CXX98CompatBindToTemporaryCopy]>;
 def SelfAssignmentField : DiagGroup<"self-assign-field">;
@@ -1133,9 +1135,11 @@ def NonGCC : DiagGroup<"non-gcc",
 def CXX14Attrs : DiagGroup<"c++14-attribute-extensions">;
 def CXX17Attrs : DiagGroup<"c++17-attribute-extensions">;
 def CXX20Attrs : DiagGroup<"c++20-attribute-extensions">;
+def CXX23Attrs : DiagGroup<"c++23-attribute-extensions">;
 def FutureAttrs : DiagGroup<"future-attribute-extensions", [CXX14Attrs,
                                                             CXX17Attrs,
-                                                            CXX20Attrs]>;
+                                                            CXX20Attrs,
+                                                            CXX23Attrs]>;
 
 def CXX23AttrsOnLambda : DiagGroup<"c++23-lambda-attributes">;
 

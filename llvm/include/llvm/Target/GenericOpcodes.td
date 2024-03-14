@@ -1289,6 +1289,15 @@ def G_MERGE_VALUES : GenericInstruction {
   let variadicOpsType = type1;
 }
 
+// Generic vscale.
+// Puts the value of the runtime vscale multiplied by the value in the source
+// operand into the destination register.
+def G_VSCALE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$src);
+  let hasSideEffects = false;
+}
+
 /// Create a vector from multiple scalar registers. No implicit
 /// conversion is performed (i.e. the result element type must be the
 /// same as all source operands)
@@ -1425,6 +1434,20 @@ def G_WRITE_REGISTER : GenericInstruction {
 //------------------------------------------------------------------------------
 // Vector ops
 //------------------------------------------------------------------------------
+
+// Generic insert subvector.
+def G_INSERT_SUBVECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type1:$src1, untyped_imm_0:$idx);
+  let hasSideEffects = false;
+}
+
+// Generic extract subvector.
+def G_EXTRACT_SUBVECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, untyped_imm_0:$idx);
+  let hasSideEffects = false;
+}
 
 // Generic insertelement.
 def G_INSERT_VECTOR_ELT : GenericInstruction {

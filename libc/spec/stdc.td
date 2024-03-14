@@ -405,8 +405,9 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fmaf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>]>,
 
           FunctionSpec<"fmod", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
-
           FunctionSpec<"fmodf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fmodl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fmodf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"frexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
@@ -451,6 +452,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"modf", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoublePtr>]>,
           FunctionSpec<"modff", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatPtr>]>,
           FunctionSpec<"modfl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoublePtr>]>,
+          GuardedFunctionSpec<"modff128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"cos", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"cosf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -528,6 +530,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"nextafterf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"nextafter", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"nextafterl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"nextafterf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nexttowardf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<LongDoubleType>]>,
           FunctionSpec<"nexttoward", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<LongDoubleType>]>,
@@ -803,6 +806,10 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec StdBit = HeaderSpec<
       "stdbit.h",
       [
+        Macro<"__STDC_VERSION_STDBIT_H__">,
+        Macro<"__STDC_ENDIAN_LITTLE__">,
+        Macro<"__STDC_ENDIAN_BIG__">,
+        Macro<"__STDC_ENDIAN_NATIVE__">,
         Macro<"stdc_leading_zeros">,
         Macro<"stdc_leading_ones">,
         Macro<"stdc_trailing_zeros">,
@@ -814,8 +821,9 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_count_zeros">,
         Macro<"stdc_count_ones">,
         Macro<"stdc_has_single_bit">,
-        Macro<"std_bit_width">,
-        Macro<"std_bit_floor">
+        Macro<"stdc_bit_width">,
+        Macro<"stdc_bit_floor">,
+        Macro<"stdc_bit_ceil">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -879,7 +887,12 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_bit_floor_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_bit_floor_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_bit_floor_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_bit_floor_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_bit_floor_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_bit_ceil_uc", RetValSpec<UnsignedCharType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_bit_ceil_us", RetValSpec<UnsignedShortType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_bit_ceil_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_bit_ceil_ul", RetValSpec<UnsignedLongType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_bit_ceil_ull", RetValSpec<UnsignedLongLongType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 
@@ -1190,6 +1203,7 @@ def StdC : StandardSpec<"stdc"> {
       [ // Types
          ClockT,
          StructTmType,
+         StructTimeSpec,
          TimeTType,
       ],
       [], // Enumerations
@@ -1270,12 +1284,23 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec UChar = HeaderSpec<
+      "uchar.h",
+      [], // Macros
+      [ //Types
+        MBStateTType,
+      ],
+      [], // Enumerations
+      []
+  >;
+
   HeaderSpec WChar = HeaderSpec<
       "wchar.h",
       [ // Macros
         Macro<"WEOF">,
       ],
       [ //Types
+        MBStateTType,
         SizeTType,
         WIntType,
         WCharType,
@@ -1310,6 +1335,7 @@ def StdC : StandardSpec<"stdc"> {
     Signal,
     Threads,
     Time,
+    UChar,
     WChar,
   ];
 }

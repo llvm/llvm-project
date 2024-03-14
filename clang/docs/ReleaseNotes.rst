@@ -100,6 +100,7 @@ C++23 Feature Support
 
 - Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
   materialize temporary object which is a prvalue in discarded-value expression.
+- Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
@@ -182,6 +183,9 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
+  ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
+  ``-Wreturn-type`` under this new flag. Fixes #GH72116.
 
 Removed Compiler Flags
 -------------------------
@@ -190,6 +194,12 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- Introduced a new function attribute ``__attribute__((amdgpu_max_num_work_groups(x, y, z)))`` or
+  ``[[clang::amdgpu_max_num_work_groups(x, y, z)]]`` for the AMDGPU target. This attribute can be
+  attached to HIP or OpenCL kernel function definitions to provide an optimization hint. The parameters
+  ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
+  and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
+  ``z`` are optional with default value of 1.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -227,6 +237,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
   Fixes #GH82512.
 
+- Clang now provides improved warnings for the ``cleanup`` attribute to detect misuse scenarios,
+  such as attempting to call ``free`` on an unallocated object. Fixes
+  `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -250,6 +264,9 @@ Bug Fixes in This Version
   for logical operators in C23.
   Fixes (#GH64356).
 
+- ``__is_trivially_relocatable`` no longer returns ``false`` for volatile-qualified types.
+  Fixes (#GH77091).
+
 - Clang no longer produces a false-positive `-Wunused-variable` warning
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
@@ -257,6 +274,16 @@ Bug Fixes in This Version
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
   Fixes (#GH83267).
+
+- Clang now correctly generates overloads for bit-precise integer types for
+  builtin operators in C++. Fixes #GH82998.
+
+- When performing mixed arithmetic between ``_Complex`` floating-point types and integers,
+  Clang now correctly promotes the integer to its corresponding real floating-point
+  type only rather than to the complex type (e.g. ``_Complex float / int`` is now evaluated
+  as ``_Complex float / float`` rather than ``_Complex float / _Complex float``), as mandated
+  by the C standard. This significantly improves codegen of `*` and `/` especially.
+  Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -344,9 +371,17 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Allow access to a public template alias declaration that refers to friend's
+  private nested type. (#GH25708).
+- Fixed a crash in constant evaluation when trying to access a
+  captured ``this`` pointer in a lambda with an explicit object parameter.
+  Fixes (#GH80997)
+- Fix an issue where missing set friend declaration in template class instantiation.
+  Fixes (#GH84368).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -408,7 +443,7 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- PTX is no longer included by default when compiling for CUDA. Using 
+- PTX is no longer included by default when compiling for CUDA. Using
   ``--cuda-include-ptx=all`` will return the old behavior.
 
 CUDA Support
@@ -440,6 +475,8 @@ AST Matchers
 
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 - Add ``isExplicitObjectMemberFunction``.
+- Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
+  not skip the explicit object parameter for operator calls.
 
 clang-format
 ------------
@@ -454,6 +491,10 @@ libclang
 
 Static Analyzer
 ---------------
+
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
 
 New features
 ^^^^^^^^^^^^
@@ -489,6 +530,11 @@ Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+
+OpenMP Support
+--------------
+
+- Added support for the `[[omp::assume]]` attribute.
 
 Additional Information
 ======================

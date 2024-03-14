@@ -260,6 +260,10 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
 
 namespace {
 
+template <typename T> T optOr(cl::opt<T> &Opt, T Other) {
+  return Opt.getNumOccurrences() ? Opt : Other;
+}
+
 bool shouldUsePageAliases(const Triple &TargetTriple) {
   return ClUsePageAliases && TargetTriple.getArch() == Triple::x86_64;
 }
@@ -269,14 +273,11 @@ bool shouldInstrumentStack(const Triple &TargetTriple) {
 }
 
 bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
-  return ClInstrumentWithCalls.getNumOccurrences()
-             ? ClInstrumentWithCalls
-             : TargetTriple.getArch() == Triple::x86_64;
+  return optOr(ClInstrumentWithCalls, TargetTriple.getArch() == Triple::x86_64);
 }
 
 bool mightUseStackSafetyAnalysis(bool DisableOptimization) {
-  return ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                              : !DisableOptimization;
+  return optOr(ClUseStackSafety, !DisableOptimization);
 }
 
 bool shouldUseStackSafetyAnalysis(const Triple &TargetTriple,
@@ -296,10 +297,8 @@ public:
   HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
                      const StackSafetyGlobalInfo *SSI)
       : M(M), SSI(SSI) {
-    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
-                              ? ClEnableKhwasan
-                              : CompileKernel;
+    this->Recover = optOr(ClRecover, Recover);
+    this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
     this->Rng =
         ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
 
@@ -316,8 +315,9 @@ private:
     Value *PtrTag = nullptr;
     Value *MemTag = nullptr;
   };
-  void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
+  bool selectiveInstrumentationShouldSkip(Function &F,
+                                          FunctionAnalysisManager &FAM);
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -624,19 +624,14 @@ void HWAddressSanitizer::initializeModule() {
   bool NewRuntime =
       !TargetTriple.isAndroid() || !TargetTriple.isAndroidVersionLT(30);
 
-  UseShortGranules =
-      ClUseShortGranules.getNumOccurrences() ? ClUseShortGranules : NewRuntime;
-  OutlinedChecks =
-      (TargetTriple.isAArch64() || TargetTriple.isRISCV64()) &&
-      TargetTriple.isOSBinFormatELF() &&
-      (ClInlineAllChecks.getNumOccurrences() ? !ClInlineAllChecks : !Recover);
+  UseShortGranules = optOr(ClUseShortGranules, NewRuntime);
+  OutlinedChecks = (TargetTriple.isAArch64() || TargetTriple.isRISCV64()) &&
+                   TargetTriple.isOSBinFormatELF() &&
+                   !optOr(ClInlineAllChecks, Recover);
 
-  InlineFastPath =
-      (ClInlineFastPathChecks.getNumOccurrences()
-           ? ClInlineFastPathChecks
-           : !(TargetTriple.isAndroid() ||
-               TargetTriple.isOSFuchsia())); // These platforms may prefer less
-                                             // inlining to reduce binary size.
+  // These platforms may prefer less inlining to reduce binary size.
+  InlineFastPath = optOr(ClInlineFastPathChecks, !(TargetTriple.isAndroid() ||
+                                                   TargetTriple.isOSFuchsia()));
 
   if (ClMatchAllTag.getNumOccurrences()) {
     if (ClMatchAllTag != -1) {
@@ -648,22 +643,17 @@ void HWAddressSanitizer::initializeModule() {
   UseMatchAllCallback = !CompileKernel && MatchAllTag.has_value();
 
   // If we don't have personality function support, fall back to landing pads.
-  InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
-                              ? ClInstrumentLandingPads
-                              : !NewRuntime;
+  InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
 
   if (!CompileKernel) {
     createHwasanCtorComdat();
-    bool InstrumentGlobals =
-        ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
+    bool InstrumentGlobals = optOr(ClGlobals, NewRuntime);
 
     if (InstrumentGlobals && !UsePageAliases)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
-        ClInstrumentPersonalityFunctions.getNumOccurrences()
-            ? ClInstrumentPersonalityFunctions
-            : NewRuntime;
+        optOr(ClInstrumentPersonalityFunctions, NewRuntime);
     if (InstrumentPersonalityFunctions)
       instrumentPersonalityFunctions();
   }
@@ -1524,6 +1514,31 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
   return true;
 }
 
+bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
+    Function &F, FunctionAnalysisManager &FAM) {
+  if (ClRandomSkipRate.getNumOccurrences()) {
+    std::bernoulli_distribution D(ClRandomSkipRate);
+    if (D(*Rng))
+      return true;
+  } else {
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (PSI && PSI->hasProfileSummary()) {
+      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+      if ((ClHotPercentileCutoff.getNumOccurrences() &&
+           ClHotPercentileCutoff >= 0)
+              ? PSI->isFunctionHotInCallGraphNthPercentile(
+                    ClHotPercentileCutoff, &F, BFI)
+              : PSI->isFunctionHotInCallGraph(&F, BFI))
+        return true;
+    } else {
+      ++NumNoProfileSummaryFuncs;
+    }
+  }
+  return false;
+}
+
 void HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
@@ -1536,28 +1551,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   NumTotalFuncs++;
-  if (CSelectiveInstrumentation) {
-    if (ClRandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(ClRandomSkipRate);
-      if (D(*Rng))
-        return;
-    } else {
-      auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-      ProfileSummaryInfo *PSI =
-          MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-      if (PSI && PSI->hasProfileSummary()) {
-        auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-        if ((ClHotPercentileCutoff.getNumOccurrences() &&
-             ClHotPercentileCutoff >= 0)
-                ? PSI->isFunctionHotInCallGraphNthPercentile(
-                      ClHotPercentileCutoff, &F, BFI)
-                : PSI->isFunctionHotInCallGraph(&F, BFI))
-          return;
-      } else {
-        ++NumNoProfileSummaryFuncs;
-      }
-    }
-  }
+
+  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+    return;
+
   NumInstrumentedFuncs++;
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
