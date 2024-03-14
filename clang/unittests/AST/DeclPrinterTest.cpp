@@ -359,18 +359,18 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl12) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-      "struct S { int x; };"
-      "namespace NS { class C {};}"
-      "void foo() {using namespace NS; C c;}",
-      "foo",
-      "void foo() {\nusing namespace NS;\nclass "
-      "NS::C c;\n}\n",
-      [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = false;
-        Policy.SuppressScope = true;
-        Policy.TerseOutput = false;
-      }));
+  ASSERT_TRUE(
+      PrintedDeclCXX98Matches("struct S { int x; };"
+                              "namespace NS { class C {};}"
+                              "void foo() {using namespace NS; C c;}",
+                              "foo",
+                              "void foo() {\nusing namespace NS;\nclass "
+                              "NS::C c;\n}\n",
+                              [](PrintingPolicy &Policy) {
+                                Policy.SuppressTagKeyword = false;
+                                Policy.SuppressScope = true;
+                                Policy.TerseOutput = false;
+                              }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl13) {
@@ -378,9 +378,7 @@ TEST(DeclPrinter, TestCXXRecordDecl13) {
       "struct S { int x; };"
       "S s1;"
       "S foo() {return s1;}",
-      "foo",
-      "struct S foo() {\nreturn s1;\n}\n",
-      [](PrintingPolicy &Policy) {
+      "foo", "struct S foo() {\nreturn s1;\n}\n", [](PrintingPolicy &Policy) {
         Policy.SuppressTagKeyword = false;
         Policy.SuppressScope = true;
         Policy.TerseOutput = false;
@@ -391,8 +389,7 @@ TEST(DeclPrinter, TestCXXRecordDecl14) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
       "struct S { int x; };"
       "S foo(S s1) {return s1;}",
-      "foo",
-      "struct S foo(struct S s1) {\nreturn s1;\n}\n",
+      "foo", "struct S foo(struct S s1) {\nreturn s1;\n}\n",
       [](PrintingPolicy &Policy) {
         Policy.SuppressTagKeyword = false;
         Policy.SuppressScope = true;
