@@ -863,8 +863,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
-  cp.processIf(clause::If::DirectiveNameModifier::TargetData,
-               ifClauseOperand);
+  cp.processIf(clause::If::DirectiveNameModifier::TargetData, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
                          useDeviceSymbols);
@@ -2449,7 +2448,8 @@ void Fortran::lower::genOpenMPReduction(
                 continue;
             }
             for (mlir::OpOperand &reductionValUse : reductionVal.getUses()) {
-              if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(reductionValUse.getOwner())) {
+              if (auto loadOp =
+                      mlir::dyn_cast<fir::LoadOp>(reductionValUse.getOwner())) {
                 mlir::Value loadVal = loadOp.getRes();
                 if (reductionType.isa<fir::LogicalType>()) {
                   mlir::Operation *reductionOp = findReductionChain(loadVal);
@@ -2468,8 +2468,7 @@ void Fortran::lower::genOpenMPReduction(
           }
         }
       } else if (const auto *reductionIntrinsic =
-                     std::get_if<clause::ProcedureDesignator>(
-                         &redOperator.u)) {
+                     std::get_if<clause::ProcedureDesignator>(&redOperator.u)) {
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic))
           continue;
@@ -2482,7 +2481,8 @@ void Fortran::lower::genOpenMPReduction(
               reductionVal = declOp.getBase();
             for (const mlir::OpOperand &reductionValUse :
                  reductionVal.getUses()) {
-              if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(reductionValUse.getOwner())) {
+              if (auto loadOp =
+                      mlir::dyn_cast<fir::LoadOp>(reductionValUse.getOwner())) {
                 mlir::Value loadVal = loadOp.getRes();
                 // Max is lowered as a compare -> select.
                 // Match the pattern here.

@@ -79,9 +79,9 @@ public:
   static std::string getReductionName(llvm::StringRef name, mlir::Type ty,
                                       bool isByRef);
 
-  static std::string getReductionName(
-      omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
-      mlir::Type ty, bool isByRef);
+  static std::string
+  getReductionName(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
+                   mlir::Type ty, bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:

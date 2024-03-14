@@ -448,8 +448,7 @@ struct ExtractSubstringHelper {
   }
 };
 
-template <typename A>
-std::optional<Substring> ExtractSubstring(const A &x) {
+template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
   return ExtractSubstringHelper::visit(x);
 }
 

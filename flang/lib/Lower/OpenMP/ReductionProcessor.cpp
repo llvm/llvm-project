@@ -97,8 +97,8 @@ std::string ReductionProcessor::getReductionName(llvm::StringRef name,
 }
 
 std::string ReductionProcessor::getReductionName(
-    omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
-    mlir::Type ty, bool isByRef) {
+    omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp, mlir::Type ty,
+    bool isByRef) {
   std::string reductionName;
 
   switch (intrinsicOp) {
