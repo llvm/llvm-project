@@ -17,11 +17,8 @@ public:
   using FPBits128 = LIBC_NAMESPACE::fputil::FPBits<float128>;
   using StorageType = FPBits128::StorageType;
 
-  const UInt128 QUIET_NAN =
-      FPBits128::quiet_nan(LIBC_NAMESPACE::fputil::Sign::POS, 0).uintval();
-
+  const UInt128 QUIET_NAN = FPBits128::quiet_nan().uintval();
   const UInt128 ONE = UInt128(1);
-  const UInt128 ZERO = UInt128(0);
 
   void run_test(const char *input_str, StorageType bits) {
     float128 result = LIBC_NAMESPACE::nanf128(input_str);
@@ -38,9 +35,9 @@ TEST_F(LlvmLibcNanf128Test, NCharSeq) {
   run_test("2417851639229258349412352", QUIET_NAN | (ONE << 81));
   run_test("0x200000000000000000000", QUIET_NAN | (ONE << 81));
   run_test("10384593717069655257060992658440191",
-           QUIET_NAN | (~ZERO & FPBits128::SIG_MASK));
+           QUIET_NAN | FPBits128::SIG_MASK);
   run_test("0x1ffffffffffffffffffffffffffff",
-           QUIET_NAN | (~ZERO & FPBits128::SIG_MASK));
+           QUIET_NAN | FPBits128::SIG_MASK);
   run_test("10384593717069655257060992658440192", QUIET_NAN);
   run_test("0x20000000000000000000000000000", QUIET_NAN);
   run_test("1a", QUIET_NAN);
