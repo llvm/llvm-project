@@ -199,11 +199,12 @@ public:
       std::string &s = os.str();
       formatted_text = !s.empty() ? std::move(s) : std::string(text);
     }
-    if (info.Kind == swift::DiagnosticKind::Remark &&
-        info.ID == swift::diag::module_loaded.ID) {
-      // Divert module import remarks into the logs.
-      LLDB_LOG(GetLog(LLDBLog::Types), "{0} Module import remark: {1}",
-               m_ast_context.GetDescription(), formatted_text);
+    if (info.Kind == swift::DiagnosticKind::Remark) {
+      if (info.ID == swift::diag::module_loaded.ID) {
+        // Divert module import remarks into the logs.
+        LLDB_LOG(GetLog(LLDBLog::Types), "{0} Module import remark: {1}",
+                 m_ast_context.GetDescription(), formatted_text);
+      }
       return;
     }
     RawDiagnostic diagnostic(
