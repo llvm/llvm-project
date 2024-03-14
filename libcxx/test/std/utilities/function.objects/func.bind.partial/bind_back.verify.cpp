@@ -20,7 +20,7 @@
 constexpr int pass(int n) { return n; }
 
 void test() {
-  { // Test calling constexpr function from non-constexpr `bind_back` unspecified-type
+  { // Test calling constexpr function from non-constexpr `bind_back` result
     auto f1 = std::bind_back(pass, 1);
     static_assert(f1() == 1); // expected-error {{static assertion expression is not an integral constant expression}}
   }
