@@ -6,7 +6,7 @@ define void @matching_vector_lens(<4 x i32> %arg1, <4 x i32> %arg2) {
     ; CHECK-LABEL: cmp_vector_lens_match
     ; CHECK: return type and first arg type must have the same number of elements
     %res = call <8 x i32> @llvm.scmp.v8i32.v4i32(<4 x i32> %arg1, <4 x i32> %arg2)
-    return void
+    ret void
 }
 
 declare void @result_len_is_at_least_2.i32.i32(i32, i32)
