@@ -487,7 +487,8 @@ public:
   virtual ~WaitcntGenerator() = default;
 
   // Create a mask value from the initializer list of wait event types.
-  unsigned eventMask(std::initializer_list<WaitEventType> Events) const {
+  static constexpr unsigned
+  eventMask(std::initializer_list<WaitEventType> Events) {
     unsigned Mask = 0;
     for (auto &E : Events)
       Mask |= 1 << E;
