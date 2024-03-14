@@ -246,6 +246,7 @@ public:
   clang::CharUnits getAlignment() const {
     return clang::CharUnits::fromQuantity(Alignment);
   }
+  void setAlignment(clang::CharUnits A) { Alignment = A.getQuantity(); }
 
   Address getAddress() const {
     return Address(getPointer(), ElementType, getAlignment());
