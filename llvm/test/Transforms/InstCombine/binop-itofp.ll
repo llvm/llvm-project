@@ -1010,8 +1010,11 @@ define float @test_ui_add_with_signed_constant(i32 %shr.i) {
 define float @missed_nonzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @missed_nonzero_check_on_constant_for_si_fmul(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
+; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i32 [[SEL]] to i16
+; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp i16 [[CONV_I]] to float
+; CHECK-NEXT:    [[MUL3_I_I:%.*]] = fmul float [[CONV1_I]], 0.000000e+00
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float [[MUL3_I_I]]
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i = trunc i32 %sel to i16
@@ -1024,8 +1027,13 @@ define float @missed_nonzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g
 define <2 x float> @missed_nonzero_check_on_constant_for_si_fmul_vec(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @missed_nonzero_check_on_constant_for_si_fmul_vec(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
+; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc i32 [[SEL]] to i16
+; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
+; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
+; CHECK-NEXT:    [[MUL3_I_I:%.*]] = fmul <2 x float> [[CONV1_I]], zeroinitializer
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret <2 x float> zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i.s = trunc i32 %sel to i16
