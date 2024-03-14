@@ -675,10 +675,6 @@ public:
                                       Qualifiers ThisTypeQuals,
                                       Fn TransformExceptionSpec);
 
-  template <typename Fn>
-  QualType TransformAttributedType(TypeLocBuilder &TLB, AttributedTypeLoc TL,
-                                   Fn TransformModifiedType);
-
   bool TransformExceptionSpec(SourceLocation Loc,
                               FunctionProtoType::ExceptionSpecInfo &ESI,
                               SmallVectorImpl<QualType> &Exceptions,
@@ -7212,11 +7208,10 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
-template <typename Fn>
 QualType TreeTransform<Derived>::TransformAttributedType(
-    TypeLocBuilder &TLB, AttributedTypeLoc TL, Fn TransformModifiedTypeFn) {
+    TypeLocBuilder &TLB, AttributedTypeLoc TL) {
   const AttributedType *oldType = TL.getTypePtr();
-  QualType modifiedType = TransformModifiedTypeFn(TLB, TL.getModifiedLoc());
+  QualType modifiedType = getDerived().TransformType(TLB, TL.getModifiedLoc());
   if (modifiedType.isNull())
     return QualType();
 
@@ -7268,15 +7263,6 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   AttributedTypeLoc newTL = TLB.push<AttributedTypeLoc>(result);
   newTL.setAttr(newAttr);
   return result;
-}
-
-template <typename Derived>
-QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
-                                                         AttributedTypeLoc TL) {
-  return getDerived().TransformAttributedType(
-      TLB, TL, [&](TypeLocBuilder &TLB, TypeLoc ModifiedLoc) -> QualType {
-        return getDerived().TransformType(TLB, ModifiedLoc);
-      });
 }
 
 template <typename Derived>
@@ -13840,62 +13826,40 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
 
-  // Transform the type of the original lambda's call operator.
-  // The transformation MUST be done in the CurrentInstantiationScope since
-  // it introduces a mapping of the original to the newly created
-  // transformed parameters.
   TypeSourceInfo *NewCallOpTSI = nullptr;
-  {
-    auto OldCallOpTypeLoc =
-        E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+  auto OldCallOpTypeLoc =
+      E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
 
-    auto TransformFunctionProtoTypeLoc =
-        [this](TypeLocBuilder &TLB, FunctionProtoTypeLoc FPTL) -> QualType {
-      SmallVector<QualType, 4> ExceptionStorage;
-      return this->TransformFunctionProtoType(
-          TLB, FPTL, nullptr, Qualifiers(),
-          [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-            return TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
-                                          ExceptionStorage, Changed);
-          });
+  QualType NewCallOpType;
+  TypeLocBuilder NewCallOpTLBuilder;
+
+  NewCallOpType =
+      getDerived().TransformType(NewCallOpTLBuilder, OldCallOpTypeLoc);
+  if (NewCallOpType.isNull())
+    return ExprError();
+  NewCallOpTSI =
+      NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
+
+  auto ExtractParams = [](TypeLoc TL) {
+    auto Impl = [](auto Self, TypeLoc TL) -> ArrayRef<ParmVarDecl *> {
+      if (auto FPTL = TL.getAs<FunctionProtoTypeLoc>())
+        return FPTL.getParams();
+      if (auto ATL = TL.getAs<AttributedTypeLoc>())
+        return Self(Self, ATL.getModifiedLoc());
+      if (auto MQTL = TL.getAs<MacroQualifiedTypeLoc>())
+        return Self(Self, MQTL.getInnerLoc());
+      llvm_unreachable("Unhandled TypeLoc");
     };
-
-    QualType NewCallOpType;
-    TypeLocBuilder NewCallOpTLBuilder;
-
-    if (auto ATL = OldCallOpTypeLoc.getAs<AttributedTypeLoc>()) {
-      NewCallOpType = this->TransformAttributedType(
-          NewCallOpTLBuilder, ATL,
-          [&](TypeLocBuilder &TLB, TypeLoc TL) -> QualType {
-            return TransformFunctionProtoTypeLoc(
-                TLB, TL.castAs<FunctionProtoTypeLoc>());
-          });
-    } else {
-      auto FPTL = OldCallOpTypeLoc.castAs<FunctionProtoTypeLoc>();
-      NewCallOpType = TransformFunctionProtoTypeLoc(NewCallOpTLBuilder, FPTL);
-    }
-
-    if (NewCallOpType.isNull())
-      return ExprError();
-    NewCallOpTSI =
-        NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
-  }
-
-  ArrayRef<ParmVarDecl *> Params;
-  if (auto ATL = NewCallOpTSI->getTypeLoc().getAs<AttributedTypeLoc>()) {
-    Params = ATL.getModifiedLoc().castAs<FunctionProtoTypeLoc>().getParams();
-  } else {
-    auto FPTL = NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
-    Params = FPTL.getParams();
-  }
+    return Impl(Impl, TL);
+  };
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(),
       E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
       E->getCallOperator()->getConstexprKind(),
-      E->getCallOperator()->getStorageClass(), Params,
-      E->hasExplicitResultType());
+      E->getCallOperator()->getStorageClass(),
+      ExtractParams(NewCallOpTSI->getTypeLoc()), E->hasExplicitResultType());
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});
