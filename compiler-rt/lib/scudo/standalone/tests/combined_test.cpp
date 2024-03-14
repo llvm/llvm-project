@@ -190,7 +190,6 @@ struct TestConditionVariableConfig {
 #endif
     static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
     static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
-    static const bool UseConditionVariable = true;
 #if SCUDO_LINUX
     using ConditionVariableT = scudo::ConditionVariableLinux;
 #else
