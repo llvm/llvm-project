@@ -37,6 +37,19 @@ func.func @arith_ops(%arg0: f32, %arg1: f32) {
 
 // -----
 
+func.func @arith_integer_ops(%arg0: i32, %arg1: i32) {
+  // CHECK: emitc.add %arg0, %arg1 : (i32, i32) -> i32
+  %0 = arith.addi %arg0, %arg1 : i32
+  // CHECK: emitc.sub %arg0, %arg1 : (i32, i32) -> i32
+  %1 = arith.subi %arg0, %arg1 : i32
+  // CHECK: emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+  %2 = arith.muli %arg0, %arg1 : i32
+
+  return
+}
+
+// -----
+
 func.func @arith_select(%arg0: i1, %arg1: tensor<8xi32>, %arg2: tensor<8xi32>) -> () {
   // CHECK: [[V0:[^ ]*]] = emitc.conditional %arg0, %arg1, %arg2 : tensor<8xi32>
   %0 = arith.select %arg0, %arg1, %arg2 : i1, tensor<8xi32>

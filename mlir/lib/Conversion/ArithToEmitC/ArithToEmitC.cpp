@@ -96,6 +96,9 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
+    ArithOpConversion<arith::AddIOp, emitc::AddOp>,
+    ArithOpConversion<arith::MulIOp, emitc::MulOp>,
+    ArithOpConversion<arith::SubIOp, emitc::SubOp>,
     SelectOpConversion
   >(typeConverter, ctx);
   // clang-format on
