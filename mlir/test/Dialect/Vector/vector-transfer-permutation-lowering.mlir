@@ -41,6 +41,22 @@ func.func @permutation_with_mask_scalable(%2: memref<?x?xf32>, %dim_1: index, %d
   return %1 : vector<8x[4]x2xf32>
 }
 
+// CHECK-LABEL:     func.func @permutation_with_masked_transfer_write_scalable(
+// CHECK-SAME:        %[[VAL_0:.*]]: vector<4x[8]xi16>,
+// CHECK-SAME:        %[[VAL_1:.*]]: memref<1x4x?x1x1x1x1xi16>,
+// CHECK-SAME:        %[[VAL_2:.*]]: vector<4x[8]xi1>) {
+// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:             %[[VAL_4:.*]] = memref.collapse_shape %[[VAL_1]] {{\[\[}}0, 1], [2, 3, 4, 5, 6]] : memref<1x4x?x1x1x1x1xi16> into memref<4x?xi16>
+// CHECK:             vector.transfer_write %[[VAL_0]], %[[VAL_4]]{{\[}}%[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, false]} : vector<4x[8]xi16>, memref<4x?xi16>
+// CHECK:             return
+// CHECK:           }
+  func.func @permutation_with_masked_transfer_write_scalable(%arg0: vector<4x[8]xi16>, %arg1: memref<1x4x?x1x1x1x1xi16>, %mask:  vector<4x[8]xi1>){
+     %c0 = arith.constant 0 : index
+      vector.transfer_write %arg0, %arg1[%c0, %c0, %c0, %c0, %c0, %c0, %c0], %mask {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d2)>
+} : vector<4x[8]xi16>, memref<1x4x?x1x1x1x1xi16>
+    return
+  }
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

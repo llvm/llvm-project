@@ -226,6 +226,38 @@ struct TransferWritePermutationLowering
 ///     {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1, d2)>} :
 ///     vector<1x8x16xf32>
 /// ```
+/// Returns the number of dims that aren't unit dims.
+static int getReducedRank(ArrayRef<int64_t> shape) {
+  return llvm::count_if(shape, [](int64_t dimSize) { return dimSize != 1; });
+}
+
+static int getFirstNonUnitDim(MemRefType oldType) {
+  int idx = 0;
+  for (auto [dimIdx, dimSize] : llvm::enumerate(oldType.getShape())) {
+    if (dimSize == 1) {
+      continue;
+    } else {
+      idx = dimIdx;
+      break;
+    }
+  }
+  return idx;
+}
+
+static int getLasttNonUnitDim(MemRefType oldType) {
+  int idx = 0;
+  for (auto [dimIdx, dimSize] :
+       llvm::enumerate(llvm::reverse(oldType.getShape()))) {
+    if (dimSize == 1) {
+      continue;
+    } else {
+      idx = oldType.getRank() - (dimIdx)-1;
+      break;
+    }
+  }
+  return idx;
+}
+
 struct TransferWriteNonPermutationLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -264,6 +296,41 @@ struct TransferWriteNonPermutationLowering
       missingInnerDim.push_back(i);
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
+
+    // Fix for lowering transfer write when we have Scalable vectors and unit
+    // dims
+    auto sourceVectorType = op.getVectorType();
+    auto memRefType = dyn_cast<MemRefType>(op.getShapedType());
+
+    if (sourceVectorType.isScalable() && !memRefType.hasStaticShape()) {
+      int reducedRank = getReducedRank(memRefType.getShape());
+
+      auto loc = op.getLoc();
+      SmallVector<Value> indices(
+          reducedRank, rewriter.create<arith::ConstantIndexOp>(loc, 0));
+
+      // Check if the result shapes has unit dim before and after the scalable
+      // and non-scalable dim
+      int firstIdx = getFirstNonUnitDim(memRefType);
+      int lastIdx = getLasttNonUnitDim(memRefType);
+
+      SmallVector<ReassociationIndices> reassociation;
+      ReassociationIndices collapsedFirstIndices;
+      for (int64_t i = 0; i < firstIdx + 1; ++i)
+        collapsedFirstIndices.push_back(i);
+      reassociation.push_back(ReassociationIndices{collapsedFirstIndices});
+      ReassociationIndices collapsedIndices;
+      for (int64_t i = lastIdx; i < memRefType.getRank(); ++i)
+        collapsedIndices.push_back(i);
+      reassociation.push_back(collapsedIndices);
+      // Create mem collapse op
+      auto newOp = rewriter.create<memref::CollapseShapeOp>(loc, op.getSource(),
+                                                            reassociation);
+      rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(op, op.getVector(),
+                                                           newOp, indices);
+      return success();
+    }
+
     // Vector: add unit dims at the beginning of the shape.
     Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
                                     missingInnerDim.size());
