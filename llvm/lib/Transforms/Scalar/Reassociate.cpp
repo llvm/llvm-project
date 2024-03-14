@@ -287,11 +287,15 @@ static Instruction *CreateNeg(Value *S1, const Twine &Name,
 static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   assert((isa<UnaryOperator>(Neg) || isa<BinaryOperator>(Neg)) &&
          "Expected a Negate!");
-  // FIXME: It's not safe to lower a unary FNeg into a FMul by -1.0.
   unsigned OpNo = isa<BinaryOperator>(Neg) ? 1 : 0;
   Type *Ty = Neg->getType();
-  Constant *NegOne = Ty->isIntOrIntVectorTy() ?
-    ConstantInt::getAllOnesValue(Ty) : ConstantFP::get(Ty, -1.0);
+  // Only lower to FMul if the operation is not a unary FNeg or Neg has the
+  // correct flags.
+  if (Ty->isFPOrFPVectorTy() && isa<UnaryOperator>(Neg) && !Neg->hasNoNaNs())
+    return nullptr;
+
+  Constant *NegOne = Ty->isIntOrIntVectorTy() ? ConstantInt::getAllOnesValue(Ty)
+                                              : ConstantFP::get(Ty, -1.0);
 
   BinaryOperator *Res =
       CreateMul(Neg->getOperand(OpNo), NegOne, "", Neg->getIterator(), Neg);
