@@ -197,7 +197,7 @@ class SparseTensorStorage final : public SparseTensorStorageBase {
                       const uint64_t *lvl2dim)
       : SparseTensorStorageBase(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                                 dim2lvl, lvl2dim),
-        positions(lvlRank), coordinates(lvlRank), lvlCursor(lvlRank), coo() {}
+        positions(lvlRank), coordinates(lvlRank), lvlCursor(lvlRank) {}
 
 public:
   /// Constructs a sparse tensor with the given encoding, and allocates
@@ -335,16 +335,6 @@ public:
       else
         endPath(0);
     }
-  }
-
-  /// Allocates a new COO object and initializes it with the contents.
-  /// Callers must make sure to delete the COO when they're done with it.
-  SparseTensorCOO<V> *toCOO() {
-    std::vector<uint64_t> dimCoords(getDimRank());
-    coo = new SparseTensorCOO<V>(getDimSizes(), values.size());
-    toCOO(0, 0, dimCoords);
-    assert(coo->getElements().size() == values.size());
-    return coo;
   }
 
   /// Sort the unordered tensor in place, the method assumes that it is
@@ -556,58 +546,10 @@ private:
     return -1u;
   }
 
-  // Performs forall on level entries and inserts into dim COO.
-  void toCOO(uint64_t parentPos, uint64_t l, std::vector<uint64_t> &dimCoords) {
-    if (l == getLvlRank()) {
-      map.pushbackward(lvlCursor.data(), dimCoords.data());
-      assert(coo);
-      assert(parentPos < values.size());
-      coo->add(dimCoords, values[parentPos]);
-      return;
-    }
-    if (isCompressedLvl(l)) {
-      const std::vector<P> &positionsL = positions[l];
-      assert(parentPos + 1 < positionsL.size());
-      const uint64_t pstart = static_cast<uint64_t>(positionsL[parentPos]);
-      const uint64_t pstop = static_cast<uint64_t>(positionsL[parentPos + 1]);
-      const std::vector<C> &coordinatesL = coordinates[l];
-      assert(pstop <= coordinatesL.size());
-      for (uint64_t pos = pstart; pos < pstop; pos++) {
-        lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
-        toCOO(pos, l + 1, dimCoords);
-      }
-    } else if (isLooseCompressedLvl(l)) {
-      const std::vector<P> &positionsL = positions[l];
-      assert(2 * parentPos + 1 < positionsL.size());
-      const uint64_t pstart = static_cast<uint64_t>(positionsL[2 * parentPos]);
-      const uint64_t pstop =
-          static_cast<uint64_t>(positionsL[2 * parentPos + 1]);
-      const std::vector<C> &coordinatesL = coordinates[l];
-      assert(pstop <= coordinatesL.size());
-      for (uint64_t pos = pstart; pos < pstop; pos++) {
-        lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
-        toCOO(pos, l + 1, dimCoords);
-      }
-    } else if (isSingletonLvl(l) || isNOutOfMLvl(l)) {
-      assert(parentPos < coordinates[l].size());
-      lvlCursor[l] = static_cast<uint64_t>(coordinates[l][parentPos]);
-      toCOO(parentPos, l + 1, dimCoords);
-    } else { // Dense level.
-      assert(isDenseLvl(l));
-      const uint64_t sz = getLvlSizes()[l];
-      const uint64_t pstart = parentPos * sz;
-      for (uint64_t c = 0; c < sz; c++) {
-        lvlCursor[l] = c;
-        toCOO(pstart + c, l + 1, dimCoords);
-      }
-    }
-  }
-
   std::vector<std::vector<P>> positions;
   std::vector<std::vector<C>> coordinates;
   std::vector<V> values;
   std::vector<uint64_t> lvlCursor;
-  SparseTensorCOO<V> *coo;
 };
 
 //===----------------------------------------------------------------------===//
@@ -661,7 +603,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                           dim2lvl, lvl2dim) {
   assert(!lvlCOO || lvlRank == lvlCOO->getRank());
-  coo = lvlCOO;
   // Provide hints on capacity of positions and coordinates.
   // TODO: needs much fine-tuning based on actual sparsity; currently
   // we reserve position/coordinate space based on all previous dense
