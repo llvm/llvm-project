@@ -284,7 +284,7 @@ public:
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
-  void runOn(mlir::Operation *op, mlir::Region &region) {
+  void runOn(mlir::Operation *op) {
     auto &context = getContext();
     mlir::ConversionTarget target(context);
     target.addLegalDialect<mlir::arith::ArithDialect, fir::FIROpsDialect,
@@ -314,15 +314,8 @@ public:
 
   void runOnOperation() override final {
     // Call runOn on all top level regions that may contain emboxOp/arrayCoorOp.
-    auto mod = getOperation();
-    for (auto func : mod.getOps<mlir::func::FuncOp>())
-      runOn(func, func.getBody());
-    for (auto global : mod.getOps<fir::GlobalOp>())
-      runOn(global, global.getRegion());
-    for (auto omp : mod.getOps<mlir::omp::ReductionDeclareOp>()) {
-      runOn(omp, omp.getInitializerRegion());
-      runOn(omp, omp.getReductionRegion());
-    }
+    mlir::ModuleOp mod = getOperation();
+    runOn(mod);
   }
 };
 
