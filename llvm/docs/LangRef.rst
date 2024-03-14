@@ -3062,13 +3062,14 @@ as follows:
     this set are considered to support most general arithmetic operations
     efficiently.
 ``z[n]:<value>``
-    This specifies the default null value for an address space. ``n`` denotes
-    the address space number, and if not specified, it is considered to be
-    for the unlisted address space. For unlisted address space, the default
-    null value is ``0``. ``value`` denotes the default null value for an
-    address space ``n``. To represent negatives values, prefix ``neg`` is
-    added to ``value``. for e.g., ``z0:neg1`` represents for ``0`` address
-    space ``-1`` is the default null value.
+    This specifies the sentinel pointer value for an address space. Sentinel
+    pointer value is the default non zero null value for a given address
+    space. ``n`` denotes the address space number, and if not specified, it
+    is considered to be for the unlisted address space. For unlisted address
+    space, the sentinel pointer value is ``0``. ``value`` denotes the sentinel
+    pointer value for an address space ``n``. To represent negatives values,
+    prefix ``neg`` is added to ``value``. for e.g., ``z0:neg1`` represents for
+    ``0`` address space ``-1`` is the sentinel pointer value.
 ``ni:<address space0>:<address space1>:<address space2>...``
     This specifies pointer types with the specified address spaces
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``

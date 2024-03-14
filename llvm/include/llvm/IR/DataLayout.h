@@ -165,7 +165,7 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
-  DenseMap<unsigned, int64_t> AddrSpaceToNonZeroValueMap;
+  DenseMap<unsigned, int64_t> AddrSpaceToSentinelValueMap;
 
   /// Attempts to set the alignment of the given type. Returns an error
   /// description on failure.
@@ -302,15 +302,15 @@ public:
     return ManglingMode == MM_WinCOFFX86;
   }
 
-  int64_t getDefaultNullPointerValue(unsigned AddrSpace) {
-    auto It = AddrSpaceToNonZeroValueMap.find(AddrSpace);
-    if (It == AddrSpaceToNonZeroValueMap.end())
+  int64_t getSentinelPointerValue(unsigned AddrSpace) {
+    auto It = AddrSpaceToSentinelValueMap.find(AddrSpace);
+    if (It == AddrSpaceToSentinelValueMap.end())
       return 0;
     return It->second;
   }
 
-  void setDefaultNullPointerValue(unsigned AddrSpace, int64_t Value) {
-    AddrSpaceToNonZeroValueMap[AddrSpace] = Value;
+  void setSentinelPointerValue(unsigned AddrSpace, int64_t Value) {
+    AddrSpaceToSentinelValueMap[AddrSpace] = Value;
   }
 
   /// Returns true if symbols with leading question marks should not receive IR

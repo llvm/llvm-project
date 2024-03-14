@@ -216,7 +216,7 @@ void DataLayout::reset(StringRef Desc) {
   if (Error Err = setPointerAlignmentInBits(0, Align(8), Align(8), 64, 64))
     return report_fatal_error(std::move(Err));
 
-  setDefaultNullPointerValue(INT_MAX, 0);
+  setSentinelPointerValue(INT_MAX, 0);
 
   if (Error Err = parseSpecifier(Desc))
     return report_fatal_error(std::move(Err));
@@ -527,7 +527,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       if (Tok.empty()) {
         if (Error Err = getIntForAddrSpace(Rest, Value))
           return Err;
-        setDefaultNullPointerValue(INT_MAX, Value);
+        setSentinelPointerValue(INT_MAX, Value);
         break;
       } else {
         if (Error Err = getInt(Tok, AddrSpace))
@@ -543,7 +543,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return Err;
       if (Error Err = getIntForAddrSpace(Tok, Value))
         return Err;
-      setDefaultNullPointerValue(AddrSpace, Value);
+      setSentinelPointerValue(AddrSpace, Value);
       break;
     }
     case 'G': { // Default address space for global variables.
