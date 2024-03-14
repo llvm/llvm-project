@@ -1490,7 +1490,7 @@ void CombinerHelper::applyOptBrCondByInvertingCond(MachineInstr &MI,
   Observer.changedInstr(*BrCond);
 }
 
- 
+
 bool CombinerHelper::tryEmitMemcpyInline(MachineInstr &MI) {
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
@@ -6369,6 +6369,9 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   if (CondTy != LLT::scalar(1))
     return false;
 
+  if (TrueTy.isPointer())
+    return false;
+
   // Both are scalars.
   std::optional<ValueAndVReg> TrueOpt =
       getIConstantVRegValWithLookThrough(True, MRI);
@@ -6712,6 +6715,9 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   CmpInst::Predicate Pred2 = Cmp2->getCond();
   LLT CmpTy = MRI.getType(Cmp1->getReg(0));
   LLT CmpOperandTy = MRI.getType(R1);
+
+  if (CmpOperandTy.isPointer())
+    return false;
 
   // We build ands, adds, and constants of type CmpOperandTy.
   // They must be legal to build.

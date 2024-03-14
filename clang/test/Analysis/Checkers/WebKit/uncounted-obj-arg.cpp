@@ -199,6 +199,8 @@ public:
   bool trivial23() const { return OptionSet<Flags>::fromRaw(v).contains(Flags::Flag1); }
   int trivial24() const { ASSERT(v); return v; }
   unsigned trivial25() const { return __c11_atomic_load((volatile _Atomic(unsigned) *)&v, __ATOMIC_RELAXED); }
+  bool trivial26() { bool hasValue = v; return !hasValue; }
+  bool trivial27(int v) { bool value; value = v ? 1 : 0; return value; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -262,6 +264,15 @@ public:
     return __c11_atomic_load((volatile _Atomic(unsigned) *)another(), __ATOMIC_RELAXED);
   }
 
+  void nonTrivial11() {
+    Number num(0.3);
+  }
+
+  bool nonTrivial12() {
+    bool val = otherFunction();
+    return val;
+  }
+
   unsigned v { 0 };
   Number* number { nullptr };
   Enum enumValue { Enum::Value1 };
@@ -309,6 +320,8 @@ public:
     getFieldTrivial().trivial23(); // no-warning
     getFieldTrivial().trivial24(); // no-warning
     getFieldTrivial().trivial25(); // no-warning
+    getFieldTrivial().trivial26(); // no-warning
+    getFieldTrivial().trivial27(5); // no-warning
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 
@@ -333,6 +346,10 @@ public:
     getFieldTrivial().nonTrivial9();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial10();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial11();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial12();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };

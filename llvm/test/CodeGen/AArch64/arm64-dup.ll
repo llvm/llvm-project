@@ -373,11 +373,9 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ;
 ; CHECK-GI-LABEL: test_build_illegal:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.h v1[1], v0[0]
 ; CHECK-GI-NEXT:    mov s0, v0[3]
-; CHECK-GI-NEXT:    mov.h v1[2], v0[0]
-; CHECK-GI-NEXT:    mov.h v1[3], v0[0]
-; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    mov.h v0[3], v0[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %val = extractelement <4 x i32> %in, i32 3
   %smallval = trunc i32 %val to i16

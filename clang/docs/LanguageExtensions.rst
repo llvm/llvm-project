@@ -2799,6 +2799,34 @@ counter's true frequency will need to be provided by the user.
 
 Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 
+``__builtin_cpu_supports``
+--------------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_cpu_supports(const char *features);
+
+**Example of Use:**:
+
+.. code-block:: c++
+
+  if (__builtin_cpu_supports("sve"))
+    sve_code();
+
+**Description**:
+
+The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
+features specified in string argument. It returns a positive integer if all
+features are supported and 0 otherwise. Feature names are target specific. On
+AArch64 features are combined using ``+`` like this
+``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
+If a feature name is not supported, Clang will issue a warning and replace
+builtin by the constant 0.
+
+Query for this feature with ``__has_builtin(__builtin_cpu_supports)``.
+
 ``__builtin_dump_struct``
 -------------------------
 
@@ -3477,7 +3505,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 -----------------------
 
 ``__builtin_popcountg`` returns the number of 1 bits in the argument. The
-argument can be of any integer type.
+argument can be of any unsigned integer type.
 
 **Syntax**:
 
@@ -3489,20 +3517,20 @@ argument can be of any integer type.
 
 .. code-block:: c++
 
-  int x = 1;
+  unsigned int x = 1;
   int x_pop = __builtin_popcountg(x);
 
   unsigned long y = 3;
   int y_pop = __builtin_popcountg(y);
 
-  _BitInt(128) z = 7;
+  unsigned _BitInt(128) z = 7;
   int z_pop = __builtin_popcountg(z);
 
 **Description**:
 
 ``__builtin_popcountg`` is meant to be a type-generic alternative to the
 ``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
-such as ``__int128`` and C23 ``_BitInt(N)``.
+such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -5350,6 +5378,7 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_popcount``
 * ``__builtin_popcountl``
 * ``__builtin_popcountll``
+* ``__builtin_popcountg``
 * ``__builtin_rotateleft8``
 * ``__builtin_rotateleft16``
 * ``__builtin_rotateleft32``

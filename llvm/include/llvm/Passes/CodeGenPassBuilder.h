@@ -111,7 +111,8 @@ namespace llvm {
 /// construction.
 template <typename DerivedT> class CodeGenPassBuilder {
 public:
-  explicit CodeGenPassBuilder(LLVMTargetMachine &TM, CGPassBuilderOption Opts,
+  explicit CodeGenPassBuilder(LLVMTargetMachine &TM,
+                              const CGPassBuilderOption &Opts,
                               PassInstrumentationCallbacks *PIC)
       : TM(TM), Opt(Opts), PIC(PIC) {
     // Target could set CGPassBuilderOption::MISchedPostRA to true to achieve

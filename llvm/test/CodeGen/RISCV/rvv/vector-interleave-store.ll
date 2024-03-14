@@ -22,7 +22,7 @@ define void @vector_interleave_store_nxv32i1_nxv16i1(<vscale x 16 x i1> %a, <vsc
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    add a2, a1, a1
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v9, v8, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vsm.v v9, (a0)
@@ -112,16 +112,16 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    vid.v v24
 ; CHECK-NEXT:    vand.vi v26, v24, 1
 ; CHECK-NEXT:    vmsne.vi v0, v26, 0
-; CHECK-NEXT:    vsrl.vi v2, v24, 1
+; CHECK-NEXT:    vsrl.vi v6, v24, 1
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
 ; CHECK-NEXT:    add a3, sp, a3
 ; CHECK-NEXT:    addi a3, a3, 16
 ; CHECK-NEXT:    vl8r.v v8, (a3) # Unknown-size Folded Reload
-; CHECK-NEXT:    vadd.vx v2, v2, a2, v0.t
+; CHECK-NEXT:    vadd.vx v6, v6, a2, v0.t
 ; CHECK-NEXT:    vmv4r.v v12, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v24, v8, v2
+; CHECK-NEXT:    vrgatherei16.vv v24, v8, v6
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v24, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    csrr a2, vlenb
@@ -130,7 +130,7 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    addi a2, a2, 16
 ; CHECK-NEXT:    vl8r.v v8, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vrgatherei16.vv v8, v16, v2
+; CHECK-NEXT:    vrgatherei16.vv v8, v16, v6
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vs8r.v v8, (a1)

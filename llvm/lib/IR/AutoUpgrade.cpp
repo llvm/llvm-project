@@ -5129,6 +5129,15 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         Changed = true;
       }
     }
+
+    if (ID->getString() == "amdgpu_code_object_version") {
+      Metadata *Ops[3] = {
+          Op->getOperand(0),
+          MDString::get(M.getContext(), "amdhsa_code_object_version"),
+          Op->getOperand(2)};
+      ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+      Changed = true;
+    }
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We
@@ -5224,6 +5233,72 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+}
+
+// Check if the module attribute is present and not zero.
+static bool isModuleAttributeSet(Module &M, const StringRef &ModAttr) {
+  const auto *Attr =
+      mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
+  return Attr && Attr->getZExtValue();
+}
+
+// Copy an attribute from module to the function if exists.
+// First value of the pair is used when the module attribute is not zero
+// the second otherwise.
+static void
+CopyModuleAttributeToFunction(Function &F, StringRef FnAttrName,
+                              StringRef ModAttrName,
+                              std::pair<StringRef, StringRef> Values) {
+  if (F.hasFnAttribute(FnAttrName))
+    return;
+  F.addFnAttr(FnAttrName, isModuleAttributeSet(*F.getParent(), ModAttrName)
+                              ? Values.first
+                              : Values.second);
+}
+
+// Copy a boolean attribute from module to the function if exists.
+// Module attribute treated false if zero otherwise true.
+static void CopyModuleAttributeToFunction(Function &F, StringRef AttrName) {
+  CopyModuleAttributeToFunction(
+      F, AttrName, AttrName,
+      std::make_pair<StringRef, StringRef>("true", "false"));
+}
+
+// Copy an attribute from module to the function if exists.
+// First value of the pair is used when the module attribute is not zero
+// the second otherwise.
+static void
+CopyModuleAttributeToFunction(Function &F, StringRef AttrName,
+                              std::pair<StringRef, StringRef> Values) {
+  CopyModuleAttributeToFunction(F, AttrName, AttrName, Values);
+}
+
+void llvm::CopyModuleAttrToFunctions(Module &M) {
+  Triple T(M.getTargetTriple());
+  if (!T.isThumb() && !T.isARM() && !T.isAArch64())
+    return;
+
+  for (Function &F : M.getFunctionList()) {
+    if (F.isDeclaration())
+      continue;
+
+    if (!F.hasFnAttribute("sign-return-address")) {
+      StringRef SignType = "none";
+      if (isModuleAttributeSet(M, "sign-return-address"))
+        SignType = "non-leaf";
+
+      if (isModuleAttributeSet(M, "sign-return-address-all"))
+        SignType = "all";
+
+      F.addFnAttr("sign-return-address", SignType);
+    }
+    CopyModuleAttributeToFunction(F, "branch-target-enforcement");
+    CopyModuleAttributeToFunction(F, "branch-protection-pauth-lr");
+    CopyModuleAttributeToFunction(F, "guarded-control-stack");
+    CopyModuleAttributeToFunction(
+        F, "sign-return-address-key",
+        std::make_pair<StringRef, StringRef>("b_key", "a_key"));
+  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {

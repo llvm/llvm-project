@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvalEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
@@ -18,7 +17,7 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk, APValue &Result)
+                         InterpStack &Stk)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
   // Create a dummy frame for the interpreter which does not have locals.
   S.Current =
@@ -38,8 +37,11 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E) && EvalResult.empty())
+  if (!this->visitExpr(E)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
+  }
 
   return std::move(this->EvalResult);
 }
