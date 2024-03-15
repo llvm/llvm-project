@@ -21,16 +21,16 @@ int16_t3 test_clamp_short3(int16_t3 p0, int16_t3 p1) { return clamp(p0, p1,p1); 
 int16_t4 test_clamp_short4(int16_t4 p0, int16_t4 p1) { return clamp(p0, p1,p1); }
 
 // NATIVE_HALF: define noundef i16 @
-// NATIVE_HALF: call i16 @llvm.dx.clamp.i16(
+// NATIVE_HALF: call i16 @llvm.dx.uclamp.i16(
 uint16_t test_clamp_ushort(uint16_t p0, uint16_t p1) { return clamp(p0, p1,p1); }
 // NATIVE_HALF: define noundef <2 x i16> @
-// NATIVE_HALF: call <2 x i16> @llvm.dx.clamp.v2i16
+// NATIVE_HALF: call <2 x i16> @llvm.dx.uclamp.v2i16
 uint16_t2 test_clamp_ushort2(uint16_t2 p0, uint16_t2 p1) { return clamp(p0, p1,p1); }
 // NATIVE_HALF: define noundef <3 x i16> @
-// NATIVE_HALF: call <3 x i16> @llvm.dx.clamp.v3i16
+// NATIVE_HALF: call <3 x i16> @llvm.dx.uclamp.v3i16
 uint16_t3 test_clamp_ushort3(uint16_t3 p0, uint16_t3 p1) { return clamp(p0, p1,p1); }
 // NATIVE_HALF: define noundef <4 x i16> @
-// NATIVE_HALF: call <4 x i16> @llvm.dx.clamp.v4i16
+// NATIVE_HALF: call <4 x i16> @llvm.dx.uclamp.v4i16
 uint16_t4 test_clamp_ushort4(uint16_t4 p0, uint16_t4 p1) { return clamp(p0, p1,p1); }
 #endif
 
@@ -48,16 +48,16 @@ int3 test_clamp_int3(int3 p0, int3 p1) { return clamp(p0, p1,p1); }
 int4 test_clamp_int4(int4 p0, int4 p1) { return clamp(p0, p1,p1); }
 
 // CHECK: define noundef i32 @
-// CHECK: call i32 @llvm.dx.clamp.i32(
+// CHECK: call i32 @llvm.dx.uclamp.i32(
 int test_clamp_uint(uint p0, uint p1) { return clamp(p0, p1,p1); }
 // CHECK: define noundef <2 x i32> @
-// CHECK: call <2 x i32> @llvm.dx.clamp.v2i32
+// CHECK: call <2 x i32> @llvm.dx.uclamp.v2i32
 uint2 test_clamp_uint2(uint2 p0, uint2 p1) { return clamp(p0, p1,p1); }
 // CHECK: define noundef <3 x i32> @
-// CHECK: call <3 x i32> @llvm.dx.clamp.v3i32
+// CHECK: call <3 x i32> @llvm.dx.uclamp.v3i32
 uint3 test_clamp_uint3(uint3 p0, uint3 p1) { return clamp(p0, p1,p1); }
 // CHECK: define noundef <4 x i32> @
-// CHECK: call <4 x i32> @llvm.dx.clamp.v4i32
+// CHECK: call <4 x i32> @llvm.dx.uclamp.v4i32
 uint4 test_clamp_uint4(uint4 p0, uint4 p1) { return clamp(p0, p1,p1); }
 
 // CHECK: define noundef i64 @
@@ -74,16 +74,16 @@ int64_t3 test_clamp_long3(int64_t3 p0, int64_t3 p1) { return clamp(p0, p1,p1); }
 int64_t4 test_clamp_long4(int64_t4 p0, int64_t4 p1) { return clamp(p0, p1,p1); }
 
 // CHECK: define noundef i64 @
-// CHECK: call i64 @llvm.dx.clamp.i64(
+// CHECK: call i64 @llvm.dx.uclamp.i64(
 uint64_t test_clamp_long(uint64_t p0, uint64_t p1) { return clamp(p0, p1,p1); }
 // CHECK: define noundef <2 x i64> @
-// CHECK: call <2 x i64> @llvm.dx.clamp.v2i64
+// CHECK: call <2 x i64> @llvm.dx.uclamp.v2i64
 uint64_t2 test_clamp_long2(uint64_t2 p0, uint64_t2 p1) { return clamp(p0, p1,p1); }
 // CHECK: define noundef <3 x i64> @
-// CHECK: call <3 x i64> @llvm.dx.clamp.v3i64
+// CHECK: call <3 x i64> @llvm.dx.uclamp.v3i64
 uint64_t3 test_clamp_long3(uint64_t3 p0, uint64_t3 p1) { return clamp(p0, p1,p1); }
 // CHECK: define noundef <4 x i64> @
-// CHECK: call <4 x i64> @llvm.dx.clamp.v4i64
+// CHECK: call <4 x i64> @llvm.dx.uclamp.v4i64
 uint64_t4 test_clamp_long4(uint64_t4 p0, uint64_t4 p1) { return clamp(p0, p1,p1); }
 
 // NATIVE_HALF: define noundef half @

@@ -36,6 +36,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::exp:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
+  case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_rcp:
     return true;
@@ -133,35 +134,33 @@ static bool expandRcpIntrinsic(CallInst *Orig) {
   return true;
 }
 
-static Intrinsic::IndependentIntrinsics
-getCorrectMaxIntrinsic(Type *elemTy) {
-  if(elemTy->isVectorTy())
-    elemTy = elemTy->getScalarType();
-  if (elemTy->isIntegerTy()) {
-      const llvm::IntegerType* intType = llvm::cast<llvm::IntegerType>(elemTy);
-      if (intType->getSignBit())
-        return Intrinsic::smax;
+static Intrinsic::ID getCorrectMaxIntrinsic(Type *elemTy,
+                                            Intrinsic::ID clampIntrinsic) {
+  if (clampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
-  }
+  assert(clampIntrinsic == Intrinsic::dx_clamp);
+  if (elemTy->isVectorTy())
+    elemTy = elemTy->getScalarType();
+  if (elemTy->isIntegerTy())
+    return Intrinsic::smax;
   assert(elemTy->isFloatingPointTy());
   return Intrinsic::maxnum;
 }
 
-static Intrinsic::IndependentIntrinsics
-getCorrectMinIntrinsic(Type *elemTy) {
-  if(elemTy->isVectorTy())
-    elemTy = elemTy->getScalarType();
-  if (elemTy->isIntegerTy()) {
-      const llvm::IntegerType* intType = llvm::cast<llvm::IntegerType>(elemTy);
-      if (intType->getSignBit())
-        return Intrinsic::smin;
+static Intrinsic::ID getCorrectMinIntrinsic(Type *elemTy,
+                                            Intrinsic::ID clampIntrinsic) {
+  if (clampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umin;
-  }
+  assert(clampIntrinsic == Intrinsic::dx_clamp);
+  if (elemTy->isVectorTy())
+    elemTy = elemTy->getScalarType();
+  if (elemTy->isIntegerTy())
+    return Intrinsic::smin;
   assert(elemTy->isFloatingPointTy());
   return Intrinsic::minnum;
 }
 
-static bool expandClampIntrinsic(CallInst *Orig) {
+static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID clampIntrinsic) {
   Value *X = Orig->getOperand(0);
   Value *Min = Orig->getOperand(1);
   Value *Max = Orig->getOperand(2);
@@ -169,10 +168,12 @@ static bool expandClampIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
   auto *MaxCall =
-      Builder.CreateIntrinsic(Ty, getCorrectMaxIntrinsic(Ty), {X, Min}, nullptr, "dx.max");
+      Builder.CreateIntrinsic(Ty, getCorrectMaxIntrinsic(Ty, clampIntrinsic),
+                              {X, Min}, nullptr, "dx.max");
   auto *MinCall =
-      Builder.CreateIntrinsic(Ty, getCorrectMinIntrinsic(Ty), {MaxCall, Max}, nullptr, "dx.min");
-  
+      Builder.CreateIntrinsic(Ty, getCorrectMinIntrinsic(Ty, clampIntrinsic),
+                              {MaxCall, Max}, nullptr, "dx.min");
+
   Orig->replaceAllUsesWith(MinCall);
   Orig->eraseFromParent();
   return true;
@@ -184,8 +185,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandExpIntrinsic(Orig);
   case Intrinsic::dx_any:
     return expandAnyIntrinsic(Orig);
+  case Intrinsic::dx_uclamp:
   case Intrinsic::dx_clamp:
-    return expandClampIntrinsic(Orig);
+    return expandClampIntrinsic(Orig, F.getIntrinsicID());
   case Intrinsic::dx_lerp:
     return expandLerpIntrinsic(Orig);
   case Intrinsic::dx_rcp:
