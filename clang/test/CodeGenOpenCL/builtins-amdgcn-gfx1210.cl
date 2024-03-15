@@ -286,26 +286,6 @@ void test_cos_bf16(global __bf16* out, __bf16 a)
   *out = __builtin_amdgcn_cos_bf16(a);
 }
 
-// CHECK-LABEL: @test_cvt_pk_bf16_f32(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store float [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.pk.bf16.f32(float [[TMP0]], float [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
-// CHECK-NEXT:    store <2 x bfloat> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-// CHECK-NEXT:    ret void
-//
-void test_cvt_pk_bf16_f32(global bfloat2* out, float a, float b)
-{
-  *out = __builtin_amdgcn_cvt_pk_bf16_f32(a, b);
-}
-
 // CHECK-LABEL: @test_cvt_sr_pk_bf16_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)

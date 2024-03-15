@@ -476,6 +476,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA = 133,
   ID_RTN_GET_SE_AID_ID = 134,
 
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1210
+
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
 };
