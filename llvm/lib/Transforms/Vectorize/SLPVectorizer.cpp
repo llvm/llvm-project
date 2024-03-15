@@ -10507,7 +10507,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
   APInt ShuffledElements = APInt::getZero(VL.size());
-  DenseSet<Value *> UniqueElements;
+  DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
@@ -10522,15 +10522,20 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
       ShuffledElements.setBit(I);
-      continue;
-    }
-    if (!UniqueElements.insert(V).second) {
-      DuplicateNonConst = true;
-      ShuffledElements.setBit(I);
       ShuffleMask[I] = I;
       continue;
     }
-    EstimateInsertCost(I, V);
+
+    if (!UniqueElements.count(V)) {
+      EstimateInsertCost(I, V);
+      UniqueElements[V] = I;
+      ShuffleMask[I] = I;
+      continue;
+    }
+
+    DuplicateNonConst = true;
+    ShuffledElements.setBit(I);
+    ShuffleMask[I] = UniqueElements[V];
   }
   if (ForPoisonSrc)
     Cost =
