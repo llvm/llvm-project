@@ -910,6 +910,18 @@ namespace TypeTraits {
   struct U {};
   static_assert(S3<U>{}.foo(), "");
   static_assert(!S3<T>{}.foo(), "");
+
+  typedef int Int;
+  typedef Int IntAr[10];
+  typedef const IntAr ConstIntAr;
+  typedef ConstIntAr ConstIntArAr[4];
+
+  static_assert(__array_rank(IntAr) == 1, "");
+  static_assert(__array_rank(ConstIntArAr) == 2, "");
+
+  static_assert(__array_extent(IntAr, 0) == 10, "");
+  static_assert(__array_extent(ConstIntArAr, 0) == 4, "");
+  static_assert(__array_extent(ConstIntArAr, 1) == 10, "");
 }
 
 #if __cplusplus >= 201402L
