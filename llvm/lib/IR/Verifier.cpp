@@ -5275,7 +5275,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     bool IsDestTypeVector = DestTy->isVectorTy();
     Check(SrcTy->isVectorTy() == IsDestTypeVector,
-          "ucmp/scmp argument and result types must both be either vector or scalar types",
+          "ucmp/scmp argument and result types must both be either vector or "
+          "scalar types",
           Call);
     if (IsDestTypeVector) {
       auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
