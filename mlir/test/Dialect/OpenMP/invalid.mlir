@@ -543,7 +543,7 @@ func.func @omp_ordered1(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
   omp.wsloop ordered(1)
   for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{ordered region must be closely nested inside a worksharing-loop region with an ordered clause without parameter present}}
-    omp.ordered_region {
+    omp.ordered.region {
       omp.terminator
     }
     omp.yield
@@ -556,7 +556,7 @@ func.func @omp_ordered1(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
 func.func @omp_ordered2(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
   omp.wsloop for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{ordered region must be closely nested inside a worksharing-loop region with an ordered clause without parameter present}}
-    omp.ordered_region {
+    omp.ordered.region {
       omp.terminator
     }
     omp.yield
@@ -1474,7 +1474,7 @@ func.func @omp_cancel5() -> () {
 func.func @omp_cancellationpoint() {
   omp.sections {
     // expected-error @below {{cancellation point parallel must appear inside a parallel region}}
-    omp.cancellationpoint cancellation_construct_type(parallel)
+    omp.cancellation.point cancellation_construct_type(parallel)
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -1486,7 +1486,7 @@ func.func @omp_cancellationpoint() {
 func.func @omp_cancellationpoint1() {
   omp.parallel {
     // expected-error @below {{cancellation point sections must appear inside a sections region}}
-    omp.cancellationpoint cancellation_construct_type(sections)
+    omp.cancellation.point cancellation_construct_type(sections)
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -1498,7 +1498,7 @@ func.func @omp_cancellationpoint1() {
 func.func @omp_cancellationpoint2() {
   omp.sections {
     // expected-error @below {{cancellation point loop must appear inside a worksharing-loop region}}
-    omp.cancellationpoint cancellation_construct_type(loop)
+    omp.cancellation.point cancellation_construct_type(loop)
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -1642,7 +1642,7 @@ func.func @omp_threadprivate() {
 // -----
 
 func.func @omp_target(%map1: memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
   omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
     ^bb0(%arg0: memref<?xi32>):
@@ -1653,9 +1653,9 @@ func.func @omp_target(%map1: memref<?xi32>) {
 // -----
 
 func.func @omp_target_data(%map1: memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target_data map_entries(%mapv : memref<?xi32>){}
+  omp.target.data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
@@ -1663,114 +1663,114 @@ func.func @omp_target_data(%map1: memref<?xi32>) {
 
 func.func @omp_target_data() {
   // expected-error @below {{At least one of map, useDevicePtr, or useDeviceAddr operand must be present}}
-  omp.target_data {}
+  omp.target.data {}
   return
 }
 
 // -----
 
 func.func @omp_target_enter_data(%map1: memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to and alloc map types are permitted}}
-  omp.target_enter_data map_entries(%mapv : memref<?xi32>){}
+  omp.target.enterdata map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_enter_data_depend(%a: memref<?xi32>) {
-  %0 = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
+  %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target.enterdata map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
   return
 }
 
 // -----
 
 func.func @omp_target_exit_data(%map1: memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{from, release and delete map types are permitted}}
-  omp.target_exit_data map_entries(%mapv : memref<?xi32>){}
+  omp.target.exitdata map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
-  %0 = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
+  %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target.exitdata map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
-  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  omp.target.update motion_entries(%mapv : memref<?xi32>)
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_type_2(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
-  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  omp.target.update motion_entries(%mapv : memref<?xi32>)
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
-  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  omp.target.update motion_entries(%mapv : memref<?xi32>)
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_2(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
-  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  omp.target.update motion_entries(%mapv : memref<?xi32>)
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_3(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
-  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  omp.target.update motion_entries(%mapv : memref<?xi32>)
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_4(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{either to or from map types can be specified, not both}}
-  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  omp.target.update motion_entries(%mapv : memref<?xi32>)
   return
 }
 
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
-  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
-  %mapv2 = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv2 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
 
   // expected-error @below {{either to or from map types can be specified, not both}}
-  omp.target_update_data motion_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
+  omp.target.update motion_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
   return
 }
 llvm.mlir.global internal @_QFsubEx() : i32
@@ -1778,9 +1778,9 @@ llvm.mlir.global internal @_QFsubEx() : i32
 // -----
 
 func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
-  %0 = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
+  %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_update_data motion_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
+  omp.target.update motion_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 0, 0, 1, 0>}
   return
 }
 

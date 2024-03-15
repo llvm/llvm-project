@@ -914,7 +914,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
+def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
                            AutomaticAllocationScope, RecursiveMemoryEffects,
                            AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                            ReductionClauseInterface]> {
@@ -1072,7 +1072,7 @@ def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
+def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
                             ReductionClauseInterface,
                             AutomaticAllocationScope]> {
   let summary = "taskgroup construct";
@@ -1303,7 +1303,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
   let hasVerifier = 1;
 }
 
-def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
+def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
@@ -1338,7 +1338,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
     =>
     ```mlir
-    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
+    omp.map.info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
       name(index)
     ```
 
@@ -1391,8 +1391,8 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
-                                             MapClauseOwningOpInterface]>{
+def TargetDataOp: OpenMP_Op<"target.data", [AttrSizedOperandSegments,
+                                            MapClauseOwningOpInterface]>{
   let summary = "target data construct";
   let description = [{
     Map variables to a device data environment for the extent of the region.
@@ -1448,7 +1448,7 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 // 2.14.3 target enter data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
+def TargetEnterDataOp: OpenMP_Op<"target.enterdata",
                                                  [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target enter data construct";
@@ -1502,7 +1502,7 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
 // 2.14.4 target exit data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
+def TargetExitDataOp: OpenMP_Op<"target.exitdata",
                                                  [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target exit data construct";
@@ -1553,13 +1553,12 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 }
 
 //===---------------------------------------------------------------------===//
-// 2.14.6 target update data Construct
+// 2.14.6 target update Construct
 //===---------------------------------------------------------------------===//
 
-def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
-                                                 [AttrSizedOperandSegments,
-                                                  MapClauseOwningOpInterface]>{
-  let  summary = "target update data construct";
+def TargetUpdateOp: OpenMP_Op<"target.update", [AttrSizedOperandSegments,
+                                                MapClauseOwningOpInterface]>{
+  let  summary = "target update construct";
   let description = [{
     The target update directive makes the corresponding list items in the device
     data environment consistent with their original list items, according to the
@@ -1613,7 +1612,7 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, MapClauseOwningOpInterface,
+def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterface,
                                    OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
@@ -1782,7 +1781,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
   let hasVerifier = 1;
 }
 
-def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
+def OrderedRegionOp : OpenMP_Op<"ordered.region"> {
   let summary = "ordered construct with region";
   let description = [{
     The ordered construct with region specifies a structured block in a
@@ -2113,7 +2112,7 @@ def CancelOp : OpenMP_Op<"cancel"> {
 //===----------------------------------------------------------------------===//
 // 2.18.2 Cancellation Point Construct
 //===----------------------------------------------------------------------===//
-def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
+def CancellationPointOp : OpenMP_Op<"cancellation.point"> {
   let summary = "cancellation point directive";
   let description = [{
     The cancellation point construct introduces a user-defined cancellation

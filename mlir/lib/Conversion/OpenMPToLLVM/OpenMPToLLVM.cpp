@@ -239,8 +239,9 @@ void mlir::configureOpenMPToLLVMConversionLegality(
     ConversionTarget &target, LLVMTypeConverter &typeConverter) {
   target.addDynamicallyLegalOp<
       mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp, mlir::omp::FlushOp,
-      mlir::omp::ThreadprivateOp, mlir::omp::YieldOp, mlir::omp::EnterDataOp,
-      mlir::omp::ExitDataOp, mlir::omp::UpdateDataOp, mlir::omp::DataBoundsOp,
+      mlir::omp::ThreadprivateOp, mlir::omp::YieldOp,
+      mlir::omp::TargetEnterDataOp, mlir::omp::TargetExitDataOp,
+      mlir::omp::TargetUpdateOp, mlir::omp::DataBoundsOp,
       mlir::omp::MapInfoOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getOperandTypes()) &&
            typeConverter.isLegal(op->getResultTypes());
@@ -250,10 +251,11 @@ void mlir::configureOpenMPToLLVMConversionLegality(
   });
   target.addDynamicallyLegalOp<
       mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::TargetOp,
-      mlir::omp::DataOp, mlir::omp::OrderedRegionOp, mlir::omp::ParallelOp,
-      mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp, mlir::omp::MasterOp,
-      mlir::omp::SectionOp, mlir::omp::SectionsOp, mlir::omp::SingleOp,
-      mlir::omp::TaskGroupOp, mlir::omp::TaskOp, mlir::omp::ReductionDeclareOp,
+      mlir::omp::TargetDataOp, mlir::omp::OrderedRegionOp,
+      mlir::omp::ParallelOp, mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp,
+      mlir::omp::MasterOp, mlir::omp::SectionOp, mlir::omp::SectionsOp,
+      mlir::omp::SingleOp, mlir::omp::TaskgroupOp, mlir::omp::TaskOp,
+      mlir::omp::ReductionDeclareOp,
       mlir::omp::PrivateClauseOp>([&](Operation *op) {
     return std::all_of(op->getRegions().begin(), op->getRegions().end(),
                        [&](Region &region) {
@@ -281,16 +283,16 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsLoopOp>,
       RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SectionOp>,
       RegionOpConversion<omp::SimdLoopOp>, RegionOpConversion<omp::SingleOp>,
-      RegionOpConversion<omp::TaskGroupOp>, RegionOpConversion<omp::TaskOp>,
-      RegionOpConversion<omp::DataOp>, RegionOpConversion<omp::TargetOp>,
+      RegionOpConversion<omp::TaskgroupOp>, RegionOpConversion<omp::TaskOp>,
+      RegionOpConversion<omp::TargetDataOp>, RegionOpConversion<omp::TargetOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
       RegionOpWithVarOperandsConversion<omp::AtomicUpdateOp>,
       RegionLessOpWithVarOperandsConversion<omp::FlushOp>,
       RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>,
       RegionLessOpConversion<omp::YieldOp>,
-      RegionLessOpConversion<omp::EnterDataOp>,
-      RegionLessOpConversion<omp::ExitDataOp>,
-      RegionLessOpConversion<omp::UpdateDataOp>,
+      RegionLessOpConversion<omp::TargetEnterDataOp>,
+      RegionLessOpConversion<omp::TargetExitDataOp>,
+      RegionLessOpConversion<omp::TargetUpdateOp>,
       RegionLessOpWithVarOperandsConversion<omp::DataBoundsOp>>(converter);
 }
 

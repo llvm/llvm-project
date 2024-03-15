@@ -783,7 +783,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
 /// Converts an OpenMP taskgroup construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
-convertOmpTaskgroupOp(omp::TaskGroupOp tgOp, llvm::IRBuilderBase &builder,
+convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   LogicalResult bodyGenStatus = success();
@@ -2279,7 +2279,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
-          .Case([&](omp::DataOp dataOp) {
+          .Case([&](omp::TargetDataOp dataOp) {
             if (auto ifExprVar = dataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
 
@@ -2294,7 +2294,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             useDevAddrOperands = dataOp.getUseDeviceAddr();
             return success();
           })
-          .Case([&](omp::EnterDataOp enterDataOp) {
+          .Case([&](omp::TargetEnterDataOp enterDataOp) {
             if (enterDataOp.getNowait())
               return (LogicalResult)(enterDataOp.emitError(
                   "`nowait` is not supported yet"));
@@ -2311,7 +2311,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             mapOperands = enterDataOp.getMapOperands();
             return success();
           })
-          .Case([&](omp::ExitDataOp exitDataOp) {
+          .Case([&](omp::TargetExitDataOp exitDataOp) {
             if (exitDataOp.getNowait())
               return (LogicalResult)(exitDataOp.emitError(
                   "`nowait` is not supported yet"));
@@ -2329,7 +2329,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             mapOperands = exitDataOp.getMapOperands();
             return success();
           })
-          .Case([&](omp::UpdateDataOp updateDataOp) {
+          .Case([&](omp::TargetUpdateOp updateDataOp) {
             if (updateDataOp.getNowait())
               return (LogicalResult)(updateDataOp.emitError(
                   "`nowait` is not supported yet"));
@@ -2366,7 +2366,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   auto genMapInfoCB =
       [&](InsertPointTy codeGenIP) -> llvm::OpenMPIRBuilder::MapInfosTy & {
     builder.restoreIP(codeGenIP);
-    if (auto dataOp = dyn_cast<omp::DataOp>(op)) {
+    if (auto dataOp = dyn_cast<omp::TargetDataOp>(op)) {
       genMapInfos(builder, moduleTranslation, DL, combinedInfo, mapData,
                   useDevPtrOperands, useDevAddrOperands);
     } else {
@@ -2381,8 +2381,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
   LogicalResult bodyGenStatus = success();
   auto bodyGenCB = [&](InsertPointTy codeGenIP, BodyGenTy bodyGenType) {
-    assert(isa<omp::DataOp>(op) && "BodyGen requested for non DataOp");
-    Region &region = cast<omp::DataOp>(op).getRegion();
+    assert(isa<omp::TargetDataOp>(op) &&
+           "BodyGen requested for non TargetDataOp");
+    Region &region = cast<omp::TargetDataOp>(op).getRegion();
     switch (bodyGenType) {
     case BodyGenTy::Priv:
       // Check if any device ptr/addr info is available
@@ -2427,7 +2428,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
-  if (isa<omp::DataOp>(op)) {
+  if (isa<omp::TargetDataOp>(op)) {
     builder.restoreIP(ompBuilder->createTargetData(
         ompLoc, allocaIP, builder.saveIP(), builder.getInt64(deviceID), ifCond,
         info, genMapInfoCB, nullptr, bodyGenCB));
@@ -3162,7 +3163,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::TaskOp op) {
         return convertOmpTaskOp(op, builder, moduleTranslation);
       })
-      .Case([&](omp::TaskGroupOp op) {
+      .Case([&](omp::TaskgroupOp op) {
         return convertOmpTaskgroupOp(op, builder, moduleTranslation);
       })
       .Case<omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp,
@@ -3180,18 +3181,18 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::ThreadprivateOp) {
         return convertOmpThreadprivate(*op, builder, moduleTranslation);
       })
-      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp, omp::UpdateDataOp>(
-          [&](auto op) {
-            return convertOmpTargetData(op, builder, moduleTranslation);
-          })
+      .Case<omp::TargetDataOp, omp::TargetEnterDataOp, omp::TargetExitDataOp,
+            omp::TargetUpdateOp>([&](auto op) {
+        return convertOmpTargetData(op, builder, moduleTranslation);
+      })
       .Case([&](omp::TargetOp) {
         return convertOmpTarget(*op, builder, moduleTranslation);
       })
       .Case<omp::MapInfoOp, omp::DataBoundsOp, omp::PrivateClauseOp>(
           [&](auto op) {
             // No-op, should be handled by relevant owning operations e.g.
-            // TargetOp, EnterDataOp, ExitDataOp, DataOp etc. and then
-            // discarded
+            // TargetOp, TargetEnterDataOp, TargetExitDataOp, TargetDataOp etc.
+            // and then discarded
             return success();
           })
       .Default([&](Operation *inst) {

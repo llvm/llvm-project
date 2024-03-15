@@ -465,7 +465,7 @@ static void genBodyOfTargetDataOp(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
-    mlir::omp::DataOp &dataOp, llvm::ArrayRef<mlir::Type> useDeviceTypes,
+    mlir::omp::TargetDataOp &dataOp, llvm::ArrayRef<mlir::Type> useDeviceTypes,
     llvm::ArrayRef<mlir::Location> useDeviceLocs,
     llvm::ArrayRef<const Fortran::semantics::Symbol *> useDeviceSymbols,
     const mlir::Location &currentLocation) {
@@ -775,8 +775,8 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands, allocateOperands, allocatorOperands);
 }
 
-static mlir::omp::TaskGroupOp
-genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
+static mlir::omp::TaskgroupOp
+genTaskgroupOp(Fortran::lower::AbstractConverter &converter,
                Fortran::semantics::SemanticsContext &semaCtx,
                Fortran::lower::pft::Evaluation &eval, bool genNested,
                mlir::Location currentLocation,
@@ -786,7 +786,7 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processTODO<Fortran::parser::OmpClause::TaskReduction>(
       currentLocation, llvm::omp::Directive::OMPD_taskgroup);
-  return genOpWithBody<mlir::omp::TaskGroupOp>(
+  return genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setClauses(&clauseList),
@@ -847,12 +847,12 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
   }
 }
 
-static mlir::omp::DataOp
-genDataOp(Fortran::lower::AbstractConverter &converter,
-          Fortran::semantics::SemanticsContext &semaCtx,
-          Fortran::lower::pft::Evaluation &eval, bool genNested,
-          mlir::Location currentLocation,
-          const Fortran::parser::OmpClauseList &clauseList) {
+static mlir::omp::TargetDataOp
+genTargetDataOp(Fortran::lower::AbstractConverter &converter,
+                Fortran::semantics::SemanticsContext &semaCtx,
+                Fortran::lower::pft::Evaluation &eval, bool genNested,
+                mlir::Location currentLocation,
+                const Fortran::parser::OmpClauseList &clauseList) {
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value ifClauseOperand, deviceOperand;
   llvm::SmallVector<mlir::Value> mapOperands, devicePtrOperands,
@@ -885,7 +885,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   cp.processMap(currentLocation, llvm::omp::Directive::OMPD_target_data,
                 stmtCtx, mapOperands);
 
-  auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
+  auto dataOp = converter.getFirOpBuilder().create<mlir::omp::TargetDataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
       deviceAddrOperands, mapOperands);
   genBodyOfTargetDataOp(converter, semaCtx, eval, genNested, dataOp,
@@ -896,7 +896,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
 
 template <typename OpTy>
 static OpTy
-genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
+genTargetEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
                          Fortran::semantics::SemanticsContext &semaCtx,
                          mlir::Location currentLocation,
                          const Fortran::parser::OmpClauseList &clauseList) {
@@ -910,13 +910,13 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   clause::If::DirectiveNameModifier directiveName;
   // GCC 9.3.0 emits a (probably) bogus warning about an unused variable.
   [[maybe_unused]] llvm::omp::Directive directive;
-  if constexpr (std::is_same_v<OpTy, mlir::omp::EnterDataOp>) {
+  if constexpr (std::is_same_v<OpTy, mlir::omp::TargetEnterDataOp>) {
     directiveName = clause::If::DirectiveNameModifier::TargetEnterData;
     directive = llvm::omp::Directive::OMPD_target_enter_data;
-  } else if constexpr (std::is_same_v<OpTy, mlir::omp::ExitDataOp>) {
+  } else if constexpr (std::is_same_v<OpTy, mlir::omp::TargetExitDataOp>) {
     directiveName = clause::If::DirectiveNameModifier::TargetExitData;
     directive = llvm::omp::Directive::OMPD_target_exit_data;
-  } else if constexpr (std::is_same_v<OpTy, mlir::omp::UpdateDataOp>) {
+  } else if constexpr (std::is_same_v<OpTy, mlir::omp::TargetUpdateOp>) {
     directiveName = clause::If::DirectiveNameModifier::TargetUpdate;
     directive = llvm::omp::Directive::OMPD_target_update;
   } else {
@@ -929,7 +929,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
 
-  if constexpr (std::is_same_v<OpTy, mlir::omp::UpdateDataOp>) {
+  if constexpr (std::is_same_v<OpTy, mlir::omp::TargetUpdateOp>) {
     cp.processMotionClauses<Fortran::parser::OmpClause::To>(stmtCtx,
                                                             mapOperands);
     cp.processMotionClauses<Fortran::parser::OmpClause::From>(stmtCtx,
@@ -1401,19 +1401,19 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::TaskyieldOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, semaCtx, eval, genNested, currentLocation,
-              opClauseList);
+    genTargetDataOp(converter, semaCtx, eval, genNested, currentLocation,
+                    opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
-    genEnterExitUpdateDataOp<mlir::omp::EnterDataOp>(
+    genTargetEnterExitUpdateDataOp<mlir::omp::TargetEnterDataOp>(
         converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_exit_data:
-    genEnterExitUpdateDataOp<mlir::omp::ExitDataOp>(
+    genTargetEnterExitUpdateDataOp<mlir::omp::TargetExitDataOp>(
         converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_update:
-    genEnterExitUpdateDataOp<mlir::omp::UpdateDataOp>(
+    genTargetEnterExitUpdateDataOp<mlir::omp::TargetUpdateOp>(
         converter, semaCtx, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_ordered:
@@ -1898,15 +1898,15 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                 beginClauseList, directive.v);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
-              beginClauseList);
+    genTargetDataOp(converter, semaCtx, eval, /*genNested=*/true,
+                    currentLocation, beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_task:
     genTaskOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
               beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_taskgroup:
-    genTaskGroupOp(converter, semaCtx, eval, /*genNested=*/true,
+    genTaskgroupOp(converter, semaCtx, eval, /*genNested=*/true,
                    currentLocation, beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_teams:

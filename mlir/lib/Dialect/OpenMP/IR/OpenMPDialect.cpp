@@ -1112,18 +1112,18 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapOperands) {
       bool implicit = mapTypeToBitFlag(
           mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
 
-      if ((isa<DataOp>(op) || isa<TargetOp>(op)) && del)
+      if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
         return emitError(op->getLoc(),
                          "to, from, tofrom and alloc map types are permitted");
 
-      if (isa<EnterDataOp>(op) && (from || del))
+      if (isa<TargetEnterDataOp>(op) && (from || del))
         return emitError(op->getLoc(), "to and alloc map types are permitted");
 
-      if (isa<ExitDataOp>(op) && to)
+      if (isa<TargetExitDataOp>(op) && to)
         return emitError(op->getLoc(),
                          "from, release and delete map types are permitted");
 
-      if (isa<UpdateDataOp>(op)) {
+      if (isa<TargetUpdateOp>(op)) {
         if (del) {
           return emitError(op->getLoc(),
                            "at least one of to or from map types must be "
@@ -1161,7 +1161,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapOperands) {
   return success();
 }
 
-LogicalResult DataOp::verify() {
+LogicalResult TargetDataOp::verify() {
   if (getMapOperands().empty() && getUseDevicePtr().empty() &&
       getUseDeviceAddr().empty()) {
     return ::emitError(this->getLoc(), "At least one of map, useDevicePtr, or "
@@ -1170,21 +1170,21 @@ LogicalResult DataOp::verify() {
   return verifyMapClause(*this, getMapOperands());
 }
 
-LogicalResult EnterDataOp::verify() {
+LogicalResult TargetEnterDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDepends(), getDependVars());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapOperands());
 }
 
-LogicalResult ExitDataOp::verify() {
+LogicalResult TargetExitDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDepends(), getDependVars());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapOperands());
 }
 
-LogicalResult UpdateDataOp::verify() {
+LogicalResult TargetUpdateOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDepends(), getDependVars());
   return failed(verifyDependVars) ? verifyDependVars
@@ -1617,17 +1617,17 @@ LogicalResult TaskOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// TaskGroupOp
+// TaskgroupOp
 //===----------------------------------------------------------------------===//
-LogicalResult TaskGroupOp::verify() {
+LogicalResult TaskgroupOp::verify() {
   return verifyReductionVarList(*this, getTaskReductions(),
                                 getTaskReductionVars());
 }
 
 //===----------------------------------------------------------------------===//
-// TaskLoopOp
+// TaskloopOp
 //===----------------------------------------------------------------------===//
-SmallVector<Value> TaskLoopOp::getAllReductionVars() {
+SmallVector<Value> TaskloopOp::getAllReductionVars() {
   SmallVector<Value> allReductionNvars(getInReductionVars().begin(),
                                        getInReductionVars().end());
   allReductionNvars.insert(allReductionNvars.end(), getReductionVars().begin(),
@@ -1635,7 +1635,7 @@ SmallVector<Value> TaskLoopOp::getAllReductionVars() {
   return allReductionNvars;
 }
 
-LogicalResult TaskLoopOp::verify() {
+LogicalResult TaskloopOp::verify() {
   if (getAllocateVars().size() != getAllocatorsVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");

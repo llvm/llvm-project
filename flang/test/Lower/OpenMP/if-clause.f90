@@ -191,18 +191,18 @@ program main
   ! ----------------------------------------------------------------------------
   ! TARGET DATA
   ! ----------------------------------------------------------------------------
-  ! CHECK:      omp.target_data
+  ! CHECK:      omp.target.data
   ! CHECK-NOT:  if({{.*}})
   ! CHECK-SAME: {
   !$omp target data map(tofrom: i)
   !$omp end target data
 
-  ! CHECK:      omp.target_data
+  ! CHECK:      omp.target.data
   ! CHECK-SAME: if({{.*}})
   !$omp target data map(tofrom: i) if(.true.)
   !$omp end target data
 
-  ! CHECK:      omp.target_data
+  ! CHECK:      omp.target.data
   ! CHECK-SAME: if({{.*}})
   !$omp target data map(tofrom: i) if(target data: .true.)
   !$omp end target data
@@ -210,32 +210,32 @@ program main
   ! ----------------------------------------------------------------------------
   ! TARGET ENTER DATA
   ! ----------------------------------------------------------------------------
-  ! CHECK:      omp.target_enter_data
+  ! CHECK:      omp.target.enterdata
   ! CHECK-NOT:  if({{.*}})
   ! CHECK-SAME: map
   !$omp target enter data map(to: i)
 
-  ! CHECK:      omp.target_enter_data
+  ! CHECK:      omp.target.enterdata
   ! CHECK-SAME: if({{.*}})
   !$omp target enter data map(to: i) if(.true.)
 
-  ! CHECK:      omp.target_enter_data
+  ! CHECK:      omp.target.enterdata
   ! CHECK-SAME: if({{.*}})
   !$omp target enter data map(to: i) if(target enter data: .true.)
 
   ! ----------------------------------------------------------------------------
   ! TARGET EXIT DATA
   ! ----------------------------------------------------------------------------
-  ! CHECK:      omp.target_exit_data
+  ! CHECK:      omp.target.exitdata
   ! CHECK-NOT:  if({{.*}})
   ! CHECK-SAME: map
   !$omp target exit data map(from: i)
 
-  ! CHECK:      omp.target_exit_data
+  ! CHECK:      omp.target.exitdata
   ! CHECK-SAME: if({{.*}})
   !$omp target exit data map(from: i) if(.true.)
 
-  ! CHECK:      omp.target_exit_data
+  ! CHECK:      omp.target.exitdata
   ! CHECK-SAME: if({{.*}})
   !$omp target exit data map(from: i) if(target exit data: .true.)
 
