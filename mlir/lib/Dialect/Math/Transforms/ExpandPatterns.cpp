@@ -108,7 +108,7 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
   Value sign = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT,
                                               op.getOperand(), zero);
-  sign = rewriter.create<arith::SIToFPOp>(loc, floatType, sign);
+  sign = rewriter.create<arith::UIToFPOp>(loc, floatType, sign);
   sign = rewriter.create<arith::MulFOp>(loc, sign, negTwo);
   sign = rewriter.create<arith::AddFOp>(loc, sign, one);
 
