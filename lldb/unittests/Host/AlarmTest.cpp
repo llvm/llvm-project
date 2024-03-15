@@ -46,7 +46,7 @@ TEST(AlarmTest, Create) {
                                     ALARM_TIMEOUT);
 
     alarm.Create([&callbacks_actual, &m, i]() {
-      std::lock_guard guard(m);
+      std::lock_guard<std::mutex> guard(m);
       callbacks_actual[i] = std::chrono::system_clock::now();
     });
 
@@ -75,7 +75,7 @@ TEST(AlarmTest, Exit) {
       callbacks.emplace_back(false);
 
       handles.push_back(alarm.Create([&callbacks, &m, i]() {
-        std::lock_guard guard(m);
+        std::lock_guard<std::mutex> guard(m);
         callbacks[i] = true;
       }));
     }
@@ -101,7 +101,7 @@ TEST(AlarmTest, Cancel) {
     callbacks.emplace_back(false);
 
     handles.push_back(alarm.Create([&callbacks, &m, i]() {
-      std::lock_guard guard(m);
+      std::lock_guard<std::mutex> guard(m);
       callbacks[i] = true;
     }));
   }
@@ -137,7 +137,7 @@ TEST(AlarmTest, Restart) {
                                     ALARM_TIMEOUT);
 
     handles.push_back(alarm.Create([&callbacks_actual, &m, i]() {
-      std::lock_guard guard(m);
+      std::lock_guard<std::mutex> guard(m);
       callbacks_actual[i] = std::chrono::system_clock::now();
     }));
 
