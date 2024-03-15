@@ -1798,8 +1798,10 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
               dyn_cast<llvm::GetElementPtrInst>(Load->getPointerOperand())) {
         if (llvm::Instruction *Pointer =
                 dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
-          CGF.getDebugInfo()->EmitPseudoVariable(
-              Builder, Pointer, E->getBase()->getType());
+          QualType Ty = E->getBase()->getType();
+          if (!E->isArrow())
+            Ty = CGF.getContext().getPointerType(Ty);
+          CGF.getDebugInfo()->EmitPseudoVariable(Builder, Pointer, Ty);
         }
       }
     }
