@@ -26,7 +26,7 @@
 template <typename T>
 static Fortran::semantics::Scope *GetScope(
     Fortran::semantics::SemanticsContext &context, const T &x) {
-  std::optional<Fortran::parser::CharBlock> source{GetSource(x)};
+  std::optional<Fortran::parser::CharBlock> source{GetLastSource(x)};
   return source ? &context.FindScope(*source) : nullptr;
 }
 
@@ -487,6 +487,9 @@ public:
       const auto namePair{
           currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
       auto &newSymbol{*namePair.first->second};
+      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+        newSymbol.attrs().set(Attr::INTRINSIC);
+      }
       name->symbol = &newSymbol;
     };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {

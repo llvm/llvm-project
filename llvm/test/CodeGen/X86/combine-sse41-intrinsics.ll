@@ -160,6 +160,53 @@ define <16 x i8> @demandedelts_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> 
   ret <16 x i8> %5
 }
 
+define <4 x float> @demandedbits_sitofp_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x i32> %a2) {
+; SSE-LABEL: demandedbits_sitofp_blendvps:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm0, %xmm3
+; SSE-NEXT:    cvtdq2ps %xmm2, %xmm0
+; SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm3
+; SSE-NEXT:    movaps %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: demandedbits_sitofp_blendvps:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; AVX-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cvt = sitofp <4 x i32> %a2 to <4 x float>
+  %sel = tail call noundef <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %cvt)
+  ret <4 x float> %sel
+}
+
+define <4 x float> @demandedbits_uitofp_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x i32> %a2) {
+; SSE-LABEL: demandedbits_uitofp_blendvps:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm0, %xmm3
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [1258291200,1258291200,1258291200,1258291200]
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
+; SSE-NEXT:    psrld $16, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0],mem[1],xmm2[2],mem[3],xmm2[4],mem[5],xmm2[6],mem[7]
+; SSE-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    addps %xmm2, %xmm0
+; SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm3
+; SSE-NEXT:    movaps %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: demandedbits_uitofp_blendvps:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],mem[1],xmm2[2],mem[3],xmm2[4],mem[5],xmm2[6],mem[7]
+; AVX-NEXT:    vpsrld $16, %xmm2, %xmm2
+; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],mem[1],xmm2[2],mem[3],xmm2[4],mem[5],xmm2[6],mem[7]
+; AVX-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX-NEXT:    vaddps %xmm2, %xmm3, %xmm2
+; AVX-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cvt = uitofp <4 x i32> %a2 to <4 x float>
+  %sel = tail call noundef <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %cvt)
+  ret <4 x float> %sel
+}
+
 define <2 x i64> @demandedbits_blendvpd(i64 %a0, i64 %a2, <2 x double> %a3) {
 ; SSE-LABEL: demandedbits_blendvpd:
 ; SSE:       # %bb.0:

@@ -65,9 +65,8 @@ if.end:                                           ; preds = %if.then, %entry
 define zeroext i1 @test8_0(i8 zeroext %x)  align 2 {
 ; CHECK-LABEL: test8_0:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    add w8, w0, #74
-; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #236
+; CHECK-NEXT:    sub w8, w0, #182
+; CHECK-NEXT:    cmn w8, #20
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
@@ -508,16 +507,17 @@ define i64 @pr58109(i8 signext %0) {
 define i64 @pr58109b(i8 signext %0, i64 %a, i64 %b) {
 ; CHECK-SD-LABEL: pr58109b:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, #1
-; CHECK-SD-NEXT:    tst w8, #0xfe
-; CHECK-SD-NEXT:    csel x0, x1, x2, eq
+; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    sub w8, w8, #255
+; CHECK-SD-NEXT:    cmn w8, #254
+; CHECK-SD-NEXT:    csel x0, x1, x2, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: pr58109b:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, #1
-; CHECK-GI-NEXT:    and w8, w8, #0xff
-; CHECK-GI-NEXT:    cmp w8, #2
+; CHECK-GI-NEXT:    mov w8, #-255 ; =0xffffff01
+; CHECK-GI-NEXT:    add w8, w8, w0, uxtb
+; CHECK-GI-NEXT:    cmn w8, #254
 ; CHECK-GI-NEXT:    csel x0, x1, x2, lo
 ; CHECK-GI-NEXT:    ret
   %2 = add i8 %0, 1

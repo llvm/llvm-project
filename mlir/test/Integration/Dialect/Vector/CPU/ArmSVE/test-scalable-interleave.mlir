@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_arm_runner_utils | \
+// RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_arm_runner_utils \
+// RUN:   -march=aarch64 -mattr=+sve | \
 // RUN: FileCheck %s
 
 func.func @entry() {

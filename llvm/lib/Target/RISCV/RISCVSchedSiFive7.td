@@ -186,9 +186,10 @@ class SiFive7AnyToGPRBypass<SchedRead read, int cycles = 2>
                                  WriteBEXT, WriteBEXTI,
                                  WriteCLZ, WriteCLZ32, WriteCTZ, WriteCTZ32,
                                  WriteCPOP, WriteCPOP32,
-                                 WriteREV8, WriteORCB, WriteSFB,
+                                 WriteREV8, WriteORCB, WriteIMinMax, WriteSFB,
                                  WriteIMul, WriteIMul32,
                                  WriteIDiv, WriteIDiv32,
+                                 WriteIRem, WriteIRem32,
                                  WriteLDB, WriteLDH, WriteLDW, WriteLDD]>;
 
 // SiFive7 machine model for scheduling and other instruction cost heuristics.
@@ -198,6 +199,7 @@ def SiFive7Model : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 3;
   let CompleteModel = 0;
+  let PostRAScheduler = true;
   let EnableIntervals = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
@@ -272,6 +274,16 @@ def : WriteRes<WriteIDiv32,  [SiFive7PipeB, SiFive7IDiv]> {
   let ReleaseAtCycles = [1, 33];
 }
 
+// Integer remainder
+def : WriteRes<WriteIRem, [SiFive7PipeB, SiFive7IDiv]> {
+  let Latency = 66;
+  let ReleaseAtCycles = [1, 65];
+}
+def : WriteRes<WriteIRem32,  [SiFive7PipeB, SiFive7IDiv]> {
+  let Latency = 34;
+  let ReleaseAtCycles = [1, 33];
+}
+
 // Bitmanip
 let Latency = 3 in {
 // Rotates are in the late-B ALU.
@@ -292,6 +304,9 @@ def : WriteRes<WriteCPOP32, [SiFive7PipeB]>;
 
 // orc.b is in the late-B ALU.
 def : WriteRes<WriteORCB, [SiFive7PipeB]>;
+
+// min/max are in the late-B ALU
+def : WriteRes<WriteIMinMax, [SiFive7PipeB]>;
 
 // rev8 is in the late-A and late-B ALUs.
 def : WriteRes<WriteREV8, [SiFive7PipeAB]>;
@@ -875,10 +890,10 @@ foreach mx = SchedMxList in {
 
 // 16. Vector Permutation Instructions
 let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 1)] in {
-  def : WriteRes<WriteVIMovVX, [SiFive7VCQ, SiFive7VA]>;
-  def : WriteRes<WriteVIMovXV, [SiFive7VCQ, SiFive7VA]>;
-  def : WriteRes<WriteVFMovVF, [SiFive7VCQ, SiFive7VA]>;
-  def : WriteRes<WriteVFMovFV, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovSX, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovXS, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovSF, [SiFive7VCQ, SiFive7VA]>;
+  def : WriteRes<WriteVMovFS, [SiFive7VCQ, SiFive7VA]>;
 }
 foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
@@ -945,6 +960,8 @@ def : SiFive7AnyToGPRBypass<ReadShiftReg>;
 def : SiFive7AnyToGPRBypass<ReadShiftReg32>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;
@@ -1027,6 +1044,7 @@ def : SiFive7AnyToGPRBypass<ReadCTZ32>;
 def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : SiFive7AnyToGPRBypass<ReadORCB>;
+def : SiFive7AnyToGPRBypass<ReadIMinMax>;
 def : SiFive7AnyToGPRBypass<ReadREV8>;
 def : SiFive7AnyToGPRBypass<ReadSHXADD>;
 def : SiFive7AnyToGPRBypass<ReadSHXADD32>;
@@ -1176,12 +1194,12 @@ defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 17. Vector Permutation Instructions
-def : ReadAdvance<ReadVIMovVX, 0>;
-def : ReadAdvance<ReadVIMovXV, 0>;
-def : ReadAdvance<ReadVIMovXX, 0>;
-def : ReadAdvance<ReadVFMovVF, 0>;
-def : ReadAdvance<ReadVFMovFV, 0>;
-def : ReadAdvance<ReadVFMovFX, 0>;
+def : ReadAdvance<ReadVMovXS, 0>;
+def : ReadAdvance<ReadVMovSX_V, 0>;
+def : ReadAdvance<ReadVMovSX_X, 0>;
+def : ReadAdvance<ReadVMovFS, 0>;
+def : ReadAdvance<ReadVMovSF_V, 0>;
+def : ReadAdvance<ReadVMovSF_F, 0>;
 defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;

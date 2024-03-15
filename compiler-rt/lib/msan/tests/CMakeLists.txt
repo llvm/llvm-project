@@ -10,7 +10,8 @@ set(MSAN_LIBCXX_CFLAGS
   -fsanitize-memory-track-origins
   -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
   -Wno-pedantic
-  -Xclang -fdepfile-entry=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
+    # Do not instrument __gxx_personality_v0 (part of libcxxabi)
+  -fsanitize-ignorelist=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
   )
 
 # Unittest sources and build flags.
@@ -69,7 +70,7 @@ macro(msan_compile obj_list source arch kind cflags)
     ${obj_list} ${source} ${arch}
     KIND ${kind}
     COMPILE_DEPS ${MSAN_UNITTEST_HEADERS}
-    DEPS llvm_gtest msan
+    DEPS msan
     CFLAGS -isystem ${CMAKE_CURRENT_BINARY_DIR}/../libcxx_msan_${arch}/include/c++/v1
            ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
   )

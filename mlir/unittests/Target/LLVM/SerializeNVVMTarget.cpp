@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -29,10 +30,10 @@
 using namespace mlir;
 
 // Skip the test if the NVPTX target was not built.
-#if MLIR_CUDA_CONVERSIONS_ENABLED == 0
-#define SKIP_WITHOUT_NVPTX(x) DISABLED_##x
-#else
+#if MLIR_ENABLE_CUDA_CONVERSIONS
 #define SKIP_WITHOUT_NVPTX(x) x
+#else
+#define SKIP_WITHOUT_NVPTX(x) DISABLED_##x
 #endif
 
 class MLIRTargetLLVMNVVM : public ::testing::Test {

@@ -618,7 +618,8 @@ public:
     assert(details && "No host-association found");
     const Fortran::semantics::Symbol &hsym = details->symbol();
     mlir::Type hSymType = genType(hsym);
-    Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
+    Fortran::lower::SymbolBox hsb =
+        lookupSymbol(hsym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
 
     auto allocate = [&](llvm::ArrayRef<mlir::Value> shape,
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
@@ -727,7 +728,8 @@ public:
   void createHostAssociateVarCloneDealloc(
       const Fortran::semantics::Symbol &sym) override final {
     mlir::Location loc = genLocation(sym.name());
-    Fortran::lower::SymbolBox hsb = lookupSymbol(sym);
+    Fortran::lower::SymbolBox hsb =
+        lookupSymbol(sym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
 
     fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
     hexv.match(
@@ -960,13 +962,14 @@ private:
   /// Find the symbol in the local map or return null.
   Fortran::lower::SymbolBox
   lookupSymbol(const Fortran::semantics::Symbol &sym,
-               Fortran::lower::SymMap *symMap = nullptr) {
+               Fortran::lower::SymMap *symMap = nullptr,
+               bool forceHlfirBase = false) {
     symMap = symMap ? symMap : &localSymbols;
     if (lowerToHighLevelFIR()) {
       if (std::optional<fir::FortranVariableOpInterface> var =
               symMap->lookupVariableDefinition(sym)) {
-        auto exv =
-            hlfir::translateToExtendedValue(toLocation(), *builder, *var);
+        auto exv = hlfir::translateToExtendedValue(toLocation(), *builder, *var,
+                                                   forceHlfirBase);
         return exv.match(
             [](mlir::Value x) -> Fortran::lower::SymbolBox {
               return Fortran::lower::SymbolBox::Intrinsic{x};
@@ -1000,6 +1003,17 @@ private:
       if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
         return symMap->lookupSymbol(sym);
 
+      // For symbols to be privatized in OMP, the symbol is mapped to an
+      // instance of `SymbolBox::Intrinsic` (i.e. a direct mapping to an MLIR
+      // SSA value). This MLIR SSA value is the block argument to the
+      // `omp.private`'s `alloc` block. If this is the case, we return this
+      // `SymbolBox::Intrinsic` value.
+      if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
+        return v.match(
+            [&](const Fortran::lower::SymbolBox::Intrinsic &)
+                -> Fortran::lower::SymbolBox { return v; },
+            [](const auto &) -> Fortran::lower::SymbolBox { return {}; });
+
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
@@ -1018,7 +1032,7 @@ private:
   /// Find the symbol in one level up of symbol map such as for host-association
   /// in OpenMP code or return null.
   Fortran::lower::SymbolBox
-  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) {
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) override {
     if (Fortran::lower::SymbolBox v = localSymbols.lookupOneLevelUpSymbol(sym))
       return v;
     return {};
@@ -2474,6 +2488,135 @@ private:
     // Handled by genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &)
   }
 
+  void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
+    localSymbols.pushScope();
+    const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
+        std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
+
+    mlir::Location loc = genLocation(dir.source);
+
+    Fortran::lower::StatementContext stmtCtx;
+
+    unsigned nestedLoops = 1;
+
+    const auto &nLoops =
+        std::get<std::optional<Fortran::parser::ScalarIntConstantExpr>>(dir.t);
+    if (nLoops)
+      nestedLoops = *Fortran::semantics::GetIntValue(*nLoops);
+
+    mlir::IntegerAttr n;
+    if (nestedLoops > 1)
+      n = builder->getIntegerAttr(builder->getI64Type(), nestedLoops);
+
+    const std::list<Fortran::parser::ScalarIntExpr> &grid = std::get<1>(dir.t);
+    const std::list<Fortran::parser::ScalarIntExpr> &block = std::get<2>(dir.t);
+    const std::optional<Fortran::parser::ScalarIntExpr> &stream =
+        std::get<3>(dir.t);
+
+    llvm::SmallVector<mlir::Value> gridValues;
+    for (const Fortran::parser::ScalarIntExpr &expr : grid)
+      gridValues.push_back(fir::getBase(
+          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    llvm::SmallVector<mlir::Value> blockValues;
+    for (const Fortran::parser::ScalarIntExpr &expr : block)
+      blockValues.push_back(fir::getBase(
+          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    mlir::Value streamValue;
+    if (stream)
+      streamValue = fir::getBase(
+          genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx));
+
+    const auto &outerDoConstruct =
+        std::get<std::optional<Fortran::parser::DoConstruct>>(kernel.t);
+
+    llvm::SmallVector<mlir::Location> locs;
+    locs.push_back(loc);
+    llvm::SmallVector<mlir::Value> lbs, ubs, steps;
+
+    mlir::Type idxTy = builder->getIndexType();
+
+    llvm::SmallVector<mlir::Type> ivTypes;
+    llvm::SmallVector<mlir::Location> ivLocs;
+    llvm::SmallVector<mlir::Value> ivValues;
+    for (unsigned i = 0; i < nestedLoops; ++i) {
+      const Fortran::parser::LoopControl *loopControl;
+      Fortran::lower::pft::Evaluation *loopEval =
+          &getEval().getFirstNestedEvaluation();
+
+      mlir::Location crtLoc = loc;
+      if (i == 0) {
+        loopControl = &*outerDoConstruct->GetLoopControl();
+        crtLoc =
+            genLocation(Fortran::parser::FindSourceLocation(outerDoConstruct));
+      } else {
+        auto *doCons = loopEval->getIf<Fortran::parser::DoConstruct>();
+        assert(doCons && "expect do construct");
+        loopControl = &*doCons->GetLoopControl();
+        crtLoc = genLocation(Fortran::parser::FindSourceLocation(*doCons));
+      }
+
+      locs.push_back(crtLoc);
+
+      const Fortran::parser::LoopControl::Bounds *bounds =
+          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
+      assert(bounds && "Expected bounds on the loop construct");
+
+      Fortran::semantics::Symbol &ivSym =
+          bounds->name.thing.symbol->GetUltimate();
+      ivValues.push_back(getSymbolAddress(ivSym));
+
+      lbs.push_back(builder->createConvert(
+          crtLoc, idxTy,
+          fir::getBase(genExprValue(*Fortran::semantics::GetExpr(bounds->lower),
+                                    stmtCtx))));
+      ubs.push_back(builder->createConvert(
+          crtLoc, idxTy,
+          fir::getBase(genExprValue(*Fortran::semantics::GetExpr(bounds->upper),
+                                    stmtCtx))));
+      if (bounds->step)
+        steps.push_back(fir::getBase(
+            genExprValue(*Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+      else // If `step` is not present, assume it is `1`.
+        steps.push_back(builder->createIntegerConstant(loc, idxTy, 1));
+
+      ivTypes.push_back(idxTy);
+      ivLocs.push_back(crtLoc);
+      if (i < nestedLoops - 1)
+        loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
+    }
+
+    auto op = builder->create<fir::CUDAKernelOp>(
+        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n);
+    builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
+                         ivLocs);
+    mlir::Block &b = op.getRegion().back();
+    builder->setInsertionPointToStart(&b);
+
+    for (auto [arg, value] : llvm::zip(
+             op.getLoopRegions().front()->front().getArguments(), ivValues)) {
+      mlir::Value convArg =
+          builder->createConvert(loc, fir::unwrapRefType(value.getType()), arg);
+      builder->create<fir::StoreOp>(loc, convArg, value);
+    }
+
+    builder->create<fir::FirEndOp>(loc);
+    builder->setInsertionPointToStart(&b);
+
+    Fortran::lower::pft::Evaluation *crtEval = &getEval();
+    if (crtEval->lowerAsStructured()) {
+      crtEval = &crtEval->getFirstNestedEvaluation();
+      for (int64_t i = 1; i < nestedLoops; i++)
+        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+    }
+
+    // Generate loop body
+    for (Fortran::lower::pft::Evaluation &e : crtEval->getNestedEvaluations())
+      genFIR(e);
+
+    builder->setInsertionPointAfter(op);
+    localSymbols.popScope();
+  }
+
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
@@ -2493,6 +2636,9 @@ private:
         ompDeviceCodeFound ||
         Fortran::lower::isOpenMPDeviceDeclareTarget(
             *this, bridge.getSemanticsContext(), getEval(), ompDecl);
+    Fortran::lower::gatherOpenMPDeferredDeclareTargets(
+        *this, bridge.getSemanticsContext(), getEval(), ompDecl,
+        ompDeferredDeclareTarget);
     genOpenMPDeclarativeConstruct(
         *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
     builder->restoreInsertionPoint(insertPt);
@@ -4348,7 +4494,16 @@ private:
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     builder->setInsertionPointToStart(&func.front());
-    func.setVisibility(mlir::SymbolTable::Visibility::Public);
+    if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
+      // Give internal linkage to internal functions. There are no name clash
+      // risks, but giving global linkage to internal procedure will break the
+      // static link register in shared libraries because of the system calls.
+      // Also, it should be possible to eliminate the procedure code if all the
+      // uses have been inlined.
+      fir::factory::setInternalLinkage(func);
+    } else {
+      func.setVisibility(mlir::SymbolTable::Visibility::Public);
+    }
     assert(blockId == 0 && "invalid blockId");
     assert(activeConstructStack.empty() && "invalid construct stack state");
 
@@ -5022,6 +5177,13 @@ private:
   /// lowering.
   void finalizeOpenMPLowering(
       const Fortran::semantics::Symbol *globalOmpRequiresSymbol) {
+    if (!ompDeferredDeclareTarget.empty()) {
+      bool deferredDeviceFuncFound =
+          Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
+              getModuleOp().getOperation(), ompDeferredDeclareTarget, *this);
+      ompDeviceCodeFound = ompDeviceCodeFound || deferredDeviceFuncFound;
+    }
+
     // Set the module attribute related to OpenMP requires directives
     if (ompDeviceCodeFound)
       Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(),
@@ -5077,6 +5239,13 @@ private:
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected
   bool ompDeviceCodeFound = false;
+
+  /// Keeps track of symbols defined as declare target that could not be
+  /// processed at the time of lowering the declare target construct, such
+  /// as certain cases where interfaces are declared but not defined within
+  /// a module.
+  llvm::SmallVector<Fortran::lower::OMPDeferredDeclareTargetInfo>
+      ompDeferredDeclareTarget;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
 

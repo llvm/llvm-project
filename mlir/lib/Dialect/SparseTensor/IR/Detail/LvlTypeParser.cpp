@@ -62,6 +62,8 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   // Set the base bit for properties.
   if (base.compare("dense") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Dense);
+  } else if (base.compare("batch") == 0) {
+    properties |= static_cast<uint64_t>(LevelFormat::Batch);
   } else if (base.compare("compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Compressed);
   } else if (base.compare("structured") == 0) {

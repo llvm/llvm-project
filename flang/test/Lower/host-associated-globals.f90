@@ -18,7 +18,7 @@ contains
     print *, j_in_equiv, not_in_equiv
  end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFmodule_varPbar()
+! CHECK-LABEL: func.func private @_QFmodule_varPbar()
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMtest_mod_used_in_hostEi) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
@@ -37,7 +37,7 @@ contains
     print *, j_in_equiv, not_in_equiv
  end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFtest_commonPbar() attributes {fir.internal_proc} {
+! CHECK-LABEL: func.func private @_QFtest_commonPbar() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@x_) : !fir.ref<!fir.array<12xi8>>
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<12xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 4 : index
@@ -59,7 +59,7 @@ contains
     print *, j_in_equiv, not_in_equiv
  end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFsaved_equivPbar() attributes {fir.internal_proc} {
+! CHECK-LABEL: func.func private @_QFsaved_equivPbar() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QFsaved_equivEi) : !fir.ref<!fir.array<8xi8>>
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 4 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
@@ -79,8 +79,8 @@ contains
     call test(saved_j, j)
  end subroutine
 end subroutine
-! CHECK-LABEL: func.func @_QFmixed_capturePbar(
-! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func.func private @_QFmixed_capturePbar(
+! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = fir.address_of(@_QFmixed_captureEsaved_i) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>

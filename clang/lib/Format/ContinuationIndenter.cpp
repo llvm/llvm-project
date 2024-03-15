@@ -241,7 +241,9 @@ ContinuationIndenter::ContinuationIndenter(const FormatStyle &Style,
     : Style(Style), Keywords(Keywords), SourceMgr(SourceMgr),
       Whitespaces(Whitespaces), Encoding(Encoding),
       BinPackInconclusiveFunctions(BinPackInconclusiveFunctions),
-      CommentPragmasRegex(Style.CommentPragmas), RawStringFormats(Style) {}
+      CommentPragmasRegex(Style.CommentPragmas), RawStringFormats(Style) {
+  assert(IsCpp == Style.isCpp());
+}
 
 LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
                                                 unsigned FirstStartColumn,
@@ -406,7 +408,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if ((startsNextParameter(Current, Style) || Previous.is(tok::semi) ||
        (Previous.is(TT_TemplateCloser) && Current.is(TT_StartOfName) &&
-        State.Line->First->isNot(TT_AttributeSquare) && Style.isCpp() &&
+        State.Line->First->isNot(TT_AttributeSquare) && IsCpp &&
         // FIXME: This is a temporary workaround for the case where clang-format
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
@@ -677,8 +679,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   auto &CurrentState = State.Stack.back();
 
   bool DisallowLineBreaksOnThisLine =
-      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
-      Style.isCpp() && [&Current] {
+      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature && IsCpp &&
+      [&Current] {
         // Deal with lambda arguments in C++. The aim here is to ensure that we
         // don't over-indent lambda function bodies when lambdas are passed as
         // arguments to function calls. We do this by ensuring that either all
@@ -1091,7 +1093,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // Any break on this level means that the parent level has been broken
   // and we need to avoid bin packing there.
   bool NestedBlockSpecialCase =
-      (!Style.isCpp() && Current.is(tok::r_brace) && State.Stack.size() > 1 &&
+      (!IsCpp && Current.is(tok::r_brace) && State.Stack.size() > 1 &&
        State.Stack[State.Stack.size() - 2].NestedBlockInlined) ||
       (Style.Language == FormatStyle::LK_ObjC && Current.is(tok::r_brace) &&
        State.Stack.size() > 1 && !Style.ObjCBreakBeforeNestedBlockParam);

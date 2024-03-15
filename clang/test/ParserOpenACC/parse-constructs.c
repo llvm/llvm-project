@@ -39,23 +39,19 @@ void func() {
   // expected-note@+1{{to match this '('}}
 #pragma acc parallel( clause list
   for(;;){}
-  // expected-error@+3{{expected clause-list or newline in OpenACC directive}}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'serial' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected clause-list or newline in OpenACC directive}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc serial() clause list
   for(;;){}
-  // expected-error@+4{{expected clause-list or newline in OpenACC directive}}
-  // expected-error@+3{{expected ')'}}
-  // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'serial' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected clause-list or newline in OpenACC directive}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
 #pragma acc serial( clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'serial' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc serial clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'kernels' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc kernels clause list
   for(;;){}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
@@ -93,8 +89,7 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc parallel invalid clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'invalid'}}
-  // expected-warning@+1{{OpenACC construct 'serial' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc serial invalid clause list
   for(;;){}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}

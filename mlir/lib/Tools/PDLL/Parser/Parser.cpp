@@ -1362,12 +1362,6 @@ FailureOr<T *> Parser::parseUserNativeConstraintOrRewriteDecl(
   if (failed(parseToken(Token::semicolon,
                         "expected `;` after native declaration")))
     return failure();
-  // TODO: PDL should be able to support constraint results in certain
-  // situations, we should revise this.
-  if (std::is_same<ast::UserConstraintDecl, T>::value && !results.empty()) {
-    return emitError(
-        "native Constraints currently do not support returning results");
-  }
   return T::createNative(ctx, name, arguments, results, optCodeStr, resultType);
 }
 
@@ -1974,6 +1968,8 @@ FailureOr<ast::Expr *> Parser::parseNegatedExpr() {
   FailureOr<ast::Expr *> identifierExpr = parseIdentifierExpr();
   if (failed(identifierExpr))
     return failure();
+  if (!curToken.is(Token::l_paren))
+    return emitError("expected `(` after function name");
   return parseCallExpr(*identifierExpr, /*isNegated = */ true);
 }
 

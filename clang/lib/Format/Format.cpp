@@ -915,6 +915,10 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignConsecutiveShortCaseStatements",
                    Style.AlignConsecutiveShortCaseStatements);
+    IO.mapOptional("AlignConsecutiveTableGenCondOperatorColons",
+                   Style.AlignConsecutiveTableGenCondOperatorColons);
+    IO.mapOptional("AlignConsecutiveTableGenDefinitionColons",
+                   Style.AlignConsecutiveTableGenDefinitionColons);
     IO.mapOptional("AlignEscapedNewlines", Style.AlignEscapedNewlines);
     IO.mapOptional("AlignOperands", Style.AlignOperands);
     IO.mapOptional("AlignTrailingComments", Style.AlignTrailingComments);
@@ -1420,6 +1424,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
   LLVMStyle.AlignConsecutiveShortCaseStatements = {};
+  LLVMStyle.AlignConsecutiveTableGenCondOperatorColons = {};
+  LLVMStyle.AlignConsecutiveTableGenDefinitionColons = {};
   LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignTrailingComments = {};
@@ -1591,7 +1597,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyBreakScopeResolution = 500;
   LLVMStyle.PenaltyBreakString = 1000;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
-  LLVMStyle.PenaltyExcessCharacter = 1000000;
+  LLVMStyle.PenaltyExcessCharacter = 1'000'000;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
 
@@ -1914,9 +1920,12 @@ FormatStyle getClangFormatStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.InsertBraces = true;
   Style.InsertNewlineAtEOF = true;
+  Style.IntegerLiteralSeparator.Decimal = 3;
+  Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
   Style.LineEnding = FormatStyle::LE_LF;
   Style.RemoveBracesLLVM = true;
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
+  Style.RemoveSemicolon = true;
   return Style;
 }
 
@@ -3832,13 +3841,15 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
-  LangOptions LangOpts;
+  IsCpp = Style.isCpp();
 
   FormatStyle::LanguageStandard LexingStd = Style.Standard;
   if (LexingStd == FormatStyle::LS_Auto)
     LexingStd = FormatStyle::LS_Latest;
   if (LexingStd == FormatStyle::LS_Latest)
     LexingStd = FormatStyle::LS_Cpp20;
+
+  LangOptions LangOpts;
   LangOpts.CPlusPlus = 1;
   LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
   LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
@@ -3849,10 +3860,8 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
-
   LangOpts.LineComment = 1;
-  bool AlternativeOperators = Style.isCpp();
-  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
+  LangOpts.CXXOperatorNames = IsCpp;
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
@@ -3917,7 +3926,7 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
     auto Extension = llvm::sys::path::extension(FileName);
     // If there's no file extension (or it's .h), we need to check the contents
     // of the code to see if it contains Objective-C.
-    if (Extension.empty() || Extension == ".h") {
+    if (!Code.empty() && (Extension.empty() || Extension == ".h")) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
@@ -3933,6 +3942,8 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
 const char *DefaultFormatStyle = "file";
 
 const char *DefaultFallbackStyle = "LLVM";
+
+bool IsCpp = false;
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,

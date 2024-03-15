@@ -502,7 +502,10 @@ append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 #
 # Note that this type of issue was discovered with lsan, but can apply to other
 # sanitizers.
-append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+# Disable PowerPC because of https://github.com/llvm/llvm-project/issues/84654.
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
+  append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+endif()
 
 # Set common link flags.
 # TODO: We should consider using the same model as libc++, that is use either
@@ -771,8 +774,6 @@ mark_as_advanced(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
 add_subdirectory(lib)
 
 if(COMPILER_RT_INCLUDE_TESTS)
-  add_subdirectory(unittests)
-  add_subdirectory(test)
   # Don't build llvm-lit for runtimes-build, it will clean up map_config.
   if (COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
     # If we have a valid source tree, generate llvm-lit into the bin directory.
@@ -782,11 +783,17 @@ if(COMPILER_RT_INCLUDE_TESTS)
       # Needed for lit support in standalone builds.
       include(AddLLVM)
       add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+      # Ensure that the testsuite uses the local lit rather than
+      # LLVM_INSTALL_DIR/bin/llvm-lit (which probably does not exist).
+      get_llvm_lit_path(_base_dir _file_name)
+      set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
     elseif(NOT EXISTS ${LLVM_EXTERNAL_LIT})
       message(WARNING "Could not find LLVM source directory and LLVM_EXTERNAL_LIT does not"
                        "point to a valid file.  You will not be able to run tests.")
     endif()
   endif()
+  add_subdirectory(unittests)
+  add_subdirectory(test)
 endif()
 
 add_subdirectory(tools)

@@ -387,7 +387,7 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// the ops to get converted properly.
 void populateVectorLinearizeTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target);
+    ConversionTarget &target, unsigned targetBitWidth);
 
 } // namespace vector
 } // namespace mlir

@@ -303,6 +303,15 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) AlwaysInlineAttr(S.Context, A);
 }
 
+static Attr *handleCXXAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                 SourceRange Range) {
+  ExprResult Res = S.ActOnCXXAssumeAttr(St, A, Range);
+  if (!Res.isUsable())
+    return nullptr;
+
+  return ::new (S.Context) CXXAssumeAttr(S.Context, A, Res.get());
+}
+
 static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   // Validation is in Sema::ActOnAttributedStmt().
@@ -594,6 +603,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   switch (A.getKind()) {
   case ParsedAttr::AT_AlwaysInline:
     return handleAlwaysInlineAttr(S, St, A, Range);
+  case ParsedAttr::AT_CXXAssume:
+    return handleCXXAssumeAttr(S, St, A, Range);
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
@@ -640,4 +651,48 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
 bool Sema::CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs) {
   CheckForDuplicateLoopAttrs<CodeAlignAttr>(*this, Attrs);
   return false;
+}
+
+ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+  if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
+    Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+    return ExprError();
+  }
+
+  auto *Assumption = A.getArgAsExpr(0);
+  if (Assumption->getDependence() == ExprDependence::None) {
+    ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);
+    if (Res.isInvalid())
+      return ExprError();
+    Assumption = Res.get();
+  }
+
+  if (!getLangOpts().CPlusPlus23)
+    Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
+
+  return Assumption;
+}
+
+ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
+                                    const IdentifierInfo *AttrName,
+                                    SourceRange Range) {
+  ExprResult Res = CorrectDelayedTyposInExpr(Assumption);
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = CheckPlaceholderExpr(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Assumption = Res.get();
+  if (Assumption->HasSideEffects(Context))
+    Diag(Assumption->getBeginLoc(), diag::warn_assume_side_effects)
+        << AttrName << Range;
+
+  return Assumption;
 }

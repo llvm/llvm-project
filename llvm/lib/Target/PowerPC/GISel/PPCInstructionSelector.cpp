@@ -695,8 +695,8 @@ bool PPCInstructionSelector::selectConstantPool(
                .addReg(HaAddrReg)
                .addMemOperand(MMO);
     else
-      // For medium code model, generate ADDItocL(CPI, ADDIStocHA8(X2, CPI))
-      MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::ADDItocL), DstReg)
+      // For medium code model, generate ADDItocL8(CPI, ADDIStocHA8(X2, CPI))
+      MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::ADDItocL8), DstReg)
                .addReg(HaAddrReg)
                .addConstantPoolIndex(CPI);
   }

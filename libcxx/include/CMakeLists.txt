@@ -380,7 +380,6 @@ set(files
   __format/format_context.h
   __format/format_error.h
   __format/format_functions.h
-  __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
@@ -430,8 +429,9 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/complex.h
+  __fwd/format.h
   __fwd/fstream.h
-  __fwd/hash.h
+  __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -701,6 +701,7 @@ set(files
   __thread/thread.h
   __thread/timed_backoff_policy.h
   __tree
+  __tuple/find_index.h
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
   __tuple/sfinae_helpers.h
@@ -968,6 +969,7 @@ set(files
   mdspan
   memory
   memory_resource
+  module.modulemap
   mutex
   new
   numbers
@@ -1021,18 +1023,10 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
-  if (NOT ${${feature}})
-    set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
-  endif()
-endforeach()
-
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
-configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
