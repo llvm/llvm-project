@@ -132,7 +132,10 @@
 /// 2) In the function entry that calls setjmp, initialize
 ///    functionInvocationId as follows:
 ///
-///    functionInvocationId = alloca()
+///    functionInvocationId = alloca(4)
+///
+///    Note: the alloca size is not important as this pointer is
+///    merely used for pointer comparisions.
 ///
 /// 3) Lower
 ///      setjmp(env)
