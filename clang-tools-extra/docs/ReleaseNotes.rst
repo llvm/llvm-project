@@ -51,20 +51,34 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
-Diagnostics
-^^^^^^^^^^^
-
-Semantic Highlighting
-^^^^^^^^^^^^^^^^^^^^^
+- Type hints
+    * Improved heuristics for showing sugared vs. desguared types
+    * Some hints which provide no information (e.g. ``<dependent-type>``) are now omitted
+- Parameter hints
+    * Parameter hints are now shown for calls through function pointers
+    * Parameter hints are now shown for calls to a class's ``operator()``
+    * No longer show bogus parameter hints for some builtins like ``__builtin_dump_struct``
 
 Compile flags
 ^^^^^^^^^^^^^
 
+- System include extractor (``--query-driver``) improvements
+    * The directory containing builtin headers is now excluded from extracted system includes
+    * Various flags which can affect the system includes (``--target``, ``--stdlib``, ``-specs``) are now forwarded to the driver
+    * Fixed a bug where clangd would sometimes try to call a driver that didn't have obj-c support with ``-x objective-c++-header``
+    * The driver path is now dot-normalized before being compared to the ``--query-driver`` pattern
+    * ``--query-driver`` is now supported by ``clangd-indexer``
+- Fixed a regression in clangd 17 where response files would not be expanded
+
 Hover
 ^^^^^
 
+- Hover now shows alignment info for fields and records
+
 Code completion
 ^^^^^^^^^^^^^^^
+
+- Refined heuristics for determining whether the use of a function can be a call or not
 
 Code actions
 ^^^^^^^^^^^^
@@ -75,14 +89,24 @@ Code actions
 Signature help
 ^^^^^^^^^^^^^^
 
+- Improved support for calls through function pointer types
+
 Cross-references
 ^^^^^^^^^^^^^^^^
+
+- Improved support for C++20 concepts
+- Find-references now works for labels
+- Improvements to template heuristics
 
 Objective-C
 ^^^^^^^^^^^
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- Various stability improvements, e.g. crash fixes
+- Improved error recovery on invalid code
+- Clangd now bails gracefully on assembly and IR source files
 
 Improvements to clang-doc
 -------------------------
@@ -564,10 +588,15 @@ Changes in existing checks
 Removed checks
 ^^^^^^^^^^^^^^
 
-Improvements to include-fixer
+Improvements to include-cleaner
 -----------------------------
 
-The improvements are...
+- Support for ``--only-headers`` flag to limit analysis to headers matching a regex
+- Recognizes references through ``concept``s
+- Builtin headers are not analyzed
+- Handling of references through ``friend`` declarations
+- Fixes around handling of IWYU pragmas on stdlib headers
+- Improved handling around references to/from template specializations
 
 Improvements to clang-include-fixer
 -----------------------------------
