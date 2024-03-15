@@ -10522,7 +10522,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
       ShuffledElements.setBit(I);
-      ShuffleMask[I] = I;
+      ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
       continue;
     }
 
