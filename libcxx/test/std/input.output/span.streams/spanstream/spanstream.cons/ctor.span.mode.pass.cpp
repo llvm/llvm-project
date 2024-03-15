@@ -32,7 +32,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
-  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
+  using SpStream = std::basic_spanstream<CharT, TraitsT>;
 
   // Mode
   static_assert(std::constructible_from<SpStream, const std::span<CharT>, std::ios_base::openmode>);
@@ -48,7 +48,11 @@ void test() {
   using SpStream = std::basic_spanstream<CharT, TraitsT>;
 
   CharT arr[4];
+  
   std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
   {
