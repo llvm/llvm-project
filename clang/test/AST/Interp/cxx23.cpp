@@ -137,3 +137,12 @@ int test_in_lambdas() {
                            // all-note {{in call to}}
   return 0;
 }
+
+/// PackIndexExpr.
+template <auto... p>
+struct check_ice {
+    enum e {
+        x = p...[0] // all-warning {{is a C++2c extension}}
+    };
+};
+static_assert(check_ice<42>::x == 42);

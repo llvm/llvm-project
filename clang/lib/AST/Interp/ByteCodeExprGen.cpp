@@ -2226,6 +2226,12 @@ bool ByteCodeExprGen<Emitter>::VisitPseudoObjectExpr(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPackIndexingExpr(
+    const PackIndexingExpr *E) {
+  return this->delegate(E->getSelectedExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
