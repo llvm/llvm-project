@@ -240,17 +240,15 @@ static cl::opt<unsigned> ChecksumMismatchFuncHotBlockSkip(
              "whose num of hot(on average) blocks is smaller than the "
              "given number."));
 
-static cl::opt<unsigned> ChecksumMismatchNumFuncSkip(
-    "checksum-mismatch-num-func-skip", cl::Hidden, cl::init(50),
-    cl::desc("For checksum-mismatch error check, skip the check if the total "
-             "number of selected function is smaller than the given number."));
+static cl::opt<unsigned> MinfuncsForStalenessError(
+    "min-functions-for-staleness-error", cl::Hidden, cl::init(50),
+    cl::desc("Skip the check if the number of hot functions is smaller than "
+             "the given number."));
 
-static cl::opt<unsigned> ChecksumMismatchErrorThreshold(
-    "checksum-mismatch-error-threshold", cl::Hidden, cl::init(80),
-    cl::desc(
-        "For checksum-mismatch error check, error out if the percentage of "
-        "function mismatched-checksum is higher than the given percentage "
-        "threshold"));
+static cl::opt<unsigned> PrecentMismatchForStalenessError(
+    "precent-mismatch-for-staleness-error", cl::Hidden, cl::init(80),
+    cl::desc("Reject the profile if the mismatch percent is higher than the "
+             "given number"));
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
@@ -648,7 +646,7 @@ protected:
   std::vector<Function *> buildFunctionOrder(Module &M, LazyCallGraph &CG);
   std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(Module &M);
   void generateMDProfMetadata(Function &F);
-  bool errorIfHighChecksumMismatch(Module &M, ProfileSummaryInfo *PSI,
+  bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
                                    const SampleProfileMap &Profiles);
 
   /// Map from function name to Function *. Used to find the function from
@@ -2218,12 +2216,12 @@ bool SampleProfileLoader::doInitialization(Module &M,
 // function selection is based on two criteria: 1) The function is "hot" enough,
 // which is tuned by a hotness-based flag(ChecksumMismatchFuncHotBlockSkip). 2)
 // The num of function is large enough which is tuned by the
-// ChecksumMismatchNumFuncSkip flag.
-bool SampleProfileLoader::errorIfHighChecksumMismatch(
+// MinfuncsForStalenessError flag.
+bool SampleProfileLoader::rejectHighStalenessProfile(
     Module &M, ProfileSummaryInfo *PSI, const SampleProfileMap &Profiles) {
   assert(FunctionSamples::ProfileIsProbeBased &&
          "Only support for probe-based profile");
-  uint64_t TotalSelectedFunc = 0;
+  uint64_t TotalHotFunc = 0;
   uint64_t NumMismatchedFunc = 0;
   for (const auto &I : Profiles) {
     const auto &FS = I.second;
@@ -2240,22 +2238,22 @@ bool SampleProfileLoader::errorIfHighChecksumMismatch(
         ChecksumMismatchFuncHotBlockSkip * PSI->getOrCompHotCountThreshold())
       continue;
 
-    TotalSelectedFunc++;
+    TotalHotFunc++;
     if (ProbeManager->profileIsHashMismatched(*FuncDesc, FS))
       NumMismatchedFunc++;
   }
   // Make sure that the num of selected function is not too small to distinguish
   // from the user's benign changes.
-  if (TotalSelectedFunc < ChecksumMismatchNumFuncSkip)
+  if (TotalHotFunc < MinfuncsForStalenessError)
     return false;
 
   // Finally check the mismatch percentage against the threshold.
   if (NumMismatchedFunc * 100 >=
-      TotalSelectedFunc * ChecksumMismatchErrorThreshold) {
+      TotalHotFunc * PrecentMismatchForStalenessError) {
     auto &Ctx = M.getContext();
     const char *Msg =
-        "The FDO profile is too old and will cause big performance regression, "
-        "please drop the profile and collect a new one.";
+        "The input profile significantly mismatches current source code. "
+        "Please recollect profile to avoid performance regression.";
     Ctx.diagnose(DiagnosticInfoSampleProfile(M.getModuleIdentifier(), Msg));
     return true;
   }
@@ -2796,7 +2794,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
 
   // Error out if the profile checksum mismatch is too high.
   if (FunctionSamples::ProfileIsProbeBased &&
-      errorIfHighChecksumMismatch(M, PSI, Reader->getProfiles()))
+      rejectHighStalenessProfile(M, PSI, Reader->getProfiles()))
     return false;
 
   // Compute the total number of samples collected in this profile.
