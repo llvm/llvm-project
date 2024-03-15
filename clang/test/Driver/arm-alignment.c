@@ -37,18 +37,12 @@
 // RUN: %clang -target thumbv8m.base-none-gnueabi -### %s 2> %t
 // RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
 
-// RUN: %clang --target=aarch64 -munaligned-access -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
-
-// RUN: %clang --target=aarch64 -mstrict-align -munaligned-access -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
-
-// RUN: %clang --target=aarch64 -mno-unaligned-access -munaligned-access -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
+// RUN: not %clang --target=aarch64 -munaligned-access -mno-unaligned-access -### %s 2>&1 | FileCheck %s --check-prefix=ERR
+// ERR: error: unsupported option '-munaligned-access' for target 'aarch64'
+// ERR: error: unsupported option '-mno-unaligned-access' for target 'aarch64'
 
 // CHECK-UNALIGNED-ARM-NOT: "-target-feature" "+strict-align"
 // CHECK-UNALIGNED-AARCH64-NOT: "-target-feature" "+strict-align"
-
 
 // RUN: %clang -target arm-none-gnueabi -mno-unaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
@@ -83,19 +77,7 @@
 // RUN: %clang -target armv6m-netbsd-eabi -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
-// RUN: %clang --target=aarch64 -mno-unaligned-access -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
-
 // RUN: %clang --target=aarch64 -mstrict-align -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
-
-// RUN: %clang --target=aarch64 -munaligned-access -mno-unaligned-access -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
-
-// RUN: %clang --target=aarch64 -munaligned-access -mstrict-align -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
-
-// RUN: %clang --target=aarch64 -mkernel -mno-unaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
 // RUN: %clang -target aarch64-unknown-openbsd -### %s 2> %t
