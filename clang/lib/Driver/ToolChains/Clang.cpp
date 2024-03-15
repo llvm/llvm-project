@@ -2794,8 +2794,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // ffast-math enables basic range rules for complex multiplication and
     // division.
     // Warn if user expects to perform full implementation of complex
-    // multiplication or division in the presence of nnan or ninf flags.
-    if (Range == LangOptions::ComplexRangeKind::CX_Full)
+    // multiplication or division in the presence of nan or ninf flags.
+    if (Range == LangOptions::ComplexRangeKind::CX_Full ||
+        Range == LangOptions::ComplexRangeKind::CX_Improved ||
+        Range == LangOptions::ComplexRangeKind::CX_Promoted)
       EmitComplexRangeDiag(
           D, ComplexArithmeticStr(Range),
           !GccRangeComplexOption.empty()

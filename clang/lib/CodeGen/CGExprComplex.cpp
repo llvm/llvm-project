@@ -310,6 +310,13 @@ public:
         CGF.getContext().getFloatTypeSemantics(ElementType);
     const llvm::fltSemantics &HigherElementTypeSemantics =
         CGF.getContext().getFloatTypeSemantics(HigherElementType);
+    // Check that LongDouble Size > Double Size.
+    // This can be interpreted as:
+    // SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal <=
+    // LargerType.LargestFiniteVal.
+    // In terms of exponent it gives this formula:
+    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
+    // doubles the exponent of SmallerType.LargestFiniteVal);
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
       return CGF.getContext().getComplexType(HigherElementType);
@@ -1036,10 +1043,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
-    else if (!CGF.getLangOpts().FastMath ||
-             // '-ffast-math' is used in the command line but followed by an
-             // '-fno-cx-limited-range' or '-fcomplex-arithmetic=full'.
-             Op.FPFeatures.getComplexRange() == LangOptions::CX_Full) {
+    // '-ffast-math' is used in the command line but followed by an
+    // '-fno-cx-limited-range' or '-fcomplex-arithmetic=full'.
+    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Full) {
       LHSi = OrigLHSi;
       // If we have a complex operand on the RHS and FastMath is not allowed, we
       // delegate to a libcall to handle all of the complexities and minimize
