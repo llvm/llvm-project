@@ -3077,15 +3077,26 @@ convertTopLevelTargetOp(Operation *op, llvm::IRBuilderBase &builder,
       })
       // Skip omp ops that are not legal top level ops for the target device
       .Case<omp::BarrierOp, omp::TaskwaitOp, omp::TaskyieldOp, omp::FlushOp,
-            omp::ParallelOp, omp::ReductionOp, omp::MasterOp, omp::CriticalOp,
-            omp::OrderedRegionOp, omp::OrderedOp, omp::WsLoopOp,
-            omp::SimdLoopOp, omp::AtomicReadOp, omp::AtomicWriteOp,
-            omp::AtomicUpdateOp, omp::AtomicCaptureOp, omp::SectionsOp,
-            omp::SingleOp, omp::TeamsOp, omp::TaskOp, omp::TaskGroupOp,
-            omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp,
-            omp::ThreadprivateOp, omp::DistributeOp, omp::MapInfoOp,
+            omp::ReductionOp, omp::OrderedOp, omp::SimdLoopOp,
+            omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
+            omp::AtomicCaptureOp, omp::YieldOp, omp::TerminatorOp,
+            omp::ReductionDeclareOp, omp::ThreadprivateOp, omp::MapInfoOp,
             omp::DataBoundsOp, omp::CriticalDeclareOp>(
+          [&](auto op) { return success(); })
+      // Recursively traverse inner regions
+      .Case<omp::ParallelOp, omp::MasterOp, omp::CriticalOp,
+            omp::OrderedRegionOp, omp::WsLoopOp, omp::SectionsOp, omp::SingleOp,
+            omp::TeamsOp, omp::TaskOp, omp::TaskGroupOp, omp::DistributeOp>(
           [&](auto op) {
+            Dialect *ompDialect = op->getDialect();
+            for (auto &block : op->getRegion(0)) {
+              for (auto &innerOp : block) {
+                if (innerOp.getDialect() == ompDialect) {
+                  return convertTopLevelTargetOp(&innerOp, builder,
+                                                 moduleTranslation);
+                }
+              }
+            }
             return success();
           })
       .Default([&](Operation *inst) {
