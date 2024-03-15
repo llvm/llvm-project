@@ -124,6 +124,12 @@ namespace clause {
 #undef EMPTY_CLASS
 #undef WRAPPER_CLASS
 
+using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
+using ProcedureDesignator =
+    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
+using ReductionOperator =
+    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
+
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.
 // These clauses are still handled here to cover all alternatives in the
