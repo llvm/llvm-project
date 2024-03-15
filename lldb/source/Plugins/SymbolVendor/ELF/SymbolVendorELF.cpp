@@ -44,6 +44,27 @@ llvm::StringRef SymbolVendorELF::GetPluginDescriptionStatic() {
          "executables.";
 }
 
+// If this is needed elsewhere, it can be exported/moved.
+static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
+                            const FileSpec &file_spec) {
+  DataBufferSP dwp_file_data_sp;
+  lldb::offset_t dwp_file_data_offset = 0;
+  // Try to create an ObjectFile from the file_spec.
+  ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
+      module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
+      dwp_file_data_sp, dwp_file_data_offset);
+  if (!ObjectFileELF::classof(dwp_obj_file.get()))
+    return false;
+  // The presence of a debug_cu_index section is the key identifying feature of
+  // a DWP file. Make sure we don't fill in the section list on dwp_obj_file
+  // (by calling GetSectionList(false)) as this is invoked before we may have
+  // all the symbol files collected and available.
+  if (!dwp_obj_file || !dwp_obj_file->GetSectionList(false)->FindSectionByType(
+                           eSectionTypeDWARFDebugCuIndex, false))
+    return false;
+  return true;
+}
+
 // CreateInstance
 //
 // Platforms can register a callback to use when creating symbol vendors to
@@ -87,8 +108,15 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec dsym_fspec =
       PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
-  if (!dsym_fspec)
-    return nullptr;
+  if (!dsym_fspec || IsDwpSymbolFile(module_sp, dsym_fspec)) {
+    // If we have a stripped binary or if we got a DWP file, we should prefer
+    // symbols in the executable acquired through a plugin.
+    ModuleSpec unstripped_spec =
+        PluginManager::LocateExecutableObjectFile(module_spec);
+    if (!unstripped_spec)
+      return nullptr;
+    dsym_fspec = unstripped_spec.GetFileSpec();
+  }
 
   DataBufferSP dsym_file_data_sp;
   lldb::offset_t dsym_file_data_offset = 0;
