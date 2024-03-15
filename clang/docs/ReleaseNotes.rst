@@ -47,6 +47,12 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
+- Fixed Microsoft name mangling of implicitly defined variables used for thread
+  safe static initialization of static local variables. This change resolves
+  incompatibilities with code compiled by MSVC but might introduce
+  incompatibilities with code compiled by earlier versions of Clang when an
+  inline member function that contains a static local variable with a dynamic
+  initializer is declared with ``__declspec(dllimport)``. (#GH83616).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
