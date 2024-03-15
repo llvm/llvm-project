@@ -37,9 +37,11 @@
 # RUN: lld-link -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a %t.helper.a
 # RUN: llvm-objdump --no-print-imm-hex -d %t.main.exe | FileCheck --check-prefix=LIB %s
 
+
 # In this case, the symbol in %t.helper.a(%t.helper2.o) is still considered first.
 # RUN: lld-link -out:%t.main.exe -entry:main %t.main.o %t.helper.a %t.lib.dll.a
 # RUN: llvm-objdump --no-print-imm-hex -d %t.main.exe | FileCheck --check-prefix=LIB %s
+
 
 # In this test we're defining libfunc in a third library that comes after all the others. The symbol should be pulled
 # now from that third library.
@@ -53,6 +55,7 @@
 # LIB: 140001008: e8 03 00 00 00                   callq   0x140001010 <.text+0x10>
 # LIB: 140001010: 31 c0                            xorl    %eax, %eax
 
+
 # Here, we should pick up the import symbol from %t.lib.dll.a since it isn't defined anywhere else.
 # RUN: lld-link -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a %t.helper1.a
 # RUN: llvm-objdump --no-print-imm-hex -d %t.main.exe | FileCheck --check-prefix=LIB-IMP %s
@@ -60,9 +63,26 @@
 # LIB-IMP: 140001000 <.text>:
 # LIB-IMP: 140001010: ff 25 22 10 00 00            jmpq    *4130(%rip)
 
+
 # Test cmd-line archives
 # RUN: lld-link -out:%t.main.exe -entry:main %t.main.o %t.lib.dll.a -start-lib %t.helper1.o %t.helper2.o -end-lib
 # RUN: llvm-objdump --no-print-imm-hex -d %t.main.exe | FileCheck --check-prefix=LIB %s
+
+
+# Test pulling two different OBJ from two archives, which themselves both define the same symbol 'libfunc'.
+# Ensure that we resolve the symbol only once.
+
+# RUN: echo -e ".globl test\n.text\ntest:\ncall libfunc\nret" > %t.test1.s
+# RUN: echo -e ".intel_syntax noprefix\n.globl libfunc\n.text\nlibfunc:\nmov eax, 2\nret" > %t.test2.s
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %t.test1.s -filetype=obj -o %t.test1.o
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %t.test2.s -filetype=obj -o %t.test2.o
+# RUN: llvm-ar rcs %t.test.a %t.test1.o %t.test2.o
+
+# RUN: echo -e ".globl main\n.text\nmain:\ncall test\ncall helper\nret" > %t.main2.s
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %s -filetype=obj -o %t.main2.o
+
+# RUN: lld-link -out:%t.main.exe -entry:main %t.main2.o %t.helper.a %t.test.a 2>&1 | FileCheck --allow-empty --check-prefix=LIB-TWO %s
+# LIB-TWO-NOT: duplicate symbol:
 
     .globl main
     .text

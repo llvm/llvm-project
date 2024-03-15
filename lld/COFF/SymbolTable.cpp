@@ -95,6 +95,7 @@ static void errorOrWarn(const Twine &s, bool forceUnresolved) {
 
 // Causes the file associated with a lazy symbol to be linked in.
 static void forceLazy(Symbol *s) {
+  assert(!s->pendingArchiveLoad);
   s->pendingArchiveLoad = true;
   switch (s->kind()) {
   case Symbol::Kind::LazyArchiveKind: {
@@ -623,14 +624,21 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
     return s;
   }
   if (s->isLazy()) {
+    if (s->pendingArchiveLoad)
+      return s;
     if (ArchiveFile *parent = lazyParent(f)) {
+      // We're placing a undefined symbol from an archive OBJ. The rules are
+      // different than regular OBJs on the command-line.
       Symbol *selected = searchArchiveSymbol(s, parent);
       forceLazy(selected);
       // Now that we have selected a symbol, we don't need the linked list of
       // `LazyArchive`s anymore. Collapse to the selected symbol.
-      memcpy(s, selected, sizeof(SymbolUnion));
+      if (s != selected)
+        memcpy(s, selected, sizeof(SymbolUnion));
+      *lazyNode(s) = LazyIntrusiveNode();
       return s;
     }
+    // We're placing a undefined symbol from a command-line OBJ.
     forceLazy(s);
   }
   return s;
@@ -667,6 +675,7 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
     return;
   }
   if (auto *n = lazyNode(s)) {
+    assert(!s->pendingArchiveLoad);
     chainLazy<LazyArchive>(n, f, sym);
     return;
   }
