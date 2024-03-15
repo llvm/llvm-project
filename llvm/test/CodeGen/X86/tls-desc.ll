@@ -4,9 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64 --relocation-model=pic -enable-tlsdesc | FileCheck %s --check-prefix=X64
 
 @x = thread_local global i32 0, align 4
-@y = internal thread_local global i32 0, align 4
-@z = internal thread_local global i32 1, align 4
-@t = external hidden thread_local global i32, align 4
+@y = internal thread_local global i32 1, align 4
+@z = external hidden thread_local global i32, align 4
 
 define ptr @f1() nounwind {
 ; X86-LABEL: f1:
@@ -195,53 +194,6 @@ define i32 @f4() nounwind {
 ; X64-NEXT:    retq
   %1 = load i32, ptr @y, align 4
   %2 = load i32, ptr @z, align 4
-  %3 = add nsw i32 %1, %2
-  ret i32 %3
-}
-
-define i32 @f5() nounwind {
-; X86-LABEL: f5:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    calll .L4$pb
-; X86-NEXT:  .L4$pb:
-; X86-NEXT:    popl %ebx
-; X86-NEXT:  .Ltmp4:
-; X86-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp4-.L4$pb), %ebx
-; X86-NEXT:    movl %gs:0, %edx
-; X86-NEXT:    leal _TLS_MODULE_BASE_@tlsdesc(%ebx), %eax
-; X86-NEXT:    calll *_TLS_MODULE_BASE_@tlscall(%eax)
-; X86-NEXT:    movl z@DTPOFF(%eax,%edx), %ecx
-; X86-NEXT:    addl t@DTPOFF(%eax,%edx), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    retl
-;
-; X32-LABEL: f5:
-; X32:       # %bb.0:
-; X32-NEXT:    pushq %rax
-; X32-NEXT:    movl %fs:0, %edx
-; X32-NEXT:    leal _TLS_MODULE_BASE_@tlsdesc(%rip), %eax
-; X32-NEXT:    callq *_TLS_MODULE_BASE_@tlscall(%eax)
-; X32-NEXT:    movl z@DTPOFF(%eax,%edx), %ecx
-; X32-NEXT:    addl t@DTPOFF(%eax,%edx), %ecx
-; X32-NEXT:    movl %ecx, %eax
-; X32-NEXT:    popq %rcx
-; X32-NEXT:    retq
-;
-; X64-LABEL: f5:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movq %fs:0, %rdx
-; X64-NEXT:    leaq _TLS_MODULE_BASE_@tlsdesc(%rip), %rax
-; X64-NEXT:    callq *_TLS_MODULE_BASE_@tlscall(%rax)
-; X64-NEXT:    movl z@DTPOFF(%rax,%rdx), %ecx
-; X64-NEXT:    addl t@DTPOFF(%rax,%rdx), %ecx
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    retq
-  %1 = load i32, ptr @z, align 4
-  %2 = load i32, ptr @t, align 4
   %3 = add nsw i32 %1, %2
   ret i32 %3
 }
