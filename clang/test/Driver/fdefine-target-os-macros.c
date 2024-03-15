@@ -141,7 +141,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-xros %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-xros \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -157,7 +158,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-xros-simulator %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-xros-simulator \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
