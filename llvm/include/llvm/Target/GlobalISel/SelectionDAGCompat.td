@@ -90,6 +90,7 @@ def : GINodeEquiv<G_UDIVFIX, udivfix>;
 def : GINodeEquiv<G_SDIVFIXSAT, sdivfixsat>;
 def : GINodeEquiv<G_UDIVFIXSAT, udivfixsat>;
 def : GINodeEquiv<G_SELECT, select>;
+def : GINodeEquiv<G_SELECT, vselect>;
 def : GINodeEquiv<G_FNEG, fneg>;
 def : GINodeEquiv<G_FPEXT, fpextend>;
 def : GINodeEquiv<G_FPTRUNC, fpround>;
