@@ -10,15 +10,15 @@ namespace Rel {
     friend bool operator>=(const A&, const A&) = default;
   };
   static_assert(A{0} < A{1});
-  static_assert(A{1} < A{1}); // expected-error {{failed}}
+  static_assert(A{1} < A{1}); // expected-error {{failed}} expected-note {{'{1} < {1}'}}
   static_assert(A{0} <= A{1});
   static_assert(A{1} <= A{1});
-  static_assert(A{2} <= A{1}); // expected-error {{failed}}
+  static_assert(A{2} <= A{1}); // expected-error {{failed}} expected-note {{'{2} <= {1}'}}
   static_assert(A{1} > A{0});
-  static_assert(A{1} > A{1}); // expected-error {{failed}}
+  static_assert(A{1} > A{1}); // expected-error {{failed}} expected-note {{'{1} > {1}'}}
   static_assert(A{1} >= A{0});
   static_assert(A{1} >= A{1});
-  static_assert(A{1} >= A{2}); // expected-error {{failed}}
+  static_assert(A{1} >= A{2}); // expected-error {{failed}} expected-note {{'{1} >= {2}'}}
 
   struct B {
     bool operator<=>(B) const = delete; // expected-note 4{{deleted here}} expected-note-re 8{{candidate {{.*}} deleted}}
@@ -49,7 +49,7 @@ namespace NotEqual {
     friend bool operator!=(const A&, const A&) = default;
   };
   static_assert(A{1} != A{2});
-  static_assert(A{1} != A{1}); // expected-error {{failed}}
+  static_assert(A{1} != A{1}); // expected-error {{failed}} expected-note {{'{1} != {1}'}}
 
   struct B {
     bool operator==(B) const = delete; // expected-note {{deleted here}} expected-note-re 2{{candidate {{.*}} deleted}}

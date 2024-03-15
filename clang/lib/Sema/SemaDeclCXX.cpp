@@ -17256,6 +17256,13 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
     OS << "i)";
   } break;
 
+  case APValue::ValueKind::Array:
+  case APValue::ValueKind::Vector:
+  case APValue::ValueKind::Struct: {
+    llvm::raw_svector_ostream OS(Str);
+    V.printPretty(OS, Context, T);
+  } break;
+
   default:
     return false;
   }
@@ -17293,11 +17300,10 @@ static bool UsefulToPrintExpr(const Expr *E) {
 /// Try to print more useful information about a failed static_assert
 /// with expression \E
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
-  if (const auto *Op = dyn_cast<BinaryOperator>(E);
-      Op && Op->getOpcode() != BO_LOr) {
-    const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
-    const Expr *RHS = Op->getRHS()->IgnoreParenImpCasts();
-
+  const auto Diagnose = [&](const Expr *LHS, const Expr *RHS,
+                            const llvm::StringRef &OpStr) {
+    LHS = LHS->IgnoreParenImpCasts();
+    RHS = RHS->IgnoreParenImpCasts();
     // Ignore comparisons of boolean expressions with a boolean literal.
     if ((isa<CXXBoolLiteralExpr>(LHS) && RHS->getType()->isBooleanType()) ||
         (isa<CXXBoolLiteralExpr>(RHS) && LHS->getType()->isBooleanType()))
@@ -17324,10 +17330,19 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
                                  DiagSide[I].ValueString, Context);
     }
     if (DiagSide[0].Print && DiagSide[1].Print) {
-      Diag(Op->getExprLoc(), diag::note_expr_evaluates_to)
-          << DiagSide[0].ValueString << Op->getOpcodeStr()
-          << DiagSide[1].ValueString << Op->getSourceRange();
+      Diag(E->getExprLoc(), diag::note_expr_evaluates_to)
+          << DiagSide[0].ValueString << OpStr << DiagSide[1].ValueString
+          << E->getSourceRange();
     }
+  };
+
+  if (const auto *Op = dyn_cast<BinaryOperator>(E);
+      Op && Op->getOpcode() != BO_LOr) {
+    Diagnose(Op->getLHS(), Op->getRHS(), Op->getOpcodeStr());
+  } else if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(E);
+             Op && Op->isInfixBinaryOp()) {
+    Diagnose(Op->getArg(0), Op->getArg(1),
+             getOperatorSpelling(Op->getOperator()));
   }
 }
 

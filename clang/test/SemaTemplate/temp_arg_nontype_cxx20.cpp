@@ -226,15 +226,19 @@ namespace UnnamedBitfield {
   // uninitialized and it being zeroed. Those are not distinct states
   // according to [temp.type]p2.
   //
-  // FIXME: We shouldn't track a value for unnamed bit-fields, nor number
-  // them when computing field indexes.
+  // At namespace scope, multiple `using` declarations are valid (to avoid
+  // conflicts when #including), just in case they they "all refer to the same
+  // entity." This test makes use of that implicit constraint to ensure that
+  // the compiler does not "see" a difference between any of the `T`s below.
+  // cf. https://stackoverflow.com/a/31225016/151464
   template <A> struct X {};
   constexpr A a;
   using T = X<a>;
   using T = X<A{}>;
   using T = X<(A())>;
-  // Once we support bit-casts involving bit-fields, this should be valid too.
-  using T = X<__builtin_bit_cast(A, 0)>; // expected-error {{constant}} expected-note {{not yet supported}}
+  using T = X<__builtin_bit_cast(A, 0)>;
+  using T = X<__builtin_bit_cast(A, A{})>;
+  using T = X<__builtin_bit_cast(A, (unsigned char[4]){})>;
 }
 
 namespace Temporary {
