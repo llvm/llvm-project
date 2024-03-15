@@ -1,0 +1,48 @@
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: yaml2obj %s -o a.o
+# RUN: not ld.lld a.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+
+# CHECK:      error: a.o:(relr): unknown section type 0x13
+# CHECK-NEXT: error: a.o:(regular): unknown section type 0x15
+# CHECK-NEXT: error: a.o:(loos_nonconforming): unknown section type 0x60000000
+# CHECK-NEXT: error: a.o:(hios_nonconforming): unknown section type 0x6fffffff
+# CHECK-NEXT: error: a.o:(louser_alloc): unknown section type 0x80000000
+# CHECK-NEXT: error: a.o:(hiuser_alloc): unknown section type 0xffffffff
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:  relr
+    Type:  19
+  - Name:  regular
+    Type:  21
+  - Name:  loos
+    Type:  0x60000000
+  - Name:  hios
+    Type:  0x6fffffff
+  - Name:  loos_nonconforming
+    Type:  0x60000000
+    Flags: [ SHF_OS_NONCONFORMING ]
+  - Name:  hios_nonconforming
+    Type:  0x6fffffff
+    Flags: [ SHF_OS_NONCONFORMING ]
+
+  - Name:  loproc
+    Type:  0x70000000
+  - Name:  hiproc
+    Type:  0x7fffffff
+
+  - Name:  louser
+    Type:  0x80000000
+  - Name:  hiuser
+    Type:  0xffffffff
+  - Name:  louser_alloc
+    Type:  0x80000000
+    Flags: [ SHF_ALLOC ]
+  - Name:  hiuser_alloc
+    Type:  0xffffffff
+    Flags: [ SHF_ALLOC ]
