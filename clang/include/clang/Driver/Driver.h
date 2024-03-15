@@ -839,6 +839,8 @@ llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
 
+/// Apply a space separated list of edits to the input argument lists.
+/// See applyOneOverrideOption.
 void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
                           std::set<std::string> &SavedStrings,

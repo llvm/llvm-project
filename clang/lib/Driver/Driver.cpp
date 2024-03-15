@@ -6781,8 +6781,6 @@ void applyOneOverrideOption(raw_ostream &OS,
 
 } // namespace
 
-/// applyOverrideOptions - Apply a space separated list of edits to the
-/// input argument lists. See applyOneOverrideOption.
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
                                   std::set<std::string> &SavedStrings,
