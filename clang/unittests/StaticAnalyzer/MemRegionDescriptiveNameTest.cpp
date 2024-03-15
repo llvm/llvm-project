@@ -12,6 +12,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "gtest/gtest.h"
+#include <fstream>
 
 using namespace clang;
 using namespace ento;
@@ -80,6 +81,48 @@ void top() {
   std::string Output;
   ASSERT_TRUE(runChecker(Code, Output));
   EXPECT_EQ(Output, "DescriptiveNameChecker: array[index]\n");
+}
+
+TEST(MemRegionDescriptiveNameTest, SymbolicElementRegionIndexSymbolValFails) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+extern int* ptr;
+extern int array[3];
+void top() {
+  reportDescriptiveName(&array[(long)ptr]);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  EXPECT_EQ(Output, "DescriptiveNameChecker: \n");
+}
+
+TEST(MemRegionDescriptiveNameTest, SymbolicElementRegionIndexOrigRegionFails) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+extern int getInt(void);
+extern int array[3];
+void top() {
+  reportDescriptiveName(&array[getInt()]);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  EXPECT_EQ(Output, "DescriptiveNameChecker: \n");
+}
+
+TEST(MemRegionDescriptiveNameTest, SymbolicElementRegionIndexDescrNameFails) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+extern int *ptr;
+extern int array[3];
+void top() {
+  reportDescriptiveName(&array[*ptr]);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  EXPECT_EQ(Output, "DescriptiveNameChecker: \n");
 }
 
 } // namespace

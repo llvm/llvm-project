@@ -720,19 +720,21 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
       CI->getValue().toString(Idx);
       ArrayIndices = (llvm::Twine("[") + Idx.str() + "]" + ArrayIndices).str();
     }
-    // Index is a SymbolVal.
-    else if (auto SI = ER->getIndex().getAs<nonloc::SymbolVal>()) {
-      if (SymbolRef SR = SI->getAsSymbol()) {
-        if (const MemRegion *OR = SR->getOriginRegion()) {
-          std::string Idx = OR->getDescriptiveName(false);
-          ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
-        }
-      }
-    }
-    // Index is neither a ConcreteInt nor SymbolVal, give up and return.
+    // Index is symbolic, but may have a descriptive name.
     else {
-      assert(false && "we should have a descriptive name");
-      return "";
+      auto SI = ER->getIndex().getAs<nonloc::SymbolVal>();
+      if (!SI)
+        return "";
+
+      const MemRegion *OR = SI->getAsSymbol()->getOriginRegion();
+      if (!OR)
+        return "";
+
+      std::string Idx = OR->getDescriptiveName(false);
+      if (Idx.empty())
+        return "";
+
+      ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
     }
     R = ER->getSuperRegion();
   }
