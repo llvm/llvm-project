@@ -40,12 +40,10 @@
 
 #include "CodeGenTarget.h"
 #include "PredicateExpander.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <set>
 #include <vector>
 
 using namespace llvm;
@@ -61,14 +59,14 @@ class MacroFusionPredicatorEmitter {
                            raw_ostream &OS);
   void emitMacroFusionImpl(std::vector<Record *> Fusions, PredicateExpander &PE,
                            raw_ostream &OS);
-  void emitPredicates(std::vector<Record *> &FirstPredicate,
+  void emitPredicates(std::vector<Record *> &FirstPredicate, bool IsCommutable,
                       PredicateExpander &PE, raw_ostream &OS);
-  void emitFirstPredicate(Record *SecondPredicate, PredicateExpander &PE,
-                          raw_ostream &OS);
-  void emitSecondPredicate(Record *SecondPredicate, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitBothPredicate(Record *Predicates, PredicateExpander &PE,
-                         raw_ostream &OS);
+  void emitFirstPredicate(Record *SecondPredicate, bool IsCommutable,
+                          PredicateExpander &PE, raw_ostream &OS);
+  void emitSecondPredicate(Record *SecondPredicate, bool IsCommutable,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitBothPredicate(Record *Predicates, bool IsCommutable,
+                         PredicateExpander &PE, raw_ostream &OS);
 
 public:
   MacroFusionPredicatorEmitter(RecordKeeper &R) : Records(R), Target(R) {}
@@ -103,6 +101,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
   for (Record *Fusion : Fusions) {
     std::vector<Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
+    bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
 
     OS << "bool is" << Fusion->getName() << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
@@ -111,7 +110,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(4) << "const MachineInstr &SecondMI) {\n";
     OS.indent(2) << "auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
-    emitPredicates(Predicates, PE, OS);
+    emitPredicates(Predicates, IsCommutable, PE, OS);
 
     OS.indent(2) << "return true;\n";
     OS << "}\n";
@@ -122,15 +121,16 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 }
 
 void MacroFusionPredicatorEmitter::emitPredicates(
-    std::vector<Record *> &Predicates, PredicateExpander &PE, raw_ostream &OS) {
+    std::vector<Record *> &Predicates, bool IsCommutable, PredicateExpander &PE,
+    raw_ostream &OS) {
   for (Record *Predicate : Predicates) {
     Record *Target = Predicate->getValueAsDef("Target");
     if (Target->getName() == "first_fusion_target")
-      emitFirstPredicate(Predicate, PE, OS);
+      emitFirstPredicate(Predicate, IsCommutable, PE, OS);
     else if (Target->getName() == "second_fusion_target")
-      emitSecondPredicate(Predicate, PE, OS);
+      emitSecondPredicate(Predicate, IsCommutable, PE, OS);
     else if (Target->getName() == "both_fusion_target")
-      emitBothPredicate(Predicate, PE, OS);
+      emitBothPredicate(Predicate, IsCommutable, PE, OS);
     else
       PrintFatalError(Target->getLoc(),
                       "Unsupported 'FusionTarget': " + Target->getName());
@@ -138,6 +138,7 @@ void MacroFusionPredicatorEmitter::emitPredicates(
 }
 
 void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
+                                                      bool IsCommutable,
                                                       PredicateExpander &PE,
                                                       raw_ostream &OS) {
   if (Predicate->isSubClassOf("WildcardPred")) {
@@ -170,6 +171,7 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
 }
 
 void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
+                                                       bool IsCommutable,
                                                        PredicateExpander &PE,
                                                        raw_ostream &OS) {
   if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
@@ -182,6 +184,36 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
+  } else if (Predicate->isSubClassOf("SameReg")) {
+    int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
+    int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
+
+    OS.indent(2) << "if (!SecondMI.getOperand(" << FirstOpIdx
+                 << ").getReg().isVirtual()) {\n";
+    OS.indent(4) << "if (SecondMI.getOperand(" << FirstOpIdx
+                 << ").getReg() != SecondMI.getOperand(" << SecondOpIdx
+                 << ").getReg())";
+
+    if (IsCommutable) {
+      OS << " {\n";
+      OS.indent(6) << "if (!SecondMI.getDesc().isCommutable())\n";
+      OS.indent(6) << "  return false;\n";
+
+      OS.indent(6)
+          << "unsigned SrcOpIdx1 = " << SecondOpIdx
+          << ", SrcOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;\n";
+      OS.indent(6)
+          << "if (TII.findCommutedOpIndices(SecondMI, SrcOpIdx1, SrcOpIdx2))\n";
+      OS.indent(6)
+          << "  if (SecondMI.getOperand(" << FirstOpIdx
+          << ").getReg() != SecondMI.getOperand(SrcOpIdx2).getReg())\n";
+      OS.indent(6) << "    return false;\n";
+      OS.indent(4) << "}\n";
+    } else {
+      OS << "\n";
+      OS.indent(4) << "  return false;\n";
+    }
+    OS.indent(2) << "}\n";
   } else {
     PrintFatalError(Predicate->getLoc(),
                     "Unsupported predicate for second instruction: " +
@@ -190,13 +222,14 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
 }
 
 void MacroFusionPredicatorEmitter::emitBothPredicate(Record *Predicate,
+                                                     bool IsCommutable,
                                                      PredicateExpander &PE,
                                                      raw_ostream &OS) {
   if (Predicate->isSubClassOf("FusionPredicateWithCode"))
     OS << Predicate->getValueAsString("Predicate");
   else if (Predicate->isSubClassOf("BothFusionPredicateWithMCInstPredicate")) {
-    emitFirstPredicate(Predicate, PE, OS);
-    emitSecondPredicate(Predicate, PE, OS);
+    emitFirstPredicate(Predicate, IsCommutable, PE, OS);
+    emitSecondPredicate(Predicate, IsCommutable, PE, OS);
   } else if (Predicate->isSubClassOf("TieReg")) {
     int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
     int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
@@ -206,8 +239,28 @@ void MacroFusionPredicatorEmitter::emitBothPredicate(Record *Predicate,
                  << ").isReg() &&\n";
     OS.indent(2) << "      FirstMI->getOperand(" << FirstOpIdx
                  << ").getReg() == SecondMI.getOperand(" << SecondOpIdx
-                 << ").getReg()))\n";
-    OS.indent(2) << "  return false;\n";
+                 << ").getReg()))";
+
+    if (IsCommutable) {
+      OS << " {\n";
+      OS.indent(4) << "if (!SecondMI.getDesc().isCommutable())\n";
+      OS.indent(4) << "  return false;\n";
+
+      OS.indent(4)
+          << "unsigned SrcOpIdx1 = " << SecondOpIdx
+          << ", SrcOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;\n";
+      OS.indent(4)
+          << "if (TII.findCommutedOpIndices(SecondMI, SrcOpIdx1, SrcOpIdx2))\n";
+      OS.indent(4)
+          << "  if (FirstMI->getOperand(" << FirstOpIdx
+          << ").getReg() != SecondMI.getOperand(SrcOpIdx2).getReg())\n";
+      OS.indent(4) << "    return false;\n";
+      OS.indent(2) << "}";
+    } else {
+      OS << "\n";
+      OS.indent(2) << "  return false;";
+    }
+    OS << "\n";
   } else
     PrintFatalError(Predicate->getLoc(),
                     "Unsupported predicate for both instruction: " +
