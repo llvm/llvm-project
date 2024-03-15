@@ -99,6 +99,7 @@ public:
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitTypeTraitExpr(const TypeTraitExpr *E);
+  bool VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E);
   bool VisitLambdaExpr(const LambdaExpr *E);
   bool VisitPredefinedExpr(const PredefinedExpr *E);
   bool VisitCXXThrowExpr(const CXXThrowExpr *E);
