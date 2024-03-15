@@ -232,6 +232,7 @@ public:
         .Case("callx", true)
         .Case("goto", true)
         .Case("gotol", true)
+        .Case("may_goto", true)
         .Case("*", true)
         .Case("exit", true)
         .Case("lock", true)
