@@ -12,11 +12,8 @@
 
 namespace LIBC_NAMESPACE {
 
-// TODO: See https://github.com/llvm/llvm-project/issues/85335 for more details
-// on why this is needed.
+// TODO: This is a temporary workaround for issue #85335.
 
-LLVM_LIBC_FUNCTION(int, remove, (const char *)) {
-  return -1;
-}
+LLVM_LIBC_FUNCTION(int, remove, (const char *)) { return -1; }
 
 } // namespace LIBC_NAMESPACE
