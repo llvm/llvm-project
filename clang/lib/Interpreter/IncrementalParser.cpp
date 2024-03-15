@@ -13,7 +13,6 @@
 #include "IncrementalParser.h"
 
 #include "clang/AST/DeclContextInternals.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
