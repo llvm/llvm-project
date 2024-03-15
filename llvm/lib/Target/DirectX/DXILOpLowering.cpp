@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILConstants.h"
+#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -94,9 +95,12 @@ public:
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
   static char ID; // Pass identification.
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+    // Specify the passes that your pass depends on
+    AU.addRequired<DXILIntrinsicExpansionLegacy>();
+  }
 };
 char DXILOpLoweringLegacy::ID = 0;
-
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
