@@ -401,6 +401,15 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_SELECT: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
 
+    if (Ty.isVector()) {
+      LLT TestTy = MRI.getType(MI.getOperand(2).getReg());
+      OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] =
+          getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+      OpdsMapping[1] =
+          getVRBValueMapping(TestTy.getSizeInBits().getKnownMinValue());
+      break;
+    }
+
     // Try to minimize the number of copies. If we have more floating point
     // constrained values than not, then we'll put everything on FPR. Otherwise,
     // everything has to be on GPR.
