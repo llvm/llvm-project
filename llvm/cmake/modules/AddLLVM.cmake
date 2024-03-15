@@ -1641,7 +1641,6 @@ function(add_unittest test_suite test_name)
         # When using FatLTO, just use relocatable linking.
         set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " -Wl,--no-fat-lto-objects")
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY COMPILE_FLAGS " -fno-lto")
       else()
         set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " -Wl,--lto-O0")
