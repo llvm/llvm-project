@@ -17,6 +17,6 @@ int main() {
   // CHECK: [[ADDR]] is located 1 bytes before 42-byte region
   // CHECK: allocated by thread T0 here:
   // CHECK-NEXT: {{#0 .* malloc}}
-  // CHECK: {{ .* main .*symbols_path.cpp}}:[[@LINE-8]]
+  // CHECK: {{ #[1-2] .* main .*symbols_path.cpp}}:[[@LINE-8]]
   free(buffer);
 }
