@@ -50,18 +50,6 @@ void test() {
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
-  {
-    SpBuf spBuf;
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(sp);
-    assert(spBuf.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-  }
   // Mode: `in`
   {
     SpBuf spBuf{std::ios_base::in};
@@ -74,17 +62,6 @@ void test() {
     assert(!spBuf.span().empty());
     assert(spBuf.span().size() == 4);
   }
-  {
-    SpBuf spBuf{std::ios_base::in};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(sp);
-    assert(spBuf.span().data() == arr);
-    assert(!spBuf.span().empty());
-    assert(spBuf.span().size() == 4);
-  }
   // Mode: `out`
   {
     SpBuf spBuf{std::ios_base::out};
@@ -93,18 +70,6 @@ void test() {
     assert(spBuf.span().size() == 0);
 
     spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-  }
-  {
-    SpBuf spBuf{std::ios_base::out};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(sp);
     assert(spBuf.span().data() == arr);
     // Mode `out` counts read characters
     assert(spBuf.span().empty());
@@ -123,18 +88,6 @@ void test() {
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
-  {
-    SpBuf spBuf(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(sp);
-    assert(spBuf.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-  }
   // Mode: `ate`
   {
     SpBuf spBuf(std::ios_base::out | std::ios_base::ate);
@@ -143,17 +96,6 @@ void test() {
     assert(spBuf.span().size() == 0);
 
     spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    assert(!spBuf.span().empty());
-    assert(spBuf.span().size() == 4);
-  }
-  {
-    SpBuf spBuf(std::ios_base::out | std::ios_base::ate);
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(sp);
     assert(spBuf.span().data() == arr);
     assert(!spBuf.span().empty());
     assert(spBuf.span().size() == 4);

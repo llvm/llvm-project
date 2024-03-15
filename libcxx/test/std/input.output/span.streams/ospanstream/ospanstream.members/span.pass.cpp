@@ -11,12 +11,12 @@
 // <spanstream>
 
 //   template<class charT, class traits = char_traits<charT>>
-//   class basic_spanstream
-//     : public basic_iostream<charT, traits> {
+//   class basic_ospanstream
+//     : public basic_ostream<charT, traits> {
 
-//     // [spanstream.members], members
+//     // [ospanstream.members], members
 
-//     void span(std::span<charT> s) noexcept;
+//     std::span<charT> span() const noexcept;
 
 #include <cassert>
 #include <span>
@@ -28,7 +28,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_spanbuf<CharT, TraitsT>;
+  using SpStream = std::basic_ospanstream<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -39,12 +39,7 @@ void test() {
 
   // Mode: default (`in` | `out`)
   {
-    SpStream spSt;
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
+    SpStream spSt{sp};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
     assert(spSt.span().empty());
@@ -52,24 +47,14 @@ void test() {
   }
   // Mode: `in`
   {
-    SpStream spSt{std::ios_base::in};
-    assert(spSt.span().data() == nullptr);
+    SpStream spSt{sp, std::ios_base::in};
+    assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
   }
   // Mode: `out`
   {
-    SpStream spSt{std::ios_base::out};
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
+    SpStream spSt{sp, std::ios_base::out};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
     assert(spSt.span().empty());
@@ -77,12 +62,7 @@ void test() {
   }
   // Mode: multiple
   {
-    SpStream spSt{std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
+    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
     assert(spSt.span().empty());
@@ -90,12 +70,7 @@ void test() {
   }
   // Mode: `ate`
   {
-    SpStream spSt{std::ios_base::out | std::ios_base::ate};
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
+    SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
