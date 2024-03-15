@@ -289,7 +289,7 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
                              AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
@@ -332,7 +332,7 @@ protected:
 private:
   /// Prepare the arguments before launching the kernel.
   void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+                    ptrdiff_t *ArgOffsets, uint32_t Version, uint32_t &NumArgs,
                     llvm::SmallVectorImpl<void *> &Args,
                     llvm::SmallVectorImpl<void *> &Ptrs,
                     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
