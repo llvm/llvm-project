@@ -743,7 +743,8 @@ void AggExprEmitter::buildNullInitializationToLValue(mlir::Location loc,
     // Note that the following is not equivalent to
     // EmitStoreThroughBitfieldLValue for ARC types.
     if (lv.isBitField()) {
-      llvm_unreachable("NYI");
+      mlir::Value result;
+      CGF.buildStoreThroughBitfieldLValue(RValue::get(null), lv, result);
     } else {
       assert(lv.isSimple());
       CGF.buildStoreOfScalar(null, lv, /* isInitialization */ true);
@@ -795,8 +796,7 @@ void AggExprEmitter::buildInitializationToLValue(Expr *E, LValue LV) {
     if (LV.isSimple()) {
       CGF.buildScalarInit(E, CGF.getLoc(E->getSourceRange()), LV);
     } else {
-      llvm_unreachable("NYI");
-      // CGF.EmitStoreThroughLValue(RValue::get(CGF.EmitScalarExpr(E)), LV);
+      CGF.buildStoreThroughLValue(RValue::get(CGF.buildScalarExpr(E)), LV);
     }
     return;
   }
@@ -1114,7 +1114,37 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   CIRGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
 
   if (record->isUnion()) {
-    llvm_unreachable("NYI");
+    // Only initialize one field of a union. The field itself is
+    // specified by the initializer list.
+    if (!InitializedFieldInUnion) {
+      // Empty union; we have nothing to do.
+
+#ifndef NDEBUG
+      // Make sure that it's really an empty and not a failure of
+      // semantic analysis.
+      for (const auto *Field : record->fields())
+        assert(
+            (Field->isUnnamedBitField() || Field->isAnonymousStructOrUnion()) &&
+            "Only unnamed bitfields or ananymous class allowed");
+#endif
+      return;
+    }
+
+    // FIXME: volatility
+    FieldDecl *Field = InitializedFieldInUnion;
+
+    LValue FieldLoc =
+        CGF.buildLValueForFieldInitialization(DestLV, Field, Field->getName());
+    if (NumInitElements) {
+      // Store the initializer into the field
+      buildInitializationToLValue(InitExprs[0], FieldLoc);
+    } else {
+      // Default-initialize to null.
+      buildNullInitializationToLValue(CGF.getLoc(ExprToVisit->getSourceRange()),
+                                      FieldLoc);
+    }
+
+    return;
   }
 
   // Here we iterate over the fields; this makes it simpler to both
