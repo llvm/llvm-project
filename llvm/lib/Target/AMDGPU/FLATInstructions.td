@@ -174,7 +174,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   bits<8> vaddr;
   bits<24> offset;
 
-  let Inst{6-0} = !if(ps.has_saddr, !if(ps.enabled_saddr, saddr, 0x7f), 0);
+  let Inst{6-0} = !if(ps.enabled_saddr, saddr, 0x7f);
   let Inst{21-14} = op;
   let Inst{31-26} = 0x3b;
   let Inst{39-32} = !if(ps.has_vdst, vdst, ?);
@@ -2115,7 +2115,7 @@ class FLAT_Real_gfx10<bits<7> op, FLAT_Pseudo ps> :
 
   let Inst{11-0}  = offset{11-0};
   let Inst{12}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlcValue);
-  let Inst{54-48} = !if(ps.has_saddr, !if(ps.enabled_saddr, saddr, 0x7d), 0x7d);
+  let Inst{54-48} = !if(ps.enabled_saddr, saddr, 0x7d);
   let Inst{55}    = 0;
 }
 
