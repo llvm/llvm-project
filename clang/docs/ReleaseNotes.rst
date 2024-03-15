@@ -205,15 +205,15 @@ Attribute Changes in Clang
   to certain C++ class types, such as smart pointers:
   ``void useObject(std::unique_ptr<Object> _Nonnull obj);``.
 
-  This works for standard library types including ``unique_ptr``, ``shared_ptr``
-  and ``function``. See `the attribute reference
-documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
-for the full list.
+  This works for standard library types including ``unique_ptr``, ``shared_ptr``,
+  and ``function``. See
+  `the attribute reference documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
+  for the full list.
 
 - The ``_Nullable`` attribute can be applied to C++ class declarations:
   ``template <class T> class _Nullable MySmartPointer {};``.
 
-  This allows the ``_Nullable`` and ``_Nonnull` family of type attributes to
+  This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
   apply to this class.
 
 Improvements to Clang's diagnostics
