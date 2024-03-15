@@ -588,8 +588,6 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
 // Generate diagnostics when adding or removing effects in a type conversion.
 void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                             SourceLocation Loc) {
-  llvm::outs() << "diagnoseFunctionEffectConversion: " << SrcType << " -> "
-               << DstType << "\n";
   const auto SrcFX = FunctionEffectSet::get(*SrcType);
   const auto DstFX = FunctionEffectSet::get(*DstType);
   if (SrcFX != DstFX) {
@@ -683,7 +681,6 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   diagnoseZeroToNullptrConversion(Kind, E);
   if (!isCast(CCK) && !E->isNullPointerConstant(
                           Context, Expr::NPC_NeverValueDependent /* ???*/)) {
-    llvm::outs() << "Sema::ImpCastExprToType\n";
     diagnoseFunctionEffectConversion(Ty, E->getType(), E->getBeginLoc());
   }
 

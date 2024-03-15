@@ -1787,9 +1787,6 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                                 QualType &ResultTy) {
 
-  llvm::outs() << "IsFunctionConversion: " << FromType << " -> " << ToType
-               << "\n";
-
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1828,7 +1825,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     if (TyClass != Type::FunctionProto && TyClass != Type::FunctionNoProto)
       return false;
   }
-  llvm::outs() << "  didn't exit early\n";
 
   const auto *FromFn = cast<FunctionType>(CanFrom);
   FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
@@ -1872,30 +1868,25 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       Changed = true;
     }
 
-#if 1
-    // NOTE (TEMP): this works for C++ to allow dropping effects.
-    // For plain C, however, this creates an error when dropping effects!
+    if (getLangOpts().CPlusPlus) {
+      // TODO:
+      // For C, when called from checkPointerTypesForAssignment,
+      // we need not to change the type, or else even an innocuous cast
+      // like dropping effects will fail.
 
-    // Transparently add/drop effects; here we are concerned with
-    // language rules/canonicalization. Adding/dropping effects is a warning.
-    auto FromFX = FromFPT->getFunctionEffects();
-    auto ToFX = ToFPT->getFunctionEffects();
-    if (FromFX != ToFX) {
-      llvm::outs() << "  effects change: " << FromType << " -> " << ToType
-                   << "\n";
-
-      // const auto MergedFX = FunctionEffectSet::getIntersection(FromFX, ToFX);
-      //  TODO: diagnose conflicts
-
-      FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-      ExtInfo.FunctionEffects = ToFX;
-      QualType QT = Context.getFunctionType(FromFPT->getReturnType(),
-                                            FromFPT->getParamTypes(), ExtInfo);
-      FromFn = QT->getAs<FunctionType>();
-      llvm::outs() << "  produced " << QT << "\n";
-      Changed = true;
+      // Transparently add/drop effects; here we are concerned with
+      // language rules/canonicalization. Adding/dropping effects is a warning.
+      const auto FromFX = FromFPT->getFunctionEffects();
+      const auto ToFX = ToFPT->getFunctionEffects();
+      if (FromFX != ToFX) {
+        FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
+        ExtInfo.FunctionEffects = ToFX;
+        QualType QT = Context.getFunctionType(
+            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
+        FromFn = QT->getAs<FunctionType>();
+        Changed = true;
+      }
     }
-#endif
   }
 
   if (!Changed)

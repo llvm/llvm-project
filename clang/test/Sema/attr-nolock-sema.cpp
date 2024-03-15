@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
-// R UN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 %s
-
-// TODO: There's a problem with diagnosing type conversions in plain C.
+// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 %s
 
 #if !__has_attribute(clang_nolock)
 #error "the 'nolock' attribute is not available"

@@ -7,25 +7,32 @@
 
 // ============================================================================
 
-#if 0 // C function type problems
+#if 1 // C function type problems
 void unannotated();
 void nolock() [[clang::nolock]];
 void noalloc() [[clang::noalloc]];
 
 
-void callthis(void (*fp)());
-
-
 void type_conversions()
 {
-// 	callthis(nolock);
-
 	// It's fine to remove a performance constraint.
 	void (*fp_plain)();
 
-// 	fp_plain = unannotated;
+	fp_plain = unannotated;
 	fp_plain = nolock;
-// 	fp_plain = noalloc;
+	fp_plain = noalloc;
+
+	// Adding/spoofing nolock is unsafe.
+	void (*fp_nolock)() [[clang::nolock]];
+	fp_nolock = nolock;
+	fp_nolock = unannotated; // expected-warning {{attribute 'nolock' should not be added via type conversion}}
+	fp_nolock = noalloc; // expected-warning {{attribute 'nolock' should not be added via type conversion}}
+
+	// Adding/spoofing noalloc is unsafe.
+	void (*fp_noalloc)() [[clang::noalloc]];
+	fp_noalloc = noalloc;
+	fp_noalloc = nolock; // no warning because nolock includes noalloc fp_noalloc = unannotated;
+	fp_noalloc = unannotated; // expected-warning {{attribute 'noalloc' should not be added via type conversion}}
 }
 #endif
 
@@ -53,6 +60,10 @@ void m()
 }
 #endif
 
+// ============================================================================
+
+#if 0
+// some messing around with type traits
 template <class _Tp, _Tp __v>
 struct integral_constant
 {
@@ -72,7 +83,7 @@ typedef integral_constant<bool, false> false_type;
 template <typename T>
 struct is_nolock;
 
-
-
 void g() [[clang::nolock]];
 void h() [[clang::nolock(false)]];
+#endif
+

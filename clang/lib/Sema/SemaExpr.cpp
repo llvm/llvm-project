@@ -9986,6 +9986,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
       return Sema::IncompatibleFunctionPointer;
     return Sema::IncompatiblePointer;
   }
+  // #85415: This call to IsFunctionConversion appears to have inverted
+  // arguments: ltrans -> From, rtrans -> To
   if (!S.getLangOpts().CPlusPlus &&
       S.IsFunctionConversion(ltrans, rtrans, ltrans))
     return Sema::IncompatibleFunctionPointer;
