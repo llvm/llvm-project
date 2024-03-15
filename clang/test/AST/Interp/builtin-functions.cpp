@@ -510,3 +510,12 @@ namespace bswap {
   int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
   int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
 }
+
+#define CFSTR __builtin___CFStringMakeConstantString
+void test7(void) {
+  const void *X;
+  X = CFSTR("\242"); // both-warning {{input conversion stopped}}
+  X = CFSTR("\0"); // no-warning
+  X = CFSTR(242); // both-error {{cannot initialize a parameter of type 'const char *' with an rvalue of type 'int'}}
+  X = CFSTR("foo", "bar"); // both-error {{too many arguments to function call}}
+}
