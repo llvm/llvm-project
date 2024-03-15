@@ -409,6 +409,38 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
   let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
 }
 
+def NVVM_BarrierArriveOp : NVVM_Op<"barrier.arrive", 
+                  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
+                  AttrSizedOperandSegments]> 
+{
+  let arguments = (ins     
+    Optional<I32>:$barrierId,
+    Optional<I32>:$numberOfThreads);
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+  let description = [{
+    Thread that executes this op announces their arrival at the barrier with 
+    given id and continue their execution.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      std::string ptx = "bar.arrive ";
+      if (getNumberOfThreads() && getBarrierId()) {
+        ptx += "%0, %1";
+      } else if (getBarrierId()) {
+        ptx += "%0";
+      } else {
+        ptx += "0";
+      }
+      ptx += ";";
+      return ptx;
+    }
+  }];
+}
+
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
