@@ -55,14 +55,14 @@ void test() {
 
     // Mode: default (`in` | `out`)
     {
-      SpBuf spBuf(sp);
+      SpBuf spBuf{sp};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp));
+      SpBuf spBuf{std::as_const(sp)};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -70,27 +70,27 @@ void test() {
     }
     // Mode: `in`
     {
-      SpBuf spBuf(sp, std::ios_base::in);
+      SpBuf spBuf{sp, std::ios_base::in};
       assert(spBuf.span().data() == nullptr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::in);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::in};
       assert(spBuf.span().data() == nullptr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     // Mode: `out`
     {
-      SpBuf spBuf(sp, std::ios_base::out);
+      SpBuf spBuf{sp, std::ios_base::out};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::out);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::out};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -98,14 +98,14 @@ void test() {
     }
     // Mode: multiple
     {
-      SpBuf spBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      SpBuf spBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -113,13 +113,13 @@ void test() {
     }
     // Mode: `ate`
     {
-      SpBuf spBuf(sp, std::ios_base::out | std::ios_base::ate);
+      SpBuf spBuf{sp, std::ios_base::out | std::ios_base::ate};
       assert(spBuf.span().data() == nullptr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::out | std::ios_base::ate);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::out | std::ios_base::ate};
       assert(spBuf.span().data() == nullptr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
@@ -133,14 +133,14 @@ void test() {
 
     // Mode: default (`in` | `out`)
     {
-      SpBuf spBuf(sp);
+      SpBuf spBuf{sp};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp));
+      SpBuf spBuf{std::as_const(sp)};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -148,27 +148,27 @@ void test() {
     }
     // Mode: `in`
     {
-      SpBuf spBuf(sp, std::ios_base::in);
+      SpBuf spBuf{sp, std::ios_base::in};
       assert(spBuf.span().data() == arr);
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::in);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::in};
       assert(spBuf.span().data() == arr);
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
     }
     // Mode `out`
     {
-      SpBuf spBuf(sp, std::ios_base::out);
+      SpBuf spBuf{sp, std::ios_base::out};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::out);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::out};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -176,14 +176,14 @@ void test() {
     }
     // Mode: multiple
     {
-      SpBuf spBuf(sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      SpBuf spBuf{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::in | std::ios_base::out | std::ios_base::binary};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -191,13 +191,13 @@ void test() {
     }
     // Mode: `ate`
     {
-      SpBuf spBuf(sp, std::ios_base::out | std::ios_base::ate);
+      SpBuf spBuf{sp, std::ios_base::out | std::ios_base::ate};
       assert(spBuf.span().data() == arr);
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
     }
     {
-      SpBuf spBuf(std::as_const(sp), std::ios_base::out | std::ios_base::ate);
+      SpBuf spBuf{std::as_const(sp), std::ios_base::out | std::ios_base::ate};
       assert(spBuf.span().data() == arr);
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
