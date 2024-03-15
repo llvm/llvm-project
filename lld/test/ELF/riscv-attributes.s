@@ -441,23 +441,23 @@
 #--- x3_reg_usage_tmp.s
 .attribute x3_reg_usage, 3
 
-# X3_REG_SCS_UKNOWN: BuildAttributes {
-# X3_REG_SCS_UKNOWN:   FormatVersion: 0x41
-# X3_REG_SCS_UKNOWN:   Section 1 {
-# X3_REG_SCS_UKNOWN:     SectionLength: 17
-# X3_REG_SCS_UKNOWN:     Vendor: riscv
-# X3_REG_SCS_UKNOWN:     Tag: Tag_File (0x1)
-# X3_REG_SCS_UKNOWN:     Size: 7
-# X3_REG_SCS_UKNOWN:     FileAttributes {
-# X3_REG_SCS_UKNOWN:       Attribute {
-# X3_REG_SCS_UKNOWN:         Tag: 16
-# X3_REG_SCS_UKNOWN:         Value: 2
-# X3_REG_SCS_UKNOWN:         TagName: x3_reg_usage
-# X3_REG_SCS_UKNOWN:         Description: X3 reg usage is 2
-# X3_REG_SCS_UKNOWN:       }
-# X3_REG_SCS_UKNOWN:     }
-# X3_REG_SCS_UKNOWN:   }
-# X3_REG_SCS_UKNOWN: }
+#      X3_REG_SCS_UKNOWN: BuildAttributes {
+# X3_REG_SCS_UKNOWN-NEXT:   FormatVersion: 0x41
+# X3_REG_SCS_UKNOWN-NEXT:   Section 1 {
+# X3_REG_SCS_UKNOWN-NEXT:     SectionLength: 17
+# X3_REG_SCS_UKNOWN-NEXT:     Vendor: riscv
+# X3_REG_SCS_UKNOWN-NEXT:     Tag: Tag_File (0x1)
+# X3_REG_SCS_UKNOWN-NEXT:     Size: 7
+# X3_REG_SCS_UKNOWN-NEXT:     FileAttributes {
+# X3_REG_SCS_UKNOWN-NEXT:       Attribute {
+# X3_REG_SCS_UKNOWN-NEXT:         Tag: 16
+# X3_REG_SCS_UKNOWN-NEXT:         Value: 2
+# X3_REG_SCS_UKNOWN-NEXT:         TagName: x3_reg_usage
+# X3_REG_SCS_UKNOWN-NEXT:         Description: X3 reg usage is 2
+# X3_REG_SCS_UKNOWN-NEXT:       }
+# X3_REG_SCS_UKNOWN-NEXT:     }
+# X3_REG_SCS_UKNOWN-NEXT:   }
+# X3_REG_SCS_UKNOWN-NEXT: }
 
 #--- unknown13.s
 .attribute 13, "0"

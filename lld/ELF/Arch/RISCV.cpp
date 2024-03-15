@@ -1149,9 +1149,9 @@ static void mergeX3RegUse(DenseMap<unsigned, unsigned>::iterator it,
     return;
   }
   if (oldTag != newTag) {
-    errorOrWarn(toString(oldSection) + " has x3_reg_usage=" + Twine(oldTag) +
-                " but " + toString(newSection) +
-                " has x3_reg_usage=" + Twine(newTag));
+    error(toString(oldSection) + " has x3_reg_usage=" + Twine(oldTag) +
+          " but " + toString(newSection) +
+          " has x3_reg_usage=" + Twine(newTag));
     return;
   }
   // TODO: do we need to check the tags are < 2047?
@@ -1216,7 +1216,6 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
           if (r.second) {
             firstAtomicAbi = sec;
           } else {
-
             mergeAtomic(r.first, firstAtomicAbi, sec, r.first->getSecond(), *i);
           }
         }

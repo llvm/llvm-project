@@ -49,15 +49,13 @@ const RISCVAttributeParser::DisplayHandler
 
 Error RISCVAttributeParser::atomicAbi(unsigned Tag) {
   uint64_t Value = de.getULEB128(cursor);
-  std::string Description = "Atomic ABI is " + utostr(Value);
-  printAttribute(Tag, Value, Description);
+  printAttribute(Tag, Value, "Atomic ABI is " + utostr(Value));
   return Error::success();
 }
 
 Error RISCVAttributeParser::x3RegUsage(unsigned Tag) {
   uint64_t Value = de.getULEB128(cursor);
-  std::string Description = "X3 reg usage is " + utostr(Value);
-  printAttribute(Tag, Value, Description);
+  printAttribute(Tag, Value, "X3 reg usage is " + utostr(Value));
   return Error::success();
 }
 

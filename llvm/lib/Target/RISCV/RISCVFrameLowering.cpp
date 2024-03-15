@@ -72,6 +72,12 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
   }
 
+  // Incompatibility checks are handled in RISCVTargetStreamer, but it is
+  // possible this IR doesn't have the subtarget feature, e.g. because of LTO.
+  if (!STI.hasFeature(RISCV::FeatureX3SCS))
+    report_fatal_error("Cannot use the software based RISCV shadow call stack "
+                       "without setting the ABI tag `+x3-scs`.");
+
   Register SCSPReg = RISCVABI::getSCSPReg();
 
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);

@@ -254,6 +254,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-sspm %s -o - | FileCheck --check-prefix=RV64SSPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-supm %s -o - | FileCheck --check-prefix=RV64SUPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssqosid %s -o - | FileCheck --check-prefix=RV64SSQOSID %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-unknown %s -o - | FileCheck --check-prefix=X3UNKNOWN %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-gp %s -o - | FileCheck --check-prefix=X3GP %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-scs %s -o - | FileCheck --check-prefix=X3SCS %s
+; RUN: llc -mtriple=riscv64 -mattr=+x3-tmp %s -o - | FileCheck --check-prefix=X3TMP %s
+
+; RUN: not --crash llc -mtriple=riscv64 -mattr=+x3-tmp,+x3-gp < %s  2>&1 | FileCheck --check-prefix=X3ERR %s
 
 ; CHECK: .attribute 4, 16
 
@@ -508,6 +514,12 @@
 ; RV64SSPM: .attribute 5, "rv64i2p1_sspm0p8"
 ; RV64SUPM: .attribute 5, "rv64i2p1_supm0p8"
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
+; X3UNKNOWN: .attribute 16, 0
+; X3GP: .attribute 16, 1
+; X3SCS: .attribute 16, 2
+; X3TMP: .attribute 16, 3
+; X3ERR: LLVM ERROR: Cannot set multiple ABIs for X3/GP
+; X3ERR: error: Aborted
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
@@ -520,8 +532,3 @@ define i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; A6S: .attribute 14, 2
 ; A6C: .attribute 14, 1
 }
-
-define void @f1() shadowcallstack {
-  ret void
-}
-
