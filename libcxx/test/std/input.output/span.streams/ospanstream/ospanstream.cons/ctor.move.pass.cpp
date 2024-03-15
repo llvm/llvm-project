@@ -36,26 +36,53 @@ void test() {
   // Mode: default (`in` | `out`)
   {
     SpStream rhsSpSt{sp};
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode: `in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode `out`
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode: multiple
   {
@@ -64,14 +91,28 @@ void test() {
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode `ate`
   {
     SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
+
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
+
+    // After move
+    assert(rhsSpSt.span().data() == arr);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
   }
 }
 

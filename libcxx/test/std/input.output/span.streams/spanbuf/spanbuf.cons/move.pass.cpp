@@ -164,7 +164,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -183,7 +183,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == nullptr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
@@ -201,7 +201,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -221,7 +221,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == nullptr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -235,7 +235,7 @@ void test() {
     // Mode: `ate`
     {
       SpBuf rhsSpBuf{std::ios_base::ate};
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == nullptr);
       assert(spBuf.span().empty());
       assert(spBuf.span().size() == 0);
@@ -260,7 +260,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -278,10 +278,15 @@ void test() {
       assert(!rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 4);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == arr);
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
+
+      // After move
+      assert(rhsSpBuf.span().data() == arr);
+      assert(!rhsSpBuf.span().empty());
+      assert(rhsSpBuf.span().size() == 4);
     }
     // Mode `out`
     {
@@ -291,7 +296,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -310,7 +315,7 @@ void test() {
       assert(rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 0);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == arr);
       // Mode `out` counts read characters
       assert(spBuf.span().empty());
@@ -328,7 +333,7 @@ void test() {
       assert(!rhsSpBuf.span().empty());
       assert(rhsSpBuf.span().size() == 4);
 
-      SpBuf spBuf(std::move(rhsSpBuf));
+      SpBuf spBuf{std::move(rhsSpBuf)};
       assert(spBuf.span().data() == arr);
       assert(!spBuf.span().empty());
       assert(spBuf.span().size() == 4);
