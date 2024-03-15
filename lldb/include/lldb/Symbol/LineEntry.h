@@ -144,7 +144,8 @@ struct LineEntry {
   /// The original source file, from debug info.
   lldb::SupportFileSP original_file_sp;
 
-  /// The source line number, or zero if there is no line number information.
+  /// The source line number, or LLDB_INVALID_LINE_NUMBER if there is no line
+  /// number information.
   uint32_t line = LLDB_INVALID_LINE_NUMBER;
 
   /// The column number of the source line, or zero if there is no column
