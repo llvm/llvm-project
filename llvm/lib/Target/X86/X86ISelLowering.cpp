@@ -42665,7 +42665,6 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
 bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     bool PoisonOnly, unsigned Depth) const {
-  unsigned EltsBits = Op.getScalarValueSizeInBits();
   unsigned NumElts = DemandedElts.getBitWidth();
 
   // TODO: Add more target shuffles.
@@ -42673,15 +42672,28 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI: {
     SmallVector<int, 8> Mask;
-    DecodePSHUFMask(NumElts, EltsBits, Op.getConstantOperandVal(1), Mask);
-
-    APInt DemandedSrcElts = APInt::getZero(NumElts);
-    for (unsigned I = 0; I != NumElts; ++I)
-      if (DemandedElts[I])
-        DemandedSrcElts.setBit(Mask[I]);
-
-    return DAG.isGuaranteedNotToBeUndefOrPoison(
-        Op.getOperand(0), DemandedSrcElts, PoisonOnly, Depth + 1);
+    SmallVector<SDValue, 2> Ops;
+    if (getTargetShuffleMask(Op.getNode(), Op.getSimpleValueType(), true, Ops,
+                             Mask)) {
+      SmallVector<APInt, 2> DemandedSrcElts(Ops.size(),
+                                            APInt::getZero(NumElts));
+      for (auto M : enumerate(Mask)) {
+        if (!DemandedElts[M.index()] || M.value() == SM_SentinelZero)
+          continue;
+        if (M.value() == SM_SentinelUndef)
+          return false;
+        assert(0 <= M.value() && M.value() < (int)(Ops.size() * NumElts) &&
+               "Shuffle mask index out of range");
+        DemandedSrcElts[M.value() / NumElts].setBit(M.value() % NumElts);
+      }
+      for (auto Op : enumerate(Ops))
+        if (!DemandedSrcElts[Op.index()].isZero() &&
+            !DAG.isGuaranteedNotToBeUndefOrPoison(
+                Op.value(), DemandedSrcElts[Op.index()], PoisonOnly, Depth + 1))
+          return false;
+      return true;
+    }
+    break;
   }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
