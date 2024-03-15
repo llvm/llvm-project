@@ -2601,6 +2601,45 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return nullptr;
   }
 
+  // De Morgan's Laws:
+  // (~(A | B)) -> (~A & ~B)
+  // (~(A & B)) -> (~A | ~B)
+  auto TryInvertAndOrUsingDeMorgan = [&](Instruction::BinaryOps Opcode,
+                                         bool IsLogical, Value *A,
+                                         Value *B) -> Value * {
+    bool LocalDoesConsume = DoesConsume;
+    if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder=*/nullptr,
+                               LocalDoesConsume, Depth))
+      return nullptr;
+    if (auto *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                           LocalDoesConsume, Depth)) {
+      auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         LocalDoesConsume, Depth);
+      DoesConsume = LocalDoesConsume;
+      if (IsLogical)
+        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+    }
+
+    return nullptr;
+  };
+
+  if (match(V, m_Or(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_And(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_LogicalOr(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/true, A,
+                                       B);
+
+  if (match(V, m_LogicalAnd(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/true, A,
+                                       B);
+
   return nullptr;
 }
 
