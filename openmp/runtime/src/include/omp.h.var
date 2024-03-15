@@ -156,6 +156,8 @@
     /* OpenMP 5.1 interop */
     typedef intptr_t omp_intptr_t;
 
+    extern void __KAI_KMPC_CONVENTION ompx_dump_mapping_tables();
+
     /* 0..omp_get_num_interop_properties()-1 are reserved for implementation-defined properties */
     typedef enum omp_interop_property {
         omp_ipr_fr_id = -1,
