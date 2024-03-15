@@ -11441,9 +11441,9 @@ static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD) {
          "Function lacks multiversion attribute");
   const auto *TA = FD->getAttr<TargetAttr>();
   const auto *TVA = FD->getAttr<TargetVersionAttr>();
-  // Target and target_version only causes MV if it is default, otherwise this
-  // is a normal function.
-  if ((TA && !TA->isDefaultVersion()) || (TVA && !TVA->isDefaultVersion()))
+  // The target attribute only causes MV if this declaration is the default,
+  // otherwise it is treated as a normal function.
+  if (TA && !TA->isDefaultVersion())
     return false;
 
   if ((TA || TVA) && CheckMultiVersionValue(S, FD)) {
