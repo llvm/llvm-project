@@ -25,7 +25,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Profile/YAMLProfileReader.h"
 #include "llvm/ADT/Bitfields.h"
@@ -706,7 +705,7 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
-  if (BF.getState() != BinaryFunction::State::CFG)
+  if (!BF.hasCFG())
     return false;
 
   LLVM_DEBUG(dbgs() << "BOLT-INFO: applying profile inference for "
