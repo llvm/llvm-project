@@ -102,6 +102,9 @@ FEATURE(memory_sanitizer,
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
+FEATURE(swiftcc,
+  PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
+  clang::TargetInfo::CCCR_OK)
 FEATURE(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
