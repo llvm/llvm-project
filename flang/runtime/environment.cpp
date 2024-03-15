@@ -49,7 +49,8 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   }
 }
 
-std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
+Fortran::common::optional<Convert> GetConvertFromString(
+    const char *x, std::size_t n) {
   static const char *keywords[]{
       "UNKNOWN", "NATIVE", "LITTLE_ENDIAN", "BIG_ENDIAN", "SWAP", nullptr};
   switch (IdentifyValue(x, n, keywords)) {
@@ -64,7 +65,7 @@ std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   case 4:
     return Convert::Swap;
   default:
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
 

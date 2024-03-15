@@ -15,10 +15,10 @@
 #include "terminator.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/bit-population-count.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <cinttypes>
 #include <memory>
-#include <optional>
 
 namespace Fortran::runtime::typeInfo {
 
@@ -39,7 +39,7 @@ public:
     LenParameter = 3
   };
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS std::optional<TypeParameterValue> GetValue(
+  RT_API_ATTRS Fortran::common::optional<TypeParameterValue> GetValue(
       const Descriptor *) const;
 
 private:

@@ -11,6 +11,7 @@
 
 #include "lock.h"
 #include "numeric-templates.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <random>
@@ -32,7 +33,7 @@ static constexpr int rangeBits{
 
 extern Lock lock;
 extern Generator generator;
-extern std::optional<GeneratedWord> nextValue;
+extern Fortran::common::optional<GeneratedWord> nextValue;
 
 // Call only with lock held
 static GeneratedWord GetNextValue() {

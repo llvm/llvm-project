@@ -16,6 +16,7 @@
 #include "format.h"
 #include "internal-unit.h"
 #include "io-error.h"
+#include "flang/Common/optional.h"
 #include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
@@ -94,7 +95,7 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t byteOffset);
   void HandleAbsolutePosition(std::int64_t byteOffset); // for r* in list I/O
-  std::optional<DataEdit> GetNextDataEdit(int maxRepeat = 1);
+  Fortran::common::optional<DataEdit> GetNextDataEdit(int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   bool BeginReadingRecord();
   void FinishReadingRecord();
@@ -122,7 +123,7 @@ public:
   }
 
   // Vacant after the end of the current record
-  std::optional<char32_t> GetCurrentChar(std::size_t &byteCount);
+  Fortran::common::optional<char32_t> GetCurrentChar(std::size_t &byteCount);
 
   // The "remaining" arguments to CueUpInput(), SkipSpaces(), & NextInField()
   // are always in units of bytes, not characters; the distinction matters
@@ -130,8 +131,8 @@ public:
 
   // For fixed-width fields, return the number of remaining bytes.
   // Skip over leading blanks.
-  std::optional<int> CueUpInput(const DataEdit &edit) {
-    std::optional<int> remaining;
+  Fortran::common::optional<int> CueUpInput(const DataEdit &edit) {
+    Fortran::common::optional<int> remaining;
     if (edit.IsListDirected()) {
       std::size_t byteCount{0};
       GetNextNonBlank(byteCount);
@@ -148,7 +149,8 @@ public:
     return remaining;
   }
 
-  std::optional<char32_t> SkipSpaces(std::optional<int> &remaining) {
+  Fortran::common::optional<char32_t> SkipSpaces(
+      Fortran::common::optional<int> &remaining) {
     while (!remaining || *remaining > 0) {
       std::size_t byteCount{0};
       if (auto ch{GetCurrentChar(byteCount)}) {
@@ -167,27 +169,27 @@ public:
         break;
       }
     }
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 
   // Acquires the next input character, respecting any applicable field width
   // or separator character.
-  std::optional<char32_t> NextInField(
-      std::optional<int> &remaining, const DataEdit &);
+  Fortran::common::optional<char32_t> NextInField(
+      Fortran::common::optional<int> &remaining, const DataEdit &);
 
   // Detect and signal any end-of-record condition after input.
   // Returns true if at EOR and remaining input should be padded with blanks.
   bool CheckForEndOfRecord(std::size_t afterReading);
 
   // Skips spaces, advances records, and ignores NAMELIST comments
-  std::optional<char32_t> GetNextNonBlank(std::size_t &byteCount) {
+  Fortran::common::optional<char32_t> GetNextNonBlank(std::size_t &byteCount) {
     auto ch{GetCurrentChar(byteCount)};
     bool inNamelist{mutableModes().inNamelist};
     while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
       if (ch && (*ch == ' ' || *ch == '\t')) {
         HandleRelativePosition(byteCount);
       } else if (!AdvanceRecord()) {
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
       ch = GetCurrentChar(byteCount);
     }
@@ -262,7 +264,7 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const;
   bool BeginReadingRecord();
@@ -287,7 +289,7 @@ class ListDirectedStatementState<Direction::Output>
 public:
   bool EmitLeadingSpaceOrAdvance(
       IoStatementState &, std::size_t = 1, bool isCharacter = false);
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
   bool lastWasUndelimitedCharacter() const {
     return lastWasUndelimitedCharacter_;
@@ -309,7 +311,7 @@ public:
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
   // when a null value appears.
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
 
   // Each NAMELIST input item is treated like a distinct list-directed
@@ -328,7 +330,7 @@ public:
 
 private:
   int remaining_{0}; // for "r*" repetition
-  std::optional<SavedPosition> repeatPosition_;
+  Fortran::common::optional<SavedPosition> repeatPosition_;
   bool eatComma_{false}; // consume comma after previously read item
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
@@ -380,7 +382,7 @@ public:
   IoStatementState &ioStatementState() { return ioStatementState_; }
   void CompleteOperation();
   int EndIoStatement();
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
@@ -465,7 +467,7 @@ public:
       const char *sourceFile = nullptr, int sourceLine = 0);
   void CompleteOperation();
   int EndIoStatement();
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
@@ -523,7 +525,7 @@ public:
   void CompleteOperation();
   int EndIoStatement();
   bool AdvanceRecord(int = 1);
-  std::optional<DataEdit> GetNextDataEdit(
+  Fortran::common::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
     return format_.GetNextDataEdit(*this, maxRepeat);
   }
@@ -571,14 +573,14 @@ public:
 private:
   bool wasExtant_;
   bool isNewUnit_;
-  std::optional<OpenStatus> status_;
-  std::optional<Position> position_;
-  std::optional<Action> action_;
+  Fortran::common::optional<OpenStatus> status_;
+  Fortran::common::optional<Position> position_;
+  Fortran::common::optional<Action> action_;
   Convert convert_{Convert::Unknown};
   OwningPtr<char> path_;
   std::size_t pathLength_;
-  std::optional<bool> isUnformatted_;
-  std::optional<Access> access_;
+  Fortran::common::optional<bool> isUnformatted_;
+  Fortran::common::optional<Access> access_;
 };
 
 class CloseStatementState : public ExternalIoStatementBase {
