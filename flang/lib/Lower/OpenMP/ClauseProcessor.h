@@ -105,9 +105,8 @@ public:
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
-  bool
-  processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
-            mlir::Value &result) const;
+  bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
+                 mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
@@ -178,6 +177,10 @@ private:
   /// if at least one instance was found.
   template <typename T>
   bool findRepeatableClause(
+      std::function<void(const T &, const Fortran::parser::CharBlock &source)>
+          callbackFn) const;
+  template <typename T>
+  bool findRepeatableClause2(
       std::function<void(const T *, const Fortran::parser::CharBlock &source)>
           callbackFn) const;
 
@@ -195,7 +198,7 @@ template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
-  return findRepeatableClause<T>(
+  return findRepeatableClause2<T>(
       [&](const T *motionClause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -295,6 +298,24 @@ const T *ClauseProcessor::findUniqueClause(
 
 template <typename T>
 bool ClauseProcessor::findRepeatableClause(
+    std::function<void(const T &, const Fortran::parser::CharBlock &source)>
+        callbackFn) const {
+  bool found = false;
+  ClauseIterator nextIt, endIt = clauses.end();
+  for (ClauseIterator it = clauses.begin(); it != endIt; it = nextIt) {
+    nextIt = findClause<T>(it, endIt);
+
+    if (nextIt != endIt) {
+      callbackFn(std::get<T>(nextIt->u), nextIt->source);
+      found = true;
+      ++nextIt;
+    }
+  }
+  return found;
+}
+
+template <typename T>
+bool ClauseProcessor::findRepeatableClause2(
     std::function<void(const T *, const Fortran::parser::CharBlock &source)>
         callbackFn) const {
   bool found = false;

@@ -210,12 +210,6 @@ namespace clause {
 #undef EMPTY_CLASS
 #undef WRAPPER_CLASS
 
-using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
-using ProcedureDesignator =
-    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
-using ReductionOperator =
-    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
-
 DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
                                     semantics::SemanticsContext &semaCtx) {
   return std::visit(
