@@ -836,7 +836,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
           // finalizable assumed-rank not allowed (C839)
           return nullptr;
         } else {
-          int actualRank = symbol.Rank();
+          int actualRank{symbol.Rank()};
           if (rank) {
             actualRank = rank.value();
           }

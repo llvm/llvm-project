@@ -221,7 +221,7 @@ public:
         SayDeallocateOfPolymorph(variable.GetSource(), *entity, reason);
       }
       if (const auto *assignment{GetAssignment(stmt)}) {
-        const auto lhs{assignment->lhs};
+        const auto &lhs{assignment->lhs};
         if (const Symbol * impure{HasImpureFinal(*entity, lhs.Rank())}) {
           SayDeallocateWithImpureFinal(*entity, reason, *impure);
         }
