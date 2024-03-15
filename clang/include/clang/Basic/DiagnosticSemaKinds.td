@@ -3759,12 +3759,12 @@ def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   "passing a VL-dependent argument to/from a function that has a different"
   " streaming-mode. The streaming and non-streaming vector lengths may be"
   " different">,
-  InGroup<AArch64SMEAttributes>;
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "passing/returning a VL-dependent argument from a function"
   " arm_locally_streaming attribute. The streaming and non-streaming vector"
   " lengths may be different">,
-  InGroup<AArch64SMEAttributes>;
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_sme_streaming_cannot_be_multiversioned : Error<

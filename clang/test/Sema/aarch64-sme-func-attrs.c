@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -fsyntax-only -verify=expected-cpp -x c++ %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -verify=expected-cpp -x c++ %s
 
 // Valid attributes
 
