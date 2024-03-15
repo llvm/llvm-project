@@ -630,7 +630,9 @@ void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst) {
       builder.createStore(loc, Vector, Dst.getVectorAddress());
       return;
     }
-    llvm_unreachable("NYI: non-simple store through lvalue");
+    assert(Dst.isBitField() && "NIY LValue type");
+    mlir::Value result;
+    return buildStoreThroughBitfieldLValue(Src, Dst, result);
   }
   assert(Dst.isSimple() && "only implemented simple");
 
