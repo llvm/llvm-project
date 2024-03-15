@@ -16,18 +16,14 @@
 #include "format.h"
 #include "internal-unit.h"
 #include "io-error.h"
-#include "flang/Common/idioms.h"
 #include "flang/Common/optional.h"
 #include "flang/Common/reference-wrapper.h"
+#include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include <functional>
 #include <type_traits>
 #include <variant>
-
-// I/O statement state classes that may be instantiated during execution
-// on an offload device have this trait:
-CLASS_TRAIT(AvailableOnDevice)
 
 namespace Fortran::runtime::io {
 
@@ -56,23 +52,15 @@ template <Direction> class ChildListIoStatementState;
 template <Direction> class ChildUnformattedIoStatementState;
 
 struct InputStatementState {};
-struct OutputStatementState {
-  using AvailableOnDevice = std::true_type;
-};
+struct OutputStatementState {};
 template <Direction D>
 using IoDirectionState = std::conditional_t<D == Direction::Input,
     InputStatementState, OutputStatementState>;
 
 // Common state for all kinds of formatted I/O
 template <Direction D> class FormattedIoStatementState {};
-template <> class FormattedIoStatementState<Direction::Output> {
-public:
-  using AvailableOnDevice = std::true_type;
-};
-
 template <> class FormattedIoStatementState<Direction::Input> {
 public:
-  using AvailableOnDevice = std::true_type;
   std::size_t GetEditDescriptorChars() const;
   void GotChar(int);
 
@@ -125,19 +113,10 @@ public:
 
   // N.B.: this also works with base classes
   template <typename A> A *get_if() const {
-    [[maybe_unused]] std::size_t index{u_.index()};
-    return Fortran::common::visit(
-        [=](auto &x) -> A * {
+    return common::visit(
+        [](auto &x) -> A * {
           if constexpr (std::is_convertible_v<decltype(x.get()), A &>) {
-#if defined(RT_DEVICE_COMPILATION)
-            if constexpr (!AvailableOnDevice<std::decay_t<A>>) {
-              terminateOnDevice(__FILE__, __LINE__, index);
-            } else {
-#endif
-              return &x.get();
-#if defined(RT_DEVICE_COMPILATION)
-            }
-#endif
+            return &x.get();
           }
           return nullptr;
         },
@@ -232,40 +211,6 @@ public:
   }
 
 private:
-#if RT_DEVICE_COMPILATION
-  static RT_API_ATTRS void terminateOnDevice(
-      const char *sourceFile, int sourceLine, std::size_t index) {
-    // %zd is not supported by device printf.
-    Terminator{sourceFile, sourceLine}.Crash(
-        "Unexpected IO statement variant (index %d) during device execution",
-        static_cast<int>(index));
-  }
-#endif
-
-  // Define special visitor for the variants of IoStatementState.
-  // During the device code compilation the visitor only allows
-  // visiting those variants that have AvailableOnDevice trait
-  // are supported on the device.
-  template <typename VISITOR, typename VARIANT>
-  static inline RT_API_ATTRS auto visitIo(VISITOR &&visitor, VARIANT &&u)
-      -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u)))) {
-    using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))));
-    [[maybe_unused]] std::size_t index{u.index()};
-    return Fortran::common::visit(
-        [&](auto &x) -> Result {
-#if defined(RT_DEVICE_COMPILATION)
-          if constexpr (!AvailableOnDevice<std::decay_t<decltype(x.get())>>) {
-            terminateOnDevice(__FILE__, __LINE__, index);
-          } else {
-#endif
-            return visitor(x);
-#if defined(RT_DEVICE_COMPILATION)
-          }
-#endif
-        },
-        std::forward<VARIANT>(u));
-  }
-
   std::variant<Fortran::common::reference_wrapper<OpenStatementState>,
       Fortran::common::reference_wrapper<CloseStatementState>,
       Fortran::common::reference_wrapper<NoopStatementState>,
@@ -351,7 +296,6 @@ template <>
 class ListDirectedStatementState<Direction::Output>
     : public FormattedIoStatementState<Direction::Output> {
 public:
-  using AvailableOnDevice = std::true_type;
   bool EmitLeadingSpaceOrAdvance(
       IoStatementState &, std::size_t = 1, bool isCharacter = false);
   Fortran::common::optional<DataEdit> GetNextDataEdit(
@@ -370,7 +314,6 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  using AvailableOnDevice = std::false_type;
   bool inNamelistSequence() const { return inNamelistSequence_; }
   int EndIoStatement();
 
@@ -408,8 +351,6 @@ template <Direction DIR>
 class InternalIoStatementState : public IoStatementBase,
                                  public IoDirectionState<DIR> {
 public:
-  using AvailableOnDevice = std::conditional_t<DIR == Direction::Output,
-      std::true_type, std::false_type>;
   using Buffer =
       std::conditional_t<DIR == Direction::Input, const char *, char *>;
   InternalIoStatementState(Buffer, std::size_t,
@@ -438,8 +379,6 @@ class InternalFormattedIoStatementState
     : public InternalIoStatementState<DIR>,
       public FormattedIoStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::conditional_t<DIR == Direction::Output,
-      std::true_type, std::false_type>;
   using CharType = CHAR;
   using typename InternalIoStatementState<DIR>::Buffer;
   InternalFormattedIoStatementState(Buffer internal, std::size_t internalLength,
@@ -468,8 +407,6 @@ template <Direction DIR>
 class InternalListIoStatementState : public InternalIoStatementState<DIR>,
                                      public ListDirectedStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::conditional_t<DIR == Direction::Output,
-      std::true_type, std::false_type>;
   using typename InternalIoStatementState<DIR>::Buffer;
   InternalListIoStatementState(Buffer internal, std::size_t internalLength,
       const char *sourceFile = nullptr, int sourceLine = 0);
@@ -487,7 +424,6 @@ private:
 
 class ExternalIoStatementBase : public IoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   ExternalIoStatementBase(
       ExternalFileUnit &, const char *sourceFile = nullptr, int sourceLine = 0);
   ExternalFileUnit &unit() { return unit_; }
@@ -508,7 +444,6 @@ template <Direction DIR>
 class ExternalIoStatementState : public ExternalIoStatementBase,
                                  public IoDirectionState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   ExternalIoStatementState(
       ExternalFileUnit &, const char *sourceFile = nullptr, int sourceLine = 0);
   MutableModes &mutableModes() { return mutableModes_; }
@@ -535,7 +470,6 @@ class ExternalFormattedIoStatementState
     : public ExternalIoStatementState<DIR>,
       public FormattedIoStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   using CharType = CHAR;
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
       std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
@@ -555,7 +489,6 @@ template <Direction DIR>
 class ExternalListIoStatementState : public ExternalIoStatementState<DIR>,
                                      public ListDirectedStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
   int EndIoStatement();
@@ -565,7 +498,6 @@ template <Direction DIR>
 class ExternalUnformattedIoStatementState
     : public ExternalIoStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
 };
@@ -574,7 +506,6 @@ template <Direction DIR>
 class ChildIoStatementState : public IoStatementBase,
                               public IoDirectionState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   ChildIoStatementState(
       ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   ChildIo &child() { return child_; }
@@ -595,7 +526,6 @@ template <Direction DIR, typename CHAR>
 class ChildFormattedIoStatementState : public ChildIoStatementState<DIR>,
                                        public FormattedIoStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   using CharType = CHAR;
   ChildFormattedIoStatementState(ChildIo &, const CharType *format,
       std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
@@ -618,7 +548,6 @@ template <Direction DIR>
 class ChildListIoStatementState : public ChildIoStatementState<DIR>,
                                   public ListDirectedStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   using ChildIoStatementState<DIR>::ChildIoStatementState;
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
   int EndIoStatement();
@@ -627,7 +556,6 @@ public:
 template <Direction DIR>
 class ChildUnformattedIoStatementState : public ChildIoStatementState<DIR> {
 public:
-  using AvailableOnDevice = std::false_type;
   using ChildIoStatementState<DIR>::ChildIoStatementState;
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
 };
@@ -635,7 +563,6 @@ public:
 // OPEN
 class OpenStatementState : public ExternalIoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   OpenStatementState(ExternalFileUnit &unit, bool wasExtant, bool isNewUnit,
       const char *sourceFile = nullptr, int sourceLine = 0)
       : ExternalIoStatementBase{unit, sourceFile, sourceLine},
@@ -667,7 +594,6 @@ private:
 
 class CloseStatementState : public ExternalIoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   CloseStatementState(ExternalFileUnit &unit, const char *sourceFile = nullptr,
       int sourceLine = 0)
       : ExternalIoStatementBase{unit, sourceFile, sourceLine} {}
@@ -682,7 +608,6 @@ private:
 // and recoverable BACKSPACE(bad unit)
 class NoUnitIoStatementState : public IoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   IoStatementState &ioStatementState() { return ioStatementState_; }
   MutableModes &mutableModes() { return connection_.modes; }
   ConnectionState &GetConnectionState() { return connection_; }
@@ -705,7 +630,6 @@ private:
 
 class NoopStatementState : public NoUnitIoStatementState {
 public:
-  using AvailableOnDevice = std::false_type;
   NoopStatementState(
       const char *sourceFile = nullptr, int sourceLine = 0, int unitNumber = -1)
       : NoUnitIoStatementState{*this, sourceFile, sourceLine, unitNumber} {}
@@ -750,7 +674,6 @@ extern template class FormatControl<
 
 class InquireUnitState : public ExternalIoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   InquireUnitState(ExternalFileUnit &unit, const char *sourceFile = nullptr,
       int sourceLine = 0);
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
@@ -761,7 +684,6 @@ public:
 
 class InquireNoUnitState : public NoUnitIoStatementState {
 public:
-  using AvailableOnDevice = std::false_type;
   InquireNoUnitState(const char *sourceFile = nullptr, int sourceLine = 0,
       int badUnitNumber = -1);
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
@@ -772,7 +694,6 @@ public:
 
 class InquireUnconnectedFileState : public NoUnitIoStatementState {
 public:
-  using AvailableOnDevice = std::false_type;
   InquireUnconnectedFileState(OwningPtr<char> &&path,
       const char *sourceFile = nullptr, int sourceLine = 0);
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
@@ -787,7 +708,6 @@ private:
 class InquireIOLengthState : public NoUnitIoStatementState,
                              public OutputStatementState {
 public:
-  using AvailableOnDevice = std::false_type;
   InquireIOLengthState(const char *sourceFile = nullptr, int sourceLine = 0);
   std::size_t bytes() const { return bytes_; }
   bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
@@ -798,7 +718,6 @@ private:
 
 class ExternalMiscIoStatementState : public ExternalIoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   enum Which { Flush, Backspace, Endfile, Rewind, Wait };
   ExternalMiscIoStatementState(ExternalFileUnit &unit, Which which,
       const char *sourceFile = nullptr, int sourceLine = 0)
@@ -812,7 +731,6 @@ private:
 
 class ErroneousIoStatementState : public IoStatementBase {
 public:
-  using AvailableOnDevice = std::false_type;
   explicit ErroneousIoStatementState(Iostat iostat,
       ExternalFileUnit *unit = nullptr, const char *sourceFile = nullptr,
       int sourceLine = 0)
