@@ -365,7 +365,7 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or3_b32 v2, v2, v11, v12
 ; GISEL-NEXT:    v_or3_b32 v0, v0, v13, v1
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
-; GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, 0x80000000, v1
+; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-NEXT:  .LBB0_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
@@ -739,7 +739,7 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or3_b32 v2, v2, v11, v12
 ; GISEL-NEXT:    v_or3_b32 v0, v0, v13, v1
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
-; GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, 0x80000000, v1
+; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-NEXT:  .LBB1_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
@@ -1099,7 +1099,7 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_or3_b32 v2, v2, v11, v12
 ; GISEL-NEXT:    v_or3_b32 v0, v0, v13, v1
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
-; GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, 0x80000000, v1
+; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-NEXT:  .LBB2_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
@@ -1459,7 +1459,7 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_or3_b32 v2, v2, v11, v12
 ; GISEL-NEXT:    v_or3_b32 v0, v0, v13, v1
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
-; GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, 0x80000000, v1
+; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-NEXT:  .LBB3_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
