@@ -38,8 +38,6 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
   Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
                             options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenmp,
-                            options::OPT_fopenmp_version_EQ,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
@@ -763,6 +761,32 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
+
+  // Forward flags for OpenMP. We don't do this if the current action is an
+  // device offloading action other than OpenMP.
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false) &&
+      (JA.isDeviceOffloading(Action::OFK_None) ||
+       JA.isDeviceOffloading(Action::OFK_OpenMP))) {
+    switch (D.getOpenMPRuntime(Args)) {
+    case Driver::OMPRT_OMP:
+    case Driver::OMPRT_IOMP5:
+      // Clang can generate useful OpenMP code for these two runtime libraries.
+      CmdArgs.push_back("-fopenmp");
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      // FIXME: Clang supports a whole bunch more flags here.
+      break;
+    default:
+      // By default, if Clang doesn't know how to generate useful OpenMP code
+      // for a specific runtime library, we just don't pass the '-fopenmp' flag
+      // down to the actual compilation.
+      // FIXME: It would be better to have a mode which *only* omits IR
+      // generation based on the OpenMP support so that we get consistent
+      // semantic analysis, etc.
+      break;
+    }
+  }
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
