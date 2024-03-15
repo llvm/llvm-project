@@ -1672,9 +1672,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     bool IsNonvoidPtr = PonteeOpType != 0 && PonteeOpType != SPIRV::OpTypeVoid;
     if (Size == -1 || IsNonvoidPtr)
       Size = 0;
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(Op))
-        .addUse(PtrReg)
-        .addImm(Size);
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(Op)).addUse(PtrReg).addImm(Size);
   } break;
   default: {
     std::string DiagMsg;

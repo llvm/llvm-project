@@ -111,12 +111,8 @@ public:
     DT.buildDepsGraph(Graph, MMI);
   }
 
-  void setBound(unsigned V) {
-    Bound = V;
-  }
-  unsigned getBound() {
-    return Bound;
-  }
+  void setBound(unsigned V) { Bound = V; }
+  unsigned getBound() { return Bound; }
 
   // Map a machine operand that represents a use of a function via function
   // pointer to a machine operand that represents the function definition.
