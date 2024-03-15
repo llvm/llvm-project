@@ -12,9 +12,9 @@
 
 ## MRMDestMemCC
 
-# CHECK: cfcmovbq	%r9, 123(%r8,%rax,4)
-# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x42,0x4c,0x80,0x7b]
-         cfcmovbq	%r9, 123(%r8,%rax,4)
+# CHECK: cfcmovbq %r16, 123(%r17,%r18,4)
+# CHECK: encoding: [0x62,0xec,0xf8,0x0c,0x42,0x44,0x91,0x7b]
+         cfcmovbq %r16, 123(%r17,%r18,4)
 
 ## MRMSrcMem
 
@@ -28,13 +28,13 @@
 
 ## MRMSrcMemCC
 
-# CHECK: cfcmovbq	123(%r8,%rax,4), %r9
-# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x42,0x4c,0x80,0x7b]
-         cfcmovbq	123(%r8,%rax,4), %r9
+# CHECK: cfcmovbq	123(%r16,%r17,4), %r18
+# CHECK: encoding: [0x62,0xec,0xf8,0x08,0x42,0x54,0x88,0x7b]
+         cfcmovbq	123(%r16,%r17,4), %r18
 
-# CHECK: cfcmovbq	123(%r8,%rax,4), %r9, %r15
-# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x42,0x4c,0x80,0x7b]
-         cfcmovbq	123(%r8,%rax,4), %r9, %r15
+# CHECK: cfcmovbq	123(%r16,%r17,4), %r18, %r19
+# CHECK: encoding: [0x62,0xec,0xe0,0x14,0x42,0x54,0x88,0x7b]
+         cfcmovbq	123(%r16,%r17,4), %r18, %r19
 
 ## MRM0m
 
@@ -140,9 +140,9 @@
 
 ## MRMDestRegCC
 
-# CHECK: cfcmovbw	%r17w, %r21w
-# CHECK: encoding: [0x62,0xec,0x7d,0x0c,0x42,0xcd]
-         cfcmovbw	%r17w, %r21w
+# CHECK: cfcmovbq	%r16, %r17
+# CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x42,0xc1]
+         cfcmovbq	%r16, %r17
 
 ## MRMSrcReg
 
@@ -152,9 +152,9 @@
 
 ## MRMSrcRegCC
 
-# CHECK: cfcmovbw	%r17w, %r21w, %r25w
-# CHECK: encoding: [0x62,0xec,0x35,0x14,0x42,0xe9]
-         cfcmovbw	%r17w, %r21w, %r25w
+# CHECK: cfcmovbq	%r16, %r17, %r18
+# CHECK: encoding: [0x62,0xec,0xec,0x14,0x42,0xc8]
+         cfcmovbq	%r16, %r17, %r18
 
 ## MRMSrcReg4VOp3
 

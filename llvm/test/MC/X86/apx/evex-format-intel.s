@@ -12,9 +12,9 @@
 
 ## MRMDestMemCC
 
-# CHECK: cfcmovb	qword ptr [r8 + 4*rax + 123], r9
-# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x42,0x4c,0x80,0x7b]
-         cfcmovb	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovb	qword ptr [r17 + 4*r18 + 123], r16
+# CHECK: encoding: [0x62,0xec,0xf8,0x0c,0x42,0x44,0x91,0x7b]
+         cfcmovb	qword ptr [r17 + 4*r18 + 123], r16
 
 ## MRMSrcMem
 
@@ -28,13 +28,13 @@
 
 ## MRMSrcMemCC
 
-# CHECK: cfcmovb	r9, qword ptr [r8 + 4*rax + 123]
-# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x42,0x4c,0x80,0x7b]
-         cfcmovb	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	r18, qword ptr [r16 + 4*r17 + 123]
+# CHECK: encoding: [0x62,0xec,0xf8,0x08,0x42,0x54,0x88,0x7b]
+         cfcmovb	r18, qword ptr [r16 + 4*r17 + 123]
 
-# CHECK: cfcmovbe	r15, r9, qword ptr [r8 + 4*rax + 123]
-# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x46,0x4c,0x80,0x7b]
-         cfcmovbe	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	r19, r18, qword ptr [r16 + 4*r17 + 123]
+# CHECK: encoding: [0x62,0xec,0xe0,0x14,0x42,0x54,0x88,0x7b]
+         cfcmovb	r19, r18, qword ptr [r16 + 4*r17 + 123]
 
 ## MRM0m
 
@@ -140,9 +140,9 @@
 
 ## MRMDestRegCC
 
-# CHECK: cfcmovb	r21w, r17w
-# CHECK: encoding: [0x62,0xec,0x7d,0x0c,0x42,0xcd]
-         cfcmovb	r21w, r17w
+# CHECK: cfcmovb	r17, r16
+# CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x42,0xc1]
+         cfcmovb	r17, r16
 
 ## MRMSrcReg
 
@@ -152,9 +152,9 @@
 
 ## MRMSrcRegCC
 
-# CHECK: cfcmovb	r25w, r21w, r17w
-# CHECK: encoding: [0x62,0xec,0x35,0x14,0x42,0xe9]
-         cfcmovb	r25w, r21w, r17w
+# CHECK: cfcmovb	r18, r17, r16
+# CHECK: encoding: [0x62,0xec,0xec,0x14,0x42,0xc8]
+         cfcmovb	r18, r17, r16
 
 ## MRMSrcReg4VOp3
 
