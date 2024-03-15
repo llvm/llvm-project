@@ -212,7 +212,7 @@ bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
 
   return !llvm::any_of(
       MRI->def_instructions(Reg),
-      [this, Reg](const MachineInstr &MI) { return this->contains(&MI); });
+      [this](const MachineInstr &MI) { return this->contains(&MI); });
 }
 
 bool MachineLoop::isLoopInvariant(MachineInstr &I,
