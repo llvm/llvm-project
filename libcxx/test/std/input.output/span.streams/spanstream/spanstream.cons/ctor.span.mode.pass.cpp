@@ -48,7 +48,7 @@ void test() {
   using SpStream = std::basic_spanstream<CharT, TraitsT>;
 
   CharT arr[4];
-  
+
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
   assert(!sp.empty());
