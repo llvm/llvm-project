@@ -36,6 +36,10 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* Symbols pulled from archives/LIBs are now resolved in the same way (archive
+  order) as MSVC link.exe. For more information see:
+  https://learn.microsoft.com/en-us/cpp/build/reference/link-input-files?view=msvc-170
+
 MinGW Improvements
 ------------------
 
