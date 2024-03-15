@@ -788,8 +788,8 @@ bool ClauseProcessor::processLink(
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::ArrayRef<mlir::Value> bounds,
-                mlir::ArrayRef<mlir::Value> members, uint64_t mapType,
+                llvm::ArrayRef<mlir::Value> bounds,
+                llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
