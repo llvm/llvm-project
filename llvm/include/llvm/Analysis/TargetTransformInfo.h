@@ -871,6 +871,26 @@ public:
                                            bool Insert, bool Extract,
                                            TTI::TargetCostKind CostKind) const;
 
+  /// Estimate the cost of a build_vector of unknown elements at the indices
+  /// implied by the active lanes in DemandedElts.  The default implementation
+  /// will simply cost a series of insertelements, but some targets can do
+  /// significantly better.
+  InstructionCost getBuildVectorCost(VectorType *Ty,
+                                     const APInt &DemandedElts,
+                                     TTI::TargetCostKind CostKind) const {
+    return getScalarizationOverhead(Ty, DemandedElts, true, false, CostKind);
+  }
+
+  /// Estimate the cost of exploding a vector of unknown elements at the
+  /// indices implied by the active lanes in DemandedElts into individual
+  /// scalar registers.  The default implementation will simply cost a
+  /// series of extractelements, but some targets can do significantly better.
+  InstructionCost getExplodeVectorCost(VectorType *Ty,
+                                       const APInt &DemandedElts,
+                                       TTI::TargetCostKind CostKind) const {
+    return getScalarizationOverhead(Ty, DemandedElts, false, true, CostKind);
+  }
+
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
