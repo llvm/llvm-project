@@ -11,12 +11,11 @@
 // <spanstream>
 
 //   template<class charT, class traits = char_traits<charT>>
-//   class basic_spanstream
-//     : public basic_iostream<charT, traits> {
+//   class basic_ispanstream
+//     : public basic_istream<charT, traits> {
 
-//     // [spanstream.cons], constructors
-
-//     basic_spanstream& operator=(basic_spanstream&& rhs);
+//     // [ispanstream.swap], swap
+//     void swap(basic_ispanstream& rhs);
 
 #include <cassert>
 #include <span>
@@ -28,7 +27,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_spanstream<CharT, TraitsT>;
+  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -41,16 +40,19 @@ void test() {
   {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
+    assert(!rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 4);
 
-    SpStream spSt = std::move(rhsSpSt);
-    assert(spSt.span().data() == arr);
+    SpStream spSt{std::span<CharT>{}};
+    assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
-    assert(rhsSpSt.span().data() == arr);
+    spSt.swap(rhsSpSt);
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
@@ -61,30 +63,38 @@ void test() {
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
-    SpStream spSt = std::move(rhsSpSt);
+    SpStream spSt(std::span<CharT>{});
+    assert(spSt.span().data() == nullptr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+
+    spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
-
-    // After move
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode `out`
   {
     SpStream rhsSpSt{sp, std::ios_base::out};
     assert(rhsSpSt.span().data() == arr);
+    // Mode `out` counts read characters
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
-    SpStream spSt = std::move(rhsSpSt);
-    assert(spSt.span().data() == arr);
+    SpStream spSt{std::span<CharT>{}};
+    assert(spSt.span().data() == nullptr);
+    // Mode `out` counts read characters
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
-    assert(rhsSpSt.span().data() == arr);
+    spSt.swap(rhsSpSt);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+    assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
@@ -95,32 +105,38 @@ void test() {
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
-    SpStream spSt = std::move(rhsSpSt);
-    assert(spSt.span().data() == arr);
+    SpStream spSt{std::span<CharT>{}};
+    assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
-    // After move
-    assert(rhsSpSt.span().data() == arr);
+    spSt.swap(rhsSpSt);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+    assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
-  // Mode `ate`
+  // Mode: `ate`
   {
-    SpStream rhsSpSt{sp, std::ios_base::in};
+    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
     assert(rhsSpSt.span().data() == arr);
     assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
-    SpStream spSt = std::move(rhsSpSt);
+    SpStream spSt(std::span<CharT>{});
+    assert(spSt.span().data() == nullptr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+
+    spSt.swap(rhsSpSt);
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
-
-    // After move
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
   }
 }
 
