@@ -30,7 +30,6 @@ using namespace MIPatternMatch;
 
 bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
                                                BuildFnTy &MatchInfo) {
-
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
 
   Register Dst = Extract->getReg(0);
@@ -39,10 +38,9 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   LLT DstTy = MRI.getType(Dst);
   LLT VectorTy = MRI.getType(Vector);
 
-  // The vector register can be def'd by various ops that
-  // have vector as its type. They can all be used for
-  // constant folding, scalarizing, canonicalization, or
-  // combining based on symmetry.
+  // The vector register can be def'd by various ops that have vector as its
+  // type. They can all be used for constant folding, scalarizing,
+  // canonicalization, or combining based on symmetry.
   //
   // vector like ops
   // * build vector
@@ -68,9 +66,12 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // * bitcast
   // * undef
 
+  // The MIs def'd on the Index and Vector register;
+  MachineInstr *IndexMI = getDefIgnoringCopies(Index, MRI);
+  MachineInstr *VectorMI = getDefIgnoringCopies(Vector, MRI);
+
   // Fold extractVectorElement(undef, undef) -> undef
-  if ((getOpcodeDef<GImplicitDef>(Vector, MRI) ||
-       getOpcodeDef<GImplicitDef>(Index, MRI)) &&
+  if ((isa<GImplicitDef>(VectorMI) || isa<GImplicitDef>(IndexMI)) &&
       isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
     // If the Vector register is undef, then we cannot extract an element from
     // it. An undef extract Index can be arbitrarily chosen to be an
@@ -99,7 +100,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
 
   // Fold extractVectorElement(freeze(FV), Index) ->
   //     freeze(extractVectorElement(FV, Index))
-  if (auto *Freeze = getOpcodeDef<GFreeze>(Vector, MRI)) {
+  if (auto *Freeze = dyn_cast<GFreeze>(VectorMI)) {
     if (MRI.hasOneNonDBGUse(Freeze->getReg(0)) &&
         isLegalOrBeforeLegalizer({TargetOpcode::G_FREEZE, {DstTy}})) {
       // For G_FREEZE, the input and the output types are identical.
@@ -120,7 +121,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
 
   // Fold extractVectorElement(insertVectorElement(_, Value, Index), Index) ->
   // Value
-  if (auto *Insert = getOpcodeDef<GInsertVectorElement>(Vector, MRI)) {
+  if (auto *Insert = dyn_cast<GInsertVectorElement>(VectorMI)) {
     if (Insert->getIndexReg() == Index) {
       // There is no one-use check. We have to keep the insert.
       // We only check for equality of the Index registers.
@@ -138,7 +139,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // where C1 != C2
   // -> extractVectorElement(Vector, C2)
   if (IndexC) {
-    if (auto *Insert = getOpcodeDef<GInsertVectorElement>(Vector, MRI)) {
+    if (auto *Insert = dyn_cast<GInsertVectorElement>(VectorMI)) {
       std::optional<ValueAndVReg> MaybeIndex =
           getIConstantVRegValWithLookThrough(Insert->getIndexReg(), MRI);
       if (MaybeIndex && MaybeIndex->Value != *IndexC) {
@@ -155,7 +156,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
 
   // Fold extractVectorElement(BuildVector(.., V, ...), IndexOfV) -> V
   if (IndexC) {
-    if (auto *Build = getOpcodeDef<GBuildVector>(Vector, MRI)) {
+    if (auto *Build = dyn_cast<GBuildVector>(VectorMI)) {
       EVT Ty(getMVTForLLT(VectorTy));
       if (MRI.hasOneNonDBGUse(Build->getReg(0)) ||
           getTargetLowering().aggressivelyPreferBuildVectorSources(Ty)) {
