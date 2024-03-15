@@ -4330,7 +4330,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
             }
             SmallVector<int> ShuffleMask(VL.size());
             for (int Idx : seq<int>(0, VL.size()))
-              ShuffleMask[i] = i / VF == I ? VL.size() + i % VF : i;
+              ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
             VecLdCost +=
                 TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
                                    ShuffleMask, CostKind, I * VF, SubVecTy);
@@ -7733,7 +7733,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           SmallVector<int> ShuffleMask(VL.size());
           for (int I = VF, E = VL.size(); I < E; I += VF) {
             for (int Idx : seq<int>(0, E))
-              ShuffleMask[i] = i / VF == I ? E + i % VF : i;
+              ShuffleMask[Idx] = Idx / VF == I ? E + Idx % VF : Idx;
             GatherCost += TTI.getShuffleCost(TTI::SK_InsertSubvector, VecTy,
                                              ShuffleMask, CostKind, I, LoadTy);
           }
