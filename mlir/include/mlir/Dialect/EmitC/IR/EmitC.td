@@ -1155,4 +1155,36 @@ def EmitC_IfOp : EmitC_Op<"if",
   let hasCustomAssemblyFormat = 1;
 }
 
+def EmitC_SubscriptOp : EmitC_Op<"subscript",
+  [TypesMatchWith<"result type matches element type of 'array'",
+                  "array", "result",
+                  "::llvm::cast<ArrayType>($_self).getElementType()">]> {
+  let summary = "Array subscript operation";
+  let description = [{
+    With the `subscript` operation the subscript operator `[]` can be applied
+    to variables or arguments of array type.
+
+    Example:
+
+    ```mlir
+    %i = index.constant 1
+    %j = index.constant 7
+    %0 = emitc.subscript %arg0[%i, %j] : <4x8xf32>, index, index
+    ```
+  }];
+  let arguments = (ins Arg<EmitC_ArrayType, "the reference to load from">:$array,
+                       Variadic<IntegerIndexOrOpaqueType>:$indices);
+  let results = (outs AnyType:$result);
+
+  let builders = [
+    OpBuilder<(ins "Value":$array, "ValueRange":$indices), [{
+      build($_builder, $_state, cast<ArrayType>(array.getType()).getElementType(), array, indices);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$array `[` $indices `]` attr-dict `:` type($array) `,` type($indices)";
+}
+
+
 #endif // MLIR_DIALECT_EMITC_IR_EMITC
