@@ -9,7 +9,6 @@
 #include "MathMissingParenthesesCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Rewrite/Core/Rewriter.h"
 
 using namespace clang::ast_matchers;
 
@@ -34,8 +33,8 @@ void addParantheses(
       ParentBinOp->getOpcode() != BinOp->getOpcode()) {
     NeedToDiagnose = true;
   }
-  clang::SourceLocation StartLoc = BinOp->getBeginLoc();
-  clang::SourceLocation EndLoc = BinOp->getEndLoc().getLocWithOffset(1);
+  const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
+  const clang::SourceLocation EndLoc = BinOp->getEndLoc().getLocWithOffset(1);
   Insertions.push_back({StartLoc, EndLoc});
   addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
                  BinOp, NeedToDiagnose, Insertions);
