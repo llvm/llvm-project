@@ -692,8 +692,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
              "without DWARF debug info",
              type.GetMangledTypeName());
     return llvm::make_error<llvm::StringError>(
-        "missing Clang debug info for type " +
-            type.GetDisplayTypeName().GetString(),
+        "missing debug info for Clang type \"" +
+            type.GetDisplayTypeName().GetString() + "\"",
         llvm::inconvertibleErrorCode());
   }
   // Structs and Tuples.
