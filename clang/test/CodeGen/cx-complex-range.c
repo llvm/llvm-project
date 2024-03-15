@@ -402,30 +402,8 @@ _Complex _Float16 mulf16(_Complex _Float16 a, _Complex _Float16 b) {
   // LABEL: define {{.*}} @mulf16(
   // FULL: call {{.*}} @__mulsc3
   //
-  // FULL_FAST: alloca { half, half }
-  // FULL_FAST-NEXT: alloca { half, half }
-  // FULL_FAST-NEXT: alloca { half, half }
-  // FULL_FAST: getelementptr inbounds { half, half }, ptr {{.*}}, i32 0, i32 0
-  // FULL_FAST-NEXT: load half, ptr {{.*}}
-  // FULL_FAST-NEXT: getelementptr inbounds { half, half }, ptr {{.*}}, i32 0, i32 1
-  // FULL_FAST-NEXT: load half, ptr {{.*}}
-  // FULL_FAST-NEXT: fpext half {{.*}} to float
-  // FULL_FAST-NEXT: fpext half {{.*}} to float
-  // FULL_FAST-NEXT: getelementptr inbounds { half, half }, ptr {{.*}}, i32 0, i32 0
-  // FULL_FAST-NEXT: load half, ptr {{.*}}
-  // FULL_FAST-NEXT: getelementptr inbounds { half, half }, ptr {{.*}}, i32 0, i32 1
-  // FULL_FAST-NEXT: load half
-  // FULL_FAST-NEXT: fpext half {{.*}} to float
-  // FULL_FAST-NEXT: fpext half {{.*}} to float
-  // FULL_FAST-NEXT: fmul{{.*}}float
-  // FULL_FAST-NEXT: fmul{{.*}}float
-  // FULL_FAST-NEXT: fmul{{.*}}float
-  // FULL_FAST-NEXT: fmul{{.*}}float
-  // FULL_FAST-NEXT: fsub{{.*}}float
-  // FULL_FAST-NEXT: fadd{{.*}}float
-  // FULL_FAST-NEXT: fptrunc float {{.*}} to half
-  // FULL_FAST-NEXT: fptrunc float {{.*}} to half
-
+  // FULL_FAST: call {{.*}} @__mulsc3
+  //
   // BASIC: alloca { half, half }
   // BASIC-NEXT: alloca { half, half }
   // BASIC: getelementptr inbounds { half, half }, ptr {{.*}}, i32 0, i32 0

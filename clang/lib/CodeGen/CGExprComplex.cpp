@@ -310,13 +310,13 @@ public:
         CGF.getContext().getFloatTypeSemantics(ElementType);
     const llvm::fltSemantics &HigherElementTypeSemantics =
         CGF.getContext().getFloatTypeSemantics(HigherElementType);
-    // Check that LongDouble Size > Double Size.
-    // This can be interpreted as:
-    // SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal <=
+    // Check that the promoted type can handle the intermediate values without
+    // overflowing. This can be interpreted as:
+    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal) * 2 <=
     // LargerType.LargestFiniteVal.
     // In terms of exponent it gives this formula:
     // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
-    // doubles the exponent of SmallerType.LargestFiniteVal);
+    // doubles the exponent of SmallerType.LargestFiniteVal)
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
       return CGF.getContext().getComplexType(HigherElementType);
@@ -843,8 +843,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
 
       if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
           Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted ||
-          CGF.getLangOpts().NoHonorInfs || CGF.getLangOpts().NoHonorNaNs)
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
         return ComplexPairTy(ResR, ResI);
 
       // Emit the test for the real part becoming NaN and create a branch to

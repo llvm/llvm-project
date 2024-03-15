@@ -2875,12 +2875,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         RangeVal = LangOptions::ComplexRangeKind::CX_Promoted;
       else if (Val.equals("basic"))
         RangeVal = LangOptions::ComplexRangeKind::CX_Basic;
-      else
+      else {
         D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << LangOptions::ComplexRangeKind::CX_None;
-      if (GccRangeComplexOption.empty() && !SeenUnsafeMathModeOption) {
-        EmitComplexRangeDiag(D, ComplexArithmeticStr(Range),
-                             ComplexArithmeticStr(RangeVal));
+            << A->getSpelling() << Val;
+        break;
       }
       if (!GccRangeComplexOption.empty()) {
         if (GccRangeComplexOption.compare("-fcx-limited-range") != 0) {
