@@ -125,7 +125,7 @@ void Mangled::SetValue(ConstString name) {
 }
 
 // Local helpers for different demangling implementations.
-static char *GetMSVCDemangledStr(std::string_view M) {
+static char *GetMSVCDemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::microsoftDemangle(
       M, nullptr, nullptr,
       llvm::MSDemangleFlags(
@@ -169,27 +169,29 @@ static char *GetItaniumDemangledStr(const char *M) {
   return demangled_cstr;
 }
 
-static char *GetRustV0DemangledStr(std::string_view M) {
+static char *GetRustV0DemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::rustDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", M, demangled_cstr);
     else
-      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle", M);
+      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle",
+               static_cast<std::string_view>(M));
   }
 
   return demangled_cstr;
 }
 
-static char *GetDLangDemangledStr(std::string_view M) {
+static char *GetDLangDemangledStr(llvm::StringRef M) {
   char *demangled_cstr = llvm::dlangDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOG(log, "demangled dlang: {0} -> \"{1}\"", M, demangled_cstr);
     else
-      LLDB_LOG(log, "demangled dlang: {0} -> error: failed to demangle", M);
+      LLDB_LOG(log, "demangled dlang: {0} -> error: failed to demangle",
+               static_cast<std::string_view>(M));
   }
 
   return demangled_cstr;

@@ -360,7 +360,7 @@ static bool isStride64(unsigned Opc) {
 
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore())
     return false;
@@ -424,7 +424,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
         Width = getOpSize(LdSt, DataOpIdx);
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data1);
-        Width += getOpSize(LdSt, DataOpIdx);
+        Width = Width.getValue() + getOpSize(LdSt, DataOpIdx);
       } else {
         Width = getOpSize(LdSt, DataOpIdx);
       }
@@ -3647,7 +3647,7 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                                const MachineInstr &MIb) const {
   SmallVector<const MachineOperand *, 4> BaseOps0, BaseOps1;
   int64_t Offset0, Offset1;
-  unsigned Dummy0, Dummy1;
+  LocationSize Dummy0 = 0, Dummy1 = 0;
   bool Offset0IsScalable, Offset1IsScalable;
   if (!getMemOperandsWithOffsetWidth(MIa, BaseOps0, Offset0, Offset0IsScalable,
                                      Dummy0, &RI) ||
@@ -3780,8 +3780,28 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
     updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
+    if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      // SlotIndex of defs needs to be updated when converting to early-clobber
+      MachineOperand &Def = MIB->getOperand(0);
+      if (Def.isEarlyClobber() && Def.isReg() &&
+          LIS->hasInterval(Def.getReg())) {
+        SlotIndex OldIndex = LIS->getInstructionIndex(*MIB).getRegSlot(false);
+        SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
+        auto &LI = LIS->getInterval(Def.getReg());
+        auto UpdateDefIndex = [&](LiveRange &LR) {
+          auto S = LR.find(OldIndex);
+          if (S != LR.end() && S->start == OldIndex) {
+            assert(S->valno && S->valno->def == OldIndex);
+            S->start = NewIndex;
+            S->valno->def = NewIndex;
+          }
+        };
+        UpdateDefIndex(LI);
+        for (auto &SR : LI.subranges())
+          UpdateDefIndex(SR);
+      }
+    }
     return MIB;
   }
 
@@ -4121,10 +4141,29 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
                                         ST.hasInv2PiInlineImm());
   case 16:
     return ST.has16BitInsts() &&
-           AMDGPU::isInlinableLiteral16(Imm.getSExtValue(),
-                                        ST.hasInv2PiInlineImm());
+           AMDGPU::isInlinableLiteralI16(Imm.getSExtValue(),
+                                         ST.hasInv2PiInlineImm());
   default:
     llvm_unreachable("invalid bitwidth");
+  }
+}
+
+bool SIInstrInfo::isInlineConstant(const APFloat &Imm) const {
+  APInt IntImm = Imm.bitcastToAPInt();
+  int64_t IntImmVal = IntImm.getSExtValue();
+  bool HasInv2Pi = ST.hasInv2PiInlineImm();
+  switch (APFloat::SemanticsToEnum(Imm.getSemantics())) {
+  default:
+    llvm_unreachable("invalid fltSemantics");
+  case APFloatBase::S_IEEEsingle:
+  case APFloatBase::S_IEEEdouble:
+    return isInlineConstant(IntImm);
+  case APFloatBase::S_BFloat:
+    return ST.has16BitInsts() &&
+           AMDGPU::isInlinableLiteralBF16(IntImmVal, HasInv2Pi);
+  case APFloatBase::S_IEEEhalf:
+    return ST.has16BitInsts() &&
+           AMDGPU::isInlinableLiteralFP16(IntImmVal, HasInv2Pi);
   }
 }
 
@@ -4200,7 +4239,7 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
       // constants in these cases
       int16_t Trunc = static_cast<int16_t>(Imm);
       return ST.has16BitInsts() &&
-             AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
+             AMDGPU::isInlinableLiteralFP16(Trunc, ST.hasInv2PiInlineImm());
     }
 
     return false;
@@ -4703,6 +4742,20 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       if (OMod != nullptr &&
         (!OMod->isImm() || OMod->getImm() != 0)) {
         ErrInfo = "OMod not allowed in SDWA instructions on VI";
+        return false;
+      }
+    }
+
+    if (Opcode == AMDGPU::V_CVT_F32_FP8_sdwa ||
+        Opcode == AMDGPU::V_CVT_F32_BF8_sdwa ||
+        Opcode == AMDGPU::V_CVT_PK_F32_FP8_sdwa ||
+        Opcode == AMDGPU::V_CVT_PK_F32_BF8_sdwa) {
+      const MachineOperand *Src0ModsMO =
+          getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+      unsigned Mods = Src0ModsMO->getImm();
+      if (Mods & SISrcMods::ABS || Mods & SISrcMods::NEG ||
+          Mods & SISrcMods::SEXT) {
+        ErrInfo = "sext, abs and neg are not allowed on this instruction";
         return false;
       }
     }

@@ -23,30 +23,6 @@ _isClExe = lambda cfg: not _isAnyClangOrGCC(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
-
-def _getSuitableClangTidy(cfg):
-    try:
-        # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
-        if runScriptExitCode(cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
-            return None
-
-        # TODO MODULES require ToT due module specific fixes.
-        if runScriptExitCode(cfg, ['clang-tidy-18 --version']) == 0:
-          return 'clang-tidy-18'
-
-        # TODO This should be the last stable release.
-        # LLVM RELEASE bump to latest stable version
-        if runScriptExitCode(cfg, ["clang-tidy-16 --version"]) == 0:
-            return "clang-tidy-16"
-
-        # LLVM RELEASE bump version
-        if int(re.search("[0-9]+", commandOutput(cfg, ["clang-tidy --version"])).group()) >= 16:
-            return "clang-tidy"
-
-    except ConfigurationRuntimeError:
-        return None
-
-
 def _getAndroidDeviceApi(cfg):
     return int(
         programOutput(
@@ -195,12 +171,12 @@ DEFAULT_FEATURES = [
         ),
     ),
     Feature(
-        name="has-128-bit-atomics",
+        name="has-1024-bit-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
             """
             #include <atomic>
-            struct Large { char storage[128/8]; };
+            struct Large { char storage[1024/8]; };
             std::atomic<Large> x;
             int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
@@ -296,13 +272,6 @@ DEFAULT_FEATURES = [
     Feature(
         name="executor-has-no-bash",
         when=lambda cfg: runScriptExitCode(cfg, ["%{exec} bash -c 'bash --version'"]) != 0,
-    ),
-    Feature(
-        name="has-clang-tidy",
-        when=lambda cfg: _getSuitableClangTidy(cfg) is not None,
-        actions=[
-            AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
-        ],
     ),
     # Whether module support for the platform is available.
     Feature(

@@ -54,10 +54,9 @@ namespace dataflow {
 ///                         Environment &Env)` - applies the analysis transfer
 ///    function for a given edge from a CFG block of a conditional statement.
 ///
-///  `Derived` can optionally override the following members:
-///   * `bool merge(QualType, const Value &, const Value &, Value &,
-///     Environment &)` -  joins distinct values. This could be a strict
-///     lattice join or a more general widening operation.
+///  `Derived` can optionally override the virtual functions in the
+///  `Environment::ValueModel` interface (which is an indirect base class of
+///  this class).
 ///
 ///  `LatticeT` is a bounded join-semilattice that is used by `Derived` and must
 ///  provide the following public members:

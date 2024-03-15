@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -1152,7 +1153,9 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
 
       // but we do need to get rid of the hlfir.destroy for the hlfir.transpose
       // result (which is entirely removed)
-      for (mlir::Operation *user : transposeOp->getResult(0).getUsers())
+      llvm::SmallVector<mlir::Operation *> users(
+          transposeOp->getResult(0).getUsers());
+      for (mlir::Operation *user : users)
         if (auto destroyOp = mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
           rewriter.eraseOp(destroyOp);
       rewriter.eraseOp(transposeOp);
@@ -1403,31 +1406,43 @@ void hlfir::AsExprOp::getEffects(
 // ElementalOp
 //===----------------------------------------------------------------------===//
 
+/// Common builder for ElementalOp and ElementalAddrOp to add the arguments and
+/// create the elemental body. Result and clean-up body must be handled in
+/// specific builders.
+template <typename Op>
+static void buildElemental(mlir::OpBuilder &builder,
+                           mlir::OperationState &odsState, mlir::Value shape,
+                           mlir::Value mold, mlir::ValueRange typeparams,
+                           bool isUnordered) {
+  odsState.addOperands(shape);
+  if (mold)
+    odsState.addOperands(mold);
+  odsState.addOperands(typeparams);
+  odsState.addAttribute(
+      Op::getOperandSegmentSizesAttrName(odsState.name),
+      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
+                                    static_cast<int32_t>(typeparams.size())}));
+  if (isUnordered)
+    odsState.addAttribute(Op::getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
+    unsigned dim = shapeType.getRank();
+    mlir::Type indexType = builder.getIndexType();
+    for (unsigned d = 0; d < dim; ++d)
+      bodyRegion->front().addArgument(indexType, odsState.location);
+  }
+}
+
 void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
                                mlir::OperationState &odsState,
                                mlir::Type resultType, mlir::Value shape,
                                mlir::Value mold, mlir::ValueRange typeparams,
                                bool isUnordered) {
-  odsState.addOperands(shape);
-  if (mold)
-    odsState.addOperands(mold);
-  odsState.addOperands(typeparams);
   odsState.addTypes(resultType);
-  odsState.addAttribute(
-      getOperandSegmentSizesAttrName(odsState.name),
-      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
-                                    static_cast<int32_t>(typeparams.size())}));
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
-    unsigned dim = exprType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+  buildElemental<hlfir::ElementalOp>(builder, odsState, shape, mold, typeparams,
+                                     isUnordered);
 }
 
 mlir::Value hlfir::ElementalOp::getElementEntity() {
@@ -1678,19 +1693,11 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
 
 void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
                                    mlir::OperationState &odsState,
-                                   mlir::Value shape, bool isUnordered) {
-  odsState.addOperands(shape);
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
-    unsigned dim = shapeType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+                                   mlir::Value shape, mlir::Value mold,
+                                   mlir::ValueRange typeparams,
+                                   bool isUnordered) {
+  buildElemental<hlfir::ElementalAddrOp>(builder, odsState, shape, mold,
+                                         typeparams, isUnordered);
   // Push cleanUp region.
   odsState.addRegion();
 }
@@ -1864,7 +1871,8 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
       return mlir::failure();
 
   auto insertPt = rewriter.saveInsertionPoint();
-  for (mlir::Operation *user : indexOp->getResult(0).getUsers())
+  llvm::SmallVector<mlir::Operation *> users(indexOp->getResult(0).getUsers());
+  for (mlir::Operation *user : users)
     if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(user)) {
       rewriter.setInsertionPoint(loadOp);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(

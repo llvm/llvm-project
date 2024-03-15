@@ -33,6 +33,10 @@ using namespace CodeGen;
 //                        Aggregate Expression Emitter
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+extern cl::opt<bool> EnableSingleByteCoverage;
+} // namespace llvm
+
 namespace  {
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CodeGenFunction &CGF;
@@ -1279,7 +1283,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  CGF.incrementProfileCounter(E);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E->getTrueExpr());
+  else
+    CGF.incrementProfileCounter(E);
   Visit(E->getTrueExpr());
   eval.end(CGF);
 
@@ -1294,6 +1301,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E->getFalseExpr());
   Visit(E->getFalseExpr());
   eval.end(CGF);
 
@@ -1302,6 +1311,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
                     E->getType());
 
   CGF.EmitBlock(ContBlock);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E);
 }
 
 void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {

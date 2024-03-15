@@ -259,7 +259,7 @@ void LoopEmitter::initializeLoopEmit(
       // Annotated sparse tensors.
       // We also need the value buffer for all-dense annotated "sparse"
       // tensors.
-      valBuffer[t] = genToValues(builder, loc, tensor);
+      valBuffer[t] = builder.create<ToValuesOp>(loc, tensor);
     }
     // NOTE: we can also prepare for 0 lvl here in advance, this will hoist
     // some loop preparation from tensor iteration, but will also (undesirably)

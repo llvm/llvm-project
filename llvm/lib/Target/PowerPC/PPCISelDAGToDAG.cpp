@@ -521,40 +521,6 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
 
   if (!GV->hasAttribute("toc-data"))
     return false;
-
-  // TODO: These asserts should be updated as more support for the toc data
-  // transformation is added (struct support, etc.).
-
-  assert(
-      PointerSize >= GV->getAlign().valueOrOne().value() &&
-      "GlobalVariables with an alignment requirement stricter than TOC entry "
-      "size not supported by the toc data transformation.");
-
-  Type *GVType = GV->getValueType();
-
-  assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
-                              "supported by the toc data transformation.");
-
-  if (GVType->isVectorTy())
-    report_fatal_error("A GlobalVariable of Vector type is not currently "
-                       "supported by the toc data transformation.");
-
-  if (GVType->isArrayTy())
-    report_fatal_error("A GlobalVariable of Array type is not currently "
-                       "supported by the toc data transformation.");
-
-  if (GVType->isStructTy())
-    report_fatal_error("A GlobalVariable of Struct type is not currently "
-                       "supported by the toc data transformation.");
-
-  assert(GVType->getPrimitiveSizeInBits() <= PointerSize * 8 &&
-         "A GlobalVariable with size larger than a TOC entry is not currently "
-         "supported by the toc data transformation.");
-
-  if (GV->hasPrivateLinkage())
-    report_fatal_error("A GlobalVariable with private linkage is not "
-                       "currently supported by the toc data transformation.");
-
   return true;
 }
 
@@ -6168,7 +6134,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // [64-bit ELF/AIX]
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
     // Otherwise we generate:
-    //   ADDItocL(ADDIStocHA8(%x2, @sym), @sym)
+    //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
@@ -6188,7 +6154,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
 
     // Build the address relative to the TOC-pointer.
-    ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, MVT::i64,
+    ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL8, dl, MVT::i64,
                                           SDValue(Tmp, 0), GA));
     return;
   }
@@ -7741,7 +7707,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     // target flags on the immediate operand when we fold it into the
     // load instruction.
     //
-    // For something like ADDItocL, the relocation information is
+    // For something like ADDItocL8, the relocation information is
     // inferred from the opcode; when we process it in the AsmPrinter,
     // we add the necessary relocation there.  A load, though, can receive
     // relocation from various flavors of ADDIxxx, so we need to carry
@@ -7762,7 +7728,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     case PPC::ADDItlsldL:
       Flags = PPCII::MO_TLSLD_LO;
       break;
-    case PPC::ADDItocL:
+    case PPC::ADDItocL8:
       Flags = PPCII::MO_TOC_LO;
       break;
     }
@@ -7789,7 +7755,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         // If we have a addi(toc@l)/addis(toc@ha) pair, and the addis has only
         // one use, then we can do this for any offset, we just need to also
         // update the offset (i.e. the symbol addend) on the addis also.
-        if (Base.getMachineOpcode() != PPC::ADDItocL)
+        if (Base.getMachineOpcode() != PPC::ADDItocL8)
           continue;
 
         if (!HBase.isMachineOpcode() ||

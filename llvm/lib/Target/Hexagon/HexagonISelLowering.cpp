@@ -1238,7 +1238,7 @@ HexagonTargetLowering::LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(HexagonISD::CONST32, dl, PtrVT, GA);
   }
 
-  bool UsePCRel = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool UsePCRel = getTargetMachine().shouldAssumeDSOLocal(GV);
   if (UsePCRel) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, Offset,
                                             HexagonII::MO_PCREL);
@@ -3543,7 +3543,7 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
         unsigned A = Amt->getZExtValue();
         SDValue S = Shl.getOperand(0);
         SDValue T0 = DCI.DAG.getNode(ISD::SHL, dl, ty(S), S,
-                                     DCI.DAG.getConstant(32 - A, dl, MVT::i32));
+                                     DCI.DAG.getConstant(A - 32, dl, MVT::i32));
         SDValue T1 = DCI.DAG.getZExtOrTrunc(T0, dl, MVT::i32);
         SDValue T2 = DCI.DAG.getZExtOrTrunc(Z, dl, MVT::i32);
         return DCI.DAG.getNode(HexagonISD::COMBINE, dl, MVT::i64, {T1, T2});

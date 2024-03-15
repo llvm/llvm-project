@@ -111,8 +111,10 @@ export namespace std {
   using std::atomic_uintmax_t;
   using std::atomic_uintptr_t;
 
+#ifndef _LIBCPP_NO_LOCK_FREE_TYPES
   using std::atomic_signed_lock_free;
   using std::atomic_unsigned_lock_free;
+#endif
 
   // [atomics.flag], flag type and operations
   using std::atomic_flag;

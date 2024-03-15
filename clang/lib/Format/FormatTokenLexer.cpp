@@ -34,6 +34,7 @@ FormatTokenLexer::FormatTokenLexer(
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
+  assert(IsCpp == Style.isCpp());
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
 
@@ -114,7 +115,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeForEach())
     return;
-  if (Style.isCpp() && tryTransformTryUsageForC())
+  if (IsCpp && tryTransformTryUsageForC())
     return;
 
   if (Style.isJavaScript() || Style.isCSharp()) {
@@ -1341,7 +1342,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&

@@ -1224,9 +1224,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
-  config->compressDebugSections = getCompressionType(
-      args.getLastArgValue(OPT_compress_debug_sections, "none"),
-      "--compress-debug-sections");
+  if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
+    config->compressDebugSections =
+        getCompressionType(arg->getValue(), "--compress-debug-sections");
+  }
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1513,6 +1514,23 @@ static void readConfigs(opt::InputArgList &args) {
         continue;
       }
       *reportArg.second = option.second;
+    }
+  }
+
+  for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
+    SmallVector<StringRef, 0> fields;
+    StringRef(arg->getValue()).split(fields, '=');
+    if (fields.size() != 2 || fields[1].empty()) {
+      error(arg->getSpelling() +
+            ": parse error, not 'section-glob=[none|zlib|zstd]'");
+      continue;
+    }
+    auto type = getCompressionType(fields[1], arg->getSpelling());
+    if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
+      config->compressSections.emplace_back(std::move(*pat), type);
+    } else {
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      continue;
     }
   }
 
@@ -2302,9 +2320,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
+    sym = &s->file->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
+    sym = &s->file->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 

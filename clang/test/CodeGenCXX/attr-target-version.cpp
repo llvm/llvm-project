@@ -40,7 +40,7 @@ int bar() {
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: @_Z3foov._Msm4Mebf16(
+// CHECK-LABEL: @_Z3foov._Mebf16Msm4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
@@ -101,7 +101,7 @@ int bar() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z3foov._Msm4Mebf16
+// CHECK-NEXT:    ret ptr @_Z3foov._Mebf16Msm4
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z3foov.default
 //

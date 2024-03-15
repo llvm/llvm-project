@@ -11,4 +11,4 @@ target triple = "x86_64-pc-windows-msvc"
 ; CHECK: U f
 
 declare dllimport void @f()
-@fp = constant void ()* @f
+@fp = constant ptr @f

@@ -25,6 +25,12 @@ llvm::cl::opt<bool> treatIndexAsSection(
     llvm::cl::desc("In the OpenMP data clauses treat `a(N)` as `a(N:N)`."),
     llvm::cl::init(true));
 
+llvm::cl::opt<bool> enableDelayedPrivatization(
+    "openmp-enable-delayed-privatization",
+    llvm::cl::desc(
+        "Emit `[first]private` variables as clauses on the MLIR ops."),
+    llvm::cl::init(false));
+
 namespace Fortran {
 namespace lower {
 namespace omp {
@@ -37,12 +43,10 @@ void genObjectList(const ObjectList &objects,
     assert(sym && "Expected Symbol");
     if (mlir::Value variable = converter.getSymbolAddress(*sym)) {
       operands.push_back(variable);
-    } else {
-      if (const auto *details =
-              sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
-        operands.push_back(converter.getSymbolAddress(details->symbol()));
-        converter.copySymbolBinding(details->symbol(), *sym);
-      }
+    } else if (const auto *details =
+                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
+      operands.push_back(converter.getSymbolAddress(details->symbol()));
+      converter.copySymbolBinding(details->symbol(), *sym);
     }
   }
 }
@@ -54,12 +58,10 @@ void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
     const mlir::Value variable = converter.getSymbolAddress(sym);
     if (variable) {
       operands.push_back(variable);
-    } else {
-      if (const auto *details =
-              sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
-        operands.push_back(converter.getSymbolAddress(details->symbol()));
-        converter.copySymbolBinding(details->symbol(), sym);
-      }
+    } else if (const auto *details =
+                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
+      operands.push_back(converter.getSymbolAddress(details->symbol()));
+      converter.copySymbolBinding(details->symbol(), sym);
     }
   };
   for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
