@@ -279,9 +279,8 @@ public:
   MCSection *
   getSectionForFunctionDescriptor(const Function *F,
                                   const TargetMachine &TM) const override;
-  MCSection *
-  getSectionForTOCEntry(const MCSymbol *Sym, const TargetMachine &TM,
-                        const MCSymbolRefExpr::VariantKind VK) const override;
+  MCSection *getSectionForTOCEntry(const MCSymbol *Sym,
+                                   const TargetMachine &TM) const override;
 
   /// For external functions, this will always return a function descriptor
   /// csect.

@@ -785,8 +785,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
     StringRef Section, SectionKind Kind,
     std::optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
     const char *BeginSymName,
-    std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags,
-    StringRef RenamePrefix) {
+    std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
   bool IsDwarfSec = DwarfSectionSubtypeFlags.has_value();
   assert((IsDwarfSec != CsectProp.has_value()) && "Invalid XCOFF section!");
 
@@ -811,9 +810,8 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   if (IsDwarfSec)
     QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(CachedName));
   else
-    // For TLS local-dynamic model RenamePrefix is "_$TLSLD.", otherwise empty.
     QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
-        RenamePrefix + CachedName + "[" +
+        CachedName + "[" +
         XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
 
   MCSymbol *Begin = nullptr;

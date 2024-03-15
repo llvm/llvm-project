@@ -636,8 +636,7 @@ entry:
 ; SMALL32-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; SMALL32-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; SMALL32-LABEL:  L..C5:
-; SMALL32-NEXT:   .tc _Renamed..5f24__TLSLD.TIInit[TC],TIInit[TL]@ld
-; SMALL32-NEXT:   .rename _Renamed..5f24__TLSLD.TIInit[TC],"TIInit"
+; SMALL32-NEXT:   .tc TIInit[TC],TIInit[TL]@ld
 ; SMALL32-LABEL:  L..C6:
 ; SMALL32-NEXT:   .tc .TWInit[TC],TWInit[TL]@m
 ; SMALL32-LABEL:  L..C7:
@@ -655,8 +654,7 @@ entry:
 ; LARGE32-LABEL:  L..C3:
 ; LARGE32-NEXT:   .tc TGInit[TE],TGInit[TL]@gd
 ; LARGE32-LABEL:  L..C4:
-; LARGE32-NEXT:   .tc _Renamed..5f24__TLSLD.TIInit[TE],TIInit[TL]@ld
-; LARGE32-NEXT:   .rename _Renamed..5f24__TLSLD.TIInit[TE],"TIInit"
+; LARGE32-NEXT:   .tc TIInit[TE],TIInit[TL]@ld
 ; LARGE32-LABEL:  L..C5:
 ; LARGE32-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; LARGE32-NEXT:   .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
@@ -680,8 +678,7 @@ entry:
 ; SMALL64-NEXT:  .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; SMALL64-NEXT:  .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; SMALL64-LABEL:  L..C5:
-; SMALL64-NEXT:   .tc _Renamed..5f24__TLSLD.TIInit[TC],TIInit[TL]@ld
-; SMALL64-NEXT:   .rename _Renamed..5f24__TLSLD.TIInit[TC],"TIInit"
+; SMALL64-NEXT:  .tc TIInit[TC],TIInit[TL]@ld
 ; SMALL64-LABEL:  L..C6:
 ; SMALL64-NEXT:  .tc .TWInit[TC],TWInit[TL]@m
 ; SMALL64-LABEL:  L..C7:
@@ -702,8 +699,7 @@ entry:
 ; LARGE64-NEXT:  .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
 ; LARGE64-NEXT:  .rename _Renamed..5f24__TLSML[TC],"_$TLSML"
 ; LARGE64-LABEL:  L..C5:
-; LARGE64-NEXT:   .tc _Renamed..5f24__TLSLD.TIInit[TE],TIInit[TL]@ld
-; LARGE64-NEXT:   .rename _Renamed..5f24__TLSLD.TIInit[TE],"TIInit"
+; LARGE64-NEXT:  .tc TIInit[TE],TIInit[TL]@ld
 ; LARGE64-LABEL:  L..C6:
 ; LARGE64-NEXT:  .tc .TWInit[TE],TWInit[TL]@m
 ; LARGE64-LABEL:  L..C7:
