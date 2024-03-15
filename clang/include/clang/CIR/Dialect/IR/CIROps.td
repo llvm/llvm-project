@@ -3284,6 +3284,23 @@ def ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
 }
 
 //===----------------------------------------------------------------------===//
+// IsConstantOp
+//===----------------------------------------------------------------------===//
+
+def IsConstantOp : CIR_Op<"is_constant", [Pure]> {
+  let description = [{
+    Returns `true` if the argument is known to be a compile-time constant
+    otherwise returns 'false'.
+  }];
+  let arguments = (ins CIR_AnyType:$val);
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    `(` $val `:` type($val) `)` `:` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
 // These operations are hacks to get around missing features in LLVM's dialect.

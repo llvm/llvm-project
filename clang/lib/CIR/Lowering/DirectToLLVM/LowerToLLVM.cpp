@@ -2724,6 +2724,25 @@ public:
   }
 };
 
+class CIRIsConstantOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::IsConstantOp> {
+
+  using mlir::OpConversionPattern<mlir::cir::IsConstantOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::IsConstantOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // FIXME(cir): llvm.intr.is.constant returns i1 value but the LLVM Lowering
+    // expects that cir.bool type will be lowered as i8 type.
+    // So we have to insert zext here.
+    auto isConstantOP = rewriter.create<mlir::LLVM::IsConstantOp>(
+        op.getLoc(), adaptor.getVal());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(op, rewriter.getI8Type(),
+                                                    isConstantOP);
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -2744,8 +2763,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRStackSaveLowering, CIRStackRestoreLowering,
       CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering,
-      CIRSetBitfieldLowering, CIRGetBitfieldLowering, CIRPrefetchLowering>(
-      converter, patterns.getContext());
+      CIRSetBitfieldLowering, CIRGetBitfieldLowering, CIRPrefetchLowering,
+      CIRIsConstantOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
