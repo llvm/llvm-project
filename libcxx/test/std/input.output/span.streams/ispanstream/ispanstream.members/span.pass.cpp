@@ -10,16 +10,20 @@
 
 // <spanstream>
 
-//   template<class charT, class traits>
-//     void swap(basic_ispanstream<charT, traits>& x, basic_ispanstream<charT, traits>& y);
+//   template<class charT, class traits = char_traits<charT>>
+//   class basic_ispanstream
+//     : public basic_istream<charT, traits> {
+
+//     // [ispanstream.members], members
+
+//     std::span<charT> span() const noexcept;
 
 #include <cassert>
-#include <concepts>
 #include <span>
 #include <spanstream>
 
 #include "constexpr_char_traits.h"
-#include "test_convertible.h"
+#include "nasty_string.h"
 #include "test_macros.h"
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -27,49 +31,54 @@ void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
+
   std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
 
-  // TODO:
-
-  // Mode: default
+  // Mode: default (`in` | `out`)
   {
-    SpStream rhsSpSt{sp};
-    SpStream spSt(std::span<CharT>{});
-    std::swap(spSt, rhsSpSt);
+    SpStream spSt{sp};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode: `in`
   {
-    SpStream rhsSpSt{sp, std::ios_base::in};
-    SpStream spSt(std::span<CharT>{});
-    std::swap(spSt, rhsSpSt);
+    SpStream spSt{sp, std::ios_base::in};
     assert(spSt.span().data() == arr);
     assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
-  // Mode `out`
+  // Mode: `out`
   {
-    SpStream rhsSpSt{sp, std::ios_base::out};
-    SpStream spSt(std::span<CharT>{});
-    std::swap(spSt, rhsSpSt);
+    SpStream spSt{sp, std::ios_base::out};
     assert(spSt.span().data() == arr);
+    // Mode `out` counts read characters
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   // Mode: multiple
   {
-    SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    SpStream spSt(std::span<CharT>{});
-    std::swap(spSt, rhsSpSt);
+    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
+  // Mode: `ate`
+  {
+    SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
+    assert(spSt.span().data() == arr);
+    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+  }
 }
 
 int main(int, char**) {
+#ifndef TEST_HAS_NO_NASTY_STRING
+  test<nasty_char, nasty_char_traits>();
+#endif
   test<char>();
   test<char, constexpr_char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
