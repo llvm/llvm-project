@@ -31,7 +31,11 @@ void test() {
   using SpStream = std::basic_ospanstream<CharT, TraitsT>;
 
   CharT arr[4];
+
   std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
   {
@@ -87,6 +91,10 @@ void test() {
   // Mode: multiple
   {
     SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     assert(spSt.span().empty());

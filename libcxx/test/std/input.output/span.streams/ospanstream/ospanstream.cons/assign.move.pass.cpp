@@ -31,7 +31,11 @@ void test() {
   using SpStream = std::basic_ospanstream<CharT, TraitsT>;
 
   CharT arr[4];
+
   std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
   {
