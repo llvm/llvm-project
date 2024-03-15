@@ -606,10 +606,9 @@ static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_launder(InterpState &S, CodePtr OpPC,
-                                    const InterpFrame *Frame,
-                                    const Function *Func,
-                                    const CallExpr *Call) {
+/// Just takes the first Argument to the call and puts it on the stack.
+static bool noopPointer(InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
+                        const Function *Func, const CallExpr *Call) {
   const Pointer &Arg = S.Stk.peek<Pointer>();
   S.Stk.push<Pointer>(Arg);
   return true;
@@ -1144,7 +1143,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_launder:
-    if (!interp__builtin_launder(S, OpPC, Frame, F, Call))
+  case Builtin::BI__builtin___CFStringMakeConstantString:
+  case Builtin::BI__builtin___NSStringMakeConstantString:
+    if (!noopPointer(S, OpPC, Frame, F, Call))
       return false;
     break;
 
