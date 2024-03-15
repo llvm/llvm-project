@@ -28,11 +28,11 @@ struct DILineInfo;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
 class NativeSession;
-}
+} // namespace pdb
 namespace lto {
 class InputFile;
 }
-}
+} // namespace llvm
 
 namespace lld {
 class DWARFCache;
@@ -45,10 +45,10 @@ std::vector<MemoryBufferRef> getArchiveMembers(llvm::object::Archive *file);
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::MachineTypes;
 using llvm::object::Archive;
-using llvm::object::COFFObjectFile;
-using llvm::object::COFFSymbolRef;
 using llvm::object::coff_import_header;
 using llvm::object::coff_section;
+using llvm::object::COFFObjectFile;
+using llvm::object::COFFSymbolRef;
 
 class Chunk;
 class Defined;
@@ -149,9 +149,7 @@ public:
 
   // Returns a Symbol object for the symbolIndex'th symbol in the
   // underlying object file.
-  Symbol *getSymbol(uint32_t symbolIndex) {
-    return symbols[symbolIndex];
-  }
+  Symbol *getSymbol(uint32_t symbolIndex) { return symbols[symbolIndex]; }
 
   // Returns the underlying COFF file.
   COFFObjectFile *getCOFFObj() { return coffObj.get(); }
@@ -216,7 +214,7 @@ public:
                                                 uint32_t sectionIndex);
 
 private:
-  const coff_section* getSection(uint32_t i);
+  const coff_section *getSection(uint32_t i);
   const coff_section *getSection(COFFSymbolRef sym) {
     return getSection(sym.getSectionNumber());
   }

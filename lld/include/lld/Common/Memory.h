@@ -57,7 +57,7 @@ inline llvm::SpecificBumpPtrAllocator<T> &getSpecificAllocSingleton() {
 
 // Creates new instances of T off a (almost) contiguous arena/object pool. The
 // instances are destroyed whenever lldMain() goes out of scope.
-template <typename T, typename... U> T *make(U &&... args) {
+template <typename T, typename... U> T *make(U &&...args) {
   return new (getSpecificAllocSingleton<T>().Allocate())
       T(std::forward<U>(args)...);
 }

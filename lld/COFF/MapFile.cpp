@@ -18,13 +18,15 @@
 // Symbols list:
 // Address        Publics by Value    Rva + Base          Lib:Object
 // 0001:00001000  main                 0000000140001000    main.obj
-// 0001:00001300  ?__scrt_common_main@@YAHXZ  0000000140001300 libcmt:exe_main.obj
+// 0001:00001300  ?__scrt_common_main@@YAHXZ  0000000140001300
+// libcmt:exe_main.obj
 //
 // entry point at        0001:00000360
 //
 // Static symbols
 //
-// 0000:00000000  __guard_fids__       0000000140000000     libcmt : exe_main.obj
+// 0000:00000000  __guard_fids__       0000000140000000     libcmt :
+// exe_main.obj
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"

@@ -124,17 +124,18 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
   auto [sysStr, ver] = arg.split(',');
   std::string sysStrLower = sysStr.lower();
   *sys = StringSwitch<WindowsSubsystem>(sysStrLower)
-    .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
-    .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
-    .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
-    .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
-    .Case("efi_boot_service_driver", IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
-    .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
-    .Case("efi_runtime_driver", IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
-    .Case("native", IMAGE_SUBSYSTEM_NATIVE)
-    .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
-    .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
-    .Default(IMAGE_SUBSYSTEM_UNKNOWN);
+             .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
+             .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
+             .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
+             .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
+             .Case("efi_boot_service_driver",
+                   IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+             .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
+             .Case("efi_runtime_driver", IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+             .Case("native", IMAGE_SUBSYSTEM_NATIVE)
+             .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
+             .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
+             .Default(IMAGE_SUBSYSTEM_UNKNOWN);
   if (*sys == IMAGE_SUBSYSTEM_UNKNOWN && sysStrLower != "default")
     fatal("unknown subsystem: " + sysStr);
   if (!ver.empty())
@@ -384,7 +385,7 @@ public:
 
   std::string path;
 };
-}
+} // namespace
 
 std::string LinkerDriver::createDefaultXml() {
   std::string ret;

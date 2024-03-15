@@ -314,7 +314,8 @@ bool X86_64::relaxOnce(int pass) const {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA difference is under 2^31, GOT-generating relocations with a 32-bit range cannot overflow.
+  // If the max VA difference is under 2^31, GOT-generating relocations with a
+  // 32-bit range cannot overflow.
   if (isUInt<31>(maxVA - minVA))
     return false;
 
@@ -423,9 +424,9 @@ void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 
 void X86_64::writePltHeader(uint8_t *buf) const {
   const uint8_t pltData[] = {
-      0xff, 0x35, 0, 0, 0, 0, // pushq GOTPLT+8(%rip)
-      0xff, 0x25, 0, 0, 0, 0, // jmp *GOTPLT+16(%rip)
-      0x0f, 0x1f, 0x40, 0x00, // nop
+      0xff, 0x35, 0,    0,    0, 0, // pushq GOTPLT+8(%rip)
+      0xff, 0x25, 0,    0,    0, 0, // jmp *GOTPLT+16(%rip)
+      0x0f, 0x1f, 0x40, 0x00,       // nop
   };
   memcpy(buf, pltData, sizeof(pltData));
   uint64_t gotPlt = in.gotPlt->getVA();
@@ -438,8 +439,8 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
                       uint64_t pltEntryAddr) const {
   const uint8_t inst[] = {
       0xff, 0x25, 0, 0, 0, 0, // jmpq *got(%rip)
-      0x68, 0, 0, 0, 0,       // pushq <relocation index>
-      0xe9, 0, 0, 0, 0,       // jmpq plt[0]
+      0x68, 0,    0, 0, 0,    // pushq <relocation index>
+      0xe9, 0,    0, 0, 0,    // jmpq plt[0]
   };
   memcpy(buf, inst, sizeof(inst));
 
@@ -1144,12 +1145,12 @@ void Retpoline::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void Retpoline::writePltHeader(uint8_t *buf) const {
   const uint8_t insn[] = {
-      0xff, 0x35, 0,    0,    0,    0,          // 0:    pushq GOTPLT+8(%rip)
-      0x4c, 0x8b, 0x1d, 0,    0,    0,    0,    // 6:    mov GOTPLT+16(%rip), %r11
-      0xe8, 0x0e, 0x00, 0x00, 0x00,             // d:    callq next
-      0xf3, 0x90,                               // 12: loop: pause
-      0x0f, 0xae, 0xe8,                         // 14:   lfence
-      0xeb, 0xf9,                               // 17:   jmp loop
+      0xff, 0x35, 0,    0,    0,    0,       // 0:    pushq GOTPLT+8(%rip)
+      0x4c, 0x8b, 0x1d, 0,    0,    0,    0, // 6:    mov GOTPLT+16(%rip), %r11
+      0xe8, 0x0e, 0x00, 0x00, 0x00,          // d:    callq next
+      0xf3, 0x90,                            // 12: loop: pause
+      0x0f, 0xae, 0xe8,                      // 14:   lfence
+      0xeb, 0xf9,                            // 17:   jmp loop
       0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 19:   int3; .align 16
       0x4c, 0x89, 0x1c, 0x24,                   // 20: next: mov %r11, (%rsp)
       0xc3,                                     // 24:   ret
@@ -1167,12 +1168,12 @@ void Retpoline::writePltHeader(uint8_t *buf) const {
 void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
                          uint64_t pltEntryAddr) const {
   const uint8_t insn[] = {
-      0x4c, 0x8b, 0x1d, 0, 0, 0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
-      0xe8, 0,    0,    0,    0,    // 7:  callq plt+0x20
-      0xe9, 0,    0,    0,    0,    // c:  jmp plt+0x12
-      0x68, 0,    0,    0,    0,    // 11: pushq <relocation index>
-      0xe9, 0,    0,    0,    0,    // 16: jmp plt+0
-      0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // 1b: int3; padding
+      0x4c, 0x8b, 0x1d, 0,    0,    0, 0, // 0:  mov foo@GOTPLT(%rip), %r11
+      0xe8, 0,    0,    0,    0,          // 7:  callq plt+0x20
+      0xe9, 0,    0,    0,    0,          // c:  jmp plt+0x12
+      0x68, 0,    0,    0,    0,          // 11: pushq <relocation index>
+      0xe9, 0,    0,    0,    0,          // 16: jmp plt+0
+      0xcc, 0xcc, 0xcc, 0xcc, 0xcc,       // 1b: int3; padding
   };
   memcpy(buf, insn, sizeof(insn));
 

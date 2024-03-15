@@ -55,7 +55,7 @@ private:
   InputSectionBase *isec;
   ArrayRef<uint8_t> d;
 };
-}
+} // namespace
 
 // Read a byte and advance D by one byte.
 uint8_t EhReader::readByte() {

@@ -236,7 +236,7 @@ public:
 
   void finish();
 };
-}
+} // namespace
 
 // Visual Studio's debugger requires absolute paths in various places in the
 // PDB to work without additional configuration:
@@ -379,7 +379,8 @@ void PDBLinker::translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
           CVType funcIdData = tMerger.getIDTable().getType(*ti);
           if (funcIdData.length() >= 8 && (funcIdData.kind() == LF_FUNC_ID ||
                                            funcIdData.kind() == LF_MFUNC_ID)) {
-            newType = *reinterpret_cast<const TypeIndex *>(&funcIdData.data()[8]);
+            newType =
+                *reinterpret_cast<const TypeIndex *>(&funcIdData.data()[8]);
           }
         }
       }
@@ -450,7 +451,8 @@ static bool symbolGoesInModuleStream(const CVSymbol &sym,
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
     return false;
-  // S_UDT and S_CONSTANT records go in the module stream if it is not a global record.
+  // S_UDT and S_CONSTANT records go in the module stream if it is not a global
+  // record.
   case SymbolKind::S_UDT:
   case SymbolKind::S_CONSTANT:
     return symbolScopeDepth > 0;
@@ -986,7 +988,8 @@ void DebugSHandler::finish() {
   // subsections. The new checksum table must have the exact same layout and
   // size as the original. Otherwise, the file references in the line and
   // inlinee line tables will be incorrect.
-  auto newChecksums = std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
+  auto newChecksums =
+      std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
   for (const FileChecksumEntry &fc : checksums) {
     SmallString<128> filename =
         exitOnErr(cvStrTab.getString(fc.FileNameOffset));
@@ -1528,7 +1531,7 @@ void PDBLinker::addImportFilesToPDB() {
       continue;
 
     if (!file->thunkLive)
-        continue;
+      continue;
 
     std::string dll = StringRef(file->dllName).lower();
     llvm::pdb::DbiModuleDescriptorBuilder *&mod = dllToModuleDbi[dll];
@@ -1715,12 +1718,11 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
-    e = handleErrors(std::move(e),
-        [](const llvm::msf::MSFError &me) {
-          error(me.message());
-          if (me.isPageOverflow())
-            error("try setting a larger /pdbpagesize");
-        });
+    e = handleErrors(std::move(e), [](const llvm::msf::MSFError &me) {
+      error(me.message());
+      if (me.isPageOverflow())
+        error("try setting a larger /pdbpagesize");
+    });
     checkError(std::move(e));
     error("failed to write PDB file " + Twine(ctx.config.pdbPath));
   }

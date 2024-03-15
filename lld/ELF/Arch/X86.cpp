@@ -198,9 +198,9 @@ void X86::writePltHeader(uint8_t *buf) const {
   }
 
   const uint8_t pltData[] = {
-      0xff, 0x35, 0, 0, 0, 0, // pushl (GOTPLT+4)
-      0xff, 0x25, 0, 0, 0, 0, // jmp *(GOTPLT+8)
-      0x90, 0x90, 0x90, 0x90, // nop
+      0xff, 0x35, 0,    0,    0, 0, // pushl (GOTPLT+4)
+      0xff, 0x25, 0,    0,    0, 0, // jmp *(GOTPLT+8)
+      0x90, 0x90, 0x90, 0x90,       // nop
   };
   memcpy(buf, pltData, sizeof(pltData));
   uint32_t gotPlt = in.gotPlt->getVA();

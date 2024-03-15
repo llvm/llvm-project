@@ -172,16 +172,14 @@ std::string ErrorHandler::getLocation(const Twine &msg) {
     return std::string(logName);
 
   static std::regex regexes[] = {
-      std::regex(
-          R"(^undefined (?:\S+ )?symbol:.*\n)"
-          R"(>>> referenced by .+\((\S+):(\d+)\))"),
+      std::regex(R"(^undefined (?:\S+ )?symbol:.*\n)"
+                 R"(>>> referenced by .+\((\S+):(\d+)\))"),
       std::regex(
           R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+))"),
       std::regex(R"(^undefined symbol:.*\n>>> referenced by (.*):)"),
       std::regex(
           R"(^duplicate symbol: .*\n>>> defined in (\S+)\n>>> defined in.*)"),
-      std::regex(
-          R"(^duplicate symbol: .*\n>>> defined at .+\((\S+):(\d+)\))"),
+      std::regex(R"(^duplicate symbol: .*\n>>> defined at .+\((\S+):(\d+)\))"),
       std::regex(R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+))"),
       std::regex(
           R"(.*\n>>> defined in .*\n>>> referenced by .+\((\S+):(\d+)\))"),

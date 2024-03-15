@@ -735,8 +735,8 @@ void ObjFile::initializeFlags() {
             (cs.Flags & CompileSym3Flags::HotPatch) != CompileSym3Flags::None;
       }
       if (sym->kind() == SymbolKind::S_OBJNAME) {
-        auto objName = cantFail(SymbolDeserializer::deserializeAs<ObjNameSym>(
-            sym.get()));
+        auto objName =
+            cantFail(SymbolDeserializer::deserializeAs<ObjNameSym>(sym.get()));
         if (objName.Signature)
           pchSignature = objName.Signature;
       }

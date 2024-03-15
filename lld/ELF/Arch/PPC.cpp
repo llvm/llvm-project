@@ -117,19 +117,19 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
     if (ha(gotBcl) == ha(gotBcl + 4)) {
       write32(buf + 32, 0x800c0000 | lo(gotBcl)); // lwz r0,r12,GOT+4-1b@l(r12)
       write32(buf + 36,
-              0x818c0000 | lo(gotBcl + 4));       // lwz r12,r12,GOT+8-1b@l(r12)
+              0x818c0000 | lo(gotBcl + 4)); // lwz r12,r12,GOT+8-1b@l(r12)
     } else {
       write32(buf + 32, 0x840c0000 | lo(gotBcl)); // lwzu r0,r12,GOT+4-1b@l(r12)
       write32(buf + 36, 0x818c0000 | 4);          // lwz r12,r12,4(r12)
     }
-    write32(buf + 40, 0x7c0903a6);                // mtctr 0
-    write32(buf + 44, 0x7c0b5a14);                // add r0,11,11
-    write32(buf + 48, 0x7d605a14);                // add r11,0,11
-    write32(buf + 52, 0x4e800420);                // bctr
+    write32(buf + 40, 0x7c0903a6); // mtctr 0
+    write32(buf + 44, 0x7c0b5a14); // add r0,11,11
+    write32(buf + 48, 0x7d605a14); // add r11,0,11
+    write32(buf + 52, 0x4e800420); // bctr
     buf += 56;
   } else {
-    write32(buf + 0, 0x3d800000 | ha(got + 4));   // lis     r12,GOT+4@ha
-    write32(buf + 4, 0x3d6b0000 | ha(-glink));    // addis   r11,r11,-glink@ha
+    write32(buf + 0, 0x3d800000 | ha(got + 4)); // lis     r12,GOT+4@ha
+    write32(buf + 4, 0x3d6b0000 | ha(-glink));  // addis   r11,r11,-glink@ha
     if (ha(got + 4) == ha(got + 8))
       write32(buf + 8, 0x800c0000 | lo(got + 4)); // lwz r0,GOT+4@l(r12)
     else
@@ -140,9 +140,9 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
     if (ha(got + 4) == ha(got + 8))
       write32(buf + 24, 0x818c0000 | lo(got + 8)); // lwz r12,GOT+8@l(r12)
     else
-      write32(buf + 24, 0x818c0000 | 4);          // lwz r12,4(r12)
-    write32(buf + 28, 0x7d605a14);                // add     r11,r0,r11
-    write32(buf + 32, 0x4e800420);                // bctr
+      write32(buf + 24, 0x818c0000 | 4); // lwz r12,4(r12)
+    write32(buf + 28, 0x7d605a14);       // add     r11,r0,r11
+    write32(buf + 32, 0x4e800420);       // bctr
     buf += 36;
   }
 

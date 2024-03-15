@@ -215,13 +215,13 @@ void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 // Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .got.plt.
 static void writePltHeaderLong(uint8_t *buf) {
-  write32(buf + 0, 0xe52de004);   //     str lr, [sp,#-4]!
-  write32(buf + 4, 0xe59fe004);   //     ldr lr, L2
-  write32(buf + 8, 0xe08fe00e);   // L1: add lr, pc, lr
-  write32(buf + 12, 0xe5bef008);  //     ldr pc, [lr, #8]
-  write32(buf + 16, 0x00000000);  // L2: .word   &(.got.plt) - L1 - 8
-  write32(buf + 20, 0xd4d4d4d4);  //     Pad to 32-byte boundary
-  write32(buf + 24, 0xd4d4d4d4);  //     Pad to 32-byte boundary
+  write32(buf + 0, 0xe52de004);  //     str lr, [sp,#-4]!
+  write32(buf + 4, 0xe59fe004);  //     ldr lr, L2
+  write32(buf + 8, 0xe08fe00e);  // L1: add lr, pc, lr
+  write32(buf + 12, 0xe5bef008); //     ldr pc, [lr, #8]
+  write32(buf + 16, 0x00000000); // L2: .word   &(.got.plt) - L1 - 8
+  write32(buf + 20, 0xd4d4d4d4); //     Pad to 32-byte boundary
+  write32(buf + 24, 0xd4d4d4d4); //     Pad to 32-byte boundary
   write32(buf + 28, 0xd4d4d4d4);
   uint64_t gotPlt = in.gotPlt->getVA();
   uint64_t l1 = in.plt->getVA() + 8;
@@ -267,10 +267,10 @@ void ARM::addPltHeaderSymbols(InputSection &isec) const {
 // of the .plt from the .got.plt.
 static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
                          uint64_t pltEntryAddr) {
-  write32(buf + 0, 0xe59fc004);   //     ldr ip, L2
-  write32(buf + 4, 0xe08cc00f);   // L1: add ip, ip, pc
-  write32(buf + 8, 0xe59cf000);   //     ldr pc, [ip]
-  write32(buf + 12, 0x00000000);  // L2: .word   Offset(&(.got.plt) - L1 - 8
+  write32(buf + 0, 0xe59fc004);  //     ldr ip, L2
+  write32(buf + 4, 0xe08cc00f);  // L1: add ip, ip, pc
+  write32(buf + 8, 0xe59cf000);  //     ldr pc, [ip]
+  write32(buf + 12, 0x00000000); // L2: .word   Offset(&(.got.plt) - L1 - 8
   uint64_t l1 = pltEntryAddr + 4;
   write32(buf + 12, gotPltEntryAddr - l1 - 8);
 }
@@ -308,8 +308,7 @@ void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
 }
 
 bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                     uint64_t branchAddr, const Symbol &s,
-                     int64_t a) const {
+                     uint64_t branchAddr, const Symbol &s, int64_t a) const {
   // If s is an undefined weak symbol and does not have a PLT entry then it will
   // be resolved as a branch to the next instruction. If it is hidden, its
   // binding has been converted to local, so we just check isUndefined() here. A
@@ -331,7 +330,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!config->armHasBlx && (s.getVA() & 1));
+           (!config->armHasBlx && (s.getVA() & 1));
   }
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
@@ -343,7 +342,8 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!config->armHasBlx && (s.getVA() & 1) == 0);;
+           (!config->armHasBlx && (s.getVA() & 1) == 0);
+    ;
   }
   }
   return false;
@@ -514,7 +514,7 @@ static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   uint32_t imm = getRemAndLZForGroup(group, val).first;
   checkUInt(loc, imm, 8, rel);
   write32(loc, (read32(loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
-                     (imm & 0xf));
+                   (imm & 0xf));
 }
 
 void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -559,8 +559,8 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
       write32(loc, 0xfa000000 |                    // opcode
-                         ((val & 2) << 23) |         // H
-                         ((val >> 2) & 0x00ffffff)); // imm24
+                       ((val & 2) << 23) |         // H
+                       ((val >> 2) & 0x00ffffff)); // imm24
       break;
     }
     // BLX (always unconditional) instruction to an ARM Target, select an
@@ -589,14 +589,14 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
     checkInt(loc, val, 21, rel);
     write16(loc,
-              (read16(loc) & 0xfbc0) |   // opcode cond
-                  ((val >> 10) & 0x0400) | // S
-                  ((val >> 12) & 0x003f)); // imm6
+            (read16(loc) & 0xfbc0) |     // opcode cond
+                ((val >> 10) & 0x0400) | // S
+                ((val >> 12) & 0x003f)); // imm6
     write16(loc + 2,
-              0x8000 |                    // opcode
-                  ((val >> 8) & 0x0800) | // J2
-                  ((val >> 5) & 0x2000) | // J1
-                  ((val >> 1) & 0x07ff)); // imm11
+            0x8000 |                    // opcode
+                ((val >> 8) & 0x0800) | // J2
+                ((val >> 5) & 0x2000) | // J1
+                ((val >> 1) & 0x07ff)); // imm11
     break;
   case R_ARM_THM_CALL: {
     // R_ARM_THM_CALL is used for BL and BLX instructions, for symbols of type
@@ -625,12 +625,12 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // different encoding rules and range due to J1 and J2 always being 1.
       checkInt(loc, val, 23, rel);
       write16(loc,
-                0xf000 |                     // opcode
-                    ((val >> 12) & 0x07ff)); // imm11
+              0xf000 |                     // opcode
+                  ((val >> 12) & 0x07ff)); // imm11
       write16(loc + 2,
-                (read16(loc + 2) & 0xd000) | // opcode
-                    0x2800 |                   // J1 == J2 == 1
-                    ((val >> 1) & 0x07ff));    // imm11
+              (read16(loc + 2) & 0xd000) | // opcode
+                  0x2800 |                 // J1 == J2 == 1
+                  ((val >> 1) & 0x07ff));  // imm11
       break;
     }
   }
@@ -640,26 +640,26 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
     checkInt(loc, val, 25, rel);
     write16(loc,
-              0xf000 |                     // opcode
-                  ((val >> 14) & 0x0400) | // S
-                  ((val >> 12) & 0x03ff)); // imm10
+            0xf000 |                     // opcode
+                ((val >> 14) & 0x0400) | // S
+                ((val >> 12) & 0x03ff)); // imm10
     write16(loc + 2,
-              (read16(loc + 2) & 0xd000) |                  // opcode
-                  (((~(val >> 10)) ^ (val >> 11)) & 0x2000) | // J1
-                  (((~(val >> 11)) ^ (val >> 13)) & 0x0800) | // J2
-                  ((val >> 1) & 0x07ff));                     // imm11
+            (read16(loc + 2) & 0xd000) |                    // opcode
+                (((~(val >> 10)) ^ (val >> 11)) & 0x2000) | // J1
+                (((~(val >> 11)) ^ (val >> 13)) & 0x0800) | // J2
+                ((val >> 1) & 0x07ff));                     // imm11
     break;
   case R_ARM_MOVW_ABS_NC:
   case R_ARM_MOVW_PREL_NC:
   case R_ARM_MOVW_BREL_NC:
     write32(loc, (read32(loc) & ~0x000f0fff) | ((val & 0xf000) << 4) |
-                       (val & 0x0fff));
+                     (val & 0x0fff));
     break;
   case R_ARM_MOVT_ABS:
   case R_ARM_MOVT_PREL:
   case R_ARM_MOVT_BREL:
-    write32(loc, (read32(loc) & ~0x000f0fff) |
-                       (((val >> 16) & 0xf000) << 4) | ((val >> 16) & 0xfff));
+    write32(loc, (read32(loc) & ~0x000f0fff) | (((val >> 16) & 0xf000) << 4) |
+                     ((val >> 16) & 0xfff));
     break;
   case R_ARM_THM_MOVT_ABS:
   case R_ARM_THM_MOVT_PREL:
@@ -672,34 +672,34 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                 ((val >> 28) & 0x000f)); // imm4
 
     write16(loc + 2,
-              (read16(loc + 2) & 0x8f00) | // opcode
-                  ((val >> 12) & 0x7000) |   // imm3
-                  ((val >> 16) & 0x00ff));   // imm8
+            (read16(loc + 2) & 0x8f00) | // opcode
+                ((val >> 12) & 0x7000) | // imm3
+                ((val >> 16) & 0x00ff)); // imm8
     break;
   case R_ARM_THM_MOVW_ABS_NC:
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVW_BREL_NC:
     // Encoding T3: A = imm4:i:imm3:imm8
     write16(loc,
-              0xf240 |                     // opcode
-                  ((val >> 1) & 0x0400) |  // i
-                  ((val >> 12) & 0x000f)); // imm4
+            0xf240 |                     // opcode
+                ((val >> 1) & 0x0400) |  // i
+                ((val >> 12) & 0x000f)); // imm4
     write16(loc + 2,
-              (read16(loc + 2) & 0x8f00) | // opcode
-                  ((val << 4) & 0x7000) |    // imm3
-                  (val & 0x00ff));           // imm8
+            (read16(loc + 2) & 0x8f00) | // opcode
+                ((val << 4) & 0x7000) |  // imm3
+                (val & 0x00ff));         // imm8
     break;
   case R_ARM_THM_ALU_ABS_G3:
-    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 24) & 0x00ff));
+    write16(loc, (read16(loc) & ~0x00ff) | ((val >> 24) & 0x00ff));
     break;
   case R_ARM_THM_ALU_ABS_G2_NC:
-    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 16) & 0x00ff));
+    write16(loc, (read16(loc) & ~0x00ff) | ((val >> 16) & 0x00ff));
     break;
   case R_ARM_THM_ALU_ABS_G1_NC:
-    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 8) & 0x00ff));
+    write16(loc, (read16(loc) & ~0x00ff) | ((val >> 8) & 0x00ff));
     break;
   case R_ARM_THM_ALU_ABS_G0_NC:
-    write16(loc, (read16(loc) &~ 0x00ff) | (val & 0x00ff));
+    write16(loc, (read16(loc) & ~0x00ff) | (val & 0x00ff));
     break;
   case R_ARM_ALU_PC_G0:
     encodeAluGroup(loc, rel, val, 0, true);
@@ -745,7 +745,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkUInt(loc, imm, 12, rel);
     write16(loc, (read16(loc) & 0xfb0f) | sub | (imm & 0x800) >> 1);
     write16(loc + 2,
-              (read16(loc + 2) & 0x8f00) | (imm & 0x700) << 4 | (imm & 0xff));
+            (read16(loc + 2) & 0x8f00) | (imm & 0x700) << 4 | (imm & 0xff));
     break;
   }
   case R_ARM_THM_PC8:

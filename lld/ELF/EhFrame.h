@@ -16,6 +16,6 @@ struct EhSectionPiece;
 
 uint8_t getFdeEncoding(EhSectionPiece *p);
 bool hasLSDA(const EhSectionPiece &p);
-}
+} // namespace lld::elf
 
 #endif

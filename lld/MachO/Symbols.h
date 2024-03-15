@@ -296,6 +296,7 @@ public:
   }
 
   bool shouldReexport : 1;
+
 private:
   RefState refState : 2;
   const bool weakDef : 1;

@@ -73,11 +73,7 @@ enum DFormOpcd {
   ADDI = 14
 };
 
-enum DSFormOpcd {
-  LD = 58,
-  LWA = 58,
-  STD = 62
-};
+enum DSFormOpcd { LD = 58, LWA = 58, STD = 62 };
 
 constexpr uint32_t NOP = 0x60000000;
 
@@ -362,8 +358,8 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 // instructions:
 //
 //   addis 3, 2, .LC0@toc@ha  # R_PPC64_TOC16_HA
-//   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a .toc entry
-//   ld/lwa 3, 0(3)           # load the value from the address
+//   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a
+//   .toc entry ld/lwa 3, 0(3)           # load the value from the address
 //
 //   .section .toc,"aw",@progbits
 //   .LC0: .tc var[TC],var
@@ -1138,9 +1134,9 @@ void PPC64::writeGotHeader(uint8_t *buf) const {
 
 void PPC64::writePltHeader(uint8_t *buf) const {
   // The generic resolver stub goes first.
-  write32(buf +  0, 0x7c0802a6); // mflr r0
-  write32(buf +  4, 0x429f0005); // bcl  20,4*cr7+so,8 <_glink+0x8>
-  write32(buf +  8, 0x7d6802a6); // mflr r11
+  write32(buf + 0, 0x7c0802a6);  // mflr r0
+  write32(buf + 4, 0x429f0005);  // bcl  20,4*cr7+so,8 <_glink+0x8>
+  write32(buf + 8, 0x7d6802a6);  // mflr r11
   write32(buf + 12, 0x7c0803a6); // mtlr r0
   write32(buf + 16, 0x7d8b6050); // subf r12, r11, r12
   write32(buf + 20, 0x380cffcc); // subi r0,r12,52
@@ -1258,7 +1254,7 @@ static bool isTocOptType(RelType type) {
 
 void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   RelType type = rel.type;
-  bool shouldTocOptimize =  isTocOptType(type);
+  bool shouldTocOptimize = isTocOptType(type);
   // For dynamic thread pointer relative, toc-relative, and got-indirect
   // relocations, proceed in terms of the corresponding ADDR16 relocation type.
   std::tie(type, val) = toAddr16Rel(type, val);
@@ -1333,8 +1329,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       uint32_t insn = readFromHalf16(loc);
       if (isInstructionUpdateForm(insn))
         error(getErrorLocation(loc) +
-              "can't toc-optimize an update instruction: 0x" +
-              utohexstr(insn));
+              "can't toc-optimize an update instruction: 0x" + utohexstr(insn));
       writeFromHalf16(loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
       write16(loc, lo(val));
@@ -1410,8 +1405,8 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(loc, val, 34, rel);
 
     uint64_t instr = readPrefixedInstruction(loc) & ~fullMask;
-    writePrefixedInstruction(loc, instr | ((val & si0Mask) << 16) |
-                             (val & si1Mask));
+    writePrefixedInstruction(loc,
+                             instr | ((val & si0Mask) << 16) | (val & si1Mask));
     break;
   }
   // If we encounter a PCREL_OPT relocation that we won't optimize.

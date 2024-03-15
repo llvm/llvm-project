@@ -120,17 +120,33 @@ void SectionChunk::applyRelX64(uint8_t *off, uint16_t type, OutputSection *os,
   case IMAGE_REL_AMD64_ADDR64:
     add64(off, s + imageBase);
     break;
-  case IMAGE_REL_AMD64_ADDR32NB: add32(off, s); break;
-  case IMAGE_REL_AMD64_REL32:    add32(off, s - p - 4); break;
-  case IMAGE_REL_AMD64_REL32_1:  add32(off, s - p - 5); break;
-  case IMAGE_REL_AMD64_REL32_2:  add32(off, s - p - 6); break;
-  case IMAGE_REL_AMD64_REL32_3:  add32(off, s - p - 7); break;
-  case IMAGE_REL_AMD64_REL32_4:  add32(off, s - p - 8); break;
-  case IMAGE_REL_AMD64_REL32_5:  add32(off, s - p - 9); break;
+  case IMAGE_REL_AMD64_ADDR32NB:
+    add32(off, s);
+    break;
+  case IMAGE_REL_AMD64_REL32:
+    add32(off, s - p - 4);
+    break;
+  case IMAGE_REL_AMD64_REL32_1:
+    add32(off, s - p - 5);
+    break;
+  case IMAGE_REL_AMD64_REL32_2:
+    add32(off, s - p - 6);
+    break;
+  case IMAGE_REL_AMD64_REL32_3:
+    add32(off, s - p - 7);
+    break;
+  case IMAGE_REL_AMD64_REL32_4:
+    add32(off, s - p - 8);
+    break;
+  case IMAGE_REL_AMD64_REL32_5:
+    add32(off, s - p - 9);
+    break;
   case IMAGE_REL_AMD64_SECTION:
     applySecIdx(off, os, file->ctx.outputSections.size());
     break;
-  case IMAGE_REL_AMD64_SECREL:   applySecRel(this, off, os, s); break;
+  case IMAGE_REL_AMD64_SECREL:
+    applySecRel(this, off, os, s);
+    break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
           toString(file));
@@ -141,16 +157,23 @@ void SectionChunk::applyRelX86(uint8_t *off, uint16_t type, OutputSection *os,
                                uint64_t s, uint64_t p,
                                uint64_t imageBase) const {
   switch (type) {
-  case IMAGE_REL_I386_ABSOLUTE: break;
+  case IMAGE_REL_I386_ABSOLUTE:
+    break;
   case IMAGE_REL_I386_DIR32:
     add32(off, s + imageBase);
     break;
-  case IMAGE_REL_I386_DIR32NB:  add32(off, s); break;
-  case IMAGE_REL_I386_REL32:    add32(off, s - p - 4); break;
+  case IMAGE_REL_I386_DIR32NB:
+    add32(off, s);
+    break;
+  case IMAGE_REL_I386_REL32:
+    add32(off, s - p - 4);
+    break;
   case IMAGE_REL_I386_SECTION:
     applySecIdx(off, os, file->ctx.outputSections.size());
     break;
-  case IMAGE_REL_I386_SECREL:   applySecRel(this, off, os, s); break;
+  case IMAGE_REL_I386_SECREL:
+    applySecRel(this, off, os, s);
+    break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
           toString(file));
@@ -158,8 +181,10 @@ void SectionChunk::applyRelX86(uint8_t *off, uint16_t type, OutputSection *os,
 }
 
 static void applyMOV(uint8_t *off, uint16_t v) {
-  write16le(off, (read16le(off) & 0xfbf0) | ((v & 0x800) >> 1) | ((v >> 12) & 0xf));
-  write16le(off + 2, (read16le(off + 2) & 0x8f00) | ((v & 0x700) << 4) | (v & 0xff));
+  write16le(off,
+            (read16le(off) & 0xfbf0) | ((v & 0x800) >> 1) | ((v >> 12) & 0xf));
+  write16le(off + 2,
+            (read16le(off + 2) & 0x8f00) | ((v & 0x700) << 4) | (v & 0xff));
 }
 
 static uint16_t readMOV(uint8_t *off, bool movt) {
@@ -179,7 +204,7 @@ void applyMOV32T(uint8_t *off, uint32_t v) {
   uint16_t immW = readMOV(off, false);    // read MOVW operand
   uint16_t immT = readMOV(off + 4, true); // read MOVT operand
   uint32_t imm = immW | (immT << 16);
-  v += imm;                         // add the immediate offset
+  v += imm;                   // add the immediate offset
   applyMOV(off, v);           // set MOVW operand
   applyMOV(off + 4, v >> 16); // set MOVT operand
 }
@@ -202,7 +227,8 @@ void applyBranch24T(uint8_t *off, int32_t v) {
   uint32_t j2 = ((~v >> 22) & 1) ^ s;
   or16(off, (s << 10) | ((v >> 12) & 0x3ff));
   // Clear out the J1 and J2 bits which may be set.
-  write16le(off + 2, (read16le(off + 2) & 0xd000) | (j1 << 13) | (j2 << 11) | ((v >> 1) & 0x7ff));
+  write16le(off + 2, (read16le(off + 2) & 0xd000) | (j1 << 13) | (j2 << 11) |
+                         ((v >> 1) & 0x7ff));
 }
 
 void SectionChunk::applyRelARM(uint8_t *off, uint16_t type, OutputSection *os,
@@ -216,18 +242,30 @@ void SectionChunk::applyRelARM(uint8_t *off, uint16_t type, OutputSection *os,
   case IMAGE_REL_ARM_ADDR32:
     add32(off, sx + imageBase);
     break;
-  case IMAGE_REL_ARM_ADDR32NB:  add32(off, sx); break;
+  case IMAGE_REL_ARM_ADDR32NB:
+    add32(off, sx);
+    break;
   case IMAGE_REL_ARM_MOV32T:
     applyMOV32T(off, sx + imageBase);
     break;
-  case IMAGE_REL_ARM_BRANCH20T: applyBranch20T(off, sx - p - 4); break;
-  case IMAGE_REL_ARM_BRANCH24T: applyBranch24T(off, sx - p - 4); break;
-  case IMAGE_REL_ARM_BLX23T:    applyBranch24T(off, sx - p - 4); break;
+  case IMAGE_REL_ARM_BRANCH20T:
+    applyBranch20T(off, sx - p - 4);
+    break;
+  case IMAGE_REL_ARM_BRANCH24T:
+    applyBranch24T(off, sx - p - 4);
+    break;
+  case IMAGE_REL_ARM_BLX23T:
+    applyBranch24T(off, sx - p - 4);
+    break;
   case IMAGE_REL_ARM_SECTION:
     applySecIdx(off, os, file->ctx.outputSections.size());
     break;
-  case IMAGE_REL_ARM_SECREL:    applySecRel(this, off, os, s); break;
-  case IMAGE_REL_ARM_REL32:     add32(off, sx - p - 4); break;
+  case IMAGE_REL_ARM_SECREL:
+    applySecRel(this, off, os, s);
+    break;
+  case IMAGE_REL_ARM_REL32:
+    add32(off, sx - p - 4);
+    break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
           toString(file));
@@ -326,28 +364,54 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
                                  uint64_t s, uint64_t p,
                                  uint64_t imageBase) const {
   switch (type) {
-  case IMAGE_REL_ARM64_PAGEBASE_REL21: applyArm64Addr(off, s, p, 12); break;
-  case IMAGE_REL_ARM64_REL21:          applyArm64Addr(off, s, p, 0); break;
-  case IMAGE_REL_ARM64_PAGEOFFSET_12A: applyArm64Imm(off, s & 0xfff, 0); break;
-  case IMAGE_REL_ARM64_PAGEOFFSET_12L: applyArm64Ldr(off, s & 0xfff); break;
-  case IMAGE_REL_ARM64_BRANCH26:       applyArm64Branch26(off, s - p); break;
-  case IMAGE_REL_ARM64_BRANCH19:       applyArm64Branch19(off, s - p); break;
-  case IMAGE_REL_ARM64_BRANCH14:       applyArm64Branch14(off, s - p); break;
+  case IMAGE_REL_ARM64_PAGEBASE_REL21:
+    applyArm64Addr(off, s, p, 12);
+    break;
+  case IMAGE_REL_ARM64_REL21:
+    applyArm64Addr(off, s, p, 0);
+    break;
+  case IMAGE_REL_ARM64_PAGEOFFSET_12A:
+    applyArm64Imm(off, s & 0xfff, 0);
+    break;
+  case IMAGE_REL_ARM64_PAGEOFFSET_12L:
+    applyArm64Ldr(off, s & 0xfff);
+    break;
+  case IMAGE_REL_ARM64_BRANCH26:
+    applyArm64Branch26(off, s - p);
+    break;
+  case IMAGE_REL_ARM64_BRANCH19:
+    applyArm64Branch19(off, s - p);
+    break;
+  case IMAGE_REL_ARM64_BRANCH14:
+    applyArm64Branch14(off, s - p);
+    break;
   case IMAGE_REL_ARM64_ADDR32:
     add32(off, s + imageBase);
     break;
-  case IMAGE_REL_ARM64_ADDR32NB:       add32(off, s); break;
+  case IMAGE_REL_ARM64_ADDR32NB:
+    add32(off, s);
+    break;
   case IMAGE_REL_ARM64_ADDR64:
     add64(off, s + imageBase);
     break;
-  case IMAGE_REL_ARM64_SECREL:         applySecRel(this, off, os, s); break;
-  case IMAGE_REL_ARM64_SECREL_LOW12A:  applySecRelLow12A(this, off, os, s); break;
-  case IMAGE_REL_ARM64_SECREL_HIGH12A: applySecRelHigh12A(this, off, os, s); break;
-  case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, off, os, s); break;
+  case IMAGE_REL_ARM64_SECREL:
+    applySecRel(this, off, os, s);
+    break;
+  case IMAGE_REL_ARM64_SECREL_LOW12A:
+    applySecRelLow12A(this, off, os, s);
+    break;
+  case IMAGE_REL_ARM64_SECREL_HIGH12A:
+    applySecRelHigh12A(this, off, os, s);
+    break;
+  case IMAGE_REL_ARM64_SECREL_LOW12L:
+    applySecRelLdr(this, off, os, s);
+    break;
   case IMAGE_REL_ARM64_SECTION:
     applySecIdx(off, os, file->ctx.outputSections.size());
     break;
-  case IMAGE_REL_ARM64_REL32:          add32(off, s - p - 4); break;
+  case IMAGE_REL_ARM64_REL32:
+    add32(off, s - p - 4);
+    break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
           toString(file));
@@ -880,8 +944,7 @@ void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
     ulittle32_t rva;
     uint8_t flag;
   };
-  auto flags =
-      MutableArrayRef(reinterpret_cast<RVAFlag *>(buf), syms.size());
+  auto flags = MutableArrayRef(reinterpret_cast<RVAFlag *>(buf), syms.size());
   for (auto t : zip(syms, flags)) {
     const auto &sym = std::get<0>(t);
     auto &flag = std::get<1>(t);
@@ -1045,13 +1108,9 @@ uint32_t MergeChunk::getOutputCharacteristics() const {
   return IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_INITIALIZED_DATA;
 }
 
-size_t MergeChunk::getSize() const {
-  return builder.getSize();
-}
+size_t MergeChunk::getSize() const { return builder.getSize(); }
 
-void MergeChunk::writeTo(uint8_t *buf) const {
-  builder.write(buf);
-}
+void MergeChunk::writeTo(uint8_t *buf) const { builder.write(buf); }
 
 // MinGW specific.
 size_t AbsolutePointerChunk::getSize() const { return ctx.config.wordsize; }

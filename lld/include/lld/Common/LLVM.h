@@ -70,12 +70,12 @@ using llvm::isa;
 
 // ADT's.
 using llvm::ArrayRef;
-using llvm::MutableArrayRef;
 using llvm::Error;
 using llvm::ErrorOr;
 using llvm::Expected;
 using llvm::MemoryBuffer;
 using llvm::MemoryBufferRef;
+using llvm::MutableArrayRef;
 using llvm::raw_ostream;
 using llvm::SmallString;
 using llvm::SmallVector;
