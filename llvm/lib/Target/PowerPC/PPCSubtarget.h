@@ -245,7 +245,9 @@ public:
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
-  void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) const;
+  /// Calculates the effective code model for argument GV.
+  CodeModel::Model getCodeModel(const TargetMachine &TM,
+                                const GlobalValue *GV) const;
 
   /// True if the ABI is descriptor based.
   bool usesFunctionDescriptors() const {
