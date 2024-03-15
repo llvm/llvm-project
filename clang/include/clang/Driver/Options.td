@@ -4696,21 +4696,17 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
     " (RISC-V only)")>;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
-  HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64/LoongArch/RISC-V only)">;
+  HelpText<"Allow memory accesses to be unaligned (AArch32 only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
-  HelpText<"Force all memory accesses to be aligned (AArch32/AArch64/LoongArch/RISC-V only)">;
+  HelpText<"Force all memory accesses to be aligned (AArch32 only)">;
 def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
-} // let Flags = [TargetSpecific]
-def mstrict_align : Flag<["-"], "mstrict-align">, Alias<mno_unaligned_access>,
-  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Force all memory accesses to be aligned (same as mno-unaligned-access)">;
-def mno_strict_align : Flag<["-"], "mno-strict-align">, Alias<munaligned_access>,
-  Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Allow memory accesses to be unaligned (same as munaligned-access)">;
-let Flags = [TargetSpecific] in {
+def mstrict_align : Flag<["-"], "mstrict-align">,
+  HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
+def mno_strict_align : Flag<["-"], "mno-strict-align">,
+  HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
