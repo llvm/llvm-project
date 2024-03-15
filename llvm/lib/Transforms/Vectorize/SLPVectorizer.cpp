@@ -4295,9 +4295,12 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               llvm_unreachable(
                   "Expected only consecutive, strided or masked gather loads.");
             }
+            SmallVector<int> ShuffleMask(VL.size());
+            for (int Idx : seq<int>(0, VL.size()))
+              ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
             VecLdCost +=
                 TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
-                                   std::nullopt, CostKind, I * VF, SubVecTy);
+                                   ShuffleMask, CostKind, I * VF, SubVecTy);
           }
           // If masked gather cost is higher - better to vectorize, so
           // consider it as a gather node. It will be better estimated
@@ -7401,7 +7404,7 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
       return TTI.getShuffleCost(
           TTI::SK_InsertSubvector,
-          FixedVectorType::get(Tp->getElementType(), Mask.size()), std::nullopt,
+          FixedVectorType::get(Tp->getElementType(), Mask.size()), Mask,
           TTI::TCK_RecipThroughput, Index, Tp);
   }
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
@@ -7674,9 +7677,13 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         if (NeedInsertSubvectorAnalysis) {
           // Add the cost for the subvectors insert.
-          for (int I = VF, E = VL.size(); I < E; I += VF)
+          SmallVector<int> ShuffleMask(VL.size());
+          for (int I = VF, E = VL.size(); I < E; I += VF) {
+            for (int Idx : seq<int>(0, E))
+              ShuffleMask[Idx] = Idx / VF == I ? E + Idx % VF : Idx;
             GatherCost += TTI.getShuffleCost(TTI::SK_InsertSubvector, VecTy,
-                                             std::nullopt, CostKind, I, LoadTy);
+                                             ShuffleMask, CostKind, I, LoadTy);
+          }
         }
         GatherCost -= ScalarsCost;
       }
