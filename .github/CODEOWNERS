@@ -108,3 +108,6 @@ clang/test/AST/Interp/ @tbaederr
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+
+# Bazel build system.
+/utils/bazel/ @rupprecht

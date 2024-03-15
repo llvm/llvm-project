@@ -933,3 +933,6 @@ openmp:libomp:
 
 openmp:libomptarget:
   - any: ['openmp/**', '!openmp/runtime/**']
+
+bazel:
+  - utils/bazel/**
