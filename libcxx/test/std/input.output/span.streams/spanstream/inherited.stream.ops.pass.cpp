@@ -12,7 +12,7 @@
 
 //   template<class charT, class traits = char_traits<charT>>
 //   class basic_spanstream
-//     : public basic_streambuf<charT, traits> {
+//     : public basic_iostream<charT, traits> {
 
 //   Test stream operations inherited from `basic_istream` and `basic_ostream`
 
