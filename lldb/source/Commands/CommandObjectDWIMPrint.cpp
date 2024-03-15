@@ -23,7 +23,6 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <regex>
 
@@ -161,7 +160,16 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     }
   }
 
-  // Second, also lastly, try `expr` as a source expression to evaluate.
+  // Second, try `expr` as a persistent variable.
+  if (expr.starts_with("$"))
+    if (auto var_sp = target.GetPersistentVariable(ConstString(expr)))
+      if (auto valobj_sp = var_sp->GetValueObject()) {
+        valobj_sp->Dump(result.GetOutputStream(), dump_options);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+        return;
+      }
+
+  // Third, and lastly, try `expr` as a source expression to evaluate.
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
@@ -169,14 +177,6 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
     ExpressionResults expr_result = target.EvaluateExpression(
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
-
-    auto persistent_name = valobj_sp->GetName();
-    // EvaluateExpression doesn't generate a new persistent result (`$0`) when
-    // the expression is already just a persistent variable (`$var`). Instead,
-    // the same persistent variable is reused. Take note of when a persistent
-    // result is created, to prevent unintentional deletion of a user's
-    // persistent variable.
-    bool did_persist_result = persistent_name != expr;
 
     // Only mention Fix-Its if the expression evaluator applied them.
     // Compiler errors refer to the final expression after applying Fix-It(s).
@@ -207,9 +207,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         }
       }
 
-      if (did_persist_result && suppress_result)
+      if (suppress_result)
         if (auto result_var_sp =
-                target.GetPersistentVariable(persistent_name)) {
+                target.GetPersistentVariable(valobj_sp->GetName())) {
           auto language = valobj_sp->GetPreferredDisplayLanguage();
           if (auto *persistent_state =
                   target.GetPersistentExpressionStateForLanguage(language))
