@@ -42,10 +42,7 @@ subroutine sub1()
 ! CHECK: fir.cuda_kernel<<<%c1{{.*}}, (%c256{{.*}}, %c1{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index) step (%{{.*}}, %{{.*}} : index, index)
 ! CHECK: {n = 2 : i64}
 
-! TODO: currently these trigger error in the parser
+! TODO: lowering for these cases
 ! !$cuf kernel do(2) <<< (1,*), (256,1) >>>
 ! !$cuf kernel do(2) <<< (*,*), (32,4) >>>
 end
-
-
-
