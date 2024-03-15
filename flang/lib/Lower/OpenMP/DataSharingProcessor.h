@@ -12,6 +12,7 @@
 #ifndef FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 #define FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 
+#include "Clauses.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -52,7 +53,7 @@ private:
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &firOpBuilder;
-  const Fortran::parser::OmpClauseList &opClauseList;
+  omp::List<omp::Clause> clauses;
   Fortran::lower::pft::Evaluation &eval;
   bool useDelayedPrivatization;
   Fortran::lower::SymMap *symTable;
@@ -61,7 +62,7 @@ private:
   bool needBarrier();
   void collectSymbols(Fortran::semantics::Symbol::Flag flag);
   void collectOmpObjectListSymbol(
-      const Fortran::parser::OmpObjectList &ompObjectList,
+      const omp::ObjectList &objects,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
   void insertBarrier();
@@ -81,14 +82,15 @@ private:
 
 public:
   DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
+                       Fortran::semantics::SemanticsContext &semaCtx,
                        const Fortran::parser::OmpClauseList &opClauseList,
                        Fortran::lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization = false,
                        Fortran::lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter),
-        firOpBuilder(converter.getFirOpBuilder()), opClauseList(opClauseList),
-        eval(eval), useDelayedPrivatization(useDelayedPrivatization),
-        symTable(symTable) {}
+        firOpBuilder(converter.getFirOpBuilder()),
+        clauses(omp::makeList(opClauseList, semaCtx)), eval(eval),
+        useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
