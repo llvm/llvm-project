@@ -7691,16 +7691,22 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       bool NeedShuffle =
           count(VL, *It) > 1 &&
           (VL.front() != *It || !all_of(VL.drop_front(), UndefValue::classof));
+      if (!NeedShuffle)
+        return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                      CostKind, std::distance(VL.begin(), It),
+                                      PoisonValue::get(VecTy), *It);
+
+      SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
+      transform(VL, ShuffleMask.begin(), [](Value *V) {
+        return isa<PoisonValue>(V) ? PoisonMaskElem : 0;   
+      });
       InstructionCost InsertCost = TTI.getVectorInstrCost(
-          Instruction::InsertElement, VecTy, CostKind,
-          NeedShuffle ? 0 : std::distance(VL.begin(), It),
+          Instruction::InsertElement, VecTy, CostKind, 0,
           PoisonValue::get(VecTy), *It);
       return InsertCost +
-             (NeedShuffle ? TTI.getShuffleCost(
-                                TargetTransformInfo::SK_Broadcast, VecTy,
-                                /*Mask=*/std::nullopt, CostKind, /*Index=*/0,
-                                /*SubTp=*/nullptr, /*Args=*/*It)
-                          : TTI::TCC_Free);
+             TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
+                                ShuffleMask, CostKind, /*Index=*/0,
+                                /*SubTp=*/nullptr, /*Args=*/*It);
     }
     return GatherCost +
            (all_of(Gathers, UndefValue::classof)
