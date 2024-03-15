@@ -304,6 +304,8 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     }
 
     if (!parsedTargetProfile.has_value())
+      // This should be unreachable, target profile validation happens
+      // before this point.
       return DAL;
     else {
       if (parsedTargetProfile.value().Major < 6 ||
