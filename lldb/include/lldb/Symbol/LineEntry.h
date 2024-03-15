@@ -130,11 +130,16 @@ struct LineEntry {
   ///     Shared pointer to the target this LineEntry belongs to.
   void ApplyFileMappings(lldb::TargetSP target_sp);
 
+  const FileSpec &GetFile() const {
+    assert(file_sp);
+    return file_sp->GetSpecOnly();
+  }
+
   /// The section offset address range for this line entry.
   AddressRange range;
 
   /// The source file, possibly mapped by the target.source-map setting.
-  FileSpec file;
+  lldb::SupportFileSP file_sp;
 
   /// The original source file, from debug info.
   lldb::SupportFileSP original_file_sp;
