@@ -52,6 +52,10 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
   let Types = ["imaxdiv_t"];
 }
 
+def StdIOAPI : PublicAPI<"stdio.h"> {
+  let Types = ["size_t"];
+}
+
 def StdlibAPI : PublicAPI<"stdlib.h"> {
   let Types = [
     "div_t",
