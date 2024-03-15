@@ -20,7 +20,7 @@
 ;; NOTE2: Unfortunately, the above only stopped it occuring on my machine.
 ;; It failed again intermittently here:
 ;; https://lab.llvm.org/buildbot/#/builders/245/builds/21930
-;; Allow this test to run fail-over twice, until this strangeness is understood.
+;; Allow this test to fail-over twice, until this strangeness is understood.
 ; ALLOW_RETRIES: 2
 ; RUN: llvm-as %s --experimental-debuginfo-iterators=true --write-experimental-debuginfo-iterators-to-bitcode=true -o %t
 ; RUN: llvm-link %t %s --experimental-debuginfo-iterators=false -o /dev/null
