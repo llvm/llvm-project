@@ -2100,8 +2100,12 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         postMerge(Size, Lo, Hi);
         return;
       }
+
+      bool InMemory = Offset % getContext().getTypeAlign(i->getType()) ||
+                      (i->getType()->getAs<BuiltinType>() &&
+                       Offset % getContext().getTypeSize(i->getType()));
       // Note, skip this test for bit-fields, see below.
-      if (!BitField && Offset % getContext().getTypeAlign(i->getType())) {
+      if (!BitField && InMemory) {
         Lo = Memory;
         postMerge(Size, Lo, Hi);
         return;
