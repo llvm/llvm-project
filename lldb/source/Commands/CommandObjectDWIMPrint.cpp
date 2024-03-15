@@ -23,7 +23,6 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <regex>
 
@@ -161,7 +160,17 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     }
   }
 
-  // Second, also lastly, try `expr` as a source expression to evaluate.
+  // Second, try `expr` as a persistent variable.
+  if (expr.starts_with("$"))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(expr))
+        if (auto valobj_sp = var_sp->GetValueObject()) {
+          valobj_sp->Dump(result.GetOutputStream(), dump_options);
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+          return;
+        }
+
+  // Third, and lastly, try `expr` as a source expression to evaluate.
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
