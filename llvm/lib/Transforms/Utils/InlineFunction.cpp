@@ -1829,7 +1829,7 @@ static void fixupAssignments(Function::iterator Start, Function::iterator End) {
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
         if (DPV.isDbgAssign())
           DPV.setAssignId(GetNewID(DPV.getAssignID()));
       }

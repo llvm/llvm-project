@@ -119,6 +119,7 @@ public:
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
+  bool VisitPackIndexingExpr(const PackIndexingExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
