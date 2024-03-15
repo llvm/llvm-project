@@ -8,9 +8,7 @@ define i1 @test_imply_not1(i32 %depth) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP1_NOT1]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[DEPTH]], 8
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP1_NOT1]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMP2]], [[CMP_NOT]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1_NOT1]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -37,10 +35,8 @@ if.else:
 define i1 @test_imply_not2(i32 %a, i1 %cmp2) {
 ; CHECK-LABEL: define i1 @test_imply_not2(
 ; CHECK-SAME: i32 [[A:%.*]], i1 [[CMP2:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP1]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[OR_COND]], [[CMP_NOT]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[BRMERGE]]
 ;
   %cmp1 = icmp eq i32 %a, 0
@@ -56,9 +52,7 @@ define i1 @test_imply_not3(i32 %a, i32 %b, i1 %cond) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A]], [[B]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP1]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP1]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_NOT]], i1 [[COND]], i1 false
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP2]], [[SEL]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP2]], i1 [[COND]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = icmp eq i32 %a, %b
