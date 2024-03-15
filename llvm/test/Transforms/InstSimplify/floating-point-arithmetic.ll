@@ -213,8 +213,7 @@ define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
 
 define float @src_mul_nzero_neg(float nofpclass(inf nan pzero psub pnorm) %f) {
 ; CHECK-LABEL: @src_mul_nzero_neg(
-; CHECK-NEXT:    [[R:%.*]] = fmul float [[F:%.*]], -0.000000e+00
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %r = fmul float %f, -0.0
   ret float %r
@@ -222,8 +221,7 @@ define float @src_mul_nzero_neg(float nofpclass(inf nan pzero psub pnorm) %f) {
 
 define <2 x float> @src_mul_zero_neg(<2 x float> nofpclass(inf nan pzero psub pnorm) %f) {
 ; CHECK-LABEL: @src_mul_zero_neg(
-; CHECK-NEXT:    [[R:%.*]] = fmul <2 x float> zeroinitializer, [[F:%.*]]
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    ret <2 x float> <float -0.000000e+00, float -0.000000e+00>
 ;
   %r = fmul <2 x float> <float 0.0, float 0.0>, %f
   ret <2 x float> %r
@@ -231,8 +229,7 @@ define <2 x float> @src_mul_zero_neg(<2 x float> nofpclass(inf nan pzero psub pn
 
 define <2 x float> @src_mul_zero_and_nzero_neg(<2 x float> nofpclass(inf nan pzero psub pnorm) %f) {
 ; CHECK-LABEL: @src_mul_zero_and_nzero_neg(
-; CHECK-NEXT:    [[R:%.*]] = fmul <2 x float> <float -0.000000e+00, float 0.000000e+00>, [[F:%.*]]
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    ret <2 x float> <float 0.000000e+00, float -0.000000e+00>
 ;
   %r = fmul <2 x float> <float -0.0, float 0.0>, %f
   ret <2 x float> %r
