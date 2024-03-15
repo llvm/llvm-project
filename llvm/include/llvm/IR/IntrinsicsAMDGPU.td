@@ -3404,8 +3404,8 @@ def int_amdgcn_permlane32_swap : ClangBuiltin<"__builtin_amdgcn_permlane32_swap"
 // modeled as InaccessibleMem.
 class AMDGPUWaitAsyncIntrinsic :
   Intrinsic<[], [llvm_i16_ty],
-  [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>, IntrHasSideEffects,
-   IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+  [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>, IntrWillReturn, IntrNoCallback,
+   IntrNoFree]>;
 
 def int_amdgcn_s_wait_asynccnt :
     ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitAsyncIntrinsic;

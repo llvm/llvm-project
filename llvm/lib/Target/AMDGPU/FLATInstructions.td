@@ -378,6 +378,23 @@ multiclass FLAT_Global_Store_AddTid_Pseudo<string opName, RegisterClass regClass
     GlobalSaddrTable<1, opName>;
 }
 
+class FLAT_Global_Tensor_Pseudo<string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !con(!if(EnableSaddr, (ins SReg_64:$saddr, flat_offset:$offset), (ins )), (ins CPol_0:$cpol)),
+  !if(EnableSaddr, " $saddr$offset", " ")#"$cpol"> {
+
+  let is_flat_global = 1;
+  let has_vdst = 0;
+  let has_data = 0;
+  let has_vaddr = 0;
+  let mayLoad = 0;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let has_offset = EnableSaddr;
+}
+
 class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = null_frag> :
   FLAT_Pseudo<opName, (outs), (ins CPol:$cpol), "$cpol", [(node)]> {
 
@@ -1031,6 +1048,9 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B8    :  FLAT_Global_STORE_LDS_Pseudo<"global_s
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B32   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b32">;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B64   :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b64">;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_store_async_from_lds_b128">;
+
+def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
+def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
 } // End SubtargetPredicate = isGFX12_10Plus
 
 } // End is_flat_global = 1
@@ -3189,6 +3209,16 @@ multiclass VGLOBAL_Real_Atomics_gfx1210<bits<8> op, string ps = NAME, string opN
   VGLOBAL_Real_AllAddr_gfx1210<op, ps, opName, renamed, alias>,
   VFLAT_Real_RTN_gfx1210<op, ps, opName>,
   VFLAT_Real_SADDR_RTN_gfx1210<op, ps, opName>;
+
+multiclass VGLOBAL_Real_Tensor_gfx1210<bits<8> op, FLAT_Pseudo ps = !cast<FLAT_Pseudo>(NAME),
+                                       string opName = !tolower(NAME)> {
+  def _gfx1210 : VFLAT_Real_gfx1210<op, ps, opName> {
+    let Inst{6-0} = !if(ps.enabled_saddr, saddr, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding));
+  }
+}
+
+defm TENSOR_SAVE : VGLOBAL_Real_Tensor_gfx1210<0x06e>;
+defm TENSOR_STOP : VGLOBAL_Real_Tensor_gfx1210<0x06f>;
 
 defm FLAT_PREFETCH_B8              : VFLAT_Real_Base_gfx1210<0x05d>;
 defm GLOBAL_PREFETCH_B8            : VGLOBAL_Real_AllAddr_gfx1210<0x05d>;

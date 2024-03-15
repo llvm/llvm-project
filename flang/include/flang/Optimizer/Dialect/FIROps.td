@@ -2454,6 +2454,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
     SymbolRefAttr:$callee,
     I32:$grid_x,
     I32:$grid_y,
+    I32:$grid_z,
     I32:$block_x,
     I32:$block_y,
     I32:$block_z,
@@ -2463,8 +2464,8 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   );
 
   let assemblyFormat = [{
-    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $block_x `,` $block_y `,`
-        $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
+        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
         `` `(` ( $args^ `:` type($args) )? `)` attr-dict
   }];
 
