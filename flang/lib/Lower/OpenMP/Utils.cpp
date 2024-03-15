@@ -13,7 +13,6 @@
 #include "Utils.h"
 #include "Clauses.h"
 
-#include <algorithm>
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
@@ -22,6 +21,7 @@
 #include <flang/Semantics/tools.h>
 #include <llvm/Support/CommandLine.h>
 
+#include <algorithm>
 #include <numeric>
 
 llvm::cl::opt<bool> treatIndexAsSection(

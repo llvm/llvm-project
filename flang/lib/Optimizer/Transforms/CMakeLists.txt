@@ -17,8 +17,8 @@ add_flang_library(FIRTransforms
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
-  OMPMapInfoFinalization.cpp
   OMPFunctionFiltering.cpp
+  OMPMapInfoFinalization.cpp
   OMPMarkDeclareTarget.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
