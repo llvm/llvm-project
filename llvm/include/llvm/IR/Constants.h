@@ -290,7 +290,9 @@ public:
   /// host double and as the target format.
   static Constant *get(Type *Ty, double V);
 
+#ifdef __FLOAT128__
   static Constant *get128(Type *Ty, float128 V);
+#endif
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantFP for the given value.

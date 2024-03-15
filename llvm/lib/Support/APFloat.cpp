@@ -3670,12 +3670,14 @@ double IEEEFloat::convertToDouble() const {
   return api.bitsToDouble();
 }
 
+#ifdef __FLOAT128__
 float128 IEEEFloat::convertToQuad() const {
   assert(semantics == (const llvm::fltSemantics *)&semIEEEquad &&
          "Float semantics are not IEEEquads");
   APInt api = bitcastToAPInt();
   return api.bitsToQuad();
 }
+#endif
 
 /// Integer bit is explicit in this format.  Intel hardware (387 and later)
 /// does not support these bit patterns:
@@ -3965,9 +3967,11 @@ IEEEFloat::IEEEFloat(double d) {
   initFromAPInt(&semIEEEdouble, APInt::doubleToBits(d));
 }
 
+#ifdef __FLOAT128__
 IEEEFloat::IEEEFloat(float128 ld) {
   initFromAPInt(&semIEEEquad, APInt::longDoubleToBits(ld));
 }
+#endif
 
 namespace {
   void append(SmallVectorImpl<char> &Buffer, StringRef Str) {
@@ -5276,6 +5280,7 @@ double APFloat::convertToDouble() const {
   return Temp.getIEEE().convertToDouble();
 }
 
+#ifdef __FLOAT128__
 float128 APFloat::convertToQuad() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
     return getIEEE().convertToQuad();
@@ -5288,6 +5293,7 @@ float128 APFloat::convertToQuad() const {
   (void)St;
   return Temp.getIEEE().convertToQuad();
 }
+#endif
 
 float APFloat::convertToFloat() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle)

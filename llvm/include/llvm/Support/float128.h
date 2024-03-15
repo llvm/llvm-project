@@ -9,12 +9,10 @@
 #ifndef LLVM_FLOAT128
 #define LLVM_FLOAT128
 
-#if defined(__clang__)
+#if defined(__clang__) && defined(__FLOAT128__)
 typedef __float128 float128;
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__FLOAT128__) && (defined(__GNUC__) || defined(__GNUG__))
 typedef _Float128 float128;
-#else
-typedef long double float128;
 #endif
 
 #endif // LLVM_FLOAT128

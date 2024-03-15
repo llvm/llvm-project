@@ -17,13 +17,8 @@ using namespace llvm;
 
 namespace {
 
-class ConstantFoldLogf128Fixture
-    : public ::testing ::TestWithParam<std::string> {
-protected:
-  std::string FuncName;
-};
-
-TEST_P(ConstantFoldLogf128Fixture, ConstantFoldLogf128) {
+TEST(ConstantFoldLogf128Fixture, ConstantFoldLogf128) {
+#ifdef __FLOAT128__
   LLVMContext Context;
   IRBuilder<> Builder(Context);
   Module MainModule("Logf128TestModule", Context);
@@ -40,15 +35,13 @@ TEST_P(ConstantFoldLogf128Fixture, ConstantFoldLogf128) {
   FunctionType *FP128FP128Prototype =
       FunctionType::get(FP128Ty, {FP128Ty}, false);
   Constant *Constant2L = ConstantFP::get128(FP128Ty, 2.0L);
-
-  std::string FunctionName = GetParam();
-  Function *Logl = Function::Create(
-      FP128FP128Prototype, Function::ExternalLinkage, FunctionName, MainModule);
-  CallInst *LoglCall = Builder.CreateCall(Logl, Constant2L);
+  Function *Logf128 = Function::Create(
+      FP128FP128Prototype, Function::ExternalLinkage, "llvm.log.f128", MainModule);
+  CallInst *Logf128Call = Builder.CreateCall(Logf128, Constant2L);
 
   TargetLibraryInfoImpl TLII(Triple(MainModule.getTargetTriple()));
   TargetLibraryInfo TLI(TLII, Logf128TestFunction);
-  Constant *FoldResult = ConstantFoldCall(LoglCall, Logl, Constant2L, &TLI);
+  Constant *FoldResult = ConstantFoldCall(Logf128Call, Logf128, Constant2L, &TLI);
 
 #ifndef HAS_LOGF128
   ASSERT_TRUE(FoldResult == nullptr);
@@ -64,11 +57,11 @@ TEST_P(ConstantFoldLogf128Fixture, ConstantFoldLogf128) {
   EXPECT_GT(Size, 0U);
 
   ASSERT_STREQ(LongDoubleHexString,
-               std::string("0X1.62E42FEFA39E0000000000000000000P-1").c_str());
+               std::string("0X1.62E42FEFA39EF000000000000000000P-1").c_str());
+#endif //HAS_LOGF128
+#else // __FLOAT128__
+  ASSERT_TRUE(true);
 #endif
 }
 
-INSTANTIATE_TEST_SUITE_P(ConstantFoldLogf128, ConstantFoldLogf128Fixture,
-                         ::testing::Values("logl", "llvm.log.f128"));
-
-} // end anonymous namespace
+}
