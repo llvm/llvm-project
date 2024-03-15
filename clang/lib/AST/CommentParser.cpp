@@ -131,6 +131,48 @@ class TextTokenRetokenizer {
     return false;
   }
 
+  bool isDataTypeQualifier(SmallString<32> &WordText) {
+    if (WordText.ends_with(StringRef("const")))
+      return true;
+    if (WordText.ends_with(StringRef("volatile")))
+      return true;
+    if (WordText.ends_with(StringRef("unsigned")))
+      return true;
+    if (WordText.ends_with(StringRef("signed")))
+      return true;
+    if (WordText.ends_with(StringRef("long")))
+      return true;
+    if (WordText.ends_with(StringRef("short")))
+      return true;
+    if (WordText.ends_with(StringRef("restrict")))
+      return true;
+    if (WordText.ends_with(StringRef("auto")))
+      return true;
+    if (WordText.ends_with(StringRef("register")))
+      return true;
+    if (WordText.ends_with(StringRef("static")))
+      return true;
+    if (WordText.ends_with(StringRef("extern")))
+      return true;
+    if (WordText.ends_with(StringRef("struct")))
+      return true;
+    if (WordText.ends_with(StringRef("typedef")))
+      return true;
+    if (WordText.ends_with(StringRef("union")))
+      return true;
+    if (WordText.ends_with(StringRef("void")))
+      return true;
+    return false;
+  }
+
+  bool isScopeResolutionOperator(SmallString<32> &WordText) {
+    return WordText.ends_with(StringRef("::"));
+  }
+
+  bool continueParsing(SmallString<32> &WordText) {
+    return isDataTypeQualifier(WordText) || isScopeResolutionOperator(WordText);
+  }
+
   /// Add a token.
   /// Returns true on success, false if there are no interesting tokens to
   /// fetch from lexer.
@@ -192,7 +234,7 @@ public:
   }
 
   /// Extract a type argument
-  bool lexDataType(Token &Tok) {
+  bool lexType(Token &Tok) {
     if (isEnd())
       return false;
     Position SavedPos = Pos;
@@ -202,6 +244,8 @@ public:
     const char *WordBegin = Pos.BufferPtr;
     SourceLocation Loc = getSourceLocation();
     StringRef ConstVal = StringRef("const");
+    StringRef PointerVal = StringRef("*");
+    StringRef ReferenceVal = StringRef("&");
     bool ConstPointer = false;
 
     while (!isEnd()) {
@@ -215,32 +259,41 @@ public:
           consumeChar();
         }
       } else {
-        if (WordText.equals(ConstVal)) {
-          WordText.push_back(C);
+        if (ConstPointer) {
           consumeChar();
-        } else if (WordText.ends_with(StringRef("*")) ||
-                   WordText.ends_with(StringRef("&"))) {
-          NextToken.clear();
-          peekNextToken(NextToken);
-          if (NextToken.equals(ConstVal)) {
-            ConstPointer = true;
-            WordText.push_back(C);
-            consumeChar();
-          } else {
-            consumeChar();
-            break;
-          }
+          break;
         } else {
-          NextToken.clear();
-          peekNextToken(NextToken);
-          if ((NextToken.ends_with(StringRef("*")) ||
-               NextToken.ends_with(StringRef("&"))) &&
-              !ConstPointer) {
+          if (continueParsing(WordText)) {
             WordText.push_back(C);
             consumeChar();
           } else {
-            consumeChar();
-            break;
+            NextToken.clear();
+            peekNextToken(NextToken);
+            if (WordText.ends_with(PointerVal) ||
+                WordText.ends_with(ReferenceVal)) {
+              if (NextToken.equals(ConstVal)) {
+                ConstPointer = true;
+                WordText.push_back(C);
+                consumeChar();
+              } else {
+                consumeChar();
+                break;
+              }
+            } else {
+              if ((NextToken.ends_with(PointerVal) ||
+                   NextToken.ends_with(ReferenceVal))) {
+                WordText.push_back(C);
+                consumeChar();
+              } else {
+                if (continueParsing(NextToken)) {
+                  WordText.push_back(C);
+                  consumeChar();
+                } else {
+                  consumeChar();
+                  break;
+                }
+              }
+            }
           }
         }
       }
@@ -425,7 +478,7 @@ Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
   unsigned ParsedArgs = 0;
   Token Arg;
 
-  while (ParsedArgs < NumArgs && Retokenizer.lexDataType(Arg)) {
+  while (ParsedArgs < NumArgs && Retokenizer.lexType(Arg)) {
     Args[ParsedArgs] = Comment::Argument{
         SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
     ParsedArgs++;

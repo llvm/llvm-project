@@ -1661,6 +1661,92 @@ TEST_F(CommentParserTest, ThrowsCommandHasArg9) {
   }
 }
 
+TEST_F(CommentParserTest, ThrowsCommandHasArg10) {
+  const char *Sources[] = {
+      "/// @throws const std::map<int, std::string> * pointer to a const map",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "const std::map<int, std::string> *");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg11) {
+  const char *Sources[] = {
+      "/// @throws const std :: map<int, std :: string> * pointer to a "
+      "const map with spaces",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) ==
+                  "const std :: map<int, std :: string> *");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg12) {
+  const char *Sources[] = {
+      "/// @throws volatile int a volatile integer",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "volatile int");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg13) {
+  const char *Sources[] = {
+      "/// @throws volatile double * volatile pointer to a double",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "volatile double *");
+    }
+  }
+}
+
 } // unnamed namespace
 
 } // end namespace comments
