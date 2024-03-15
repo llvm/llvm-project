@@ -162,12 +162,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   // Second, try `expr` as a persistent variable.
   if (expr.starts_with("$"))
-    if (auto var_sp = target.GetPersistentVariable(ConstString(expr)))
-      if (auto valobj_sp = var_sp->GetValueObject()) {
-        valobj_sp->Dump(result.GetOutputStream(), dump_options);
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-        return;
-      }
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(expr))
+        if (auto valobj_sp = var_sp->GetValueObject()) {
+          valobj_sp->Dump(result.GetOutputStream(), dump_options);
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+          return;
+        }
 
   // Third, and lastly, try `expr` as a source expression to evaluate.
   {
