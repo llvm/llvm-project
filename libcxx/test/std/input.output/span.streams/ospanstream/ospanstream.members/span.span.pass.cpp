@@ -11,8 +11,8 @@
 // <spanstream>
 
 //   template<class charT, class traits = char_traits<charT>>
-//   class basic_spanstream
-//     : public basic_iostream<charT, traits> {
+//   class basic_ospanstream
+//     : public basic_ostream<charT, traits> {
 
 //     // [spanstream.members], members
 
@@ -28,7 +28,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_spanbuf<CharT, TraitsT>;
+  using SpStream = std::basic_ospanstream<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -39,7 +39,7 @@ void test() {
 
   // Mode: default (`in` | `out`)
   {
-    SpStream spSt;
+    SpStream spSt{std::span<CharT>{}};
     assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
@@ -52,19 +52,19 @@ void test() {
   }
   // Mode: `in`
   {
-    SpStream spSt{std::ios_base::in};
+    SpStream spSt{std::span<CharT>{}, std::ios_base::in};
     assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
   }
   // Mode: `out`
   {
-    SpStream spSt{std::ios_base::out};
+    SpStream spSt{std::span<CharT>{}, std::ios_base::out};
     assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
@@ -77,7 +77,7 @@ void test() {
   }
   // Mode: multiple
   {
-    SpStream spSt{std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpStream spSt{std::span<CharT>{}, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
     assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
@@ -90,7 +90,7 @@ void test() {
   }
   // Mode: `ate`
   {
-    SpStream spSt{std::ios_base::out | std::ios_base::ate};
+    SpStream spSt{std::span<CharT>{}, std::ios_base::out | std::ios_base::ate};
     assert(spSt.span().data() == nullptr);
     assert(spSt.span().empty());
     assert(spSt.span().size() == 0);

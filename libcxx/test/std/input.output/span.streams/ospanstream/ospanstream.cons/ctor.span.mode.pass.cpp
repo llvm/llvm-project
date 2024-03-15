@@ -19,6 +19,7 @@
 //                                ios_base::openmode which = ios_base::out | ios_base::in);
 
 #include <cassert>
+#include <concepts>
 #include <span>
 #include <spanstream>
 #include <utility>
@@ -48,7 +49,11 @@ void test() {
   using SpStream = std::basic_ospanstream<CharT, TraitsT>;
 
   CharT arr[4];
+
   std::span<CharT> sp{arr};
+  assert(sp.data() == arr);
+  assert(!sp.empty());
+  assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
   {
