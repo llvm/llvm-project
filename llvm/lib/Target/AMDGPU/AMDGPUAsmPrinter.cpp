@@ -435,10 +435,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-
-  auto CreateExpr = [&MF](int64_t Value) {
-    return MCConstantExpr::create(Value, MF.getContext());
-  };
+  MCContext &Ctx = MF.getContext();
 
   MCKernelDescriptor KernelDescriptor;
 
@@ -446,24 +443,29 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   assert(isUInt<32>(PI.getComputePGMRSrc1(STM)));
   assert(isUInt<32>(PI.getComputePGMRSrc2()));
 
-  KernelDescriptor.group_segment_fixed_size = CreateExpr(PI.LDSSize);
-  KernelDescriptor.private_segment_fixed_size = CreateExpr(PI.ScratchSize);
+  KernelDescriptor.group_segment_fixed_size =
+      MCConstantExpr::create(PI.LDSSize, Ctx);
+  KernelDescriptor.private_segment_fixed_size =
+      MCConstantExpr::create(PI.ScratchSize, Ctx);
 
   Align MaxKernArgAlign;
-  KernelDescriptor.kernarg_size =
-      CreateExpr(STM.getKernArgSegmentSize(F, MaxKernArgAlign));
+  KernelDescriptor.kernarg_size = MCConstantExpr::create(
+      STM.getKernArgSegmentSize(F, MaxKernArgAlign), Ctx);
 
-  KernelDescriptor.compute_pgm_rsrc1 = CreateExpr(PI.getComputePGMRSrc1(STM));
-  KernelDescriptor.compute_pgm_rsrc2 = CreateExpr(PI.getComputePGMRSrc2());
+  KernelDescriptor.compute_pgm_rsrc1 =
+      MCConstantExpr::create(PI.getComputePGMRSrc1(STM), Ctx);
+  KernelDescriptor.compute_pgm_rsrc2 =
+      MCConstantExpr::create(PI.getComputePGMRSrc2(), Ctx);
   KernelDescriptor.kernel_code_properties =
-      CreateExpr(getAmdhsaKernelCodeProperties(MF));
+      MCConstantExpr::create(getAmdhsaKernelCodeProperties(MF), Ctx);
 
   assert(STM.hasGFX90AInsts() || CurrentProgramInfo.ComputePGMRSrc3GFX90A == 0);
-  KernelDescriptor.compute_pgm_rsrc3 = CreateExpr(
-      STM.hasGFX90AInsts() ? CurrentProgramInfo.ComputePGMRSrc3GFX90A : 0);
+  KernelDescriptor.compute_pgm_rsrc3 = MCConstantExpr::create(
+      STM.hasGFX90AInsts() ? CurrentProgramInfo.ComputePGMRSrc3GFX90A : 0, Ctx);
 
-  KernelDescriptor.kernarg_preload = CreateExpr(
-      AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0);
+  KernelDescriptor.kernarg_preload = MCConstantExpr::create(
+      AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0,
+      Ctx);
 
   return KernelDescriptor;
 }
