@@ -1080,7 +1080,7 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   LLDB_LOG(log, "Calling {0} with {1} to find dSYM: {2}", dsymForUUID_exe_path,
            lookup_desc, command.GetString());
 
-  Progress progress("Downloading symbol file", lookup_desc);
+  Progress progress("Downloading symbol file for", lookup_desc);
 
   // Invoke dsymForUUID.
   int exit_status = -1;
