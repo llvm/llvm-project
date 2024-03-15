@@ -1193,7 +1193,6 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
           if (r.second) {
             firstAtomicAbi = sec;
           } else {
-
             mergeAtomic(r.first, firstAtomicAbi, sec, r.first->getSecond(), *i);
           }
         }
