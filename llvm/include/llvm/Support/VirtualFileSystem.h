@@ -929,12 +929,12 @@ private:
   /// Canonicalize path by removing ".", "..", "./", components. This is
   /// a VFS request, do not bother about symlinks in the path components
   /// but canonicalize in order to perform the correct entry search.
-  std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
+  std::error_code makeCanonicalForLookup(SmallVectorImpl<char> &Path) const;
 
   /// Get the File status, or error, from the underlying external file system.
   /// This returns the status with the originally requested name, while looking
-  /// up the entry using the canonical path.
-  ErrorOr<Status> getExternalStatus(const Twine &CanonicalPath,
+  /// up the entry using a potentially different path.
+  ErrorOr<Status> getExternalStatus(const Twine &LookupPath,
                                     const Twine &OriginalPath) const;
 
   /// Make \a Path an absolute path.
@@ -1022,7 +1022,7 @@ private:
                  llvm::SmallVectorImpl<Entry *> &Entries) const;
 
   /// Get the status for a path with the provided \c LookupResult.
-  ErrorOr<Status> status(const Twine &CanonicalPath, const Twine &OriginalPath,
+  ErrorOr<Status> status(const Twine &LookupPath, const Twine &OriginalPath,
                          const LookupResult &Result);
 
 public:
