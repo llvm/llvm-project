@@ -241,8 +241,11 @@ public:
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
 
-  /// Get context-specific system description
+  /// Get context-specific system descriptor
   SystemDesc &getSystemDesc();
+
+  /// Set context-specific system descriptor
+  void setSystemDesc(const SystemDesc& desc);
 
   //===--------------------------------------------------------------------===//
   // Action API

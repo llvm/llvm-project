@@ -19,7 +19,11 @@
 #include <memory>
 #include <vector>
 
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,47 +51,8 @@ namespace mlir {
 /// Describes the individual device from the system description
 class DeviceDesc {
 public:
-  /// Some typedefs
   using DeviceID = uint32_t;
-  using DevicePropertyName = std::string;
-  struct DevicePropertyValue {
-    enum Tag { INT, DOUBLE, INT_VECTOR, DOUBLE_VECTOR } tag;
-    struct Data {
-      int64_t iValue;
-      double dValue;
-      std::vector<int64_t> ivValue;
-      std::vector<double> dvValue;
-
-      Data() : iValue(0), dValue(0.0), ivValue({0}), dvValue({0.0}) {}
-      ~Data() {}
-    } data;
-
-    DevicePropertyValue() = default;
-    DevicePropertyValue(const mlir::DeviceDesc::DevicePropertyValue &rhs) {
-      this->tag = rhs.tag;
-      if (this->tag == INT)
-        this->data.iValue = rhs.data.iValue;
-      else if (this->tag == DOUBLE)
-        this->data.dValue = rhs.data.dValue;
-      else if (this->tag == INT_VECTOR)
-        this->data.ivValue = rhs.data.ivValue;
-      else
-        this->data.dvValue = rhs.data.dvValue;
-    }
-    bool operator==(const mlir::DeviceDesc::DevicePropertyValue &rhs) const {
-      return tag == rhs.tag &&
-             ((tag == INT && data.iValue == rhs.data.iValue) ||
-              (tag == DOUBLE && data.dValue == rhs.data.dValue) ||
-              (tag == INT_VECTOR && data.ivValue == rhs.data.ivValue) ||
-              (tag == DOUBLE_VECTOR && data.dvValue == rhs.data.dvValue));
-    }
-    bool operator!=(const mlir::DeviceDesc::DevicePropertyValue &rhs) const {
-      return !(*this == rhs);
-    }
-  };
-  using DevicePropertiesMapTy =
-      std::map<DevicePropertyName, DevicePropertyValue>;
-
+  using DevicePropertiesMapTy = mlir::NamedAttrList;
   typedef enum { CPU, GPU, SPECIAL } DeviceType;
 
   /// Basic constructor
@@ -121,75 +86,78 @@ public:
     description = desc;
     return *this;
   }
+
   /// Set property
-  DeviceDesc &setProperty(llvm::StringRef name, int64_t iv) {
-    DevicePropertyValue value;
-    value.tag = DevicePropertyValue::Tag::INT;
-    value.data.iValue = iv;
-    auto inserted =
-        deviceProperties.insert(std::make_pair(std::string(name), value));
-    if (!inserted.second && inserted.first->second != value) {
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name, int64_t iv) {
+    std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
+    if (!attr.has_value()) {
+      IntegerType int64Ty = IntegerType::get(context, 64);
+      Attribute value = IntegerAttr::get(int64Ty, iv);
+      deviceProperties.append(name, value);
+    } else
       llvm::report_fatal_error("Duplicate device property name found:" + name);
-    }
     return *this;
   }
-  DeviceDesc &setProperty(llvm::StringRef name, double dv) {
-    DevicePropertyValue value;
-    value.tag = DevicePropertyValue::Tag::DOUBLE;
-    value.data.dValue = dv;
-    auto inserted =
-        deviceProperties.insert(std::make_pair(std::string(name), value));
-    if (!inserted.second && inserted.first->second != value) {
+
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name, double dv) {
+    std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
+    if (!attr.has_value()) {
+      FloatType floatType = FloatType::getF64(context);
+      Attribute value = FloatAttr::get(floatType, dv);
+      deviceProperties.append(name, value);
+    } else
       llvm::report_fatal_error("Duplicate device property name found:" + name);
-    }
     return *this;
   }
-  DeviceDesc &setProperty(llvm::StringRef name,
+
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name,
                           const std::vector<int64_t> &ivv) {
-    DevicePropertyValue value;
-    value.tag = DevicePropertyValue::Tag::INT_VECTOR;
-    value.data.ivValue = ivv;
-    auto inserted =
-        deviceProperties.insert(std::make_pair(std::string(name), value));
-    if (!inserted.second && inserted.first->second != value) {
+    std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
+    if (!attr.has_value()) {
+      IntegerType int64Ty = IntegerType::get(context, 64);
+      RankedTensorType shape = RankedTensorType::get({static_cast<long>(ivv.size()), 1}, int64Ty);
+      DenseElementsAttr value = DenseElementsAttr::get(shape, llvm::ArrayRef(ivv));
+      deviceProperties.append(name, value);
+    } else
       llvm::report_fatal_error("Duplicate device property name found:" + name);
-    }
     return *this;
   }
-  DeviceDesc &setProperty(llvm::StringRef name,
+
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name,
                           const std::vector<double> &idv) {
-    DevicePropertyValue value;
-    value.tag = DevicePropertyValue::Tag::DOUBLE_VECTOR;
-    value.data.dvValue = idv;
-    auto inserted =
-        deviceProperties.insert(std::make_pair(std::string(name), value));
-    if (!inserted.second && inserted.first->second != value) {
+    std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
+    if (!attr.has_value()) {
+      FloatType float64Ty = FloatType::getF64(context);
+      RankedTensorType shape = RankedTensorType::get({static_cast<long>(idv.size()), 1}, float64Ty);
+      DenseElementsAttr value = DenseElementsAttr::get(shape, llvm::ArrayRef(idv));
+      deviceProperties.append(name, value);
+    } else
       llvm::report_fatal_error("Duplicate device property name found:" + name);
-    }
     return *this;
   }
+
   // We provide convenience interface to handle int/float value as string
-  DeviceDesc &setProperty(llvm::StringRef name, const std::string &json_value) {
+  DeviceDesc &setProperty(MLIRContext *context, llvm::StringRef name, const std::string &json_value) {
     if (json_value.length() > 0 && json_value[0] == '[') {
       // Parse as an array
       llvm::Expected<std::vector<int64_t>> ivv =
           llvm::json::parse<std::vector<int64_t>>(json_value);
       if (ivv) {
-        *this = this->setProperty(name, ivv.get());
+        *this = this->setProperty(context, name, ivv.get());
         return *this;
       }
 
       llvm::Expected<std::vector<double>> idv =
           llvm::json::parse<std::vector<double>>(json_value);
       if (idv) {
-        *this = this->setProperty(name, idv.get());
+        *this = this->setProperty(context, name, idv.get());
         return *this;
       }
     } else {
       // int64_t because llvm::json has int64_t support (not int)
       llvm::Expected<int64_t> iv = llvm::json::parse<int64_t>(json_value);
       if (iv) {
-        *this = this->setProperty(name, iv.get());
+        *this = this->setProperty(context, name, iv.get());
         return *this;
       }
 
@@ -197,7 +165,7 @@ public:
       // double because llvm::json has double support (not float)
       llvm::Expected<double> dv = llvm::json::parse<double>(json_value);
       if (dv) {
-        *this = this->setProperty(name, dv.get());
+        *this = this->setProperty(context, name, dv.get());
         return *this;
       }
     }
@@ -217,40 +185,34 @@ public:
     return deviceProperties;
   }
   /// Get property value: returns the value of the property with given name, if
-  /// it exists. Otherwise throws exception (TODO)
+  /// it exists. Otherwise returns std::nullopt.
   std::optional<int64_t> getPropertyValueAsInt(llvm::StringRef name) const {
     // check that property with the given name exists
-    auto iter = deviceProperties.find(std::string(name));
-    if (iter == deviceProperties.end()) {
-      return std::nullopt;
+    std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
+    if (attr) {
+      if (IntegerAttr intAttr = dyn_cast<IntegerAttr>(attr->getValue()))
+        return intAttr.getInt();
     }
-    // TODO: we can do a tag check here.
-    return iter->second.data.iValue;
+    return std::nullopt;
   }
   std::optional<double> getPropertyValueAsFloat(llvm::StringRef name) const {
     // check that property with the given name exists
-    auto iter = deviceProperties.find(std::string(name));
-    if (iter == deviceProperties.end()) {
-      return std::nullopt;
+    std::optional<NamedAttribute> attr = deviceProperties.getNamed(name);
+    if (attr) {
+      if (FloatAttr floatAttr = dyn_cast<FloatAttr>(attr->getValue()))
+        return floatAttr.getValueAsDouble();
     }
-    // TODO: we can do a tag check here.
-    return iter->second.data.dValue;
+    return std::nullopt;
   }
 
   /// Special functions
   auto getAllDevicePropertyNames() const {
     return llvm::map_range(
-        deviceProperties,
-        [](const DevicePropertiesMapTy::value_type &item) -> llvm::StringRef {
-          return item.first;
+        deviceProperties.getAttrs(),
+        [](const NamedAttribute &named_attribute) -> llvm::StringRef {
+          return named_attribute.getName();
         });
   }
-
-  /// We use a list of key-value pairs to represent a system description in
-  /// JSON.
-  using DeviceDescJSONTy = std::map<std::string, std::string>;
-  static DeviceDesc
-  parseDeviceDescFromJSON(const DeviceDescJSONTy &device_desc);
 
   // -----------------------------------------------------------------------
   //          CPU specific methods
@@ -281,9 +243,9 @@ public:
     }
     return std::nullopt;
   }
-  void setL1CacheSizeInBytes(int64_t value) {
+  void setL1CacheSizeInBytes(MLIRContext *context, int64_t value) {
     // Temporarily use int override until we support size_t
-    this->setProperty(DeviceDesc::getCPUL1CacheSizeInBytesKeyName(), value);
+    this->setProperty(context, DeviceDesc::getCPUL1CacheSizeInBytesKeyName(), value);
   }
   std::optional<int64_t> getConvAndMatMulBlockingFactor() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -292,9 +254,9 @@ public:
     }
     return std::nullopt;
   }
-  void setConvAndMatMulBlockingFactor(int64_t value) {
+  void setConvAndMatMulBlockingFactor(MLIRContext *context, int64_t value) {
     // Temporarily use int override until we support size_t
-    this->setProperty(DeviceDesc::getConvAndMatMulBlockingFactorKeyName(),
+    this->setProperty(context, DeviceDesc::getConvAndMatMulBlockingFactorKeyName(),
                       value);
   }
   std::optional<int64_t> getMatMulTileSizeInBytes() const {
@@ -304,9 +266,9 @@ public:
     }
     return std::nullopt;
   }
-  void setMatMulTileSizeInBytes(int64_t value) {
+  void setMatMulTileSizeInBytes(MLIRContext *context, int64_t value) {
     // Temporarily use int override until we support size_t
-    this->setProperty(DeviceDesc::getMatMulTileSizeInBytesKeyName(), value);
+    this->setProperty(context, DeviceDesc::getMatMulTileSizeInBytesKeyName(), value);
   }
   std::optional<int64_t> getCanonicalizerMaxNumRewrites() const {
     if (std::optional<int64_t> v = this->getPropertyValueAsInt(
@@ -315,8 +277,8 @@ public:
     }
     return std::nullopt;
   }
-  void setCanonicalizerMaxNumRewrites(int64_t value) {
-    this->setProperty(DeviceDesc::getCanonicalizerMaxNumRewritesKeyName(),
+  void setCanonicalizerMaxNumRewrites(MLIRContext *context, int64_t value) {
+    this->setProperty(context, DeviceDesc::getCanonicalizerMaxNumRewritesKeyName(),
                       value);
   }
   std::optional<int64_t> getCanonicalizerMaxIterations() const {
@@ -326,8 +288,8 @@ public:
     }
     return std::nullopt;
   }
-  void setCanonicalizerMaxIterations(int64_t value) {
-    this->setProperty(DeviceDesc::getCanonicalizerMaxIterationsKeyName(),
+  void setCanonicalizerMaxIterations(MLIRContext *context, int64_t value) {
+    this->setProperty(context, DeviceDesc::getCanonicalizerMaxIterationsKeyName(),
                       value);
   }
   std::optional<int64_t> getMaxVectorWidth() const {
@@ -337,8 +299,8 @@ public:
     }
     return std::nullopt;
   }
-  void setMaxVectorWidth(uint32_t value) {
-    this->setProperty(DeviceDesc::getMaxVectorWidthKeyName(),
+  void setMaxVectorWidth(MLIRContext *context, uint32_t value) {
+    this->setProperty(context, DeviceDesc::getMaxVectorWidthKeyName(),
                       static_cast<int64_t>(value));
   }
 
@@ -359,10 +321,12 @@ private:
 class SystemDesc {
 public:
   SystemDesc() = default;
-
-  /// Read and parse system description from JSON file
-  LogicalResult readSystemDescFromJSONFile(llvm::StringRef filename);
-  void writeSystemDescToJSONFile(llvm::StringRef filename);
+  SystemDesc(const SystemDesc &desc) {
+    this->deviceDescs = desc.deviceDescs;
+  }
+  void operator=(const SystemDesc &rhs) {
+    this->deviceDescs = rhs.deviceDescs;
+  }
 
   /// Insert a new device description
   SystemDesc &addDeviceDesc(const DeviceDesc &desc) {
@@ -373,6 +337,7 @@ public:
     }
     return *this;
   }
+
   /// Get a device description
   const DeviceDesc &getDeviceDesc(DeviceDesc::DeviceID deviceID) {
     auto iter = deviceDescs.find(deviceID);
@@ -390,10 +355,6 @@ public:
   /// Get number of CPU devices in the system
   static uint32_t getNumCPUDevices() { return 0; }
   static uint32_t getNumGPUDevices() { return 0; }
-
-private:
-  SystemDesc(const SystemDesc &) = delete;
-  void operator=(const SystemDesc &) = delete;
 
 private:
   /// Map to store all the device descriptions
@@ -416,22 +377,22 @@ public:
   /// -----------------------------------------------------------------------
   /// Set of common questions asked by various passes
   // Blocking factor and tile size are typically used by tile/block passes.
-  virtual void setConvAndMatMulBlockingFactor(){};
-  virtual void setMatMulTileSize(){};
+  virtual void setConvAndMatMulBlockingFactor(MLIRContext *context){};
+  virtual void setMatMulTileSize(MLIRContext *context){};
 
-  virtual void setCanonicalizerMaxIterations(){};
-  virtual void setCanonicalizerMaxNumRewrites(){};
+  virtual void setCanonicalizerMaxIterations(MLIRContext *context){};
+  virtual void setCanonicalizerMaxNumRewrites(MLIRContext *context){};
 
   /// -----------------------------------------------------------------------
   /// CPU-specific parameters of system description
   /// -----------------------------------------------------------------------
-  virtual void setL1CacheSizeInBytes(){};
+  virtual void setL1CacheSizeInBytes(MLIRContext *context){};
 
   /// -----------------------------------------------------------------------
   /// GPU-specific parameters of system description
   /// -----------------------------------------------------------------------
   // Used by Conversion/AMDGPUToROCDL/AMDGPUToROCDL.cpp#L52
-  virtual void setMaxVectorWidth(){};
+  virtual void setMaxVectorWidth(MLIRContext *context){};
 };
 
 // Class that represent device description for a typical CPU device
@@ -439,14 +400,14 @@ class DefaultCPUDeviceDesc : public DefaultBaseDeviceDesc {
 public:
   // We use default ID of 0 because we are expecting to have only one device so
   // far. Not heterogeneous setup.
-  DefaultCPUDeviceDesc()
+  DefaultCPUDeviceDesc(MLIRContext *context)
       : cpu_device_desc(DeviceDesc(/* id */ 0, DeviceDesc::CPU)) {
     // Register all system properties
-    this->setL1CacheSizeInBytes();
-    this->setConvAndMatMulBlockingFactor();
-    this->setMatMulTileSize();
-    this->setCanonicalizerMaxNumRewrites();
-    this->setCanonicalizerMaxIterations();
+    this->setL1CacheSizeInBytes(context);
+    this->setConvAndMatMulBlockingFactor(context);
+    this->setMatMulTileSize(context);
+    this->setCanonicalizerMaxNumRewrites(context);
+    this->setCanonicalizerMaxIterations(context);
   }
 
   ~DefaultCPUDeviceDesc() {}
@@ -459,22 +420,22 @@ public:
   //                    CPU-specific properties
   // -------------------------------------------------------------------------
 
-  void setL1CacheSizeInBytes() override {
-    cpu_device_desc.setL1CacheSizeInBytes(8192);
+  void setL1CacheSizeInBytes(MLIRContext *context) override {
+    cpu_device_desc.setL1CacheSizeInBytes(context, 8192);
   }
-  void setConvAndMatMulBlockingFactor() override {
-    cpu_device_desc.setConvAndMatMulBlockingFactor(32);
+  void setConvAndMatMulBlockingFactor(MLIRContext *context) override {
+    cpu_device_desc.setConvAndMatMulBlockingFactor(context, 32);
   }
-  void setMatMulTileSize() override {
-    cpu_device_desc.setMatMulTileSizeInBytes(32);
+  void setMatMulTileSize(MLIRContext *context) override {
+    cpu_device_desc.setMatMulTileSizeInBytes(context, 32);
   }
-  void setCanonicalizerMaxNumRewrites() override {
+  void setCanonicalizerMaxNumRewrites(MLIRContext *context) override {
     // taken from include/mlir/Transforms/Passes.td
-    cpu_device_desc.setCanonicalizerMaxNumRewrites(-1);
+    cpu_device_desc.setCanonicalizerMaxNumRewrites(context, -1);
   }
-  void setCanonicalizerMaxIterations() override {
+  void setCanonicalizerMaxIterations(MLIRContext *context) override {
     // taken from include/mlir/Transforms/Passes.td
-    cpu_device_desc.setCanonicalizerMaxIterations(10);
+    cpu_device_desc.setCanonicalizerMaxIterations(context, 10);
   }
 
 private:
@@ -485,10 +446,10 @@ class DefaultGPUDeviceDesc : public DefaultBaseDeviceDesc {
 public:
   // We use default ID of 0 because we are expecting to have only one device so
   // far. Not heterogeneous setup.
-  DefaultGPUDeviceDesc()
+  DefaultGPUDeviceDesc(MLIRContext *context)
       : gpu_device_desc(DeviceDesc(/* id */ 1, DeviceDesc::GPU)) {
     // GPU device supports default value for MaxVectorWidth so far.
-    this->setMaxVectorWidth();
+    this->setMaxVectorWidth(context);
   }
 
   ~DefaultGPUDeviceDesc() {}
@@ -501,13 +462,48 @@ public:
   //                    GPU-specific properties
   // -------------------------------------------------------------------------
 
-  void setMaxVectorWidth() override {
+  void setMaxVectorWidth(MLIRContext *context) override {
     // Conversion/AMDGPUToROCDL/AMDGPUToROCDL.cpp#L52
-    gpu_device_desc.setMaxVectorWidth(128);
+    gpu_device_desc.setMaxVectorWidth(context, 128);
   }
 
 private:
   DeviceDesc gpu_device_desc;
+};
+
+// ---------------------------------------------------------------------------
+//                     Config file readers
+// ---------------------------------------------------------------------------
+namespace impl {
+  class SystemDescJSONConfigParser {
+  public:
+    /// Build SystemDesc by parsing input config file in JSON format.
+    /// Returns a valid SystemDesc if parsing is successful; otherwise
+    /// returns std::nullopt.
+    static std::optional<SystemDesc> buildSystemDescFromConfigFile(
+      MLIRContext *context, llvm::StringRef filename);
+
+  private:
+    /// We represent DeviceDesc in JSON as a key-value pairs of strings.
+    using DeviceDescJSONTy = std::map<std::string, std::string>;
+
+    /// A utility function to parse device description entry in JSON format
+    /// Returns valid DeviceDesc if parsing is successful; otherwise returns
+    /// std::nullopt.
+    static std::optional<DeviceDesc> buildDeviceDescFromConfigFile(MLIRContext *context,
+      const DeviceDescJSONTy &device_desc_in_json);
+  };
+}
+
+class SystemDescConfigFileParser {
+public:
+  /// Build SystemDesc by parsing input config file. Returns valid SystemDesc
+  /// if parsing is successful; otherwise returns std::nullopt.
+  static std::optional<SystemDesc> buildSystemDescFromConfigFile(
+    MLIRContext *context, llvm::StringRef filename) {
+      // Once we support more formats, we can accept format as the input argument.
+      return impl::SystemDescJSONConfigParser::buildSystemDescFromConfigFile(context, filename);
+  }
 };
 
 } // namespace mlir

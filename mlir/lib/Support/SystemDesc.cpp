@@ -20,20 +20,22 @@
 using namespace llvm;
 using namespace mlir;
 
-// ManagedStatic<SystemDesc> systemDesc;
-
-DeviceDesc DeviceDesc::parseDeviceDescFromJSON(
-    const DeviceDescJSONTy &device_desc_in_json) {
+std::optional<DeviceDesc> impl::SystemDescJSONConfigParser::buildDeviceDescFromConfigFile(
+    MLIRContext *context, const DeviceDescJSONTy &device_desc_in_json) {
   // ID and Type are mandatory fields.
   auto iter = device_desc_in_json.find("ID");
-  if (iter == device_desc_in_json.end())
-    llvm::report_fatal_error("\"ID\" key missing in Device Description");
-  DeviceID id = DeviceDesc::strToDeviceID(iter->second);
+  if (iter == device_desc_in_json.end()) {
+    llvm::errs() << "\"ID\" key missing in Device Description" << "\n";
+    return std::nullopt;
+  }
+  DeviceDesc::DeviceID id = DeviceDesc::strToDeviceID(iter->second);
 
   iter = device_desc_in_json.find("Type");
-  if (iter == device_desc_in_json.end())
-    llvm::report_fatal_error("\"Type\" key missing in Device Description");
-  DeviceType type = DeviceDesc::strToDeviceType(iter->second);
+  if (iter == device_desc_in_json.end()) {
+    llvm::errs() << "\"Type\" key missing in Device Description" << "\n";
+    return std::nullopt;
+  }
+  DeviceDesc::DeviceType type = DeviceDesc::strToDeviceType(iter->second);
 
   // Now process optional fields: description and properties
   DeviceDesc device_desc(id, type);
@@ -43,37 +45,47 @@ DeviceDesc DeviceDesc::parseDeviceDescFromJSON(
       if (property.first == "Description")
         device_desc.setDescription(property.second);
       else
-        device_desc.setProperty(property.first, property.second);
+        device_desc.setProperty(context, property.first, property.second);
     }
   }
-  return device_desc;
+  return std::optional<DeviceDesc>(device_desc);
 }
 
-LogicalResult SystemDesc::readSystemDescFromJSONFile(llvm::StringRef filename) {
+std::optional<SystemDesc> impl::SystemDescJSONConfigParser::buildSystemDescFromConfigFile(
+    MLIRContext *context, llvm::StringRef filename) {
   std::string errorMessage;
   std::unique_ptr<llvm::MemoryBuffer> file =
       openInputFile(filename, &errorMessage);
   if (!file) {
     llvm::errs() << errorMessage << "\n";
-    return failure();
+    return std::nullopt;
   }
 
   // Code to parse here
   auto parsed = llvm::json::parse(file.get()->getBuffer());
   if (!parsed) {
-    report_fatal_error(parsed.takeError());
+    llvm::errs() << parsed.takeError();
+    return std::nullopt;
   }
 
   json::Path::Root NullRoot;
-  using SystemDescJSONTy = std::vector<mlir::DeviceDesc::DeviceDescJSONTy>;
+  // System description is a list of Device descriptions.
+  using SystemDescJSONTy = std::vector<DeviceDescJSONTy>;
   SystemDescJSONTy system_desc_in_json;
   if (!json::fromJSON(*parsed, system_desc_in_json, NullRoot)) {
-    report_fatal_error("Invalid System Description in JSON");
-  }
-  for (auto device_desc_in_json : system_desc_in_json) {
-    auto device_desc = DeviceDesc::parseDeviceDescFromJSON(device_desc_in_json);
-    this->addDeviceDesc(device_desc);
+    llvm::errs() << "Invalid System Description in JSON" << "\n";
+    return std::nullopt;
   }
 
-  return success();
+  SystemDesc system_desc;
+  for (auto device_desc_in_json : system_desc_in_json) {
+    std::optional<DeviceDesc> device_desc = impl::SystemDescJSONConfigParser::buildDeviceDescFromConfigFile(
+      context, device_desc_in_json);
+    if (device_desc)
+      system_desc.addDeviceDesc(*device_desc);
+    else
+      return std::nullopt;
+  }
+
+  return std::optional<SystemDesc>(system_desc);
 }

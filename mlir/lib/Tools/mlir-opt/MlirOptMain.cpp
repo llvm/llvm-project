@@ -388,18 +388,21 @@ performActions(raw_ostream &os,
 
   context->enableMultithreading(wasThreadingEnabled);
 
+  bool setDefaultSystemDesc = true;
   if (!config.getSystemDescriptionFileName().empty()) {
-    // If there is an error in file IO or parse error, we should report
-    // the error and fallback to default values.
-    if (failed(context->getSystemDesc().readSystemDescFromJSONFile(
-            config.getSystemDescriptionFileName()))) {
-      return failure();
+    std::optional<SystemDesc> desc =
+      SystemDescConfigFileParser::buildSystemDescFromConfigFile(context,
+                                                                config.getSystemDescriptionFileName());
+    if (desc) {
+      context->setSystemDesc(*desc);
+      setDefaultSystemDesc = false;
     }
-  } else {
-    DefaultCPUDeviceDesc default_cpu_device_desc;
+  }
+  if (setDefaultSystemDesc) {
+    DefaultCPUDeviceDesc default_cpu_device_desc(context);
     default_cpu_device_desc.registerDeviceDesc(context);
 
-    DefaultGPUDeviceDesc default_gpu_device_desc;
+    DefaultGPUDeviceDesc default_gpu_device_desc(context);
     default_gpu_device_desc.registerDeviceDesc(context);
   }
 
