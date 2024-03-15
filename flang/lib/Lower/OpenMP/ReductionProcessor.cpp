@@ -30,9 +30,9 @@ namespace lower {
 namespace omp {
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
-    const Fortran::parser::ProcedureDesignator &pd) {
+    const omp::clause::ProcedureDesignator &pd) {
   auto redType = llvm::StringSwitch<std::optional<ReductionIdentifier>>(
-                     ReductionProcessor::getRealName(pd).ToString())
+                     getRealName(pd.v.id()).ToString())
                      .Case("max", ReductionIdentifier::MAX)
                      .Case("min", ReductionIdentifier::MIN)
                      .Case("iand", ReductionIdentifier::IAND)
@@ -44,21 +44,21 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
 }
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
-    Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp) {
+    omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp) {
   switch (intrinsicOp) {
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+  case omp::clause::DefinedOperator::IntrinsicOperator::Add:
     return ReductionIdentifier::ADD;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Subtract:
+  case omp::clause::DefinedOperator::IntrinsicOperator::Subtract:
     return ReductionIdentifier::SUBTRACT;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+  case omp::clause::DefinedOperator::IntrinsicOperator::Multiply:
     return ReductionIdentifier::MULTIPLY;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
+  case omp::clause::DefinedOperator::IntrinsicOperator::AND:
     return ReductionIdentifier::AND;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
+  case omp::clause::DefinedOperator::IntrinsicOperator::EQV:
     return ReductionIdentifier::EQV;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+  case omp::clause::DefinedOperator::IntrinsicOperator::OR:
     return ReductionIdentifier::OR;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+  case omp::clause::DefinedOperator::IntrinsicOperator::NEQV:
     return ReductionIdentifier::NEQV;
   default:
     llvm_unreachable("unexpected intrinsic operator in reduction");
@@ -66,13 +66,11 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
 }
 
 bool ReductionProcessor::supportedIntrinsicProcReduction(
-    const Fortran::parser::ProcedureDesignator &pd) {
-  const auto *name{Fortran::parser::Unwrap<Fortran::parser::Name>(pd)};
-  assert(name && "Invalid Reduction Intrinsic.");
-  if (!name->symbol->GetUltimate().attrs().test(
-          Fortran::semantics::Attr::INTRINSIC))
+    const omp::clause::ProcedureDesignator &pd) {
+  Fortran::semantics::Symbol *sym = pd.v.id();
+  if (!sym->GetUltimate().attrs().test(Fortran::semantics::Attr::INTRINSIC))
     return false;
-  auto redType = llvm::StringSwitch<bool>(getRealName(name).ToString())
+  auto redType = llvm::StringSwitch<bool>(getRealName(sym).ToString())
                      .Case("max", true)
                      .Case("min", true)
                      .Case("iand", true)
@@ -99,24 +97,24 @@ std::string ReductionProcessor::getReductionName(llvm::StringRef name,
 }
 
 std::string ReductionProcessor::getReductionName(
-    Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
-    mlir::Type ty, bool isByRef) {
+    omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp, mlir::Type ty,
+    bool isByRef) {
   std::string reductionName;
 
   switch (intrinsicOp) {
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+  case omp::clause::DefinedOperator::IntrinsicOperator::Add:
     reductionName = "add_reduction";
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+  case omp::clause::DefinedOperator::IntrinsicOperator::Multiply:
     reductionName = "multiply_reduction";
     break;
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
+  case omp::clause::DefinedOperator::IntrinsicOperator::AND:
     return "and_reduction";
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
+  case omp::clause::DefinedOperator::IntrinsicOperator::EQV:
     return "eqv_reduction";
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+  case omp::clause::DefinedOperator::IntrinsicOperator::OR:
     return "or_reduction";
-  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+  case omp::clause::DefinedOperator::IntrinsicOperator::NEQV:
     return "neqv_reduction";
   default:
     reductionName = "other_reduction";
@@ -364,7 +362,7 @@ bool ReductionProcessor::doReductionByRef(
 void ReductionProcessor::addReductionDecl(
     mlir::Location currentLocation,
     Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::OmpReductionClause &reduction,
+    const omp::clause::Reduction &reduction,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
@@ -372,13 +370,12 @@ void ReductionProcessor::addReductionDecl(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::omp::ReductionDeclareOp decl;
   const auto &redOperator{
-      std::get<Fortran::parser::OmpReductionOperator>(reduction.t)};
-  const auto &objectList{std::get<Fortran::parser::OmpObjectList>(reduction.t)};
+      std::get<omp::clause::ReductionOperator>(reduction.t)};
+  const auto &objectList{std::get<omp::ObjectList>(reduction.t)};
 
-  if (!std::holds_alternative<Fortran::parser::DefinedOperator>(
-          redOperator.u)) {
+  if (!std::holds_alternative<omp::clause::DefinedOperator>(redOperator.u)) {
     if (const auto *reductionIntrinsic =
-            std::get_if<Fortran::parser::ProcedureDesignator>(&redOperator.u)) {
+            std::get_if<omp::clause::ProcedureDesignator>(&redOperator.u)) {
       if (!ReductionProcessor::supportedIntrinsicProcReduction(
               *reductionIntrinsic)) {
         return;
@@ -388,27 +385,23 @@ void ReductionProcessor::addReductionDecl(
     }
   }
 
-  // initial pass to collect all recuction vars so we can figure out if this
+  // initial pass to collect all reduction vars so we can figure out if this
   // should happen byref
-  for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
-    if (const auto *name{
-            Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
-      if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
-        if (reductionSymbols)
-          reductionSymbols->push_back(symbol);
-        mlir::Value symVal = converter.getSymbolAddress(*symbol);
-        if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
-          symVal = declOp.getBase();
-        reductionVars.push_back(symVal);
-      }
-    }
+  for (const Object &object : objectList) {
+    const Fortran::semantics::Symbol *symbol = object.id();
+    if (reductionSymbols)
+      reductionSymbols->push_back(symbol);
+    mlir::Value symVal = converter.getSymbolAddress(*symbol);
+    if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+      symVal = declOp.getBase();
+    reductionVars.push_back(symVal);
   }
   const bool isByRef = doReductionByRef(reductionVars);
 
   if (const auto &redDefinedOp =
-          std::get_if<Fortran::parser::DefinedOperator>(&redOperator.u)) {
+          std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
     const auto &intrinsicOp{
-        std::get<Fortran::parser::DefinedOperator::IntrinsicOperator>(
+        std::get<omp::clause::DefinedOperator::IntrinsicOperator>(
             redDefinedOp->u)};
     ReductionIdentifier redId = getReductionType(intrinsicOp);
     switch (redId) {
@@ -424,73 +417,63 @@ void ReductionProcessor::addReductionDecl(
            "Reduction of some intrinsic operators is not supported");
       break;
     }
-    for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
-      if (const auto *name{
-              Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
-        if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
-          mlir::Value symVal = converter.getSymbolAddress(*symbol);
-          if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
-            symVal = declOp.getBase();
-          auto redType = symVal.getType().cast<fir::ReferenceType>();
-          if (redType.getEleTy().isa<fir::LogicalType>())
-            decl = createReductionDecl(
-                firOpBuilder,
-                getReductionName(intrinsicOp, firOpBuilder.getI1Type(),
-                                 isByRef),
-                redId, redType, currentLocation, isByRef);
-          else if (redType.getEleTy().isIntOrIndexOrFloat()) {
-            decl = createReductionDecl(
-                firOpBuilder, getReductionName(intrinsicOp, redType, isByRef),
-                redId, redType, currentLocation, isByRef);
-          } else {
-            TODO(currentLocation, "Reduction of some types is not supported");
-          }
-          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-              firOpBuilder.getContext(), decl.getSymName()));
-        }
+
+    for (const Object &object : objectList) {
+      const Fortran::semantics::Symbol *symbol = object.id();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+        symVal = declOp.getBase();
+      auto redType = symVal.getType().cast<fir::ReferenceType>();
+      if (redType.getEleTy().isa<fir::LogicalType>())
+        decl = createReductionDecl(
+            firOpBuilder,
+            getReductionName(intrinsicOp, firOpBuilder.getI1Type(), isByRef),
+            redId, redType, currentLocation, isByRef);
+      else if (redType.getEleTy().isIntOrIndexOrFloat()) {
+        decl = createReductionDecl(
+            firOpBuilder, getReductionName(intrinsicOp, redType, isByRef),
+            redId, redType, currentLocation, isByRef);
+      } else {
+        TODO(currentLocation, "Reduction of some types is not supported");
       }
+      reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+          firOpBuilder.getContext(), decl.getSymName()));
     }
   } else if (const auto *reductionIntrinsic =
-                 std::get_if<Fortran::parser::ProcedureDesignator>(
+                 std::get_if<omp::clause::ProcedureDesignator>(
                      &redOperator.u)) {
     if (ReductionProcessor::supportedIntrinsicProcReduction(
             *reductionIntrinsic)) {
       ReductionProcessor::ReductionIdentifier redId =
           ReductionProcessor::getReductionType(*reductionIntrinsic);
-      for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
-        if (const auto *name{
-                Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
-          if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
-            mlir::Value symVal = converter.getSymbolAddress(*symbol);
-            if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
-              symVal = declOp.getBase();
-            auto redType = symVal.getType().cast<fir::ReferenceType>();
-            assert(redType.getEleTy().isIntOrIndexOrFloat() &&
-                   "Unsupported reduction type");
-            decl = createReductionDecl(
-                firOpBuilder,
-                getReductionName(getRealName(*reductionIntrinsic).ToString(),
-                                 redType, isByRef),
-                redId, redType, currentLocation, isByRef);
-            reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-                firOpBuilder.getContext(), decl.getSymName()));
-          }
-        }
+      for (const Object &object : objectList) {
+        const Fortran::semantics::Symbol *symbol = object.id();
+        mlir::Value symVal = converter.getSymbolAddress(*symbol);
+        if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+          symVal = declOp.getBase();
+        auto redType = symVal.getType().cast<fir::ReferenceType>();
+        assert(redType.getEleTy().isIntOrIndexOrFloat() &&
+               "Unsupported reduction type");
+        decl = createReductionDecl(
+            firOpBuilder,
+            getReductionName(getRealName(*reductionIntrinsic).ToString(),
+                             redType, isByRef),
+            redId, redType, currentLocation, isByRef);
+        reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+            firOpBuilder.getContext(), decl.getSymName()));
       }
     }
   }
 }
 
 const Fortran::semantics::SourceName
-ReductionProcessor::getRealName(const Fortran::parser::Name *name) {
-  return name->symbol->GetUltimate().name();
+ReductionProcessor::getRealName(const Fortran::semantics::Symbol *symbol) {
+  return symbol->GetUltimate().name();
 }
 
-const Fortran::semantics::SourceName ReductionProcessor::getRealName(
-    const Fortran::parser::ProcedureDesignator &pd) {
-  const auto *name{Fortran::parser::Unwrap<Fortran::parser::Name>(pd)};
-  assert(name && "Invalid Reduction Intrinsic.");
-  return getRealName(name);
+const Fortran::semantics::SourceName
+ReductionProcessor::getRealName(const omp::clause::ProcedureDesignator &pd) {
+  return getRealName(pd.v.id());
 }
 
 int ReductionProcessor::getOperationIdentity(ReductionIdentifier redId,
