@@ -2918,7 +2918,7 @@ TEST(APIntTest, Average) {
   APInt A100(32, 100);
   APInt A101(32, 101);
   APInt A200(32, 200, false);
-  APInt ApUMax(32, UINT_MAX, false);
+  APInt ApUMax(32, UINT_MAX);
 
   EXPECT_EQ(APInt(32, 150), APIntOps::avgFloorU(A100, A200));
   EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A200, A2, APInt::Rounding::DOWN),
