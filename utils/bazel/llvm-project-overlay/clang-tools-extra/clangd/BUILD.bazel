@@ -9,12 +9,30 @@ package(
 
 licenses(["notice"])
 
+# TODO: this is a shim to provide Features.inc as needed by Feature.h.
+# Replace this with something that parses Features.inc.in.
+genrule(
+    name = "gen_features_inc",
+    outs = ["Features.inc"],
+    cmd = "\n".join([
+        "echo '// IWYU pragma: private, include \"Feature.h\"' >> $@",
+        "echo '#define CLANGD_BUILD_XPC 0' >> $@",
+        "echo '#define CLANGD_ENABLE_REMOTE 1' >> $@",
+        "echo '#define ENABLE_GRPC_REFLECTION 0' >> $@",
+        "echo '#define CLANGD_MALLOC_TRIM 0' >> $@",
+        "echo '#define CLANGD_TIDY_CHECKS 1' >> $@",
+        "echo '#define CLANGD_DECISION_FOREST 1' >> $@",
+    ]),
+)
+
 # TODO: Pick up other files for more complete functionality, to match
 # clangd/CMakeLists.txt. This might look something like
 # glob(["*.cpp", "dir/**/*.cpp", ...]).
 cc_library(
     name = "ClangDaemon",
     srcs = [
+        "Feature.cpp",
+        "Features.inc",
         "JSONTransport.cpp",
         "Protocol.cpp",
         "URI.cpp",
@@ -28,6 +46,7 @@ cc_library(
         "support/Trace.cpp",
     ],
     hdrs = [
+        "Feature.h",
         "LSPBinder.h",
         "Protocol.h",
         "Transport.h",
@@ -47,5 +66,6 @@ cc_library(
         "//clang:basic",
         "//clang:index",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
