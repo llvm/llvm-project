@@ -5275,13 +5275,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     bool IsDestTypeVector = DestTy->isVectorTy();
     Check(SrcTy->isVectorTy() == IsDestTypeVector,
-          "[us]cmp source and destination must both be a vector or neither",
+          "ucmp/scmp argument and result types must both be either vector or scalar types",
           Call);
     if (IsDestTypeVector) {
       auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
       auto DestVecLen = cast<VectorType>(DestTy)->getElementCount();
       Check(SrcVecLen == DestVecLen,
-            "return type and first arg type must have the same number of "
+            "return type and arguments must have the same number of "
             "elements",
             Call);
     }
