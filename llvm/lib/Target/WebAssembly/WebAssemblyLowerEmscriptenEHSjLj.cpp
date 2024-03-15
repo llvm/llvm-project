@@ -737,10 +737,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   BasicBlock *EndBB2 = BasicBlock::Create(C, "if.end2", F);
   Value *ThrewPtr =
       IRB.CreateIntToPtr(Threw, getAddrPtrType(M), Threw->getName() + ".p");
-  Value *LoadedThrew = IRB.CreateLoad(getAddrIntType(M), ThrewPtr,
-                                      ThrewPtr->getName() + ".loaded");
   Value *ThenLabel =
-      IRB.CreateCall(TestSetjmpF, {LoadedThrew, FunctionInvocationId}, "label");
+      IRB.CreateCall(TestSetjmpF, {ThrewPtr, FunctionInvocationId}, "label");
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp2, CallEmLongjmpBB, EndBB2);
 
