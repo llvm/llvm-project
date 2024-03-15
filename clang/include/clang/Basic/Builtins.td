@@ -4598,7 +4598,7 @@ def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
