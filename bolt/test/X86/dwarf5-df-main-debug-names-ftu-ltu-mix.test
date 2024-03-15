@@ -1,0 +1,56 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-debug-names-ftu-ltu-mix-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-debug-names-ftu-ltu-mix-helper.s -o helper.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-debug-names-ftu-ltu-mix-helper1.s -o helper1.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o helper1.o -o main.exe -fno-pic -no-pie
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --create-debug-names-section=true
+; RUN: llvm-dwarfdump --debug-names main.exe.bolt | FileCheck -check-prefix=BOLT %s
+
+;; Tests BOLT correctly sets foreign TU Index when there are local TUs.
+
+; BOLT:        Compilation Unit offsets [
+; BOLT-NEXT:     CU[0]: {{.+}}
+; BOLT-NEXT:     CU[1]: {{.+}}
+; BOLT-NEXT:     CU[2]: {{.+}}
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Local Type Unit offsets [
+; BOLT-NEXT:     LocalTU[0]: {{.+}}
+; BOLT-NEXT:     LocalTU[1]: {{.+}}
+; BOLT-NEXT:   ]
+; BOLT-NEXT:   Foreign Type Unit signatures [
+; BOLT-NEXT:     ForeignTU[0]: 0x889c84450dac881f
+; BOLT-NEXT:   ]
+; BOLT:        Name 3 {
+; BOLT-NEXT:     Hash: 0x6A05C500
+; BOLT-NEXT:     String: {{.+}} "globalMono1"
+; BOLT-NEXT:     Entry @ {{.+}} {
+; BOLT-NEXT:       Abbrev: 0x5
+; BOLT-NEXT:       Tag: DW_TAG_variable
+; BOLT-NEXT:       DW_IDX_compile_unit: 0x02
+; BOLT-NEXT:       DW_IDX_die_offset: 0x0000001e
+; BOLT-NEXT:     }
+; BOLT-NEXT:   }
+; BOLT:        Name 6 {
+; BOLT-NEXT:     Hash: 0xF283AF92
+; BOLT-NEXT:     String: {{.+}} "ASplit"
+; BOLT-NEXT:     Entry @ {{.+}} {
+; BOLT-NEXT:       Abbrev: 0x7
+; BOLT-NEXT:       Tag: DW_TAG_structure_type
+; BOLT-NEXT:       DW_IDX_type_unit: 0x02
+; BOLT-NEXT:       DW_IDX_compile_unit: 0x00
+; BOLT-NEXT:       DW_IDX_die_offset: 0x00000021
+; BOLT-NEXT:     }
+; BOLT-NEXT:   }
+; BOLT:        Name 7 {
+; BOLT-NEXT:     Hash: 0xF17F51F
+; BOLT-NEXT:     String: {{.+}} "AMono"
+; BOLT-NEXT:     Entry @ {{.+}} {
+; BOLT-NEXT:       Abbrev: 0x4
+; BOLT-NEXT:       Tag: DW_TAG_structure_type
+; BOLT-NEXT:       DW_IDX_type_unit: 0x00
+; BOLT-NEXT:       DW_IDX_die_offset: 0x00000023
+; BOLT-NEXT:     }
+; BOLT-NEXT:   }

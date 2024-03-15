@@ -20,9 +20,22 @@ using LIBC_NAMESPACE::operator""_u16;
 using LIBC_NAMESPACE::operator""_u32;
 using LIBC_NAMESPACE::operator""_u64;
 
+class LlvmLibcFxBitsTest : public LIBC_NAMESPACE::testing::Test {
+public:
+  template <typename T> void testBitwiseOps() {
+    EXPECT_EQ(LIBC_NAMESPACE::fixed_point::bit_and(T(0.75), T(0.375)), T(0.25));
+    EXPECT_EQ(LIBC_NAMESPACE::fixed_point::bit_or(T(0.75), T(0.375)), T(0.875));
+    using StorageType = typename FXRep<T>::StorageType;
+    StorageType a = LIBC_NAMESPACE::cpp::bit_cast<StorageType>(T(0.75));
+    a = ~a;
+    EXPECT_EQ(LIBC_NAMESPACE::fixed_point::bit_not(T(0.75)),
+              FXBits<T>(a).get_val());
+  }
+};
+
 // -------------------------------- SHORT TESTS --------------------------------
 
-TEST(LlvmLibcFxBitsTest, FXBits_UnsignedShortFract) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_UnsignedShortFract) {
   auto bits_var = FXBits<unsigned short fract>(0b00000000_u8);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -51,9 +64,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_UnsignedShortFract) {
   EXPECT_EQ(bits_var.get_sign(), false);
   EXPECT_EQ(bits_var.get_integral(), 0x00_u8);
   EXPECT_EQ(bits_var.get_fraction(), 0xcd_u8);
+
+  // Bitwise ops
+  testBitwiseOps<unsigned short fract>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_UnsignedShortAccum) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_UnsignedShortAccum) {
   auto bits_var = FXBits<unsigned short accum>(0b00000000'00000000_u16);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -77,9 +93,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_UnsignedShortAccum) {
   EXPECT_EQ(bits_var.get_sign(), false);
   EXPECT_EQ(bits_var.get_integral(), 0x00cd_u16);
   EXPECT_EQ(bits_var.get_fraction(), 0x00fe_u16);
+
+  // Bitwise ops
+  testBitwiseOps<unsigned short accum>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_ShortFract) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_ShortFract) {
   auto bits_var = FXBits<short fract>(0b0'0000000_u8);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -103,9 +122,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_ShortFract) {
   EXPECT_EQ(bits_var.get_sign(), true);
   EXPECT_EQ(bits_var.get_integral(), 0x00_u8);
   EXPECT_EQ(bits_var.get_fraction(), 0x4d_u8);
+
+  // Bitwise ops
+  testBitwiseOps<short fract>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_ShortAccum) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_ShortAccum) {
   auto bits_var = FXBits<short accum>(0b0'00000000'0000000_u16);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -129,9 +151,14 @@ TEST(LlvmLibcFxBitsTest, FXBits_ShortAccum) {
   EXPECT_EQ(bits_var.get_sign(), true);
   EXPECT_EQ(bits_var.get_integral(), 0x00cd_u16);
   EXPECT_EQ(bits_var.get_fraction(), 0x007e_u16);
+
+  // Bitwise ops
+  testBitwiseOps<short accum>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_UnsignedFract) {
+// -------------------------------- NORMAL TESTS -------------------------------
+
+TEST_F(LlvmLibcFxBitsTest, FXBits_UnsignedFract) {
   auto bits_var = FXBits<unsigned fract>(0b0000000000000000_u16);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -155,11 +182,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_UnsignedFract) {
   EXPECT_EQ(bits_var.get_sign(), false);
   EXPECT_EQ(bits_var.get_integral(), 0x0000_u16);
   EXPECT_EQ(bits_var.get_fraction(), 0xef12_u16);
+
+  // Bitwise ops
+  testBitwiseOps<unsigned fract>();
 }
 
-// -------------------------------- NORMAL TESTS -------------------------------
-
-TEST(LlvmLibcFxBitsTest, FXBits_UnsignedAccum) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_UnsignedAccum) {
   auto bits_var =
       FXBits<unsigned accum>(0b0000000000000000'0000000000000000_u32);
 
@@ -184,9 +212,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_UnsignedAccum) {
   EXPECT_EQ(bits_var.get_sign(), false);
   EXPECT_EQ(bits_var.get_integral(), 0x0000abcd_u32);
   EXPECT_EQ(bits_var.get_fraction(), 0x0000ef12_u32);
+
+  // Bitwise ops
+  testBitwiseOps<unsigned accum>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_Fract) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_Fract) {
   auto bits_var = FXBits<fract>(0b0'000000000000000_u16);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -210,9 +241,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_Fract) {
   EXPECT_EQ(bits_var.get_sign(), true);
   EXPECT_EQ(bits_var.get_integral(), 0x0000_u16);
   EXPECT_EQ(bits_var.get_fraction(), 0x6f12_u16);
+
+  // Bitwise ops
+  testBitwiseOps<fract>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_Accum) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_Accum) {
   auto bits_var = FXBits<accum>(0b0'0000000000000000'000000000000000_u32);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -236,11 +270,14 @@ TEST(LlvmLibcFxBitsTest, FXBits_Accum) {
   EXPECT_EQ(bits_var.get_sign(), true);
   EXPECT_EQ(bits_var.get_integral(), 0x0000abcd_u32);
   EXPECT_EQ(bits_var.get_fraction(), 0x00006f12_u32);
+
+  // Bitwise ops
+  testBitwiseOps<accum>();
 }
 
 // --------------------------------- LONG TESTS --------------------------------
 
-TEST(LlvmLibcFxBitsTest, FXBits_UnsignedLongFract) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_UnsignedLongFract) {
   auto bits_var =
       FXBits<unsigned long fract>(0b00000000000000000000000000000000_u32);
 
@@ -265,9 +302,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_UnsignedLongFract) {
   EXPECT_EQ(bits_var.get_sign(), false);
   EXPECT_EQ(bits_var.get_integral(), 0x00000000_u32);
   EXPECT_EQ(bits_var.get_fraction(), 0xfedcba98_u32);
+
+  // Bitwise ops
+  testBitwiseOps<unsigned long fract>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_UnsignedLongAccum) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_UnsignedLongAccum) {
   auto bits_var = FXBits<unsigned long accum>(
       0b00000000000000000000000000000000'00000000000000000000000000000000_u64);
 
@@ -292,9 +332,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_UnsignedLongAccum) {
   EXPECT_EQ(bits_var.get_sign(), false);
   EXPECT_EQ(bits_var.get_integral(), 0x00000000abcdef12_u64);
   EXPECT_EQ(bits_var.get_fraction(), 0x00000000fedcba98_u64);
+
+  // Bitwise ops
+  testBitwiseOps<unsigned long accum>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_LongFract) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_LongFract) {
   auto bits_var = FXBits<long fract>(0b0'0000000000000000000000000000000_u32);
 
   EXPECT_EQ(bits_var.get_sign(), false);
@@ -318,9 +361,12 @@ TEST(LlvmLibcFxBitsTest, FXBits_LongFract) {
   EXPECT_EQ(bits_var.get_sign(), true);
   EXPECT_EQ(bits_var.get_integral(), 0x00000000_u32);
   EXPECT_EQ(bits_var.get_fraction(), 0x7edcba98_u32);
+
+  // Bitwise ops
+  testBitwiseOps<long fract>();
 }
 
-TEST(LlvmLibcFxBitsTest, FXBits_LongAccum) {
+TEST_F(LlvmLibcFxBitsTest, FXBits_LongAccum) {
   auto bits_var = FXBits<long accum>(
       0b0'00000000000000000000000000000000'0000000000000000000000000000000_u64);
 
@@ -345,4 +391,7 @@ TEST(LlvmLibcFxBitsTest, FXBits_LongAccum) {
   EXPECT_EQ(bits_var.get_sign(), true);
   EXPECT_EQ(bits_var.get_integral(), 0x00000000abcdef12_u64);
   EXPECT_EQ(bits_var.get_fraction(), 0x000000007edcba98_u64);
+
+  // Bitwise ops
+  testBitwiseOps<long accum>();
 }

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX12 %s
 
 # GFX12: s_wait_alu depctr_hold_cnt(0) depctr_sa_sdst(0) depctr_va_vdst(0) depctr_va_sdst(0) depctr_va_ssrc(0) depctr_va_vcc(0) depctr_vm_vsrc(0) ; encoding: [0x00,0x00,0x88,0xbf]
 0x00,0x00,0x88,0xbf

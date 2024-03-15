@@ -777,9 +777,9 @@ public:
   bool forceScalarizeMaskedScatter(VectorType *Type, Align Alignment) const;
 
   /// Return true if the target supports masked compress store.
-  bool isLegalMaskedCompressStore(Type *DataType) const;
+  bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked expand load.
-  bool isLegalMaskedExpandLoad(Type *DataType) const;
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports strided load.
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
@@ -1247,13 +1247,16 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
+  /// \p TLibInfo is used to search for platform specific vector library
+  /// functions for instructions that might be converted to calls (e.g. frem).
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr) const;
+      const Instruction *CxtI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
   /// lowered to a single instruction on the target. In X86 this is for the
@@ -1863,8 +1866,8 @@ public:
                                           Align Alignment) = 0;
   virtual bool forceScalarizeMaskedScatter(VectorType *DataType,
                                            Align Alignment) = 0;
-  virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
-  virtual bool isLegalMaskedExpandLoad(Type *DataType) = 0;
+  virtual bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
@@ -2358,11 +2361,11 @@ public:
                                    Align Alignment) override {
     return Impl.forceScalarizeMaskedScatter(DataType, Alignment);
   }
-  bool isLegalMaskedCompressStore(Type *DataType) override {
-    return Impl.isLegalMaskedCompressStore(DataType);
+  bool isLegalMaskedCompressStore(Type *DataType, Align Alignment) override {
+    return Impl.isLegalMaskedCompressStore(DataType, Alignment);
   }
-  bool isLegalMaskedExpandLoad(Type *DataType) override {
-    return Impl.isLegalMaskedExpandLoad(DataType);
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) override {
+    return Impl.isLegalMaskedExpandLoad(DataType, Alignment);
   }
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalStridedLoadStore(DataType, Alignment);

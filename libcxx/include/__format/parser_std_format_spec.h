@@ -355,10 +355,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
     auto __begin = __ctx.begin();
     auto __end   = __ctx.end();
-    if (__begin == __end || *__begin == _CharT('}'))
+    if (__begin == __end || *__begin == _CharT('}') || (__fields.__use_range_fill_ && *__begin == _CharT(':')))
       return __begin;
 
-    if (__parse_fill_align(__begin, __end, __fields.__use_range_fill_) && __begin == __end)
+    if (__parse_fill_align(__begin, __end) && __begin == __end)
       return __begin;
 
     if (__fields.__sign_) {
@@ -574,12 +574,10 @@ private:
     return false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill) {
     // The forbidden fill characters all code points formed from a single code unit, thus the
     // check can be omitted when more code units are used.
-    if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT(':')))
-      std::__throw_format_error("The fill option contains an invalid value");
-    else if (__fill == _CharT('{'))
+    if (__fill == _CharT('{'))
       std::__throw_format_error("The fill option contains an invalid value");
   }
 
@@ -590,7 +588,7 @@ private:
 #    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
           || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
 #    endif
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -606,7 +604,7 @@ private:
         // The forbidden fill characters all are code points encoded
         // in one code unit, thus the check can be omitted when more
         // code units are used.
-        __validate_fill_character(*__begin, __use_range_fill);
+        __validate_fill_character(*__begin);
 
       std::copy_n(__begin, __code_units, std::addressof(__fill_.__data[0]));
       __begin += __code_units + 1;
@@ -623,7 +621,7 @@ private:
 #    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   template <contiguous_iterator _Iterator>
     requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -632,7 +630,7 @@ private:
       if (!__unicode::__is_scalar_value(*__begin))
         std::__throw_format_error("The fill option contains an invalid value");
 
-      __validate_fill_character(*__begin, __use_range_fill);
+      __validate_fill_character(*__begin);
 
       __fill_.__data[0] = *__begin;
       __begin += 2;
@@ -651,14 +649,14 @@ private:
 #  else // _LIBCPP_HAS_NO_UNICODE
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
         "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
-        __validate_fill_character(*__begin, __use_range_fill);
+        __validate_fill_character(*__begin);
 
         __fill_.__data[0] = *__begin;
         __begin += 2;

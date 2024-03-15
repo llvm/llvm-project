@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR --implicit-check-not=error: %s
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607
 // GFX12: encoding: [0x03,0x00,0x05,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
@@ -3970,70 +3970,70 @@ buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
 buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v255, off, s[8:11], s3 offset:8388607
+buffer_atomic_min_num_f32 v255, off, s[8:11], s3 offset:8388607
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[12:15], s3 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[12:15], s3 offset:8388607
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[96:99], s3 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[96:99], s3 offset:8388607
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s101 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], s101 offset:8388607
 // GFX12: encoding: [0x65,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], m0 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], m0 offset:8388607
 // GFX12: encoding: [0x7d,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], 0 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], 0 offset:8388607
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], -1 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], -1 offset:8388607
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], 0.5 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], 0.5 offset:8388607
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], -4.0 offset:8388607
+buffer_atomic_min_num_f32 v5, off, s[8:11], -4.0 offset:8388607
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, v0, s[8:11], s3 idxen offset:8388607
+buffer_atomic_min_num_f32 v5, v0, s[8:11], s3 idxen offset:8388607
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, v0, s[8:11], s3 offen offset:8388607
+buffer_atomic_min_num_f32 v5, v0, s[8:11], s3 offen offset:8388607
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:0
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:0
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:7
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:7
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
 // GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 glc
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 slc
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 slc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 dlc
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 dlc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607

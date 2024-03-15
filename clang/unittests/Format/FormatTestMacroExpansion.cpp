@@ -48,7 +48,7 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
 )",
                Style);
   verifyIncompleteFormat("ID3({, ID(a *b),\n"
-                         "  ;\n"
+                         "    ;\n"
                          "  });",
                          Style);
 
@@ -131,9 +131,9 @@ ID(CALL(CALL(a * b)));
   EXPECT_EQ(R"(
 ID3(
     {
-    CLASS
-    a *b;
-    };
+      CLASS
+        a *b;
+      };
     },
     ID(x *y);
     ,
@@ -284,6 +284,19 @@ TEST_F(FormatTestMacroExpansion,
   verifyFormat("MOCK_METHOD(\n"
                "    type, variable,\n"
                "    (type));",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
+  FormatStyle Style = getGoogleStyleWithColumns(22);
+  Style.Macros.push_back("MACRO(a, b)=a=(b)");
+  verifyFormat("void f() {\n"
+               "  MACRO(a b, call([] {\n"
+               "          if (expr) {\n"
+               "            indent();\n"
+               "          }\n"
+               "        }));\n"
+               "}",
                Style);
 }
 

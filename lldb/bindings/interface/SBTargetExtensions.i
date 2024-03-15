@@ -172,7 +172,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
             '''An accessor function that returns a list() that contains all watchpoints in a lldb.SBtarget object.'''
             watchpoints = []
             for idx in range(self.GetNumWatchpoints()):
-                bkpts.append(self.GetWatchpointAtIndex(idx))
+                watchpoints.append(self.GetWatchpointAtIndex(idx))
             return watchpoints
 
         modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')

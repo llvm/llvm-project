@@ -17,8 +17,6 @@ define <vscale x 8 x half> @fdiv_recip_8f16(<vscale x 8 x half> %a, <vscale x 8 
 ; CHECK-LABEL: fdiv_recip_8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frecpe z2.h, z1.h
-; CHECK-NEXT:    frecps z3.h, z1.h, z2.h
-; CHECK-NEXT:    fmul z2.h, z2.h, z3.h
 ; CHECK-NEXT:    frecps z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fmul z1.h, z2.h, z1.h
 ; CHECK-NEXT:    fmul z0.h, z1.h, z0.h
@@ -96,9 +94,6 @@ define <vscale x 8 x half> @fsqrt_recip_8f16(<vscale x 8 x half> %a) #0 {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fmul z2.h, z1.h, z1.h
 ; CHECK-NEXT:    fcmne p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    frsqrts z2.h, z0.h, z2.h
-; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    fmul z2.h, z1.h, z1.h
 ; CHECK-NEXT:    frsqrts z2.h, z0.h, z2.h
 ; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h

@@ -40,6 +40,7 @@ add_subdirectory(UB)
 add_subdirectory(Utils)
 add_subdirectory(Vector)
 add_subdirectory(X86Vector)
+add_subdirectory(XeGPU)
 
 set(LLVM_OPTIONAL_SOURCES
   Traits.cpp

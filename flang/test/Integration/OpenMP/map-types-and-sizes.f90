@@ -100,8 +100,8 @@ subroutine mapType_derived_explicit
   !$omp end target
 end subroutine mapType_derived_explicit
 
-!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 0, i64 40]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 32, i64 281474976710659]
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 40]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 35]
 subroutine mapType_derived_explicit_single_member
   type :: scalar_and_array
     real(4) :: real
@@ -130,8 +130,8 @@ subroutine mapType_derived_explicit_multiple_members
   !$omp end target
 end subroutine mapType_derived_explicit_multiple_members
 
-!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 0, i64 16]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 32, i64 281474976710659]
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 16]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 35]
 subroutine mapType_derived_explicit_member_with_bounds
   type :: scalar_and_array
     real(4) :: real
@@ -144,6 +144,72 @@ subroutine mapType_derived_explicit_member_with_bounds
      scalar_arr%array(3) = 3
   !$omp end target
 end subroutine mapType_derived_explicit_member_with_bounds
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 35]
+subroutine mapType_derived_explicit_nested_single_member
+  type :: nested
+    integer(4) :: int
+    real(4) :: real
+    integer(4) :: array(10)
+  end type nested
+
+  type :: scalar_and_array
+    real(4) :: real
+    integer(4) :: array(10)
+    type(nested) :: nest
+    integer(4) :: int
+  end type scalar_and_array
+  type(scalar_and_array) :: scalar_arr 
+  
+  !$omp target map(tofrom: scalar_arr%nest%real)
+    scalar_arr%nest%real = 1
+  !$omp end target
+end subroutine mapType_derived_explicit_nested_single_member
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 32, i64 281474976710659, i64 281474976710659]
+subroutine mapType_derived_explicit_multiple_nested_members
+  type :: nested
+    integer(4) :: int
+    real(4) :: real
+    integer(4) :: array(10)
+  end type nested
+
+  type :: scalar_and_array
+    real(4) :: real
+    integer(4) :: array(10)
+    type(nested) :: nest
+    integer(4) :: int
+  end type scalar_and_array
+  type(scalar_and_array) :: scalar_arr 
+  
+!$omp target map(tofrom: scalar_arr%nest%int, scalar_arr%nest%real)
+  scalar_arr%nest%int = 1
+!$omp end target
+end subroutine mapType_derived_explicit_multiple_nested_members
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 16]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 35]
+subroutine mapType_derived_explicit_nested_member_with_bounds
+  type :: nested
+    integer(4) :: int
+    real(4) :: real
+    integer(4) :: array(10)
+  end type nested
+
+  type :: scalar_and_array
+    real(4) :: real
+    integer(4) :: array(10)
+    type(nested) :: nest
+    integer(4) :: int
+  end type scalar_and_array
+  type(scalar_and_array) :: scalar_arr 
+  
+!$omp target map(tofrom: scalar_arr%nest%array(2:5))
+    scalar_arr%nest%array(3) = 3
+!$omp end target
+end subroutine mapType_derived_explicit_nested_member_with_bounds
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 8, i64 4]
 !CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
@@ -203,21 +269,10 @@ end subroutine mapType_char
 !CHECK: %[[ALLOCA:.*]] = alloca %_QFmaptype_derived_explicit_single_memberTscalar_and_array, i64 1, align 8
 !CHECK: %[[MEMBER_ACCESS:.*]] = getelementptr %_QFmaptype_derived_explicit_single_memberTscalar_and_array, ptr %[[ALLOCA]], i32 0, i32 1
 !CHECK: %[[ARR_OFF:.*]] = getelementptr inbounds [10 x i32], ptr %[[MEMBER_ACCESS]], i64 0, i64 0
-!CHECK: %[[ARR_END_OFF:.*]] = getelementptr [10 x i32], ptr %[[ARR_OFF]], i64 1
-!CHECK: %[[ARR_END:.*]] = ptrtoint ptr %[[ARR_END_OFF]] to i64
-!CHECK: %[[ARR_BEGIN:.*]] = ptrtoint ptr %[[ARR_OFF]] to i64
-!CHECK: %[[SIZE_DIFF:.*]] = sub i64 %[[ARR_END]], %[[ARR_BEGIN]]
-!CHECK: %[[SIZE:.*]] = sdiv exact i64 %[[SIZE_DIFF]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 !CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
-!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 !CHECK: store ptr %[[ARR_OFF]], ptr %[[OFFLOAD_PTR_ARR]], align 8
-!CHECK: %[[OFFLOAD_SIZE_ARR:.*]] = getelementptr inbounds [2 x i64], ptr %.offload_sizes, i32 0, i32 0
-!CHECK: store i64 %[[SIZE]], ptr %[[OFFLOAD_SIZE_ARR]], align 8
-!CHECK: %[[BASE_PTR_ARR_2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
-!CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_2]], align 8
-!CHECK: %[[OFFLOAD_PTR_ARR_2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
-!CHECK: store ptr %[[ARR_OFF]], ptr %[[OFFLOAD_PTR_ARR_2]], align 8
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_derived_explicit_multiple_members_{{.*}}
 !CHECK: %[[ALLOCA:.*]] = alloca %_QFmaptype_derived_explicit_multiple_membersTscalar_and_array, i64 1, align 8
@@ -247,18 +302,47 @@ end subroutine mapType_char
 !CHECK: %[[ALLOCA:.*]] = alloca %_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array, i64 1, align 8
 !CHECK: %[[MEMBER_ACCESS:.*]] = getelementptr %_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array, ptr %[[ALLOCA]], i32 0, i32 1
 !CHECK: %[[ARR_OFF:.*]] = getelementptr inbounds [10 x i32], ptr %[[MEMBER_ACCESS]], i64 0, i64 1
-!CHECK: %[[ARR_END_OFF:.*]] = getelementptr [10 x i32], ptr %[[ARR_OFF]], i64 1
-!CHECK: %[[ARR_END:.*]] = ptrtoint ptr %[[ARR_END_OFF]] to i64
-!CHECK: %[[ARR_BEGIN:.*]] = ptrtoint ptr %[[ARR_OFF]] to i64
-!CHECK: %[[SIZE_DIFF:.*]] = sub i64 %[[ARR_END]], %[[ARR_BEGIN]]
-!CHECK: %[[SIZE:.*]] = sdiv exact i64 %[[SIZE_DIFF]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 !CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
-!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 !CHECK: store ptr %[[ARR_OFF]], ptr %[[OFFLOAD_PTR_ARR]], align 8
-!CHECK: %[[OFFLOAD_SIZE_ARR:.*]] = getelementptr inbounds [2 x i64], ptr %.offload_sizes, i32 0, i32 0
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_derived_explicit_nested_single_member_{{.*}}
+!CHECK: %[[ALLOCA:.*]] = alloca %_QFmaptype_derived_explicit_nested_single_memberTscalar_and_array, i64 1, align 8
+!CHECK: %[[MEMBER_ACCESS:.*]] = getelementptr %_QFmaptype_derived_explicit_nested_single_memberTscalar_and_array, ptr %[[ALLOCA]], i32 0, i32 2, i32 1
+!CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[MEMBER_ACCESS]], ptr %[[OFFLOAD_PTR_ARR]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_derived_explicit_multiple_nested_members_{{.*}}
+!CHECK: %[[ALLOCA:.*]] = alloca %_QFmaptype_derived_explicit_multiple_nested_membersTscalar_and_array, i64 1, align 8
+!CHECK: %[[MEMBER_ACCESS_1:.*]] = getelementptr %_QFmaptype_derived_explicit_multiple_nested_membersTscalar_and_array, ptr %[[ALLOCA]], i32 0, i32 2, i32 0
+!CHECK: %[[MEMBER_ACCESS_2:.*]] = getelementptr %_QFmaptype_derived_explicit_multiple_nested_membersTscalar_and_array, ptr %[[ALLOCA]], i32 0, i32 2, i32 1
+!CHECK: %[[ARR_END_OFF:.*]] = getelementptr float, ptr %[[MEMBER_ACCESS_2]], i64 1
+!CHECK: %[[ARR_END:.*]] = ptrtoint ptr %[[ARR_END_OFF]] to i64
+!CHECK: %[[FIRST_MEMBER:.*]] = ptrtoint ptr %[[MEMBER_ACCESS_1]] to i64
+!CHECK: %[[SIZE_DIFF:.*]] = sub i64 %[[ARR_END]], %[[FIRST_MEMBER]]
+!CHECK: %[[SIZE:.*]] = sdiv exact i64 %[[SIZE_DIFF]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[MEMBER_ACCESS_1]], ptr %[[OFFLOAD_PTR_ARR]], align 8
+!CHECK: %[[OFFLOAD_SIZE_ARR:.*]] = getelementptr inbounds [3 x i64], ptr %.offload_sizes, i32 0, i32 0
 !CHECK: store i64 %[[SIZE]], ptr %[[OFFLOAD_SIZE_ARR]], align 8
-!CHECK: %[[BASE_PTR_ARR_2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: %[[BASE_PTR_ARR_2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 !CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_2]], align 8
-!CHECK: %[[OFFLOAD_PTR_ARR_2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
-!CHECK: store ptr %[[ARR_OFF]], ptr %[[OFFLOAD_PTR_ARR_2]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR_2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr %[[MEMBER_ACCESS_1]], ptr %[[OFFLOAD_PTR_ARR_2]], align 8
+!CHECK: %[[BASE_PTR_ARR_3:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+!CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_3]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR_3:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+!CHECK: store ptr %[[MEMBER_ACCESS_2]], ptr %[[OFFLOAD_PTR_ARR_3]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_derived_explicit_nested_member_with_bounds_{{.*}}
+!CHECK: %[[ALLOCA:.*]] = alloca %_QFmaptype_derived_explicit_nested_member_with_boundsTscalar_and_array, i64 1, align 8
+!CHECK: %[[MEMBER_ACCESS:.*]] = getelementptr %_QFmaptype_derived_explicit_nested_member_with_boundsTscalar_and_array, ptr %[[ALLOCA]], i32 0, i32 2, i32 2
+!CHECK: %[[ARR_OFF:.*]] = getelementptr inbounds [10 x i32], ptr %[[MEMBER_ACCESS]], i64 0, i64 1
+!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[ARR_OFF]], ptr %[[OFFLOAD_PTR_ARR]], align 8

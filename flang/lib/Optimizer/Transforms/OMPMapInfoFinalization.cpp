@@ -86,24 +86,16 @@ class OMPMapInfoFinalizationPass
     mlir::Value baseAddrAddr = builder.create<fir::BoxOffsetOp>(
         loc, descriptor, fir::BoxFieldAttr::base_addr);
 
-    llvm::omp::OpenMPOffloadMappingFlags baseAddrMapFlag =
-        llvm::omp::OpenMPOffloadMappingFlags(op.getMapType().value());
-    baseAddrMapFlag |=
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
-
     // Member of the descriptor pointing at the allocated data
     mlir::Value baseAddr = builder.create<mlir::omp::MapInfoOp>(
         loc, baseAddrAddr.getType(), descriptor,
         mlir::TypeAttr::get(llvm::cast<mlir::omp::PointerLikeType>(
                                 fir::unwrapRefType(baseAddrAddr.getType()))
                                 .getElementType()),
-        baseAddrAddr, mlir::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
-        op.getBounds(),
-        builder.getIntegerAttr(
-            builder.getIntegerType(64, false),
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                baseAddrMapFlag)),
+        baseAddrAddr, mlir::SmallVector<mlir::Value>{},
+        mlir::DenseIntElementsAttr{}, op.getBounds(),
+        builder.getIntegerAttr(builder.getIntegerType(64, false),
+                               op.getMapType().value()),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         builder.getStringAttr("") /*name*/,
@@ -139,8 +131,11 @@ class OMPMapInfoFinalizationPass
         op->getLoc(), op.getResult().getType(), descriptor,
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
         mlir::Value{}, mlir::SmallVector<mlir::Value>{baseAddr},
-        mlir::ArrayAttr::get(builder.getContext(),
-                             builder.getI64IntegerAttr(0)) /*members_index*/,
+        mlir::DenseIntElementsAttr::get(
+            mlir::VectorType::get(
+                llvm::ArrayRef<int64_t>({1, 1}),
+                mlir::IntegerType::get(builder.getContext(), 32)),
+            llvm::ArrayRef<int32_t>({0})) /*members_index*/,
         mlir::SmallVector<mlir::Value>{},
         builder.getIntegerAttr(builder.getIntegerType(64, false),
                                op.getMapType().value()),
@@ -203,16 +198,17 @@ class OMPMapInfoFinalizationPass
     for (size_t i = 0; i < mapOperandsArr.size(); ++i) {
       if (mapOperandsArr[i] == op) {
         // Push member maps
-        for (auto member : op.getMembers()) {
-          newMapOps.push_back(member);
+        for (size_t j = 0; j < op.getMembers().size(); ++j) {
+          newMapOps.push_back(op.getMembers()[j]);
           // for TargetOp's which have IsolatedFromAbove we must align the
           // new additional map operand with an appropriate BlockArgument,
           // as the printing and later processing currently requires a 1:1
           // mapping of BlockArgs to MapInfoOp's at the same placement in
           // each array (BlockArgs and MapOperands).
-          if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target))
-            targetOp.getRegion().insertArgument(i, member.getType(),
-                                                builder.getUnknownLoc());
+          if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target)) {
+            targetOp.getRegion().insertArgument(
+                i + j, op.getMembers()[j].getType(), builder.getUnknownLoc());
+          }
         }
       }
       newMapOps.push_back(mapOperandsArr[i]);

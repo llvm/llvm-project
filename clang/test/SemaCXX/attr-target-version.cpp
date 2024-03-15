@@ -7,6 +7,7 @@ void __attribute__((target_version("dotprod"))) no_def(void);
 void __attribute__((target_version("rdm+fp"))) no_def(void);
 void __attribute__((target_version("rcpc3"))) no_def(void);
 void __attribute__((target_version("mops"))) no_def(void);
+void __attribute__((target_version("rdma"))) no_def(void);
 
 // expected-error@+1 {{no matching function for call to 'no_def'}}
 void foo(void) { no_def(); }

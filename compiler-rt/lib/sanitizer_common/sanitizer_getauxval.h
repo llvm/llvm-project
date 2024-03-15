@@ -55,20 +55,6 @@ static inline decltype(AuxInfo::a_v) getauxval(decltype(AuxInfo::a_type) type) {
   return 0;
 }
 
-#elif SANITIZER_FREEBSD
-#  include <sys/auxv.h>
-
-#  define SANITIZER_USE_GETAUXVAL 1
-#  define AT_EXECFN AT_EXECPATH
-
-static inline unsigned long getauxval(unsigned long type) {
-  unsigned long buf = 0ul;
-
-  if (elf_aux_info(static_cast<int>(type), &buf, sizeof(buf)))
-    return 0ul;
-  return buf;
-}
-
 #endif
 
 #endif // SANITIZER_GETAUXVAL_H

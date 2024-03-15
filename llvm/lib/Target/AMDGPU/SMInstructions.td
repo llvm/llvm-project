@@ -277,8 +277,7 @@ class SM_Pseudo_Atomic<string opName,
                         (ins CPolTy:$cpol)),
                    !if(isRet, " $sdst", " $sdata") #
                      ", $sbase, " # offsets.Asm # "$cpol",
-                   isRet>,
-  AtomicNoRet <opNameWithSuffix, isRet> {
+                   isRet> {
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
   let PseudoInstr = opNameWithSuffix;
@@ -662,8 +661,7 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_vi <0x27>;
 //===----------------------------------------------------------------------===//
 
 class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_vi <op, ps>,
-    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
+  : SMEM_Real_vi <op, ps> {
 
   bits<7> sdata;
 
@@ -1222,8 +1220,7 @@ defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26>;
 defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx10 <0x27>;
 
 class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_gfx10 <op, ps>,
-    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
+  : SMEM_Real_gfx10 <op, ps> {
 
   bits<7> sdata;
 

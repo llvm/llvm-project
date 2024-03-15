@@ -16,6 +16,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -25,8 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
-
-using namespace llvm::PatternMatch;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -486,6 +485,7 @@ static void removeDeadRecipes(VPlan &Plan) {
                  [](VPValue *V) { return V->getNumUsers(); }))
         continue;
 
+      using namespace llvm::PatternMatch;
       // Having side effects keeps R alive, but do remove conditional assume
       // instructions as their conditions may be flattened.
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
@@ -595,15 +595,6 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   }
 }
 
-static bool canSimplifyBranchOnCond(VPInstruction *Term) {
-  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
-  if (!Not || Not->getOpcode() != VPInstruction::Not)
-    return false;
-
-  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
-  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
-}
-
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -611,23 +602,24 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
   VPBasicBlock *ExitingVPBB =
       Plan.getVectorLoopRegion()->getExitingBasicBlock();
-  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
+  auto *Term = &ExitingVPBB->back();
   // Try to simplify the branch condition if TC <= VF * UF when preparing to
   // execute the plan for the main vector loop. We only do this if the
   // terminator is:
   //  1. BranchOnCount, or
   //  2. BranchOnCond where the input is Not(ActiveLaneMask).
-  if (!Term || (Term->getOpcode() != VPInstruction::BranchOnCount &&
-                (Term->getOpcode() != VPInstruction::BranchOnCond ||
-                 !canSimplifyBranchOnCond(Term))))
+  using namespace llvm::VPlanPatternMatch;
+  if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
+      !match(Term,
+             m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
     return;
 
   Type *IdxTy =
       Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
   const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *C =
-      SE.getConstant(TripCount->getType(), BestVF.getKnownMinValue() * BestUF);
+  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
   if (TripCount->isZero() ||
       !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
@@ -1200,10 +1192,10 @@ void VPlanTransforms::addActiveLaneMask(
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
-    LaneMask = new VPInstruction(VPInstruction::ActiveLaneMask,
-                                 {WideCanonicalIV, Plan.getTripCount()},
-                                 nullptr, "active.lane.mask");
-    LaneMask->insertAfter(WideCanonicalIV);
+    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
+    LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
+                              {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                              "active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace all compares of the form
