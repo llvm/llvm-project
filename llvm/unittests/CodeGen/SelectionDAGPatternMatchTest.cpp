@@ -174,10 +174,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op0);
   SDValue Trunc = DAG->getNode(ISD::TRUNCATE, DL, Int32VT, Op1);
 
-  SDValue Zero = DAG->getConstant(0, DL, Int32VT);
-  SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, Int32VT);
-  SDValue Neg = DAG->getNode(ISD::SUB, DL, Int32VT, Zero, Op0);
-  SDValue Not = DAG->getNode(ISD::XOR, DL, Int32VT, AllOnes, Op0);
+  SDValue Neg = DAG->getNegative(Op0, DL, Int32VT);
+  SDValue Not = DAG->getNOT(DL, Op0, Int32VT);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
