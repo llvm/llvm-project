@@ -42,6 +42,7 @@
 #ifndef FORTRAN_COMMON_VISIT_H_
 #define FORTRAN_COMMON_VISIT_H_
 
+#include "flang/Runtime/api-attrs.h"
 #include <type_traits>
 #include <variant>
 
@@ -50,7 +51,7 @@ namespace log2visit {
 
 template <std::size_t LOW, std::size_t HIGH, typename RESULT, typename VISITOR,
     typename... VARIANT>
-inline RESULT Log2VisitHelper(
+inline RT_API_ATTRS RESULT Log2VisitHelper(
     VISITOR &&visitor, std::size_t which, VARIANT &&...u) {
   if constexpr (LOW == HIGH) {
     return visitor(std::get<LOW>(std::forward<VARIANT>(u))...);
@@ -67,7 +68,7 @@ inline RESULT Log2VisitHelper(
 }
 
 template <typename VISITOR, typename... VARIANT>
-inline auto visit(VISITOR &&visitor, VARIANT &&...u)
+inline RT_API_ATTRS auto visit(VISITOR &&visitor, VARIANT &&...u)
     -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...)) {
   using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...));
   if constexpr (sizeof...(u) == 1) {
