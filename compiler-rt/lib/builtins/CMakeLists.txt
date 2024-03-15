@@ -190,6 +190,7 @@ set(GENERIC_SOURCES
 
 # We only build BF16 files when "__bf16" is available.
 set(BF16_SOURCES
+    extendbfsf2.c
     truncdfbf2.c
     truncsfbf2.c
 )

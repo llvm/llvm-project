@@ -208,6 +208,30 @@ func.func @all_gather_dynamic_dims_in_mesh(
   return %0 : tensor<5x?xf32>
 }
 
+// CHECK-LABEL: func @all_slice_static_dimensions
+func.func @all_slice_static_dimensions(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x4xf32>
+    %arg0 : tensor<3x4xf32>) -> tensor<3x1xf32> {
+  // CHECK-NEXT: mesh.all_slice %[[ARG]]
+  // CHECK-SAME: on @mesh0 mesh_axes = [2] slice_axis = 1
+  // CHECK-SAME: : tensor<3x4xf32> -> tensor<3x1xf32>
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [2] slice_axis = 1
+    : tensor<3x4xf32> -> tensor<3x1xf32>
+  return %0 : tensor<3x1xf32>
+}
+
+// CHECK-LABEL: func @all_slice_dynamic_dimensions
+func.func @all_slice_dynamic_dimensions(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<?xf32>
+    %arg0 : tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK-NEXT: mesh.all_slice %[[ARG]]
+  // CHECK-SAME: on @mesh3 mesh_axes = [0, 1] slice_axis = 0
+  // CHECK-SAME: : tensor<?xf32> -> tensor<?xf32>
+  %0 = mesh.all_slice %arg0 on @mesh3 mesh_axes = [0, 1] slice_axis = 0
+    : tensor<?xf32> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
 // CHECK-LABEL: func @all_to_all
 func.func @all_to_all(
     // CHECK-SAME: %[[ARG:.*]]: tensor<3x6xi8>

@@ -34,7 +34,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 
@@ -77,7 +77,9 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         # Verify log message match
         for idx, logMessage_line in enumerate(logMessage_output):
             result = idx + 3
-            reg_str = f"{logMessage_prefix}{result}, {message_addr_pattern} {message_content}"
+            reg_str = (
+                f"{logMessage_prefix}{result}, {message_addr_pattern} {message_content}"
+            )
             self.assertRegex(logMessage_line, reg_str)
 
     @skipIfWindows
@@ -95,7 +97,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 
@@ -158,7 +160,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 
@@ -223,7 +225,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         before_loop_breakpoint_ids = self.set_source_breakpoints(
             self.main_path, [before_loop_line]
         )
-        self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
         self.dap_server.request_continue()
 

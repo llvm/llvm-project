@@ -75,6 +75,16 @@ static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 /// Attribute to mark Fortran entities with the CUDA attribute.
 static constexpr llvm::StringRef getCUDAAttrName() { return "fir.cuda_attr"; }
 
+/// Attribute to carry CUDA launch_bounds values.
+static constexpr llvm::StringRef getCUDALaunchBoundsAttrName() {
+  return "fir.cuda_launch_bounds";
+}
+
+/// Attribute to carry CUDA cluster_dims values.
+static constexpr llvm::StringRef getCUDAClusterDimsAttrName() {
+  return "fir.cuda_cluster_dims";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {

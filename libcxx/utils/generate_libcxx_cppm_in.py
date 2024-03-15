@@ -61,7 +61,7 @@ module;
             """
 // *** Headers not yet available ***
 //
-// This validation is mainly to catch when a new header is added but adding the 
+// This validation is mainly to catch when a new header is added but adding the
 // corresponding .inc file is forgotten. However, the check based on __has_include
 // alone doesn't work on Windows because the Windows SDK is on the include path,
 // and that means the MSVC STL headers can be found as well, tricking __has_include

@@ -22,6 +22,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
+#include "src/__support/integer_literals.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
@@ -39,6 +40,7 @@ using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
 using Sign = fputil::Sign;
+using LIBC_NAMESPACE::operator""_u128;
 
 // log2(e)
 constexpr double LOG2_E = 0x1.71547652b82fep+0;
@@ -107,20 +109,14 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 Float128 poly_approx_f128(const Float128 &dx) {
-  using MType = typename Float128::MantissaType;
-
   constexpr Float128 COEFFS_128[]{
-      {Sign::POS, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {Sign::POS, -128, MType({0, 0x8000000000000000})},                  // 0.5
-      {Sign::POS, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
-      {Sign::POS, -132,
-       MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
-      {Sign::POS, -134,
-       MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
-      {Sign::POS, -137,
-       MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
-      {Sign::POS, -140,
-       MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
+      {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
+      {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/24
+      {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/120
+      {Sign::POS, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/720
+      {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -146,7 +142,6 @@ std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
 Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
-  using MType = typename Float128::MantissaType;
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -170,7 +165,8 @@ Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
   Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
   int hi = static_cast<int>(kd) >> 12;
-  Float128 minus_one{Sign::NEG, -127 - hi, MType({0, 0x8000000000000000})};
+  Float128 minus_one{Sign::NEG, -127 - hi,
+                     0x80000000'00000000'00000000'00000000_u128};
 
   Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
 

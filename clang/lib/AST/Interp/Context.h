@@ -75,6 +75,7 @@ public:
 
   /// Classifies an expression.
   std::optional<PrimType> classify(const Expr *E) const {
+    assert(E);
     if (E->isGLValue()) {
       if (E->getType()->isFunctionType())
         return PT_FnPtr;
@@ -106,9 +107,6 @@ public:
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func, APValue &Result);
-
-  /// Checks a result from the interpreter.
-  bool Check(State &Parent, llvm::Expected<bool> &&R);
 
   /// Current compilation context.
   ASTContext &Ctx;

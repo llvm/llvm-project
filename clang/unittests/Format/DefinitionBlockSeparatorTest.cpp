@@ -144,7 +144,7 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                Style);
 
   FormatStyle BreakAfterReturnTypeStyle = Style;
-  BreakAfterReturnTypeStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  BreakAfterReturnTypeStyle.BreakAfterReturnType = FormatStyle::RTBS_All;
   // Test uppercased long typename
   verifyFormat("class Foo {\n"
                "  void\n"

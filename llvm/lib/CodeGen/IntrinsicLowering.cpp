@@ -312,6 +312,12 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
     break;
   }
+  case Intrinsic::readsteadycounter: {
+    errs() << "WARNING: this target does not support the llvm.readsteadycounter"
+           << " intrinsic.  It is being lowered to a constant 0\n";
+    CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
+    break;
+  }
 
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_label:

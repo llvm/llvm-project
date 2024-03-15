@@ -44,6 +44,24 @@ void ScalarBitSetTraits<XCOFF::SectionTypeFlags>::bitset(
 #undef ECase
 }
 
+void ScalarEnumerationTraits<XCOFF::DwarfSectionSubtypeFlags>::enumeration(
+    IO &IO, XCOFF::DwarfSectionSubtypeFlags &Value) {
+#define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
+  ECase(SSUBTYP_DWINFO);
+  ECase(SSUBTYP_DWLINE);
+  ECase(SSUBTYP_DWPBNMS);
+  ECase(SSUBTYP_DWPBTYP);
+  ECase(SSUBTYP_DWARNGE);
+  ECase(SSUBTYP_DWABREV);
+  ECase(SSUBTYP_DWSTR);
+  ECase(SSUBTYP_DWRNGES);
+  ECase(SSUBTYP_DWLOC);
+  ECase(SSUBTYP_DWFRAME);
+  ECase(SSUBTYP_DWMAC);
+#undef ECase
+  IO.enumFallback<Hex32>(Value);
+}
+
 void ScalarEnumerationTraits<XCOFF::StorageClass>::enumeration(
     IO &IO, XCOFF::StorageClass &Value) {
 #define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
@@ -232,6 +250,7 @@ void MappingTraits<XCOFFYAML::Section>::mapping(IO &IO,
   IO.mapOptional("NumberOfRelocations", Sec.NumberOfRelocations);
   IO.mapOptional("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
   IO.mapOptional("Flags", NC->Flags);
+  IO.mapOptional("DWARFSectionSubtype", Sec.SectionSubtype);
   IO.mapOptional("SectionData", Sec.SectionData);
   IO.mapOptional("Relocations", Sec.Relocations);
 }

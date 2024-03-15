@@ -1255,6 +1255,98 @@ lldb::SBFileSpec SBProcess::GetCoreFile() {
   return SBFileSpec(core_file);
 }
 
+addr_t SBProcess::GetAddressMask(AddressMaskType type,
+                                 AddressMaskRange addr_range) {
+  LLDB_INSTRUMENT_VA(this, type, addr_range);
+
+  if (ProcessSP process_sp = GetSP()) {
+    switch (type) {
+    case eAddressMaskTypeCode:
+      if (addr_range == eAddressMaskRangeHigh)
+        return process_sp->GetHighmemCodeAddressMask();
+      else
+        return process_sp->GetCodeAddressMask();
+    case eAddressMaskTypeData:
+      if (addr_range == eAddressMaskRangeHigh)
+        return process_sp->GetHighmemDataAddressMask();
+      else
+        return process_sp->GetDataAddressMask();
+    case eAddressMaskTypeAny:
+      if (addr_range == eAddressMaskRangeHigh)
+        return process_sp->GetHighmemDataAddressMask();
+      else
+        return process_sp->GetDataAddressMask();
+    }
+  }
+  return LLDB_INVALID_ADDRESS_MASK;
+}
+
+void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
+                               AddressMaskRange addr_range) {
+  LLDB_INSTRUMENT_VA(this, type, mask, addr_range);
+
+  if (ProcessSP process_sp = GetSP()) {
+    switch (type) {
+    case eAddressMaskTypeCode:
+      if (addr_range == eAddressMaskRangeAll) {
+        process_sp->SetCodeAddressMask(mask);
+        process_sp->SetHighmemCodeAddressMask(mask);
+      } else if (addr_range == eAddressMaskRangeHigh) {
+        process_sp->SetHighmemCodeAddressMask(mask);
+      } else {
+        process_sp->SetCodeAddressMask(mask);
+      }
+      break;
+    case eAddressMaskTypeData:
+      if (addr_range == eAddressMaskRangeAll) {
+        process_sp->SetDataAddressMask(mask);
+        process_sp->SetHighmemDataAddressMask(mask);
+      } else if (addr_range == eAddressMaskRangeHigh) {
+        process_sp->SetHighmemDataAddressMask(mask);
+      } else {
+        process_sp->SetDataAddressMask(mask);
+      }
+      break;
+    case eAddressMaskTypeAll:
+      if (addr_range == eAddressMaskRangeAll) {
+        process_sp->SetCodeAddressMask(mask);
+        process_sp->SetDataAddressMask(mask);
+        process_sp->SetHighmemCodeAddressMask(mask);
+        process_sp->SetHighmemDataAddressMask(mask);
+      } else if (addr_range == eAddressMaskRangeHigh) {
+        process_sp->SetHighmemCodeAddressMask(mask);
+        process_sp->SetHighmemDataAddressMask(mask);
+      } else {
+        process_sp->SetCodeAddressMask(mask);
+        process_sp->SetDataAddressMask(mask);
+      }
+      break;
+    }
+  }
+}
+
+void SBProcess::SetAddressableBits(AddressMaskType type, uint32_t num_bits,
+                                   AddressMaskRange addr_range) {
+  LLDB_INSTRUMENT_VA(this, type, num_bits, addr_range);
+
+  SetAddressMask(type, AddressableBits::AddressableBitToMask(num_bits),
+                 addr_range);
+}
+
+addr_t SBProcess::FixAddress(addr_t addr, AddressMaskType type) {
+  LLDB_INSTRUMENT_VA(this, addr, type);
+
+  if (ProcessSP process_sp = GetSP()) {
+    if (type == eAddressMaskTypeAny)
+      return process_sp->FixAnyAddress(addr);
+    else if (type == eAddressMaskTypeData)
+      return process_sp->FixDataAddress(addr);
+    else if (type == eAddressMaskTypeCode)
+      return process_sp->FixCodeAddress(addr);
+  }
+  return addr;
+}
+
 lldb::addr_t SBProcess::AllocateMemory(size_t size, uint32_t permissions,
                                        lldb::SBError &sb_error) {
   LLDB_INSTRUMENT_VA(this, size, permissions, sb_error);

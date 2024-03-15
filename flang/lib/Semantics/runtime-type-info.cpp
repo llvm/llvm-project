@@ -555,10 +555,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           },
           symbol.details());
     }
-    // Sort the data component symbols by offset before emitting them
+    // Sort the data component symbols by offset before emitting them, placing
+    // the parent component first if any.
     std::sort(dataComponentSymbols.begin(), dataComponentSymbols.end(),
         [](const Symbol *x, const Symbol *y) {
-          return x->offset() < y->offset();
+          return x->test(Symbol::Flag::ParentComp) || x->offset() < y->offset();
         });
     std::vector<evaluate::StructureConstructor> dataComponents;
     for (const Symbol *symbol : dataComponentSymbols) {
@@ -1238,6 +1239,16 @@ void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
 RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
     SemanticsContext &context) {
   RuntimeDerivedTypeTables result;
+  // Do not attempt to read __fortran_type_info.mod when compiling
+  // the module on which it depends.
+  const auto &allSources{context.allCookedSources().allSources()};
+  if (auto firstProv{allSources.GetFirstFileProvenance()}) {
+    if (const auto *srcFile{allSources.GetSourceFile(firstProv->start())}) {
+      if (srcFile->path().find("__fortran_builtins.f90") != std::string::npos) {
+        return result;
+      }
+    }
+  }
   result.schemata = context.GetBuiltinModule(typeInfoBuiltinModule);
   if (result.schemata) {
     RuntimeTableBuilder builder{context, result};

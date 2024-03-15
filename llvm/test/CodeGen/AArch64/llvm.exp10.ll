@@ -100,8 +100,7 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset b8, -16
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov h8, v0.h[1]
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
@@ -110,14 +109,11 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s1
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    fcvt h0, s0
-; GISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    fcvt h1, s0
+; GISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldr d8, [sp, #16] // 8-byte Folded Reload
-; GISEL-NEXT:    mov v1.h[1], v0.h[0]
-; GISEL-NEXT:    mov v1.h[2], v0.h[0]
-; GISEL-NEXT:    mov v1.h[3], v0.h[0]
-; GISEL-NEXT:    mov v0.16b, v1.16b
+; GISEL-NEXT:    mov v0.h[1], v1.h[0]
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    add sp, sp, #32
 ; GISEL-NEXT:    ret
@@ -197,7 +193,6 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; GISEL-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; GISEL-NEXT:    mov v1.h[1], v2.h[0]
 ; GISEL-NEXT:    mov v1.h[2], v0.h[0]
-; GISEL-NEXT:    mov v1.h[3], v0.h[0]
 ; GISEL-NEXT:    mov v0.16b, v1.16b
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    add sp, sp, #64
@@ -323,8 +318,7 @@ define <1 x float> @exp10_v1f32(<1 x float> %x) {
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-NEXT:    .cfi_offset w30, -16
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 def $d0
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -442,7 +436,6 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; GISEL-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; GISEL-NEXT:    mov v1.s[1], v2.s[0]
 ; GISEL-NEXT:    mov v1.s[2], v0.s[0]
-; GISEL-NEXT:    mov v1.s[3], v0.s[0]
 ; GISEL-NEXT:    mov v0.16b, v1.16b
 ; GISEL-NEXT:    add sp, sp, #64
 ; GISEL-NEXT:    ret

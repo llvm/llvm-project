@@ -45,12 +45,12 @@ define dso_local i32 @fn1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP7]]
 ; CHECK-NEXT:    store i32 32, ptr [[ARRAYIDX_US]], align 4
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add nuw nsw i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_014_US]], 1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i64 [[INDVAR_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY3_US]], label [[FOR_COND1_FOR_INC4_CRIT_EDGE_US]]
 ; CHECK:       for.cond1.for.inc4_crit_edge.us:
-; CHECK-NEXT:    [[INDVAR_NEXT3]] = add i64 [[INDVAR2]], 1
+; CHECK-NEXT:    [[INDVAR_NEXT3]] = add nuw nsw i64 [[INDVAR2]], 1
 ; CHECK-NEXT:    [[INC5_US]] = add nuw nsw i32 [[I_016_US]], 1
 ; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVAR_NEXT3]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_END6_LOOPEXIT:%.*]]

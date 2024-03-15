@@ -79,6 +79,14 @@ linking is desired, simply do not run the binaries through the
 ``clang-linker-wrapper``. This will simply append the embedded device code so
 that it can be linked later.
 
+Matching
+========
+
+The linker wrapper will link extracted device code that is compatible with each
+other. Generally, this requires that the target triple and architecture match.
+An exception is made when the architecture is listed as ``generic``, which will
+cause it be linked with any other device code with the same target triple.
+
 Example
 =======
 

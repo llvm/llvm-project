@@ -150,7 +150,17 @@ namespace format {
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TableGenBangOperator)                                                   \
   TYPE(TableGenCondOperator)                                                   \
+  TYPE(TableGenCondOperatorColon)                                              \
+  TYPE(TableGenCondOperatorComma)                                              \
+  TYPE(TableGenDAGArgCloser)                                                   \
+  TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenListCloser)                                                     \
+  TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \
+  TYPE(TableGenTrailingPasteOperator)                                          \
+  TYPE(TableGenValueSuffix)                                                    \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
@@ -666,6 +676,8 @@ public:
   /// Determine whether the token is a simple-type-specifier.
   [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
+  [[nodiscard]] bool isTypeName() const;
+
   [[nodiscard]] bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
@@ -811,8 +823,8 @@ public:
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
-  bool isCppStructuredBinding(const FormatStyle &Style) const {
-    if (!Style.isCpp() || isNot(tok::l_square))
+  bool isCppStructuredBinding() const {
+    if (!IsCpp || isNot(tok::l_square))
       return false;
     const FormatToken *T = this;
     do {

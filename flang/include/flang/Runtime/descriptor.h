@@ -99,7 +99,7 @@ class DescriptorAddendum {
 public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
-      : derivedType_{dt} {}
+      : derivedType_{dt}, len_{0} {}
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
   const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {

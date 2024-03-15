@@ -33,12 +33,18 @@ using namespace llvm::omp::target::ompt;
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
-  PM->addRequirements(Flags);
+  MESSAGE("The %s function has been removed. Old OpenMP requirements will not "
+          "be handled",
+          __PRETTY_FUNCTION__);
 }
+
+EXTERN void __tgt_rtl_init() { initRuntime(); }
+EXTERN void __tgt_rtl_deinit() { deinitRuntime(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
+  initRuntime();
   if (PM->delayRegisterLib(Desc))
     return;
 
@@ -47,12 +53,17 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize all available devices without registering any image
-EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
+EXTERN void __tgt_init_all_rtls() {
+  assert(PM && "Runtime not initialized");
+  PM->initAllPlugins();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
   PM->unregisterLib(Desc);
+
+  deinitRuntime();
 }
 
 template <typename TargetAsyncInfoTy>
@@ -62,6 +73,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
            map_var_info_t *ArgNames, void **ArgMappers,
            TargetDataFuncPtrTy TargetDataFunction, const char *RegionTypeMsg,
            const char *RegionName) {
+  assert(PM && "Runtime not initialized");
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
@@ -237,6 +249,7 @@ template <typename TargetAsyncInfoTy>
 static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
+  assert(PM && "Runtime not initialized");
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
@@ -343,6 +356,7 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
                                         bool SaveOutput,
                                         uint64_t &ReqPtrArgOffset) {
+  assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
@@ -378,7 +392,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                                       ptrdiff_t *TgtOffsets, int32_t NumArgs,
                                       int32_t NumTeams, int32_t ThreadLimit,
                                       uint64_t LoopTripCount) {
-
+  assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (checkDeviceAndCtors(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
@@ -429,6 +443,7 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
 }
 
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
+  assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
   for (auto &R : PM->pluginAdaptors()) {
@@ -438,6 +453,7 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
+  assert(PM && "Runtime not initialized");
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
@@ -446,7 +462,9 @@ EXTERN int __tgt_print_device_info(int64_t DeviceId) {
 }
 
 EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
+  assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+
   if (!AsyncHandle || !*AsyncHandle) {
     FATAL_MESSAGE0(
         1, "Receive an invalid async handle from the current OpenMP task. Is "

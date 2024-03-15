@@ -369,7 +369,7 @@ public:
   }
 
 protected:
-  void notifyOperationRemoved(Operation *op) override {
+  void notifyOperationErased(Operation *op) override {
     erasedOps.insert(op);
     // Erase if present.
     toMemrefOps.erase(op);

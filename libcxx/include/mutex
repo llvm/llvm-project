@@ -186,7 +186,6 @@ template<class Callable, class ...Args>
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__chrono/steady_clock.h>
 #include <__chrono/time_point.h>
 #include <__condition_variable/condition_variable.h>

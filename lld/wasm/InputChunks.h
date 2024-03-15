@@ -81,6 +81,7 @@ public:
   void generateRelocationCode(raw_ostream &os) const;
 
   bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
+  bool isRetained() const { return flags & llvm::wasm::WASM_SEG_FLAG_RETAIN; }
 
   ObjFile *file;
   OutputSection *outputSec = nullptr;

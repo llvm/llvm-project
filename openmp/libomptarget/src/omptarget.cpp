@@ -194,7 +194,7 @@ static int initLibrary(DeviceTy &Device) {
                                         Entry.size) != OFFLOAD_SUCCESS)
               REPORT("Failed to write symbol for USM %s\n", Entry.name);
           }
-        } else {
+        } else if (Entry.addr) {
           if (Device.RTL->get_function(Binary, Entry.name, &DeviceEntry.addr) !=
               OFFLOAD_SUCCESS)
             REPORT("Failed to load kernel %s\n", Entry.name);

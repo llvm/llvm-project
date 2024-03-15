@@ -2516,15 +2516,19 @@ bool hasIntersectingAccesses(isl::set AllAccs, MemoryAccess *LoadMA,
                              MemoryAccess *StoreMA, isl::set Domain,
                              SmallVector<MemoryAccess *, 8> &MemAccs) {
   bool HasIntersectingAccs = false;
+  auto AllAccsNoParams = AllAccs.project_out_all_params();
+
   for (MemoryAccess *MA : MemAccs) {
     if (MA == LoadMA || MA == StoreMA)
       continue;
+    auto AccRel = MA->getAccessRelation().intersect_domain(Domain);
+    auto Accs = AccRel.range();
+    auto AccsNoParams = Accs.project_out_all_params();
 
-    isl::map AccRel = MA->getAccessRelation().intersect_domain(Domain);
-    isl::set Accs = AccRel.range();
+    bool CompatibleSpace = AllAccsNoParams.has_equal_space(AccsNoParams);
 
-    if (AllAccs.has_equal_space(Accs)) {
-      isl::set OverlapAccs = Accs.intersect(AllAccs);
+    if (CompatibleSpace) {
+      auto OverlapAccs = Accs.intersect(AllAccs);
       bool DoesIntersect = !OverlapAccs.is_empty();
       HasIntersectingAccs |= DoesIntersect;
     }
