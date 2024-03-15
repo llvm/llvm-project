@@ -1192,7 +1192,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
 
   // Print floating point attributes.
   if (auto fAttr = dyn_cast<FloatAttr>(attr)) {
-    if (!fAttr.getType().isF32() && !fAttr.getType().isF64()) {
+    if (!isa<Float32Type, Float64Type>(fAttr.getType())) {
       return emitError(loc,
                        "expected floating point attribute to be f32 or f64");
     }
@@ -1200,7 +1200,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
     return success();
   }
   if (auto dense = dyn_cast<DenseFPElementsAttr>(attr)) {
-    if (!dense.getElementType().isF32() && !dense.getElementType().isF64()) {
+    if (!isa<Float32Type, Float64Type>(dense.getElementType())) {
       return emitError(loc,
                        "expected floating point attribute to be f32 or f64");
     }
