@@ -1971,6 +1971,191 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
   return false;
 }
 
+namespace {
+enum PointerAuthOpKind {
+  PAO_Strip,
+  PAO_Sign,
+  PAO_Auth,
+  PAO_SignGeneric,
+  PAO_Discriminator,
+  PAO_BlendPointer,
+  PAO_BlendInteger
+};
+}
+
+static bool checkPointerAuthEnabled(Sema &S, Expr *E) {
+  if (S.getLangOpts().PointerAuthIntrinsics)
+    return false;
+
+  S.Diag(E->getExprLoc(), diag::err_ptrauth_disabled) << E->getSourceRange();
+  return true;
+}
+
+static bool checkPointerAuthKey(Sema &S, Expr *&Arg) {
+  // Convert it to type 'int'.
+  if (convertArgumentToType(S, Arg, S.Context.IntTy))
+    return true;
+
+  // Value-dependent expressions are okay; wait for template instantiation.
+  if (Arg->isValueDependent())
+    return false;
+
+  unsigned KeyValue;
+  return S.checkConstantPointerAuthKey(Arg, KeyValue);
+}
+
+bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
+  // Attempt to constant-evaluate the expression.
+  std::optional<llvm::APSInt> KeyValue = Arg->getIntegerConstantExpr(Context);
+  if (!KeyValue) {
+    Diag(Arg->getExprLoc(), diag::err_expr_not_ice)
+        << 0 << Arg->getSourceRange();
+    return true;
+  }
+
+  // Ask the target to validate the key parameter.
+  if (!Context.getTargetInfo().validatePointerAuthKey(*KeyValue)) {
+    llvm::SmallString<32> Value;
+    {
+      llvm::raw_svector_ostream Str(Value);
+      Str << *KeyValue;
+    }
+
+    Diag(Arg->getExprLoc(), diag::err_ptrauth_invalid_key)
+        << Value << Arg->getSourceRange();
+    return true;
+  }
+
+  Result = KeyValue->getZExtValue();
+  return false;
+}
+
+static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
+                                  PointerAuthOpKind OpKind) {
+  if (Arg->hasPlaceholderType()) {
+    ExprResult R = S.CheckPlaceholderExpr(Arg);
+    if (R.isInvalid())
+      return true;
+    Arg = R.get();
+  }
+
+  auto AllowsPointer = [](PointerAuthOpKind OpKind) {
+    return OpKind != PAO_BlendInteger;
+  };
+  auto AllowsInteger = [](PointerAuthOpKind OpKind) {
+    return OpKind == PAO_Discriminator || OpKind == PAO_BlendInteger ||
+           OpKind == PAO_SignGeneric;
+  };
+
+  // Require the value to have the right range of type.
+  QualType ExpectedTy;
+  if (AllowsPointer(OpKind) && Arg->getType()->isPointerType()) {
+    ExpectedTy = Arg->getType().getUnqualifiedType();
+  } else if (AllowsPointer(OpKind) && Arg->getType()->isNullPtrType()) {
+    ExpectedTy = S.Context.VoidPtrTy;
+  } else if (AllowsInteger(OpKind) &&
+             Arg->getType()->isIntegralOrUnscopedEnumerationType()) {
+    ExpectedTy = S.Context.getUIntPtrType();
+
+  } else {
+    // Diagnose the failures.
+    S.Diag(Arg->getExprLoc(), diag::err_ptrauth_value_bad_type)
+        << unsigned(OpKind == PAO_Discriminator  ? 1
+                    : OpKind == PAO_BlendPointer ? 2
+                    : OpKind == PAO_BlendInteger ? 3
+                                                 : 0)
+        << unsigned(AllowsInteger(OpKind) ? (AllowsPointer(OpKind) ? 2 : 1) : 0)
+        << Arg->getType() << Arg->getSourceRange();
+    return true;
+  }
+
+  // Convert to that type.  This should just be an lvalue-to-rvalue
+  // conversion.
+  if (convertArgumentToType(S, Arg, ExpectedTy))
+    return true;
+
+  // Warn about null pointers for non-generic sign and auth operations.
+  if ((OpKind == PAO_Sign || OpKind == PAO_Auth) &&
+      Arg->isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNull)) {
+    S.Diag(Arg->getExprLoc(), OpKind == PAO_Sign
+                                  ? diag::warn_ptrauth_sign_null_pointer
+                                  : diag::warn_ptrauth_auth_null_pointer)
+        << Arg->getSourceRange();
+  }
+
+  return false;
+}
+
+static ExprResult SemaPointerAuthStrip(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 2))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Strip) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]))
+    return ExprError();
+
+  Call->setType(Call->getArgs()[0]->getType());
+  return Call;
+}
+
+static ExprResult SemaPointerAuthBlendDiscriminator(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 2))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_BlendPointer) ||
+      checkPointerAuthValue(S, Call->getArgs()[1], PAO_BlendInteger))
+    return ExprError();
+
+  Call->setType(S.Context.getUIntPtrType());
+  return Call;
+}
+
+static ExprResult SemaPointerAuthSignGenericData(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 2))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_SignGeneric) ||
+      checkPointerAuthValue(S, Call->getArgs()[1], PAO_Discriminator))
+    return ExprError();
+
+  Call->setType(S.Context.getUIntPtrType());
+  return Call;
+}
+
+static ExprResult SemaPointerAuthSignOrAuth(Sema &S, CallExpr *Call,
+                                            PointerAuthOpKind OpKind) {
+  if (checkArgCount(S, Call, 3))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], OpKind) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator))
+    return ExprError();
+
+  Call->setType(Call->getArgs()[0]->getType());
+  return Call;
+}
+
+static ExprResult SemaPointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
+  if (checkArgCount(S, Call, 5))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) ||
+      checkPointerAuthKey(S, Call->getArgs()[3]) ||
+      checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator))
+    return ExprError();
+
+  Call->setType(Call->getArgs()[0]->getType());
+  return Call;
+}
+
 static ExprResult SemaBuiltinLaunder(Sema &S, CallExpr *TheCall) {
   if (checkArgCount(S, TheCall, 1))
     return ExprError();
@@ -2683,6 +2868,18 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_ptrauth_strip:
+    return SemaPointerAuthStrip(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_blend_discriminator:
+    return SemaPointerAuthBlendDiscriminator(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
+    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Sign);
+  case Builtin::BI__builtin_ptrauth_auth:
+    return SemaPointerAuthSignOrAuth(*this, TheCall, PAO_Auth);
+  case Builtin::BI__builtin_ptrauth_sign_generic_data:
+    return SemaPointerAuthSignGenericData(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_auth_and_resign:
+    return SemaPointerAuthAuthAndResign(*this, TheCall);
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:
@@ -5233,10 +5430,6 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
                            TheCall->getArg(1)->getEndLoc());
         retValue = true;
       }
-
-      if (!retValue)
-        TheCall->setType(VecTyA->getElementType());
-
       return retValue;
     }
   }
@@ -5250,11 +5443,12 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
-  QualType ExpectedType = S->Context.FloatTy;
+bool CheckArgsTypesAreCorrect(
+    Sema *S, CallExpr *TheCall, QualType ExpectedType,
+    llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
     QualType PassedType = TheCall->getArg(i)->getType();
-    if (!PassedType->hasFloatingRepresentation()) {
+    if (Check(PassedType)) {
       if (auto *VecTyA = PassedType->getAs<VectorType>())
         ExpectedType = S->Context.getVectorType(
             ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
@@ -5265,6 +5459,35 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
     }
   }
   return false;
+}
+
+bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllFloatTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasFloatingRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                  checkAllFloatTypes);
+}
+
+bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
+  auto checkFloatorHalf = [](clang::QualType PassedType) -> bool {
+    clang::QualType BaseType =
+        PassedType->isVectorType()
+            ? PassedType->getAs<clang::VectorType>()->getElementType()
+            : PassedType;
+    return !BaseType->isHalfType() && !BaseType->isFloat32Type();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                  checkFloatorHalf);
+}
+
+void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
+                                QualType ReturnType) {
+  auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
+  if (VecTyA)
+    ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),
+                                          VectorKind::Generic);
+  TheCall->setType(ReturnType);
 }
 
 // Note: returning true in this case results in CheckBuiltinFunctionCall
@@ -5285,12 +5508,27 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_rcp:
-  case Builtin::BI__builtin_hlsl_elementwise_frac: {
-    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
-      return true;
+  case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
       return true;
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
+  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+    if (CheckFloatOrHalfRepresentations(this, TheCall))
+      return true;
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+    if (CheckFloatOrHalfRepresentations(this, TheCall))
+      return true;
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    SetElementTypeAsReturnType(this, TheCall, this->Context.BoolTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_lerp: {
@@ -5300,7 +5538,7 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (SemaBuiltinElementwiseTernaryMath(TheCall))
       return true;
-    if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
+    if (CheckFloatOrHalfRepresentations(this, TheCall))
       return true;
     break;
   }
