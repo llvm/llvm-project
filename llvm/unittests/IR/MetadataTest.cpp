@@ -3560,6 +3560,27 @@ TEST_F(DIExpressionTest, foldConstant) {
 #undef EXPECT_FOLD_CONST
 }
 
+TEST_F(DIExpressionTest, appendToStackAssert) {
+  DIExpression *Expr = DIExpression::get(Context, {});
+
+  // Verify that the DW_OP_LLVM_convert operands, which have the same values as
+  // DW_OP_stack_value and DW_OP_LLVM_fragment, do not get interpreted as such
+  // operations. This previously triggered an assert.
+  uint64_t FromSize = dwarf::DW_OP_stack_value;
+  uint64_t ToSize = dwarf::DW_OP_LLVM_fragment;
+  uint64_t Ops[] = {
+      dwarf::DW_OP_LLVM_convert, FromSize, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, ToSize,   dwarf::DW_ATE_signed,
+  };
+  Expr = DIExpression::appendToStack(Expr, Ops);
+
+  uint64_t Expected[] = {
+      dwarf::DW_OP_LLVM_convert, FromSize, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, ToSize,   dwarf::DW_ATE_signed,
+      dwarf::DW_OP_stack_value};
+  EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {

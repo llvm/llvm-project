@@ -1880,11 +1880,12 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
 DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                                           ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
-  assert(none_of(Ops,
-                 [](uint64_t Op) {
-                   return Op == dwarf::DW_OP_stack_value ||
-                          Op == dwarf::DW_OP_LLVM_fragment;
-                 }) &&
+  assert(std::none_of(expr_op_iterator(Ops.begin()),
+                      expr_op_iterator(Ops.end()),
+                      [](auto Op) {
+                        return Op.getOp() == dwarf::DW_OP_stack_value ||
+                               Op.getOp() == dwarf::DW_OP_LLVM_fragment;
+                      }) &&
          "Can't append this op");
 
   // Append a DW_OP_deref after Expr's current op list if it's non-empty and
