@@ -34,7 +34,7 @@ Alarm::Handle Alarm::Create(std::function<void()> callback) {
   Handle handle = INVALID_HANDLE;
 
   {
-    std::lock_guard alarm_guard(m_alarm_mutex);
+    std::lock_guard<std::mutex> alarm_guard(m_alarm_mutex);
 
     // Create a new unique entry and remember its handle.
     m_entries.emplace_back(callback, expiration);
@@ -59,7 +59,7 @@ bool Alarm::Restart(Handle handle) {
   const TimePoint expiration = GetNextExpiration();
 
   {
-    std::lock_guard alarm_guard(m_alarm_mutex);
+    std::lock_guard<std::mutex> alarm_guard(m_alarm_mutex);
 
     // Find the entry corresponding to the given handle.
     const auto it =
@@ -86,7 +86,7 @@ bool Alarm::Cancel(Handle handle) {
     return false;
 
   {
-    std::lock_guard alarm_guard(m_alarm_mutex);
+    std::lock_guard<std::mutex> alarm_guard(m_alarm_mutex);
 
     const auto it =
         std::find_if(m_entries.begin(), m_entries.end(),
@@ -126,7 +126,7 @@ void Alarm::StartAlarmThread() {
 void Alarm::StopAlarmThread() {
   if (m_alarm_thread.IsJoinable()) {
     {
-      std::lock_guard alarm_guard(m_alarm_mutex);
+      std::lock_guard<std::mutex> alarm_guard(m_alarm_mutex);
       m_exit = true;
     }
     m_alarm_cv.notify_one();
@@ -154,7 +154,7 @@ lldb::thread_result_t Alarm::AlarmThread() {
     //
     // Below we only deal with the timeout expiring and fall through for dealing
     // with the rest.
-    std::unique_lock alarm_lock(m_alarm_mutex);
+    std::unique_lock<std::mutex> alarm_lock(m_alarm_mutex);
     if (next_alarm) {
       if (!m_alarm_cv.wait_until(alarm_lock, *next_alarm, predicate)) {
         // The timeout for the next alarm expired.
