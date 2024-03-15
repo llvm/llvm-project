@@ -6406,8 +6406,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid dbg record: missing instruction");
       DILocation *DIL = cast<DILocation>(getFnMetadataByID(Record[0]));
       DILabel *Label = cast<DILabel>(getFnMetadataByID(Record[1]));
-      Inst->getParent()->insertDPValueBefore(new DPLabel(Label, DIL),
-                                             Inst->getIterator());
+      Inst->getParent()->insertDbgRecordBefore(
+          new DPLabel(Label, DebugLoc(DIL)), Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
@@ -6479,7 +6479,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       default:
         llvm_unreachable("Unknown DPValue bitcode");
       }
-      Inst->getParent()->insertDPValueBefore(DPV, Inst->getIterator());
+      Inst->getParent()->insertDbgRecordBefore(DPV, Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_INST_CALL: {

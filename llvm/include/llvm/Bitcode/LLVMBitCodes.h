@@ -634,7 +634,7 @@ enum FunctionCodes {
           //  DIAssignID, DIExpression (addr), ValueAsMetadata (addr)]
   FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE =
       64, // [DILocation, DILocalVariable, DIExpression, Value]
-  FUNC_CODE_DEBUG_RECORD_LABEL = 65, // DPVALUE: [DILocation, DILabel]
+  FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
 };
 
 enum UseListCodes {

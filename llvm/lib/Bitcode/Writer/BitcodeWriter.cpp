@@ -3532,11 +3532,11 @@ void ModuleBitcodeWriter::writeFunction(
         }
       }
 
-      // If the instruction has DPValues attached to it, emit them. Note that
+      // If the instruction has DbgRecords attached to it, emit them. Note that
       // they come after the instruction so that it's easy to attach them again
       // when reading the bitcode, even though conceptually the debug locations
       // start "before" the instruction.
-      if (I.hasDbgValues() && WriteNewDbgInfoFormatToBitcode) {
+      if (I.hasDbgRecords() && WriteNewDbgInfoFormatToBitcode) {
         /// Try to push the value only (unwrapped), otherwise push the
         /// metadata wrapped value. Returns true if the value was pushed
         /// without the ValueAsMetadata wrapper.
@@ -3562,7 +3562,7 @@ void ModuleBitcodeWriter::writeFunction(
         // Write out non-instruction debug information attached to this
         // instruction. Write it after the instruction so that it's easy to
         // re-attach to the instruction reading the records in.
-        for (DbgRecord &DR : I.DbgMarker->getDbgValueRange()) {
+        for (DbgRecord &DR : I.DbgMarker->getDbgRecordRange()) {
           if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
             Vals.push_back(VE.getMetadataID(&*DPL->getDebugLoc()));
             Vals.push_back(VE.getMetadataID(DPL->getLabel()));

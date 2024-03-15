@@ -144,7 +144,7 @@ static OrderMap orderModule(const Module &M) {
           }
         };
 
-        for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
           OrderConstantFromMetadata(DPV.getRawLocation());
           if (DPV.isDbgAssign())
             OrderConstantFromMetadata(DPV.getRawAddress());
@@ -285,7 +285,7 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F) {
       for (const Instruction &I : BB) {
-        for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
           PredictValueOrderFromMetadata(DPV.getRawLocation());
           if (DPV.isDbgAssign())
             PredictValueOrderFromMetadata(DPV.getRawAddress());
@@ -440,7 +440,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
             EnumerateMetadata(&F, MD);
         };
 
-        for (DbgRecord &DR : I.getDbgValueRange()) {
+        for (DbgRecord &DR : I.getDbgRecordRange()) {
           if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
             EnumerateMetadata(&F, DPL->getLabel());
             EnumerateMetadata(&F, &*DPL->getDebugLoc());
@@ -1128,7 +1128,7 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
           AddFnLocalMetadata(MD->getMetadata());
       }
       /// RemoveDIs: Add non-instruction function-local metadata uses.
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
         assert(DPV.getRawLocation() && "DPValue location unexpectedly null");
         AddFnLocalMetadata(DPV.getRawLocation());
         if (DPV.isDbgAssign()) {
