@@ -694,6 +694,7 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
     return;
   }
   if (auto *node = lazyNode(s)) {
+    assert(!s->pendingArchiveLoad);
     chainLazy<LazyObject>(node, f, n);
     return;
   }
