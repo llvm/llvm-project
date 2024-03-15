@@ -127,11 +127,21 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Print the list of registered dialects and exit"),
         cl::location(showDialectsFlag), cl::init(false));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> splitInputFile(
-        "split-input-file",
-        cl::desc("Split the input file into pieces and process each "
-                 "chunk independently"),
-        cl::location(splitInputFileFlag), cl::init(false));
+    static cl::opt<std::string, /*ExternalStorage=*/true> splitInputFile(
+        "split-input-file", llvm::cl::ValueOptional,
+        cl::callback([&](const std::string &str) {
+          // Implicit value: use default marker if flag was used without value.
+          if (str.empty())
+            splitInputFile.setValue(kDefaultSplitMarker);
+        }),
+        cl::desc("Split the input file into chunks using the given or "
+                 "default marker and process each chunk independently"),
+        cl::location(splitInputFileFlag), cl::init(""));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> outputSplitMarker(
+        "output-split-marker",
+        cl::desc("Split marker to use for merging the ouput"),
+        cl::location(outputSplitMarkerFlag), cl::init(kDefaultSplitMarker));
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyDiagnostics(
         "verify-diagnostics",
@@ -533,8 +543,8 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
                          threadPool);
   };
   return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
-                               config.shouldSplitInputFile(),
-                               /*insertMarkerInOutput=*/true);
+                               config.inputSplitMarker(),
+                               config.outputSplitMarker());
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv,

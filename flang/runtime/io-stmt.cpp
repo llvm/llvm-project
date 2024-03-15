@@ -493,66 +493,67 @@ int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
 }
 
 Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
-  return visit([&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
+  return visitIo(
+      [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
 
 bool IoStatementState::Emit(
     const char *data, std::size_t bytes, std::size_t elementBytes) {
-  return visit(
+  return visitIo(
       [=](auto &x) { return x.get().Emit(data, bytes, elementBytes); }, u_);
 }
 
 bool IoStatementState::Receive(
     char *data, std::size_t n, std::size_t elementBytes) {
-  return visit(
+  return visitIo(
       [=](auto &x) { return x.get().Receive(data, n, elementBytes); }, u_);
 }
 
 std::size_t IoStatementState::GetNextInputBytes(const char *&p) {
-  return visit([&](auto &x) { return x.get().GetNextInputBytes(p); }, u_);
+  return visitIo([&](auto &x) { return x.get().GetNextInputBytes(p); }, u_);
 }
 
 bool IoStatementState::AdvanceRecord(int n) {
-  return visit([=](auto &x) { return x.get().AdvanceRecord(n); }, u_);
+  return visitIo([=](auto &x) { return x.get().AdvanceRecord(n); }, u_);
 }
 
 void IoStatementState::BackspaceRecord() {
-  visit([](auto &x) { x.get().BackspaceRecord(); }, u_);
+  visitIo([](auto &x) { x.get().BackspaceRecord(); }, u_);
 }
 
 void IoStatementState::HandleRelativePosition(std::int64_t n) {
-  visit([=](auto &x) { x.get().HandleRelativePosition(n); }, u_);
+  visitIo([=](auto &x) { x.get().HandleRelativePosition(n); }, u_);
 }
 
 void IoStatementState::HandleAbsolutePosition(std::int64_t n) {
-  visit([=](auto &x) { x.get().HandleAbsolutePosition(n); }, u_);
+  visitIo([=](auto &x) { x.get().HandleAbsolutePosition(n); }, u_);
 }
 
 void IoStatementState::CompleteOperation() {
-  visit([](auto &x) { x.get().CompleteOperation(); }, u_);
+  visitIo([](auto &x) { x.get().CompleteOperation(); }, u_);
 }
 
 int IoStatementState::EndIoStatement() {
-  return visit([](auto &x) { return x.get().EndIoStatement(); }, u_);
+  return visitIo([](auto &x) { return x.get().EndIoStatement(); }, u_);
 }
 
 ConnectionState &IoStatementState::GetConnectionState() {
-  return visit(
+  return visitIo(
       [](auto &x) -> ConnectionState & { return x.get().GetConnectionState(); },
       u_);
 }
 
 MutableModes &IoStatementState::mutableModes() {
-  return visit(
+  return visitIo(
       [](auto &x) -> MutableModes & { return x.get().mutableModes(); }, u_);
 }
 
 bool IoStatementState::BeginReadingRecord() {
-  return visit([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
+  return visitIo([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
 }
 
 IoErrorHandler &IoStatementState::GetIoErrorHandler() const {
-  return visit(
+  return visitIo(
       [](auto &x) -> IoErrorHandler & {
         return static_cast<IoErrorHandler &>(x.get());
       },
@@ -560,7 +561,7 @@ IoErrorHandler &IoStatementState::GetIoErrorHandler() const {
 }
 
 ExternalFileUnit *IoStatementState::GetExternalFileUnit() const {
-  return visit([](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
+  return visitIo([](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
 }
 
 Fortran::common::optional<char32_t> IoStatementState::GetCurrentChar(
@@ -686,25 +687,26 @@ bool IoStatementState::CheckForEndOfRecord(std::size_t afterReading) {
 
 bool IoStatementState::Inquire(
     InquiryKeywordHash inquiry, char *out, std::size_t chars) {
-  return visit(
+  return visitIo(
       [&](auto &x) { return x.get().Inquire(inquiry, out, chars); }, u_);
 }
 
 bool IoStatementState::Inquire(InquiryKeywordHash inquiry, bool &out) {
-  return visit([&](auto &x) { return x.get().Inquire(inquiry, out); }, u_);
+  return visitIo([&](auto &x) { return x.get().Inquire(inquiry, out); }, u_);
 }
 
 bool IoStatementState::Inquire(
     InquiryKeywordHash inquiry, std::int64_t id, bool &out) {
-  return visit([&](auto &x) { return x.get().Inquire(inquiry, id, out); }, u_);
+  return visitIo(
+      [&](auto &x) { return x.get().Inquire(inquiry, id, out); }, u_);
 }
 
 bool IoStatementState::Inquire(InquiryKeywordHash inquiry, std::int64_t &n) {
-  return visit([&](auto &x) { return x.get().Inquire(inquiry, n); }, u_);
+  return visitIo([&](auto &x) { return x.get().Inquire(inquiry, n); }, u_);
 }
 
 std::int64_t IoStatementState::InquirePos() {
-  return visit([&](auto &x) { return x.get().InquirePos(); }, u_);
+  return visitIo([&](auto &x) { return x.get().InquirePos(); }, u_);
 }
 
 void IoStatementState::GotChar(int n) {
