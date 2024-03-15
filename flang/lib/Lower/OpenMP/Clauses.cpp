@@ -101,7 +101,9 @@ struct SymbolAndDesignatorExtractor {
     } else {
       // This could still be a Substring or ComplexPart, but at least Substring
       // is not allowed in OpenMP.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       maybeDsg->dump();
+#endif
       llvm_unreachable("Expecting DataRef designator");
     }
   }
