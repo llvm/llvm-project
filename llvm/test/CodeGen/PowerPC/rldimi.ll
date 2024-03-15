@@ -132,4 +132,14 @@ define i64 @rldimi10(i64 %a, i64 %b) {
   ret i64 %r
 }
 
+define i64 @rldimi11(i64 %a, i64 %b) {
+; CHECK-LABEL: rldimi11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rldimi 4, 3, 8, 56
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+  %r = call i64 @llvm.ppc.rldimi(i64 %a, i64 %b, i32 8, i64 -1)
+  ret i64 %r
+}
+
 declare i64 @llvm.ppc.rldimi(i64, i64, i32 immarg, i64 immarg)

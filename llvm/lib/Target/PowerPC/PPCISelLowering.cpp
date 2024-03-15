@@ -10773,8 +10773,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       report_fatal_error("invalid rldimi mask!");
 
     // For all-one mask, MB will be set to 0, adjust it next to 63-SH.
-    if (MB == 0 && ME == 63 && SH != 0)
-      MB = 64 - SH;
+    if (MB == 0 && ME == 63 && SH != 0) {
+      ME = 63 - SH;
+      MB = ME + 1;
+    }
     SDValue Src = Op.getOperand(1);
     // rldimi requires ME=63-SH, otherwise rotation is needed before rldimi.
     if (ME < 63 - SH) {
