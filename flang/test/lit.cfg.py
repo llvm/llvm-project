@@ -199,3 +199,17 @@ else:
 result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
+
+# Add features and substitutions to test F128 math support.
+# %f128-lib substitution may be used to generate check prefixes
+# for LIT tests checking for F128 library support.
+if config.flang_runtime_f128_math_lib:
+    config.available_features.add("flang-supports-f128-math")
+    config.available_features.add(
+        "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
+    )
+    config.substitutions.append(
+        ("%f128-lib", config.flang_runtime_f128_math_lib.upper())
+    )
+else:
+    config.substitutions.append(("%f128-lib", "NONE"))

@@ -869,6 +869,9 @@ backend:SystemZ:
 third-party:unittests:
   - third-party/unittests/**
 
+third-party:benchmark:
+  - third-party/benchmark/**
+
 llvm:binary-utilities:
   - llvm/docs/CommandGuide/llvm-*
   - llvm/include/llvm/BinaryFormat/**

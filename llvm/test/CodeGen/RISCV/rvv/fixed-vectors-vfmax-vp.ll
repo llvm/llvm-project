@@ -425,7 +425,7 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v1, v0, 2
+; CHECK-NEXT:    vslidedown.vi v7, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    li a1, 16
@@ -441,7 +441,7 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfmax.vv v16, v16, v24, v0.t

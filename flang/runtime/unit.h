@@ -36,10 +36,14 @@ class ExternalFileUnit : public ConnectionState,
                          public OpenFile,
                          public FileFrame<ExternalFileUnit> {
 public:
+  static constexpr int maxAsyncIds{64 * 16};
+
   explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {
     isUTF8 = executionEnvironment.defaultUTF8;
-    asyncIdAvailable_.set();
-    asyncIdAvailable_.reset(0);
+    for (int j{0}; 64 * j < maxAsyncIds; ++j) {
+      asyncIdAvailable_[j].set();
+    }
+    asyncIdAvailable_[0].reset(0);
   }
   ~ExternalFileUnit() {}
 
@@ -150,7 +154,7 @@ private:
   std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
   bool swapEndianness_{false};
   bool createdForInternalChildIo_{false};
-  common::BitSet<64> asyncIdAvailable_;
+  common::BitSet<64> asyncIdAvailable_[maxAsyncIds / 64];
 
   // When a synchronous I/O statement is in progress on this unit, holds its
   // state.

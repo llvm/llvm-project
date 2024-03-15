@@ -1,5 +1,6 @@
 # -*- Python -*-
 
+import json
 import os
 import platform
 import re
@@ -179,3 +180,18 @@ if can_set_dbregs:
 
 if "LD_PRELOAD" in os.environ:
     config.available_features.add("ld_preload-present")
+
+# Determine if a specific version of Xcode's linker contains a bug. We want to
+# skip affected tests if they contain this bug.
+if platform.system() == "Darwin":
+    try:
+        raw_version_details = subprocess.check_output(
+            ("xcrun", "ld", "-version_details")
+        )
+        version_details = json.loads(raw_version_details)
+        version = version_details.get("version", "0")
+        version_tuple = tuple(int(x) for x in version.split("."))
+        if (1000,) <= version_tuple <= (1109,):
+            config.available_features.add("ld_new-bug")
+    except:
+        pass

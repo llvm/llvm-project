@@ -45,11 +45,15 @@ namespace amdgpu {
 /// function that depends on the row Index. The permutation function is chosen
 /// to ensure that sequential distributed+vectorized reads/writes down a single
 /// dimension of the memref have minimal conflicts.
-LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
-                                                 Value memrefValue);
+LogicalResult
+optimizeSharedMemoryReadsAndWrites(Operation *parentOp, Value memrefValue,
+                                   int64_t sharedMemoryLineSizeBytes,
+                                   int64_t defaultVectorSizeBits);
 
 std::optional<LogicalResult>
-optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp);
+optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp,
+                                     int64_t sharedMemoryLineSizeBytes,
+                                     int64_t defaultVectorSizeBits);
 
 } // namespace amdgpu
 } // namespace mlir

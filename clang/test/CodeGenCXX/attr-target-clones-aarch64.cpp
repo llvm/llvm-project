@@ -36,22 +36,33 @@ void run_foo_tml() {
 }
 
 
+
+
+//.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
+// CHECK: @_Z7foo_ovli.ifunc = weak_odr alias i32 (i32), ptr @_Z7foo_ovli
+// CHECK: @_Z7foo_ovlv.ifunc = weak_odr alias i32 (), ptr @_Z7foo_ovlv
+// CHECK: @_ZN7MyClassIssE7foo_tmlEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv
+// CHECK: @_ZN7MyClassIisE7foo_tmlEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv
 // CHECK: @_Z7foo_ovli = weak_odr ifunc i32 (i32), ptr @_Z7foo_ovli.resolver
 // CHECK: @_Z7foo_ovlv = weak_odr ifunc i32 (), ptr @_Z7foo_ovlv.resolver
 // CHECK: @_ZN7MyClassIssE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv.resolver
 // CHECK: @_ZN7MyClassIisE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv.resolver
-
+//.
 // CHECK-LABEL: @_Z7foo_ovli._Mfp16Mls64_v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: @_Z7foo_ovli.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: @_Z7foo_ovli.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -63,13 +74,19 @@ void run_foo_tml() {
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @_Z7foo_ovli._Mfp16Mls64_v
 // CHECK:       resolver_else:
-// CHECK-NEXT:    ret ptr @_Z7foo_ovli
+// CHECK-NEXT:    ret ptr @_Z7foo_ovli.default
+//
+//
 // CHECK-LABEL: @_Z7foo_ovlv._Mls64Mls64_accdata(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
+//
+//
 // CHECK-LABEL: @_Z7foo_ovlv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
+//
+//
 // CHECK-LABEL: @_Z7foo_ovlv.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -82,12 +99,16 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret ptr @_Z7foo_ovlv._Mls64Mls64_accdata
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z7foo_ovlv.default
+//
+//
 // CHECK-LABEL: @_Z3barv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z7foo_ovli(i32 noundef 1)
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z7foo_ovlv()
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
 // CHECK-NEXT:    ret i32 [[ADD]]
+//
+//
 // CHECK-LABEL: @_Z11run_foo_tmlv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[MC1:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
@@ -99,6 +120,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZN7MyClassIfsE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC3]])
 // CHECK-NEXT:    [[CALL3:%.*]] = call noundef i32 @_ZN7MyClassIdfE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC4]])
 // CHECK-NEXT:    ret void
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -108,7 +131,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._MssbsMsme-f64f64
+// CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
@@ -118,7 +141,9 @@ void run_foo_tml() {
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._Mfrintts
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv
+// CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv.default
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -128,7 +153,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._MssbsMsme-f64f64
+// CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
@@ -138,58 +163,79 @@ void run_foo_tml() {
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._Mfrintts
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv
+// CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv.default
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIfsE7foo_tmlEv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 3
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIdfE7foo_tmlEv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 4
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv._Mfrintts(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv._MssbsMsme-f64f64(
+//
+//
+// CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv._Mfrintts(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 2
-// CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv._MssbsMsme-f64f64(
+//
+//
+// CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 2
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 2
-
-// CHECK: attributes #0 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #1 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #2 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
-// CHECK: attributes #3 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
-// CHECK: attributes #4 = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+//
+//.
+// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
+// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
+// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

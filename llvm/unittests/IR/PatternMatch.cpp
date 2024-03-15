@@ -579,8 +579,14 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_Power2().match(C128));
   EXPECT_FALSE(m_Power2().match(CNeg128));
 
+  EXPECT_TRUE(m_Power2OrZero().match(C128));
+  EXPECT_FALSE(m_Power2OrZero().match(CNeg128));
+
   EXPECT_FALSE(m_NegatedPower2().match(C128));
   EXPECT_TRUE(m_NegatedPower2().match(CNeg128));
+
+  EXPECT_FALSE(m_NegatedPower2OrZero().match(C128));
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CNeg128));
 
   Value *CIntMin = IRB.getInt64(APSInt::getSignedMinValue(64).getSExtValue());
   Value *CNegIntMin = ConstantExpr::getNeg(cast<Constant>(CIntMin));
@@ -588,8 +594,24 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_Power2().match(CIntMin));
   EXPECT_TRUE(m_Power2().match(CNegIntMin));
 
+  EXPECT_TRUE(m_Power2OrZero().match(CIntMin));
+  EXPECT_TRUE(m_Power2OrZero().match(CNegIntMin));
+
   EXPECT_TRUE(m_NegatedPower2().match(CIntMin));
   EXPECT_TRUE(m_NegatedPower2().match(CNegIntMin));
+
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CIntMin));
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CNegIntMin));
+
+  Value *CZero = IRB.getInt64(0);
+
+  EXPECT_FALSE(m_Power2().match(CZero));
+
+  EXPECT_TRUE(m_Power2OrZero().match(CZero));
+
+  EXPECT_FALSE(m_NegatedPower2().match(CZero));
+
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CZero));
 }
 
 TEST_F(PatternMatchTest, Not) {

@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -48,7 +48,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f32
 
@@ -71,11 +71,10 @@ module {
     %crd02 = arith.constant dense<
        [ 0, 1, 0, 1, 0, 0, 1, 0  ]> : tensor<8xi32>
 
-    %s0 = sparse_tensor.assemble %data0, %pos00, %crd00, %pos01, %crd01, %pos02, %crd02 :
-       tensor<8xf32>,
-       tensor<2xi64>, tensor<3xi32>,
-       tensor<4xi64>, tensor<5xi32>,
-       tensor<6xi64>, tensor<8xi32> to tensor<4x3x2xf32, #CCC>
+    %s0 = sparse_tensor.assemble (%pos00, %crd00, %pos01, %crd01, %pos02, %crd02), %data0 :
+       (tensor<2xi64>, tensor<3xi32>,
+        tensor<4xi64>, tensor<5xi32>,
+        tensor<6xi64>, tensor<8xi32>), tensor<8xf32> to tensor<4x3x2xf32, #CCC>
 
     //
     // Setup BatchedCSR.
@@ -89,7 +88,7 @@ module {
     %crd1 = arith.constant dense<
        [ 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1]> : tensor<16xi32>
 
-    %s1 = sparse_tensor.assemble %data1, %pos1, %crd1 : tensor<16xf32>, tensor<13xi64>, tensor<16xi32> to tensor<4x3x2xf32, #BatchedCSR>
+    %s1 = sparse_tensor.assemble (%pos1, %crd1), %data1 : (tensor<13xi64>, tensor<16xi32>), tensor<16xf32> to tensor<4x3x2xf32, #BatchedCSR>
 
     //
     // Setup CSRDense.
@@ -103,35 +102,57 @@ module {
     %crd2 = arith.constant dense<
       [ 0, 1, 2, 0, 2, 0, 1, 2, 0, 1, 2 ]> : tensor<11xi32>
 
-    %s2 = sparse_tensor.assemble %data2, %pos2, %crd2 : tensor<22xf32>, tensor<5xi64>, tensor<11xi32> to tensor<4x3x2xf32, #CSRDense>
+    %s2 = sparse_tensor.assemble (%pos2, %crd2), %data2  : (tensor<5xi64>, tensor<11xi32>), tensor<22xf32> to tensor<4x3x2xf32, #CSRDense>
 
     //
     // Verify.
     //
-    // CHECK: ( ( ( 1, 2 ), ( 3, 4 ), ( 0, 0 ) ), ( ( 0, 0 ), ( 0, 0 ), ( 0, 0 ) ), ( ( 0, 0 ), ( 5, 0 ), ( 6, 7 ) ), ( ( 0, 0 ), ( 8, 0 ), ( 0, 0 ) ) )
-    // CHECK: ( ( ( 1, 2 ), ( 0, 3 ), ( 4, 0 ) ), ( ( 5, 6 ), ( 0, 0 ), ( 0, 7 ) ), ( ( 8, 9 ), ( 10, 11 ), ( 12, 13 ) ), ( ( 14, 0 ), ( 0, 15 ), ( 0, 16 ) ) )
-    // CHECK: ( ( ( 1, 2 ), ( 0, 3 ), ( 4, 0 ) ), ( ( 5, 6 ), ( 0, 0 ), ( 0, 7 ) ), ( ( 8, 9 ), ( 10, 11 ), ( 12, 13 ) ), ( ( 14, 0 ), ( 0, 15 ), ( 0, 16 ) ) )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: dim = ( 4, 3, 2 )
+    // CHECK-NEXT: lvl = ( 4, 3, 2 )
+    // CHECK-NEXT: pos[0] : ( 0, 3
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 5
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 2, 1
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 5, 7, 8
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 0, 1, 0
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 16
+    // CHECK-NEXT: dim = ( 4, 3, 2 )
+    // CHECK-NEXT: lvl = ( 4, 3, 2 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 3, 4, 6, 6, 7, 9, 11, 13, 14, 15, 16
+    // CHECK-NEXT: crd[2] : ( 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 22
+    // CHECK-NEXT: dim = ( 4, 3, 2 )
+    // CHECK-NEXT: lvl = ( 4, 3, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 8, 11
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 2, 0, 1, 2, 0, 1, 2
+    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 5, 6, 0, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0, 15, 0, 16
+    // CHECK-NEXT: ----
     //
+    sparse_tensor.print %s0 : tensor<4x3x2xf32, #CCC>
+    sparse_tensor.print %s1 : tensor<4x3x2xf32, #BatchedCSR>
+    sparse_tensor.print %s2 : tensor<4x3x2xf32, #CSRDense>
 
-    %d0 = sparse_tensor.convert %s0 : tensor<4x3x2xf32, #CCC> to tensor<4x3x2xf32>
-    %v0 = vector.transfer_read %d0[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
-    vector.print %v0 : vector<4x3x2xf32>
+    // TODO: This check is no longer needed once the codegen path uses the
+    // buffer deallocation pass. "dealloc_tensor" turn into a no-op in the
+    // codegen path.
+    %has_runtime = sparse_tensor.has_runtime_library
+    scf.if %has_runtime {
+      // sparse_tensor.assemble copies buffers when running with the runtime
+      // library. Deallocations are needed not needed when running in codgen
+      // mode.
+      bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
+      bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #BatchedCSR>
+      bufferization.dealloc_tensor %s2 : tensor<4x3x2xf32, #CSRDense>
+    }
 
-    %d1 = sparse_tensor.convert %s1 : tensor<4x3x2xf32, #BatchedCSR> to tensor<4x3x2xf32>
-    %v1 = vector.transfer_read %d1[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
-    vector.print %v1 : vector<4x3x2xf32>
-
-    %d2 = sparse_tensor.convert %s2 : tensor<4x3x2xf32, #CSRDense> to tensor<4x3x2xf32>
-    %v2 = vector.transfer_read %d1[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
-    vector.print %v2 : vector<4x3x2xf32>
-
-    bufferization.dealloc_tensor %d0 : tensor<4x3x2xf32>
-    bufferization.dealloc_tensor %d1 : tensor<4x3x2xf32>
-    bufferization.dealloc_tensor %d2 : tensor<4x3x2xf32>
-    // FIXME: doing this explicitly crashes runtime
-    // bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
-    // bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #BatchedCSR>
-    // bufferization.dealloc_tensor %s2 : tensor<4x3x2xf32, #CSRDense>
     return
   }
 }

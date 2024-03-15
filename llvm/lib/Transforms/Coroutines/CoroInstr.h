@@ -78,6 +78,39 @@ public:
   }
 };
 
+/// This represents the llvm.coro.await.suspend instruction.
+// FIXME: add callback metadata
+// FIXME: make a proper IntrinisicInst. Currently this is not possible,
+// because llvm.coro.await.suspend can be invoked.
+class LLVM_LIBRARY_VISIBILITY CoroAwaitSuspendInst : public CallBase {
+  enum { AwaiterArg, FrameArg, WrapperArg };
+
+public:
+  Value *getAwaiter() const { return getArgOperand(AwaiterArg); }
+
+  Value *getFrame() const { return getArgOperand(FrameArg); }
+
+  Function *getWrapperFunction() const {
+    return cast<Function>(getArgOperand(WrapperArg));
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const CallBase *CB) {
+    if (const Function *CF = CB->getCalledFunction()) {
+      auto IID = CF->getIntrinsicID();
+      return IID == Intrinsic::coro_await_suspend_void ||
+             IID == Intrinsic::coro_await_suspend_bool ||
+             IID == Intrinsic::coro_await_suspend_handle;
+    }
+
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<CallBase>(V) && classof(cast<CallBase>(V));
+  }
+};
+
 /// This represents a common base class for llvm.coro.id instructions.
 class LLVM_LIBRARY_VISIBILITY AnyCoroIdInst : public IntrinsicInst {
 public:

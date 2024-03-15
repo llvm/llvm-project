@@ -2,11 +2,11 @@ function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
-    check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${flags})
+    check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
-  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${flags})
-  check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${flags})
-  
+  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${ARGN})
+  check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
+
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     if(ADD_FMA_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86)
@@ -87,6 +87,7 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fvisibility=hidden")
     list(APPEND compile_options "-fconvergent-functions")
     list(APPEND compile_options "-flto")
+    list(APPEND compile_options "-Wno-multi-gpu")
 
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND compile_options "-Wno-unknown-cuda-version")
@@ -107,7 +108,7 @@ function(_get_common_compile_options output_var flags)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
-function(_get_common_test_compile_options output_var flags)
+function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
 
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
@@ -121,7 +122,9 @@ function(_get_common_test_compile_options output_var flags)
       list(APPEND compile_options "-fno-exceptions")
       list(APPEND compile_options "-fno-unwind-tables")
       list(APPEND compile_options "-fno-asynchronous-unwind-tables")
-      list(APPEND compile_options "-fno-rtti")
+      if(NOT ${c_test})
+        list(APPEND compile_options "-fno-rtti")
+      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
@@ -158,12 +161,12 @@ function(_get_hermetic_test_compile_options output_var flags)
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     list(APPEND compile_options
-         -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+         -Wno-multi-gpu -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
          -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     list(APPEND compile_options
          "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
-         --cuda-path=${LIBC_CUDA_ROOT}
+         -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)

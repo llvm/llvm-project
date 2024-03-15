@@ -2809,7 +2809,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
 //       call to the function. For that, it might be useful to have a
 //       'vector.scale.global' and a 'vector.scale.local' operation.
 def VectorScaleOp : Vector_Op<"vscale",
-                 [Pure]> {
+  [Pure, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+> {
   let summary = "Load vector scale size";
   let description = [{
     The `vscale` op returns the scale of the scalable vectors, a positive
@@ -2825,6 +2826,13 @@ def VectorScaleOp : Vector_Op<"vscale",
   }];
   let results = (outs Index:$res);
   let assemblyFormat = "attr-dict";
+
+  let extraClassDefinition = [{
+    void $cppClass::getAsmResultNames(
+        ::llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
+      setNameFn(getResult(), "vscale");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

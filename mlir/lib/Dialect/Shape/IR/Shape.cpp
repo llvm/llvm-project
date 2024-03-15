@@ -375,15 +375,13 @@ void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
 void AssumingOp::build(
     OpBuilder &builder, OperationState &result, Value witness,
     function_ref<SmallVector<Value, 2>(OpBuilder &, Location)> bodyBuilder) {
+  OpBuilder::InsertionGuard g(builder);
 
   result.addOperands(witness);
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
+  builder.createBlock(bodyRegion);
 
   // Build body.
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(&bodyBlock);
   SmallVector<Value, 2> yieldValues = bodyBuilder(builder, result.location);
   builder.create<AssumingYieldOp>(result.location, yieldValues);
 
@@ -1904,23 +1902,23 @@ bool ToExtentTensorOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
                      ValueRange initVals) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands(shape);
   result.addOperands(initVals);
 
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(builder.getIndexType(), result.location);
+  Block *bodyBlock = builder.createBlock(
+      bodyRegion, /*insertPt=*/{}, builder.getIndexType(), result.location);
 
   Type elementType;
   if (auto tensorType = llvm::dyn_cast<TensorType>(shape.getType()))
     elementType = tensorType.getElementType();
   else
     elementType = SizeType::get(builder.getContext());
-  bodyBlock.addArgument(elementType, shape.getLoc());
+  bodyBlock->addArgument(elementType, shape.getLoc());
 
   for (Value initVal : initVals) {
-    bodyBlock.addArgument(initVal.getType(), initVal.getLoc());
+    bodyBlock->addArgument(initVal.getType(), initVal.getLoc());
     result.addTypes(initVal.getType());
   }
 }

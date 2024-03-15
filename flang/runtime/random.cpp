@@ -11,85 +11,24 @@
 
 #include "flang/Runtime/random.h"
 #include "lock.h"
+#include "random-templates.h"
 #include "terminator.h"
 #include "flang/Common/float128.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <memory>
-#include <random>
 #include <time.h>
 
-namespace Fortran::runtime {
+namespace Fortran::runtime::random {
 
-// Newer "Minimum standard", recommended by Park, Miller, and Stockmeyer in
-// 1993. Same as C++17 std::minstd_rand, but explicitly instantiated for
-// permanence.
-using Generator =
-    std::linear_congruential_engine<std::uint_fast32_t, 48271, 0, 2147483647>;
-
-using GeneratedWord = typename Generator::result_type;
-static constexpr std::uint64_t range{
-    static_cast<std::uint64_t>(Generator::max() - Generator::min() + 1)};
-static constexpr bool rangeIsPowerOfTwo{(range & (range - 1)) == 0};
-static constexpr int rangeBits{
-    64 - common::LeadingZeroBitCount(range) - !rangeIsPowerOfTwo};
-
-static Lock lock;
-static Generator generator;
-static std::optional<GeneratedWord> nextValue;
-
-// Call only with lock held
-static GeneratedWord GetNextValue() {
-  GeneratedWord result;
-  if (nextValue.has_value()) {
-    result = *nextValue;
-    nextValue.reset();
-  } else {
-    result = generator();
-  }
-  return result;
-}
-
-template <typename REAL, int PREC>
-inline void Generate(const Descriptor &harvest) {
-  static constexpr std::size_t minBits{
-      std::max<std::size_t>(PREC, 8 * sizeof(GeneratedWord))};
-  using Int = common::HostUnsignedIntType<minBits>;
-  static constexpr std::size_t words{
-      static_cast<std::size_t>(PREC + rangeBits - 1) / rangeBits};
-  std::size_t elements{harvest.Elements()};
-  SubscriptValue at[maxRank];
-  harvest.GetLowerBounds(at);
-  {
-    CriticalSection critical{lock};
-    for (std::size_t j{0}; j < elements; ++j) {
-      while (true) {
-        Int fraction{GetNextValue()};
-        if constexpr (words > 1) {
-          for (std::size_t k{1}; k < words; ++k) {
-            static constexpr auto rangeMask{
-                (GeneratedWord{1} << rangeBits) - 1};
-            GeneratedWord word{(GetNextValue() - generator.min()) & rangeMask};
-            fraction = (fraction << rangeBits) | word;
-          }
-        }
-        fraction >>= words * rangeBits - PREC;
-        REAL next{std::ldexp(static_cast<REAL>(fraction), -(PREC + 1))};
-        if (next >= 0.0 && next < 1.0) {
-          *harvest.Element<REAL>(at) = next;
-          break;
-        }
-      }
-      harvest.IncrementSubscripts(at);
-    }
-  }
-}
+Lock lock;
+Generator generator;
+std::optional<GeneratedWord> nextValue;
 
 extern "C" {
 
@@ -129,14 +68,6 @@ void RTNAME(RandomNumber)(
     if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
 #if LDBL_MANT_DIG == 64
       Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
-      return;
-#endif
-    }
-    break;
-  case 16:
-    if constexpr (HasCppTypeFor<TypeCategory::Real, 16>) {
-#if LDBL_MANT_DIG == 113
-      Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
       return;
 #endif
     }
@@ -263,4 +194,4 @@ void RTNAME(RandomSeed)(const Descriptor *size, const Descriptor *put,
 }
 
 } // extern "C"
-} // namespace Fortran::runtime
+} // namespace Fortran::runtime::random

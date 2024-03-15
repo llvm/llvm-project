@@ -28,7 +28,7 @@ def testEncodingAttr1D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [131072]
+        # CHECK: lvl_types: [262144]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0) -> (d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")
@@ -71,9 +71,9 @@ def testEncodingAttrStructure():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [65536, 65536, 4406637494272]
+        # CHECK: lvl_types: [65536, 65536, 4406638542848]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: lvl_formats_enum: [<LevelFormat.dense: 65536>, <LevelFormat.dense: 65536>, <LevelFormat.n_out_of_m: 1048576>]
+        # CHECK: lvl_formats_enum: [<LevelFormat.dense: 65536>, <LevelFormat.dense: 65536>, <LevelFormat.n_out_of_m: 2097152>]
         print(f"lvl_formats_enum: {casted.lvl_formats_enum}")
         # CHECK: structured_n: 2
         print(f"structured_n: {casted.structured_n}")
@@ -157,7 +157,7 @@ def testEncodingAttr2D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [65536, 131072]
+        # CHECK: lvl_types: [65536, 262144]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0, d1) -> (d1, d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")

@@ -395,6 +395,16 @@ Register FunctionLoweringInfo::CreateRegs(const Value *V) {
                                       !TLI->requiresUniformRegister(*MF, V));
 }
 
+Register FunctionLoweringInfo::InitializeRegForValue(const Value *V) {
+  // Tokens live in vregs only when used for convergence control.
+  if (V->getType()->isTokenTy() && !isa<ConvergenceControlInst>(V))
+    return 0;
+  Register &R = ValueMap[V];
+  assert(R == Register() && "Already initialized this value register!");
+  assert(VirtReg2Value.empty());
+  return R = CreateRegs(V);
+}
+
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
 /// register is a PHI destination and the PHI's LiveOutInfo is not valid. If
 /// the register's LiveOutInfo is for a smaller bit width, it is extended to

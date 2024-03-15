@@ -1627,4 +1627,4 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

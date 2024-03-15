@@ -54,12 +54,12 @@ define i64 @caller_float_on_stack() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    lu12i.w $a0, 264704
-; CHECK-NEXT:    st.d $a0, $sp, 0
+; CHECK-NEXT:    lu12i.w $a1, 264704
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a2, $zero, 2
 ; CHECK-NEXT:    ori $a4, $zero, 3
 ; CHECK-NEXT:    ori $a6, $zero, 4
+; CHECK-NEXT:    st.d $a1, $sp, 0
 ; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    move $a3, $zero
 ; CHECK-NEXT:    move $a5, $zero

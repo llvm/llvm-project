@@ -9,30 +9,30 @@
 define void @xvfmadd_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfmadd_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfmadd_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfadd.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfadd.s $xr0, $xr0, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfmadd_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfadd.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfadd.s $xr0, $xr0, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -48,30 +48,30 @@ entry:
 define void @xvfmsub_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfmsub_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfmsub_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfmsub_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -87,31 +87,31 @@ entry:
 define void @xvfnmadd_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfnmadd_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfnmadd_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfadd.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfadd.s $xr0, $xr0, $xr2
 ; CONTRACT-ON-NEXT:    xvbitrevi.w $xr0, $xr0, 31
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfnmadd_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfadd.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfadd.s $xr0, $xr0, $xr2
 ; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr0, $xr0, 31
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
@@ -129,32 +129,32 @@ entry:
 define void @xvfnmadd_s_nsz(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfnmadd_s_nsz:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfnmadd_s_nsz:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvbitrevi.w $xr1, $xr1, 31
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfnmadd_s_nsz:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr1, $xr1, 31
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -173,33 +173,33 @@ entry:
 define void @not_xvfnmadd_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: not_xvfnmadd_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: not_xvfnmadd_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvbitrevi.w $xr1, $xr1, 31
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: not_xvfnmadd_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr1, $xr1, 31
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -217,31 +217,31 @@ entry:
 define void @xvfnmsub_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfnmsub_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfnmsub_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-ON-NEXT:    xvbitrevi.w $xr0, $xr0, 31
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfnmsub_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr0, $xr2
 ; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr0, $xr0, 31
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
@@ -260,30 +260,30 @@ entry:
 define void @xvfnmsub_s_nsz(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfnmsub_s_nsz:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfnmsub_s_nsz:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr2, $xr0
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfnmsub_s_nsz:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr2, $xr0
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -301,31 +301,31 @@ entry:
 define void @not_xvfnmsub_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: not_xvfnmsub_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: not_xvfnmsub_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-ON-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-ON-NEXT:    xvfsub.s $xr0, $xr2, $xr0
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: not_xvfnmsub_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr1, $xr0
-; CONTRACT-OFF-NEXT:    xvld $xr1, $a3, 0
-; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
+; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmul.s $xr0, $xr0, $xr1
+; CONTRACT-OFF-NEXT:    xvfsub.s $xr0, $xr2, $xr0
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -342,28 +342,28 @@ entry:
 define void @contract_xvfmadd_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: contract_xvfmadd_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: contract_xvfmadd_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: contract_xvfmadd_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -379,28 +379,28 @@ entry:
 define void @contract_xvfmsub_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: contract_xvfmsub_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: contract_xvfmsub_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: contract_xvfmsub_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -416,28 +416,28 @@ entry:
 define void @contract_xvfnmadd_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: contract_xvfnmadd_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: contract_xvfnmadd_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: contract_xvfnmadd_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -454,28 +454,28 @@ entry:
 define void @contract_xvfnmadd_s_nsz(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: contract_xvfnmadd_s_nsz:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: contract_xvfnmadd_s_nsz:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: contract_xvfnmadd_s_nsz:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -494,31 +494,31 @@ entry:
 define void @not_contract_xvfnmadd_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: not_contract_xvfnmadd_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: not_contract_xvfnmadd_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-ON-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-ON-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: not_contract_xvfnmadd_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-OFF-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-OFF-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -536,28 +536,28 @@ entry:
 define void @contract_xvfnmsub_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: contract_xvfnmsub_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: contract_xvfnmsub_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: contract_xvfnmsub_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -575,28 +575,28 @@ entry:
 define void @contract_xvfnmsub_s_nsz(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: contract_xvfnmsub_s_nsz:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: contract_xvfnmsub_s_nsz:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: contract_xvfnmsub_s_nsz:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -614,31 +614,31 @@ entry:
 define void @not_contract_xvfnmsub_s(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: not_contract_xvfnmsub_s:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: not_contract_xvfnmsub_s:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-ON-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-ON-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: not_contract_xvfnmsub_s:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr2, $xr2, 31
-; CONTRACT-OFF-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvbitrevi.w $xr0, $xr0, 31
+; CONTRACT-OFF-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -655,28 +655,28 @@ entry:
 define void @xvfmadd_s_contract(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfmadd_s_contract:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfmadd_s_contract:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfmadd_s_contract:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -692,28 +692,28 @@ entry:
 define void @xvfmsub_s_contract(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfmsub_s_contract:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfmsub_s_contract:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfmsub_s_contract:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -729,28 +729,28 @@ entry:
 define void @xvfnmadd_s_contract(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfnmadd_s_contract:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfnmadd_s_contract:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfnmadd_s_contract:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfnmadd.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfnmadd.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
@@ -767,28 +767,28 @@ entry:
 define void @xvfnmsub_s_contract(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind {
 ; CONTRACT-FAST-LABEL: xvfnmsub_s_contract:
 ; CONTRACT-FAST:       # %bb.0: # %entry
-; CONTRACT-FAST-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-FAST-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-FAST-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-FAST-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-FAST-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-FAST-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-FAST-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-FAST-NEXT:    ret
 ;
 ; CONTRACT-ON-LABEL: xvfnmsub_s_contract:
 ; CONTRACT-ON:       # %bb.0: # %entry
-; CONTRACT-ON-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-ON-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-ON-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-ON-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-ON-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-ON-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-ON-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-ON-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-ON-NEXT:    ret
 ;
 ; CONTRACT-OFF-LABEL: xvfnmsub_s_contract:
 ; CONTRACT-OFF:       # %bb.0: # %entry
-; CONTRACT-OFF-NEXT:    xvld $xr0, $a3, 0
+; CONTRACT-OFF-NEXT:    xvld $xr0, $a1, 0
 ; CONTRACT-OFF-NEXT:    xvld $xr1, $a2, 0
-; CONTRACT-OFF-NEXT:    xvld $xr2, $a1, 0
-; CONTRACT-OFF-NEXT:    xvfnmsub.s $xr0, $xr2, $xr1, $xr0
+; CONTRACT-OFF-NEXT:    xvld $xr2, $a3, 0
+; CONTRACT-OFF-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr2
 ; CONTRACT-OFF-NEXT:    xvst $xr0, $a0, 0
 ; CONTRACT-OFF-NEXT:    ret
 entry:
