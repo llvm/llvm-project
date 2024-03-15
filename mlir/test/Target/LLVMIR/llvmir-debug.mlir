@@ -342,3 +342,63 @@ llvm.func @func_line_tables() {
 llvm.func @func_debug_directives() {
   llvm.return
 } loc(fused<#di_subprogram_2>["foo2.mlir":0:0])
+
+// -----
+
+// Ensure recursive types with multiple external references work.
+
+// Common base nodes.
+#di_file = #llvm.di_file<"test.mlir" in "/">
+#di_null_type = #llvm.di_null_type
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
+
+// Recursive type itself.
+#di_struct_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_ptr_inner = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #di_struct_self, sizeInBits = 64>
+#di_subroutine_inner = #llvm.di_subroutine_type<types = #di_null_type, #di_ptr_inner>
+#di_subprogram_inner = #llvm.di_subprogram<
+  id = distinct[2]<>,
+  compileUnit = #di_compile_unit,
+  scope = #di_struct_self,
+  name = "class_method",
+  file = #di_file,
+  subprogramFlags = Definition,
+  type = #di_subroutine_inner>
+#di_struct = #llvm.di_composite_type<
+  tag = DW_TAG_class_type,
+  recId = distinct[0]<>,
+  name = "class_name",
+  file = #di_file,
+  line = 42,
+  flags = "TypePassByReference|NonTrivial",
+  elements = #di_subprogram_inner>
+
+// Outer types referencing the entire recursive type.
+#di_ptr_outer = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #di_struct, sizeInBits = 64>
+#di_subroutine_outer = #llvm.di_subroutine_type<types = #di_null_type, #di_ptr_outer>
+#di_subprogram_outer = #llvm.di_subprogram<
+  id = distinct[2]<>,
+  compileUnit = #di_compile_unit,
+  scope = #di_struct,
+  name = "class_method",
+  file = #di_file,
+  subprogramFlags = Definition,
+  type = #di_subroutine_outer>
+
+#loc3 = loc(fused<#di_subprogram_outer>["test.mlir":1:1])
+
+// CHECK: @class_method
+// CHECK: ret void, !dbg ![[LOC:.*]]
+
+// CHECK: ![[CU:.*]] = distinct !DICompileUnit(
+// CHECK: ![[SP:.*]] = distinct !DISubprogram(name: "class_method", scope: ![[STRUCT:.*]], file: !{{.*}}, type: ![[SUBROUTINE:.*]], spFlags: DISPFlagDefinition, unit: ![[CU]])
+// CHECK: ![[STRUCT]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "class_name", {{.*}}, elements: ![[ELEMS:.*]])
+// CHECK: ![[ELEMS]] = !{![[SP]]}
+// CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SUBROUTINE_ELEMS:.*]])
+// CHECK: ![[SUBROUTINE_ELEMS]] = !{null, ![[PTR:.*]]}
+// CHECK: ![[PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[STRUCT]], size: 64)
+// CHECK: ![[LOC]] = !DILocation(line: 1, column: 1, scope: ![[SP]])
+
+llvm.func @class_method() {
+  llvm.return loc(#loc3)
+} loc(#loc3)
