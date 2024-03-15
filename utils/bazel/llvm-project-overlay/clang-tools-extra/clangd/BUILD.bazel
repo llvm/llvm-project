@@ -1,0 +1,49 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(default_visibility = ["//visibility:public"],
+        features = ["layering_check"])
+
+licenses(["notice"])
+
+# TODO: Pick up other files for more complete functionality, to match
+# clangd/CMakeLists.txt. This might look something like
+# glob(["*.cpp", "dir/**/*.cpp", ...]).
+cc_library(
+    name = "ClangDaemon",
+    srcs = [
+        "JSONTransport.cpp",
+        "Protocol.cpp",
+        "URI.cpp",
+        "index/SymbolID.cpp",
+        "support/Logger.cpp",
+        "support/Trace.cpp",
+        "support/MemoryTree.cpp",
+        "support/Context.cpp",
+        "support/Cancellation.cpp",
+        "support/ThreadCrashReporter.cpp",
+        "support/Shutdown.cpp",
+    ],
+    hdrs = [
+        "Transport.h",
+        "Protocol.h",
+        "URI.h",
+        "LSPBinder.h",
+        "index/SymbolID.h",
+        "support/Function.h",
+        "support/Cancellation.h",
+        "support/ThreadCrashReporter.h",
+        "support/Logger.h",
+        "support/Trace.h",
+        "support/MemoryTree.h",
+        "support/Context.h",
+        "support/Shutdown.h",
+    ],
+    includes = ["."],
+    deps = [
+        "//llvm:Support",
+        "//clang:basic",
+        "//clang:index",
+    ],
+)
