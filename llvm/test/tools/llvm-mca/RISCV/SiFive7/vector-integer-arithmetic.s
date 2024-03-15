@@ -399,6 +399,26 @@ vmseq.vv v4, v8, v12
 vsetvli zero, zero, e64, m8, tu, mu
 vmseq.vx v4, v8, x10
 
+# Pseudo instructions
+vsetvli zero, zero, e8, mf8, tu, mu
+vmslt.vi v4, v8, 1
+vsetvli zero, zero, e8, mf4, tu, mu
+vmsltu.vi v4, v8, 1
+vsetvli zero, zero, e8, mf2, tu, mu
+vmsltu.vi v4, v8, 0
+vsetvli zero, zero, e8, m1, tu, mu
+vmsgeu.vi v4, v8, 1
+vsetvli zero, zero, e8, m2, tu, mu
+vmsge.vi v4, v8, 1
+vsetvli zero, zero, e8, m4, tu, mu
+vmsgeu.vi v4, v8, 0
+vsetvli zero, zero, e16, mf4, tu, mu
+vmsge.vi v4, v8, 0
+vsetvli zero, zero, e16, mf2, tu, mu
+vmsge.vx v4, v8, x10
+vsetvli zero, zero, e16, m1, tu, mu
+vmsgeu.vx v4, v8, x11
+
 # Vector Integer Min/Max Instructions
 vsetvli zero, zero, e8, mf8, tu, mu
 vminu.vv v4, v8, v12
@@ -754,14 +774,14 @@ vsetvli zero, zero, e64, m8, tu, mu
 vmv.v.v v4, v12
 
 # CHECK:      Iterations:        1
-# CHECK-NEXT: Instructions:      707
-# CHECK-NEXT: Total Cycles:      11962
-# CHECK-NEXT: Total uOps:        707
+# CHECK-NEXT: Instructions:      727
+# CHECK-NEXT: Total Cycles:      12018
+# CHECK-NEXT: Total uOps:        727
 
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.06
 # CHECK-NEXT: IPC:               0.06
-# CHECK-NEXT: Block RThroughput: 11549.0
+# CHECK-NEXT: Block RThroughput: 11583.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1144,6 +1164,26 @@ vmv.v.v v4, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      19    17.00                       vmseq.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
+# CHECK-NEXT:  1      4     2.00                        vmsle.vi	v4, v8, 0
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
+# CHECK-NEXT:  1      4     2.00                        vmsleu.vi	v4, v8, 0
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
+# CHECK-NEXT:  1      4     2.00                        vmsne.vv	v4, v8, v8
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
+# CHECK-NEXT:  1      5     3.00                        vmsgtu.vi	v4, v8, 0
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
+# CHECK-NEXT:  1      7     5.00                        vmsgt.vi	v4, v8, 0
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
+# CHECK-NEXT:  1      11    9.00                        vmseq.vv	v4, v8, v8
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
+# CHECK-NEXT:  1      4     2.00                        vmsgt.vi	v4, v8, -1
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
+# CHECK-NEXT:  1      4     2.00                        vmslt.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     2.00                        vmnot.m	v4, v4
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
+# CHECK-NEXT:  1      5     3.00                        vmsltu.vx	v4, v8, a1
+# CHECK-NEXT:  1      4     2.00                        vmnot.m	v4, v4
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  1      4     2.00                        vminu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
 # CHECK-NEXT:  1      4     2.00                        vminu.vx	v4, v8, a0
@@ -1492,7 +1532,7 @@ vmv.v.v v4, v12
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     333.00  -     11549.00 374.00  -    -
+# CHECK-NEXT:  -      -     342.00  -     11583.00 385.00  -    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -1867,6 +1907,26 @@ vmv.v.v v4, v12
 # CHECK-NEXT:  -      -      -      -     9.00   1.00    -      -     vmseq.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -     17.00  1.00    -      -     vmseq.vx	v4, v8, a0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsle.vi	v4, v8, 0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsleu.vi	v4, v8, 0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsne.vv	v4, v8, v8
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmsgtu.vi	v4, v8, 0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
+# CHECK-NEXT:  -      -      -      -     5.00   1.00    -      -     vmsgt.vi	v4, v8, 0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, m4, tu, mu
+# CHECK-NEXT:  -      -      -      -     9.00   1.00    -      -     vmseq.vv	v4, v8, v8
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsgt.vi	v4, v8, -1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmslt.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v4, v4
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmsltu.vx	v4, v8, a1
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v4, v4
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vminu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e8, mf4, tu, mu

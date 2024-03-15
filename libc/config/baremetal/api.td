@@ -56,6 +56,10 @@ def MathAPI : PublicAPI<"math.h"> {
   let Types = ["double_t", "float_t"];
 }
 
+def StdIOAPI : PublicAPI<"stdio.h"> {
+  let Types = ["size_t"];
+}
+
 def StdlibAPI : PublicAPI<"stdlib.h"> {
   let Types = [
     "div_t",
@@ -64,7 +68,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
     "size_t",
     "__bsearchcompare_t",
     "__qsortcompare_t",
-    "__atexithandler_t",
+    "__qsortrcompare_t",
   ];
 }
 

@@ -982,7 +982,7 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
-  // RemoveDIs: as there's no textual form for DPValues yet, print debug-info
+  // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
   // in dbg.value format.
   bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
   if (IsNewDbgInfoFormat)
@@ -996,7 +996,7 @@ void llvm::printMIR(raw_ostream &OS, const Module &M) {
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineFunction &MF) {
-  // RemoveDIs: as there's no textual form for DPValues yet, print debug-info
+  // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
   // in dbg.value format.
   bool IsNewDbgInfoFormat = MF.getFunction().IsNewDbgInfoFormat;
   if (IsNewDbgInfoFormat)

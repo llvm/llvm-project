@@ -153,6 +153,9 @@ Changes to the LLVM tools
   if it's not specified with the ``--format`` argument and cannot be inferred from
   input files.
 
+* llvm-ar now allows specifying COFF archive format with ``--format`` argument
+  and uses it by default for COFF targets.
+
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
