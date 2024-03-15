@@ -2115,7 +2115,9 @@ class FLAT_Real_gfx10<bits<7> op, FLAT_Pseudo ps> :
 
   let Inst{11-0}  = offset{11-0};
   let Inst{12}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlcValue);
-  let Inst{54-48} = !if(ps.enabled_saddr, saddr, 0x7d);
+  let Inst{54-48} = !cond(ps.enabled_saddr : saddr,
+                          !and(ps.is_flat_scratch, !not(ps.has_vaddr)) : EXEC_HI.Index{6-0}, // ST mode
+                          true : SGPR_NULL_gfxpre11.Index{6-0});
   let Inst{55}    = 0;
 }
 
@@ -2143,7 +2145,6 @@ multiclass FLAT_Real_SADDR_RTN_gfx10<bits<7> op> {
 multiclass FLAT_Real_ST_gfx10<bits<7> op> {
   def _ST_gfx10 :
     FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")> {
-      let Inst{54-48} = EXEC_HI.Index;
       let OtherPredicates = [HasFlatScratchSTMode];
     }
 }
