@@ -56,7 +56,7 @@ void test() {
 
   // TODO:
   CharT arr[4];
-  
+
   ReadOnlySpan<CharT, 4> ros{arr};
 
   {
