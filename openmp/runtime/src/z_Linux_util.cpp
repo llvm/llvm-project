@@ -143,7 +143,28 @@ void __kmp_affinity_bind_thread(int which) {
   KMP_CPU_FREE_FROM_STACK(mask);
 }
 
-#ifndef KMP_OS_AIX
+#if KMP_OS_AIX
+void __kmp_affinity_determine_capable(const char *env_var) {
+  // All versions of AIX support bindprocessor().
+
+  size_t mask_size = __kmp_xproc / CHAR_BIT;
+  // Round up to byte boundary.
+  if (__kmp_xproc % CHAR_BIT)
+    ++mask_size;
+
+  // Round up to the mask_size_type boundary.
+  if (mask_size % sizeof(__kmp_affin_mask_size))
+    mask_size += sizeof(__kmp_affin_mask_size) -
+                 mask_size % sizeof(__kmp_affin_mask_size);
+  KMP_AFFINITY_ENABLE(mask_size);
+  KA_TRACE(10,
+           ("__kmp_affinity_determine_capable: "
+            "AIX OS affinity interface bindprocessor functional (mask size = "
+            "%" KMP_SIZE_T_SPEC ").\n",
+            __kmp_affin_mask_size));
+}
+
+#else // !KMP_OS_AIX
 
 /* Determine if we can access affinity functionality on this version of
  * Linux* OS by checking __NR_sched_{get,set}affinity system calls, and set
@@ -274,28 +295,6 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_WARNING(AffCantGetMaskSize, env_var);
   }
 }
-
-#elif KMP_OS_AIX
-void __kmp_affinity_determine_capable(const char *env_var) {
-  // All versions of AIX support bindprocessor().
-
-  size_t mask_size = __kmp_xproc / CHAR_BIT;
-  // Round up to byte boundary.
-  if (__kmp_xproc % CHAR_BIT)
-    ++mask_size;
-
-  // Round up to the mask_size_type boundary.
-  if (mask_size % sizeof(__kmp_affin_mask_size))
-    mask_size += sizeof(__kmp_affin_mask_size) -
-                 mask_size % sizeof(__kmp_affin_mask_size);
-  KMP_AFFINITY_ENABLE(mask_size);
-  KA_TRACE(10,
-           ("__kmp_affinity_determine_capable: "
-            "AIX OS affinity interface bindprocessor functional (mask size = "
-            "%" KMP_SIZE_T_SPEC ").\n",
-            __kmp_affin_mask_size));
-}
-
 #endif // KMP_OS_AIX
 #endif // (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD ||                  \
            KMP_OS_DRAGONFLY || KMP_OS_AIX) && KMP_AFFINITY_SUPPORTED

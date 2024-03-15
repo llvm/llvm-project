@@ -2915,7 +2915,9 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
                                               kmp_i18n_id_t *const msg_id) {
   *msg_id = kmp_i18n_null;
 
-#ifndef KMP_OS_AIX
+#if KMP_OS_AIX
+  unsigned num_records = __kmp_xproc;
+#else
   const char *filename = __kmp_cpuinfo_get_filename();
   const char *envvar = __kmp_cpuinfo_get_envvar();
 
@@ -2976,9 +2978,7 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
     *msg_id = kmp_i18n_str_CantRewindCpuinfo;
     return false;
   }
-#else // KMP_OS_AIX
-  unsigned num_records = __kmp_xproc;
-#endif
+#endif // KMP_OS_AIX
 
   // Allocate the array of records to store the proc info in.  The dummy
   // element at the end makes the logic in filling them out easier to code.
@@ -3008,7 +3008,99 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
     INIT_PROC_INFO(threadInfo[i]);
   }
 
-#ifndef KMP_OS_AIX
+#if KMP_OS_AIX
+  int smt_threads;
+  lpar_info_format1_t cpuinfo;
+  unsigned num_avail = __kmp_xproc;
+
+  if (__kmp_affinity.flags.verbose)
+    KMP_INFORM(AffParseFilename, "KMP_AFFINITY", "system info for topology");
+
+  // Get the number of SMT threads per core.
+  int retval =
+      lpar_get_info(LPAR_INFO_FORMAT1, &cpuinfo, sizeof(lpar_info_format1_t));
+  if (!retval)
+    smt_threads = cpuinfo.smt_threads;
+  else {
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  // Allocate a resource set containing available system resourses.
+  rsethandle_t sys_rset = rs_alloc(RS_SYSTEM);
+  if (sys_rset == NULL) {
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+  // Allocate a resource set for the SRAD info.
+  rsethandle_t srad = rs_alloc(RS_EMPTY);
+  if (srad == NULL) {
+    rs_free(sys_rset);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  // Get the SRAD system detail level.
+  int sradsdl = rs_getinfo(NULL, R_SRADSDL, 0);
+  if (sradsdl < 0) {
+    rs_free(sys_rset);
+    rs_free(srad);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+  // Get the number of RADs at that SRAD SDL.
+  int num_rads = rs_numrads(sys_rset, sradsdl, 0);
+  if (num_rads < 0) {
+    rs_free(sys_rset);
+    rs_free(srad);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  // Get the maximum number of procs that may be contained in a resource set.
+  int max_procs = rs_getinfo(NULL, R_MAXPROCS, 0);
+  if (max_procs < 0) {
+    rs_free(sys_rset);
+    rs_free(srad);
+    CLEANUP_THREAD_INFO;
+    *msg_id = kmp_i18n_str_UnknownTopology;
+    return false;
+  }
+
+  int cur_rad = 0;
+  int num_set = 0;
+  for (int srad_idx = 0; cur_rad < num_rads && srad_idx < VMI_MAXRADS;
+       ++srad_idx) {
+    // Check if the SRAD is available in the RSET.
+    if (rs_getrad(sys_rset, srad, sradsdl, srad_idx, 0) < 0)
+      continue;
+
+    for (int cpu = 0; cpu < max_procs; cpu++) {
+      // Set the info for the cpu if it is in the SRAD.
+      if (rs_op(RS_TESTRESOURCE, srad, NULL, R_PROCS, cpu)) {
+        threadInfo[cpu][osIdIndex] = cpu;
+        threadInfo[cpu][pkgIdIndex] = cur_rad;
+        threadInfo[cpu][coreIdIndex] = cpu / smt_threads;
+        ++num_set;
+        if (num_set >= num_avail) {
+          // Done if all available CPUs have been set.
+          break;
+        }
+      }
+    }
+    ++cur_rad;
+  }
+  rs_free(sys_rset);
+  rs_free(srad);
+
+  // The topology is already sorted.
+
+#else // !KMP_OS_AIX
   unsigned num_avail = 0;
   *line = 0;
 #if KMP_ARCH_S390X
@@ -3255,98 +3347,6 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
   // Sort the threadInfo table by physical Id.
   qsort(threadInfo, num_avail, sizeof(*threadInfo),
         __kmp_affinity_cmp_ProcCpuInfo_phys_id);
-
-#else // KMP_OS_AIX
-  int smt_threads;
-  lpar_info_format1_t cpuinfo;
-  unsigned num_avail = __kmp_xproc;
-
-  if (__kmp_affinity.flags.verbose)
-    KMP_INFORM(AffParseFilename, "KMP_AFFINITY", "system info for topology");
-
-  // Get the number of SMT threads per core.
-  int retval =
-      lpar_get_info(LPAR_INFO_FORMAT1, &cpuinfo, sizeof(lpar_info_format1_t));
-  if (!retval)
-    smt_threads = cpuinfo.smt_threads;
-  else {
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
-
-  // Allocate a resource set containing available system resourses.
-  rsethandle_t sys_rset = rs_alloc(RS_SYSTEM);
-  if (sys_rset == NULL) {
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
-  // Allocate a resource set for the SRAD info.
-  rsethandle_t srad = rs_alloc(RS_EMPTY);
-  if (srad == NULL) {
-    rs_free(sys_rset);
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
-
-  // Get the SRAD system detail level.
-  int sradsdl = rs_getinfo(NULL, R_SRADSDL, 0);
-  if (sradsdl < 0) {
-    rs_free(sys_rset);
-    rs_free(srad);
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
-  // Get the number of RADs at that SRAD SDL.
-  int num_rads = rs_numrads(sys_rset, sradsdl, 0);
-  if (num_rads < 0) {
-    rs_free(sys_rset);
-    rs_free(srad);
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
-
-  // Get the maximum number of procs that may be contained in a resource set.
-  int max_procs = rs_getinfo(NULL, R_MAXPROCS, 0);
-  if (max_procs < 0) {
-    rs_free(sys_rset);
-    rs_free(srad);
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
-
-  int cur_rad = 0;
-  int num_set = 0;
-  for (int srad_idx = 0; cur_rad < num_rads && srad_idx < VMI_MAXRADS;
-       ++srad_idx) {
-    // Check if the SRAD is available in the RSET.
-    if (rs_getrad(sys_rset, srad, sradsdl, srad_idx, 0) < 0)
-      continue;
-
-    for (int cpu = 0; cpu < max_procs; cpu++) {
-      // Set the info for the cpu if it is in the SRAD.
-      if (rs_op(RS_TESTRESOURCE, srad, NULL, R_PROCS, cpu)) {
-        threadInfo[cpu][osIdIndex] = cpu;
-        threadInfo[cpu][pkgIdIndex] = cur_rad;
-        threadInfo[cpu][coreIdIndex] = cpu / smt_threads;
-        ++num_set;
-        if (num_set >= num_avail) {
-          // Done if all available CPUs have been set.
-          break;
-        }
-      }
-    }
-    ++cur_rad;
-  }
-  rs_free(sys_rset);
-  rs_free(srad);
-
-  // The topology is already sorted.
 
 #endif // KMP_OS_AIX
 
@@ -4941,7 +4941,7 @@ void __kmp_affinity_uninitialize(void) {
   }
   if (__kmp_affin_origMask != NULL) {
     if (KMP_AFFINITY_CAPABLE()) {
-#ifdef KMP_OS_AIX
+#if KMP_OS_AIX
       // Uninitialize by unbinding the thread.
       bindprocessor(BINDTHREAD, thread_self(), PROCESSOR_CLASS_ANY);
 #else
@@ -5705,7 +5705,7 @@ extern "C"
                 "set full mask for thread %d\n",
                 gtid));
   KMP_DEBUG_ASSERT(__kmp_affin_fullMask != NULL);
-#ifdef KMP_OS_AIX
+#if KMP_OS_AIX
   return bindprocessor(BINDTHREAD, thread_self(), PROCESSOR_CLASS_ANY);
 #else
   return __kmp_set_system_affinity(__kmp_affin_fullMask, FALSE);
