@@ -65,7 +65,7 @@ Deprecations and Removals
   provided, and such a base template is bound to be incorrect for some types, which could currently cause unexpected behavior
   while going undetected.
 
-- TODO: The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
+- The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
   in ``std::variant`` has been removed in LLVM 19.
 
 - TODO: The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been removed in LLVM 19.

@@ -12539,7 +12539,9 @@ Value *BoUpSLP::vectorizeTree(
   DenseMap<Value *, InsertElementInst *> VectorToInsertElement;
   // Maps extract Scalar to the corresponding extractelement instruction in the
   // basic block. Only one extractelement per block should be emitted.
-  DenseMap<Value *, DenseMap<BasicBlock *, Instruction *>> ScalarToEEs;
+  DenseMap<Value *,
+           DenseMap<BasicBlock *, std::pair<Instruction *, Instruction *>>>
+      ScalarToEEs;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
@@ -12568,18 +12570,23 @@ Value *BoUpSLP::vectorizeTree(
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
       if (Scalar->getType() != Vec->getType()) {
         Value *Ex = nullptr;
+        Value *ExV = nullptr;
         auto It = ScalarToEEs.find(Scalar);
         if (It != ScalarToEEs.end()) {
           // No need to emit many extracts, just move the only one in the
           // current block.
           auto EEIt = It->second.find(Builder.GetInsertBlock());
           if (EEIt != It->second.end()) {
-            Instruction *I = EEIt->second;
+            Instruction *I = EEIt->second.first;
             if (Builder.GetInsertPoint() != Builder.GetInsertBlock()->end() &&
-                Builder.GetInsertPoint()->comesBefore(I))
+                Builder.GetInsertPoint()->comesBefore(I)) {
               I->moveBefore(*Builder.GetInsertPoint()->getParent(),
                             Builder.GetInsertPoint());
+              if (auto *CI = EEIt->second.second)
+                CI->moveAfter(I);
+            }
             Ex = I;
+            ExV = EEIt->second.second ? EEIt->second.second : Ex;
           }
         }
         if (!Ex) {
@@ -12592,8 +12599,16 @@ Value *BoUpSLP::vectorizeTree(
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
+          // If necessary, sign-extend or zero-extend ScalarRoot
+          // to the larger type.
+          ExV = Ex;
+          if (Scalar->getType() != Ex->getType())
+            ExV = Builder.CreateIntCast(Ex, Scalar->getType(),
+                                        MinBWs.find(E)->second.second);
           if (auto *I = dyn_cast<Instruction>(Ex))
-            ScalarToEEs[Scalar].try_emplace(Builder.GetInsertBlock(), I);
+            ScalarToEEs[Scalar].try_emplace(
+                Builder.GetInsertBlock(),
+                std::make_pair(I, cast<Instruction>(ExV)));
         }
         // The then branch of the previous if may produce constants, since 0
         // operand might be a constant.
@@ -12601,12 +12616,7 @@ Value *BoUpSLP::vectorizeTree(
           GatherShuffleExtractSeq.insert(ExI);
           CSEBlocks.insert(ExI->getParent());
         }
-        // If necessary, sign-extend or zero-extend ScalarRoot
-        // to the larger type.
-        if (Scalar->getType() != Ex->getType())
-          return Builder.CreateIntCast(Ex, Scalar->getType(),
-                                       MinBWs.find(E)->second.second);
-        return Ex;
+        return ExV;
       }
       assert(isa<FixedVectorType>(Scalar->getType()) &&
              isa<InsertElementInst>(Scalar) &&
@@ -16614,36 +16624,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     if (Opcodes1.size() > Opcodes2.size())
       return false;
     for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
-      // Undefs are compatible with any other value.
-      if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
-        if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
-          continue;
-        if (isa<Instruction>(Opcodes1[I])) {
-          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
-          return true;
-        }
-        if (isa<Instruction>(Opcodes2[I])) {
-          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
-          return false;
-        }
-        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I])) {
-          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
-          return true;
-        }
-        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I])) {
-          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
-          return false;
-        }
-        if (!isa<UndefValue>(Opcodes2[I])) {
-          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
-          return false;
-        }
-        assert(!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]) &&
-               "Expected 1st non-undef and 2nd undef value");
-        return true;
-      }
-      if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
-        if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
+      {
+        // Instructions come first.
+        auto *I1 = dyn_cast<Instruction>(Opcodes1[I]);
+        auto *I2 = dyn_cast<Instruction>(Opcodes2[I]);
+        if (I1 && I2) {
           DomTreeNodeBase<BasicBlock> *NodeI1 = DT->getNode(I1->getParent());
           DomTreeNodeBase<BasicBlock> *NodeI2 = DT->getNode(I2->getParent());
           if (!NodeI1)
@@ -16660,20 +16645,44 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             continue;
           return I1->getOpcode() < I2->getOpcode();
         }
-      if (isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
-        continue;
-      if (isa<Instruction>(Opcodes1[I]) && !isa<Instruction>(Opcodes2[I]))
-        return true;
-      if (!isa<Instruction>(Opcodes1[I]) && isa<Instruction>(Opcodes2[I]))
-        return false;
-      if (isa<Constant>(Opcodes1[I]) && !isa<Constant>(Opcodes2[I]))
-        return true;
-      if (!isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
-        return false;
-      if (Opcodes1[I]->getValueID() < Opcodes2[I]->getValueID())
-        return true;
-      if (Opcodes1[I]->getValueID() > Opcodes2[I]->getValueID())
-        return false;
+        if (I1)
+          return true;
+        if (I2)
+          return false;
+      }
+      {
+        // Non-undef constants come next.
+        bool C1 = isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]);
+        bool C2 = isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]);
+        if (C1 && C2)
+          continue;
+        if (C1)
+          return true;
+        if (C2)
+          return false;
+      }
+      bool U1 = isa<UndefValue>(Opcodes1[I]);
+      bool U2 = isa<UndefValue>(Opcodes2[I]);
+      {
+        // Non-constant non-instructions come next.
+        if (!U1 && !U2) {
+          auto ValID1 = Opcodes1[I]->getValueID();
+          auto ValID2 = Opcodes2[I]->getValueID();
+          if (ValID1 == ValID2)
+            continue;
+          if (ValID1 < ValID2)
+            return true;
+          if (ValID1 > ValID2)
+            return false;
+        }
+        if (!U1)
+          return true;
+        if (!U2)
+          return false;
+      }
+      // Undefs come last.
+      assert(U1 && U2 && "The only thing left should be undef & undef.");
+      continue;
     }
     return false;
   };

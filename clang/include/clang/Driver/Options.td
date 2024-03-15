@@ -3609,6 +3609,27 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   MetaVarName<"<dsopath>">,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
+defm tocdata : BoolOption<"m","tocdata",
+  CodeGenOpts<"AllTocData">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  "All suitable variables will have the TOC data transformation applied">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+  "This is the default. TOC data transformation is not applied to any"
+  "variables. Only variables specified explicitly in -mtocdata= will"
+  "have the TOC data transformation.">,
+  BothFlags<[TargetSpecific], [ClangOption, CLOption]>>, Group<m_Group>;
+def mtocdata_EQ : CommaJoined<["-"], "mtocdata=">,
+  Visibility<[ClangOption, CC1Option]>,
+  Flags<[TargetSpecific]>, Group<m_Group>,
+  HelpText<"Specifies a list of variables to which the TOC data transformation"
+           "will be applied.">,
+  MarshallingInfoStringVector<CodeGenOpts<"TocDataVarsUserSpecified">>;
+def mno_tocdata_EQ : CommaJoined<["-"], "mno-tocdata=">,
+  Visibility<[ClangOption, CC1Option]>,
+  Flags<[TargetSpecific]>, Group<m_Group>,
+  HelpText<"Specifies a list of variables to be exempt from the TOC data"
+           "transformation.">,
+  MarshallingInfoStringVector<CodeGenOpts<"NoTocDataVars">>;
 defm preserve_as_comments : BoolFOption<"preserve-as-comments",
   CodeGenOpts<"PreserveAsmComments">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -8557,6 +8578,11 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"Entry point name">;
+def dxc_hlsl_version : Option<["/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
+                     Group<dxc_Group>,
+                     Visibility<[DXCOption]>,
+                     HelpText<"HLSL Version">,
+                     Values<"2016, 2017, 2018, 2021, 202x">;
 def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,

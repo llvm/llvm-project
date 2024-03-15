@@ -9,6 +9,7 @@
 #include "flang/Runtime/pointer.h"
 #include "assign-impl.h"
 #include "derived.h"
+#include "environment.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"
@@ -184,17 +185,20 @@ int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  // Validate the footer.  This should fail if the pointer doesn't
-  // span the entire object, or the object was not allocated as a
-  // pointer.
-  std::size_t byteSize{pointer.Elements() * pointer.ElementBytes()};
-  constexpr std::size_t align{sizeof(std::uintptr_t)};
-  byteSize = ((byteSize + align - 1) / align) * align;
-  void *p{pointer.raw().base_addr};
-  std::uintptr_t *footer{
-      reinterpret_cast<std::uintptr_t *>(static_cast<char *>(p) + byteSize)};
-  if (*footer != ~reinterpret_cast<std::uintptr_t>(p)) {
-    return ReturnError(terminator, StatBadPointerDeallocation, errMsg, hasStat);
+  if (executionEnvironment.checkPointerDeallocation) {
+    // Validate the footer.  This should fail if the pointer doesn't
+    // span the entire object, or the object was not allocated as a
+    // pointer.
+    std::size_t byteSize{pointer.Elements() * pointer.ElementBytes()};
+    constexpr std::size_t align{sizeof(std::uintptr_t)};
+    byteSize = ((byteSize + align - 1) / align) * align;
+    void *p{pointer.raw().base_addr};
+    std::uintptr_t *footer{
+        reinterpret_cast<std::uintptr_t *>(static_cast<char *>(p) + byteSize)};
+    if (*footer != ~reinterpret_cast<std::uintptr_t>(p)) {
+      return ReturnError(
+          terminator, StatBadPointerDeallocation, errMsg, hasStat);
+    }
   }
   return ReturnError(terminator,
       pointer.Destroy(/*finalize=*/true, /*destroyPointers=*/true, &terminator),

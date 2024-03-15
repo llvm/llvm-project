@@ -2944,6 +2944,34 @@ def : GCNPat<
    (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1))), sub0,
    (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0))), sub1)>;
 
+// If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
+let AddedComplexity = 1000 in {
+def : GCNPat<
+  (is_canonicalized_1<fcanonicalize> f16:$src),
+  (COPY f16:$src)
+>;
+
+def : GCNPat<
+  (is_canonicalized_1<fcanonicalize> v2f16:$src),
+  (COPY v2f16:$src)
+>;
+
+def : GCNPat<
+  (is_canonicalized_1<fcanonicalize> f32:$src),
+  (COPY f32:$src)
+>;
+
+def : GCNPat<
+  (is_canonicalized_1<fcanonicalize> v2f32:$src),
+  (COPY v2f32:$src)
+>;
+
+def : GCNPat<
+  (is_canonicalized_1<fcanonicalize> f64:$src),
+  (COPY f64:$src)
+>;
+}
+
 // Prefer selecting to max when legal, but using mul is always valid.
 let AddedComplexity = -5 in {
 
@@ -3277,8 +3305,8 @@ def : GCNPat <
 
 let AddedComplexity = 5 in {
 def : GCNPat <
-  (v2f16 (is_canonicalized<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
-                                         (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
+  (v2f16 (is_canonicalized_2<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
+                                           (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
   (V_PACK_B32_F16_e64 $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
@@ -3590,6 +3618,17 @@ FPMinMaxPat<Instruction minmaxInst, ValueType vt, SDPatternOperator min_or_max,
               DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+class
+FPMinCanonMaxPat<Instruction minmaxInst, ValueType vt, SDPatternOperator min_or_max,
+                 SDPatternOperator max_or_min_oneuse> : GCNPat <
+  (min_or_max (is_canonicalized_1<fcanonicalize>
+                  (max_or_min_oneuse (VOP3Mods vt:$src0, i32:$src0_mods),
+                                     (VOP3Mods vt:$src1, i32:$src1_mods))),
+               (vt (VOP3Mods vt:$src2, i32:$src2_mods))),
+  (minmaxInst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
 let OtherPredicates = [isGFX11Plus] in {
 def : IntMinMaxPat<V_MAXMIN_I32_e64, smin, smax_oneuse>;
 def : IntMinMaxPat<V_MINMAX_I32_e64, smax, smin_oneuse>;
@@ -3599,6 +3638,10 @@ def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
 def : FPMinMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 }
 
 let OtherPredicates = [isGFX9Plus] in {
@@ -3612,6 +3655,10 @@ def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fmi
 def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 }
 
 // Convert a floating-point power of 2 to the integer exponent.

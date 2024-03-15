@@ -5041,8 +5041,8 @@ static void insertNewDbgInst(DIBuilder &DIB, DPValue *Orig, AllocaInst *NewAddr,
   if (Orig->isDbgDeclare()) {
     DPValue *DPV = DPValue::createDPVDeclare(
         NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
-    BeforeInst->getParent()->insertDPValueBefore(DPV,
-                                                 BeforeInst->getIterator());
+    BeforeInst->getParent()->insertDbgRecordBefore(DPV,
+                                                   BeforeInst->getIterator());
     return;
   }
   if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {

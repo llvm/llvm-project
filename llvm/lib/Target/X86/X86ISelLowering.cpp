@@ -5858,6 +5858,23 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(SubBCSrc);
       return true;
     }
+    // Handle CONCAT(SUB0, SUB1).
+    // Limit this to vXi64 512-bit vector cases to make the most of AVX512
+    // cross lane shuffles.
+    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
+        NumBitsPerElt == 64 && NumSizeInBits == 512 &&
+        Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOperand(0).isUndef() &&
+        Src.getOperand(1).getValueType() == SubVT &&
+        Src.getConstantOperandVal(2) == 0) {
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i);
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i + NumElts);
+      Ops.push_back(Src.getOperand(1));
+      Ops.push_back(Sub);
+      return true;
+    }
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
     SmallVector<int, 64> SubMask;
     SmallVector<SDValue, 2> SubInputs;
@@ -47630,16 +47647,12 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
           // PACKSS: Truncate signed value with signed saturation.
           // Source values less than dst minint are saturated to minint.
           // Source values greater than dst maxint are saturated to maxint.
-          if (Val.isSignedIntN(DstBitsPerElt))
-            Val = Val.trunc(DstBitsPerElt);
-          else if (Val.isNegative())
-            Val = APInt::getSignedMinValue(DstBitsPerElt);
-          else
-            Val = APInt::getSignedMaxValue(DstBitsPerElt);
+          Val = Val.truncSSat(DstBitsPerElt);
         } else {
           // PACKUS: Truncate signed value with unsigned saturation.
           // Source values less than zero are saturated to zero.
           // Source values greater than dst maxuint are saturated to maxuint.
+          // NOTE: This is different from APInt::truncUSat.
           if (Val.isIntN(DstBitsPerElt))
             Val = Val.trunc(DstBitsPerElt);
           else if (Val.isNegative())

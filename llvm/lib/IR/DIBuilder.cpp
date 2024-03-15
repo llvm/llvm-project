@@ -1095,7 +1095,7 @@ void DIBuilder::insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
   else if (InsertBB)
     InsertPt = InsertBB->end();
   InsertPt.setHeadBit(InsertAtHead);
-  InsertBB->insertDPValueBefore(DPV, InsertPt);
+  InsertBB->insertDbgRecordBefore(DPV, InsertPt);
 }
 
 Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
@@ -1137,9 +1137,9 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
   if (M.IsNewDbgInfoFormat) {
     DPLabel *DPL = new DPLabel(LabelInfo, DL);
     if (InsertBB && InsertBefore)
-      InsertBB->insertDPValueBefore(DPL, InsertBefore->getIterator());
+      InsertBB->insertDbgRecordBefore(DPL, InsertBefore->getIterator());
     else if (InsertBB)
-      InsertBB->insertDPValueBefore(DPL, InsertBB->end());
+      InsertBB->insertDbgRecordBefore(DPL, InsertBB->end());
     return DPL;
   }
 

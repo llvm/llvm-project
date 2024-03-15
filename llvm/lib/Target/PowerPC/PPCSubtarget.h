@@ -245,6 +245,8 @@ public:
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
+  void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) const;
+
   /// True if the ABI is descriptor based.
   bool usesFunctionDescriptors() const {
     // Both 32-bit and 64-bit AIX are descriptor based. For ELF only the 64-bit

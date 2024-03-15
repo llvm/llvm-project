@@ -2,6 +2,7 @@ include "config/public_api.td"
 
 include "spec/stdc.td"
 include "spec/stdc_ext.td"
+include "spec/bsd_ext.td"
 include "spec/llvm_libc_stdfix_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
@@ -65,4 +66,8 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
+}
+
+def UCharAPI : PublicAPI<"uchar.h"> {
+  let Types = ["mbstate_t"];
 }

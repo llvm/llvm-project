@@ -327,6 +327,9 @@ void kmp_topology_t::_insert_windows_proc_groups() {
   KMP_CPU_FREE(mask);
   _insert_layer(KMP_HW_PROC_GROUP, ids);
   __kmp_free(ids);
+
+  // sort topology after adding proc groups
+  __kmp_topology->sort_ids();
 }
 #endif
 
@@ -1777,6 +1780,8 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       __kmp_nThreadsPerCore = __kmp_hwloc_get_nobjs_under_obj(o, HWLOC_OBJ_PU);
     else
       __kmp_nThreadsPerCore = 1; // no CORE found
+    if (__kmp_nThreadsPerCore == 0)
+      __kmp_nThreadsPerCore = 1;
     __kmp_ncores = __kmp_xproc / __kmp_nThreadsPerCore;
     if (nCoresPerPkg == 0)
       nCoresPerPkg = 1; // to prevent possible division by 0

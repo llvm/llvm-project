@@ -198,6 +198,7 @@ add_math_entrypoint_object(nearbyintl)
 add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
+add_math_entrypoint_object(nextafterf128)
 
 add_math_entrypoint_object(nexttoward)
 add_math_entrypoint_object(nexttowardf)

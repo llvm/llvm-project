@@ -141,3 +141,20 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroBitCeil) {
   EXPECT_EQ(stdc_bit_ceil(0UL), 0x6DUL);
   EXPECT_EQ(stdc_bit_ceil(0ULL), 0x6EULL);
 }
+
+TEST(LlvmLibcStdbitTest, VersionMacro) {
+  // 7.18.1p2 an integer constant expression with a value equivalent to 202311L.
+  EXPECT_EQ(__STDC_VERSION_STDBIT_H__, 202311L);
+}
+
+TEST(LlvmLibcStdbitTest, EndianMacros) {
+  // 7.18.2p3 The values of the integer constant expressions for
+  // __STDC_ENDIAN_LITTLE__ and __STDC_ENDIAN_BIG__ are not equal.
+  EXPECT_NE(__STDC_ENDIAN_LITTLE__, __STDC_ENDIAN_BIG__);
+  // The standard does allow for __STDC_ENDIAN_NATIVE__ to be an integer
+  // constant expression with an implementation defined value for non-big or
+  // little endianness environments.  I assert such machines are no longer
+  // relevant.
+  EXPECT_TRUE(__STDC_ENDIAN_NATIVE__ == __STDC_ENDIAN_LITTLE__ ||
+              __STDC_ENDIAN_NATIVE__ == __STDC_ENDIAN_BIG__);
+}
