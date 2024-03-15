@@ -298,8 +298,8 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Function *ResumeF = nullptr;            // __resumeException() (Emscripten)
   Function *EHTypeIDF = nullptr;          // llvm.eh.typeid.for() (intrinsic)
   Function *EmLongjmpF = nullptr;         // emscripten_longjmp() (Emscripten)
-  Function *SaveSetjmpF = nullptr;        // __wasm_setjmp() (Emscripten)
-  Function *TestSetjmpF = nullptr;        // __wasm_setjmp_test() (Emscripten)
+  Function *WasmSetjmpF = nullptr;        // __wasm_setjmp() (Emscripten)
+  Function *WasmSetjmpTestF = nullptr;    // __wasm_setjmp_test() (Emscripten)
   Function *WasmLongjmpF = nullptr;       // __wasm_longjmp() (Emscripten)
   Function *CatchF = nullptr;             // wasm.catch() (intrinsic)
 
@@ -737,8 +737,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   BasicBlock *EndBB2 = BasicBlock::Create(C, "if.end2", F);
   Value *ThrewPtr =
       IRB.CreateIntToPtr(Threw, getAddrPtrType(M), Threw->getName() + ".p");
-  Value *ThenLabel =
-      IRB.CreateCall(TestSetjmpF, {ThrewPtr, FunctionInvocationId}, "label");
+  Value *ThenLabel = IRB.CreateCall(WasmSetjmpTestF,
+                                    {ThrewPtr, FunctionInvocationId}, "label");
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp2, CallEmLongjmpBB, EndBB2);
 
@@ -999,11 +999,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy},
           false);
-      SaveSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp", &M);
+      WasmSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp", &M);
 
       // Register __wasm_setjmp_test function
       FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
-      TestSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp_test", &M);
+      WasmSetjmpTestF = getEmscriptenFunction(FTy, "__wasm_setjmp_test", &M);
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
@@ -1049,7 +1049,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (V && V->use_empty())
       V->eraseFromParent();
   for (auto *V : {GetTempRet0F, SetTempRet0F, ResumeF, EHTypeIDF, EmLongjmpF,
-                  SaveSetjmpF, TestSetjmpF, WasmLongjmpF, CatchF})
+                  WasmSetjmpF, WasmSetjmpTestF, WasmLongjmpF, CatchF})
     if (V && V->use_empty())
       V->eraseFromParent();
 
@@ -1316,7 +1316,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     IRB.SetInsertPoint(CI);
     Value *Args[] = {CI->getArgOperand(0), IRB.getInt32(SetjmpRetPHIs.size()),
                      FunctionInvocationId};
-    IRB.CreateCall(SaveSetjmpF, Args);
+    IRB.CreateCall(WasmSetjmpF, Args);
     ToErase.push_back(CI);
   }
 
@@ -1619,7 +1619,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", &F);
   BasicBlock *EndBB = BasicBlock::Create(C, "if.end", &F);
   Value *EnvP = IRB.CreateBitCast(Env, getAddrPtrType(&M), "env.p");
-  Value *Label = IRB.CreateCall(TestSetjmpF, {EnvP, FunctionInvocationId},
+  Value *Label = IRB.CreateCall(WasmSetjmpTestF, {EnvP, FunctionInvocationId},
                                 OperandBundleDef("funclet", CatchPad), "label");
   Value *Cmp = IRB.CreateICmpEQ(Label, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp, ThenBB, EndBB);
