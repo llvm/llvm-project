@@ -36,6 +36,11 @@
   tag = DW_TAG_pointer_type, name = "ptr1"
 >
 
+// CHECK-DAG: #[[COMP3:.*]] = #llvm.di_composite_type<"mystruct", tag = DW_TAG_structure_type, name = "array1", file = #[[FILE]], scope = #[[FILE]] (#llvm.di_composite_type<"mystruct">, #int0, #int1)>
+#comp3 = #llvm.di_composite_type<"mystruct", tag = DW_TAG_structure_type, name = "struct1",
+  file = #file, scope = #file (#llvm.di_composite_type<"mystruct">, #int0, #int1)
+>
+
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
 #comp0 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array0",
@@ -45,9 +50,9 @@
 // CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], elements = #llvm.di_subrange<count = 4 : i64>>
 #comp1 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array1", file = #file,
-  scope = #file, baseType = #int0,
+  scope = #file, baseType = #int0
   // Specify the subrange count.
-  elements = #llvm.di_subrange<count = 4>
+  (#llvm.di_subrange<count = 4>)
 >
 
 // CHECK-DAG: #[[TOPLEVEL:.*]] = #llvm.di_namespace<name = "toplevel", exportSymbols = true>
@@ -74,7 +79,7 @@
 
 // CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2, #comp3
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

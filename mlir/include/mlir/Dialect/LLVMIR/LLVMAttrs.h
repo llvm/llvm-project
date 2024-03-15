@@ -23,6 +23,10 @@
 namespace mlir {
 namespace LLVM {
 
+namespace detail {
+  struct DICompositeTypeAttrStorage;
+} // namespace detail
+
 /// This class represents the base attribute for all debug info attributes.
 class DINodeAttr : public Attribute {
 public:

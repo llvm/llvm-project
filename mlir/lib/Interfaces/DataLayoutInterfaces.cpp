@@ -35,9 +35,22 @@ using namespace mlir;
 /// Returns the bitwidth of the index type if specified in the param list.
 /// Assumes 64-bit index otherwise.
 static uint64_t getIndexBitwidth(DataLayoutEntryListRef params) {
-  if (params.empty())
+  DataLayoutEntryInterface entry;
+
+  // Look up the bitwidth param in the list.
+  for (DataLayoutEntryInterface param : params) {
+    if (param.getKey().is<Type>() &&
+        mlir::isa<IndexType>(param.getKey().get<Type>()))
+      entry = param;
+  }
+
+  // No corresponding entry was found, so assume the bitwidth is 64-bit.
+  if (!entry)
     return 64;
-  auto attr = cast<IntegerAttr>(params.front().getValue());
+
+  // The expected attribute is a IntegerAttr. Cast to it and retreive the
+  // bitwidth value.
+  auto attr = cast<IntegerAttr>(entry.getValue());
   return attr.getValue().getZExtValue();
 }
 
@@ -86,16 +99,20 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
   reportMissingDataLayout(type);
 }
 
+template<typename T>
 static DataLayoutEntryInterface
-findEntryForIntegerType(IntegerType intType,
+findEntryForType(T type,
                         ArrayRef<DataLayoutEntryInterface> params) {
   assert(!params.empty() && "expected non-empty parameter list");
   std::map<unsigned, DataLayoutEntryInterface> sortedParams;
   for (DataLayoutEntryInterface entry : params) {
-    sortedParams.insert(std::make_pair(
-        entry.getKey().get<Type>().getIntOrFloatBitWidth(), entry));
+    // Filter the params by integer type.
+    if (entry.getKey().is<Type>() &&
+        mlir::isa<IntegerType>(entry.getKey().get<Type>()))
+      sortedParams.insert(std::make_pair(
+          entry.getKey().get<Type>().getIntOrFloatBitWidth(), entry));
   }
-  auto iter = sortedParams.lower_bound(intType.getWidth());
+  auto iter = sortedParams.lower_bound(type.getWidth());
   if (iter == sortedParams.end())
     iter = std::prev(iter);
 
@@ -122,17 +139,15 @@ getIntegerTypeABIAlignment(IntegerType intType,
                : kDefaultSmallIntAlignment;
   }
 
-  return extractABIAlignment(findEntryForIntegerType(intType, params));
+  return extractABIAlignment(findEntryForType<IntegerType>(intType, params));
 }
 
 static uint64_t
 getFloatTypeABIAlignment(FloatType fltType, const DataLayout &dataLayout,
                          ArrayRef<DataLayoutEntryInterface> params) {
-  assert(params.size() <= 1 && "at most one data layout entry is expected for "
-                               "the singleton floating-point type");
   if (params.empty())
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(fltType).getFixedValue());
-  return extractABIAlignment(params[0]);
+  return extractABIAlignment(findEntryForType(fltType, params));
 }
 
 uint64_t mlir::detail::getDefaultABIAlignment(
@@ -175,17 +190,15 @@ getIntegerTypePreferredAlignment(IntegerType intType,
   if (params.empty())
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(intType).getFixedValue());
 
-  return extractPreferredAlignment(findEntryForIntegerType(intType, params));
+  return extractPreferredAlignment(findEntryForType(intType, params));
 }
 
 static uint64_t
 getFloatTypePreferredAlignment(FloatType fltType, const DataLayout &dataLayout,
                                ArrayRef<DataLayoutEntryInterface> params) {
-  assert(params.size() <= 1 && "at most one data layout entry is expected for "
-                               "the singleton floating-point type");
   if (params.empty())
     return dataLayout.getTypeABIAlignment(fltType);
-  return extractPreferredAlignment(params[0]);
+  return extractPreferredAlignment(findEntryForType(fltType, params));
 }
 
 uint64_t mlir::detail::getDefaultPreferredAlignment(

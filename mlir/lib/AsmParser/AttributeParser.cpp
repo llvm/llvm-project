@@ -248,6 +248,7 @@ Attribute Parser::parseAttribute(Type type) {
 OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
                                                    Type type) {
   switch (getToken().getKind()) {
+  case Token::kw_distinct:
   case Token::at_identifier:
   case Token::floatliteral:
   case Token::integer:
