@@ -14,31 +14,19 @@
 
 template <typename T>
 class NextUpTestTemplate : public LIBC_NAMESPACE::testing::Test {
-  using FPBits = typename LIBC_NAMESPACE::fputil::FPBits<T>;
-  using Sign = typename LIBC_NAMESPACE::fputil::Sign;
 
-  static constexpr T inf = FPBits::inf().get_val();
-  static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
-  static constexpr T zero = FPBits::zero().get_val();
-  static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  static constexpr T nan = FPBits::quiet_nan().get_val();
-
-  static constexpr T min_subnormal = FPBits::min_subnormal().get_val();
-  static constexpr T neg_min_subnormal =
-      FPBits::min_subnormal(Sign::NEG).get_val();
-  static constexpr T max_normal = FPBits::max_normal().get_val();
-  static constexpr T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();
+  DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
   typedef T (*NextUpFunc)(T);
 
-  void testNaN(NextUpFunc func) { ASSERT_FP_EQ(func(nan), nan); }
+  void testNaN(NextUpFunc func) { ASSERT_FP_EQ(func(aNaN), aNaN); }
 
   void testBoundaries(NextUpFunc func) {
-    ASSERT_FP_EQ(neg_zero, func(neg_min_subnormal));
+    ASSERT_FP_EQ(neg_zero, func(neg_min_denormal));
 
-    ASSERT_FP_EQ(min_subnormal, func(zero));
-    ASSERT_FP_EQ(min_subnormal, func(neg_zero));
+    ASSERT_FP_EQ(min_denormal, func(zero));
+    ASSERT_FP_EQ(min_denormal, func(neg_zero));
 
     ASSERT_FP_EQ(max_normal, func(max_normal));
     ASSERT_FP_EQ(inf, func(inf));

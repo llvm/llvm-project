@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float128, nextupf128, (float128 x)) {
-  return fputil::nextupdown(x, fputil::Sign::POS);
+  return fputil::nextupdown</*IsDown=*/false>(x);
 }
 
 } // namespace LIBC_NAMESPACE

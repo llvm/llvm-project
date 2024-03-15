@@ -230,8 +230,11 @@ LIBC_INLINE T nextafter(T from, U to) {
   return from_bits.get_val();
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T nextupdown(T x, Sign sign) {
+template <bool IsDown, typename T,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE constexpr T nextupdown(T x) {
+  constexpr Sign sign = IsDown ? Sign::NEG : Sign::POS;
+
   FPBits<T> xbits(x);
   if (xbits.is_nan() || xbits == FPBits<T>::max_normal(sign) ||
       xbits == FPBits<T>::inf(sign))
