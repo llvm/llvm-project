@@ -2517,7 +2517,7 @@ let Predicates = [HasSVEorSME] in {
               (ADDVL_XXI GPR64:$op, $imm)>;
 
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
-              (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (IMPLICIT_DEF),
                                         GPR32:$op, sub_32), $imm),
                               sub_32)>;
 
@@ -2536,28 +2536,28 @@ let Predicates = [HasSVEorSME] in {
               (DECD_XPiI GPR64:$op, 31, $imm)>;
 
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm i32:$imm))))),
-              (EXTRACT_SUBREG (INCH_XPiI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (INCH_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntw_imm i32:$imm))))),
-              (EXTRACT_SUBREG (INCW_XPiI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (INCW_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntd_imm i32:$imm))))),
-              (EXTRACT_SUBREG (INCD_XPiI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (INCD_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
 
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm))))),
-              (EXTRACT_SUBREG (DECH_XPiI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (DECH_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm))))),
-              (EXTRACT_SUBREG (DECW_XPiI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (DECW_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
     def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntd_imm_neg i32:$imm))))),
-              (EXTRACT_SUBREG (DECD_XPiI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (EXTRACT_SUBREG (DECD_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
   }
