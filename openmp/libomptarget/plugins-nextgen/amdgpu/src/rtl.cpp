@@ -1584,6 +1584,9 @@ private:
   /// Indicate to spread data transfers across all avilable SDMAs
   bool UseMultipleSdmaEngines;
 
+  /// Use synchronous copy back.
+  bool UseSyncCopyBack;
+
   /// Return the current number of asychronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -1869,6 +1872,11 @@ public:
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
       return Err;
+
+    // Wait for kernel to finish before scheduling the asynchronous copy.
+    if (UseSyncCopyBack && InputSignal && InputSignal->load())
+      if (auto Err = InputSignal->wait(StreamBusyWaitMicroseconds, RPCServer, &Device))
+        return Err;
 
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
@@ -2471,10 +2479,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", false),
         OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
+        OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
+
+  /// Return synchronous copy back status variable.
+  bool syncCopyBack() const { return OMPX_SyncCopyBack; }
 
   /// Returns the maximum of HSA queues to create
   /// This reads a non-cached environment variable, don't call everywhere.
@@ -3888,6 +3900,9 @@ private:
   // Makes warnings turn into fatal errors
   BoolEnvar OMPX_StrictSanityChecks;
 
+  // Variable to hold synchronous copy back
+  BoolEnvar OMPX_SyncCopyBack;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -4057,7 +4072,8 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCServer(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
-      UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()) {}
+      UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()),
+      UseSyncCopyBack(Device.syncCopyBack()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
