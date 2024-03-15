@@ -6685,7 +6685,7 @@ const char *GetStableCStr(std::set<std::string> &SavedStrings, StringRef S) {
   return SavedStrings.insert(std::string(S)).first->c_str();
 }
 
-/// ApplyOneQAOverride - Apply a list of edits to the input argument lists.
+/// applyOneOverrideOption - Apply a list of edits to the input argument lists.
 ///
 /// The input string is a space separated list of edits to perform,
 /// they are applied in order to the input argument lists. Edits
@@ -6781,8 +6781,8 @@ void applyOneOverrideOption(raw_ostream &OS,
 
 } // namespace
 
-/// ApplyQAOverride - Apply a space separated list of edits to the
-/// input argument lists. See ApplyOneQAOverride.
+/// applyOverrideOptions - Apply a space separated list of edits to the
+/// input argument lists. See applyOneOverrideOption.
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
                                   std::set<std::string> &SavedStrings,
