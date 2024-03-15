@@ -116,10 +116,11 @@ static bool GetLowerCaseName(
   return false;
 }
 
-static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
-  std::optional<SubscriptValue> value;
+static Fortran::common::optional<SubscriptValue> GetSubscriptValue(
+    IoStatementState &io) {
+  Fortran::common::optional<SubscriptValue> value;
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
   bool negate{ch && *ch == '-'};
   if ((ch && *ch == '+') || negate) {
     io.HandleRelativePosition(byteCount);
@@ -136,7 +137,7 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
   if (overflow) {
     io.GetIoErrorHandler().SignalError(
         "NAMELIST input subscript value overflow");
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
   if (negate) {
     if (value) {
@@ -158,7 +159,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   char32_t comma{GetComma(io)};
   for (; ch && *ch != ')'; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
@@ -282,9 +283,9 @@ static bool HandleSubstring(
   SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
   // Allow for blanks in substring bounds; they're nonstandard, but not
   // ambiguous within the parentheses.
-  std::optional<SubscriptValue> lower, upper;
+  Fortran::common::optional<SubscriptValue> lower, upper;
   std::size_t byteCount{0};
-  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   if (ch) {
     if (*ch == ':') {
       lower = 1;
@@ -346,7 +347,8 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
           // If base and component are both arrays, the component name
           // must be followed by subscripts; process them now.
           std::size_t byteCount{0};
-          if (std::optional<char32_t> next{io.GetNextNonBlank(byteCount)};
+          if (Fortran::common::optional<char32_t> next{
+                  io.GetNextNonBlank(byteCount)};
               next && *next == '(') {
             io.HandleRelativePosition(byteCount); // skip over '('
             StaticDescriptor<maxRank, true, 16> staticDesc;
@@ -435,7 +437,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   RUNTIME_CHECK(handler, listInput != nullptr);
   // Find this namelist group's header in the input
   io.BeginReadingRecord();
-  std::optional<char32_t> next;
+  Fortran::common::optional<char32_t> next;
   char name[nameBufferSize];
   RUNTIME_CHECK(handler, group.groupName != nullptr);
   char32_t comma{GetComma(io)};
