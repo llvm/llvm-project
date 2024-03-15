@@ -157,7 +157,3 @@ void mlir::populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
   patterns.add<ConvertAlloca, ConvertLoad, ConvertStore>(converter,
                                                          patterns.getContext());
 }
-
-std::unique_ptr<OperationPass<>> mlir::createConvertMemRefToEmitCPass() {
-  return std::make_unique<ConvertMemRefToEmitCPass>();
-}

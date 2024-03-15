@@ -21,9 +21,6 @@ void populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter);
 
 void populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
                                              TypeConverter &converter);
-
-std::unique_ptr<OperationPass<>> createConvertMemRefToEmitCPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
