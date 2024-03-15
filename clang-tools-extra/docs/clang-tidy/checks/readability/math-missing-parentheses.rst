@@ -3,7 +3,8 @@
 readability-math-missing-parentheses
 ====================================
 
-Checks for mathematical expressions that involve operators of different priorities.
+Check for mising parantheses in mathematical expressions that involve operators
+of different priorities.
 
 Before:
 

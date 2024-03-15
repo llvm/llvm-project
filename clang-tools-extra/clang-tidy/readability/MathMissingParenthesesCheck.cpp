@@ -7,13 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MathMissingParenthesesCheck.h"
-#include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include <iostream>
-using namespace std;
 
 using namespace clang::ast_matchers;
 
@@ -26,42 +22,47 @@ void MathMissingParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void addParantheses(const BinaryOperator *BinOp, clang::Rewriter &Rewrite,
-                    const BinaryOperator *ParentBinOp, bool &NeedToDiagnose) {
+void addParantheses(
+    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+    bool &NeedToDiagnose,
+    std::vector<std::pair<clang::SourceLocation, clang::SourceLocation>>
+        &Insertions) {
   if (!BinOp)
     return;
+
   if (ParentBinOp != nullptr &&
       ParentBinOp->getOpcode() != BinOp->getOpcode()) {
     NeedToDiagnose = true;
   }
-  clang::SourceLocation StartLoc = BinOp->getLHS()->getBeginLoc();
-  clang::SourceLocation EndLoc = BinOp->getRHS()->getEndLoc();
-  Rewrite.InsertText(StartLoc, "(");
-  Rewrite.InsertTextAfterToken(EndLoc, ")");
-  addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()), Rewrite, BinOp,
-                 NeedToDiagnose);
-  addParantheses(dyn_cast<BinaryOperator>(BinOp->getRHS()), Rewrite, BinOp,
-                 NeedToDiagnose);
+  clang::SourceLocation StartLoc = BinOp->getBeginLoc();
+  clang::SourceLocation EndLoc = BinOp->getEndLoc().getLocWithOffset(1);
+  Insertions.push_back({StartLoc, EndLoc});
+  addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
+                 BinOp, NeedToDiagnose, Insertions);
+  addParantheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
+                 BinOp, NeedToDiagnose, Insertions);
 }
 
 void MathMissingParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
-  if (!BinOp)
-    return;
-  clang::SourceManager &SM = *Result.SourceManager;
-  clang::LangOptions LO = Result.Context->getLangOpts();
-  Rewriter Rewrite(SM, LO);
   bool NeedToDiagnose = false;
-  addParantheses(BinOp, Rewrite, nullptr, NeedToDiagnose);
-  clang::SourceLocation StartLoc = BinOp->getLHS()->getBeginLoc();
-  clang::SourceLocation EndLoc =
-      BinOp->getRHS()->getEndLoc().getLocWithOffset(1);
-  clang::SourceRange range(StartLoc, EndLoc);
-  std::string NewExpression = Rewrite.getRewrittenText(range);
+  std::vector<std::pair<clang::SourceLocation, clang::SourceLocation>>
+      Insertions;
+  addParantheses(BinOp, nullptr, NeedToDiagnose, Insertions);
+  const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
+  const clang::SourceLocation EndLoc = BinOp->getEndLoc().getLocWithOffset(1);
+  const clang::SourceRange range(StartLoc, EndLoc);
+  if (!Insertions.empty()) {
+    Insertions.erase(Insertions.begin());
+  }
   if (NeedToDiagnose) {
-    diag(StartLoc, "add parantheses to clarify the precedence of operations")
-        << FixItHint::CreateReplacement(range, NewExpression);
+    auto const &Diag = diag(
+        StartLoc, "add parantheses to clarify the precedence of operations");
+    for (const auto &Insertion : Insertions) {
+      Diag << FixItHint::CreateInsertion(Insertion.first, "(");
+      Diag << FixItHint::CreateInsertion(Insertion.second, ")");
+    }
   }
 }
 
