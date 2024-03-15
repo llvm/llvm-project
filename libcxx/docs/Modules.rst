@@ -179,33 +179,12 @@ This is a small sample program that uses the module ``std``. It consists of a
   FetchContent_MakeAvailable(std)
 
   #
-  # Adjust project compiler flags
-  #
-
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-  # The include path needs to be set to be able to use macros from headers.
-  # For example from, the headers <cassert> and <version>.
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-isystem>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_BUILD}/include/c++/v1>)
-
-  #
-  # Adjust project linker flags
-  #
-
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-nostdlib++>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-L${LIBCXX_BUILD}/lib>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-Wl,-rpath,${LIBCXX_BUILD}/lib>)
-  # Linking against the standard c++ library is required for CMake to get the proper dependencies.
-  link_libraries(std c++)
-  link_libraries(std.compat c++)
-
-  #
   # Add the project
   #
 
   add_executable(main)
+  add_dependencies(main std.compat)
+  target_link_libraries(main std.compat)
   target_sources(main
     PRIVATE
       main.cpp
@@ -218,12 +197,8 @@ Building this project is done with the following steps, assuming the files
 
   $ mkdir build
   $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_BUILD=<build>
-  $ ninja -j1 std -C build
   $ ninja -C build
   $ build/main
-
-.. note:: The ``std`` dependencies of ``std.compat`` is not always resolved when
-          building the ``std`` target using multiple jobs.
 
 .. warning:: ``<path-to-compiler>`` should point point to the real binary and
              not to a symlink.
