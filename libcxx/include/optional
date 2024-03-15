@@ -1291,6 +1291,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <ctime>
 #  include <iterator>
+#  include <limits>
 #  include <memory>
 #  include <ratio>
 #  include <stdexcept>

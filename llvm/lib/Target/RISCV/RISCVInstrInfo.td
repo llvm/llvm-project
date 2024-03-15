@@ -1405,7 +1405,8 @@ multiclass BccPat<CondCode Cond, RVInstB Inst> {
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
     : Pat<(riscv_brcc GPR:$lhs, simm12_no6:$Constant, Cond, bb:$place),
-          (Inst (ADDI GPR:$lhs, (NegImm simm12:$Constant)), (XLenVT X0), bb:$place)>;
+          (Inst (XLenVT (ADDI GPR:$lhs, (NegImm simm12:$Constant))),
+                (XLenVT X0), bb:$place)>;
 
 defm : BccPat<SETEQ, BEQ>;
 defm : BccPat<SETNE, BNE>;
