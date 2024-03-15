@@ -226,12 +226,11 @@ define i1 @src_is_mask_shl_lshr(i8 %x_in, i8 %y, i1 %cond) {
 
 define i1 @src_is_mask_shl_lshr_fail_not_allones(i8 %x_in, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @src_is_mask_shl_lshr_fail_not_allones(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[TMP1]], -2
-; CHECK-NEXT:    [[NOTMASK:%.*]] = xor i8 [[MASK]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NOTMASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[MASK]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -572,11 +571,10 @@ define i1 @src_is_notmask_neg_p2(i8 %x_in, i8 %y) {
 
 define i1 @src_is_notmask_neg_p2_fail_not_invertable(i8 %x_in, i8 %y) {
 ; CHECK-LABEL: @src_is_notmask_neg_p2_fail_not_invertable(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[Y]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
