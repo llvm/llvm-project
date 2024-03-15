@@ -6679,9 +6679,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   return llvm::Error::success();
 }
 
-namespace {
-
-const char *GetStableCStr(std::set<std::string> &SavedStrings, StringRef S) {
+static const char *GetStableCStr(std::set<std::string> &SavedStrings,
+                                 StringRef S) {
   return SavedStrings.insert(std::string(S)).first->c_str();
 }
 
@@ -6712,9 +6711,10 @@ const char *GetStableCStr(std::set<std::string> &SavedStrings, StringRef S) {
 /// \param Args - The vector of command line arguments.
 /// \param Edit - The override command to perform.
 /// \param SavedStrings - Set to use for storing string representations.
-void applyOneOverrideOption(raw_ostream &OS,
-                            SmallVectorImpl<const char *> &Args, StringRef Edit,
-                            std::set<std::string> &SavedStrings) {
+static void applyOneOverrideOption(raw_ostream &OS,
+                                   SmallVectorImpl<const char *> &Args,
+                                   StringRef Edit,
+                                   std::set<std::string> &SavedStrings) {
   // This does not need to be efficient.
 
   if (Edit[0] == '^') {
@@ -6778,8 +6778,6 @@ void applyOneOverrideOption(raw_ostream &OS,
     OS << "### Unrecognized edit: " << Edit << "\n";
   }
 }
-
-} // namespace
 
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
